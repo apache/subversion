@@ -2369,6 +2369,15 @@ svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
                                      const char *local_abspath,
                                      apr_pool_t *scratch_pool);
 
+/* Set file external information on LOCAL_ABSPATH to REPOS_RELPATH
+   at PEG_REV with revision REV*/
+svn_error_t *
+svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const char *repos_relpath,
+                                     const svn_opt_revision_t *peg_rev,
+                                     const svn_opt_revision_t *rev,
+                                     apr_pool_t *scratch_pool);
 
 /* @} */
 

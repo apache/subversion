@@ -4263,12 +4263,7 @@ merge_file(svn_skel_t **work_items,
                    conflicts, since this file was added as a place holder to
                    merge externals item from the repository.
 
-     ### Possible entry caching bug?  Before the removal of the access
-     batons a newly added file external caused svn_wc__get_entry to
-     return an entry with entry->schedule=svn_wc_schedule_add (the
-     entry was retrieved from the cache).  Now the svn_wc__get_entry
-     call reads the entries from the database the returned entry is
-     svn_wc_schedule_replace.  2 lines marked ### EBUG below. */
+     ### Newly added file externals have a svn_wc_schedule_add here. */
   if (fb->copied_working_text)
     {
       /* The file was copied here, and it came with both a (new) pristine
@@ -4280,9 +4275,9 @@ merge_file(svn_skel_t **work_items,
       is_locally_modified = TRUE;
     }
   else if (entry && entry->file_external_path
-           && entry->schedule == svn_wc_schedule_replace) /* ###EBUG */
+           && entry->schedule == svn_wc_schedule_add)
     {
-      is_locally_modified = FALSE;
+      is_locally_modified = FALSE; /* ### Or a conflict will be raised */
     }
   else if (! fb->obstruction_found)
     {
@@ -4310,8 +4305,7 @@ merge_file(svn_skel_t **work_items,
       is_locally_modified = FALSE;
     }
 
-  if (entry && entry->schedule == svn_wc_schedule_replace
-      && ! entry->file_external_path)  /* ### EBUG */
+  if (entry && entry->schedule == svn_wc_schedule_replace)
     is_replaced = TRUE;
 
   /* For 'textual' merging, we implement this matrix.
@@ -4363,7 +4357,7 @@ merge_file(svn_skel_t **work_items,
 
               /* ### sheesh. for file externals, there is a WORKING_NODE
                  ### row (during this transitional state), which means the
-                 ### node is reported as "replaced". further, this means
+                 ### node is reported as "added". further, this means
                  ### that the text base will be dropped into the "revert
                  ### base". even after everything stabilizes, the file
                  ### external's base will continue to reside in the revert
@@ -4373,7 +4367,7 @@ merge_file(svn_skel_t **work_items,
                  ### from the revert base for file externals.  */
               if (entry && entry->file_external_path)
                 {
-                  SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_replace);
+                  SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_add);
 
                   /* The revert-base will be installed later in this function.
                      To tell the caller to install the new working text from
@@ -4982,22 +4976,20 @@ close_file(void *file_baton,
        ### have a temp API into wc_db.  */
     if (kind != svn_node_none && serialised)
       {
-        const char *file_external_path;
+        const char *file_external_repos_relpath;
         svn_opt_revision_t file_external_peg_rev, file_external_rev;
-        svn_wc_entry_t tmp_entry;
 
-        SVN_ERR(svn_wc__unserialize_file_external(&file_external_path,
+        SVN_ERR(svn_wc__unserialize_file_external(&file_external_repos_relpath,
                                                   &file_external_peg_rev,
                                                   &file_external_rev,
                                                   serialised, pool));
-        tmp_entry.file_external_path = file_external_path;
-        tmp_entry.file_external_peg_rev = file_external_peg_rev;
-        tmp_entry.file_external_rev = file_external_rev;
-        SVN_ERR(svn_wc__entry_modify(eb->db, fb->local_abspath,
-                                     svn_node_file,
-                                     &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL,
-                                     pool));
+
+        SVN_ERR(svn_wc__db_temp_op_set_file_external(
+                                                  eb->db, fb->local_abspath,
+                                                  file_external_repos_relpath,
+                                                  &file_external_peg_rev,
+                                                  &file_external_rev,
+                                                  pool));
       }
   }
 

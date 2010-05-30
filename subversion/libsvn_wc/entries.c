@@ -2744,16 +2744,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
       cur_entry->keep_local = FALSE;
     }
 
-  /* File externals. */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL)
-    {
-      cur_entry->file_external_path = (entry->file_external_path
-                                       ? apr_pstrdup(pool,
-                                                     entry->file_external_path)
-                                       : NULL);
-      cur_entry->file_external_peg_rev = entry->file_external_peg_rev;
-      cur_entry->file_external_rev = entry->file_external_rev;
-    }
+  /* File externals are no longer passed to entry_modify(). */
 
   return SVN_NO_ERROR;
 }
