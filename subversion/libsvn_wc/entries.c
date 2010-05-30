@@ -158,35 +158,6 @@ svn_wc__entry_is_hidden(svn_boolean_t *hidden, const svn_wc_entry_t *entry)
 }
 
 
-/* Use entry SRC to fill in blank portions of entry DST.  SRC itself
-   may not have any blanks, of course.
-   Typically, SRC is a parent directory's own entry, and DST is some
-   child in that directory. */
-static void
-take_from_entry(const svn_wc_entry_t *src,
-                svn_wc_entry_t *dst,
-                apr_pool_t *pool)
-{
-  /* Inherits parent's revision if doesn't have a revision of one's
-     own, unless this is a subdirectory. */
-  if ((dst->revision == SVN_INVALID_REVNUM) && (dst->kind != svn_node_dir))
-    dst->revision = src->revision;
-
-  /* Inherits parent's url if doesn't have a url of one's own. */
-  if (! dst->url)
-    dst->url = svn_path_url_add_component2(src->url, dst->name, pool);
-
-  if (! dst->repos)
-    dst->repos = src->repos;
-
-  if ((! dst->uuid)
-      && (! ((dst->schedule == svn_wc_schedule_add)
-             || (dst->schedule == svn_wc_schedule_replace))))
-    {
-      dst->uuid = src->uuid;
-    }
-}
-
 /* */
 static svn_error_t *
 fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *sdb)
@@ -2712,7 +2683,11 @@ fold_entry(svn_wc_entry_t *cur_entry,
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir && parent_entry != NULL)
-    take_from_entry(parent_entry, cur_entry, pool);
+    {
+      if ((cur_entry->revision == SVN_INVALID_REVNUM) 
+          && (cur_entry->kind != svn_node_dir))
+        cur_entry->revision = parent_entry->revision;
+    }
 
   /* Cleanup meaningless fields */
 
