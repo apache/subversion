@@ -379,36 +379,32 @@ log_do_delete_entry(struct log_runner *loggy,
                     svn_node_kind_t kind)
 {
   const char *local_abspath;
+  const char *repos_relpath, *repos_root, *repos_uuid;
 
   local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
+
+  if (SVN_IS_VALID_REVNUM(revision))
+    SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root,
+                                       &repos_uuid, loggy->db, local_abspath,
+                                       loggy->pool, loggy->pool));
 
   SVN_ERR(basic_delete_entry(loggy->db, local_abspath, loggy->pool));
 
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      svn_wc_entry_t tmp_entry;
-
-      tmp_entry.revision = revision;
-      tmp_entry.kind = kind;
-      tmp_entry.deleted = TRUE;
-
-      if (kind == svn_node_dir)
-        SVN_ERR(svn_wc__entry_modify_stub(loggy->db,
-                                          local_abspath,
-                                          &tmp_entry,
-                                          SVN_WC__ENTRY_MODIFY_REVISION
-                                            | SVN_WC__ENTRY_MODIFY_KIND
-                                            | SVN_WC__ENTRY_MODIFY_DELETED,
-                                          loggy->pool));
-      else
-        SVN_ERR(svn_wc__entry_modify(loggy->db,
-                                     local_abspath,
-                                     svn_node_file,
-                                     &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_REVISION
-                                       | SVN_WC__ENTRY_MODIFY_KIND
-                                       | SVN_WC__ENTRY_MODIFY_DELETED,
-                                     loggy->pool));
+      SVN_ERR(svn_wc__db_base_add_absent_node(loggy->db,
+                                              local_abspath,
+                                              repos_relpath,
+                                              repos_root_url,
+                                              repos_uuid,
+                                              revision,
+                                              kind == svn_node_dir 
+                                                   ? svn_wc__db_kind_dir
+                                                   : svn_wc__db_kind_file,
+                                              svn_wc__db_status_not_present,
+                                              NULL,
+                                              NULL,
+                                              loggy->pool));
     }
 
   return SVN_NO_ERROR;
