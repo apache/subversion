@@ -395,7 +395,7 @@ log_do_delete_entry(struct log_runner *loggy,
       SVN_ERR(svn_wc__db_base_add_absent_node(loggy->db,
                                               local_abspath,
                                               repos_relpath,
-                                              repos_root_url,
+                                              repos_root,
                                               repos_uuid,
                                               revision,
                                               kind == svn_node_dir 
