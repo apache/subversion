@@ -392,11 +392,11 @@ switch_file_external(const char *path,
             SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath,
                                                subpool));
 
-          return svn_error_createf
-            (SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
+          return svn_error_createf(
+              SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
              _("The file external from '%s' cannot overwrite the existing "
                "versioned item at '%s'"),
-             url, path);
+             url, svn_dirent_local_style(path, pool));
         }
     }
   else
