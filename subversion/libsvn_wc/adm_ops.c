@@ -2768,28 +2768,33 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
                                    const char *repos_root_url,
                                    apr_pool_t *scratch_pool)
 {
-  svn_wc_entry_t entry = { 0 };
+  const char *external_repos_relpath;
+  const svn_opt_revision_t unspecified_rev = { svn_opt_revision_unspecified };
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(!url || svn_uri_is_canonical(url, scratch_pool));
 
   if (url)
     {
-      /* A repository root relative path is stored in the entry. */
-      SVN_ERR_ASSERT(peg_rev);
-      SVN_ERR_ASSERT(rev);
-      entry.file_external_path = url + strlen(repos_root_url);
-      entry.file_external_peg_rev = *peg_rev;
-      entry.file_external_rev = *rev;
+      external_repos_relpath = svn_uri_is_child(repos_root_url, url, NULL);
+      SVN_ERR_ASSERT(external_repos_relpath != NULL);
+
+      external_repos_relpath = svn_path_uri_decode(external_repos_relpath,
+                                                   scratch_pool);
+
+      SVN_ERR_ASSERT(peg_rev != NULL);
+      SVN_ERR_ASSERT(rev != NULL);
     }
   else
     {
-      entry.file_external_path = NULL;
-      entry.file_external_peg_rev.kind = svn_opt_revision_unspecified;
-      entry.file_external_rev.kind = svn_opt_revision_unspecified;
+      external_repos_relpath = NULL;
+      peg_rev = &unspecified_rev;
+      rev = &unspecified_rev;
     }
 
-  SVN_ERR(svn_wc__entry_modify(wc_ctx->db, local_abspath,
-                               svn_node_unknown,
-                               &entry, SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL,
-                               scratch_pool));
+  SVN_ERR(svn_wc__db_temp_op_set_file_external(wc_ctx->db, local_abspath,
+                                               external_repos_relpath, peg_rev,
+                                               rev, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -80,7 +80,6 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_PREJFILE           0x00002000
 #define SVN_WC__ENTRY_MODIFY_ABSENT             0x00004000
 /* ### gap  */
-#define SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL      0x00010000
 
 /* ...ORed together with this to mean: just set the schedule to the new
    value, instead of treating the new value as a change of state to be

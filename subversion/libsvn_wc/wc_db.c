@@ -7544,3 +7544,91 @@ svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const char *repos_relpath,
+                                     const svn_opt_revision_t *peg_rev,
+                                     const svn_opt_revision_t *rev,
+                                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(!repos_relpath 
+                 || svn_relpath_is_canonical(repos_relpath, scratch_pool));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (!got_row)
+    {
+      const char *repos_root_url, *repos_uuid;
+      apr_int64_t repos_id;
+
+      if (!repos_relpath)
+        return SVN_NO_ERROR; /* Don't add a BASE node */
+
+      SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url,
+                                         &repos_uuid, db, pdh->local_abspath,
+                                         scratch_pool, scratch_pool));
+
+      SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
+                              pdh->wcroot->sdb, scratch_pool));
+
+      /* ### Insert a switched not present base node. Luckily this hack
+             is not as ugly as the original file externals hack. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_INSERT_BASE_NODE));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isisstt",
+                                pdh->wcroot->wc_id,
+                                local_relpath,
+                                repos_id,
+                                repos_relpath,
+                                svn_relpath_dirname(local_relpath,
+                                                    scratch_pool),
+                                presence_map, svn_wc__db_status_not_present,
+                                kind_map, svn_wc__db_kind_file));
+
+      SVN_ERR(svn_sqlite__insert(NULL, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_FILE_EXTERNAL));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                          local_relpath));
+
+  if (repos_relpath)
+    {
+      const char *str;
+
+      SVN_ERR(svn_wc__serialize_file_external(&str,
+                                              repos_relpath,
+                                              peg_rev,
+                                              rev,
+                                              scratch_pool));
+
+      SVN_ERR(svn_sqlite__bind_text(stmt, 3, str));
+    }
+
+  flush_entries(pdh);
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
