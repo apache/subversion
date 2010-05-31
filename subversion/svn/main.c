@@ -120,7 +120,7 @@ typedef enum {
   opt_reverse_diff,
   opt_ignore_whitespace,
   opt_show_diff,
-  opt_force_internal_diff,
+  opt_internal_diff,
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -363,8 +363,10 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("produce diff output\n"
                        "                             "
                        "[alias: --diff]")},
-  {"force-internal-diff", opt_force_internal_diff, 0,
-                       N_("override diff-cmd specified in config file")},
+  {"internal-diff", opt_internal_diff, 0,
+                       N_("override diff-cmd specified in config file\n"
+                       "                             "
+                       "[alias: --idiff]")},
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -392,6 +394,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ik",            opt_ignore_keywords, 0, NULL},
   {"iw",            opt_ignore_whitespace, 0, NULL},
   {"diff",          opt_show_diff, 0, NULL},
+  {"idiff",         opt_internal_diff, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -567,7 +570,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
-     opt_force_internal_diff, 'x', opt_no_diff_deleted, opt_show_copies_as_adds,
+     opt_internal_diff, 'x', opt_no_diff_deleted, opt_show_copies_as_adds,
      opt_notice_ancestry, opt_summarize, opt_changelist, opt_force, opt_xml} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
@@ -687,7 +690,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     opt_show_diff, opt_diff_cmd, opt_force_internal_diff, 'x'},
+     opt_show_diff, opt_diff_cmd, opt_internal_diff, 'x'},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -1758,8 +1761,8 @@ main(int argc, const char *argv[])
       case opt_show_diff:
           opt_state.show_diff = TRUE;
           break;
-      case opt_force_internal_diff:
-        opt_state.force_internal_diff = TRUE;
+      case opt_internal_diff:
+        opt_state.internal_diff = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
@@ -1931,11 +1934,11 @@ main(int argc, const char *argv[])
     }
 
   /* Disallow simultaneous use of both --diff-cmd and
-     --force-internal-diff.  */
-  if (opt_state.diff_cmd && opt_state.force_internal_diff)
+     --internal-diff.  */
+  if (opt_state.diff_cmd && opt_state.internal_diff)
     {
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--diff-cmd and --force-internal-diff "
+                             _("--diff-cmd and --internal-diff "
                                "are mutually exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
@@ -2116,7 +2119,7 @@ main(int argc, const char *argv[])
   if (opt_state.merge_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
-  if (opt_state.force_internal_diff)
+  if (opt_state.internal_diff)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF_CMD, NULL);
 
