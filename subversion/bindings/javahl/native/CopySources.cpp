@@ -116,11 +116,12 @@ CopySources::array(SVN::Pool &pool)
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-      JNIStringHolder path(jpath);
+      const char *path = env->GetStringUTFChars(jpath, NULL);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-      src->path = apr_pstrdup(p, (const char *) path);
+      src->path = apr_pstrdup(p, path);
+      env->ReleaseStringUTFChars(jpath, path);
       SVN_JNI_ERR(JNIUtil::preprocessPath(src->path, pool.pool()),
                   NULL);
       env->DeleteLocalRef(jpath);
