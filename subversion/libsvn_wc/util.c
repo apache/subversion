@@ -546,7 +546,7 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
 
 svn_error_t *
 svn_wc__status2_from_3(svn_wc_status2_t **status,
-                       const svn_wc_status3_t *old_status, 
+                       const svn_wc_status3_t *old_status,
                        svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
                        apr_pool_t *result_pool,
@@ -564,9 +564,10 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
   *status = apr_pcalloc(result_pool, sizeof(**status));
 
-  SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
-                            svn_node_unknown, FALSE, result_pool,
-                            scratch_pool));
+  if (old_status->versioned)
+    SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
+                              svn_node_unknown, FALSE, result_pool,
+                              scratch_pool));
 
   SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, wc_ctx->db,
                                            local_abspath, scratch_pool,
