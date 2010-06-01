@@ -458,20 +458,8 @@ run_revert(svn_wc__db_t *db,
       SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, &is_switched,
                                     db, local_abspath, scratch_pool));
       if (!is_wc_root && !is_switched)
-        {
-          tmp_entry.copied = FALSE;
-          tmp_entry.copyfrom_url = NULL;
-          tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
-          tmp_entry.schedule = svn_wc_schedule_normal;
-          SVN_ERR(svn_wc__entry_modify_stub(
-                    db, local_abspath,
-                    &tmp_entry,
-                    SVN_WC__ENTRY_MODIFY_COPIED
-                      | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                      | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-                      | SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                    scratch_pool));
-        }
+        SVN_ERR(svn_wc__db_temp_op_remove_working_stub(db, local_abspath,
+                                                       scratch_pool));
     }
 
   return SVN_NO_ERROR;

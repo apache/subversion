@@ -2379,6 +2379,12 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                      const svn_opt_revision_t *rev,
                                      apr_pool_t *scratch_pool);
 
+/* Remove the WORKING_NODE information from LOCAL_ABSPATH's parent stub */
+svn_error_t *
+svn_wc__db_temp_op_remove_working_stub(svn_wc__db_t* db,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool);
+
 /* @} */
 
 
