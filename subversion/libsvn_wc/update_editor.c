@@ -5151,16 +5151,11 @@ close_edit(void *edit_baton,
      will only remove the deleted entry!  */
   if (! eb->target_deleted)
     {
-      const char *switch_url = NULL;
-
-      if (eb->switch_relpath)
-        switch_url = svn_path_url_add_component2(eb->repos_root,
-                                                 eb->switch_relpath, eb->pool);
-
       SVN_ERR(svn_wc__do_update_cleanup(eb->db, eb->target_abspath,
                                         eb->requested_depth,
-                                        switch_url,
+                                        eb->switch_relpath,
                                         eb->repos_root,
+                                        eb->repos_uuid,
                                         *(eb->target_revision),
                                         eb->notify_func,
                                         eb->notify_baton,
