@@ -640,15 +640,43 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_repos_fs_pack(svn_repos_t *repos,
-                  svn_fs_pack_notify_t notify_func,
-                  void *notify_baton,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *pool)
+struct pack_notify_baton
 {
-  return svn_fs_pack(repos->db_path, notify_func, notify_baton,
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
+};
+
+/* Implements svn_fs_pack_notify_t. */
+static svn_error_t *
+pack_notify_func(void *baton,
+                 apr_int64_t shard,
+                 svn_fs_pack_notify_action_t pack_action,
+                 apr_pool_t *pool)
+{
+  struct pack_notify_baton *pnb = baton;
+  svn_repos_notify_t *notify;
+
+  notify = svn_repos_notify_create(pack_action + 3, pool);
+  notify->shard = shard;
+  pnb->notify_func(pnb->notify_baton, notify, pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_fs_pack2(svn_repos_t *repos,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  struct pack_notify_baton pnb;
+  
+  pnb.notify_func = notify_func;
+  pnb.notify_baton = notify_baton;
+
+  return svn_fs_pack(repos->db_path, pack_notify_func, &pnb,
                      cancel_func, cancel_baton, pool);
 }
 

@@ -306,6 +306,40 @@ svn_repos_fs_change_rev_prop(svn_repos_t *repos,
                                        NULL, NULL, pool);
 }
 
+struct pack_notify_wrapper_baton
+{
+  svn_fs_pack_notify_t notify_func;
+  void *notify_baton;
+};
+
+static void
+pack_notify_wrapper_func(void *baton,
+                         const svn_repos_notify_t *notify,
+                         apr_pool_t *scratch_pool)
+{
+  struct pack_notify_wrapper_baton *pnwb = baton;
+
+  svn_error_clear(pnwb->notify_func(pnwb->notify_baton, notify->shard,
+                                    notify->action - 3, scratch_pool));
+}
+
+svn_error_t *
+svn_repos_fs_pack(svn_repos_t *repos,
+                  svn_fs_pack_notify_t notify_func,
+                  void *notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *pool)
+{
+  struct pack_notify_wrapper_baton pnwb;
+
+  pnwb.notify_func = notify_func;
+  pnwb.notify_baton = notify_baton;
+
+  return svn_repos_fs_pack2(repos, pack_notify_wrapper_func, &pnwb,
+                            cancel_func, cancel_baton, pool);
+}
+
 /*** From logs.c ***/
 svn_error_t *
 svn_repos_get_logs3(svn_repos_t *repos,
