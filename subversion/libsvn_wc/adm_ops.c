@@ -102,6 +102,88 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue)
 
 /*** Finishing updates and commits. ***/
 
+/* Helper for svn_wc__do_update_cleanup().
+ *
+ * Tweak the information for LOCAL_ABSPATH in DB.  If NEW_URL is non-null,
+ * make this the entry's new url.  If NEW_REV is valid, make this the
+ * entry's working revision.
+ *
+ * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry for
+ * LOCAL_ABSPATH to be removed from the WC; if ALLOW_REMOVAL is FALSE this
+ * will not happen.
+ *
+ * THIS_DIR should be true if the LOCAL_ABSPATH refers to a directory, and
+ * the information to be edited is not in the stub entry.
+ */
+static svn_error_t *
+tweak_node(svn_wc__db_t *db,
+           const char *local_abspath,
+           svn_node_kind_t kind,
+           svn_boolean_t parent_stub,
+           const char *new_url,
+           svn_revnum_t new_rev,
+           svn_boolean_t allow_removal,
+           apr_pool_t *scratch_pool)
+{
+const svn_wc_entry_t *entry;
+  svn_wc_entry_t tmp_entry;
+  int modify_flags = 0;
+
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, kind,
+                            parent_stub, scratch_pool, scratch_pool));
+
+  if (new_url != NULL
+      && (! entry->url || strcmp(new_url, entry->url)))
+    {
+      modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+      tmp_entry.url = new_url;
+    }
+
+  if ((SVN_IS_VALID_REVNUM(new_rev))
+      && (entry->schedule != svn_wc_schedule_add)
+      && (entry->schedule != svn_wc_schedule_replace)
+      && (entry->copied != TRUE)
+      && (entry->revision != new_rev))
+    {
+      modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
+      tmp_entry.revision = new_rev;
+    }
+
+  /* As long as this function is only called as a helper to
+     svn_wc__do_update_cleanup, then it's okay to remove any entry
+     under certain circumstances:
+
+     If the entry is still marked 'deleted', then the server did not
+     re-add it.  So it's really gone in this revision, thus we remove
+     the entry.
+
+     If the entry is still marked 'absent' and yet is not the same
+     revision as new_rev, then the server did not re-add it, nor
+     re-absent it, so we can remove the entry.
+
+     ### This function cannot always determine whether removal is
+     ### appropriate, hence the ALLOW_REMOVAL flag.  It's all a bit of a
+     ### mess. */
+  if (allow_removal
+      && (entry->deleted || (entry->absent && entry->revision != new_rev)))
+    {
+      SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                              scratch_pool));
+    }
+  else if (modify_flags)
+    {
+      if (entry->kind == svn_node_dir && parent_stub)
+        SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
+                                          &tmp_entry, modify_flags,
+                                          scratch_pool));
+      else
+        SVN_ERR(svn_wc__entry_modify(db, local_abspath, entry->kind,
+                                     &tmp_entry, modify_flags, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The main body of svn_wc__do_update_cleanup. */
 static svn_error_t *
@@ -127,9 +209,8 @@ tweak_entries(svn_wc__db_t *db,
   iterpool = svn_pool_create(pool);
 
   /* Tweak "this_dir" */
-  SVN_ERR(svn_wc__tweak_entry(db, dir_abspath, svn_node_dir, FALSE,
-                              base_url, new_rev,
-                              FALSE /* allow_removal */, iterpool));
+  SVN_ERR(tweak_node(db, dir_abspath, svn_node_dir, FALSE, base_url, new_rev,
+                     FALSE /* allow_removal */, iterpool));
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
@@ -180,15 +261,13 @@ tweak_entries(svn_wc__db_t *db,
             continue;
 
           if (kind == svn_wc__db_kind_dir)
-            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, svn_node_dir, TRUE,
-                                        child_url, new_rev,
-                                        TRUE /* allow_removal */,
-                                        iterpool));
+            SVN_ERR(tweak_node(db, child_abspath, svn_node_dir, TRUE,
+                               child_url, new_rev, TRUE /* allow_removal */,
+                               iterpool));
           else
-            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, svn_node_file, FALSE,
-                                        child_url, new_rev,
-                                        TRUE /* allow_removal */,
-                                        iterpool));
+            SVN_ERR(tweak_node(db, child_abspath, svn_node_file, FALSE,
+                               child_url, new_rev, TRUE /* allow_removal */,
+                               iterpool));
         }
 
       /* If a directory and recursive... */
@@ -294,10 +373,8 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
       case svn_wc__db_status_obstructed_delete:
         /* There is only a parent stub. That's fine... just tweak it
            and avoid directory recursion.  */
-        SVN_ERR(svn_wc__tweak_entry(db, local_abspath, svn_node_dir, TRUE,
-                                    base_url, new_revision,
-                                    FALSE /* allow_removal */,
-                                    pool));
+        SVN_ERR(tweak_node(db, local_abspath, svn_node_dir, TRUE, base_url,
+                           new_revision, FALSE /* allow_removal */, pool));
         return SVN_NO_ERROR;
 
       /* Explicitly ignore other statii */
@@ -308,10 +385,8 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
       /* Parent not updated so don't remove PATH entry.  */
-      SVN_ERR(svn_wc__tweak_entry(db, local_abspath, svn_node_file, FALSE,
-                                  base_url, new_revision,
-                                  FALSE /* allow_removal */,
-                                  pool));
+      SVN_ERR(tweak_node(db, local_abspath, svn_node_file, FALSE, base_url,
+                         new_revision, FALSE /* allow_removal */, pool));
     }
   else if (kind == svn_wc__db_kind_dir)
     {
@@ -1290,9 +1365,8 @@ mark_tree_copied(svn_wc__db_t *db,
   int i;
 
   /* Tweak "this_dir" */
-  SVN_ERR(svn_wc__tweak_entry(db, dir_abspath, svn_node_dir, FALSE,
-                              base_url, SVN_INVALID_REVNUM,
-                              FALSE /* allow_removal */, iterpool));
+  SVN_ERR(tweak_node(db, dir_abspath, svn_node_dir, FALSE, base_url,
+                     SVN_INVALID_REVNUM, FALSE /* allow_removal */, iterpool));
 
   /* Read the entries file for this directory. */
   SVN_ERR(svn_wc__db_read_children(&children, db, dir_abspath,
@@ -1336,14 +1410,13 @@ mark_tree_copied(svn_wc__db_t *db,
           || child_status == svn_wc__db_status_excluded)
         {
           if (child_kind == svn_wc__db_kind_dir)
-            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, svn_node_dir,
-                                        TRUE /* parent_stub */,
-                                        child_url, SVN_INVALID_REVNUM,
-                                        TRUE /* allow_removal */,
-                                        iterpool));
+            SVN_ERR(tweak_node(db, child_abspath, svn_node_dir,
+                               TRUE /* parent_stub */, child_url,
+                               SVN_INVALID_REVNUM, TRUE /* allow_removal */,
+                               iterpool));
           else
-            SVN_ERR(svn_wc__tweak_entry(db, child_abspath, svn_node_file,
-                                        FALSE /* parent_stub */,
+            SVN_ERR(tweak_node(db, child_abspath, svn_node_file,
+                               FALSE /* parent_stub */,
                                         child_url, SVN_INVALID_REVNUM,
                                         TRUE /* allow_removal */,
                                         iterpool));

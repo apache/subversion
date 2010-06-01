@@ -126,31 +126,6 @@ svn_wc__entry_modify_stub(svn_wc__db_t *db,
                           int modify_flags,
                           apr_pool_t *scratch_pool);
 
-
-/* Tweak the information for LOCAL_ABSPATH in DB.  If NEW_URL is non-null,
- * make this the entry's new url.  If NEW_REV is valid, make this the
- * entry's working revision.
- *
- * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry for
- * LOCAL_ABSPATH to be removed from the WC; if ALLOW_REMOVAL is FALSE this
- * will not happen.
- *
- * THIS_DIR should be true if the LOCAL_ABSPATH refers to a directory, and
- * the information to be edited is not in the stub entry.
- *
- * (Intended as a helper to svn_wc__do_update_cleanup, which see.)
- */
-svn_error_t *
-svn_wc__tweak_entry(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_node_kind_t kind,
-                    svn_boolean_t parent_stub,
-                    const char *new_url,
-                    svn_revnum_t new_rev,
-                    svn_boolean_t allow_removal,
-                    apr_pool_t *scratch_pool);
-
-
 /** Get an ENTRY for the given LOCAL_ABSPATH.
  *
  * This API does not require an access baton, just a wc_db handle (DB).
