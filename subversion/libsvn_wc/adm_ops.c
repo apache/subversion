@@ -104,39 +104,48 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue)
 
 /* Helper for svn_wc__do_update_cleanup().
  *
- * Tweak the information for LOCAL_ABSPATH in DB.  If NEW_URL is non-null,
- * make this the entry's new url.  If NEW_REV is valid, make this the
- * entry's working revision.
+ * Tweak the information for LOCAL_ABSPATH in DB.  If NEW_REPOS_RELPATH is
+ * non-NULL update the entry to the new url specified by NEW_REPOS_RELPATH,
+ * NEW_REPOS_ROOT_URL, NEW_REPOS_UUID..  If NEW_REV is valid, make this the
+ * node's working revision.
  *
- * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry for
+ * If ALLOW_REMOVAL is TRUE the tweaks might cause the node for
  * LOCAL_ABSPATH to be removed from the WC; if ALLOW_REMOVAL is FALSE this
  * will not happen.
- *
- * THIS_DIR should be true if the LOCAL_ABSPATH refers to a directory, and
- * the information to be edited is not in the stub entry.
  */
 static svn_error_t *
 tweak_node(svn_wc__db_t *db,
            const char *local_abspath,
-           svn_node_kind_t kind,
+           svn_wc__db_kind_t kind,
            svn_boolean_t parent_stub,
-           const char *new_url,
+           const char *new_repos_relpath,
+           const char *new_repos_root_url,
+           const char *new_repos_uuid,
            svn_revnum_t new_rev,
            svn_boolean_t allow_removal,
            apr_pool_t *scratch_pool)
 {
-const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
   int modify_flags = 0;
+  svn_node_kind_t node_kind = (kind == svn_wc__db_kind_dir)
+                                     ? svn_node_dir
+                                     : svn_node_file;
 
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, kind,
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, node_kind,
                             parent_stub, scratch_pool, scratch_pool));
 
-  if (new_url != NULL
-      && (! entry->url || strcmp(new_url, entry->url)))
+  if (new_repos_relpath != NULL)
     {
-      modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
-      tmp_entry.url = new_url;
+      const char *new_url = svn_path_url_add_component2(new_repos_root_url,
+                                                        new_repos_relpath,
+                                                        scratch_pool);
+      if (new_url != NULL
+          && (! entry->url || strcmp(new_url, entry->url)))
+        {
+          modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+          tmp_entry.url = new_url;
+        }
     }
 
   if ((SVN_IS_VALID_REVNUM(new_rev))
@@ -177,7 +186,7 @@ const svn_wc_entry_t *entry;
                                           &tmp_entry, modify_flags,
                                           scratch_pool));
       else
-        SVN_ERR(svn_wc__entry_modify(db, local_abspath, entry->kind,
+        SVN_ERR(svn_wc__entry_modify(db, local_abspath, node_kind,
                                      &tmp_entry, modify_flags, scratch_pool));
     }
 
@@ -189,7 +198,9 @@ const svn_wc_entry_t *entry;
 static svn_error_t *
 tweak_entries(svn_wc__db_t *db,
               const char *dir_abspath,
-              const char *base_url,
+              const char *new_repos_relpath,
+              const char *new_repos_root_url,
+              const char *new_repos_uuid,
               svn_revnum_t new_rev,
               svn_wc_notify_func2_t notify_func,
               void *notify_baton,
@@ -209,8 +220,9 @@ tweak_entries(svn_wc__db_t *db,
   iterpool = svn_pool_create(pool);
 
   /* Tweak "this_dir" */
-  SVN_ERR(tweak_node(db, dir_abspath, svn_node_dir, FALSE, base_url, new_rev,
-                     FALSE /* allow_removal */, iterpool));
+  SVN_ERR(tweak_node(db, dir_abspath, svn_wc__db_kind_dir, FALSE,
+                     new_repos_relpath, new_repos_root_url, new_repos_uuid,
+                     new_rev, FALSE /* allow_removal */, iterpool));
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
@@ -228,15 +240,15 @@ tweak_entries(svn_wc__db_t *db,
       svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
 
-      const char *child_url = NULL;
+      const char *child_repos_relpath = NULL;
       svn_boolean_t excluded;
 
       svn_pool_clear(iterpool);
 
       /* Derive the new URL for the current (child) entry */
-      if (base_url)
-        child_url = svn_path_url_add_component2(base_url, child_basename,
-                                                iterpool);
+      if (new_repos_relpath)
+        child_repos_relpath = svn_relpath_join(new_repos_relpath,
+                                               child_basename, iterpool);
 
       child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
       excluded = (apr_hash_get(exclude_paths, child_abspath,
@@ -261,13 +273,15 @@ tweak_entries(svn_wc__db_t *db,
             continue;
 
           if (kind == svn_wc__db_kind_dir)
-            SVN_ERR(tweak_node(db, child_abspath, svn_node_dir, TRUE,
-                               child_url, new_rev, TRUE /* allow_removal */,
-                               iterpool));
+            SVN_ERR(tweak_node(db, child_abspath, kind, TRUE,
+                               child_repos_relpath, new_repos_root_url,
+                               new_repos_uuid, new_rev,
+                               TRUE /* allow_removal */, iterpool));
           else
-            SVN_ERR(tweak_node(db, child_abspath, svn_node_file, FALSE,
-                               child_url, new_rev, TRUE /* allow_removal */,
-                               iterpool));
+            SVN_ERR(tweak_node(db, child_abspath, kind, FALSE,
+                               child_repos_relpath, new_repos_root_url,
+                               new_repos_uuid, new_rev,
+                               TRUE /* allow_removal */, iterpool));
         }
 
       /* If a directory and recursive... */
@@ -315,7 +329,8 @@ tweak_entries(svn_wc__db_t *db,
           /* Not missing, deleted, or absent, so recurse. */
           else
             {
-              SVN_ERR(tweak_entries(db, child_abspath, child_url,
+              SVN_ERR(tweak_entries(db, child_abspath, child_repos_relpath,
+                                    new_repos_root_url, new_repos_uuid,
                                     new_rev, notify_func, notify_baton,
                                     depth_below_here,
                                     exclude_paths, iterpool));
@@ -334,8 +349,9 @@ svn_error_t *
 svn_wc__do_update_cleanup(svn_wc__db_t *db,
                           const char *local_abspath,
                           svn_depth_t depth,
-                          const char *base_url,
-                          const char *repos,
+                          const char *new_repos_relpath,
+                          const char *new_repos_root_url,
+                          const char *new_repos_uuid,
                           svn_revnum_t new_revision,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -373,8 +389,10 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
       case svn_wc__db_status_obstructed_delete:
         /* There is only a parent stub. That's fine... just tweak it
            and avoid directory recursion.  */
-        SVN_ERR(tweak_node(db, local_abspath, svn_node_dir, TRUE, base_url,
-                           new_revision, FALSE /* allow_removal */, pool));
+        SVN_ERR(tweak_node(db, local_abspath, kind, TRUE,
+                           new_repos_relpath, new_repos_root_url,
+                           new_repos_uuid, new_revision,
+                           FALSE /* allow_removal */, pool));
         return SVN_NO_ERROR;
 
       /* Explicitly ignore other statii */
@@ -385,12 +403,14 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
       /* Parent not updated so don't remove PATH entry.  */
-      SVN_ERR(tweak_node(db, local_abspath, svn_node_file, FALSE, base_url,
+      SVN_ERR(tweak_node(db, local_abspath, kind, FALSE,
+                         new_repos_relpath, new_repos_root_url, new_repos_uuid,
                          new_revision, FALSE /* allow_removal */, pool));
     }
   else if (kind == svn_wc__db_kind_dir)
     {
-      SVN_ERR(tweak_entries(db, local_abspath, base_url, new_revision,
+      SVN_ERR(tweak_entries(db, local_abspath, new_repos_relpath,
+                            new_repos_root_url, new_repos_uuid, new_revision,
                             notify_func, notify_baton,
                             depth, exclude_paths, pool));
     }
@@ -1357,7 +1377,9 @@ static svn_error_t *
 mark_tree_copied(svn_wc__db_t *db,
                  const char *dir_abspath,
                  svn_wc__db_status_t dir_status,
-                 const char *base_url,
+                 const char *new_repos_relpath,
+                 const char *new_repos_root_url,
+                 const char *new_repos_uuid,
                  apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -1365,7 +1387,8 @@ mark_tree_copied(svn_wc__db_t *db,
   int i;
 
   /* Tweak "this_dir" */
-  SVN_ERR(tweak_node(db, dir_abspath, svn_node_dir, FALSE, base_url,
+  SVN_ERR(tweak_node(db, dir_abspath, svn_wc__db_kind_dir, FALSE,
+                     new_repos_relpath, new_repos_root_url, new_repos_uuid,
                      SVN_INVALID_REVNUM, FALSE /* allow_removal */, iterpool));
 
   /* Read the entries file for this directory. */
@@ -1379,15 +1402,15 @@ mark_tree_copied(svn_wc__db_t *db,
       const char *child_abspath;
       svn_wc__db_status_t child_status;
       svn_wc__db_kind_t child_kind;
-      const char *child_url = NULL;
+      const char *child_relpath = NULL;
 
       /* Clear our per-iteration pool. */
       svn_pool_clear(iterpool);
 
       /* Derive the new URL for the current (child) entry */
-      if (base_url)
-        child_url = svn_path_url_add_component2(base_url, child_basename,
-                                                iterpool);
+      if (new_repos_relpath)
+        child_relpath = svn_relpath_join(new_repos_relpath, child_basename,
+                                         iterpool);
 
       child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
 
@@ -1410,16 +1433,17 @@ mark_tree_copied(svn_wc__db_t *db,
           || child_status == svn_wc__db_status_excluded)
         {
           if (child_kind == svn_wc__db_kind_dir)
-            SVN_ERR(tweak_node(db, child_abspath, svn_node_dir,
-                               TRUE /* parent_stub */, child_url,
+            SVN_ERR(tweak_node(db, child_abspath, child_kind,
+                               TRUE /* parent_stub */, child_relpath,
+                               new_repos_root_url, new_repos_uuid,
                                SVN_INVALID_REVNUM, TRUE /* allow_removal */,
                                iterpool));
           else
-            SVN_ERR(tweak_node(db, child_abspath, svn_node_file,
-                               FALSE /* parent_stub */,
-                                        child_url, SVN_INVALID_REVNUM,
-                                        TRUE /* allow_removal */,
-                                        iterpool));
+            SVN_ERR(tweak_node(db, child_abspath, child_kind,
+                               FALSE /* parent_stub */, child_relpath,
+                               new_repos_root_url, new_repos_uuid,
+                               SVN_INVALID_REVNUM, TRUE /* allow_removal */,
+                               iterpool));
         }
 
       /* Skip deleted items, or otherwise "not really here" nodes.  */
@@ -1433,8 +1457,8 @@ mark_tree_copied(svn_wc__db_t *db,
       /* If this is a directory, recurse; otherwise, do real work. */
       if (child_kind == svn_wc__db_kind_dir)
         {
-          SVN_ERR(mark_tree_copied(db, child_abspath, child_status, child_url,
-                                   iterpool));
+          SVN_ERR(mark_tree_copied(db, child_abspath, child_status, child_relpath,
+                                   new_repos_root_url, new_repos_uuid, iterpool));
         }
       else
         {
@@ -1756,10 +1780,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
              the post-commit bumping process.  We might want to change
              this model someday. */
 
-          /* Figure out what the new url should be. */
-          const char *new_url =
-            svn_path_url_add_component2(parent_entry->url, base_name, pool);
-
           /* ### copy.c will copy .svn subdirs, which means the whole
              ### subtree is already "versioned". we now need to rejigger
              ### the metadata to make it Proper for this location.  */
@@ -1767,7 +1787,14 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR(mark_tree_copied(db, local_abspath,
                                    exists ? status : svn_wc__db_status_added,
-                                   new_url,
+                                   svn_relpath_join(
+                                     svn_path_uri_decode(
+                                       svn_uri_skip_ancestor(
+                                           parent_entry->repos,
+                                           parent_entry->url), pool),
+                                     base_name, pool),
+                                   parent_entry->repos,
+                                   parent_entry->uuid,
                                    pool));
 
           /* Clean out the now-obsolete dav cache values.  */

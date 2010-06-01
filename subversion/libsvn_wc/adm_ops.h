@@ -68,16 +68,18 @@ extern "C" {
    for pathnames contained in EXCLUDE_PATHS are not touched by this
    function.  These pathnames should be absolute paths.
 */
-svn_error_t *svn_wc__do_update_cleanup(svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       svn_depth_t depth,
-                                       const char *base_url,
-                                       const char *repos,
-                                       svn_revnum_t new_revision,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       apr_hash_t *exclude_paths,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc__do_update_cleanup(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          svn_depth_t depth,
+                          const char *new_repos_relpath,
+                          const char *new_repos_root_url,
+                          const char *new_repos_uuid,
+                          svn_revnum_t new_revision,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_hash_t *exclude_paths,
+                          apr_pool_t *pool);
 
 
 #ifdef __cplusplus
