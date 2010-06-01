@@ -429,7 +429,10 @@ dump_node(struct edit_baton *eb,
           if (!eb->verify && cmp_rev < eb->oldest_dumped_rev
               && eb->notify_func)
             {
-              const char *warning = apr_psprintf(
+              svn_repos_notify_t *notify =
+                    svn_repos_notify_create(svn_repos_notify_warning, pool);
+
+              notify->warning = apr_psprintf(
                      pool,
                      _("WARNING: Referencing data in revision %ld,"
                        " which is older than the oldest\n"
@@ -438,8 +441,7 @@ dump_node(struct edit_baton *eb,
                        "WARNING: will fail.\n"),
                      cmp_rev, eb->oldest_dumped_rev);
               eb->found_old_reference = TRUE;
-              SVN_ERR(eb->notify_func(eb->notify_baton,
-                                        eb->oldest_dumped_rev, warning, pool));
+              eb->notify_func(eb->notify_baton, notify, pool);
             }
 
           SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -530,7 +532,10 @@ dump_node(struct edit_baton *eb,
                 TRUE, pool, pool));
               if (apr_hash_count(old_mergeinfo))
                 {
-                  const char *warning = apr_psprintf(
+                  svn_repos_notify_t *notify =
+                    svn_repos_notify_create(svn_repos_notify_warning, pool);
+
+                  notify->warning = apr_psprintf(
                     pool,
                     _("WARNING: Mergeinfo referencing revision(s) prior "
                       "to the oldest dumped revision (%ld).\n"
@@ -539,9 +544,7 @@ dump_node(struct edit_baton *eb,
                     eb->oldest_dumped_rev);
 
                   eb->found_old_mergeinfo = TRUE;
-                  SVN_ERR(eb->notify_func(eb->notify_baton,
-                                            SVN_INVALID_REVNUM,
-                                            warning, pool));
+                  eb->notify_func(eb->notify_baton, notify, pool);
                 }
             }
         }
@@ -1030,6 +1033,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
   int version;
   svn_boolean_t found_old_reference = FALSE;
   svn_boolean_t found_old_mergeinfo = FALSE;
+  svn_repos_notify_t *notify;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -1074,6 +1078,11 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                             version));
   SVN_ERR(svn_stream_printf(stream, pool, SVN_REPOS_DUMPFILE_UUID
                             ": %s\n\n", uuid));
+
+  /* Create a notify object that we can reuse in the loop. */
+  if (notify_func)
+    notify = svn_repos_notify_create(svn_repos_notify_dump_rev_end,
+                                     pool);
 
   /* Main loop:  we're going to dump revision i.  */
   for (i = start_rev; i <= end_rev; i++)
@@ -1156,7 +1165,10 @@ svn_repos_dump_fs3(svn_repos_t *repos,
 
     loop_end:
       if (notify_func)
-        SVN_ERR(notify_func(notify_baton, to_rev, NULL, subpool));
+        {
+          notify->revision = to_rev;
+          notify_func(notify_baton, notify, subpool);
+        }
 
       if (dump_edit_baton) /* We never get an edit baton for r0. */
         {
@@ -1173,23 +1185,28 @@ svn_repos_dump_fs3(svn_repos_t *repos,
          the oldest dumped revision?  If so, then issue a final generic
          warning, since the inline warnings already issued might easily be
          missed. */
+
+      notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
+
       if (found_old_reference)
-        SVN_ERR(notify_func(notify_baton, SVN_INVALID_REVNUM,
-                              _("WARNING: The range of revisions dumped "
-                                "contained references to\n"
-                                "WARNING: copy sources outside that "
-                                "range.\n"),
-                              subpool));
+        {
+          notify->warning = _("WARNING: The range of revisions dumped "
+                              "contained references to\n"
+                              "WARNING: copy sources outside that "
+                              "range.\n");
+          notify_func(notify_baton, notify, subpool);
+        }
 
       /* Ditto if we issued any warnings about old revisions referenced
          in dumped mergeinfo. */
       if (found_old_mergeinfo)
-        SVN_ERR(notify_func(notify_baton, SVN_INVALID_REVNUM,
-                              _("WARNING: The range of revisions dumped "
-                                "contained mergeinfo\n"
-                                "WARNING: which reference revisions outside "
-                                "that range.\n"),
-                              subpool));
+        {
+          notify->warning = _("WARNING: The range of revisions dumped "
+                              "contained mergeinfo\n"
+                              "WARNING: which reference revisions outside "
+                              "that range.\n");
+          notify_func(notify_baton, notify, subpool);
+        }
     }
 
   svn_pool_destroy(subpool);
@@ -1274,6 +1291,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
   svn_revnum_t youngest;
   svn_revnum_t rev;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_repos_notify_t *notify;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -1295,6 +1313,11 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                              _("End revision %ld is invalid "
                                "(youngest revision is %ld)"),
                              end_rev, youngest);
+
+  /* Create a notify object that we can reuse within the loop. */
+  if (notify_func)
+    notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end,
+                                     pool);
 
   for (rev = start_rev; rev <= end_rev; rev++)
     {
@@ -1329,7 +1352,10 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, iterpool));
 
       if (notify_func)
-        SVN_ERR(notify_func(notify_baton, rev, NULL, iterpool));
+        {
+          notify->revision = rev;
+          notify_func(notify_baton, notify, iterpool);
+        }
     }
 
   svn_pool_destroy(iterpool);

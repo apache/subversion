@@ -428,36 +428,40 @@ svn_repos_dump_fs(svn_repos_t *repos,
                             cancel_baton, pool);
 }
 
-/* Baton for repos_progress_handler */
-struct notify_baton
-{
-  svn_boolean_t dumping;
-  svn_stream_t *feedback_stream;
-};
-
 /* Implementation of svn_repos_notify_func_t to wrap the output to a
    response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
-static svn_error_t *
-repos_progress_handler(void * baton,
-                       svn_revnum_t revision,
-                       const char *warning_text,
-                       apr_pool_t *scratch_pool)
+static void
+repos_notify_handler(void *baton,
+                     const svn_repos_notify_t *notify,
+                     apr_pool_t *scratch_pool)
 {
-  struct notify_baton *nb = baton;
+  svn_stream_t *feedback_stream = baton;
 
-  if (warning_text != NULL)
-    {
-      apr_size_t len = strlen(warning_text);
-      SVN_ERR(svn_stream_write(nb->feedback_stream, warning_text, &len));
-    }
-  else
-    SVN_ERR(svn_stream_printf(nb->feedback_stream, scratch_pool,
-                              nb->dumping
-                              ? _("* Dumped revision %ld.\n")
-                              : _("* Verified revision %ld.\n"),
-                              revision));
+  switch (notify->action)
+  {
+    case svn_repos_notify_warning:
+      {
+        apr_size_t len = strlen(notify->warning);
+        svn_error_clear(svn_stream_write(feedback_stream, notify->warning,
+                                         &len));
+        return;
+      }
 
-  return SVN_NO_ERROR;
+    case svn_repos_notify_dump_rev_end:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                        _("* Dumped revision %ld.\n"),
+                                        notify->revision));
+      return;
+
+    case svn_repos_notify_verify_rev_end:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                        _("* Verified revision %ld.\n"),
+                                        notify->revision));
+      return;
+
+    default:
+      return;
+  }
 }
 
 
@@ -473,10 +477,6 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  struct notify_baton nb;
-  nb.dumping = (stream != NULL); /* Show verify messages if stream is NULL */
-  nb.feedback_stream = feedback_stream;
-
   return svn_error_return(svn_repos_dump_fs3(repos,
                                              stream,
                                              start_rev,
@@ -484,9 +484,9 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                                              incremental,
                                              use_deltas,
                                              feedback_stream
-                                               ? repos_progress_handler
+                                               ? repos_notify_handler
                                                : NULL,
-                                             &nb,
+                                             feedback_stream,
                                              cancel_func,
                                              cancel_baton,
                                              pool));
@@ -501,17 +501,13 @@ svn_repos_verify_fs(svn_repos_t *repos,
                     void *cancel_baton,
                     apr_pool_t *pool)
 {
-  struct notify_baton nb;
-  nb.dumping = FALSE;
-  nb.feedback_stream = feedback_stream;
-
   return svn_error_return(svn_repos_verify_fs2(repos,
                                                start_rev,
                                                end_rev,
                                                feedback_stream
-                                                 ? repos_progress_handler
+                                                 ? repos_notify_handler
                                                  : NULL,
-                                               &nb,
+                                               feedback_stream,
                                                cancel_func,
                                                cancel_baton,
                                                pool));
