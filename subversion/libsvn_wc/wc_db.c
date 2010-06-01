@@ -2267,14 +2267,16 @@ temp_cross_db_copy(svn_wc__db_t *db,
                                                              scratch_pool);
       const char *tree_conflict_data = svn_sqlite__column_text(stmt, 5,
                                                                scratch_pool);
-      const char *properties = svn_sqlite__column_text(stmt, 6, scratch_pool);
+      apr_size_t props_size;
+      const char *properties = svn_sqlite__column_blob(stmt, 6, &props_size,
+                                                       scratch_pool);
       SVN_ERR(svn_sqlite__reset(stmt));
       SVN_ERR(svn_sqlite__get_statement(&stmt, dst_pdh->wcroot->sdb,
                                         STMT_INSERT_ACTUAL_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isss",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issbsssss",
                                 dst_pdh->wcroot->wc_id, dst_relpath,
                                 svn_relpath_dirname(dst_relpath, scratch_pool),
-                                properties,
+                                properties, props_size,
                                 conflict_old, conflict_new, conflict_working,
                                 changelist, tree_conflict_data));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
