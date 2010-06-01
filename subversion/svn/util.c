@@ -1294,5 +1294,8 @@ svn_cl__path_join(const char *base,
                   const char *component,
                   apr_pool_t *pool)
 {
-  return svn_path_join(base, component, pool);
+  if (svn_path_is_url(base))
+    return svn_uri_join(base, component, pool);
+  else
+    return svn_dirent_join(base, component, pool);
 }
