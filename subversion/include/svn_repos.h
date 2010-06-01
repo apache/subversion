@@ -2115,14 +2115,69 @@ enum svn_repos_load_uuid
   svn_repos_load_uuid_force
 };
 
-/** Callback for providing per revision progress while dumping or verifying
- *  the repository.
+/** The type of action occuring.
+ *
+ * @since New in 1.7.
+ */
+typedef enum svn_repos_notify_action_t
+{
+  /** A warning message is waiting. */
+  svn_repos_notify_warning = 0,
+
+  /** A revision has finished being dumped. */
+  svn_repos_notify_dump_rev_end,
+
+  /** A revision has finished being verified. */
+  svn_repos_notify_verify_rev_end,
+} svn_repos_notify_action_t;
+
+/**
+ * Structure used by #svn_repos_notify_func_t.
+ *
+ * The only field guaranteed to be populated is @c action.  Other fields are
+ * dependent upon the @c action.  (See individual fields for more information.)
+ *
+ * @note Callers of notification functions should use
+ * svn_repos_notify_create() to create structures of this type to allow for
+ * future extensibility.
+ *
+ * @since New in 1.7.
+ */
+typedef struct svn_repos_notify_t
+{
+  /** Action that describes what happened in the repository. */
+  svn_repos_notify_action_t action;
+
+  /** For #svn_repos_notify_dump_rev_end and #svn_repos_notify_verify_rev_end,
+   * the revision which just completed. */
+  svn_revnum_t revision;
+
+  /** For #svn_repos_notify_warning, the warning text. */
+  const char *warning;
+
+  /* NOTE: Add new fields at the end to preserve binary compatibility.
+     Also, if you add fields here, you have to update
+     svn_repos_notify_create(). */
+} svn_repos_notify_t;
+
+/** Callback for providing notification from the repository.
+ * Returns @a void.  Justification: success of an operation is not dependent
+ * upon successful notification of that operation.
  *
  * @since New in 1.7. */
-typedef svn_error_t *(*svn_repos_notify_func_t)(void *baton,
-                                                svn_revnum_t rev,
-                                                const char *warning_text,
-                                                apr_pool_t *scratch_pool);
+typedef void (*svn_repos_notify_func_t)(void *baton,
+                                        const svn_repos_notify_t *notify,
+                                        apr_pool_t *scratch_pool);
+
+/**
+ * Allocate an #svn_repos_notify_t structure in @a result_pool, initialize
+ * and return it.
+ *
+ * @since New in 1.7.
+ */
+svn_repos_notify_t *
+svn_repos_notify_create(svn_repos_notify_action_t action,
+                        apr_pool_t *result_pool);
 
 
 /**
