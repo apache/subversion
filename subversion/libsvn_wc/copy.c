@@ -559,39 +559,26 @@ post_copy_cleanup(svn_wc__db_t *db,
          with creating a directory.  See Issue #2101 for details. */
       if (entry->deleted)
         {
-          int modify_flags = (SVN_WC__ENTRY_MODIFY_FORCE
-                              | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                              | SVN_WC__ENTRY_MODIFY_DELETED);
-          svn_wc_entry_t tmp_entry;
+          /* ### WARNING: Very dodgy stuff here! ###
 
-          tmp_entry.schedule = svn_wc_schedule_delete;
-          tmp_entry.deleted = FALSE;
+            Directories are a problem since a schedule delete directory
+            needs an admin directory to be present.  It's possible to
+            create a dummy admin directory and that sort of works, it's
+            good enough if the user commits the copy.  Where it falls
+            down is if the user *reverts* the dummy directory since the
+            now schedule normal, copied, directory doesn't have the
+            correct contents.
 
-          if (entry->kind == svn_node_dir)
-            {
-              /* ### WARNING: Very dodgy stuff here! ###
+            In the entries world we cheated a bit by making directories
+            a file, to allow not creating the administrative area for
+            these not-present directories.
 
-              Directories are a problem since a schedule delete directory
-              needs an admin directory to be present.  It's possible to
-              create a dummy admin directory and that sort of works, it's
-              good enough if the user commits the copy.  Where it falls
-              down is if the user *reverts* the dummy directory since the
-              now schedule normal, copied, directory doesn't have the
-              correct contents.
+            Currently we apply a different cheat: We record a directory
+            deletion in the parent directory, which our future compatibility
+            handling already handles as if we were in the future single-db
+            operation. */
 
-              The dodgy solution is to cheat and use a schedule delete file
-              as a placeholder!  This is sufficient to provide a delete
-              when the copy is committed.  Attempts to revert any such
-              "fake" files will fail due to a missing text-base. This
-              effectively means that the schedule deletes have to remain
-              schedule delete until the copy is committed, when they become
-              state deleted and everything works! */
-              tmp_entry.kind = svn_node_file;
-              modify_flags |= SVN_WC__ENTRY_MODIFY_KIND;
-            }
-
-          SVN_ERR(svn_wc__entry_modify(db, child_abspath, svn_node_unknown,
-                                       &tmp_entry, modify_flags, iterpool));
+          SVN_ERR(svn_wc__db_temp_op_delete(db, child_abspath, iterpool));
         }
 
       /* Remove lock stuffs. */
