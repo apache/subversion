@@ -7634,3 +7634,35 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
 
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
+
+svn_error_t *
+svn_wc__db_temp_op_remove_working_stub(svn_wc__db_t* db,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  if (*local_relpath != '\0')
+    return SVN_NO_ERROR; /* No stub to change */
+
+  SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                             scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_WORKING_NODE));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                            svn_dirent_basename(local_abspath, NULL)));
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
