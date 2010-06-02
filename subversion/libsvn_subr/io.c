@@ -3255,7 +3255,7 @@ svn_io_dir_walk(const char *dirname,
                                   walk_baton,
                                   subpool));
         }
-      else if (finfo.filetype == APR_REG)
+      else if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
         {
           /* some other directory. pass it to the callback. */
           SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
