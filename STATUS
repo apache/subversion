@@ -217,6 +217,15 @@ Candidate changes:
    Votes:
      +1: stsp, julianfoad
 
+ * r950445, 950468
+   Fix for issue #2591 "'svnadmin hotcopy' does not replicate symlinks".
+   Justification:
+     This issue is waiting for resolution for more than 3 years.
+   Notes:
+     r950445 fixes the issue and r950468 is a test for this issue.
+   Votes:
+     +1: stylesen
+
 Veto-blocked changes:
 =====================
 
