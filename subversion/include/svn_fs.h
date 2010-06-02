@@ -2143,7 +2143,15 @@ typedef enum
   svn_fs_pack_notify_start = 0,
 
   /** packing of the shard is completed */
-  svn_fs_pack_notify_end
+  svn_fs_pack_notify_end,
+
+  /** packing of the shard revprops has commenced
+      @since New in 1.7. */
+  svn_fs_pack_notify_start_revprop,
+
+  /** packing of the shard revprops has completed
+      @since New in 1.7. */
+  svn_fs_pack_notify_end_revprop
 
 } svn_fs_pack_notify_action_t;
 
