@@ -1837,6 +1837,8 @@ static svn_error_t *hotcopy_structure(void *baton,
     return create_repos_dir(target, pool);
   else if (finfo->filetype == APR_REG)
     return svn_io_copy_file(path, target, TRUE, pool);
+  else if (finfo->filetype == APR_LNK)
+    return svn_io_copy_link(path, target, pool);
   else
     return SVN_NO_ERROR;
 }
