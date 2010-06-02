@@ -721,10 +721,68 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
   }
 }
 
+/* Make a copy SRC_ABSPATH under a temporary name in the directory
+   TMPDIR_ABSPATH and return the absolute path of the copy in
+   *DST_ABSPATH.  If SRC_ABSPATH doesn't exist then set *DST_ABSPATH
+   to NULL to indicate that no copy was made. */
+static svn_error_t *
+copy_to_tmpdir(const char **dst_abspath,
+               const char *src_abspath,
+               const char *tmpdir_abspath,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  svn_boolean_t is_special;
+  svn_io_file_del_t delete_when;
+
+  SVN_ERR(svn_io_check_special_path(src_abspath, &kind, &is_special,
+                                    scratch_pool));
+  if (kind == svn_node_none)
+    {
+      *dst_abspath = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (kind == svn_node_unknown)
+    {
+      return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                               _("Source '%s' is unexpected kind"),
+                               svn_dirent_local_style(src_abspath,
+                                                      scratch_pool));
+    }
+  else if (kind == svn_node_dir || is_special)
+    delete_when = svn_io_file_del_on_close;
+  else if (kind == svn_node_file)
+    delete_when = svn_io_file_del_none;
+
+  SVN_ERR(svn_io_open_unique_file3(NULL, dst_abspath, tmpdir_abspath,
+                                   delete_when, scratch_pool, scratch_pool));
+
+  if (kind == svn_node_dir)
+    SVN_ERR(svn_io_copy_dir_recursively(src_abspath,
+                                        tmpdir_abspath,
+                                        svn_dirent_basename(*dst_abspath,
+                                                            scratch_pool),
+                                        TRUE, /* copy_perms */
+                                        cancel_func, cancel_baton,
+                                        scratch_pool));
+  else if (!is_special)
+    SVN_ERR(svn_io_copy_file(src_abspath, *dst_abspath, TRUE, /* copy_perms */
+                             scratch_pool));
+  else
+    SVN_ERR(svn_io_copy_link(src_abspath, *dst_abspath, scratch_pool));
+    
+
+  return SVN_NO_ERROR;
+}
+
+
 #ifdef SVN_EXPERIMENTAL_COPY
 /* A replacement for both copy_file_administratively and
    copy_added_file_administratively.  Not yet fully working.  Relies
-   on in-db-props.  */
+   on in-db-props.  SRC_ABSPATH is a versioned file but the filesystem
+   node might not be a file. */
 static svn_error_t *
 copy_versioned_file(svn_wc_context_t *wc_ctx,
                     const char *src_abspath,
@@ -738,15 +796,19 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
   svn_skel_t *work_items = NULL;
   const char *dir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
   const char *tmpdir_abspath;
-  svn_stream_t *src, *src_pristine;
+#ifndef SVN_EXPERIMENTAL_PRISTINE
+  svn_stream_t *src_pristine;
+#endif
   const char *tmp_dst_abspath;
-  svn_error_t *err;
 
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, wc_ctx->db,
                                          dst_abspath,
                                          scratch_pool, scratch_pool));
 
 #ifndef SVN_EXPERIMENTAL_PRISTINE
+  /* This goes away when the pristine store is enabled; the copy
+     shares the same pristine as the source so nothing needs to be
+     copied. */
   SVN_ERR(svn_wc__get_pristine_contents(&src_pristine, wc_ctx->db,
                                         src_abspath,
                                         scratch_pool, scratch_pool));
@@ -770,26 +832,12 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
     }
 #endif
 
-  err = svn_stream_open_readonly(&src, src_abspath, scratch_pool, scratch_pool);
-  if (err)
-    {
-      if (!APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
-      /* Source may not exist when recursively copying a directory. */
-      svn_error_clear(err);
-    }
-  else
+  SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, src_abspath, tmpdir_abspath,
+                         cancel_func, cancel_baton, scratch_pool));
+  if (tmp_dst_abspath)
     {
       svn_skel_t *work_item;
-      svn_stream_t *tmp_dst;
 
-      SVN_ERR(svn_stream_open_unique(&tmp_dst, &tmp_dst_abspath,
-                                     tmpdir_abspath, svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-      SVN_ERR(svn_io_copy_perms(src_abspath,
-                                tmp_dst_abspath, scratch_pool));
-      SVN_ERR(svn_stream_copy3(src, tmp_dst,
-                               cancel_func, cancel_baton, scratch_pool));
       SVN_ERR(svn_wc__loggy_move(&work_item, wc_ctx->db, dir_abspath,
                                  tmp_dst_abspath, dst_abspath,
                                  scratch_pool));
