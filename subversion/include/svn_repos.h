@@ -181,9 +181,18 @@ typedef enum svn_repos_notify_action_t
   /** A revision has finished being verified. */
   svn_repos_notify_verify_rev_end,
 
+  /** packing of an FSFS shard has commenced */
   svn_repos_notify_pack_shard_start,
 
-  svn_repos_notify_pack_shard_end
+  /** packing of an FSFS shard is completed */
+  svn_repos_notify_pack_shard_end,
+
+  /** packing of the shard revprops has commenced */
+  svn_repos_notify_pack_shard_start_revprop,
+
+  /** packing of the shard revprops has completed */
+  svn_repos_notify_pack_shard_end_revprop
+
 } svn_repos_notify_action_t;
 
 /**

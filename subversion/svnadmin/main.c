@@ -687,12 +687,28 @@ repos_notify_handler(void *baton,
                                             "%" APR_INT64_T_FMT,
                                             notify->shard);
         svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                          _("Packing shard %s..."),
+                                          _("Packing revisions in shard %s..."),
                                           shardstr));
       }
       return;
 
     case svn_repos_notify_pack_shard_end:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                        _("done.\n")));
+      return;
+
+    case svn_repos_notify_pack_shard_start_revprop:
+      {
+        const char *shardstr = apr_psprintf(scratch_pool,
+                                            "%" APR_INT64_T_FMT,
+                                            notify->shard);
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                          _("Packing revprops in shard %s..."),
+                                          shardstr));
+      }
+      return;
+
+    case svn_repos_notify_pack_shard_end_revprop:
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                         _("done.\n")));
       return;

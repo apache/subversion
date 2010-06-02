@@ -7450,7 +7450,7 @@ pack_revprop_shard(svn_fs_t *fs,
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)
-    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_start,
+    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_start_revprop,
                         pool));
 
   start_rev = (svn_revnum_t) (shard * max_files_per_dir);
@@ -7488,7 +7488,7 @@ pack_revprop_shard(svn_fs_t *fs,
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)
-    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_end,
+    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_end_revprop,
                         pool));
 
   return SVN_NO_ERROR;
