@@ -676,7 +676,9 @@ svn_repos_fs_pack2(svn_repos_t *repos,
   pnb.notify_func = notify_func;
   pnb.notify_baton = notify_baton;
 
-  return svn_fs_pack(repos->db_path, pack_notify_func, &pnb,
+  return svn_fs_pack(repos->db_path,
+                     notify_func ? pack_notify_func : NULL,
+                     notify_func ? &pnb : NULL,
                      cancel_func, cancel_baton, pool);
 }
 
