@@ -413,7 +413,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin pack REPOS_PATH\n\n"
     "Possibly compact the repository into a more efficient storage model.\n"
     "This may not apply to all repositories, in which case, exit.\n"),
-   {0} },
+   {'q'} },
 
   {"recover", subcommand_recover, {0}, N_
    ("usage: svnadmin recover REPOS_PATH\n\n"
@@ -679,6 +679,22 @@ repos_notify_handler(void *baton,
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                         _("* Verified revision %ld.\n"),
                                         notify->revision));
+      return;
+
+    case svn_repos_notify_pack_shard_start:
+      {
+        const char *shardstr = apr_psprintf(scratch_pool,
+                                            "%" APR_INT64_T_FMT,
+                                            notify->shard);
+        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                          _("Packing shard %s..."),
+                                          shardstr));
+      }
+      return;
+
+    case svn_repos_notify_pack_shard_end:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                        _("done.\n")));
       return;
 
     default:
@@ -1177,33 +1193,6 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                      opt_state, pool);
 }
 
-/* This implements svn_fs_pack_notify_t */
-static svn_error_t *
-pack_notify(void *baton,
-            apr_int64_t shard,
-            svn_fs_pack_notify_action_t action,
-            apr_pool_t *pool)
-{
-  switch (action)
-    {
-      case svn_fs_pack_notify_start:
-        {
-          const char *shardstr = apr_psprintf(pool, "%" APR_INT64_T_FMT, shard);
-          SVN_ERR(svn_cmdline_printf(pool, _("Packing shard %s..."), shardstr));
-        }
-        break;
-
-      case svn_fs_pack_notify_end:
-        SVN_ERR(svn_cmdline_printf(pool, _("done.\n")));
-        break;
-
-      default:
-        return SVN_NO_ERROR;
-    }
-
-  return svn_cmdline_fflush(stdout);
-}
-
 
 /* This implements 'svn_opt_subcommand_t'. */
 static svn_error_t *
@@ -1211,10 +1200,17 @@ subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
+  svn_stream_t *progress_stream = NULL;
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
-  return svn_repos_fs_pack(repos, pack_notify, NULL, check_cancel, NULL, pool);
+  /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
+  if (! opt_state->quiet)
+    progress_stream = recode_stream_create(stderr, pool);
+
+  return svn_error_return(
+    svn_repos_fs_pack2(repos, !opt_state->quiet ? repos_notify_handler : NULL,
+                       progress_stream, check_cancel, NULL, pool));
 }
 
 
