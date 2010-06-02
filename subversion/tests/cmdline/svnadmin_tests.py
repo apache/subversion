@@ -1188,6 +1188,35 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
+
+def hotcopy_symlink(sbox):
+  "'svnadmin hotcopy' replicates symlink"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2591. ##
+
+  original_repo = sbox.repo_dir
+
+  hotcopy_repo, hotcopy_url = sbox.add_repo_path('hotcopy')
+  orig_symlink_path = os.path.join(original_repo, 'conf', 'newconf')
+  hotcopy_symlink_path = os.path.join(hotcopy_repo, 'conf', 'newconf')
+  linktarget_path = os.path.join(original_repo, 'conf', 'linktarget')
+
+  # Create a repository.
+  svntest.main.safe_rmtree(original_repo, 1)
+  svntest.main.create_repos(original_repo)
+
+  # Create a symlink within the repository directory.
+  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  os.symlink('linktarget', orig_symlink_path)
+
+  svntest.actions.run_and_verify_svnadmin(
+    None, None, [],
+    "hotcopy", original_repo, hotcopy_repo)
+
+  # Check if the symlink was hotcopied.
+  if (not (os.path.exists(hotcopy_symlink_path))):
+    raise svntest.Failure
+
 ########################################################################
 # Run the tests
 
@@ -1216,6 +1245,7 @@ test_list = [ None,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
               XFail(dont_drop_valid_mergeinfo_during_incremental_loads),
+              SkipUnless(hotcopy_symlink, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':
