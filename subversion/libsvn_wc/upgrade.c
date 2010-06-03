@@ -1066,11 +1066,11 @@ migrate_props(const char *wcroot_abspath,
 
   /* Migrate the props for "this dir".  */
   SVN_ERR(migrate_node_props(wcroot_abspath, "", sdb, original_format,
-                             scratch_pool));
+                             iterpool));
 
   /* Go find all the children of the wcroot. */
   SVN_ERR(svn_wc__db_read_children(&children, db, wcroot_abspath,
-                                   scratch_pool, scratch_pool));
+                                   scratch_pool, iterpool));
 
   /* Iterate over the children, as described above */
   for (i = 0; i < children->nelts; i++)
