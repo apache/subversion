@@ -53,6 +53,35 @@ class Processor(object):
   re_include = re.compile('-- *include: *([-a-z]+)')
   re_define = re.compile('-- *define: *([A-Z_0-9]+)')
 
+  def _sub_format(self, match):
+    vsn = match.group(1)
+
+    self.close_define()
+    self.output.write('#define %s_%s \\\n' % (self.var_name, match.group(1)))
+    self.var_printed = True
+
+  def _sub_statement(self, match):
+    name = match.group(1)
+
+    self.close_define()
+    self.output.write('#define STMT_%s %d\n' % (match.group(1),
+                                                self.stmt_count))
+    self.output.write('#define STMT_%d \\\n' % (self.stmt_count,))
+    self.var_printed = True
+
+    self.stmt_count += 1
+
+  def _sub_include(self, match):
+    filepath = os.path.join(self.dirpath, match.group(1) + '.sql')
+
+    self.close_define()
+    self.process_file(open(filepath).read())
+
+  def _sub_define(self, match):
+    define = match.group(1)
+
+    self.output.write('  APR_STRINGIFY(%s) \\\n' % define)
+
   def __init__(self, dirpath, output, var_name):
     self.dirpath = dirpath
     self.output = output
@@ -61,6 +90,13 @@ class Processor(object):
     self.stmt_count = 0
     self.var_printed = False
 
+    self._directives = {
+        self.re_format      : self._sub_format,
+        self.re_statement   : self._sub_statement,
+        self.re_include     : self._sub_include,
+        self.re_define      : self._sub_define,
+      }
+
   def process_file(self, input):
     input = self.re_comments.sub('', input)
 
@@ -68,50 +104,17 @@ class Processor(object):
       line = line.replace('"', '\\"')
 
       if line.strip():
-        match = self.re_format.match(line)
-        if match:
-          vsn = match.group(1)
+        handled = False
 
-          self.close_define()
-          self.output.write('#define %s_%s \\\n' % (self.var_name,
-                                                    match.group(1)))
-          self.var_printed = True
+        for regex, handler in self._directives.iteritems():
+          match = regex.match(line)
+          if match:
+            handler(match)
+            handled = True
+            break
 
-          # no need to put the directive into the file. skip this line.
-          continue
-
-        match = self.re_statement.match(line)
-        if match:
-          name = match.group(1)
-
-          self.close_define()
-          self.output.write('#define STMT_%s %d\n' % (match.group(1),
-                                                      self.stmt_count))
-          self.output.write('#define STMT_%d \\\n' % (self.stmt_count,))
-          self.var_printed = True
-
-          self.stmt_count += 1
-
-          # no need to put the directive into the file. skip this line.
-          continue
-
-        match = self.re_include.match(line)
-        if match:
-          filepath = os.path.join(self.dirpath, match.group(1) + '.sql')
-
-          self.close_define()
-          self.process_file(open(filepath).read())
-
-          # no need to put the directive into the file. skip this line.
-          continue
-
-        match = self.re_define.match(line)
-        if match:
-          define = match.group(1)
-
-          self.output.write('  APR_STRINGIFY(%s) \\\n' % define)
-
-          # no need to put the directive into the file. skip this line.
+        # we've handed the line, so skip it
+        if handled:
           continue
 
         if not self.var_printed:
