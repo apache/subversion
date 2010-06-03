@@ -2488,7 +2488,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
 #ifdef SVN_EXPERIMENTAL_PRISTINE
       /* Find the checksum(s) of the node's one or two pristine texts.  Note
-         that read_info() may give us the one from WORKING_NODE again. */
+         that read_info() may give us the one from BASE_NODE again. */
       err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL,
                                      &base_sha1_checksum,
