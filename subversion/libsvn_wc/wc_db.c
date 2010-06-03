@@ -694,6 +694,33 @@ blank_iwb(insert_working_baton_t *piwb)
      value, but... meh. We'll avoid them if ORIGINAL_REPOS_RELPATH==NULL.  */
 }
 
+static svn_error_t *
+insert_incomplete_working_children(svn_sqlite__db_t *sdb,
+                                   apr_int64_t wc_id,
+                                   const char *local_relpath,
+                                   const apr_array_header_t *children,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  int i;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_INSERT_WORKING_NODE_INCOMPLETE));
+
+  for (i = children->nelts; i--; )
+    {
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                                wc_id,
+                                svn_relpath_join(local_relpath, name,
+                                                 scratch_pool),
+                                local_relpath));
+      SVN_ERR(svn_sqlite__insert(NULL, stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* */
 static svn_error_t *
@@ -771,25 +798,10 @@ insert_working_node(void *baton,
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   if (piwb->kind == svn_wc__db_kind_dir && piwb->children)
-    {
-      int i;
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_INSERT_WORKING_NODE_INCOMPLETE));
-
-      for (i = piwb->children->nelts; i--; )
-        {
-          const char *name = APR_ARRAY_IDX(piwb->children, i, const char *);
-
-          SVN_ERR(svn_sqlite__bindf(stmt, "iss",
-                                    piwb->wc_id,
-                                    svn_relpath_join(piwb->local_relpath,
-                                                     name,
-                                                     scratch_pool),
-                                    piwb->local_relpath));
-          SVN_ERR(svn_sqlite__insert(NULL, stmt));
-        }
-    }
+    SVN_ERR(insert_incomplete_working_children(sdb, piwb->wc_id,
+                                               piwb->local_relpath,
+                                               piwb->children,
+                                               scratch_pool));
 
   SVN_ERR(add_work_items(sdb, piwb->work_items, scratch_pool));
 
@@ -2189,6 +2201,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
                    svn_wc__db_pdh_t *dst_pdh,
                    const char *dst_relpath,
                    svn_wc__db_kind_t kind,
+                   const apr_array_header_t *children,
                    apr_int64_t copyfrom_id,
                    const char *copyfrom_relpath,
                    svn_revnum_t copyfrom_rev,
@@ -2202,6 +2215,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
   apr_hash_t *props;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  svn_depth_t depth;
 
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_dir);
 
@@ -2213,7 +2227,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
                                NULL, /* repos_uuid */
                                &changed_rev, &changed_date, &changed_author,
                                NULL, /* last_mod_time */
-                               NULL, /* depth */
+                               &depth,
                                &checksum,
                                NULL, /* translated_size */
                                NULL, /* target */
@@ -2247,7 +2261,8 @@ temp_cross_db_copy(svn_wc__db_t *db,
   iwb.moved_here = FALSE;
 
   iwb.checksum = checksum;
-  iwb.children = NULL;
+  iwb.children = children;
+  iwb.depth = depth;
 
   iwb.work_items = NULL;
 
@@ -2301,6 +2316,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   apr_int64_t copyfrom_id;
   svn_wc__db_kind_t kind;
+  const apr_array_header_t *children;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
@@ -2398,6 +2414,12 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       src_relpath = svn_dirent_basename(src_abspath, NULL);
     }
 
+  if (kind == svn_wc__db_kind_dir && !*src_relpath)
+    SVN_ERR(gather_children(&children, FALSE, db, src_abspath,
+                            scratch_pool, scratch_pool));
+  else
+    children = NULL;
+
   if (!strcmp(src_pdh->local_abspath, dst_pdh->local_abspath))
     {
       svn_sqlite__stmt_t *stmt;
@@ -2435,15 +2457,17 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                 dst_relpath, dst_parent_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
-      if (kind == svn_wc__db_kind_dir)
-        {
-          /* Add incomplete children if copying a directory */
-        }
+      if (kind == svn_wc__db_kind_dir && children)
+        SVN_ERR(insert_incomplete_working_children(dst_pdh->wcroot->sdb,
+                                                   dst_pdh->wcroot->wc_id,
+                                                   dst_relpath,
+                                                   children,
+                                                   scratch_pool));
     }
   else
     {
       SVN_ERR(temp_cross_db_copy(db, src_abspath, src_pdh, src_relpath,
-                                 dst_pdh, dst_relpath, kind,
+                                 dst_pdh, dst_relpath, kind, children,
                                  copyfrom_id, copyfrom_relpath, copyfrom_rev,
                                  scratch_pool));
     }
