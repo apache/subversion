@@ -2203,7 +2203,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file);
+  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_dir);
 
   SVN_ERR(svn_wc__db_read_info(NULL, /* status */
                                NULL, /* kind */
@@ -2247,6 +2247,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
   iwb.moved_here = FALSE;
 
   iwb.checksum = checksum;
+  iwb.children = NULL;
 
   iwb.work_items = NULL;
 
@@ -2342,7 +2343,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                NULL, /* lock */
                                db, src_abspath, scratch_pool, scratch_pool));
 
-  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file);
+  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_dir);
 
   if (status != svn_wc__db_status_added)
     {
@@ -2388,7 +2389,14 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
         }
     }
 
-
+  /* When copying a directory we only copy the parent stub if the
+     destination directory does not exist.  */
+  if (kind == svn_wc__db_kind_dir && !*src_relpath && *dst_relpath)
+    {
+      SVN_ERR(navigate_to_parent(&src_pdh, db, src_pdh,
+                                 svn_sqlite__mode_readwrite, scratch_pool));
+      src_relpath = svn_dirent_basename(src_abspath, NULL);
+    }
 
   if (!strcmp(src_pdh->local_abspath, dst_pdh->local_abspath))
     {
@@ -2426,6 +2434,11 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                 src_pdh->wcroot->wc_id, src_relpath,
                                 dst_relpath, dst_parent_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+      if (kind == svn_wc__db_kind_dir)
+        {
+          /* Add incomplete children if copying a directory */
+        }
     }
   else
     {
