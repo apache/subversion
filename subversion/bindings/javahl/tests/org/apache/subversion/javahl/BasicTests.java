@@ -129,58 +129,6 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Tests Subversion path validation.
-     */
-    public void testPathValidation() throws Throwable
-    {
-        // Rather than segfaulting, JavaHL considers null an invalid path.
-        assertFalse("Path validation produced false-positive for null path",
-                    Path.isValid(null));
-
-        String path = "valid-path";
-        assertTrue("Validation check of valid path '" + path +
-                   "' should succeed", Path.isValid(path));
-
-        // File names cannot contain control characters.
-        path = "invalid-\u0001-path";
-        assertFalse("Validation check of invalid path '" + path +
-                    "' (which contains control characters) should fail",
-                    Path.isValid(path));
-    }
-
-    /**
-     * Tests Subversion path as URL predicate.
-     */
-    public void testPathIsURL() throws Throwable
-    {
-        try
-        {
-            Path.isURL(null);
-            fail("A null path should raise an exception");
-        }
-        catch (IllegalArgumentException expected)
-        {
-        }
-
-        // Subversion "paths" which aren't URLs.
-        String[] paths = { "/path", "c:\\path" };
-        for (String path : paths)
-        {
-            assertFalse("'" + path + "' should not be considered a URL",
-                        Path.isURL(path));
-        }
-
-        // Subversion "paths" which are URLs.
-        paths = new String[] { "http://example.com", "svn://example.com",
-                               "svn+ssh://example.com", "file:///src/svn/" };
-        for (String path : paths)
-        {
-            assertTrue("'" + path + "' should be considered a URL",
-                       Path.isURL(path));
-        }
-    }
-
-    /**
      * Tests Mergeinfo and RevisionRange classes.
      * @since 1.5
      */
