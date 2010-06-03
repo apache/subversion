@@ -475,7 +475,9 @@ CREATE TABLE WC_LOCK (
  );
 
 
-PRAGMA user_version = 16;
+PRAGMA user_version =
+-- define: SVN_WC__VERSION
+;
 
 
 /* ------------------------------------------------------------------------- */
