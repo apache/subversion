@@ -101,8 +101,18 @@ copy_added_file_administratively(svn_wc_context_t *wc_ctx,
                                  void *notify_baton,
                                  apr_pool_t *scratch_pool)
 {
+  svn_node_kind_t kind;
+  svn_boolean_t is_special;
+
+  /* Check to see if this is a special file. */
+  SVN_ERR(svn_io_check_special_path(src_abspath, &kind, &is_special,
+                                    scratch_pool));
+
   /* Copy this file and possibly put it under version control. */
-  SVN_ERR(svn_io_copy_file(src_abspath, dst_abspath, TRUE, scratch_pool));
+  if (is_special)
+    SVN_ERR(svn_io_copy_link(src_abspath, dst_abspath, scratch_pool));
+  else
+    SVN_ERR(svn_io_copy_file(src_abspath, dst_abspath, TRUE, scratch_pool));
 
   if (src_is_added)
     {

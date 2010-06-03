@@ -4583,7 +4583,7 @@ test_list = [ None,
               reverse_merge_move,
               XFail(nonrecursive_commit_of_copy),
               XFail(copy_added_dir_with_copy),
-              XFail(SkipUnless(copy_broken_symlink, svntest.main.is_posix_os)),
+              SkipUnless(copy_broken_symlink, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':
