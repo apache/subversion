@@ -2275,7 +2275,10 @@ temp_cross_db_copy(svn_wc__db_t *db,
   if (have_row)
     {
       /* const char *prop_reject = svn_sqlite__column_text(stmt, 0,
-                                                           scratch_pool); */
+                                                           scratch_pool);
+
+         ### STMT_INSERT_ACTUAL_NODE doesn't cover every column, it's
+         ### enough for some cases but will probably need to extended. */
       const char *changelist = svn_sqlite__column_text(stmt, 1, scratch_pool);
       const char *conflict_old = svn_sqlite__column_text(stmt, 2, scratch_pool);
       const char *conflict_new = svn_sqlite__column_text(stmt, 3, scratch_pool);
@@ -2284,6 +2287,8 @@ temp_cross_db_copy(svn_wc__db_t *db,
       const char *tree_conflict_data = svn_sqlite__column_text(stmt, 5,
                                                                scratch_pool);
       apr_size_t props_size;
+
+      /* No need to parse the properties when simply copying. */
       const char *properties = svn_sqlite__column_blob(stmt, 6, &props_size,
                                                        scratch_pool);
       SVN_ERR(svn_sqlite__reset(stmt));
