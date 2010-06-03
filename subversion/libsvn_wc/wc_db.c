@@ -2219,28 +2219,28 @@ temp_cross_db_copy(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_dir);
 
-  SVN_ERR(svn_wc__db_read_info(NULL, /* status */
-                               NULL, /* kind */
-                               NULL, /* revision */
-                               NULL, /* repos_relpath */
-                               NULL, /* repos_root_url */
-                               NULL, /* repos_uuid */
+  SVN_ERR(svn_wc__db_read_info(NULL /* status */,
+                               NULL /* kind */,
+                               NULL /* revision */,
+                               NULL /* repos_relpath */,
+                               NULL /* repos_root_url */,
+                               NULL /* repos_uuid */,
                                &changed_rev, &changed_date, &changed_author,
-                               NULL, /* last_mod_time */
+                               NULL /* last_mod_time */,
                                &depth,
                                &checksum,
-                               NULL, /* translated_size */
-                               NULL, /* target */
-                               NULL, /* changelist */
-                               NULL, /* original_repos_relpath */
-                               NULL, /* original_root_url */
-                               NULL, /* original_uuid */
-                               NULL, /* original_revision */
-                               NULL, /* text_mod */
-                               NULL, /* props_mod */
-                               NULL, /* base_shadowed */
-                               NULL, /* conflicted */
-                               NULL, /* lock */
+                               NULL /* translated_size */,
+                               NULL /* target */,
+                               NULL /* changelist */,
+                               NULL /* original_repos_relpath */,
+                               NULL /* original_root_url */,
+                               NULL /* original_uuid */,
+                               NULL /* original_revision */,
+                               NULL /* text_mod */,
+                               NULL /* props_mod */,
+                               NULL /* base_shadowed */,
+                               NULL /* conflicted */,
+                               NULL /* lock */,
                                db, src_abspath, scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__get_pristine_props(&props, db, src_abspath,
@@ -2344,24 +2344,24 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision,
                                &repos_relpath, &repos_root_url, &repos_uuid,
-                               NULL, /* changed_rev */
-                               NULL, /* changed_date */
-                               NULL, /* changed_author */
-                               NULL, /* last_mod_time */
-                               NULL, /* depth */
-                               NULL, /* checksum */
-                               NULL, /* translated_size */
-                               NULL, /* target */
-                               NULL, /* changelist */
-                               NULL, /* original_repos_relpath */
-                               NULL, /* original_root_url */
-                               NULL, /* original_uuid */
-                               NULL, /* original_revision */
-                               NULL, /* text_mod */
-                               NULL, /* props_mod */
-                               NULL, /* base_shadowed */
-                               NULL, /* conflicted */
-                               NULL, /* lock */
+                               NULL /* changed_rev */,
+                               NULL /* changed_date */,
+                               NULL /* changed_author */,
+                               NULL /* last_mod_time */,
+                               NULL /* depth */,
+                               NULL /* checksum */,
+                               NULL /* translated_size */,
+                               NULL /* target */,
+                               NULL /* changelist */,
+                               NULL /* original_repos_relpath */,
+                               NULL /* original_root_url */,
+                               NULL /* original_uuid */,
+                               NULL /* original_revision */,
+                               NULL /* text_mod */,
+                               NULL /* props_mod */,
+                               NULL /* base_shadowed */,
+                               NULL /* conflicted */,
+                               NULL /* lock */,
                                db, src_abspath, scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_dir);
@@ -2381,9 +2381,9 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       svn_revnum_t original_revision;
 
       SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
-                                       NULL, /* repos_relpath */
-                                       NULL, /* repos_root_url */
-                                       NULL, /* repos_uuid */
+                                       NULL /* repos_relpath */,
+                                       NULL /* repos_root_url */,
+                                       NULL /* repos_uuid */,
                                        &original_repos_relpath,
                                        &original_root_url, &original_uuid,
                                        &original_revision,
