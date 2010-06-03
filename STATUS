@@ -226,6 +226,17 @@ Candidate changes:
    Votes:
      +1: stylesen
 
+ * r950931, 950933
+   Fix for issue #3303 "cannot copy broken symlink".
+   Justification:
+     This issue was reported in 1.5.x hence it is nice to have in 1.6.x.
+   Notes:
+     r950933 fixes the issue and r950931 is a test for this issue.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3303
+   Votes:
+     +1: stylesen
+
 Veto-blocked changes:
 =====================
 
