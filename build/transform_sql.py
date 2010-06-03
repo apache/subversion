@@ -51,6 +51,7 @@ class Processor(object):
   re_format = re.compile('-- *format: *([0-9]+)')
   re_statement = re.compile('-- *STMT_([A-Z_0-9]+)')
   re_include = re.compile('-- *include: *([-a-z]+)')
+  re_define = re.compile('-- *define: *([A-Z_0-9]+)')
 
   def __init__(self, dirpath, output, var_name):
     self.dirpath = dirpath
@@ -100,6 +101,15 @@ class Processor(object):
 
           self.close_define()
           self.process_file(open(filepath).read())
+
+          # no need to put the directive into the file. skip this line.
+          continue
+
+        match = self.re_define.match(line)
+        if match:
+          define = match.group(1)
+
+          self.output.write('  APR_STRINGIFY(%s) \\\n' % define)
 
           # no need to put the directive into the file. skip this line.
           continue
