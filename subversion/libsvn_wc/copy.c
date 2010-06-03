@@ -48,6 +48,8 @@
 
 /*** Code. ***/
 
+#ifndef SVN_EXPERIMENTAL_COPY
+
 /* Copy all properties of SRC_PATH to DST_PATH. */
 static svn_error_t *
 copy_props(svn_wc__db_t *db,
@@ -270,7 +272,6 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
-#ifndef SVN_EXPERIMENTAL_COPY
 /* This function effectively creates and schedules a file for
    addition, but does extra administrative things to allow it to
    function as a 'copy'.
@@ -488,7 +489,6 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 
 /* Recursively crawl over a directory PATH and do a number of things:
@@ -730,53 +730,67 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
                                         scratch_pool));
   }
 }
+#endif
 
+#ifdef SVN_EXPERIMENTAL_COPY
 /* Make a copy SRC_ABSPATH under a temporary name in the directory
    TMPDIR_ABSPATH and return the absolute path of the copy in
-   *DST_ABSPATH.  If SRC_ABSPATH doesn't exist then set *DST_ABSPATH
-   to NULL to indicate that no copy was made. */
+   *DST_ABSPATH.  Return the node kind of SRC_ABSPATH in *KIND.  If
+   SRC_ABSPATH doesn't exist then set *DST_ABSPATH to NULL to indicate
+   that no copy was made. */
 static svn_error_t *
 copy_to_tmpdir(const char **dst_abspath,
+               svn_node_kind_t *kind,
                const char *src_abspath,
                const char *tmpdir_abspath,
+               svn_boolean_t recursive,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t kind;
   svn_boolean_t is_special;
   svn_io_file_del_t delete_when;
 
-  SVN_ERR(svn_io_check_special_path(src_abspath, &kind, &is_special,
+  SVN_ERR(svn_io_check_special_path(src_abspath, kind, &is_special,
                                     scratch_pool));
-  if (kind == svn_node_none)
+  if (*kind == svn_node_none)
     {
       *dst_abspath = NULL;
       return SVN_NO_ERROR;
     }
-  else if (kind == svn_node_unknown)
+  else if (*kind == svn_node_unknown)
     {
       return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                _("Source '%s' is unexpected kind"),
                                svn_dirent_local_style(src_abspath,
                                                       scratch_pool));
     }
-  else if (kind == svn_node_dir || is_special)
+  else if (*kind == svn_node_dir || is_special)
     delete_when = svn_io_file_del_on_close;
-  else if (kind == svn_node_file)
+  else if (*kind == svn_node_file)
     delete_when = svn_io_file_del_none;
+
+  /* ### Do we need a pool cleanup to remove the copy?  We can't use
+     ### svn_io_file_del_on_pool_cleanup above because a) it won't
+     ### handle the directory case and b) we need to be able to remove
+     ### the cleanup before queueing the move work item. */
 
   SVN_ERR(svn_io_open_unique_file3(NULL, dst_abspath, tmpdir_abspath,
                                    delete_when, scratch_pool, scratch_pool));
 
-  if (kind == svn_node_dir)
-    SVN_ERR(svn_io_copy_dir_recursively(src_abspath,
-                                        tmpdir_abspath,
-                                        svn_dirent_basename(*dst_abspath,
-                                                            scratch_pool),
-                                        TRUE, /* copy_perms */
-                                        cancel_func, cancel_baton,
-                                        scratch_pool));
+  if (*kind == svn_node_dir)
+    {
+      if (recursive)
+        SVN_ERR(svn_io_copy_dir_recursively(src_abspath,
+                                            tmpdir_abspath,
+                                            svn_dirent_basename(*dst_abspath,
+                                                                scratch_pool),
+                                            TRUE, /* copy_perms */
+                                            cancel_func, cancel_baton,
+                                            scratch_pool));
+      else
+        SVN_ERR(svn_io_dir_make(*dst_abspath, APR_OS_DEFAULT, scratch_pool));
+    }
   else if (!is_special)
     SVN_ERR(svn_io_copy_file(src_abspath, *dst_abspath, TRUE, /* copy_perms */
                              scratch_pool));
@@ -788,7 +802,6 @@ copy_to_tmpdir(const char **dst_abspath,
 }
 
 
-#ifdef SVN_EXPERIMENTAL_COPY
 /* A replacement for both copy_file_administratively and
    copy_added_file_administratively.  Not yet fully working.  Relies
    on in-db-props.  SRC_ABSPATH is a versioned file but the filesystem
@@ -810,6 +823,7 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
   svn_stream_t *src_pristine;
 #endif
   const char *tmp_dst_abspath;
+  svn_node_kind_t kind;
 
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, wc_ctx->db,
                                          dst_abspath,
@@ -842,7 +856,8 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
     }
 #endif
 
-  SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, src_abspath, tmpdir_abspath,
+  SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, src_abspath, tmpdir_abspath,
+                         TRUE, /* recursive */
                          cancel_func, cancel_baton, scratch_pool));
   if (tmp_dst_abspath)
     {
@@ -867,6 +882,118 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
       notify->kind = svn_node_file;
       (*notify_func)(notify_baton, notify, scratch_pool);
     }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+copy_versioned_dir(svn_wc_context_t *wc_ctx,
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   svn_wc_notify_func2_t notify_func,
+                   void *notify_baton,
+                   apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_items = NULL;
+  const char *dir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
+  const char *tmpdir_abspath;
+  const char *tmp_dst_abspath;
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, wc_ctx->db,
+                                         dst_abspath,
+                                         scratch_pool, scratch_pool));
+
+  SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, src_abspath, tmpdir_abspath,
+                         FALSE, /* recursive */
+                         cancel_func, cancel_baton, scratch_pool));
+  if (tmp_dst_abspath)
+    {
+      svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__loggy_move(&work_item, wc_ctx->db, dir_abspath,
+                                 tmp_dst_abspath, dst_abspath,
+                                 scratch_pool));
+      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+
+      if (kind == svn_node_dir)
+        {
+          /* Create the per-directory db in the copied directory.  The
+             copy is not yet connected to the parent so we don't need
+             to use a workqueue.  This will be removed when we
+             centralise. */
+          const char *dst_parent_abspath, *name, *parent_url, *url;
+          const char *repos_root_url, *repos_uuid;
+          svn_revnum_t revision;
+          svn_depth_t depth;
+
+          svn_dirent_split(dst_abspath, &dst_parent_abspath, &name,
+                           scratch_pool);
+          SVN_ERR(svn_wc__node_get_url(&parent_url, wc_ctx, dst_parent_abspath,
+                                       scratch_pool, scratch_pool));
+          url = svn_uri_join(parent_url, name, scratch_pool);
+          SVN_ERR(svn_wc__db_read_info(NULL, /* status */
+                                       NULL, /* kind */
+                                       &revision,
+                                       NULL, /* repos_relpath */
+                                       &repos_root_url,
+                                       &repos_uuid,
+                                       NULL, /* changed_rev */
+                                       NULL, /* changed_date */
+                                       NULL, /* changed_author */
+                                       NULL, /* last_mod_time */
+                                       &depth,
+                                       NULL, /* checksum */
+                                       NULL, /* translated_size */
+                                       NULL, /* target */
+                                       NULL, /* changelist */
+                                       NULL, /* original_repos_relpath */
+                                       NULL, /* original_root_url */
+                                       NULL, /* original_uuid */
+                                       NULL, /* original_revision */
+                                       NULL, /* text_mod */
+                                       NULL, /* props_mod */
+                                       NULL, /* base_shadowed */
+                                       NULL, /* conflicted */
+                                       NULL, /* lock */
+                                       wc_ctx->db, src_abspath,
+                                       scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__internal_ensure_adm(wc_ctx->db, tmp_dst_abspath,
+                                              url, repos_root_url, repos_uuid,
+                                              revision, depth, scratch_pool));
+
+          /* That creates a base node which we do not want so delete it. */
+          SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, tmp_dst_abspath,
+                                         scratch_pool));
+        }
+    }
+
+  SVN_ERR(svn_wc__db_op_copy(wc_ctx->db, src_abspath, dst_abspath,
+                             work_items, scratch_pool));
+  SVN_ERR(svn_wc__wq_run(wc_ctx->db, dir_abspath,
+                         cancel_func, cancel_baton, scratch_pool));
+
+  if (kind == svn_node_dir)
+    {
+      /* The first copy only does the parent stub, this second copy
+         does the full node but can only happen after the workqueue
+         has move the destination into place. */
+      SVN_ERR(svn_wc__db_op_copy(wc_ctx->db, src_abspath, dst_abspath,
+                                 NULL, scratch_pool));
+    }
+
+  if (notify_func)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(dst_abspath, svn_wc_notify_add,
+                               scratch_pool);
+      notify->kind = svn_node_dir;
+      (*notify_func)(notify_baton, notify, scratch_pool);
+    }
+
+  /* Iterate over versioned children and unversioned nodes */
+
   return SVN_NO_ERROR;
 }
 #endif
@@ -1016,6 +1143,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
     }
   else if (src_kind == svn_node_dir)
     {
+#ifndef SVN_EXPERIMENTAL_COPY
       /* Check if we are copying a directory scheduled for addition,
          these require special handling. */
       if (src_entry->schedule == svn_wc_schedule_add
@@ -1037,6 +1165,12 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                             notify_func, notify_baton,
                                             scratch_pool));
         }
+#else
+      SVN_ERR(copy_versioned_dir(wc_ctx, src_abspath, dst_abspath,
+                                 cancel_func, cancel_baton,
+                                 notify_func, notify_baton,
+                                 scratch_pool));
+#endif
     }
 
   return SVN_NO_ERROR;
