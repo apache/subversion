@@ -2477,6 +2477,12 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
      only copy the parent stub */
   if (kind == svn_wc__db_kind_dir && !*src_relpath && *dst_relpath)
     {
+      /* ### copy_tests.py 69 copies from the root of one wc to
+         ### another wc, that means the source doesn't have a
+         ### versioned parent and so there is no parent stub to
+         ### copy. We could generate a parent stub but it becomes
+         ### unnecessary when we centralise so for the moment we just
+         ### fail. */
       SVN_ERR(navigate_to_parent(&src_pdh, db, src_pdh,
                                  svn_sqlite__mode_readwrite, scratch_pool));
       src_relpath = svn_dirent_basename(src_abspath, NULL);
