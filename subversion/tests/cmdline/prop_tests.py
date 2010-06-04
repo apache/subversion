@@ -1787,6 +1787,7 @@ def prop_reject_grind(sbox):
 
   iota_path = sbox.ospath('iota')
   mu_path = sbox.ospath('A/mu')
+  mu_prej_path = sbox.ospath('A/mu.prej')
 
   # Create r2 with all the properties we intend to use as incoming-change,
   # and as incoming-delete. Also set up our local-edit and local-delete
@@ -1830,8 +1831,7 @@ def prop_reject_grind(sbox):
   sbox.simple_propdel('del.edit', iota_path)
   sbox.simple_propdel('del.edit2', iota_path)
   sbox.simple_propdel('del.diff', iota_path)
-  ### don't delete this. causes a segfault :-)
-  #sbox.simple_propdel('del.del', iota_path)
+  sbox.simple_propdel('del.del', iota_path)
   sbox.simple_propdel('del.add', iota_path)
   sbox.simple_commit()
 
@@ -1852,9 +1852,69 @@ def prop_reject_grind(sbox):
   svntest.main.run_svn(False, 'merge', '-r2:3', sbox.repo_url + '/iota',
                        mu_path)
 
-  ### need to verify mu.prej
-  ### note that del.add has been erroneously deleted!
+  # Check that A/mu.prej reports the expected conflicts:
+  expected_prej = svntest.verify.UnorderedOutput([
+   "Trying to change property 'edit.none' from 'repos' to 'repos.changed',\n"
+   "but the property does not exist.\n",
 
+   "Trying to delete property 'del.del' with value 'repos',\n"
+   "but property with value 'local' is locally deleted.\n",
+
+   "Trying to delete property 'del.edit' with value 'repos',\n"
+   "but the local value is 'local.changed'.\n",
+
+   "Trying to change property 'edit.del' from 'repos' to 'repos.changed',\n"
+   "but it has been locally deleted.\n",
+
+   "Trying to change property 'edit.edit' from 'repos' to 'repos.changed',\n"
+   "but the property has been locally changed from 'local' to 'local.changed'.\n",
+
+   "Trying to delete property 'del.edit2' with value 'repos',\n"
+   "but it has been modified from 'repos' to 'repos.changed'.\n",
+
+   "Trying to delete property 'del.add' with value 'repos',\n"
+   "but property has been locally added with value 'local'.\n",
+
+   "Trying to delete property 'del.diff' with value 'repos',\n"
+   "but the local value is 'local'.\n",
+
+   "Trying to change property 'edit.add' from 'repos' to 'repos.changed',\n"
+   "but property has been locally added with value 'local'.\n",
+
+   "Trying to change property 'edit.diff' from 'repos' to 'repos.changed',\n"
+   "but property already exists with value 'local'.\n",
+
+   "Trying to add new property 'add.add' with value 'repos',\n"
+   "but property already exists with value 'local'.\n",
+
+   "Trying to add new property 'add.diff' with value 'repos',\n"
+   "but property already exists with value 'local'.\n",
+
+   "Trying to create property 'add.del' with value 'repos',\n"
+   "but it has been locally deleted.\n",
+
+   "Trying to add new property 'add.edit' with value 'repos',\n"
+   "but property already exists with value 'local.changed'.\n",
+
+   "\n"  
+   ])
+
+  # Get the contents of mu.prej.  The error messages in the prej file are
+  # two lines each, but there is no guarantee as to order, so remove the
+  # newline between each two line error message and then split the whole
+  # thing into a list of strings on the remaining newline...
+  raw_prej = open(mu_prej_path,
+                     'r').read().replace('\nbut', ' but').split('\n')
+  # ...then put the newlines back in each list item.  That leaves us with
+  # list of two lines strings we can compare to the unordered expected
+  # prej file.
+  actual_prej = []
+  for line in raw_prej:
+      repaired_line = line.replace(' but', '\nbut')
+      actual_prej.append(repaired_line + '\n')
+  
+  svntest.verify.verify_outputs("Expected mu.prej doesn't match actual mu.prej",
+                                actual_prej, None, expected_prej, None)
 
 def obstructed_subdirs(sbox):
   """test properties of obstructed subdirectories"""
