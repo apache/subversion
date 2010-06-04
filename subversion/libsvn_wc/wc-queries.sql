@@ -530,6 +530,11 @@ UNION
 SELECT local_relpath FROM WORKING_NODE
 WHERE kind = 'file';
 
+-- STMT_PLAN_PROP_UPGRADE
+SELECT 0, null, wc_id FROM BASE_NODE WHERE local_relpath = ?1
+UNION
+SELECT 1, presence, wc_id FROM WORKING_NODE WHERE local_relpath = ?1;
+
 
 /* ------------------------------------------------------------------------- */
 
