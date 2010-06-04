@@ -523,6 +523,13 @@ values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
 -- STMT_ERASE_OLD_CONFLICTS
 update actual_node set tree_conflict_data = null;
 
+-- STMT_SELECT_ALL_FILES
+SELECT local_relpath FROM BASE_NODE
+WHERE kind = 'file'
+UNION
+SELECT local_relpath FROM WORKING_NODE
+WHERE kind = 'file';
+
 
 /* ------------------------------------------------------------------------- */
 
