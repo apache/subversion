@@ -2015,6 +2015,15 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
                                    apr_pool_t *scratch_pool);
 
 
+/* ### need much more docco
+
+   ### this function should be called within a sqlite transaction. it makes
+   ### assumptions around this fact.
+
+   Apply the various sets of properties to the database nodes based on
+   their existence/presence, the current state of the node, and the original
+   format of the working copy which provided these property sets.
+*/
 svn_error_t *
 svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                const char *local_relpath,
