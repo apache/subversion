@@ -805,7 +805,10 @@ copy_to_tmpdir(const char **dst_abspath,
 /* A replacement for both copy_file_administratively and
    copy_added_file_administratively.  Not yet fully working.  Relies
    on in-db-props.  SRC_ABSPATH is a versioned file but the filesystem
-   node might not be a file. */
+   node might not be a file.
+
+   This also works for versioned symlinks that are stored in the db as
+   svn_wc__db_kind_file with svn:special set. */
 static svn_error_t *
 copy_versioned_file(svn_wc_context_t *wc_ctx,
                     const char *src_abspath,
