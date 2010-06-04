@@ -55,6 +55,7 @@ struct parse_baton
   const char *parent_dir;
   svn_repos_notify_func_t notify_func;
   void *notify_baton;
+  svn_repos_notify_t *notify;
   apr_pool_t *pool;
 
   /* A hash mapping copy-from revisions and mergeinfo range revisions
@@ -468,11 +469,10 @@ parse_property_block(svn_stream_t *stream,
 
                       if (pb->notify_func)
                         {
-                          svn_repos_notify_t *notify = svn_repos_notify_create(
-                            svn_repos_notify_load_normalized_mergeinfo,
-                            proppool);
-
-                          pb->notify_func(pb->notify_baton, notify, proppool);
+                          pb->notify->action = 
+                            svn_repos_notify_load_normalized_mergeinfo;
+                          pb->notify_func(pb->notify_baton, pb->notify,
+                                          proppool);
                         }
                     }
 
@@ -1055,11 +1055,9 @@ new_revision_record(void **revision_baton,
 
       if (pb->notify_func)
         {
-          svn_repos_notify_t *notify = svn_repos_notify_create(
-                            svn_repos_notify_load_txn_start, rb->pool);
-
-          notify->old_revision = rb->rev;
-          pb->notify_func(pb->notify_baton, notify, rb->pool);
+          pb->notify->action = svn_repos_notify_load_txn_start;
+          pb->notify->old_revision = rb->rev;
+          pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
         }
     }
 
@@ -1134,9 +1132,8 @@ maybe_add_with_history(struct node_baton *nb,
 
       if (pb->notify_func)
         {
-          svn_repos_notify_t *notify = svn_repos_notify_create(
-                             svn_repos_notify_load_copied_node, rb->pool);
-          pb->notify_func(pb->notify_baton, notify, rb->pool);
+          pb->notify->action = svn_repos_notify_load_copied_node;
+          pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
         }
     }
 
@@ -1191,12 +1188,10 @@ new_node_record(void **node_baton,
 
   if (pb->notify_func)
     {
-      svn_repos_notify_t *notify = svn_repos_notify_create(
-                             svn_repos_notify_load_node_start, rb->pool);
-
-      notify->node_action = nb->action;
-      notify->path = nb->path;
-      pb->notify_func(pb->notify_baton, notify, rb->pool);
+      pb->notify->action = svn_repos_notify_load_node_start;
+      pb->notify->node_action = nb->action;
+      pb->notify->path = nb->path;
+      pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
     }
 
   switch (nb->action)
@@ -1371,10 +1366,8 @@ close_node(void *baton)
 
   if (pb->notify_func)
     {
-      svn_repos_notify_t *notify = svn_repos_notify_create(
-                             svn_repos_notify_load_node_done, rb->pool);
-      
-      pb->notify_func(pb->notify_baton, notify, rb->pool);
+      pb->notify->action = svn_repos_notify_load_node_done;
+      pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
     }
 
   return SVN_NO_ERROR;
@@ -1480,14 +1473,12 @@ close_revision(void *baton)
 
   if (pb->notify_func)
     {
-      svn_repos_notify_t *notify = svn_repos_notify_create(
-                             svn_repos_notify_load_txn_committed, rb->pool);
-    
-      notify->new_revision = *new_rev;
-      notify->old_revision = ((*new_rev == rb->rev)
-                                ? SVN_INVALID_REVNUM
-                                : rb->rev);
-      pb->notify_func(pb->notify_baton, notify, rb->pool);
+      pb->notify->action = svn_repos_notify_load_txn_committed;
+      pb->notify->new_revision = *new_rev;
+      pb->notify->old_revision = ((*new_rev == rb->rev)
+                                    ? SVN_INVALID_REVNUM
+                                    : rb->rev);
+      pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
     }
 
   return SVN_NO_ERROR;
@@ -1530,6 +1521,7 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **callbacks,
   pb->use_history = use_history;
   pb->notify_func = notify_func;
   pb->notify_baton = notify_baton;
+  pb->notify = svn_repos_notify_create(svn_repos_notify_load_txn_start, pool);
   pb->uuid_action = uuid_action;
   pb->parent_dir = parent_dir;
   pb->pool = pool;
