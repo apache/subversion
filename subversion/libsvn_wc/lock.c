@@ -1732,8 +1732,10 @@ svn_wc__path_switched(svn_boolean_t *switched,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool)
 {
-  return svn_error_return(child_is_disjoint(switched, wc_ctx->db,
-                                            local_abspath, scratch_pool));
+  svn_boolean_t wc_root;
+
+  return svn_wc__check_wc_root(&wc_root, NULL, switched, wc_ctx->db,
+                               local_abspath, scratch_pool);
 }
 
 
