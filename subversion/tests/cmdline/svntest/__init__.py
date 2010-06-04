@@ -17,8 +17,10 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-#
-__all__ = ["main", "tree", "actions"]
+
+# any bozos that do "from svntest import *" should die. export nothing
+# to the dumbasses.
+__all__ = [ ]
 
 import sys
 if sys.hexversion < 0x2040000:
@@ -29,6 +31,7 @@ if sys.hexversion < 0x2040000:
 
   # we're skipping this test, not failing, so exit with 0
   sys.exit(0)
+
 try:
   import sqlite3
 except ImportError:
