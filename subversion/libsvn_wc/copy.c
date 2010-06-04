@@ -1081,7 +1081,7 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
 
           SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, unver_src_abspath,
                                  tmpdir_abspath,
-                                 FALSE, /* recursive */
+                                 TRUE, /* recursive */
                                  cancel_func, cancel_baton, iterpool));
           if (tmp_dst_abspath)
             {
