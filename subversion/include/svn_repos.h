@@ -56,6 +56,25 @@ const svn_version_t *
 svn_repos_version(void);
 
 
+/* Some useful enums.  They need to be declared here for the notification
+   system to pick them up. */
+/** The different "actions" attached to nodes in the dumpfile. */
+enum svn_node_action
+{
+  svn_node_action_change,
+  svn_node_action_add,
+  svn_node_action_delete,
+  svn_node_action_replace
+};
+
+/** The different policies for processing the UUID in the dumpfile. */
+enum svn_repos_load_uuid
+{
+  svn_repos_load_uuid_default,
+  svn_repos_load_uuid_ignore,
+  svn_repos_load_uuid_force
+};
+
 
 /** Callback type for checking authorization on paths produced by (at
  * least) svn_repos_dir_delta2().
@@ -191,7 +210,25 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_pack_shard_start_revprop,
 
   /** packing of the shard revprops has completed */
-  svn_repos_notify_pack_shard_end_revprop
+  svn_repos_notify_pack_shard_end_revprop,
+
+  /** A revision has begun loading */
+  svn_repos_notify_load_txn_start,
+
+  /** A revision has finished loading */
+  svn_repos_notify_load_txn_committed,
+
+  /** A node has begun loading */
+  svn_repos_notify_load_node_start,
+
+  /** A node has finished loading */
+  svn_repos_notify_load_node_done,
+
+  /** A copied node has been encountered */
+  svn_repos_notify_load_copied_node,
+
+  /** Mergeinfo has been normalized */
+  svn_repos_notify_load_normalized_mergeinfo
 
 } svn_repos_notify_action_t;
 
@@ -219,7 +256,26 @@ typedef struct svn_repos_notify_t
   /** For #svn_repos_notify_warning, the warning text. */
   const char *warning;
 
+  /** For #svn_repos_notify_pack_shard_start,
+      #svn_repos_notify_pack_shard_end,
+      #svn_repos_notify_pack_shard_start_revprop, and
+      #svn_repos_notify_pack_shard_end_revprop, the shard processed. */
   apr_int64_t shard;
+
+  /** For #svn_repos_notify_load_commited_rev, the revision committed. */
+  svn_revnum_t new_revision;
+
+  /** For #svn_repos_notify_load_commited_rev, the source revision, if
+      different from #new_revision, otherwise #SVN_INVALID_REVNUM.
+      For #svn_repos_notify_load_txn_start, the source revision. */
+  svn_revnum_t old_revision;
+
+  /** For #svn_repos_notify_load_node_start, the action being taken on the
+      node. */
+  enum svn_node_action node_action;
+
+  /** For #svn_repos_notify_load_node_start, the path of the node. */
+  const char *path;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
@@ -2195,23 +2251,6 @@ svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  \
                                         SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
 
-/** The different "actions" attached to nodes in the dumpfile. */
-enum svn_node_action
-{
-  svn_node_action_change,
-  svn_node_action_add,
-  svn_node_action_delete,
-  svn_node_action_replace
-};
-
-/** The different policies for processing the UUID in the dumpfile. */
-enum svn_repos_load_uuid
-{
-  svn_repos_load_uuid_default,
-  svn_repos_load_uuid_ignore,
-  svn_repos_load_uuid_force
-};
-
 /**
  * Verify the contents of the file system in @a repos.
  *
@@ -2347,8 +2386,7 @@ svn_repos_dump_fs(svn_repos_t *repos,
 /**
  * Read and parse dumpfile-formatted @a dumpstream, reconstructing
  * filesystem revisions in already-open @a repos, handling uuids in
- * accordance with @a uuid_action.  If non-@c NULL, send feedback to
- * @a feedback_stream.  Use @a pool for all allocation.
+ * accordance with @a uuid_action.  Use @a pool for all allocation.
  *
  * If the dumpstream contains copy history that is unavailable in the
  * repository, an error will be thrown.
@@ -2372,11 +2410,34 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * If @a use_post_commit_hook is set, call the repository's
  * post-commit hook after committing each loaded revision.
  *
+ * If non-NULL, use @a notify_func and @a notify_baton to send notification
+ * of events to the caller.
+ *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_repos_load_fs3(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_load_fs3(), but with @a feedback_stream in place of
+ * the #svn_repos_notify_func_t and baton.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 svn_error_t *
 svn_repos_load_fs2(svn_repos_t *repos,
@@ -2554,8 +2615,27 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
  * Print all parsing feedback to @a outstream (if non-@c NULL).
  *
  *
- * @since New in 1.1.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_boolean_t use_history,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_fs_build_parser3(), but with @a outstream in place
+ * if a #svn_repos_notify_func_t and baton.
+ *
+ * @since New in 1.1.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **parser,
                                void **parse_baton,
@@ -2565,7 +2645,6 @@ svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **parser,
                                svn_stream_t *outstream,
                                const char *parent_dir,
                                apr_pool_t *pool);
-
 
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream().
