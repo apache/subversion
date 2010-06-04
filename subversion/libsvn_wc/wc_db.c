@@ -2246,6 +2246,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
   SVN_ERR(svn_wc__get_pristine_props(&props, db, src_abspath,
                                      scratch_pool, scratch_pool));
 
+  blank_iwb(&iwb);
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = kind;
   iwb.wc_id = dst_pdh->wcroot->wc_id;
@@ -2263,8 +2264,6 @@ temp_cross_db_copy(svn_wc__db_t *db,
   iwb.checksum = checksum;
   iwb.children = children;
   iwb.depth = depth;
-
-  iwb.work_items = NULL;
 
   SVN_ERR(insert_working_node(&iwb, dst_pdh->wcroot->sdb, scratch_pool));
 
@@ -2410,8 +2409,8 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
         }
     }
 
-  /* When copying a directory we only copy the parent stub if the
-     destination directory does not exist.  */
+  /* When copying a directory the destination may not exist, if so we
+     only copy the parent stub */
   if (kind == svn_wc__db_kind_dir && !*src_relpath && *dst_relpath)
     {
       SVN_ERR(navigate_to_parent(&src_pdh, db, src_pdh,
