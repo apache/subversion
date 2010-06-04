@@ -1437,7 +1437,7 @@ close_revision(void *baton)
   if (pb->last_rev_mapped != SVN_INVALID_REVNUM
       && *old_rev != pb->last_rev_mapped + 1)
     {
-      int i;
+      svn_revnum_t i;
 
       /* Map all dropped revisions between PB->LAST_REV_MAPPED and OLD_REV. */
       for (i = pb->last_rev_mapped + 1; i < *old_rev; i++)
