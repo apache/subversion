@@ -733,7 +733,7 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
 #endif
 
 #ifdef SVN_EXPERIMENTAL_COPY
-/* Make a copy SRC_ABSPATH under a temporary name in the directory
+/* Make a copy of SRC_ABSPATH under a temporary name in the directory
    TMPDIR_ABSPATH and return the absolute path of the copy in
    *DST_ABSPATH.  Return the node kind of SRC_ABSPATH in *KIND.  If
    SRC_ABSPATH doesn't exist then set *DST_ABSPATH to NULL to indicate
@@ -899,7 +899,11 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
   const char *dir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
   const char *tmpdir_abspath;
   const char *tmp_dst_abspath;
+  const apr_array_header_t *versioned_children;
+  apr_hash_t *children;
   svn_node_kind_t kind;
+  apr_pool_t *iterpool;
+  int i;
 
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, wc_ctx->db,
                                          dst_abspath,
@@ -927,13 +931,15 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
           const char *repos_root_url, *repos_uuid;
           svn_revnum_t revision;
           svn_depth_t depth;
+          svn_wc__db_status_t status;
 
           svn_dirent_split(dst_abspath, &dst_parent_abspath, &name,
                            scratch_pool);
           SVN_ERR(svn_wc__node_get_url(&parent_url, wc_ctx, dst_parent_abspath,
                                        scratch_pool, scratch_pool));
           url = svn_uri_join(parent_url, name, scratch_pool);
-          SVN_ERR(svn_wc__db_read_info(NULL, /* status */
+
+          SVN_ERR(svn_wc__db_read_info(&status,
                                        NULL, /* kind */
                                        &revision,
                                        NULL, /* repos_relpath */
@@ -959,6 +965,10 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
                                        NULL, /* lock */
                                        wc_ctx->db, src_abspath,
                                        scratch_pool, scratch_pool));
+          
+          /* ### Need to handle more states, in particular copies. */
+          SVN_ERR_ASSERT(status == svn_wc__db_status_normal);
+
           SVN_ERR(svn_wc__internal_ensure_adm(wc_ctx->db, tmp_dst_abspath,
                                               url, repos_root_url, repos_uuid,
                                               revision, depth, scratch_pool));
@@ -992,7 +1002,90 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
       (*notify_func)(notify_baton, notify, scratch_pool);
     }
 
-  /* Iterate over versioned children and unversioned nodes */
+  if (kind == svn_node_dir)
+    /* All children, versioned and unversioned */
+    SVN_ERR(svn_io_get_dirents2(&children, src_abspath, scratch_pool));
+
+  /* Copy all the versioned children */
+  SVN_ERR(svn_wc__db_read_children(&versioned_children, wc_ctx->db, src_abspath,
+                                   scratch_pool, scratch_pool));
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < versioned_children->nelts; ++i)
+    {
+      const char *child_name, *child_src_abspath, *child_dst_abspath;
+      svn_wc__db_kind_t child_kind;
+
+      svn_pool_clear(iterpool);
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      child_name = APR_ARRAY_IDX(versioned_children, i, const char *);
+      child_src_abspath = svn_dirent_join(src_abspath, child_name, iterpool);
+      child_dst_abspath = svn_dirent_join(dst_abspath, child_name, iterpool);
+
+      SVN_ERR(svn_wc__db_read_kind(&child_kind, wc_ctx->db, child_src_abspath,
+                                   TRUE, iterpool));
+
+      if (child_kind == svn_wc__db_kind_file)
+        SVN_ERR(copy_versioned_file(wc_ctx,
+                                    child_src_abspath, child_dst_abspath,
+                                    cancel_func, cancel_baton,
+                                    notify_func, notify_baton,
+                                    iterpool));
+      else if (child_kind == svn_wc__db_kind_dir)
+        SVN_ERR(copy_versioned_dir(wc_ctx,
+                                   child_src_abspath, child_dst_abspath,
+                                   cancel_func, cancel_baton,
+                                   notify_func, notify_baton,
+                                   iterpool));
+      /* ### Need to handle more types */
+
+      if (kind == svn_node_dir)
+        /* Remove versioned child as it has been handled */
+        apr_hash_set(children, child_name, APR_HASH_KEY_STRING, NULL);
+    }
+
+  if (kind == svn_node_dir)
+    {
+      /* Copy all the unversioned children */
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, children); hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *name = svn__apr_hash_index_key(hi);
+          const char *unver_src_abspath, *unver_dst_abspath;
+
+          if (svn_wc_is_adm_dir(name, iterpool))
+            continue;
+
+          svn_pool_clear(iterpool);
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
+
+          unver_src_abspath = svn_dirent_join(src_abspath, name, iterpool);
+          unver_dst_abspath = svn_dirent_join(dst_abspath, name, iterpool);
+
+          SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, unver_src_abspath,
+                                 tmpdir_abspath,
+                                 FALSE, /* recursive */
+                                 cancel_func, cancel_baton, iterpool));
+          if (tmp_dst_abspath)
+            {
+              svn_skel_t *work_item;
+              SVN_ERR(svn_wc__loggy_move(&work_item, wc_ctx->db, dir_abspath,
+                                         tmp_dst_abspath, unver_dst_abspath,
+                                         iterpool));
+              SVN_ERR(svn_wc__db_wq_add(wc_ctx->db, dst_abspath, work_item,
+                                        iterpool));
+            }
+
+        }
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, dst_abspath, cancel_func, cancel_baton,
+                             scratch_pool));
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
