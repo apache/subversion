@@ -969,8 +969,18 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
                                        wc_ctx->db, src_abspath,
                                        scratch_pool, scratch_pool));
           
-          /* ### Need to handle more states, in particular copies. */
-          SVN_ERR_ASSERT(status == svn_wc__db_status_normal);
+          if (status == svn_wc__db_status_added)
+            SVN_ERR(svn_wc__db_scan_addition(NULL /* status */,
+                                             NULL /* op_root_abspath */,
+                                             NULL /* repos_relpath */,
+                                             &repos_root_url,
+                                             &repos_uuid,
+                                             NULL /* original_repos_relpath */,
+                                             NULL /* original_root_url */,
+                                             NULL /* original_uuid */,
+                                             NULL /* original_revision */,
+                                             wc_ctx->db, src_abspath,
+                                             scratch_pool, scratch_pool));
 
           SVN_ERR(svn_wc__internal_ensure_adm(wc_ctx->db, tmp_dst_abspath,
                                               url, repos_root_url, repos_uuid,
