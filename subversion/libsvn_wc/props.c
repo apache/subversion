@@ -852,34 +852,51 @@ generate_conflict_message(const char *propname,
       /* Attempting to delete the value INCOMING_BASE.  */
       SVN_ERR_ASSERT_NO_RETURN(incoming_base != NULL);
 
+      /* Are we trying to delete a local addition? */
+      if (original == NULL && mine != NULL)
+        return svn_string_createf(result_pool,
+                                  _("Trying to delete property '%s' with "
+                                    "value '%s',\nbut property has been "
+                                    "locally added with value '%s'."),
+                                  propname, incoming_base->data,
+                                  mine->data);
+
       /* A conflict can only occur if we originally had the property;
          otherwise, we would have merged the property-delete into the
          non-existent property.  */
       SVN_ERR_ASSERT_NO_RETURN(original != NULL);
 
-      if (mine && svn_string_compare(original, incoming_base))
+      if (svn_string_compare(original, incoming_base))
         {
-          /* We were trying to delete the correct property, but an edit
-             caused the conflict.  */
+          if (mine)
+            /* We were trying to delete the correct property, but an edit
+               caused the conflict.  */
+            return svn_string_createf(result_pool,
+                                      _("Trying to delete property '%s' with "
+                                        "value '%s',\nbut it has been modified "
+                                        "from '%s' to '%s'."),
+                                      propname, incoming_base->data,
+                                      original->data, mine->data);
+        }
+      else if (mine == NULL)
+        {
+          /* We were trying to delete the property, but we have locally
+             deleted the same property, but with a different value. */
           return svn_string_createf(result_pool,
                                     _("Trying to delete property '%s' with "
-                                      "value '%s'\nbut it has been modified "
-                                      "from '%s' to '%s'."),
+                                      "value '%s',\nbut property with value "
+                                      "'%s' is locally deleted."),
                                     propname, incoming_base->data,
-                                    original->data, mine->data);
+                                    original->data);          
         }
 
       /* We were trying to delete INCOMING_BASE but our ORIGINAL is
          something else entirely.  */
       SVN_ERR_ASSERT_NO_RETURN(!svn_string_compare(original, incoming_base));
 
-      /* ### wait. what if we had a different property and locally
-         ### deleted it? the statement below is gonna blow up.
-         ### we could have: local-add, local-edit, local-del, or just
-         ### something different (and unchanged).  */
       return svn_string_createf(result_pool,
                                 _("Trying to delete property '%s' with "
-                                  "value '%s'\nbut the local value is "
+                                  "value '%s',\nbut the local value is "
                                   "'%s'."),
                                 propname, incoming_base->data, mine->data);
     }
@@ -1466,12 +1483,27 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
 
   if (! base_val)
     {
-      /* ### what about working_val? what if we locally-added?  */
-
-      apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
-      if (old_val)
-        /* This is a merge, merging a delete into non-existent */
-        set_prop_merge_state(state, svn_wc_notify_state_merged);
+      if (working_val
+          && !svn_string_compare(working_val, old_val))
+        {
+          /* We are trying to delete a locally-added prop. */
+          SVN_ERR(maybe_generate_propconflict(conflict_remains,
+                                              db, local_abspath,
+                                              left_version, right_version,
+                                              is_dir, propname,
+                                              working_props, old_val, NULL,
+                                              base_val, working_val,
+                                              conflict_func, conflict_baton,
+                                              dry_run, scratch_pool));
+        }
+      else
+        {
+          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
+          if (old_val)
+            /* This is a merge, merging a delete into non-existent
+               property or a local addition of same prop value. */
+            set_prop_merge_state(state, svn_wc_notify_state_merged);
+        }
     }
 
   else if (svn_string_compare(base_val, old_val))
@@ -1496,7 +1528,8 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
              }
          }
        else
-         /* The property is locally deleted, so it's a merge */
+         /* The property is locally deleted from the same value, so it's
+            a merge */
          set_prop_merge_state(state, svn_wc_notify_state_merged);
     }
 
