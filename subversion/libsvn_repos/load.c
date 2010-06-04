@@ -51,9 +51,10 @@ struct parse_baton
   svn_boolean_t use_history;
   svn_boolean_t use_pre_commit_hook;
   svn_boolean_t use_post_commit_hook;
-  svn_stream_t *outstream;
   enum svn_repos_load_uuid uuid_action;
   const char *parent_dir;
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
   apr_pool_t *pool;
 
   /* A hash mapping copy-from revisions and mergeinfo range revisions
@@ -465,12 +466,14 @@ parse_property_block(svn_stream_t *stream,
                       propstring.data = prop_eol_normalized;
                       propstring.len = strlen(prop_eol_normalized);
 
-                      if (pb->outstream)
-                        SVN_ERR(svn_stream_printf(
-                          pb->outstream,
-                          proppool,
-                          _(" removing '\\r' from %s ..."),
-                          SVN_PROP_MERGEINFO));
+                      if (pb->notify_func)
+                        {
+                          svn_repos_notify_t *notify = svn_repos_notify_create(
+                            svn_repos_notify_load_normalized_mergeinfo,
+                            proppool);
+
+                          pb->notify_func(pb->notify_baton, notify, proppool);
+                        }
                     }
 
                   SVN_ERR(parse_fns->set_node_property(record_baton,
@@ -1050,9 +1053,14 @@ new_revision_record(void **revision_baton,
       SVN_ERR(svn_fs_begin_txn2(&(rb->txn), pb->fs, head_rev, 0, pool));
       SVN_ERR(svn_fs_txn_root(&(rb->txn_root), rb->txn, pool));
 
-      SVN_ERR(svn_stream_printf(pb->outstream, pool,
-                                _("<<< Started new transaction, based on "
-                                  "original revision %ld\n"), rb->rev));
+      if (pb->notify_func)
+        {
+          svn_repos_notify_t *notify = svn_repos_notify_create(
+                            svn_repos_notify_load_txn_start, rb->pool);
+
+          notify->old_revision = rb->rev;
+          pb->notify_func(pb->notify_baton, notify, rb->pool);
+        }
     }
 
   /* If we're parsing revision 0, only the revision are (possibly)
@@ -1073,7 +1081,6 @@ maybe_add_with_history(struct node_baton *nb,
                        apr_pool_t *pool)
 {
   struct parse_baton *pb = rb->pb;
-  apr_size_t len;
 
   if ((nb->copyfrom_path == NULL) || (! pb->use_history))
     {
@@ -1125,8 +1132,12 @@ maybe_add_with_history(struct node_baton *nb,
       SVN_ERR(svn_fs_copy(copy_root, nb->copyfrom_path,
                           rb->txn_root, nb->path, pool));
 
-      len = 9;
-      SVN_ERR(svn_stream_write(pb->outstream, "COPIED...", &len));
+      if (pb->notify_func)
+        {
+          svn_repos_notify_t *notify = svn_repos_notify_create(
+                             svn_repos_notify_load_copied_node, rb->pool);
+          pb->notify_func(pb->notify_baton, notify, rb->pool);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1171,47 +1182,40 @@ new_node_record(void **node_baton,
 
   nb = make_node_baton(headers, rb, pool);
 
-  switch (nb->action)
-    {
-    case svn_node_action_change:
-      {
-        SVN_ERR(svn_stream_printf(pb->outstream, pool,
-                                  _("     * editing path : %s ..."),
-                                  nb->path));
-        break;
-      }
-    case svn_node_action_delete:
-      {
-        SVN_ERR(svn_stream_printf(pb->outstream, pool,
-                                  _("     * deleting path : %s ..."),
-                                  nb->path));
-        SVN_ERR(svn_fs_delete(rb->txn_root, nb->path, pool));
-        break;
-      }
-    case svn_node_action_add:
-      {
-        SVN_ERR(svn_stream_printf(pb->outstream, pool,
-                                  _("     * adding path : %s ..."),
-                                  nb->path));
-
-        SVN_ERR(maybe_add_with_history(nb, rb, pool));
-        break;
-      }
-    case svn_node_action_replace:
-      {
-        SVN_ERR(svn_stream_printf(pb->outstream, pool,
-                                  _("     * replacing path : %s ..."),
-                                  nb->path));
-
-        SVN_ERR(svn_fs_delete(rb->txn_root, nb->path, pool));
-
-        SVN_ERR(maybe_add_with_history(nb, rb, pool));
-        break;
-      }
-    default:
+  /* Make sure we have an action we recognize. */
+  if (nb->action < svn_node_action_change
+        || nb->action > svn_node_action_replace)
       return svn_error_createf(SVN_ERR_STREAM_UNRECOGNIZED_DATA, NULL,
                                _("Unrecognized node-action on node '%s'"),
                                nb->path);
+
+  if (pb->notify_func)
+    {
+      svn_repos_notify_t *notify = svn_repos_notify_create(
+                             svn_repos_notify_load_node_start, rb->pool);
+
+      notify->node_action = nb->action;
+      notify->path = nb->path;
+      pb->notify_func(pb->notify_baton, notify, rb->pool);
+    }
+
+  switch (nb->action)
+    {
+    case svn_node_action_change:
+      break;
+
+    case svn_node_action_delete:
+      SVN_ERR(svn_fs_delete(rb->txn_root, nb->path, pool));
+      break;
+
+    case svn_node_action_add:
+      SVN_ERR(maybe_add_with_history(nb, rb, pool));
+      break;
+
+    case svn_node_action_replace:
+      SVN_ERR(svn_fs_delete(rb->txn_root, nb->path, pool));
+      SVN_ERR(maybe_add_with_history(nb, rb, pool));
+      break;
     }
 
   *node_baton = nb;
@@ -1364,9 +1368,16 @@ close_node(void *baton)
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
   struct parse_baton *pb = rb->pb;
-  apr_size_t len = 7;
 
-  return svn_stream_write(pb->outstream, _(" done.\n"), &len);
+  if (pb->notify_func)
+    {
+      svn_repos_notify_t *notify = svn_repos_notify_create(
+                             svn_repos_notify_load_node_done, rb->pool);
+      
+      pb->notify_func(pb->notify_baton, notify, rb->pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1467,19 +1478,19 @@ close_revision(void *baton)
                                  SVN_PROP_REVISION_DATE, rb->datestamp,
                                  rb->pool));
 
-  if (*new_rev == rb->rev)
+  if (pb->notify_func)
     {
-      return svn_stream_printf(pb->outstream, rb->pool,
-                               _("\n------- Committed revision %ld"
-                                 " >>>\n\n"), *new_rev);
+      svn_repos_notify_t *notify = svn_repos_notify_create(
+                             svn_repos_notify_load_txn_committed, rb->pool);
+    
+      notify->new_revision = *new_rev;
+      notify->old_revision = ((*new_rev == rb->rev)
+                                ? SVN_INVALID_REVNUM
+                                : rb->rev);
+      pb->notify_func(pb->notify_baton, notify, rb->pool);
     }
-  else
-    {
-      return svn_stream_printf(pb->outstream, rb->pool,
-                               _("\n------- Committed new rev %ld"
-                                 " (loaded from original rev %ld"
-                                 ") >>>\n\n"), *new_rev, rb->rev);
-    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1489,13 +1500,14 @@ close_revision(void *baton)
 
 
 svn_error_t *
-svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **callbacks,
+svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
                                enum svn_repos_load_uuid uuid_action,
-                               svn_stream_t *outstream,
                                const char *parent_dir,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
                                apr_pool_t *pool)
 {
   svn_repos_parse_fns2_t *parser = apr_pcalloc(pool, sizeof(*parser));
@@ -1516,7 +1528,8 @@ svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **callbacks,
   pb->repos = repos;
   pb->fs = svn_repos_fs(repos);
   pb->use_history = use_history;
-  pb->outstream = outstream ? outstream : svn_stream_empty(pool);
+  pb->notify_func = notify_func;
+  pb->notify_baton = notify_baton;
   pb->uuid_action = uuid_action;
   pb->parent_dir = parent_dir;
   pb->pool = pool;
@@ -1531,13 +1544,14 @@ svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **callbacks,
 
 
 svn_error_t *
-svn_repos_load_fs2(svn_repos_t *repos,
+svn_repos_load_fs3(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
-                   svn_stream_t *feedback_stream,
                    enum svn_repos_load_uuid uuid_action,
                    const char *parent_dir,
                    svn_boolean_t use_pre_commit_hook,
                    svn_boolean_t use_post_commit_hook,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
@@ -1548,12 +1562,13 @@ svn_repos_load_fs2(svn_repos_t *repos,
 
   /* This is really simple. */
 
-  SVN_ERR(svn_repos_get_fs_build_parser2(&parser, &parse_baton,
+  SVN_ERR(svn_repos_get_fs_build_parser3(&parser, &parse_baton,
                                          repos,
                                          TRUE, /* look for copyfrom revs */
                                          uuid_action,
-                                         feedback_stream,
                                          parent_dir,
+                                         notify_func,
+                                         notify_baton,
                                          pool));
 
   /* Heh.  We know this is a parse_baton.  This file made it.  So

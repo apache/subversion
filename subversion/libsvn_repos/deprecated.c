@@ -470,16 +470,14 @@ repos_notify_handler(void *baton,
                      apr_pool_t *scratch_pool)
 {
   svn_stream_t *feedback_stream = baton;
+  apr_size_t len;
 
   switch (notify->action)
   {
     case svn_repos_notify_warning:
-      {
-        apr_size_t len = strlen(notify->warning);
-        svn_error_clear(svn_stream_write(feedback_stream, notify->warning,
-                                         &len));
-        return;
-      }
+      len = strlen(notify->warning);
+      svn_error_clear(svn_stream_write(feedback_stream, notify->warning, &len));
+      return;
 
     case svn_repos_notify_dump_rev_end:
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
@@ -491,6 +489,78 @@ repos_notify_handler(void *baton,
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                         _("* Verified revision %ld.\n"),
                                         notify->revision));
+      return;
+
+    case svn_repos_notify_load_txn_committed:
+      if (notify->old_revision == SVN_INVALID_REVNUM)
+        {
+          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                            _("\n------- Committed revision %ld >>>\n\n"),
+                            notify->new_revision));
+        }
+      else
+        {
+          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                            _("\n------- Committed new rev %ld"
+                              " (loaded from original rev %ld"
+                              ") >>>\n\n"), notify->new_revision,
+                              notify->old_revision));
+        }
+      return;
+
+    case svn_repos_notify_load_node_start:
+      {
+        switch (notify->node_action)
+        {
+          case svn_node_action_change:
+            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                  _("     * editing path : %s ..."),
+                                  notify->path));
+            break;
+          
+          case svn_node_action_delete:
+            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                  _("     * deleting path : %s ..."),
+                                  notify->path));
+            break;
+          
+          case svn_node_action_add:
+            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                  _("     * adding path : %s ..."),
+                                  notify->path));
+            break;
+          
+          case svn_node_action_replace:
+            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                  _("     * replacing path : %s ..."),
+                                  notify->path));
+            break;
+          
+        }
+      }
+      return;
+
+    case svn_repos_notify_load_node_done:
+      len = 7;
+      svn_error_clear(svn_stream_write(feedback_stream, _(" done.\n"), &len));
+      return;
+
+    case svn_repos_notify_load_copied_node:
+      len = 9;
+      svn_error_clear(svn_stream_write(feedback_stream, "COPIED...", &len));
+      return;
+
+    case svn_repos_notify_load_txn_start:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                _("<<< Started new transaction, based on "
+                                  "original revision %ld\n"),
+                                notify->old_revision));
+      return;
+
+    case svn_repos_notify_load_normalized_mergeinfo:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                _(" removing '\\r' from %s ..."),
+                                SVN_PROP_MERGEINFO));
       return;
 
     default:
@@ -548,6 +618,26 @@ svn_repos_verify_fs(svn_repos_t *repos,
 }
 
 /*** From load.c ***/
+
+svn_error_t *
+svn_repos_load_fs2(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   svn_stream_t *feedback_stream,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_load_fs3(repos, dumpstream, uuid_action, parent_dir,
+                            use_pre_commit_hook, use_post_commit_hook,
+                            feedback_stream ? repos_notify_handler : NULL,
+                            feedback_stream, cancel_func, cancel_baton, pool);
+}
+
+
 static svn_repos_parser_fns_t *
 fns_from_fns2(const svn_repos_parse_fns2_t *fns2,
               apr_pool_t *pool)
@@ -566,6 +656,7 @@ fns_from_fns2(const svn_repos_parse_fns2_t *fns2,
   fns->close_revision = fns2->close_revision;
   return fns;
 }
+
 static svn_repos_parse_fns2_t *
 fns2_from_fns(const svn_repos_parser_fns_t *fns,
               apr_pool_t *pool)
@@ -614,6 +705,22 @@ svn_repos_load_fs(svn_repos_t *repos,
   return svn_repos_load_fs2(repos, dumpstream, feedback_stream,
                             uuid_action, parent_dir, FALSE, FALSE,
                             cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
+svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **parser,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_boolean_t use_history,
+                               enum svn_repos_load_uuid uuid_action,
+                               svn_stream_t *outstream,
+                               const char *parent_dir,
+                               apr_pool_t *pool)
+{
+  return svn_repos_get_fs_build_parser3(parser, parse_baton, repos, use_history,
+                                        uuid_action, parent_dir,
+                                        outstream ? repos_notify_handler : NULL,
+                                        outstream, pool);
 }
 
 svn_error_t *
