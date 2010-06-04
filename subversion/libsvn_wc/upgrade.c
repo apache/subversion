@@ -73,11 +73,10 @@
 
 /* Forward declare until we decide to shift/reorder functions.  */
 static svn_error_t *
-migrate_node_props(const char *wcroot_abspath,
-                   const char *name,
-                   svn_sqlite__db_t *sdb,
-                   int original_format,
-                   apr_pool_t *scratch_pool);
+migrate_props(const char *wcroot_abspath,
+              svn_sqlite__db_t *sdb,
+              int original_format,
+              apr_pool_t *scratch_pool);
 
 
 /* Read the properties from the file at PROPFILE_ABSPATH, returning them
@@ -339,6 +338,52 @@ get_versioned_subdirs(apr_array_header_t **children,
 }
 
 
+/* Return in CHILDREN, the list of all versioned *files* in SDB.
+   These files' existence on disk is not tested.
+
+   This set of children is intended for props/text-base upgrades.
+   Subdirectory's properties exist in the subdirs. Non-files have no
+   text bases.
+
+   Note that this uses just the SDB to locate children, which means
+   that the children must have been upgraded to wc-ng format. Also note
+   that this returns *all* files found in SDB. Typically, this is just
+   one directory's worth since it won't be run on a single-db.  */
+static svn_error_t *
+get_versioned_files(const apr_array_header_t **children,
+                    svn_sqlite__db_t *sdb,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  apr_array_header_t *child_relpaths;
+  svn_boolean_t have_row;
+
+  /* ### just select 'file' children. do we need 'symlink' in the future?  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ALL_FILES));
+
+  /* ### 10 is based on Subversion's average of 8.5 files per versioned
+     ### directory in its repository. maybe use a different value? or
+     ### count rows first?  */
+  child_relpaths = apr_array_make(result_pool, 10, sizeof(const char *));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *local_relpath = svn_sqlite__column_text(stmt, 0,
+                                                          result_pool);
+
+      APR_ARRAY_PUSH(child_relpaths, const char *) = local_relpath;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  *children = child_relpaths;
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
 /* */
 static const char *
 build_lockfile_path(const char *local_dir_abspath,
@@ -445,6 +490,12 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                     FALSE, NULL, NULL, scratch_pool));
 #endif
 
+#if 0
+  /* ### this checks for a write-lock, and we are not (always) taking out
+     ### a write lock in all callers.  */
+  SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, wcroot_abspath, iterpool));
+#endif
+
   /* Remove the old-style lock file LAST.  */
   svn_error_clear(svn_io_remove_file2(
                     build_lockfile_path(wcroot_abspath, scratch_pool),
@@ -520,7 +571,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
   apr_int64_t repos_id;
   apr_int64_t wc_id;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_index_t *hi;
 
   /* Don't try to mess with the WC if there are old log files left. */
 
@@ -599,23 +649,14 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* Upgrade all the properties (including "this dir").
 
      Note: this must come AFTER the entries have been migrated into the
-     database. The upgrade process needs to examine the WORKING state.  */
-  for (hi = apr_hash_first(scratch_pool, entries);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *name = svn__apr_hash_index_key(hi);
-
-      svn_pool_clear(iterpool);
-
+     database. The upgrade process needs the children in BASE_NODE and
+     WORKING_NODE, and to examine the resultant WORKING state.  */
 #if 0
-      /* ### need to skip subdir stub entries.  */
-      /* ### not ready for this yet.  */
-      SVN_ERR(migrate_node_props(dir_abspath, name, sdb, old_format,
-                                 iterpool));
+  /* ### not quite yet  */
+  SVN_ERR(migrate_props(dir_abspath, sdb, old_format, iterpool));
 #endif
-    }
 
+  /* All done. DB should finalize the upgrade process now.  */
   SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, sdb, iterpool));
 
   /* All subdir access batons (and locks!) will be closed. Of course, they
@@ -1054,25 +1095,14 @@ migrate_props(const char *wcroot_abspath,
   */
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_wc__db_t *db;
   int i;
-
-  /* ### the use of DB within this function must go away.  */
-
-  /* *sigh*  We actually want to use wc_db APIs to read data, but we aren't
-     provided a wc_db, so open one. */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_default, NULL, FALSE, TRUE,
-                          scratch_pool, scratch_pool));
 
   /* Migrate the props for "this dir".  */
   SVN_ERR(migrate_node_props(wcroot_abspath, "", sdb, original_format,
                              iterpool));
 
-  /* Go find all the children of the wcroot. */
-  SVN_ERR(svn_wc__db_read_children(&children, db, wcroot_abspath,
-                                   scratch_pool, iterpool));
-
-  /* Iterate over the children, as described above */
+  /* Iterate over all the files in this SDB.  */
+  SVN_ERR(get_versioned_files(&children, sdb, scratch_pool, iterpool));
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -1083,12 +1113,6 @@ migrate_props(const char *wcroot_abspath,
                                  iterpool));
     }
 
-#if 0
-  /* ### we are not (yet) taking out a write lock  */
-  SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, wcroot_abspath, iterpool));
-#endif
-
-  SVN_ERR(svn_wc__db_close(db));
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
