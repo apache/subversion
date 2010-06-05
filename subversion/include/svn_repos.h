@@ -2439,6 +2439,7 @@ svn_repos_load_fs3(svn_repos_t *repos,
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_load_fs2(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
