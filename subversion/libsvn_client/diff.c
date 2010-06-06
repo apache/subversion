@@ -360,6 +360,12 @@ print_git_diff_header(svn_stream_t *os, const char *copyfrom_path,
       SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
                                           "new file mode 10644" APR_EOL_STR));
     }
+  else
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "diff --git a/%s b/%s%s",
+                                          path, path, APR_EOL_STR));
+    }
   return SVN_NO_ERROR;
 }
 #endif
@@ -681,6 +687,13 @@ diff_content_changed(const char *path,
               label1 = diff_label(apr_psprintf(subpool, "a/%s", path1), rev1,
                                   subpool);
               label2 = diff_label("/dev/null", rev2, subpool);
+            }
+          else
+            {
+              label1 = diff_label(apr_psprintf(subpool, "a/%s", path1), rev1,
+                                  subpool);
+              label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), rev2,
+                                  subpool);
             }
           
           /* ### Passing FALSE for added, copied and moved and NULL for
