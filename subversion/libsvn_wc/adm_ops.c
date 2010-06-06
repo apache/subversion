@@ -125,38 +125,34 @@ tweak_node(svn_wc__db_t *db,
            svn_boolean_t allow_removal,
            apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
   int modify_flags = 0;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t db_kind;
+  svn_revnum_t revision;
+  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  svn_error_t *err;
   svn_node_kind_t node_kind = (kind == svn_wc__db_kind_dir)
                                      ? svn_node_dir
                                      : svn_node_file;
 
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, node_kind,
-                            parent_stub, scratch_pool, scratch_pool));
+  err = svn_wc__db_base_get_info(&status, &db_kind, &revision,
+                                 &repos_relpath, &repos_root_url,
+                                 &repos_uuid, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, db, local_abspath,
+                                 scratch_pool, scratch_pool);
 
-  if (new_repos_relpath != NULL)
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
-      const char *new_url = svn_path_url_add_component2(new_repos_root_url,
-                                                        new_repos_relpath,
-                                                        scratch_pool);
-      if (new_url != NULL
-          && (! entry->url || strcmp(new_url, entry->url)))
-        {
-          modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
-          tmp_entry.url = new_url;
-        }
+      /* ### Tweaking should never be necessary for nodes that don't
+         ### have a base node, but we still get here from many tests */
+      svn_error_clear(err);
+      return SVN_NO_ERROR; /* No BASE_NODE -> Added node */
     }
+  else
+    SVN_ERR(err);
 
-  if ((SVN_IS_VALID_REVNUM(new_rev))
-      && (entry->schedule != svn_wc_schedule_add)
-      && (entry->schedule != svn_wc_schedule_replace)
-      && (entry->copied != TRUE)
-      && (entry->revision != new_rev))
-    {
-      modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
-      tmp_entry.revision = new_rev;
-    }
+  SVN_ERR_ASSERT(db_kind == kind);
 
   /* As long as this function is only called as a helper to
      svn_wc__do_update_cleanup, then it's okay to remove any entry
@@ -174,14 +170,51 @@ tweak_node(svn_wc__db_t *db,
      ### appropriate, hence the ALLOW_REMOVAL flag.  It's all a bit of a
      ### mess. */
   if (allow_removal
-      && (entry->deleted || (entry->absent && entry->revision != new_rev)))
+      && (status == svn_wc__db_status_not_present
+          || (status == svn_wc__db_status_absent && revision != new_rev)))
     {
-      SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
-                                              scratch_pool));
+      return svn_error_return(
+                svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                scratch_pool));
+
     }
-  else if (modify_flags)
+
+  if (new_repos_relpath != NULL)
     {
-      if (entry->kind == svn_node_dir && parent_stub)
+      if (!repos_relpath)
+        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                           &repos_uuid, db, local_abspath,
+                                           scratch_pool, scratch_pool));
+
+      if (strcmp(repos_relpath, new_repos_relpath)
+          || strcmp(repos_root_url, repos_root_url))
+        {
+          modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+          tmp_entry.url = svn_path_url_add_component2(new_repos_root_url,
+                                                      new_repos_relpath,
+                                                      scratch_pool);
+        }
+    }
+
+  if (SVN_IS_VALID_REVNUM(new_rev) && new_rev != revision)
+    {
+      const svn_wc_entry_t *entry;
+      SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, node_kind,
+                                parent_stub, scratch_pool, scratch_pool));
+
+      if ((entry->schedule != svn_wc_schedule_add)
+          && (entry->schedule != svn_wc_schedule_replace)
+          && (entry->copied != TRUE)
+          && (entry->revision != new_rev))
+        {
+          modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
+          tmp_entry.revision = new_rev;
+        }
+    }
+
+  if (modify_flags)
+    {
+      if (db_kind == svn_wc__db_kind_dir && parent_stub)
         SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
                                           &tmp_entry, modify_flags,
                                           scratch_pool));
