@@ -2746,13 +2746,25 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_is_wc_root2(wc_root, wc_ctx, local_abspath, pool));
+  err = svn_wc_is_wc_root2(wc_root, wc_ctx, local_abspath, pool);
+
+  if (err
+      && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
+          || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+    {
+      /* Subversion <= 1.6 just said that a not versioned path is not a root */
+      svn_error_clear(err);
+      *wc_root = FALSE;
+    }
+  else
+    SVN_ERR(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }

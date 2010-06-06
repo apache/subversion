@@ -446,6 +446,11 @@ SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, properties,
      prop_reject, changelist, text_mod, tree_conflict_data FROM ACTUAL_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_SELECT_SUBDIR
+SELECT 1 FROM BASE_NODE WHERE wc_id = ?1 and local_relpath = ?2 and kind = 'subdir'
+UNION
+SELECT 0 FROM WORKING_NODE WHERE wc_id = ?1 and local_relpath = ?2 and kind = 'subdir';
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

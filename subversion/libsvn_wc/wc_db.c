@@ -531,6 +531,10 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
       && (*parent_pdh)->wcroot != NULL)
     return SVN_NO_ERROR;
 
+  /* Make sure we don't see the root as its own parent */
+  SVN_ERR_ASSERT(!svn_dirent_is_root(child_pdh->local_abspath,
+                                     strlen(child_pdh->local_abspath)));
+
   parent_abspath = svn_dirent_dirname(child_pdh->local_abspath, scratch_pool);
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(parent_pdh, &local_relpath, db,
                               parent_abspath, smode,
@@ -6825,6 +6829,68 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_is_wcroot(svn_boolean_t *is_root,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  if (*local_relpath != '\0')
+    {
+      *is_root = FALSE; /* Node is a file, or has a parent directory within
+                           the same wcroot */
+      return SVN_NO_ERROR;
+    }
+
+#ifndef SINGLE_DB
+  if (!svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+    {
+      svn_error_t *err = navigate_to_parent(&pdh, db, pdh,
+                                            svn_sqlite__mode_readwrite,
+                                            scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+        {
+          svn_error_clear(err);
+          *is_root = TRUE;
+          return SVN_NO_ERROR;
+        }
+      SVN_ERR(err);
+
+      VERIFY_USABLE_PDH(pdh);
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                     STMT_SELECT_SUBDIR));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                                svn_dirent_basename(local_abspath, NULL)));
+
+      SVN_ERR(svn_sqlite__step(&got_row, stmt));
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      if (got_row)
+        {
+          *is_root = FALSE;
+          return SVN_NO_ERROR;
+        }
+    }  
+#endif
+   *is_root = TRUE;
+
+   return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
