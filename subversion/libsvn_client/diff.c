@@ -306,6 +306,64 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN_EXPERIMENTAL_PATCH
+/*
+ * Print a git diff header for PATH to the stream OS using HEADER_ENCODING.
+ * The header lines are determined from what operation is performed on the
+ * file using DELETED, COPIED, MOVED and ADDED. When the
+ * operation is a move or copy, copyfrom_path is used to determine the
+ * source. All allocations are done in RESULT_POOL. */
+static svn_error_t *
+print_git_diff_header(svn_stream_t *os, const char *copyfrom_path,
+                      svn_boolean_t deleted, svn_boolean_t copied,
+                      svn_boolean_t moved, svn_boolean_t added, 
+                      const char *header_encoding, const char *path, 
+                      apr_pool_t *result_pool)
+{
+  if (copied)
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "diff --git a/%s b/%s%s",
+                                          copyfrom_path, path, APR_EOL_STR));
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "copy from %s%s", path, APR_EOL_STR));
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "copy to %s%s", copyfrom_path, 
+                                          APR_EOL_STR));
+    }
+  else if (moved)
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "diff --git a/%s b/%s%s",
+                                          copyfrom_path, path, APR_EOL_STR));
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "rename from %s%s", path, 
+                                          APR_EOL_STR));
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "rename to %s%s", copyfrom_path, 
+                                          APR_EOL_STR));
+    }
+  else if (deleted)
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "diff --git a/%s b/%s%s",
+                                          path, path, APR_EOL_STR));
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "deleted file mode 10644"
+                                          APR_EOL_STR));
+    }
+  else if (added)
+    {
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "diff --git a/%s b/%s%s",
+                                          path, path, APR_EOL_STR));
+      SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                          "new file mode 10644" APR_EOL_STR));
+    }
+  return SVN_NO_ERROR;
+}
+#endif
+
 
 /*-----------------------------------------------------------------*/
 
@@ -365,6 +423,10 @@ struct diff_cmd_baton {
   /* The directory that diff target paths should be considered as
      relative to for output generation (see issue #2723). */
   const char *relative_to_dir;
+
+  /* ### Add moved, copied and added fields when we can detect those
+   * ### properly. */
+  svn_boolean_t deleted;
 };
 
 /* Generate a label for the diff output for file PATH at revision REVNUM.
@@ -535,6 +597,8 @@ diff_content_changed(const char *path,
               (os, diff_cmd_baton->header_encoding, subpool,
                "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
 
+      /* ### Print git diff headers. */
+
       SVN_ERR(svn_stream_printf_from_utf8
               (os, diff_cmd_baton->header_encoding, subpool,
                _("Cannot display: file marked as a binary type.%s"),
@@ -577,6 +641,11 @@ diff_content_changed(const char *path,
       /* Close the stream (flush) */
       SVN_ERR(svn_stream_close(os));
 
+      /* ### Do we want to add git diff headers here too? I'd say no. The
+       * ### 'Index' and '===' line is something subversion has added. The rest
+       * ### is up to the external diff application. We may be dealing with
+       * ### a non-git compatible diff application.*/
+
       SVN_ERR(svn_io_run_diff2(".",
                                diff_cmd_baton->options.for_external.argv,
                                diff_cmd_baton->options.for_external.argc,
@@ -600,6 +669,31 @@ diff_content_changed(const char *path,
                   (os, diff_cmd_baton->header_encoding, subpool,
                    "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
                    path, equal_string));
+#ifdef SVN_EXPERIMENTAL_PATCH
+          /* ### We need to adjust the labels to comply with the git unidiff
+           * ### standard. The labels must be adjusted for the case of an
+           * ### add too. 
+           * 
+           * ### If the paths has different length, the revisions will not
+           * ### be in the same column. Is that a problem? */
+          if (diff_cmd_baton->deleted)
+            {
+              label1 = diff_label(apr_psprintf(subpool, "a/%s", path1), rev1,
+                                  subpool);
+              label2 = diff_label("/dev/null", rev2, subpool);
+            }
+          
+          /* ### Passing FALSE for added, copied and moved and NULL for
+           * ### copyfrom_path since we're only dealing with deleted paths for
+           * ### git headers at this early point. */
+          SVN_ERR(print_git_diff_header(os, NULL, /* copyfrom_path */
+                                        diff_cmd_baton->deleted,
+                                        FALSE, /* copied */
+                                        FALSE, /* moved */
+                                        FALSE, /* added */
+                                        diff_cmd_baton->header_encoding,
+                                        path, subpool));
+#endif
           /* Output the actual diff */
           SVN_ERR(svn_diff_file_output_unified3
                   (os, diff, tmpfile1, tmpfile2, label1, label2,
@@ -715,6 +809,7 @@ diff_file_deleted_with_diff(const char *local_dir_abspath,
                             apr_pool_t *scratch_pool)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  diff_cmd_baton->deleted = TRUE;
 
   /* We don't list all the deleted properties. */
   return diff_file_changed(local_dir_abspath, state, NULL, tree_conflicted,
@@ -1748,6 +1843,7 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
+  diff_cmd_baton.deleted = FALSE;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
@@ -1814,6 +1910,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
+  diff_cmd_baton.deleted = FALSE;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
