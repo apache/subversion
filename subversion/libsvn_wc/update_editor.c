@@ -1965,8 +1965,18 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
       if (svn_dirent_is_root(ancestor_abspath, strlen(ancestor_abspath)))
         break;
 
-      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
-                                    db, ancestor_abspath, iterpool));
+      err = svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
+                                  db, ancestor_abspath, iterpool);
+
+      if (err
+          && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+              || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else
+        SVN_ERR(err);
 
       ancestor_abspath = svn_dirent_dirname(ancestor_abspath, scratch_pool);
     }
@@ -5525,7 +5535,6 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
 {
   const char *parent_abspath, *name;
   const char *repos_relpath, *repos_root, *repos_uuid;
-  svn_error_t *err;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t my_kind;
 
@@ -5535,7 +5544,6 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
     kind = &my_kind;
 
   *wc_root = TRUE;
-  *kind = svn_node_dir;
   if (switched)
     *switched = FALSE;
 
@@ -5580,71 +5588,49 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
   svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
 
   /* Check if the node is recorded in the parent */
-  {
-    const apr_array_header_t *children;
-    svn_boolean_t found = FALSE;
-    int i;
-
-    err = svn_wc__db_read_children(&children, db, parent_abspath,
-                                   scratch_pool, scratch_pool);
-    if (err)
-      {
-        if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
-            && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY
-            && err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
-          return svn_error_return(err);
-
-        svn_error_clear(err);
-        return SVN_NO_ERROR;
-      }
-    else
-      for (i = 0; i < children->nelts; i++)
-        {
-          if (strcmp(APR_ARRAY_IDX(children, i, const char *), name) == 0)
-            {
-              found = TRUE;
-              break;
-            }
-        }
-
-    if (!found)
-      {
-        /* We're not in the (versioned) parent directory's list of
-           children, so we must be the root of a distinct working copy.  */
-        return SVN_NO_ERROR;
-      }
-  }
-
+  if (*wc_root)
     {
-      const char *parent_repos_root;
-      const char *parent_repos_relpath;
-      const char *parent_repos_uuid;
+      svn_boolean_t is_root;
+      SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath, scratch_pool));
 
-      SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
-                                         &parent_repos_root,
-                                         &parent_repos_uuid,
-                                         db, parent_abspath,
-                                         scratch_pool, scratch_pool));
-
-      if (strcmp(repos_root, parent_repos_root) != 0
-          || strcmp(repos_uuid, parent_repos_uuid) != 0)
+      if (is_root)
         {
-          /* This should never happen (### until we get mixed-repos working
-             copies). If we're in the parent, then we should be from the
-             same repository. For this situation, just declare us the root
-             of a separate, unswitched working copy.  */
+          /* We're not in the (versioned) parent directory's list of
+             children, so we must be the root of a distinct working copy.  */
           return SVN_NO_ERROR;
         }
+    }
 
-      *wc_root = FALSE;
+  {
+    const char *parent_repos_root;
+    const char *parent_repos_relpath;
+    const char *parent_repos_uuid;
 
-      if (switched)
-        {
-          const char *expected_relpath = svn_relpath_join(parent_repos_relpath,
-                                                          name, scratch_pool);
+    SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
+                                       &parent_repos_root,
+                                       &parent_repos_uuid,
+                                       db, parent_abspath,
+                                       scratch_pool, scratch_pool));
 
-          *switched = (strcmp(expected_relpath, repos_relpath) != 0);
-        }
+    if (strcmp(repos_root, parent_repos_root) != 0
+        || strcmp(repos_uuid, parent_repos_uuid) != 0)
+      {
+        /* This should never happen (### until we get mixed-repos working
+           copies). If we're in the parent, then we should be from the
+           same repository. For this situation, just declare us the root
+           of a separate, unswitched working copy.  */
+        return SVN_NO_ERROR;
+      }
+
+    *wc_root = FALSE;
+
+    if (switched)
+      {
+        const char *expected_relpath = svn_relpath_join(parent_repos_relpath,
+                                                        name, scratch_pool);
+
+        *switched = (strcmp(expected_relpath, repos_relpath) != 0);
+      }
     }
 
   return SVN_NO_ERROR;
