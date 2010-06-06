@@ -273,7 +273,7 @@ tweak_entries(svn_wc__db_t *db,
             continue;
 
           if (kind == svn_wc__db_kind_dir)
-            SVN_ERR(tweak_node(db, child_abspath, kind, TRUE,
+            SVN_ERR(tweak_node(db, child_abspath, svn_wc__db_kind_dir, TRUE,
                                child_repos_relpath, new_repos_root_url,
                                new_repos_uuid, new_rev,
                                TRUE /* allow_removal */, iterpool));
@@ -389,7 +389,7 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
       case svn_wc__db_status_obstructed_delete:
         /* There is only a parent stub. That's fine... just tweak it
            and avoid directory recursion.  */
-        SVN_ERR(tweak_node(db, local_abspath, kind, TRUE,
+        SVN_ERR(tweak_node(db, local_abspath, svn_wc__db_kind_dir, TRUE,
                            new_repos_relpath, new_repos_root_url,
                            new_repos_uuid, new_revision,
                            FALSE /* allow_removal */, pool));
@@ -1433,7 +1433,7 @@ mark_tree_copied(svn_wc__db_t *db,
           || child_status == svn_wc__db_status_excluded)
         {
           if (child_kind == svn_wc__db_kind_dir)
-            SVN_ERR(tweak_node(db, child_abspath, child_kind,
+            SVN_ERR(tweak_node(db, child_abspath, svn_wc__db_kind_dir,
                                TRUE /* parent_stub */, child_relpath,
                                new_repos_root_url, new_repos_uuid,
                                SVN_INVALID_REVNUM, TRUE /* allow_removal */,
@@ -1769,6 +1769,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
       if (copyfrom_url)
         {
+          const char *parent_relpath;
           /* If this new directory has ancestry, it's not enough to
              schedule it for addition with copyfrom args.  We also
              need to rewrite its ancestor-url, and rewrite the
@@ -1785,14 +1786,16 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
              ### the metadata to make it Proper for this location.  */
 
           /* Recursively add the 'copied' existence flag as well!  */
+
+          parent_relpath = svn_path_uri_decode(
+                                    svn_uri_skip_ancestor(
+                                        parent_entry->repos,
+                                        parent_entry->url), pool);
+
           SVN_ERR(mark_tree_copied(db, local_abspath,
                                    exists ? status : svn_wc__db_status_added,
-                                   svn_relpath_join(
-                                     svn_path_uri_decode(
-                                       svn_uri_skip_ancestor(
-                                           parent_entry->repos,
-                                           parent_entry->url), pool),
-                                     base_name, pool),
+                                   svn_relpath_join(parent_relpath, base_name,
+                                                    pool),
                                    parent_entry->repos,
                                    parent_entry->uuid,
                                    pool));
