@@ -430,8 +430,12 @@ struct diff_cmd_baton {
      relative to for output generation (see issue #2723). */
   const char *relative_to_dir;
 
-  /* ### Add moved, copied and added fields when we can detect those
-   * ### properly. */
+  /* ### Add moved and copied fields when we can detect those
+   * ### properly. 
+   *
+   * ### Should we pass these fields as parameters to the affected funcs
+   * ### instead of in the baton? */
+  svn_boolean_t added;
   svn_boolean_t deleted;
 };
 
@@ -676,10 +680,11 @@ diff_content_changed(const char *path,
                    "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
                    path, equal_string));
 #ifdef SVN_EXPERIMENTAL_PATCH
-          /* ### We need to adjust the labels to comply with the git unidiff
-           * ### standard. The labels must be adjusted for the case of an
-           * ### add too. 
-           * 
+
+          /* We adjust the labels to comply with the git unidiff standard.
+           *
+           * ### Move this logic into print_git_diff_header?
+           *
            * ### If the paths has different length, the revisions will not
            * ### be in the same column. Is that a problem? */
           if (diff_cmd_baton->deleted)
@@ -687,6 +692,12 @@ diff_content_changed(const char *path,
               label1 = diff_label(apr_psprintf(subpool, "a/%s", path1), rev1,
                                   subpool);
               label2 = diff_label("/dev/null", rev2, subpool);
+            }
+          else if (diff_cmd_baton->added)
+            {
+              label1 = diff_label("/dev/null", rev1, subpool);
+              label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), rev2,
+                                  subpool);
             }
           else
             {
@@ -703,7 +714,7 @@ diff_content_changed(const char *path,
                                         diff_cmd_baton->deleted,
                                         FALSE, /* copied */
                                         FALSE, /* moved */
-                                        FALSE, /* added */
+                                        diff_cmd_baton->added,
                                         diff_cmd_baton->header_encoding,
                                         path, subpool));
 #endif
@@ -787,6 +798,8 @@ diff_file_added(const char *local_dir_abspath,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
+  diff_cmd_baton->added = TRUE;
+
   /* We want diff_file_changed to unconditionally show diffs, even if
      the diff is empty (as would be the case if an empty file were
      added.)  It's important, because 'patch' would still see an empty
@@ -802,6 +815,7 @@ diff_file_added(const char *local_dir_abspath,
                             prop_changes, original_props, diff_baton,
                             scratch_pool));
 
+  diff_cmd_baton->added = FALSE;
   diff_cmd_baton->force_empty = FALSE;
 
   return SVN_NO_ERROR;
@@ -825,14 +839,17 @@ diff_file_deleted_with_diff(const char *local_dir_abspath,
   diff_cmd_baton->deleted = TRUE;
 
   /* We don't list all the deleted properties. */
-  return diff_file_changed(local_dir_abspath, state, NULL, tree_conflicted,
-                           path, tmpfile1, tmpfile2,
-                           diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
-                           mimetype1, mimetype2,
-                           apr_array_make(diff_cmd_baton->pool, 1,
-                                          sizeof(svn_prop_t)),
-                           apr_hash_make(diff_cmd_baton->pool), diff_baton,
-                           scratch_pool);
+  SVN_ERR(diff_file_changed(local_dir_abspath, state, NULL, tree_conflicted,
+                            path, tmpfile1, tmpfile2,
+                            diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
+                            mimetype1, mimetype2,
+                            apr_array_make(diff_cmd_baton->pool, 1,
+                                           sizeof(svn_prop_t)),
+                            apr_hash_make(diff_cmd_baton->pool), diff_baton,
+                            scratch_pool));
+  diff_cmd_baton->deleted = FALSE;
+
+  return SVN_NO_ERROR;
 }
 
 /* An svn_wc_diff_callbacks4_t function. */
@@ -1857,6 +1874,7 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.deleted = FALSE;
+  diff_cmd_baton.added = FALSE;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
@@ -1924,6 +1942,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.deleted = FALSE;
+  diff_cmd_baton.added = FALSE;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
