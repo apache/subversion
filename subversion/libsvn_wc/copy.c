@@ -1063,14 +1063,12 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
       if (child_kind == svn_wc__db_kind_file)
         SVN_ERR(copy_versioned_file(wc_ctx,
                                     child_src_abspath, child_dst_abspath,
-                                    cancel_func, cancel_baton,
-                                    notify_func, notify_baton,
+                                    cancel_func, cancel_baton, NULL, NULL,
                                     iterpool));
       else if (child_kind == svn_wc__db_kind_dir)
         SVN_ERR(copy_versioned_dir(wc_ctx,
                                    child_src_abspath, child_dst_abspath,
-                                   cancel_func, cancel_baton,
-                                   notify_func, notify_baton,
+                                   cancel_func, cancel_baton, NULL, NULL,
                                    iterpool));
       else
         return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
