@@ -121,7 +121,7 @@ CONTENTS
         - See issue #3632, "Subversion's RA subsystem should carry rename
           information".
 
-    D. Other WC commands
+    D. Renaming and Copying
 
         - copy from source path: fail (can't reference a gone-away node)
 
@@ -130,18 +130,32 @@ CONTENTS
 
         - copy/move a dir with a whole rename inside it: DTRT (ordering?)
 
-        - delete target path: convert the rename into a delete.
-
-        - info: on source node, display the target path; on target path,
-          indicate it is a tracked rename
-
         - rename from source path: fail (can't reference a gone-away node)
           (unless the source has since been replaced by a new node, in which
           case that new node is referenced)
 
         - rename from target path: adapt the original rename
 
-        - status: indicate source and target paths are parts of a rename
+        ### Peter Samuelson says:
+            I think this operation,    {mv A B; cp B C},
+            should behave exactly like {cp A C; mv A B}.
+
+    E. Other WC commands
+
+        - delete target path: convert the rename into a delete.
+
+        - 'svn info': on source node, display the target path; on target
+          path, indicate it is a tracked rename.
+
+        - 'svn status': indicate source and target paths are parts of a
+          rename.
+
+        - 'svn log --stop-on-copy' does not stop at a rename.
+
+        - 'svn diff' and 'svnlook diff' do not show either a whole-file add
+          or a whole-file delete, but just show an indication that the file
+          was renamed and show any content change that was made at the same
+          time.
 
         - ...
 
