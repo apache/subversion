@@ -215,6 +215,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r901304
+   Update email adress to which to send the crash reports (on Windows).
+   Justification:
+     Old address still points to the tigris.org domain. Simple fix.
+   Votes:
+     +1: lgo
+
 Veto-blocked changes:
 =====================
 
