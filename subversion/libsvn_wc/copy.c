@@ -824,6 +824,7 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
   const char *tmpdir_abspath;
 #ifndef SVN_EXPERIMENTAL_PRISTINE
   svn_stream_t *src_pristine;
+  svn_wc__db_status_t status;
 #endif
   const char *tmp_dst_abspath;
   svn_node_kind_t kind;
@@ -836,9 +837,22 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
   /* This goes away when the pristine store is enabled; the copy
      shares the same pristine as the source so nothing needs to be
      copied. */
-  SVN_ERR(svn_wc__get_pristine_contents(&src_pristine, wc_ctx->db,
-                                        src_abspath,
-                                        scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               wc_ctx->db, src_abspath,
+                               scratch_pool, scratch_pool));
+  if (status == svn_wc__db_status_absent
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_not_present)
+    src_pristine = NULL;
+  else
+    SVN_ERR(svn_wc__get_pristine_contents(&src_pristine, wc_ctx->db,
+                                          src_abspath,
+                                          scratch_pool, scratch_pool));
+
   if (src_pristine)
     {
       svn_skel_t *work_item;
@@ -1051,7 +1065,11 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
                                    cancel_func, cancel_baton,
                                    notify_func, notify_baton,
                                    iterpool));
-      /* ### Need to handle more types */
+      else
+        return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                                 _("cannot handle node kind for '%s'"),
+                                 svn_dirent_local_style(child_src_abspath,
+                                                        scratch_pool));
 
       if (kind == svn_node_dir)
         /* Remove versioned child as it has been handled */
@@ -1060,7 +1078,7 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
 
   if (kind == svn_node_dir)
     {
-      /* Copy all the unversioned children */
+      /* All the remaining children are unversioned. */
       apr_hash_index_t *hi;
 
       for (hi = apr_hash_first(scratch_pool, children); hi;
