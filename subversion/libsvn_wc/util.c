@@ -552,7 +552,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry = NULL;
   const svn_wc_conflict_description2_t *tree_conflict;
   svn_wc_conflict_description_t *old_tree_conflict;
 
