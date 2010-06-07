@@ -567,9 +567,18 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      const svn_wc_entry_t *entry = status->entry;
+      const svn_wc_entry_t *entry = NULL;
+
+      if (status->versioned)
+        /* ### This doesn't set enty when _get_entry returns 
+           ### SVN_ERR_NODE_UNEXPECTED_KIND! */
+        SVN_JNI_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                                svn_node_unknown, FALSE, FALSE,
+                                                pool, pool));
+
       if (entry != NULL)
         {
+          /* ### Some of these values are also available in status */
           jNodeKind = EnumMapper::mapNodeKind(entry->kind);
           jRevision = entry->revision;
           jLastChangedRevision = entry->cmt_rev;
