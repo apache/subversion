@@ -137,6 +137,8 @@ Candidate changes:
      Sanity checks should themselves be sane.
    Votes:
      +1: cmpilato
+     -0: This introduces new issues like #3242 and might break reintegrate
+         where it previously worked. (Untested)
 
  * r935992, r935996 (issue #3636)
    Makes it possible to delete paths directly from the repository that contain
@@ -160,7 +162,7 @@ Candidate changes:
      "svn_tests: Can't open file 'test-repo-fsfs-pack/transactions/
      33-x.txn/changes': Too many open files")
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r939375-939376
    Fix issue #3623, a bug in foreign repository merges that causes properties
@@ -213,7 +215,7 @@ Candidate changes:
    Justification:
      Simple fix, user requests.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r901304
    Update email adress to which to send the crash reports (on Windows).
