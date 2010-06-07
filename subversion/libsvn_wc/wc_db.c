@@ -2268,6 +2268,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
                    const char *src_relpath,
                    svn_wc__db_pdh_t *dst_pdh,
                    const char *dst_relpath,
+                   svn_wc__db_status_t dst_status,
                    svn_wc__db_kind_t kind,
                    const apr_array_header_t *children,
                    apr_int64_t copyfrom_id,
@@ -2315,7 +2316,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
                                      scratch_pool, scratch_pool));
 
   blank_iwb(&iwb);
-  iwb.presence = svn_wc__db_status_normal;
+  iwb.presence = dst_status;
   iwb.kind = kind;
   iwb.wc_id = dst_pdh->wcroot->wc_id;
   iwb.local_relpath = dst_relpath;
@@ -2385,7 +2386,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   const char *src_relpath, *dst_relpath;
   const char *repos_relpath, *repos_root_url, *repos_uuid, *copyfrom_relpath;
   svn_revnum_t revision, copyfrom_rev;
-  svn_wc__db_status_t status;
+  svn_wc__db_status_t status, dst_status;
   apr_int64_t copyfrom_id;
   svn_wc__db_kind_t kind;
   const apr_array_header_t *children;
@@ -2477,6 +2478,31 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
         }
     }
 
+  /* ### New status, not finished, see notes/wc-ng/copying */
+  switch (status)
+    {
+    case svn_wc__db_status_normal:
+    case svn_wc__db_status_added:
+    case svn_wc__db_status_moved_here:
+    case svn_wc__db_status_copied:
+      dst_status = svn_wc__db_status_normal;
+      break;
+    case svn_wc__db_status_deleted:
+    case svn_wc__db_status_not_present:
+    case svn_wc__db_status_absent:
+      dst_status = svn_wc__db_status_not_present;
+      break;
+    case svn_wc__db_status_excluded:
+      dst_status = svn_wc__db_status_excluded;
+      break;
+    default:
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("cannot handle status '%s'"),
+                               svn_dirent_local_style(src_abspath,
+                                                      scratch_pool));
+    }
+
+
   /* When copying a directory the destination may not exist, if so we
      only copy the parent stub */
   if (kind == svn_wc__db_kind_dir && !*src_relpath && *dst_relpath)
@@ -2492,6 +2518,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       src_relpath = svn_dirent_basename(src_abspath, NULL);
     }
 
+  /* Get the children for a directory if this is not the parent stub */
   if (kind == svn_wc__db_kind_dir && !*src_relpath)
     SVN_ERR(gather_children(&children, FALSE, db, src_abspath,
                             scratch_pool, scratch_pool));
@@ -2517,7 +2544,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__bindf(stmt, "issst",
                                 src_pdh->wcroot->wc_id, src_relpath,
                                 dst_relpath, dst_parent_relpath,
-                                presence_map, svn_wc__db_status_normal));
+                                presence_map, dst_status));
 
       if (copyfrom_relpath)
         {
@@ -2545,7 +2572,8 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   else
     {
       SVN_ERR(temp_cross_db_copy(db, src_abspath, src_pdh, src_relpath,
-                                 dst_pdh, dst_relpath, kind, children,
+                                 dst_pdh, dst_relpath, dst_status,
+                                 kind, children,
                                  copyfrom_id, copyfrom_relpath, copyfrom_rev,
                                  scratch_pool));
     }
@@ -4122,15 +4150,29 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 
               work_status = svn_sqlite__column_token(stmt_work, 0,
                                                      presence_map);
+#ifdef SVN_EXPERIMENTAL_COPY
+              SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
+                             || work_status == svn_wc__db_status_not_present
+                             || work_status == svn_wc__db_status_base_deleted
+                             || work_status == svn_wc__db_status_incomplete
+                             || work_status == svn_wc__db_status_excluded);
+#else
               SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
                              || work_status == svn_wc__db_status_not_present
                              || work_status == svn_wc__db_status_base_deleted
                              || work_status == svn_wc__db_status_incomplete);
+#endif
 
               if (work_status == svn_wc__db_status_incomplete)
                 {
                   *status = svn_wc__db_status_incomplete;
                 }
+#ifdef SVN_EXPERIMENTAL_COPY
+              else if (work_status == svn_wc__db_status_excluded)
+                {
+                  *status = svn_wc__db_status_excluded;
+                }
+#endif
               else if (work_status == svn_wc__db_status_not_present
                        || work_status == svn_wc__db_status_base_deleted)
                 {
