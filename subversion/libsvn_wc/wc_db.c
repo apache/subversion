@@ -2269,7 +2269,6 @@ temp_cross_db_copy(svn_wc__db_t *db,
                    svn_wc__db_pdh_t *dst_pdh,
                    const char *dst_relpath,
                    svn_wc__db_status_t dst_status,
-                   svn_wc__db_kind_t kind,
                    const apr_array_header_t *children,
                    apr_int64_t copyfrom_id,
                    const char *copyfrom_relpath,
@@ -2277,6 +2276,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
                    apr_pool_t *scratch_pool)
 {
   insert_working_baton_t iwb;
+  svn_wc__db_kind_t kind;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -2286,10 +2286,8 @@ temp_cross_db_copy(svn_wc__db_t *db,
   svn_boolean_t have_row;
   svn_depth_t depth;
 
-  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_dir);
-
   SVN_ERR(svn_wc__db_read_info(NULL /* status */,
-                               NULL /* kind */,
+                               &kind,
                                NULL /* revision */,
                                NULL /* repos_relpath */,
                                NULL /* repos_root_url */,
@@ -2311,6 +2309,10 @@ temp_cross_db_copy(svn_wc__db_t *db,
                                NULL /* conflicted */,
                                NULL /* lock */,
                                db, src_abspath, scratch_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
+                 || kind == svn_wc__db_kind_dir
+                 || kind == svn_wc__db_kind_subdir);
 
   SVN_ERR(svn_wc__get_pristine_props(&props, db, src_abspath,
                                      scratch_pool, scratch_pool));
@@ -2516,10 +2518,11 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       SVN_ERR(navigate_to_parent(&src_pdh, db, src_pdh,
                                  svn_sqlite__mode_readwrite, scratch_pool));
       src_relpath = svn_dirent_basename(src_abspath, NULL);
+      kind = svn_wc__db_kind_subdir;
     }
 
   /* Get the children for a directory if this is not the parent stub */
-  if (kind == svn_wc__db_kind_dir && !*src_relpath)
+  if (kind == svn_wc__db_kind_dir)
     SVN_ERR(gather_children(&children, FALSE, db, src_abspath,
                             scratch_pool, scratch_pool));
   else
@@ -2562,7 +2565,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                 dst_relpath, dst_parent_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
-      if (kind == svn_wc__db_kind_dir && children)
+      if (kind == svn_wc__db_kind_dir)
         SVN_ERR(insert_incomplete_working_children(dst_pdh->wcroot->sdb,
                                                    dst_pdh->wcroot->wc_id,
                                                    dst_relpath,
@@ -2572,8 +2575,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   else
     {
       SVN_ERR(temp_cross_db_copy(db, src_abspath, src_pdh, src_relpath,
-                                 dst_pdh, dst_relpath, dst_status,
-                                 kind, children,
+                                 dst_pdh, dst_relpath, dst_status, children,
                                  copyfrom_id, copyfrom_relpath, copyfrom_rev,
                                  scratch_pool));
     }
