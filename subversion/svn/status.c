@@ -166,7 +166,7 @@ print_status(const char *path,
          ### revision=0.  This is wrong, and we're trying to remedy that,
          ### but for the sake of test suite and code sanity now in WC-NG,
          ### we'll just maintain the old behavior. */
-      if (! status->entry)
+      if (! status->versioned)
         working_rev = "";
       else if (! SVN_IS_VALID_REVNUM(status->revision))
         {
@@ -219,14 +219,14 @@ print_status(const char *path,
 
           if (SVN_IS_VALID_REVNUM(status->changed_rev))
             commit_rev = apr_psprintf(pool, "%ld", status->changed_rev);
-          else if (status->entry)
+          else if (status->versioned)
             commit_rev = " ? ";
           else
             commit_rev = "";
 
           if (status->changed_author)
             commit_author = status->changed_author;
-          else if (status->entry)
+          else if (status->versioned)
             commit_author = " ? ";
           else
             commit_author = "";
@@ -317,7 +317,7 @@ svn_cl__print_status_xml(const char *path,
     apr_hash_set(att_hash, "switched", APR_HASH_KEY_STRING, "true");
   if (status->file_external)
     apr_hash_set(att_hash, "file-external", APR_HASH_KEY_STRING, "true");
-  if (status->entry && ! status->entry->copied)
+  if (status->versioned && ! status->copied)
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "%ld", status->revision));
   if (tree_conflicted)
@@ -330,7 +330,7 @@ svn_cl__print_status_xml(const char *path,
     {
       svn_cl__print_xml_commit(&sb, status->changed_rev,
                                status->changed_author,
-                               svn_time_to_cstring(status->entry->cmt_date,
+                               svn_time_to_cstring(status->changed_date,
                                                    pool),
                                pool);
     }
@@ -430,7 +430,7 @@ svn_cl__print_status(const char *path,
                                        ctx->wc_ctx, local_abspath, pool,
                                        pool));
   if (! status
-      || (skip_unrecognized && !(status->entry || tree_conflicted))
+      || (skip_unrecognized && !(status->versioned || tree_conflicted))
       || (status->text_status == svn_wc_status_none
           && status->repos_text_status == svn_wc_status_none))
     return SVN_NO_ERROR;
