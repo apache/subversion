@@ -523,7 +523,6 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
       /* Unparse the meaning of the conflicted flag. */
       if (status->conflicted)
         {
-          svn_error_t *err;
           svn_boolean_t text_conflicted = FALSE;
           svn_boolean_t prop_conflicted = FALSE;
           svn_boolean_t tree_conflicted = FALSE;
@@ -574,7 +573,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
            ### SVN_ERR_NODE_UNEXPECTED_KIND! */
         SVN_JNI_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
                                                 svn_node_unknown, FALSE, FALSE,
-                                                pool, pool));
+                                                pool, pool), NULL);
 
       if (entry != NULL)
         {

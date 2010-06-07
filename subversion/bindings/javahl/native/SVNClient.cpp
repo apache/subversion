@@ -1696,15 +1696,15 @@ analyze_status(void *baton,
     if (sb->done)
         return SVN_NO_ERROR;
 
-    if (! status->entry)
+    if (! status->versioned)
         return SVN_NO_ERROR;
 
     /* Added files have a revision of no interest */
     if (status->text_status != svn_wc_status_added)
     {
         svn_revnum_t item_rev = (sb->committed
-                                 ? status->entry->cmt_rev
-                                 : status->entry->revision);
+                                 ? status->changed_rev
+                                 : status->revision);
 
         if (sb->min_rev == SVN_INVALID_REVNUM || item_rev < sb->min_rev)
             sb->min_rev = item_rev;
@@ -1721,8 +1721,8 @@ analyze_status(void *baton,
     if (sb->wc_abspath
         && (! sb->wc_url)
         && (strcmp(local_abspath, sb->wc_abspath) == 0)
-        && (status->entry))
-        sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
+        && (status->versioned))
+        sb->wc_url = apr_pstrdup(sb->pool, status->url);
 
     return SVN_NO_ERROR;
 }
