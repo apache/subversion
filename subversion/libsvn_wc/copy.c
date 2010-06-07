@@ -1003,6 +1003,13 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
           /* That creates a base node which we do not want so delete it. */
           SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, tmp_dst_abspath,
                                          scratch_pool));
+
+          /* ### Need to close the database so that Windows can move
+             ### the directory.  Is this the right way to do it?  This
+             ### is not temporary code so the _temp_ name isn't
+             ### right. */
+          SVN_ERR(svn_wc__db_temp_forget_directory(wc_ctx->db, tmp_dst_abspath,
+                                                   scratch_pool));
         }
     }
 
