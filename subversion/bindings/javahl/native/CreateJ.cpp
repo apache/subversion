@@ -569,12 +569,20 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
       const svn_wc_entry_t *entry = NULL;
 
       if (status->versioned)
-        /* ### This sets entry to NULL when svn_wc__get_entry() returns
-           ### SVN_ERR_NODE_UNEXPECTED_KIND!. Needs a workaround for 100%
-           ### compatibility with <= 1.6 */
-        SVN_JNI_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                                svn_node_unknown, FALSE, FALSE,
-                                                pool, pool), NULL);
+        {
+          /* ### This call returns SVN_ERR_ENTRY_NOT_FOUND for all not found
+             ### cases including the (for status) ignored 
+             ### SVN_ERR_NODE_UNEXPECTED_KIND!. Needs a workaround for 100%
+             ### compatibility with <= 1.6 */
+          svn_error_t *err = svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                                         svn_node_unknown, FALSE, FALSE,
+                                                         pool, pool);
+
+          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            svn_error_clear(err);
+          else
+            SVN_JNI_ERR(err, NULL);
+         }
 
       if (entry != NULL)
         {
