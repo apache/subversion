@@ -352,10 +352,10 @@ print_git_diff_header_copied(svn_stream_t *os, const char *header_encoding,
                                       "diff --git a/%s b/%s%s",
                                       copyfrom_path, path, APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "copy from %s%s", path, APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "copy to %s%s", copyfrom_path, 
+                                      "copy from %s%s", copyfrom_path,
                                       APR_EOL_STR));
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "copy to %s%s", path, APR_EOL_STR));
   return SVN_NO_ERROR;
 }
 
@@ -372,11 +372,10 @@ print_git_diff_header_moved(svn_stream_t *os, const char *header_encoding,
                                       "diff --git a/%s b/%s%s",
                                       copyfrom_path, path, APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "rename from %s%s", path, 
+                                      "rename from %s%s", copyfrom_path, 
                                       APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "rename to %s%s", copyfrom_path, 
-                                      APR_EOL_STR));
+                                      "rename to %s%s", path, APR_EOL_STR));
   return SVN_NO_ERROR;
 }
 
