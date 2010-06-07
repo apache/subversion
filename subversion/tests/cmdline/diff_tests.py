@@ -52,6 +52,62 @@ def make_diff_header(path, old_tag, new_tag):
     "+++ " + path_as_shown + "\t(" + new_tag + ")\n",
     ]
 
+def make_git_diff_header(path, old_tag, new_tag, add=False, delete=False,
+                         cp=False, mv=False, copyfrom=None):
+  """ Generate the expected 'git diff' header for file PATH, with its old
+  and new versions described in parentheses by OLD_TAG and NEW_TAG. ADD,
+  DELETE, CP and MV denotes the operations performed on the file. COPYFROM
+  is the source of a copy or move.  Return the header as an array of
+  newline-terminated strings."""
+
+  path_as_shown = path.replace('\\', '/')
+  if copyfrom:
+    copyfrom_as_shown = copyfrom.replace('\\', '/')
+
+  if add:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + path_as_shown + " b/" + path_as_shown + "\n",
+      "new file mode 10644\n",
+      "--- /dev/null\t(" + old_tag + ")\n",
+      "+++ b/" + path_as_shown + "\t(" + new_tag + ")\n",
+    ]
+  elif delete:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + path_as_shown + " b/" + path_as_shown + "\n",
+      "deleted file mode 10644\n",
+      "--- a/" + path_as_shown + "\t(" + old_tag + ")\n",
+      "+++ /dev/null\t(" + new_tag + ")\n",
+    ]
+  elif cp:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + copyfrom_as_shown + " b/" + path_as_shown + "\n",
+      "copy from " + copyfrom_as_shown + "\n",
+      "copy to " + path_as_shown + "\n",
+    ]
+  elif mv:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + copyfrom_as_shown + " b/" + path_as_shown + "\n",
+      "rename from " + copyfrom_as_shown + "\n",
+      "rename to " + path_as_shown + "\n",
+    ]
+  else:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + path_as_shown + " b/" + path_as_shown + "\n",
+      "--- a/" + path_as_shown + "\t(" + old_tag + ")\n",
+      "+++ b/" + path_as_shown + "\t(" + new_tag + ")\n",
+    ]
+
+
 ######################################################################
 # Diff output checker
 #
@@ -3090,6 +3146,54 @@ def diff_preexisting_rev_against_local_add(sbox):
   verify_expected_output(diff_output, "-This is the file 'beta'.")
   verify_expected_output(diff_output, "+Re-created file beta.")
 
+# Passes with SVN_EXPERIMENTAL_PATCH defined
+def diff_git_format(sbox):
+  "create a diff in git unidiff format"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  new_path = os.path.join(wc_dir, 'new')
+  svntest.main.file_append(iota_path, "Changed 'iota'.\n")
+  svntest.main.file_append(new_path, "This is the file 'new'.\n")
+  svntest.main.run_svn(None, 'add', new_path)
+  svntest.main.run_svn(None, 'rm', mu_path)
+
+  ### We're not testing copied or moved paths
+
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'diff', wc_dir)
+  expected_output_lines = make_git_diff_header(mu_path, "revision 1", "working copy", 
+                           delete=True) + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'mu'.\n",
+  ] +  make_git_diff_header(iota_path, "revision 1", 
+                            "working copy") + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Changed 'iota'.\n",
+  ] + make_git_diff_header(new_path, "revision 0", "working copy", 
+                           add=True) + [
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'.\n",
+  ] 
+
+  # Makes diff output look the same on all platforms.
+  def strip_eols(lines):
+    return [x.replace("\r", "").replace("\n", "") for x in lines]
+
+  for line in diff_output:
+    print line,
+
+  print "\n"
+  for line in expected_output_lines:
+    print line,
+
+  ### It would be nice to know what lines are not matching in case of a
+  ### failure.
+  if strip_eols(diff_output) != strip_eols(expected_output_lines):
+    raise svntest.Failure
+
 ########################################################################
 #Run the tests
 
@@ -3146,6 +3250,7 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
+              XFail(diff_git_format),
               ]
 
 if __name__ == '__main__':
