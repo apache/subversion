@@ -3182,13 +3182,6 @@ def diff_git_format(sbox):
   def strip_eols(lines):
     return [x.replace("\r", "").replace("\n", "") for x in lines]
 
-  for line in diff_output:
-    print line,
-
-  print "\n"
-  for line in expected_output_lines:
-    print line,
-
   ### It would be nice to know what lines are not matching in case of a
   ### failure.
   if strip_eols(diff_output) != strip_eols(expected_output_lines):
