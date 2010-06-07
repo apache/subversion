@@ -569,8 +569,9 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
       const svn_wc_entry_t *entry = NULL;
 
       if (status->versioned)
-        /* ### This doesn't set enty when _get_entry returns 
-           ### SVN_ERR_NODE_UNEXPECTED_KIND! */
+        /* ### This sets entry to NULL when svn_wc__get_entry() returns
+           ### SVN_ERR_NODE_UNEXPECTED_KIND!. Needs a workaround for 100%
+           ### compatibility with <= 1.6 */
         SVN_JNI_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
                                                 svn_node_unknown, FALSE, FALSE,
                                                 pool, pool), NULL);
