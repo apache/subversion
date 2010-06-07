@@ -3532,8 +3532,9 @@ typedef struct svn_wc_status3_t
    * (#svn_depth_unknown for files or when no depth is set) */
   svn_depth_t depth;
 
-  /** Can be @c NULL if not under version control. */
-  const svn_wc_entry_t *entry;
+  /** If the path is under version control, versioned is TRUE, otherwise
+   * FALSE. */
+  svn_boolean_t versioned;
 
   /** The status of the entry itself, including its text if it is a file. */
   enum svn_wc_status_kind text_status;
@@ -3651,9 +3652,6 @@ typedef struct svn_wc_status3_t
   
   /** Set to TRUE if the item is the victim of a conflict. */
   svn_boolean_t conflicted;
-
-  /** If the path is under version control, versioned is TRUE. */
-  svn_boolean_t versioned;
 
   /** Which changelist this item is part of, or NULL if not part of any. */
   const char *changelist;

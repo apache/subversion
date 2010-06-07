@@ -291,6 +291,7 @@ assemble_status(svn_wc_status3_t **status,
   svn_boolean_t switched_p = FALSE;
   const svn_wc_conflict_description2_t *tree_conflict;
   svn_boolean_t file_external_p = FALSE;
+  svn_boolean_t prop_modified_p;
   svn_wc__db_lock_t *lock;
   svn_revnum_t revision;
   svn_revnum_t changed_rev;
@@ -299,7 +300,8 @@ assemble_status(svn_wc_status3_t **status,
   const char *changelist;
   svn_boolean_t base_shadowed;
   svn_boolean_t conflicted;
-  const svn_wc_entry_t *entry;
+  svn_boolean_t copied = FALSE;
+  svn_depth_t depth;
   svn_error_t *err;
 
   /* Defaults for two main variables. */
@@ -308,14 +310,6 @@ assemble_status(svn_wc_status3_t **status,
   /* And some intermediate results */
   enum svn_wc_status_kind pristine_text_status = svn_wc_status_none;
   enum svn_wc_status_kind pristine_prop_status = svn_wc_status_none;
-
-  err = svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
-                          FALSE, result_pool, scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
 
   /* Find out whether the path is a tree conflict victim.
    * This function will set tree_conflict to NULL if the path
@@ -326,11 +320,11 @@ assemble_status(svn_wc_status3_t **status,
   SVN_ERR(svn_wc__db_read_info(&db_status, &db_kind, &revision,
                                &repos_relpath, &repos_root_url, NULL,
                                &changed_rev, &changed_date,
-                               &changed_author, NULL, NULL, NULL, NULL,
+                               &changed_author, NULL, &depth, NULL, NULL,
                                NULL, &changelist, NULL, NULL, NULL, NULL,
-                               NULL, NULL, &base_shadowed, &conflicted,
-                               &lock, db, local_abspath, result_pool,
-                               scratch_pool));
+                               NULL, &prop_modified_p, &base_shadowed,
+                               &conflicted, &lock, db, local_abspath,
+                               result_pool, scratch_pool));
 
   /* ### Temporary until we've revved svn_wc_status3_t to only use
    * ### repos_{root_url,relpath} */
@@ -422,7 +416,6 @@ assemble_status(svn_wc_status3_t **status,
   if (final_text_status == svn_wc_status_normal)
     {
       svn_boolean_t has_props;
-      svn_boolean_t prop_modified_p = FALSE;
       svn_boolean_t text_modified_p = FALSE;
 #ifdef HAVE_SYMLINK
       svn_boolean_t wc_special;
@@ -434,18 +427,26 @@ assemble_status(svn_wc_status3_t **status,
             Together, these two stati are of lowest precedence, and C has
             precedence over M. */
 
-      /* Does the entry have props? */
-      {
-        apr_hash_t *pristine;
-        apr_hash_t *actual;
+      /* Does the node have props? */
+      if (prop_modified_p)
+        has_props = TRUE;
+      else
+        {
+          apr_hash_t *props;
+        
+          SVN_ERR(svn_wc__get_pristine_props(&props, db, local_abspath,
+                                             scratch_pool, scratch_pool));
+        
+          if (props != NULL && apr_hash_count(props) > 0)
+            has_props = TRUE;
+          else
+            {
+              SVN_ERR(svn_wc__get_actual_props(&props, db, local_abspath,
+                                               scratch_pool, scratch_pool));
 
-        SVN_ERR(svn_wc__get_pristine_props(&pristine, db, local_abspath,
-                                           scratch_pool, scratch_pool));
-        SVN_ERR(svn_wc__get_actual_props(&actual, db, local_abspath,
-                                         scratch_pool, scratch_pool));
-        has_props = ((pristine != NULL && apr_hash_count(pristine) > 0)
-                     || (actual != NULL && apr_hash_count(actual) > 0));
-      }
+              has_props = (props != NULL && apr_hash_count(props) > 0);
+            }
+        }
       if (has_props)
         final_prop_status = svn_wc_status_normal;
 
@@ -454,8 +455,11 @@ assemble_status(svn_wc_status3_t **status,
          ### fetched above. but for now, there is some trickery we may
          ### need to rely upon in ths function. keep it for now.  */
       /* ### see r944980 as an example of the brittleness of this stuff.  */
-      SVN_ERR(svn_wc__props_modified(&prop_modified_p, db, local_abspath,
-                                     scratch_pool));
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
+      if (has_props)
+        SVN_ERR(svn_wc__props_modified(&prop_modified_p, db, local_abspath,
+                                       scratch_pool));
+#endif
 
       /* Record actual property status */
       pristine_prop_status = prop_modified_p ? svn_wc_status_modified
@@ -506,8 +510,7 @@ assemble_status(svn_wc_status3_t **status,
       if (prop_modified_p)
         final_prop_status = svn_wc_status_modified;
 
-      if (entry->prejfile || entry->conflict_old ||
-          entry->conflict_new || entry->conflict_wrk)
+      if (conflicted)
         {
           svn_boolean_t text_conflict_p, prop_conflict_p;
 
@@ -534,27 +537,42 @@ assemble_status(svn_wc_status3_t **status,
       /* ### db_status, base_shadowed, and fetching base_status can
          ### fully replace entry->schedule here.  */
 
-      if (entry->schedule == svn_wc_schedule_add
-          && final_text_status != svn_wc_status_conflicted)
+      if (db_status == svn_wc__db_status_added)
         {
-          final_text_status = svn_wc_status_added;
-          final_prop_status = svn_wc_status_none;
-        }
+          const svn_wc_entry_t *entry;
 
-      else if (entry->schedule == svn_wc_schedule_replace
+          err = svn_wc__get_entry(&entry, db, local_abspath, FALSE,
+                                  svn_node_unknown, FALSE, result_pool,
+                                  scratch_pool);
+
+          if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+            svn_error_clear(err);
+          else
+            SVN_ERR(err);
+
+          copied = entry->copied;
+
+          if (entry->schedule == svn_wc_schedule_add
+              && final_text_status != svn_wc_status_conflicted)
+            {
+              final_text_status = svn_wc_status_added;
+              final_prop_status = svn_wc_status_none;
+            }
+
+          else if (entry->schedule == svn_wc_schedule_replace
+                   && final_text_status != svn_wc_status_conflicted)
+            {
+              final_text_status = svn_wc_status_replaced;
+              final_prop_status = svn_wc_status_none;
+            }
+        }
+      else if (db_status == svn_wc__db_status_deleted
                && final_text_status != svn_wc_status_conflicted)
         {
-          final_text_status = svn_wc_status_replaced;
-          final_prop_status = svn_wc_status_none;
-        }
-
-      else if (entry->schedule == svn_wc_schedule_delete
-               && final_text_status != svn_wc_status_conflicted)
-        {
+          /* ### Set copied for working_node only delete? */
           final_text_status = svn_wc_status_deleted;
           final_prop_status = svn_wc_status_none;
         }
-
 
       /* 3. Highest precedence:
 
@@ -569,7 +587,7 @@ assemble_status(svn_wc_status3_t **status,
 
          4. Check for locked directory (only for directories). */
 
-      if (entry->incomplete
+      if (db_status == svn_wc__db_status_incomplete
           && (final_text_status != svn_wc_status_deleted)
           && (final_text_status != svn_wc_status_added))
         {
@@ -620,9 +638,21 @@ assemble_status(svn_wc_status3_t **status,
   /* 6. Build and return a status structure. */
 
   stat = apr_pcalloc(result_pool, sizeof(**status));
-  stat->kind = entry->kind;
-  stat->depth = entry->depth;
-  stat->entry = entry;
+
+  switch (db_kind)
+    {
+      case svn_wc__db_kind_dir:
+        stat->kind = svn_node_dir;
+        break;
+      case svn_wc__db_kind_file:
+      case svn_wc__db_kind_symlink:
+        stat->kind = svn_node_file;
+        break;
+      case svn_wc__db_kind_unknown:
+      default:
+        stat->kind = svn_node_unknown;
+    }
+  stat->depth = depth;
   stat->text_status = final_text_status;
   stat->prop_status = final_prop_status;
   stat->repos_text_status = svn_wc_status_none;   /* default */
@@ -630,7 +660,7 @@ assemble_status(svn_wc_status3_t **status,
   stat->locked = locked_p;
   stat->switched = switched_p;
   stat->file_external = file_external_p;
-  stat->copied = entry->copied;
+  stat->copied = copied;
   stat->repos_lock = repos_lock;
   stat->url = url;
   stat->revision = revision;
@@ -2640,9 +2670,6 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
   *new_stat = *orig_stat;
 
   /* Now go back and dup the deep items into this pool. */
-  if (orig_stat->entry)
-    new_stat->entry = svn_wc_entry_dup(orig_stat->entry, pool);
-
   if (orig_stat->repos_lock)
     new_stat->repos_lock = svn_lock_dup(orig_stat->repos_lock, pool);
 
