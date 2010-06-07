@@ -960,7 +960,8 @@ get_dir_status(const struct walk_status_baton *wb,
 static svn_error_t *
 handle_dir_entry(const struct walk_status_baton *wb,
                  const char *local_abspath,
-                 const svn_wc_entry_t *entry,
+                 svn_wc__db_status_t status,
+                 svn_wc__db_kind_t db_kind,
                  const char *dir_repos_root_url,
                  const char *dir_repos_relpath,
                  svn_node_kind_t path_kind,
@@ -976,12 +977,16 @@ handle_dir_entry(const struct walk_status_baton *wb,
                  apr_pool_t *pool)
 {
   /* We are looking at a directory on-disk.  */
-  if (path_kind == svn_node_dir)
+  if (path_kind == svn_node_dir
+      && db_kind == svn_wc__db_kind_dir)
     {
       /* Descend only if the subdirectory is a working copy directory (which
          we've discovered because we got a THIS_DIR entry. And only descend
          if DEPTH permits it, of course.  */
-      if (*entry->name == '\0'
+
+      if (status != svn_wc__db_status_obstructed
+          && status != svn_wc__db_status_obstructed_add
+          && status != svn_wc__db_status_obstructed_delete
           && (depth == svn_depth_unknown
               || depth == svn_depth_immediates
               || depth == svn_depth_infinity))
@@ -1007,7 +1012,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
     }
   else
     {
-      /* This is a file/symlink on-disk.  */
+      /* This is a file/symlink on-disk or not a directory in the db.  */
       SVN_ERR(send_status_structure(wb, local_abspath,
                                     dir_repos_root_url,
                                     dir_repos_relpath, path_kind,
@@ -1241,52 +1246,35 @@ get_dir_status(const struct walk_status_baton *wb,
       if (apr_hash_get(nodes, key, klen))
         {
           /* Versioned node */
-          svn_error_t *err;
-          const svn_wc_entry_t *entry;
+          svn_wc__db_status_t node_status;
+          svn_wc__db_kind_t node_kind;
           svn_boolean_t hidden;
+
+          SVN_ERR(svn_wc__db_read_info(&node_status, &node_kind, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   wb->db, node_abspath, iterpool, iterpool));
 
           SVN_ERR(svn_wc__db_node_hidden(&hidden, wb->db, node_abspath,
                                          iterpool));
 
-          if (!hidden)
+          /* Hidden looks in the parent stubs, which should not be necessary
+             later. Also skip excluded/absent/not-present working nodes, which
+             only have an implied status via their parent. */
+          if (!hidden
+              && node_status != svn_wc__db_status_excluded
+              && node_status != svn_wc__db_status_absent
+              && node_status != svn_wc__db_status_not_present)
             {
-              err = svn_wc__get_entry(&entry, wb->db, node_abspath, FALSE,
-                                      svn_node_unknown, FALSE,
-                                      iterpool, iterpool);
-              if (err)
-                {
-                  if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-                    {
-                      /* We asked for the contents, but got the stub.  */
-                      svn_error_clear(err);
-                    }
-                  else if (err && err->apr_err == SVN_ERR_WC_MISSING)
-                    {
-                      svn_error_clear(err);
-
-                      /* Most likely the parent refers to a missing child;
-                       * retrieve the stub stored in the parent */
-
-                      err = svn_wc__get_entry(&entry, wb->db, node_abspath,
-                                              FALSE, svn_node_dir, TRUE,
-                                              iterpool, iterpool);
-
-                      if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-                        svn_error_clear(err);
-                      else
-                        SVN_ERR(err);
-                    }
-                  else
-                    return svn_error_return(err);
-                }
-
-              if (depth == svn_depth_files && entry->kind == svn_node_dir)
+              if (depth == svn_depth_files && node_kind == svn_wc__db_kind_dir)
                 continue;
 
               /* Handle this entry (possibly recursing). */
               SVN_ERR(handle_dir_entry(wb,
                                        node_abspath,
-                                       entry,
+                                       node_status,
+                                       node_kind,
                                        dir_repos_root_url,
                                        dir_repos_relpath,
                                        dirent_p ? dirent_p->kind
