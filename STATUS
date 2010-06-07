@@ -304,11 +304,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r944635
-   On Windows, allow building subversion against Sqlite versions that have a
-   fourth number in their version string, such as 3.6.23.1.
-   Justification:
-     We force users to run using unpatched versions without this patch.
-   Votes:
-     +1: rhuijben, danielsh, lgo
