@@ -3232,6 +3232,46 @@ def diff_git_format_url_wc(sbox):
                                      '--old', repo_url + '@1', '--new',
                                      wc_dir)
 
+# Passes with SVN_EXPERIMENTAL_PATCH defined
+def diff_git_format_url_url(sbox):
+  "create a diff in git unidiff format for url-url"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  new_path = os.path.join(wc_dir, 'new')
+  svntest.main.file_append(iota_path, "Changed 'iota'.\n")
+  svntest.main.file_append(new_path, "This is the file 'new'.\n")
+  svntest.main.run_svn(None, 'add', new_path)
+  svntest.main.run_svn(None, 'rm', mu_path)
+
+  ### We're not testing copied or moved paths. When we do, we will not be
+  ### able to identify them as copies/moves until we have editor-v2.
+
+  svntest.main.run_svn(None, 'commit', '-m', 'Committing changes', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  expected_output = make_git_diff_header("A/mu", "revision 1", 
+                                         "revision 2", 
+                                         delete=True) + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'mu'.\n",
+    ] + make_git_diff_header("new", "revision 0", "revision 2", 
+                              add=True) + [
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'.\n",
+  ] +  make_git_diff_header("iota", "revision 1", 
+                            "revision 2") + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Changed 'iota'.\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+                                     '--old', repo_url + '@1', '--new',
+                                     repo_url + '@2')
+
 ########################################################################
 #Run the tests
 
@@ -3290,6 +3330,7 @@ test_list = [ None,
               XFail(diff_preexisting_rev_against_local_add),
               XFail(diff_git_format_wc_wc),
               XFail(diff_git_format_url_wc),
+              XFail(diff_git_format_url_url),
               ]
 
 if __name__ == '__main__':
