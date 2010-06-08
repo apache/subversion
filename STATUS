@@ -135,8 +135,10 @@ Candidate changes:
    Fix one of the sanity checks in the 'svn merge --reintegrate' logic.
    Justification:
      Sanity checks should themselves be sane.
+   Branch:
+     ^/subversion/branches/1.6.x-r935631
    Votes:
-     +1: cmpilato
+     +1: cmpilato, pburba
      -0: This introduces new issues like #3242 and might break reintegrate
          where it previously worked. (Untested)
 
