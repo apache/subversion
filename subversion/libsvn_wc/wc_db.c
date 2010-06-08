@@ -4525,7 +4525,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (props_mod)
         {
-          *props_mod = have_act && !svn_sqlite__column_is_null(stmt_act, 7);
+          *props_mod = have_act && !svn_sqlite__column_is_null(stmt_act, 6);
         }
       if (base_shadowed)
         {
