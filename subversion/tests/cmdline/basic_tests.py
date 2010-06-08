@@ -2461,7 +2461,7 @@ def delete_from_url_with_spaces(sbox):
                                      os.path.join(sbox.wc_dir,
                                                   'Dir With Spaces'))
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mkdir', '--parents'
+                                     'mkdir', '--parents',
                                      os.path.join(sbox.wc_dir,
                                                   'Dir With/Spaces'))
 
