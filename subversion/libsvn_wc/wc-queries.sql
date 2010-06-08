@@ -87,16 +87,21 @@ INSERT OR IGNORE INTO WORKING_NODE (
   wc_id, local_relpath, parent_relpath, presence, kind)
 VALUES (?1, ?2, ?3, 'incomplete', 'unknown');
 
+-- STMT_COUNT_BASE_NODE_CHILDREN
+SELECT COUNT(*) FROM BASE_NODE
+WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_COUNT_WORKING_NODE_CHILDREN
+SELECT COUNT(*) FROM WORKING_NODE
+WHERE wc_id = ?1 AND parent_relpath = ?2;
+
 -- STMT_SELECT_BASE_NODE_CHILDREN
 select local_relpath from base_node
 where wc_id = ?1 and parent_relpath = ?2;
 
--- STMT_SELECT_WORKING_CHILDREN
-select local_relpath from base_node
-where wc_id = ?1 and parent_relpath = ?2
-union
-select local_relpath from working_node
-where wc_id = ?1 and parent_relpath = ?2;
+-- STMT_SELECT_WORKING_NODE_CHILDREN
+SELECT local_relpath FROM WORKING_NODE
+WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_SELECT_WORKING_IS_FILE
 select kind == 'file' from working_node

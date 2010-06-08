@@ -813,40 +813,97 @@ insert_working_node(void *baton,
 }
 
 
-/* */
 static svn_error_t *
-gather_children(const apr_array_header_t **children,
-                svn_boolean_t base_only,
-                svn_wc__db_t *db,
-                const char *local_abspath,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
+count_children(int *count,
+               int stmt_idx,
+               svn_sqlite__db_t *sdb,
+               apr_int64_t wc_id,
+               const char *parent_relpath)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, stmt_idx));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
+  SVN_ERR(svn_sqlite__step_row(stmt));
+  *count = svn_sqlite__column_int(stmt, 0);
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
+/* Each name is allocated in RESULT_POOL and stored into CHILDREN as a key
+   pointed to the same name.  */
+static svn_error_t *
+add_children_to_hash(apr_hash_t *children,
+                     int stmt_idx,
+                     svn_sqlite__db_t *sdb,
+                     apr_int64_t wc_id,
+                     const char *parent_relpath,
+                     apr_pool_t *result_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, stmt_idx));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *name = svn_relpath_basename(child_relpath, result_pool);
+
+      apr_hash_set(children, name, APR_HASH_KEY_STRING, name);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  return svn_sqlite__reset(stmt);
+}
+
+
+static svn_error_t *
+union_children(const apr_array_header_t **children,
+               svn_sqlite__db_t *sdb,
+               apr_int64_t wc_id,
+               const char *parent_relpath,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
+{
+  /* ### it would be nice to pre-size this hash table.  */
+  apr_hash_t *names = apr_hash_make(scratch_pool);
+  apr_array_header_t *names_array;
+
+  /* All of the names get allocated in RESULT_POOL.  */
+  SVN_ERR(add_children_to_hash(names, STMT_SELECT_BASE_NODE_CHILDREN,
+                               sdb, wc_id, parent_relpath, result_pool));
+  SVN_ERR(add_children_to_hash(names, STMT_SELECT_WORKING_NODE_CHILDREN,
+                               sdb, wc_id, parent_relpath, result_pool));
+
+  SVN_ERR(svn_hash_keys(&names_array, names, result_pool));
+  *children = names_array;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+single_table_children(const apr_array_header_t **children,
+                      int stmt_idx,
+                      int start_size,
+                      svn_sqlite__db_t *sdb,
+                      apr_int64_t wc_id,
+                      const char *parent_relpath,
+                      apr_pool_t *result_pool)
+{
   svn_sqlite__stmt_t *stmt;
   apr_array_header_t *child_names;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    base_only
-                                      ? STMT_SELECT_BASE_NODE_CHILDREN
-                                      : STMT_SELECT_WORKING_CHILDREN));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, stmt_idx));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
 
   /* ### should test the node to ensure it is a directory */
 
-  /* ### 10 is based on Subversion's average of 8.5 files per versioned
-     ### directory in its repository. maybe use a different value? or
-     ### count rows first?  */
-  child_names = apr_array_make(result_pool, 10, sizeof(const char *));
+  child_names = apr_array_make(result_pool, start_size, sizeof(const char *));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
@@ -862,6 +919,76 @@ gather_children(const apr_array_header_t **children,
   *children = child_names;
 
   return svn_sqlite__reset(stmt);
+}
+
+
+/* */
+static svn_error_t *
+gather_children(const apr_array_header_t **children,
+                svn_boolean_t base_only,
+                svn_wc__db_t *db,
+                const char *local_abspath,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  int base_count;
+  int working_count;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readonly,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  if (base_only)
+    {
+      /* 10 is based on Subversion's average of 8.7 files per versioned
+         directory in its repository.
+
+         ### note "files". should redo count with subdirs included */
+      return svn_error_return(single_table_children(
+                                children, STMT_SELECT_BASE_NODE_CHILDREN,
+                                10 /* start_size */,
+                                pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                local_relpath, result_pool));
+    }
+
+  SVN_ERR(count_children(&base_count, STMT_COUNT_BASE_NODE_CHILDREN,
+                         pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(count_children(&working_count, STMT_COUNT_WORKING_NODE_CHILDREN,
+                         pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
+
+  if (base_count == 0)
+    {
+      if (working_count == 0)
+        {
+          *children = apr_array_make(result_pool, 0, sizeof(const char *));
+          return SVN_NO_ERROR;
+        }
+
+      return svn_error_return(single_table_children(
+                                children, STMT_SELECT_WORKING_NODE_CHILDREN,
+                                working_count,
+                                pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                local_relpath, result_pool));
+    }
+  if (working_count == 0)
+    return svn_error_return(single_table_children(
+                              children, STMT_SELECT_BASE_NODE_CHILDREN,
+                              base_count,
+                              pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                              local_relpath, result_pool));
+
+  /* ### it would be nice to pass BASE_COUNT and WORKING_COUNT, but there is
+     ### nothing union_children() can do with those.  */
+  return svn_error_return(union_children(children, 
+                                         pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                         local_relpath,
+                                         result_pool, scratch_pool));
 }
 
 
