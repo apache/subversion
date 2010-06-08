@@ -10807,6 +10807,7 @@ def foreign_repos(sbox):
 
   # Convenience variables for working copy paths.
   Z_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
+  B_path = os.path.join(wc_dir, 'A', 'B')
   Q_path = os.path.join(wc_dir, 'Q')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   iota_path = os.path.join(wc_dir, 'iota')
@@ -10815,21 +10816,24 @@ def foreign_repos(sbox):
   zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
   fred_path = os.path.join(wc_dir, 'A', 'C', 'fred')
 
-  # Add new directories
+  # Add new directories, with properties
   svntest.main.run_svn(None, 'mkdir', Q_path, Z_path)
+  svntest.main.run_svn(None, 'pset', 'foo', 'bar', Q_path, Z_path)
 
-  # Add new files
+  # Add new files, with contents and properties.
   zeta_contents = "This is the file 'zeta'.\n"
   fred_contents = "This is the file 'fred'.\n"
   svntest.main.file_append(zeta_path, zeta_contents)
   svntest.main.file_append(fred_path, fred_contents)
   svntest.main.run_svn(None, 'add', zeta_path, fred_path)
-
-  # Modify existing files
+  svntest.main.run_svn(None, 'pset', 'foo', 'bar', zeta_path, fred_path)
+  
+  # Modify existing files and directories.
   added_contents = "This is another line of text.\n"
   svntest.main.file_append(iota_path, added_contents)
   svntest.main.file_append(beta_path, added_contents)
-
+  svntest.main.run_svn(None, 'pset', 'foo', 'bar', iota_path, B_path)
+  
   # Delete some stuff
   svntest.main.run_svn(None, 'delete', alpha_path, H_path)
 
@@ -10840,6 +10844,7 @@ def foreign_repos(sbox):
     'A/D/G/Z/zeta' : Item(verb='Adding'),
     'A/C/fred'     : Item(verb='Adding'),
     'iota'         : Item(verb='Sending'),
+    'A/B'          : Item(verb='Sending'),
     'A/B/E/beta'   : Item(verb='Sending'),
     'A/B/E/alpha'  : Item(verb='Deleting'),
     'A/D/H'        : Item(verb='Deleting'),
@@ -10851,21 +10856,23 @@ def foreign_repos(sbox):
     'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2),
     'A/C/fred'     : Item(status='  ', wc_rev=2),
     })
-  expected_status.tweak('iota', 'A/B/E/beta', wc_rev=2)
+  expected_status.tweak('iota', 'A/B/E/beta', 'A/B', wc_rev=2)
   expected_status.remove('A/B/E/alpha', 'A/D/H', 'A/D/H/chi',
                          'A/D/H/psi', 'A/D/H/omega')
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'Q'            : Item(),
-    'A/D/G/Z'      : Item(),
-    'A/D/G/Z/zeta' : Item(contents=zeta_contents),
-    'A/C/fred'     : Item(contents=fred_contents),
+    'Q'            : Item(props={'foo':'bar'}),
+    'A/D/G/Z'      : Item(props={'foo':'bar'}),
+    'A/D/G/Z/zeta' : Item(contents=zeta_contents,props={'foo':'bar'}),
+    'A/C/fred'     : Item(contents=fred_contents,props={'foo':'bar'}),
     })
   expected_disk.remove('A/B/E/alpha', 'A/D/H', 'A/D/H/chi',
                        'A/D/H/psi', 'A/D/H/omega')
   expected_disk.tweak('iota',
                       contents=expected_disk.desc['iota'].contents
-                      + added_contents)
+                      + added_contents,
+                      props={'foo':'bar'})
+  expected_disk.tweak('A/B', props={'foo':'bar'})
   expected_disk.tweak('A/B/E/beta',
                       contents=expected_disk.desc['A/B/E/beta'].contents
                       + added_contents)
@@ -10887,6 +10894,14 @@ def foreign_repos(sbox):
   svntest.actions.verify_disk(wc_dir2, expected_disk,
                               None, None, None, None, 1)
 
+  # Now, let's make a third checkout -- our second from the original
+  # repository -- and make sure that all the data there is correct.
+  # It should look just like the original EXPECTED_DISK.
+  wc_dir3 = sbox.add_wc_path('wc3')
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     sbox2.repo_url, wc_dir3)
+  svntest.actions.verify_disk(wc_dir3, expected_disk,
+                              None, None, None, None, 1)
 
 def foreign_repos_uuid(sbox):
   "verify uuid of items added via foreign repo merge"
