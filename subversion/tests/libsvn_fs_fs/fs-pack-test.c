@@ -112,6 +112,7 @@ create_packed_filesystem(const char *dir,
   const char *conflict;
   svn_revnum_t after_rev;
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool;
 
   /* Create a filesystem, then close it */
   SVN_ERR(svn_test__create_fs(&fs, dir, opts, subpool));
@@ -133,16 +134,19 @@ create_packed_filesystem(const char *dir,
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
 
   /* Revisions 2-11: A bunch of random changes. */
+  iterpool = svn_pool_create(subpool);
   while (after_rev < max_rev + 1)
     {
-      SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, subpool));
-      SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, iterpool));
+      SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
       SVN_ERR(svn_test__set_file_contents(txn_root, "iota",
                                           get_rev_contents(after_rev + 1,
-                                                           subpool),
-                                          subpool));
-      SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
+                                                           iterpool),
+                                          iterpool));
+      SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, iterpool));
     }
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
 
   /* Now pack the FS */
