@@ -6957,12 +6957,13 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  svn_wc__db_status_t base_status;
+  svn_wc__db_status_t work_status, base_status;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  /* Check two things: does a WORKING node exist, and what is the BASE
-     status? */
+  /* This uses an optimisation that first reads the working node and
+     then may read the base node.  It could call svn_wc__db_read_info
+     but that would always read both nodes. */
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -6976,17 +6977,18 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
                                     STMT_SELECT_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
 
-  /* If a working node exists, the node will not be hidden.
-
-     Note: this can ONLY be an add/copy-here/move-here. It is not possible
-     to delete a "hidden" node.  */
   if (have_row)
     {
-      *hidden = FALSE;
+      /* Note: this can ONLY be an add/copy-here/move-here. It is not
+         possible to delete a "hidden" node.  */
+      work_status = svn_sqlite__column_token(stmt, 0, presence_map);
+      *hidden = (work_status == svn_wc__db_status_excluded);
+      SVN_ERR(svn_sqlite__reset(stmt));
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Now check the BASE node's status.  */
   SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL, NULL,
