@@ -275,22 +275,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r876032, r876104, r878447, r878910, r878911, r878916
-   Several fixes to the Win32 exception handler. This change also makes it
-   available on Windows Vista and 7 where it was previously blocked by a
-   version check.
-   Justification:
-     This exception handler is a valuable debugging tool for users who don't
-     have development tools installed. (Most users on Windows).
-   Notes:
-     Most of these revisions cancel out each other. The real changes are in
-     r878447 (removing version check) and r878910,r878916 (fixing formatting
-     specifier). It's probably easier to review the combined patch than the
-     individual revisions.
-   Branch:
-     ^/subversion/branches/1.6.x-r38836.
-   Votes:
-     +1: rhuijben, steveking, lgo
-     +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
-         works fine on my XP box.

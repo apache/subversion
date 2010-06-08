@@ -64,16 +64,6 @@ typedef PVOID (WINAPI * SYMFUNCTIONTABLEACCESS64)(HANDLE hProcess, DWORD64 AddrB
 
 typedef DWORD64 (WINAPI * SYMGETMODULEBASE64)(HANDLE hProcess, DWORD64 dwAddr);
 
-/* public functions in version.dll */
-typedef DWORD (APIENTRY * GETFILEVERSIONINFOSIZE)
-                          (LPCSTR lptstrFilename, LPDWORD lpdwHandle);
-typedef BOOL  (APIENTRY * GETFILEVERSIONINFO)
-                          (LPCSTR lptstrFilename, DWORD dwHandle, DWORD dwLen,
-                           LPVOID lpData);
-typedef BOOL  (APIENTRY * VERQUERYVALUE)
-                          (const LPVOID pBlock, LPSTR lpSubBlock,
-                           LPVOID * lplpBuffer, PUINT puLen);
-
 /* public functions in kernel32.dll */
 typedef BOOL  (WINAPI * ISDEBUGGERPRESENT)(VOID);
 
