@@ -142,18 +142,6 @@ Candidate changes:
      -0: This introduces new issues like #3242 and might break reintegrate
          where it previously worked. (Untested)
 
- * r935992, r935996 (issue #3636)
-   Makes it possible to delete paths directly from the repository that contain
-   characters that need escaping in an uri.
-   Justification:
-     svn rm URL should just work on 'http://server/path/with%20space'
-   Notes: r935992 is a test for this issue and r935996 fixes the issue and
-     extends the testcase a bit.
-   Branch:
-     ^/subversion/branches/1.6.x-r935996.
-   Votes:
-     +1 rhuijben, steveking
-
  * r937610
    Allow fs-pack-test 1 to pass with low file descriptor limits.
    Justification:
@@ -320,3 +308,16 @@ Approved changes:
      +1: rhuijben, steveking, lgo
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
          works fine on my XP box.
+
+ * r935992, r935996 (issue #3636)
+   Makes it possible to delete paths directly from the repository that contain
+   characters that need escaping in an uri.
+   Justification:
+     svn rm URL should just work on 'http://server/path/with%20space'
+   Notes: r935992 is a test for this issue and r935996 fixes the issue and
+     extends the testcase a bit.
+   Branch:
+     ^/subversion/branches/1.6.x-r935996.
+   Votes:
+     +1 rhuijben, steveking, pburba
+
