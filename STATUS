@@ -139,8 +139,6 @@ Candidate changes:
      ^/subversion/branches/1.6.x-r935631
    Votes:
      +1: cmpilato, pburba
-     -0: This introduces new issues like #3242 and might break reintegrate
-         where it previously worked. (Untested)
 
  * r939375-939376
    Fix issue #3623, a bug in foreign repository merges that causes properties
