@@ -5660,8 +5660,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       /* Record information from the starting node.  */
       if (current_abspath == local_abspath)
         {
-          /* The starting node should exist normally.  */
-          if (presence != svn_wc__db_status_normal)
+          if (presence != svn_wc__db_status_normal
+              && presence != svn_wc__db_status_excluded)
             return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
                                      svn_sqlite__reset(stmt),
                                      _("Expected node '%s' to be added."),
