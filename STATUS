@@ -149,11 +149,11 @@ Candidate changes:
      This can actually result in what is arguably a corrupt working copy,
      one that thinks it is in sync with the repository but actually is not.
    Notes:
-     r939375 tweaks a test to cover this case.  There's a minor conflict
-     with its merge with a single deleted function call.  (Keep 'theirs'.)
-     r939376 is the fix.  It merges cleanly.
+     r939375 tweaks a test to cover this case.  r939376 is the fix.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3623
    Votes:
-     +1: cmpilato
+     +1: cmpilato, pburba
 
  * r945708
    Fix issue #3469 "tree conflict inside of directory external causes
