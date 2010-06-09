@@ -543,16 +543,26 @@ def relocate_deleted_missing_copied(sbox):
   # Remove A/B/F to create a missing entry
   svntest.main.safe_rmtree(os.path.join(wc_dir, 'A', 'B', 'F'))
 
-  # Copy A/D/H to A/D/H2
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  H2_path = os.path.join(wc_dir, 'A', 'D', 'H2')
+  # Copy A/D to A/D2
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  D2_path = os.path.join(wc_dir, 'A', 'D2')
   svntest.actions.run_and_verify_svn(None, None, [], 'copy',
-                                     H_path, H2_path)
+                                     D_path, D2_path)
+  # Delete within the copy
+  D2G_path = os.path.join(wc_dir, 'A', 'D2', 'G')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', D2G_path)
+
   expected_status.add({
-    'A/D/H2'       : Item(status='A ', wc_rev='-', copied='+'),
-    'A/D/H2/chi'   : Item(status='  ', wc_rev='-', copied='+'),
-    'A/D/H2/omega' : Item(status='  ', wc_rev='-', copied='+'),
-    'A/D/H2/psi'   : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D2'         : Item(status='A ', wc_rev='-', copied='+'),
+    'A/D2/gamma'   : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D2/G'       : Item(status='D ', wc_rev='?'),
+    'A/D2/G/pi'    : Item(status='D ', wc_rev='?'),
+    'A/D2/G/rho'   : Item(status='D ', wc_rev='?'),
+    'A/D2/G/tau'   : Item(status='D ', wc_rev='?'),
+    'A/D2/H'       : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D2/H/chi'   : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D2/H/omega' : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D2/H/psi'   : Item(status='  ', wc_rev='-', copied='+'),
     })
   expected_status.tweak('A/B/F', status='! ', wc_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -574,17 +584,23 @@ def relocate_deleted_missing_copied(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/mu')
   expected_disk.add({
-    'A/D/H2'       : Item(),
-    'A/D/H2/chi'   : Item("This is the file 'chi'.\n"),
-    'A/D/H2/omega' : Item("This is the file 'omega'.\n"),
-    'A/D/H2/psi'   : Item("This is the file 'psi'.\n"),
+    'A/D2'       : Item(),
+    'A/D2/gamma'   : Item("This is the file 'gamma'.\n"),
+    'A/D2/G'       : Item(),
+    'A/D2/H'       : Item(),
+    'A/D2/H/chi'   : Item("This is the file 'chi'.\n"),
+    'A/D2/H/omega' : Item("This is the file 'omega'.\n"),
+    'A/D2/H/psi'   : Item("This is the file 'psi'.\n"),
     })
   expected_status.add({
     'A/B/F'       : Item(status='  ', wc_rev='2'),
     })
   expected_status.tweak(wc_rev=2)
-  expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
+  expected_status.tweak('A/D2', 'A/D2/gamma',
+                        'A/D2/H', 'A/D2/H/chi', 'A/D2/H/omega', 'A/D2/H/psi',
                         wc_rev='-')
+  expected_status.tweak('A/D2/G', 'A/D2/G/pi', 'A/D2/G/rho', 'A/D2/G/tau',
+                        wc_rev='?')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -592,10 +608,13 @@ def relocate_deleted_missing_copied(sbox):
 
   # Commit to verify that copyfrom URLs have been relocated
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/H2'       : Item(verb='Adding'),
+    'A/D2'       : Item(verb='Adding'),
+    'A/D2/G'     : Item(verb='Deleting'),
     })
-  expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
+  expected_status.tweak('A/D2', 'A/D2/gamma',
+                        'A/D2/H', 'A/D2/H/chi', 'A/D2/H/omega', 'A/D2/H/psi',
                         status='  ', wc_rev='3', copied=None)
+  expected_status.remove('A/D2/G', 'A/D2/G/pi', 'A/D2/G/rho', 'A/D2/G/tau')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
                                         None, wc_dir)
