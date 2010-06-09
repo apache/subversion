@@ -2395,7 +2395,7 @@ public class BasicTests extends SVNTests
 
         // Add a "begin merge" notification handler.
         final Revision[] actualRange = new Revision[2];
-        NotifyCallback notify = new NotifyCallback()
+        ClientNotifyCallback notify = new ClientNotifyCallback()
         {
             public void onNotify(NotifyInformation info)
             {
@@ -3032,7 +3032,7 @@ public class BasicTests extends SVNTests
     {
         // build the test setup
         OneTest thisTest = new OneTest();
-        NotifyCallback notify = new NotifyCallback()
+        ClientNotifyCallback notify = new ClientNotifyCallback()
         {
             public void onNotify(NotifyInformation info)
             {
@@ -3050,7 +3050,7 @@ public class BasicTests extends SVNTests
     {
         // build the test setup
         OneTest thisTest = new OneTest();
-        NotifyCallback notify = new NotifyCallback()
+        ClientNotifyCallback notify = new ClientNotifyCallback()
         {
             public void onNotify(NotifyInformation info)
             {

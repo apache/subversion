@@ -36,7 +36,7 @@ import java.util.EventListener;
  *
  * @since 1.2
  */
-public interface NotifyCallback extends EventListener
+public interface ClientNotifyCallback extends EventListener
 {
     /**
      * Handler for Subversion notifications.

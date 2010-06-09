@@ -832,7 +832,7 @@ class SVNTests extends TestCase
         }
     }
 
-    class MyNotifier implements NotifyCallback
+    class MyNotifier implements ClientNotifyCallback
     {
 
         /**

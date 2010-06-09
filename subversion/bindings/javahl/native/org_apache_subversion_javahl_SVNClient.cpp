@@ -33,7 +33,7 @@
 #include "Revision.h"
 #include "RevisionRange.h"
 #include "EnumMapper.h"
-#include "NotifyCallback.h"
+#include "ClientNotifyCallback.h"
 #include "ConflictResolverCallback.h"
 #include "ProgressListener.h"
 #include "CommitMessage.h"
@@ -354,7 +354,7 @@ Java_org_apache_subversion_javahl_SVNClient_notification2
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  NotifyCallback *notify2 = NotifyCallback::makeCNotify(jnotify2);
+  ClientNotifyCallback *notify2 = ClientNotifyCallback::makeCNotify(jnotify2);
   if (JNIUtil::isExceptionThrown())
     return;
 

@@ -179,7 +179,7 @@ public interface ISVNClient
      *               file operations.
      * @since 1.2
      */
-    void notification2(NotifyCallback notify);
+    void notification2(ClientNotifyCallback notify);
 
     /**
      * Set the conflict resolution callback.
