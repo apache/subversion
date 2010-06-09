@@ -174,7 +174,7 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.2
      */
-    public native void notification2(NotifyCallback notify);
+    public native void notification2(ClientNotifyCallback notify);
 
     /**
      * @since 1.5

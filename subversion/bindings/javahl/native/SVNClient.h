@@ -34,7 +34,7 @@
 
 class Revision;
 class RevisionRange;
-class NotifyCallback;
+class ClientNotifyCallback;
 class ConflictResolverCallback;
 class ProgressListener;
 class Targets;
@@ -143,7 +143,7 @@ class SVNClient :public SVNBase
   void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, const char *message, bool force,
               bool keep_local, RevpropTable &revprops);
-  void notification2(NotifyCallback *notify2);
+  void notification2(ClientNotifyCallback *notify2);
   void setConflictResolver(ConflictResolverCallback *conflictResolver);
   void setProgressListener(ProgressListener *progressListener);
   jlong checkout(const char *moduleName, const char *destPath,
@@ -225,7 +225,7 @@ class SVNClient :public SVNBase
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds);
 
-  NotifyCallback *m_notify2;
+  ClientNotifyCallback *m_notify2;
   ConflictResolverCallback *m_conflictResolver;
   ProgressListener *m_progressListener;
   Prompter *m_prompter;
