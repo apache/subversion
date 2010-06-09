@@ -186,13 +186,6 @@ Candidate changes:
    Votes:
      +1: stylesen
 
- * r951753
-   Fix issue #3649: a bogus 'mkdir --parents' error.
-   Justification:
-     Simple fix, user requests.
-   Votes:
-     +1: danielsh, rhuijben
-
  * r901304
    Update email adress to which to send the crash reports (on Windows).
    Justification:
@@ -275,3 +268,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r951753
+   Fix issue #3649: a bogus 'mkdir --parents' error.
+   Justification:
+     Simple fix, user requests.
+   Votes:
+     +1: danielsh, rhuijben, stylesen
