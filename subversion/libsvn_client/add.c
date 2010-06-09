@@ -769,7 +769,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
         svn_sort_compare_paths);
 
   /* ### This reparent may be problematic in limited-authz-to-common-parent
-     ### scenarios (compare issue #3242).  See also issue #3496. */
+     ### scenarios (compare issue #3242).  See also issue #3649. */
   if (ra_session)
     SVN_ERR(svn_ra_reparent(ra_session, common, pool));
 
