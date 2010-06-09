@@ -276,10 +276,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r901304
-   Update email address to which to send the crash reports (on Windows).
-   Justification:
-     Old address still points to the tigris.org domain. Simple fix.
-   Votes:
-     +1: lgo, stylesen, pburba
