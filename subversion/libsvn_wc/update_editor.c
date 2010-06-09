@@ -3057,15 +3057,6 @@ close_directory(void *dir_baton,
                                      &new_changed_author,
                                      eb->db, db->local_abspath, entry_props,
                                      pool, pool));
-
-      /* Handle the wcprops. */
-      if (wc_props && wc_props->nelts > 0)
-        {
-          SVN_ERR(svn_wc__db_base_set_dav_cache(eb->db, db->local_abspath,
-                                                prop_hash_from_array(wc_props,
-                                                                     pool),
-                                                pool));
-        }
     }
 
   /* If this directory is merely an anchor for a targeted child, then we
@@ -3170,6 +3161,15 @@ close_directory(void *dir_baton,
                                           NULL /* conflict */,
                                           work_items,
                                           pool));
+        }
+
+      /* Handle the wcprops. */
+      if (wc_props && wc_props->nelts > 0)
+        {
+          SVN_ERR(svn_wc__db_base_set_dav_cache(eb->db, db->local_abspath,
+                                                prop_hash_from_array(wc_props,
+                                                                     pool),
+                                                pool));
         }
     }
 
@@ -4859,13 +4859,6 @@ close_file(void *file_baton,
     all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
   }
 
-  /* This writes a whole bunch of log commands to install wcprops.  */
-  /* ### no it doesn't. this immediately modifies them. should probably
-     ### occur later, when we know the (new) BASE node exists.  */
-  SVN_ERR(svn_wc__db_base_set_dav_cache(eb->db, fb->local_abspath,
-                                        prop_hash_from_array(wc_props, pool),
-                                        pool));
-
   /* Do the hard work. This will queue some additional work.  */
   SVN_ERR(merge_file(&work_item, &install_pristine, &install_from,
                      &content_state, fb, new_text_base_abspath, pool));
@@ -4980,6 +4973,12 @@ close_file(void *file_baton,
                                      NULL /* conflict */,
                                      all_work_items,
                                      pool));
+
+    /* This writes a whole bunch of log commands to install wcprops.  */
+    /* ### no it doesn't. this immediately modifies them. */
+    SVN_ERR(svn_wc__db_base_set_dav_cache(eb->db, fb->local_abspath,
+                                          prop_hash_from_array(wc_props, pool),
+                                          pool));
 
     /* ### ugh. deal with preserving the file external value in the database.
        ### there is no official API, so we do it this way. maybe we should
