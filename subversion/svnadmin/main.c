@@ -658,16 +658,15 @@ repos_notify_handler(void *baton,
                      apr_pool_t *scratch_pool)
 {
   svn_stream_t *feedback_stream = baton;
+  apr_size_t len;
 
   switch (notify->action)
   {
     case svn_repos_notify_warning:
-      {
-        apr_size_t len = strlen(notify->warning);
-        svn_error_clear(svn_stream_write(feedback_stream, notify->warning,
-                                         &len));
-        return;
-      }
+      len = strlen(notify->warning);
+      svn_error_clear(svn_stream_write(feedback_stream, notify->warning,
+                                       &len));
+      return;
 
     case svn_repos_notify_dump_rev_end:
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
@@ -711,6 +710,78 @@ repos_notify_handler(void *baton,
     case svn_repos_notify_pack_shard_end_revprop:
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                         _("done.\n")));
+      return;
+
+    case svn_repos_notify_load_txn_committed:
+      if (notify->old_revision == SVN_INVALID_REVNUM)
+        {
+          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                            _("\n------- Committed revision %ld >>>\n\n"),
+                            notify->new_revision));
+        }
+      else
+        {
+          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                            _("\n------- Committed new rev %ld"
+                              " (loaded from original rev %ld"
+                              ") >>>\n\n"), notify->new_revision,
+                              notify->old_revision));
+        }
+      return;
+
+    case svn_repos_notify_load_node_start:
+      {
+        switch (notify->node_action)
+        {
+          case svn_node_action_change:
+            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                  _("     * editing path : %s ..."),
+                                  notify->path));
+            break;
+          
+          case svn_node_action_delete:
+            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                  _("     * deleting path : %s ..."),
+                                  notify->path));
+            break;
+          
+          case svn_node_action_add:
+            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                  _("     * adding path : %s ..."),
+                                  notify->path));
+            break;
+          
+          case svn_node_action_replace:
+            svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                  _("     * replacing path : %s ..."),
+                                  notify->path));
+            break;
+          
+        }
+      }
+      return;
+
+    case svn_repos_notify_load_node_done:
+      len = 7;
+      svn_error_clear(svn_stream_write(feedback_stream, _(" done.\n"), &len));
+      return;
+
+    case svn_repos_notify_load_copied_node:
+      len = 9;
+      svn_error_clear(svn_stream_write(feedback_stream, "COPIED...", &len));
+      return;
+
+    case svn_repos_notify_load_txn_start:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                _("<<< Started new transaction, based on "
+                                  "original revision %ld\n"),
+                                notify->old_revision));
+      return;
+
+    case svn_repos_notify_load_normalized_mergeinfo:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                _(" removing '\\r' from %s ..."),
+                                SVN_PROP_MERGEINFO));
       return;
 
     default:
@@ -860,11 +931,12 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     stdout_stream = recode_stream_create(stdout, pool);
 
-  SVN_ERR(svn_repos_load_fs2(repos, stdin_stream, stdout_stream,
+  SVN_ERR(svn_repos_load_fs3(repos, stdin_stream,
                              opt_state->uuid_action, opt_state->parent_dir,
                              opt_state->use_pre_commit_hook,
                              opt_state->use_post_commit_hook,
-                             check_cancel, NULL, pool));
+                             !opt_state->quiet ? repos_notify_handler : NULL,
+                             stdout_stream, check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
