@@ -186,13 +186,6 @@ Candidate changes:
    Votes:
      +1: stylesen
 
- * r901304
-   Update email address to which to send the crash reports (on Windows).
-   Justification:
-     Old address still points to the tigris.org domain. Simple fix.
-   Votes:
-     +1: lgo, stylesen
-
  * r952973, r952992
    Fix for issue #3651 "svn copy does not eat peg revision within copy target
    path"
@@ -290,3 +283,10 @@ Approved changes:
      Simple fix, user requests.
    Votes:
      +1: danielsh, rhuijben, stylesen
+
+ * r901304
+   Update email address to which to send the crash reports (on Windows).
+   Justification:
+     Old address still points to the tigris.org domain. Simple fix.
+   Votes:
+     +1: lgo, stylesen, pburba
