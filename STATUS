@@ -277,13 +277,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r951753
-   Fix issue #3649: a bogus 'mkdir --parents' error.
-   Justification:
-     Simple fix, user requests.
-   Votes:
-     +1: danielsh, rhuijben, stylesen
-
  * r901304
    Update email address to which to send the crash reports (on Windows).
    Justification:
