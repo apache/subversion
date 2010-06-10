@@ -61,14 +61,14 @@ GNU_ICONV_VER	= 1.13.1
 APR_UTIL_VER	= 1.3.9
 HTTPD_VER	= 2.2.15
 NEON_VER	= 0.29.3
-SERF_VER	= 0.6.1
+SERF_VER	= 0.6.x
 SQLITE_VER	= 3.6.23.1
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
 GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
-SERF_DIST	= serf-$(SERF_VER).tar.gz
+#SERF_DIST	= serf-$(SERF_VER).tar.gz
 SQLITE_DIST	= sqlite-$(SQLITE_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
 
@@ -89,7 +89,8 @@ GNU_ICONV_URL	= ftp://ftp.fu-berlin.de/unix/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= http://svn.apache.org/repos/asf/apr/apr-util
 HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
-SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
+#SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
+SERF_URL	= http://serf.googlecode.com/svn/branches/$(SERF_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -553,21 +554,29 @@ serf-clean:
 
 
 # fetch distfile for serf
-$(DISTDIR)/$(SERF_DIST):
-	cd $(DISTDIR) && $(FETCH_CMD) $(SERF_URL)
-
+#$(DISTDIR)/$(SERF_DIST):
+#	cd $(DISTDIR) && $(FETCH_CMD) $(SERF_URL)
+#
 # retrieve serf
-$(SERF_OBJDIR)/.retrieved: $(DISTDIR)/$(SERF_DIST)
+#$(SERF_OBJDIR)/.retrieved: $(DISTDIR)/$(SERF_DIST)
+#	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
+#	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SERF_DIST)
+#	cd $(SRCDIR)/serf-$(SERF_VER) && \
+#		svn diff -c1394 http://serf.googlecode.com/svn | patch -p2
+#	touch $@
+
+# retrieve serf if not present yet
+$(SERF_OBJDIR)/.retrieved:
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
-	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SERF_DIST)
-	cd $(SRCDIR)/serf-$(SERF_VER) && \
-		svn diff -c1394 http://serf.googlecode.com/svn | patch -p2
+	if [ ! -d $(SERF_SRCDIR) ]; then \
+		svn export $(SERF_URL) $(SERF_SRCDIR); \
+	fi
 	touch $@
 
 # compile serf (serf won't compile outside its source tree)
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved
 	cd $(SERF_SRCDIR) && \
-		./serfmake --with-apr=$(PREFIX)/apr \
+		env CFLAGS="-O0 -g" ./serfmake --with-apr=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf \
 			build
 	touch $@
