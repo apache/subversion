@@ -24,6 +24,7 @@
 package org.tigris.subversion.javahl;
 
 import java.util.Date;
+import java.io.File;
 
 /**
  * Give information about one subversion item (file or directory) in the
@@ -143,16 +144,32 @@ public class Info implements java.io.Serializable
     /**
      * A backward-compat constructor
      */
-    public Info(org.apache.subversion.javahl.Info aInfo)
+    public Info(org.apache.subversion.javahl.Info2 aInfo)
     {
-        this(aInfo.getName(), aInfo.getUrl(), aInfo.getUuid(),
-             aInfo.getRepository(), aInfo.getSchedule().ordinal(),
-             NodeKind.fromApache(aInfo.getNodeKind()),
-             aInfo.getAuthor(), aInfo.getRevision(),
-             aInfo.getLastChangedRevision(), aInfo.getLastChangedDate(),
-             aInfo.getLastDateTextUpdate(), aInfo.getLastDatePropsUpdate(),
-             aInfo.isCopied(), aInfo.isDeleted(), aInfo.isAbsent(),
-             aInfo.isIncomplete(), aInfo.getCopyRev(), aInfo.getCopyUrl());
+        this((new File(aInfo.getPath())).getName(), aInfo.getUrl(),
+             aInfo.getReposUUID(), aInfo.getReposRootUrl(),
+             aInfo.getSchedule().ordinal(),
+             NodeKind.fromApache(aInfo.getKind()),
+             aInfo.getLastChangedAuthor(), aInfo.getRev(),
+             aInfo.getLastChangedRev(), aInfo.getLastChangedDate(),
+             aInfo.getTextTime(), aInfo.getPropTime(), aInfo.getCopyFromUrl() != null,
+             aInfo.getSchedule() == org.apache.subversion.javahl.Info2.ScheduleKind.delete,
+             checkAbsent(aInfo.getPath()), checkIncomplete(aInfo.getPath()),
+             aInfo.getCopyFromRev(), aInfo.getCopyFromUrl());
+    }
+    
+    private static boolean checkAbsent(String path)
+    {
+    	File f = new File(path);
+    	return !f.exists();
+    }
+    
+    /** See if the path is incomplete.  We currently have no way of getting
+     *  this information from the existing info struct, so just return false.
+     */
+    private static boolean checkIncomplete(String path)
+    {
+    	return false;
     }
 
     /**
