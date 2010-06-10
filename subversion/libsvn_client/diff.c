@@ -393,17 +393,6 @@ print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding,
 }
 #endif
 
-enum diff_operation
-{
-  diff_op_added,
-  diff_op_deleted,
-  diff_op_copied,
-  diff_op_moved,
-  /* There's no tree changes, just text modifications. */
-  diff_op_modified
-}; 
-
-
 /*-----------------------------------------------------------------*/
 
 /*** Callbacks for 'svn diff', invoked by the repos-diff editor. ***/
@@ -528,7 +517,7 @@ diff_content_changed(const char *path,
                      svn_revnum_t rev2,
                      const char *mimetype1,
                      const char *mimetype2,
-                     enum diff_operation operation,
+                     svn_diff_operation_kind_t operation,
                      void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
