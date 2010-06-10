@@ -228,7 +228,13 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_load_copied_node,
 
   /** Mergeinfo has been normalized */
-  svn_repos_notify_load_normalized_mergeinfo
+  svn_repos_notify_load_normalized_mergeinfo,
+
+  /** The operation has acquired a mutex for the repo. */
+  svn_repos_notify_mutex_acquired,
+
+  /** Recover has started. */
+  svn_repos_notify_recover_start
 
 } svn_repos_notify_action_t;
 
@@ -496,8 +502,8 @@ svn_repos_fs_pack(svn_repos_t *repos,
  * If @a nonblocking is TRUE, an error of type EWOULDBLOCK is
  * returned if the lock is not immediately available.
  *
- * If @a start_callback is not NULL, it will be called with @a
- * start_callback_baton as argument before the recovery starts, but
+ * If @a notify_func is not NULL, it will be called with @a
+ * notify_baton as argument before the recovery starts, but
  * after the exclusive lock has been acquired.
  *
  * If @a cancel_func is not @c NULL, it is called periodically with
@@ -509,8 +515,25 @@ svn_repos_fs_pack(svn_repos_t *repos,
  * by a single threaded process, or by a multi-threaded process when
  * no other threads are accessing the repository.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_repos_recover4(const char *path,
+                   svn_boolean_t nonblocking,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void * cancel_baton,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_recover4(), but with @a start callback in place of
+ * the notify_func / baton.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_recover3(const char *path,
                    svn_boolean_t nonblocking,
