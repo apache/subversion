@@ -2248,7 +2248,19 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            return new Info(aSVNClient.info(path));
+        	final List<org.apache.subversion.javahl.Info2> infos =
+        		new ArrayList<org.apache.subversion.javahl.Info2>();
+        	aSVNClient.info2(path,
+        					org.apache.subversion.javahl.Revision.HEAD,
+        					org.apache.subversion.javahl.Revision.HEAD,
+        					org.apache.subversion.javahl.Depth.empty,
+        				    null, new org.apache.subversion.javahl.callback.InfoCallback()
+        	{
+				public void singleInfo(org.apache.subversion.javahl.Info2 info) {
+					infos.add(info);
+				}
+        	});
+            return new Info(infos.get(0));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {

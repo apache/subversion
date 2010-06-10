@@ -508,14 +508,6 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #info2(String, Revision, Revision, int, String[],
-     *                               InfoCallback)} instead.
-     * @since 1.0
-     */
-    public native Info info(String path)
-            throws ClientException;
-
-    /**
      * @since 1.5
      */
     public native void addToChangelist(Set<String> paths, String changelist,
