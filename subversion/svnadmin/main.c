@@ -784,6 +784,18 @@ repos_notify_handler(void *baton,
                                 SVN_PROP_MERGEINFO));
       return;
 
+    case svn_repos_notify_mutex_acquired:
+      /* Enable cancellation signal handlers. */
+      setup_cancellation_signals(signal_handler);
+      return;
+
+    case svn_repos_notify_recover_start:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                             _("Repository lock acquired.\n"
+                               "Please wait; recovering the"
+                               " repository may take some time...\n")));
+      return;
+
     default:
       return;
   }
@@ -967,25 +979,6 @@ subcommand_lstxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
-/* A callback which is called when the recovery starts. */
-static svn_error_t *
-recovery_started(void *baton)
-{
-  apr_pool_t *pool = (apr_pool_t *)baton;
-
-  SVN_ERR(svn_cmdline_printf(pool,
-                             _("Repository lock acquired.\n"
-                               "Please wait; recovering the"
-                               " repository may take some time...\n")));
-  SVN_ERR(svn_cmdline_fflush(stdout));
-
-  /* Enable cancellation signal handlers. */
-  setup_cancellation_signals(signal_handler);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
 subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
@@ -994,14 +987,17 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_error_t *err;
   struct svnadmin_opt_state *opt_state = baton;
+  svn_stream_t *stdout_stream;
+
+  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
 
   /* Restore default signal handlers until after we have acquired the
    * exclusive lock so that the user interrupt before we actually
    * touch the repository. */
   setup_cancellation_signals(SIG_DFL);
 
-  err = svn_repos_recover3(opt_state->repository_path, TRUE,
-                           recovery_started, pool,
+  err = svn_repos_recover4(opt_state->repository_path, TRUE,
+                           repos_notify_handler, stdout_stream,
                            check_cancel, NULL, pool);
   if (err)
     {
@@ -1018,8 +1014,8 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                  _("Waiting on repository lock; perhaps"
                                    " another process has it open?\n")));
       SVN_ERR(svn_cmdline_fflush(stdout));
-      SVN_ERR(svn_repos_recover3(opt_state->repository_path, FALSE,
-                                 recovery_started, pool,
+      SVN_ERR(svn_repos_recover4(opt_state->repository_path, FALSE,
+                                 repos_notify_handler, stdout_stream,
                                  check_cancel, NULL, pool));
     }
 
