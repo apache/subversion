@@ -34,7 +34,7 @@
 HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 
 /* Email address where the crash reports should be sent too. */
-#define CRASHREPORT_EMAIL "notifications@subversion.apache.org"
+#define CRASHREPORT_EMAIL "users@subversion.apache.org"
 
 #define DBGHELP_DLL "dbghelp.dll"
 
