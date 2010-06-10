@@ -564,7 +564,8 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
 }
 
 jobject
-CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
+CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify,
+                                 apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -591,7 +592,8 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$LockStatus;"
                                "JLjava/lang/String;"
                                "L"JAVA_PACKAGE"/RevisionRange;"
-                               "Ljava/lang/String;)V");
+                               "Ljava/lang/String;Ljava/lang/String;"
+                               "Ljava/util/Map;JJJJJJI)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         POP_AND_RETURN_NULL;
     }
@@ -649,12 +651,32 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
+  jstring jpropName = JNIUtil::makeJString(wcNotify->prop_name);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobject jrevProps = CreateJ::PropertyMap(wcNotify->rev_props, pool);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jlong joldRevision = wcNotify->old_revision;
+  jlong jhunkOriginalStart = wcNotify->hunk_original_start;
+  jlong jhunkOriginalLength = wcNotify->hunk_original_length;
+  jlong jhunkModifiedStart = wcNotify->hunk_modified_start;
+  jlong jhunkModifiedLength = wcNotify->hunk_modified_length;
+  jlong jhunkMatchedLine = wcNotify->hunk_matched_line;
+  jint jhunkFuzz = wcNotify->hunk_fuzz;
+
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
                                  jKind, jMimeType, jLock, jErr,
                                  jContentState, jPropState, jLockState,
                                  (jlong) wcNotify->revision, jChangelistName,
-                                 jMergeRange, jpathPrefix);
+                                 jMergeRange, jpathPrefix, jpropName,
+                                 jrevProps, joldRevision,
+                                 jhunkOriginalStart, jhunkOriginalLength,
+                                 jhunkModifiedStart, jhunkModifiedLength,
+                                 jhunkMatchedLine, jhunkFuzz);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -735,6 +757,9 @@ CreateJ::StringSet(apr_array_header_t *strings)
 jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
+
+  if (prop_hash == NULL)
+    return NULL;
 
   // Create a local frame for our references
   env->PushLocalFrame(LOCAL_FRAME_SIZE);
