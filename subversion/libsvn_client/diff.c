@@ -699,7 +699,7 @@ diff_content_changed(const char *path,
           /* Add git headers and adjust the labels. 
            * ### Once we're using the git format everywhere, we can create
            * ### one func that sets the correct labels in one place. */
-          if (operation == diff_op_deleted)
+          if (operation == svn_diff_op_deleted)
             {
               SVN_ERR(print_git_diff_header_deleted(
                                             os, 
@@ -710,7 +710,7 @@ diff_content_changed(const char *path,
                                   subpool);
               label2 = diff_label("/dev/null", rev2, subpool);
             }
-          else if (operation == diff_op_added)
+          else if (operation == svn_diff_op_added)
             {
               SVN_ERR(print_git_diff_header_added(
                                             os, 
@@ -720,7 +720,7 @@ diff_content_changed(const char *path,
               label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), rev2,
                                   subpool);
             }
-          else if (operation == diff_op_modified)
+          else if (operation == svn_diff_op_modified)
             {
               SVN_ERR(print_git_diff_header_modified(
                                             os, 
@@ -775,7 +775,7 @@ diff_file_changed(const char *local_dir_abspath,
     SVN_ERR(diff_content_changed(path,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
-                                 diff_op_modified, diff_baton));
+                                 svn_diff_op_modified, diff_baton));
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(local_dir_abspath, prop_state, tree_conflicted,
                                path, prop_changes,
@@ -826,7 +826,7 @@ diff_file_added(const char *local_dir_abspath,
     SVN_ERR(diff_content_changed(path,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2,
-                                 diff_op_added, diff_baton));
+                                 svn_diff_op_added, diff_baton));
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(local_dir_abspath, prop_state, tree_conflicted,
                                path, prop_changes,
@@ -864,7 +864,7 @@ diff_file_deleted_with_diff(const char *local_dir_abspath,
                                  tmpfile1, tmpfile2, diff_cmd_baton->revnum1, 
                                  diff_cmd_baton->revnum2,
                                  mimetype1, mimetype2,
-                                 diff_op_deleted, diff_baton));
+                                 svn_diff_op_deleted, diff_baton));
 
   /* We don't list all the deleted properties. */
 
