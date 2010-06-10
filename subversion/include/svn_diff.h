@@ -771,6 +771,21 @@ svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
  * rather than parse it, see svn_client_patch(). */
 
 /**
+ * Describes what operation has been performed on a file.
+ *
+ * @since New in 1.7.
+ */
+typedef enum svn_diff_operation_kind_e
+{
+  diff_op_added,
+  diff_op_deleted,
+  diff_op_copied,
+  diff_op_moved,
+  /* There's no tree changes, just text modifications. */
+  diff_op_modified
+}svn_diff_operation_kind_t;
+
+/**
  * A single hunk inside a patch
  *
  * @since New in 1.7. */
@@ -852,6 +867,10 @@ typedef struct svn_patch_t {
    * An array containing an svn_hunk_t object for each hunk parsed
    * from the patch. */
   apr_array_header_t *hunks;
+
+  /**
+   * Represents the operation performed on the file. */
+  svn_diff_operation_kind_t operation;
 } svn_patch_t;
 
 /**
