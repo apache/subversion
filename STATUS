@@ -31,21 +31,6 @@ Candidate changes:
                    works correctly. I think the not interactive code path
                    needs the same fix).
 
- * r879902, r879916
-   Disables file synchronization mutexes in fsfs on Windows. These mutexes
-   were added to make POSIX systems lock files that were in use by other
-   threads in the same process.
-   
-   Windows implements per filehandle locking, so it doesn't need these
-   locks. We usually see the opposite problem in Subversion on Windows.
-   Justification:
-     This gives a measurable performance boost (5% decrease in running time
-     on running the testsuite in parallel mode (on trunk). The difference
-     will be bigger when measured on a real subversion server like one
-     running apache or svnserve.
-   Votes:
-     +1: rhuijben, steveking
-
  * r879966, r879971
    Reduce the lifetime of the rep-sharing database handles in FSFS to avoid
    having writers blocking readers, and update that database outside the
@@ -75,16 +60,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r898048
-   Extend the Windows only, crypto api verification of server certificates
-   to check for certificate revocation. Also simplify the code by making
-   Windows do the chain verification instead of just taking an intermediate
-   result.
-   Justification:
-     It's better to be safe, when we are talking about SSL.
-   Votes:
-     +1: rhuijben, steveking
-
  * r878590, r878607, r878625, r878626, r878627
    In trunk we optimized the common case of 'find-and-replace with same uri'
    of proxied content thanks to issue 3445 "WebDAV proxy code munging user
@@ -101,7 +76,7 @@ Candidate changes:
      3. Need this to be ported for the other defect to be ported
         without conflict.
    Votes:
-     +1: kameshj
+     +1: kameshj, cmpilato
      -0: julianfoad (seem to be multiple changes here for different reasons -
            at least issue '3445 and an optimization and an information leak;
            r878607 log msg says it fixes bugs but it's not clear what bugs;
@@ -280,3 +255,29 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r879902, r879916
+   Disables file synchronization mutexes in fsfs on Windows. These mutexes
+   were added to make POSIX systems lock files that were in use by other
+   threads in the same process.
+   
+   Windows implements per filehandle locking, so it doesn't need these
+   locks. We usually see the opposite problem in Subversion on Windows.
+   Justification:
+     This gives a measurable performance boost (5% decrease in running time
+     on running the testsuite in parallel mode (on trunk). The difference
+     will be bigger when measured on a real subversion server like one
+     running apache or svnserve.
+   Votes:
+     +1: rhuijben, steveking, cmpilato
+
+ * r898048
+   Extend the Windows only, crypto api verification of server certificates
+   to check for certificate revocation. Also simplify the code by making
+   Windows do the chain verification instead of just taking an intermediate
+   result.
+   Justification:
+     It's better to be safe, when we are talking about SSL.
+   Votes:
+     +1: rhuijben, steveking, cmpilato
+
