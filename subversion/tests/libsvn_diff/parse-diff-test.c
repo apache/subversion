@@ -56,6 +56,36 @@ static const char *unidiff =
   "Name: svn:mergeinfo"                                                 NL
   ""                                                                    NL;
 
+/* ### We need to add plenty of more cases to this patch:
+ * ### copy with modifications
+ * ### rename
+ * ### rename with modications 
+ * ### add with modifications
+ * ### delete with modifications*/
+static const char *git_unidiff =
+  "Index: A/mu (deleted)"                                               NL
+  "===================================================================" NL
+  "git --diff a/A/mu b/A/mu"                                            NL
+  "deleted file mode 100644"                                            NL
+  "Index: A/C/gamma"                                                    NL
+  "===================================================================" NL
+  "git --diff a/A/C/gamma b/A/C/gamma"                                  NL
+  "--- a/A/C/gamma\t(revision 2)"                                       NL
+  "+++ b/A/C/gamma\t(working copy)"                                     NL
+  "@@ -1 +1,2 @@"                                                       NL
+  " This is the file 'gamma'."                                          NL
+  "+some more bytes to 'gamma'"                                         NL
+  "Index: iota"                                                         NL
+  "===================================================================" NL
+  "git --diff a/iota b/iota.copied"                                     NL
+  "copy from iota"                                                      NL
+  "copy to iota.copied"                                                 NL
+  "Index: new"                                                          NL
+  "===================================================================" NL
+  "git --diff a/new b/new"                                              NL
+  "new file mode 100644"                                                NL
+  ""                                                                    NL;
+
 static svn_error_t *
 test_parse_unidiff(apr_pool_t *pool)
 {
@@ -202,6 +232,110 @@ test_parse_unidiff(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_parse_git_diff(apr_pool_t *pool)
+{
+  /* ### Should we check for reversed diffs? */
+
+  apr_file_t *patch_file;
+  apr_status_t status;
+  apr_size_t len;
+  svn_patch_t *patch;
+  svn_stringbuf_t *buf;
+  svn_boolean_t eof;
+  svn_hunk_t *hunk;
+  svn_stream_t *original_text;
+  svn_stream_t *modified_text;
+  const char *fname = "test_parse_git_diff.patch";
+
+  /* Create a patch file. */
+  status = apr_file_open(&patch_file, fname,
+                        (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE |
+                         APR_DELONCLOSE), APR_OS_DEFAULT, pool);
+  if (status != APR_SUCCESS)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
+                             fname);
+  /* Write to the file */
+  len = strlen(git_unidiff);
+  status = apr_file_write_full(patch_file, git_unidiff, len, &len);
+  if (status || len != strlen(git_unidiff))
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Cannot write to '%s'", fname);
+
+  /* Parse a deleted empty file */
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/mu"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/mu"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_deleted);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+
+  /* Parse a modified file. */
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_modified);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+  original_text = hunk->original_text;
+  modified_text = hunk->modified_text;
+
+  /* Make sure original text was parsed correctly. */
+  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+  SVN_TEST_ASSERT(! eof);
+  SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+  /* Now we should get EOF. */
+  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+  SVN_TEST_ASSERT(eof);
+  SVN_TEST_ASSERT(buf->len == 0);
+
+  /* Make sure modified text was parsed correctly. */
+  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+  SVN_TEST_ASSERT(! eof);
+  SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+  SVN_TEST_ASSERT(! eof);
+  SVN_TEST_ASSERT(! strcmp(buf->data, "some more bytes to 'gamma'"));
+  /* Now we should get EOF. */
+  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+  SVN_TEST_ASSERT(eof);
+  SVN_TEST_ASSERT(buf->len == 0);
+
+  /* Parse a copied empty file */
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota.copied"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+
+  /* Parse an added empty file */
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "new"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "new"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -209,5 +343,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_parse_unidiff,
                    "test unidiff parsing"),
+    SVN_TEST_XFAIL2(test_parse_git_diff,
+                    "test git unidiff parsing"),
     SVN_TEST_NULL
   };
