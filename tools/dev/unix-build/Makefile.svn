@@ -505,9 +505,9 @@ neon-reset:
 neon-clean:
 	-(cd $(NEON_OBJDIR) && make clean)
 
-# fetch distfile for serf
-$(DISTDIR)/$(SERF_DIST):
-	cd $(DISTDIR) && $(FETCH_CMD) $(SERF_URL)
+# fetch distfile for neon
+$(DISTDIR)/$(NEON_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
 
 # retrieve neon
 $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
@@ -552,10 +552,10 @@ serf-clean:
 	-(cd $(SERF_SRCDIR) && ./serfmake clean)
 
 
-# fetch distfile for neon
-$(DISTDIR)/$(NEON_DIST):
-	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
-#
+# fetch distfile for serf
+$(DISTDIR)/$(SERF_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(SERF_URL)
+
 # retrieve serf
 $(SERF_OBJDIR)/.retrieved: $(DISTDIR)/$(SERF_DIST)
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
