@@ -131,7 +131,7 @@ ClientNotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool
       env->DeleteLocalRef(clazz);
     }
 
-  jobject jInfo = CreateJ::ClientNotifyInformation(wcNotify);
+  jobject jInfo = CreateJ::ClientNotifyInformation(wcNotify, pool);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
