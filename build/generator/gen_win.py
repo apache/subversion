@@ -1156,7 +1156,7 @@ class WinGeneratorBase(GeneratorBase):
                                                    '*.c'))),
                          ('serf_headers',
                           glob.glob(os.path.join(serf_path, '*.h'))
-                          + glob.glob(os.path.join(serf_path, 'auth', '*.c'))
+                          + glob.glob(os.path.join(serf_path, 'auth', '*.h'))
                           + glob.glob(os.path.join(serf_path, 'buckets',
                                                    '*.h'))),
                          ('zlib_path', self.zlib_path
