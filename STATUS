@@ -161,11 +161,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3651
    Votes:
-     +1: stylesen
-     -0: pburba (The 1.6.x-issue3651 compiles with a warning that
-                 svn_opt__eat_peg_revisions is undefined.  Any reason we
-                 didn't include "private/svn_opt_private.h" in copy-cmd.c?
-                 Feel free to change my vote to +1 if this is fixed.)
+     +1: stylesen, pburba
 
 Veto-blocked changes:
 =====================
