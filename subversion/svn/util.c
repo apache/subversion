@@ -60,6 +60,7 @@
 #include "cl.h"
 
 #include "private/svn_token.h"
+#include "private/svn_opt_private.h"
 
 
 
@@ -1298,4 +1299,30 @@ svn_cl__path_join(const char *base,
     return svn_uri_join(base, component, pool);
   else
     return svn_dirent_join(base, component, pool);
+}
+
+svn_error_t *
+svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                          const apr_array_header_t *targets,
+                          apr_pool_t *pool)
+{
+  int i;
+  apr_array_header_t *true_targets;
+
+  true_targets = apr_array_make(pool, targets->nelts, sizeof(const char *));
+
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      const char *true_target;
+
+      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, NULL,
+                                                 target, pool));
+      APR_ARRAY_PUSH(true_targets, const char *) = true_target;
+    }
+
+  SVN_ERR_ASSERT(true_targets_p);
+  *true_targets_p = true_targets;
+
+  return SVN_NO_ERROR;
 }

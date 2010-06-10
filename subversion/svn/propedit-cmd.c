@@ -176,7 +176,7 @@ svn_cl__propedit(apr_getopt_t *os,
              _("Explicit target argument required"));
         }
 
-      SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+      SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
       /* For each target, edit the property PNAME. */
       for (i = 0; i < targets->nelts; i++)
