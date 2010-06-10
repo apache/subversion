@@ -560,13 +560,14 @@ $(DISTDIR)/$(NEON_DIST):
 $(SERF_OBJDIR)/.retrieved: $(DISTDIR)/$(SERF_DIST)
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SERF_DIST)
+	cd $(SRCDIR)/serf-$(SERF_VER) && \
+		svn diff -c1394 http://serf.googlecode.com/svn | patch -p2
 	touch $@
 
 # compile serf (serf won't compile outside its source tree)
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved
 	cd $(SERF_SRCDIR) && \
 		./serfmake --with-apr=$(PREFIX)/apr \
-			--with-apr-util=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf \
 			build
 	touch $@
