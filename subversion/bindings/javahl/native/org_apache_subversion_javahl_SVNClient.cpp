@@ -1608,25 +1608,6 @@ Java_org_apache_subversion_javahl_SVNClient_cancelOperation
   cl->cancelOperation();
 }
 
-JNIEXPORT jobject JNICALL
-Java_org_apache_subversion_javahl_SVNClient_info
-(JNIEnv *env, jobject jthis, jstring jpath)
-{
-  JNIEntry(SVNClient, info);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError("bad C++ this");
-      return NULL;
-    }
-
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  return cl->info(path);
-}
-
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_addToChangelist
 (JNIEnv *env, jobject jthis, jobject jtargets, jstring jchangelist,

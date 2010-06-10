@@ -1885,30 +1885,6 @@ struct info_baton
     apr_pool_t *pool;
 };
 
-/**
- * Get information about a file or directory.
- */
-jobject SVNClient::info(const char *path)
-{
-    SVN::Pool requestPool;
-    svn_wc_adm_access_t *adm_access;
-    const svn_wc_entry_t *entry;
-
-    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
-    Path intPath(path);
-    SVN_JNI_ERR(intPath.error_occured(), NULL);
-
-    SVN_JNI_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, intPath.c_str(),
-                                       FALSE, 0, NULL, NULL,
-                                       requestPool.pool()),
-                NULL);
-    SVN_JNI_ERR(svn_wc_entry(&entry, intPath.c_str(), adm_access, FALSE,
-                             requestPool.pool()),
-                NULL);
-
-    return CreateJ::Info(entry);
-}
-
 void
 SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
                  svn_depth_t depth, StringArray &changelists,
