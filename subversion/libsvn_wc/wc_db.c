@@ -2618,15 +2618,20 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       break;
     case svn_wc__db_status_deleted:
     case svn_wc__db_status_not_present:
-    case svn_wc__db_status_absent:
       dst_status = svn_wc__db_status_not_present;
       break;
     case svn_wc__db_status_excluded:
       dst_status = svn_wc__db_status_excluded;
       break;
+    case svn_wc__db_status_absent:
+      return svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
+                               _("Cannot copy '%s' excluded by server"),
+                               svn_dirent_local_style(src_abspath,
+                                                      scratch_pool));
+      break;
     default:
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                               _("cannot handle status '%s'"),
+                               _("Cannot handle status of '%s'"),
                                svn_dirent_local_style(src_abspath,
                                                       scratch_pool));
     }
