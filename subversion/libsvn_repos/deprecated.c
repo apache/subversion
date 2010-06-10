@@ -192,6 +192,21 @@ svn_repos_recover(const char *path,
   return svn_repos_recover2(path, FALSE, NULL, NULL, pool);
 }
 
+svn_error_t *
+svn_repos_upgrade(const char *path,
+                  svn_boolean_t nonblocking,
+                  svn_error_t *(*start_callback)(void *baton),
+                  void *start_callback_baton,
+                  apr_pool_t *pool)
+{
+  struct recover_baton rb;
+
+  rb.start_callback = start_callback;
+  rb.start_callback_baton = start_callback_baton;
+
+  return svn_repos_upgrade2(path, nonblocking, recovery_started, &rb, pool);
+}
+
 /*** From reporter.c ***/
 svn_error_t *
 svn_repos_begin_report(void **report_baton,

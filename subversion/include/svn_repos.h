@@ -234,7 +234,10 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_mutex_acquired,
 
   /** Recover has started. */
-  svn_repos_notify_recover_start
+  svn_repos_notify_recover_start,
+
+  /** Upgrade has started. */
+  svn_repos_notify_upgrade_start
 
 } svn_repos_notify_action_t;
 
@@ -388,8 +391,23 @@ svn_repos_create(svn_repos_t **repos_p,
  * It does *not* guarantee the most optimized repository state as a
  * dump and subsequent load would.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_repos_upgrade2(const char *path,
+                   svn_boolean_t nonblocking,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_upgrade2(), but with @a start_callback and baton,
+ * rather than a notify_callback / baton
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_upgrade(const char *path,
                   svn_boolean_t nonblocking,
