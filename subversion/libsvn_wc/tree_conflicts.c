@@ -487,15 +487,40 @@ svn_wc__del_tree_conflict(const char *victim_path,
                           apr_pool_t *pool)
 {
   svn_stringbuf_t *log_accum = NULL;
+  const char *parent_path;
+  svn_wc_adm_access_t *parent_adm_access;
+  svn_boolean_t parent_adm_access_is_temporary = FALSE;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__loggy_del_tree_conflict(&log_accum, victim_path, adm_access,
-                                          pool));
+  parent_path = svn_path_dirname(victim_path, pool);
+  /* Try to get the parent's admin access baton from the baton set. */
+  err = svn_wc_adm_retrieve(&parent_adm_access, adm_access, parent_path,
+                             pool);
+  if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+    {
+      svn_error_clear(err);
+      /* Try to access the parent dir independently.
+       * Maybe the victim is the root of a directory external,
+       * and the parent working copy isn't locked. */
+      SVN_ERR(svn_wc_adm_open3(&parent_adm_access, NULL, parent_path,
+                               TRUE, 0, NULL, NULL, pool));
+      parent_adm_access_is_temporary = TRUE;
+    }
+  else if (err)
+    return err;
+
+  SVN_ERR(svn_wc__loggy_del_tree_conflict(&log_accum, victim_path,
+                                          parent_adm_access, pool));
 
   if (log_accum != NULL)
     {
-      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      SVN_ERR(svn_wc__write_log(parent_adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
     }
+
+  /* If we opened a temporary admin access baton, close it. */
+  if (parent_adm_access_is_temporary)
+    SVN_ERR(svn_wc_adm_close2(parent_adm_access, pool));
 
   return SVN_NO_ERROR;
 }

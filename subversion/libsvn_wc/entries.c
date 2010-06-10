@@ -3314,10 +3314,21 @@ svn_wc__walk_entries_and_tc(const char *path,
   err = svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path, pool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
     {
-      /* Item is unversioned and doesn't have a versioned parent so there is
-       * nothing to walk. */
       svn_error_clear(err);
-      return SVN_NO_ERROR;
+
+      /* Hmmm... maybe the subdirectory is an external?
+       * Try to access the parent dir explicitly. */
+      err = svn_wc_adm_probe_retrieve(&path_adm_access, adm_access,
+                                      svn_path_dirname(path, pool), pool);
+      if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+        {
+          /* Item is unversioned and doesn't have a versioned parent
+           * so there is nothing to walk. */
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else if (err)
+        return err;
     }
   else if (err)
     return err;
