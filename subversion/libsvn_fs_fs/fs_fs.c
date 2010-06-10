@@ -541,7 +541,7 @@ with_some_lock(svn_error_t *(*body)(void *baton,
                                     apr_pool_t *pool),
                void *baton,
                const char *lock_filename,
-#if APR_HAS_THREADS
+#if SVN_FS_FS__USE_LOCK_MUTEX
                apr_thread_mutex_t *lock_mutex,
 #endif
                apr_pool_t *pool)
@@ -549,7 +549,7 @@ with_some_lock(svn_error_t *(*body)(void *baton,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_error_t *err;
 
-#if APR_HAS_THREADS
+#if SVN_FS_FS__USE_LOCK_MUTEX
   apr_status_t status;
 
   /* POSIX fcntl locks are per-process, so we need to serialize locks
@@ -568,7 +568,7 @@ with_some_lock(svn_error_t *(*body)(void *baton,
 
   svn_pool_destroy(subpool);
 
-#if APR_HAS_THREADS
+#if SVN_FS_FS__USE_LOCK_MUTEX
   status = apr_thread_mutex_unlock(lock_mutex);
   if (status && !err)
     return svn_error_wrap_apr(status,
@@ -586,7 +586,7 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
                            void *baton,
                            apr_pool_t *pool)
 {
-#if APR_HAS_THREADS
+#if SVN_FS_FS__USE_LOCK_MUTEX
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
   apr_thread_mutex_t *mutex = ffsd->fs_write_lock;
@@ -594,7 +594,7 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
 
   return with_some_lock(body, baton,
                         path_lock(fs, pool),
-#if APR_HAS_THREADS
+#if SVN_FS_FS__USE_LOCK_MUTEX
                         mutex,
 #endif
                         pool);
@@ -609,7 +609,7 @@ with_txn_current_lock(svn_fs_t *fs,
                       void *baton,
                       apr_pool_t *pool)
 {
-#if APR_HAS_THREADS
+#if SVN_FS_FS__USE_LOCK_MUTEX
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
   apr_thread_mutex_t *mutex = ffsd->txn_current_lock;
@@ -617,7 +617,7 @@ with_txn_current_lock(svn_fs_t *fs,
 
   return with_some_lock(body, baton,
                         path_txn_current_lock(fs, pool),
-#if APR_HAS_THREADS
+#if SVN_FS_FS__USE_LOCK_MUTEX
                         mutex,
 #endif
                         pool);

@@ -255,18 +255,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r879902, r879916
-   Disables file synchronization mutexes in fsfs on Windows. These mutexes
-   were added to make POSIX systems lock files that were in use by other
-   threads in the same process.
-   
-   Windows implements per filehandle locking, so it doesn't need these
-   locks. We usually see the opposite problem in Subversion on Windows.
-   Justification:
-     This gives a measurable performance boost (5% decrease in running time
-     on running the testsuite in parallel mode (on trunk). The difference
-     will be bigger when measured on a real subversion server like one
-     running apache or svnserve.
-   Votes:
-     +1: rhuijben, steveking, cmpilato

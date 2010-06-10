@@ -81,7 +81,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       ffsd = apr_pcalloc(common_pool, sizeof(*ffsd));
       ffsd->common_pool = common_pool;
 
-#if APR_HAS_THREADS
+#if SVN_FS_FS__USE_LOCK_MUTEX
       /* POSIX fcntl locks are per-process, so we need a mutex for
          intra-process synchronization when grabbing the repository write
          lock. */
@@ -91,14 +91,6 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
         return svn_error_wrap_apr(status,
                                   _("Can't create FSFS write-lock mutex"));
 
-      /* We also need a mutex for synchronising access to the active
-         transaction list and free transaction pointer. */
-      status = apr_thread_mutex_create(&ffsd->txn_list_lock,
-                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create FSFS txn list mutex"));
-
       /* ... not to mention locking the txn-current file. */
       status = apr_thread_mutex_create(&ffsd->txn_current_lock,
                                        APR_THREAD_MUTEX_DEFAULT, common_pool);
@@ -106,6 +98,16 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
         return svn_error_wrap_apr(status,
                                   _("Can't create FSFS txn-current mutex"));
 #endif
+#if APR_HAS_THREADS
+      /* We also need a mutex for synchronising access to the active
+         transaction list and free transaction pointer. */
+      status = apr_thread_mutex_create(&ffsd->txn_list_lock,
+                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
+      if (status)
+        return svn_error_wrap_apr(status,
+                                  _("Can't create FSFS txn list mutex"));
+#endif
+
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
