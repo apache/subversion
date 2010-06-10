@@ -2397,9 +2397,9 @@ public class BasicTests extends SVNTests
         final Revision[] actualRange = new Revision[2];
         ClientNotifyCallback notify = new ClientNotifyCallback()
         {
-            public void onNotify(NotifyInformation info)
+            public void onNotify(ClientNotifyInformation info)
             {
-                if (info.getAction() == NotifyInformation.Action.merge_begin)
+                if (info.getAction() == ClientNotifyInformation.Action.merge_begin)
                 {
                     RevisionRange r = info.getMergeRange();
                     actualRange[0] = r.getFromRevision();
@@ -3034,7 +3034,7 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
         ClientNotifyCallback notify = new ClientNotifyCallback()
         {
-            public void onNotify(NotifyInformation info)
+            public void onNotify(ClientNotifyInformation info)
             {
                 client.isAdminDirectory(".svn");
             }
@@ -3052,7 +3052,7 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
         ClientNotifyCallback notify = new ClientNotifyCallback()
         {
-            public void onNotify(NotifyInformation info)
+            public void onNotify(ClientNotifyInformation info)
             {
                 try
                 {

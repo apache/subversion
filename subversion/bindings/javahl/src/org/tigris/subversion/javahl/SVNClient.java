@@ -605,7 +605,7 @@ public class SVNClient implements SVNClientInterface
         aSVNClient.notification2(
           new org.apache.subversion.javahl.callback.ClientNotifyCallback () {
             public void onNotify(
-                        org.apache.subversion.javahl.NotifyInformation aInfo)
+                        org.apache.subversion.javahl.ClientNotifyInformation aInfo)
             {
                 notify.onNotify(new NotifyInformation(aInfo));
             }

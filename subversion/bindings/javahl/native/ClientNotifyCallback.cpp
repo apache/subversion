@@ -124,14 +124,14 @@ ClientNotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool
         return;
 
       mid = env->GetMethodID(clazz, "onNotify",
-                             "(L"JAVA_PACKAGE"/NotifyInformation;)V");
+                             "(L"JAVA_PACKAGE"/ClientNotifyInformation;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         return;
 
       env->DeleteLocalRef(clazz);
     }
 
-  jobject jInfo = CreateJ::NotifyInformation(wcNotify);
+  jobject jInfo = CreateJ::ClientNotifyInformation(wcNotify);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

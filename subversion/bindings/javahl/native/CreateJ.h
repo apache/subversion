@@ -55,7 +55,7 @@ class CreateJ
          const svn_wc_status3_t *status, apr_pool_t *pool);
 
   static jobject
-  NotifyInformation(const svn_wc_notify_t *notify);
+  ClientNotifyInformation(const svn_wc_notify_t *notify);
 
   static jobject
   RevisionRangeList(apr_array_header_t *ranges);

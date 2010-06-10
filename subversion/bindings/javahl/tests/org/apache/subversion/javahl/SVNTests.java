@@ -842,7 +842,7 @@ class SVNTests extends TestCase
          *
          * @param info everything to know about this event
          */
-        public void onNotify(NotifyInformation info)
+        public void onNotify(ClientNotifyInformation info)
         {
         }
     }
