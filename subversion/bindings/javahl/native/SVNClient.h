@@ -159,7 +159,6 @@ class SVNClient :public SVNBase
   void username(const char *pi_username);
   jstring getAdminDirectoryName();
   jboolean isAdminDirectory(const char *name);
-  jobject info(const char *path);
   void addToChangelist(Targets &srcPaths, const char *changelist,
                        svn_depth_t depth, StringArray &changelists);
   void removeFromChangelists(Targets &srcPaths, svn_depth_t depth,
