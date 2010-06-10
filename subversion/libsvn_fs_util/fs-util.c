@@ -39,7 +39,7 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
 {
   char *newpath;
   size_t path_len;
-  int path_i = 0, newpath_i = 0;
+  size_t path_i = 0, newpath_i = 0;
   svn_boolean_t eating_slashes = FALSE;
 
   /* No PATH?  No problem. */
