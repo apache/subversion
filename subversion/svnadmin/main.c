@@ -796,6 +796,13 @@ repos_notify_handler(void *baton,
                                " repository may take some time...\n")));
       return;
 
+    case svn_repos_notify_upgrade_start:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                             _("Repository lock acquired.\n"
+                               "Please wait; upgrading the"
+                               " repository may take some time...\n")));
+      return;
+
     default:
       return;
   }
@@ -1487,37 +1494,21 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
-/* A callback which is called when the upgrade starts. */
-static svn_error_t *
-upgrade_started(void *baton)
-{
-  apr_pool_t *pool = (apr_pool_t *)baton;
-
-  SVN_ERR(svn_cmdline_printf(pool,
-                             _("Repository lock acquired.\n"
-                               "Please wait; upgrading the"
-                               " repository may take some time...\n")));
-  SVN_ERR(svn_cmdline_fflush(stdout));
-
-  /* Enable cancellation signal handlers. */
-  setup_cancellation_signals(signal_handler);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
 subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   svn_error_t *err;
   struct svnadmin_opt_state *opt_state = baton;
+  svn_stream_t *stdout_stream;
+
+  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
 
   /* Restore default signal handlers. */
   setup_cancellation_signals(SIG_DFL);
 
-  err = svn_repos_upgrade(opt_state->repository_path, TRUE,
-                          upgrade_started, pool, pool);
+  err = svn_repos_upgrade2(opt_state->repository_path, TRUE,
+                           repos_notify_handler, stdout_stream, pool);
   if (err)
     {
       if (APR_STATUS_IS_EAGAIN(err->apr_err))
@@ -1534,8 +1525,9 @@ subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                      _("Waiting on repository lock; perhaps"
                                        " another process has it open?\n")));
           SVN_ERR(svn_cmdline_fflush(stdout));
-          SVN_ERR(svn_repos_upgrade(opt_state->repository_path, FALSE,
-                                    upgrade_started, pool, pool));
+          SVN_ERR(svn_repos_upgrade2(opt_state->repository_path, FALSE,
+                                     repos_notify_handler, stdout_stream,
+                                     pool));
         }
       else if (err->apr_err == SVN_ERR_FS_UNSUPPORTED_UPGRADE)
         {
