@@ -564,7 +564,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
 }
 
 jobject
-CreateJ::NotifyInformation(const svn_wc_notify_t *wcNotify)
+CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -574,7 +574,7 @@ CreateJ::NotifyInformation(const svn_wc_notify_t *wcNotify)
     return NULL;
 
   static jmethodID midCT = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/NotifyInformation");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientNotifyInformation");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -582,13 +582,13 @@ CreateJ::NotifyInformation(const svn_wc_notify_t *wcNotify)
     {
       midCT = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;"
-                               "L"JAVA_PACKAGE"/NotifyInformation$Action;"
+                               "L"JAVA_PACKAGE"/ClientNotifyInformation$Action;"
                                "L"JAVA_PACKAGE"/NodeKind;Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/Lock;"
                                "Ljava/lang/String;"
-                               "L"JAVA_PACKAGE"/NotifyInformation$Status;"
-                               "L"JAVA_PACKAGE"/NotifyInformation$Status;"
-                               "L"JAVA_PACKAGE"/NotifyInformation$LockStatus;"
+                               "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
+                               "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
+                               "L"JAVA_PACKAGE"/ClientNotifyInformation$LockStatus;"
                                "JLjava/lang/String;"
                                "L"JAVA_PACKAGE"/RevisionRange;"
                                "Ljava/lang/String;)V");

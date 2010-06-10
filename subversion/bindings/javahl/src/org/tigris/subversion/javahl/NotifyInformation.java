@@ -149,7 +149,7 @@ public class NotifyInformation extends EventObject
      * A backward-compat callback.
      */
     public NotifyInformation(
-                        org.apache.subversion.javahl.NotifyInformation aInfo)
+                        org.apache.subversion.javahl.ClientNotifyInformation aInfo)
     {
         this(aInfo.getPath(),
              fromAAction(aInfo.getAction()),
@@ -272,7 +272,7 @@ public class NotifyInformation extends EventObject
     }
 
     private static int
-    fromAStatus(org.apache.subversion.javahl.NotifyInformation.Status aStatus)
+    fromAStatus(org.apache.subversion.javahl.ClientNotifyInformation.Status aStatus)
     {
         switch(aStatus)
         {
@@ -297,7 +297,7 @@ public class NotifyInformation extends EventObject
     }
 
     private static int
-    fromAAction(org.apache.subversion.javahl.NotifyInformation.Action aAction)
+    fromAAction(org.apache.subversion.javahl.ClientNotifyInformation.Action aAction)
     {
         if (aAction == null)
             return -1;

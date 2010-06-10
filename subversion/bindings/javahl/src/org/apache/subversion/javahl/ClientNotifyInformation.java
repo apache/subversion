@@ -31,7 +31,7 @@ import java.util.EventObject;
  *
  * @since 1.2
  */
-public class NotifyInformation extends EventObject
+public class ClientNotifyInformation extends EventObject
 {
     // Update the serialVersionUID when there is a incompatible change
     // made to this class.  See any of the following, depending upon
@@ -124,7 +124,7 @@ public class NotifyInformation extends EventObject
      * @param mergeRange The range of the merge just beginning to occur.
      * @param pathPrefix A common path prefix.
      */
-    public NotifyInformation(String path, Action action, NodeKind kind,
+    public ClientNotifyInformation(String path, Action action, NodeKind kind,
                              String mimeType, Lock lock, String errMsg,
                              Status contentState, Status propState,
                              LockStatus lockState, long revision,

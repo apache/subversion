@@ -23,7 +23,7 @@
 
 package org.apache.subversion.javahl.callback;
 
-import org.apache.subversion.javahl.NotifyInformation;
+import org.apache.subversion.javahl.ClientNotifyInformation;
 
 import java.util.EventListener;
 
@@ -45,5 +45,5 @@ public interface ClientNotifyCallback extends EventListener
      * send notifications
      * @param info everything to know about this event
      */
-    public void onNotify(NotifyInformation info);
+    public void onNotify(ClientNotifyInformation info);
 }
