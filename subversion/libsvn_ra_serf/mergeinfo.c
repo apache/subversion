@@ -210,11 +210,9 @@ create_mergeinfo_body(void *baton,
     {
       for (i = 0; i < mergeinfo_ctx->paths->nelts; i++)
         {
-          const char *this_path =
-            apr_xml_quote_string(pool,
-                                 APR_ARRAY_IDX(mergeinfo_ctx->paths,
-                                               i, const char *),
-                                 0);
+          const char *this_path = APR_ARRAY_IDX(mergeinfo_ctx->paths,
+                                                i, const char *);
+
           svn_ra_serf__add_tag_buckets(body_bkt, "S:" SVN_DAV__PATH,
                                        this_path, alloc);
         }
