@@ -777,12 +777,12 @@ svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
  */
 typedef enum svn_diff_operation_kind_e
 {
-  diff_op_added,
-  diff_op_deleted,
-  diff_op_copied,
-  diff_op_moved,
+  svn_diff_op_added,
+  svn_diff_op_deleted,
+  svn_diff_op_copied,
+  svn_diff_op_moved,
   /* There's no tree changes, just text modifications. */
-  diff_op_modified
+  svn_diff_op_modified
 }svn_diff_operation_kind_t;
 
 /**
