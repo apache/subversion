@@ -137,6 +137,41 @@ svn_repos_get_commit_editor(const svn_delta_editor_t **editor,
 }
 
 /*** From repos.c ***/
+struct recover_baton
+{
+  svn_error_t *(*start_callback)(void *baton);
+  void *start_callback_baton;
+  apr_pool_t *pool;
+};
+
+static void
+recovery_started(void *baton,
+                 const svn_repos_notify_t *notify,
+                 apr_pool_t *scratch_pool)
+{
+  struct recover_baton *rb = baton;
+
+  if (notify->action == svn_repos_notify_mutex_acquired)
+    svn_error_clear(rb->start_callback(rb->start_callback_baton));
+}
+
+svn_error_t *
+svn_repos_recover3(const char *path,
+                   svn_boolean_t nonblocking,
+                   svn_error_t *(*start_callback)(void *baton),
+                   void *start_callback_baton,
+                   svn_cancel_func_t cancel_func, void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  struct recover_baton rb;
+
+  rb.start_callback = start_callback;
+  rb.start_callback_baton = start_callback_baton;
+
+  return svn_repos_recover4(path, nonblocking, recovery_started, &rb,
+                            cancel_func, cancel_baton, pool);
+}
+
 svn_error_t *
 svn_repos_recover2(const char *path,
                    svn_boolean_t nonblocking,
