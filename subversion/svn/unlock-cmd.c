@@ -60,7 +60,7 @@ svn_cl__unlock(apr_getopt_t *os,
   SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                                FALSE, FALSE, scratch_pool));
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   return svn_error_return(
     svn_client_unlock(targets, opt_state->force, ctx, scratch_pool));

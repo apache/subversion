@@ -66,7 +66,7 @@ svn_cl__resolved(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)

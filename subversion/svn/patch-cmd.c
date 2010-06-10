@@ -67,7 +67,7 @@ svn_cl__patch(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   svn_opt_push_implicit_dot_target(targets, pool);
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
   SVN_ERR(svn_dirent_get_absolute(&abs_target_path,
                                   APR_ARRAY_IDX(targets, 0, const char *),
                                   pool));

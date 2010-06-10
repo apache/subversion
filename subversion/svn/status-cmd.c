@@ -290,7 +290,7 @@ svn_cl__status(apr_getopt_t *os,
   sb.tree_conflicts = 0;
   sb.ctx = ctx;
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)

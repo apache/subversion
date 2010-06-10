@@ -58,7 +58,7 @@ svn_cl__update(apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */

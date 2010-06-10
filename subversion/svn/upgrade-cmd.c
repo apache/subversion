@@ -61,7 +61,7 @@ svn_cl__upgrade(apr_getopt_t *os,
     SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
                                  FALSE, FALSE, FALSE, scratch_pool));
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)

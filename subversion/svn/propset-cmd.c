@@ -109,7 +109,7 @@ svn_cl__propset(apr_getopt_t *os,
   if (opt_state->revprop)
     svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
