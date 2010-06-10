@@ -28,6 +28,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_opt_private.h"
 
 
 /*** Code. ***/
