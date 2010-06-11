@@ -2643,26 +2643,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
 
   /* text_time, prop_time no longer passed to entry_modify()  */
 
-  /* Conflict stuff */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_OLD)
-    cur_entry->conflict_old = entry->conflict_old
-      ? apr_pstrdup(pool, entry->conflict_old)
-                              : NULL;
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_NEW)
-    cur_entry->conflict_new = entry->conflict_new
-      ? apr_pstrdup(pool, entry->conflict_new)
-                              : NULL;
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_WRK)
-    cur_entry->conflict_wrk = entry->conflict_wrk
-      ? apr_pstrdup(pool, entry->conflict_wrk)
-                              : NULL;
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_PREJFILE)
-    cur_entry->prejfile = entry->prejfile
-      ? apr_pstrdup(pool, entry->prejfile)
-                          : NULL;
+  /* Conflict stuff no longer passed to entry_modify() */
 
   /* Last-commit flags are no longer passed to entry_modify() */
 
