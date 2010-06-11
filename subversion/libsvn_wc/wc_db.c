@@ -4842,6 +4842,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   struct relocate_baton rb;
   const char *old_repos_root_url, *stored_local_dir_abspath;
+  svn_boolean_t base_shadowed;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
@@ -4856,10 +4857,30 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                                &rb.repos_relpath, &old_repos_root_url,
                                &rb.repos_uuid,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &base_shadowed,
                                NULL, NULL,
                                db, local_dir_abspath,
                                scratch_pool, scratch_pool));
+
+  if (status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_incomplete)
+    {
+      svn_sqlite__stmt_t *stmt;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_SELECT_BASE_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                pdh->wcroot->wc_id, rb.local_relpath));
+      SVN_ERR(svn_sqlite__step(&rb.have_base_node, stmt));
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+  else if (base_shadowed || status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_absent
+           || status == svn_wc__db_status_not_present)
+    rb.have_base_node = TRUE;
+  else
+    rb.have_base_node = FALSE;
 
   if (status == svn_wc__db_status_excluded)
     {
