@@ -26,6 +26,7 @@ package org.tigris.subversion.javahl;
 import java.util.Set;
 import java.io.OutputStream;
 import java.io.InputStream;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -101,7 +102,8 @@ public class SVNAdmin
             throws ClientException
     {
         try {
-            aSVNAdmin.create(path, disableFsyncCommit, keepLog, configPath,
+            aSVNAdmin.create(new File(path), disableFsyncCommit, keepLog,
+                             configPath == null ? null : new File(configPath),
                              fstype);
         } catch (org.apache.subversion.javahl.ClientException ex) {
             throw new ClientException(ex);

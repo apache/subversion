@@ -26,6 +26,7 @@ package org.apache.subversion.javahl;
 import java.util.Set;
 import java.io.OutputStream;
 import java.io.InputStream;
+import java.io.File;
 
 import org.apache.subversion.javahl.SVNAdmin.MessageReceiver;
 
@@ -60,8 +61,8 @@ public interface ISVNAdmin {
 	 * @param fstype                the type of the filesystem (BDB or FSFS)
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void create(String path, boolean disableFsyncCommit,
-			boolean keepLog, String configPath, String fstype)
+	public abstract void create(File path, boolean disableFsyncCommit,
+			boolean keepLog, File configPath, String fstype)
 			throws ClientException;
 
 	/**
