@@ -2637,9 +2637,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_DELETED)
     cur_entry->deleted = entry->deleted;
 
-  /* Absent state */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_ABSENT)
-    cur_entry->absent = entry->absent;
+  /* Absent state is no longer passed to entry_modify() */
 
   /* text_time, prop_time no longer passed to entry_modify()  */
 
@@ -3017,7 +3015,6 @@ svn_wc__entry_modify_stub(svn_wc__db_t *db,
                     /* from update_editor.c  */
                     | SVN_WC__ENTRY_MODIFY_KIND
                     | SVN_WC__ENTRY_MODIFY_DELETED
-                    | SVN_WC__ENTRY_MODIFY_ABSENT
                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
                     | SVN_WC__ENTRY_MODIFY_FORCE
 
