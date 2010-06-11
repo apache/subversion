@@ -8211,7 +8211,7 @@ svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                         STMT_INSERT_ACTUAL_TEXT_CONFLICTS));
 
-      SVN_ERR(svn_sqlite__bind_text(stmt, 5,
+      SVN_ERR(svn_sqlite__bind_text(stmt, 6,
                                     svn_relpath_dirname(local_relpath,
                                                         scratch_pool)));
     }
@@ -8266,14 +8266,15 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                         STMT_INSERT_ACTUAL_PROPERTY_CONFLICTS));
 
-      SVN_ERR(svn_sqlite__bind_text(stmt, 4,
-                                    svn_relpath_dirname(local_relpath,
-                                                        scratch_pool)));
+      if (*local_relpath != '\0')
+        SVN_ERR(svn_sqlite__bind_text(stmt, 4,
+                                      svn_relpath_dirname(local_relpath,
+                                                          scratch_pool)));
     }
 
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", pdh->wcroot->wc_id,
-                                           local_relpath,
-                                           prej_basename));
+                                         local_relpath,
+                                         prej_basename));
 
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
