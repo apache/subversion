@@ -51,8 +51,6 @@ extern "C" {
 #define SVN_WC__ENTRY_MODIFY_COPYFROM_URL       0x00000100
 #define SVN_WC__ENTRY_MODIFY_COPYFROM_REV       0x00000200
 /* ### gap  */
-#define SVN_WC__ENTRY_MODIFY_ABSENT             0x00004000
-/* ### gap  */
 
 /* ...ORed together with this to mean: just set the schedule to the new
    value, instead of treating the new value as a change of state to be
