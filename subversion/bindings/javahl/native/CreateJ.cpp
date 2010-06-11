@@ -33,6 +33,7 @@
 #include "CreateJ.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
 
+#include "svn_path.h"
 #include "private/svn_wc_private.h"
 
 jobject
@@ -470,7 +471,10 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      jUrl = JNIUtil::makeJString(status->url);
+      jUrl = JNIUtil::makeJString(svn_path_url_add_component2(
+                                      status->repos_root_url,
+                                      status->repos_relpath,
+                                      pool));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 

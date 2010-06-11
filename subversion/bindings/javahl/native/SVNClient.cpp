@@ -59,6 +59,7 @@
 #include "svn_config.h"
 #include "svn_io.h"
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "svn_utf.h"
 #include "svn_private_config.h"
 #include "JNIStringHolder.h"
@@ -1722,7 +1723,9 @@ analyze_status(void *baton,
         && (! sb->wc_url)
         && (strcmp(local_abspath, sb->wc_abspath) == 0)
         && (status->versioned))
-        sb->wc_url = apr_pstrdup(sb->pool, status->url);
+        sb->wc_url = svn_path_url_add_component2(status->repos_root_url,
+                                                 status->repos_relpath,
+                                                 pool);
 
     return SVN_NO_ERROR;
 }

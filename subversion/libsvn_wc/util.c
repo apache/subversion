@@ -591,7 +591,9 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
   (*status)->repos_text_status = old_status->repos_text_status;
   (*status)->repos_prop_status = old_status->repos_prop_status;
   (*status)->repos_lock = svn_lock_dup(old_status->repos_lock, result_pool);
-  (*status)->url = apr_pstrdup(result_pool, old_status->url);
+  (*status)->url = svn_path_url_add_component2(old_status->repos_root_url,
+                                               old_status->repos_relpath,
+                                               result_pool);
   (*status)->ood_last_cmt_rev = old_status->ood_last_cmt_rev;
   (*status)->ood_last_cmt_date = old_status->ood_last_cmt_date;
   (*status)->ood_kind = old_status->ood_kind;

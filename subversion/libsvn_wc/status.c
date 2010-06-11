@@ -185,9 +185,6 @@ struct dir_baton
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
 
-  /* The URI to this item in the repository. */
-  const char *url;
-
   /* out-of-date info corresponding to ood_* fields in svn_wc_status3_t. */
   svn_revnum_t ood_last_cmt_rev;
   apr_time_t ood_last_cmt_date;
@@ -226,9 +223,6 @@ struct file_baton
   /* This gets set if the file underwent a prop change, which guides
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t prop_changed;
-
-  /* The URI to this item in the repository. */
-  const char *url;
 
   /* out-of-date info corresponding to ood_* fields in svn_wc_status3_t. */
   svn_revnum_t ood_last_cmt_rev;
@@ -286,7 +280,6 @@ assemble_status(svn_wc_status3_t **status,
   svn_wc__db_kind_t db_kind;
   const char *repos_relpath;
   const char *repos_root_url;
-  const char *url;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
   const svn_wc_conflict_description2_t *tree_conflict;
@@ -326,11 +319,6 @@ assemble_status(svn_wc_status3_t **status,
                                &conflicted, &lock, db, local_abspath,
                                result_pool, scratch_pool));
 
-  /* ### Temporary until we've revved svn_wc_status3_t to only use
-   * ### repos_{root_url,relpath} */
-  SVN_ERR(svn_wc__internal_node_get_url(&url, db, local_abspath,
-                                        result_pool, scratch_pool));
-
   SVN_ERR(svn_wc__internal_is_file_external(&file_external_p, db,
                                             local_abspath, scratch_pool));
 
@@ -346,8 +334,8 @@ assemble_status(svn_wc_status3_t **status,
 
           if (! repos_relpath)
             {
-              repos_relpath = svn_relpath_join( parent_repos_relpath, base,
-                                                result_pool);
+              repos_relpath = svn_relpath_join(parent_repos_relpath, base,
+                                               result_pool);
               /* If _read_info() doesn't give us a repos_relpath, it means
                * that it is implied by the parent, thus the path can not be
                * switched. */
@@ -361,6 +349,32 @@ assemble_status(svn_wc_status3_t **status,
             }
         }
     }
+
+  if (!repos_relpath)
+    {
+      if (db_status == svn_wc__db_status_added)
+        SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
+                                         &repos_root_url, NULL, NULL, NULL,
+                                         NULL, NULL,
+                                         db, local_abspath,
+                                         result_pool, scratch_pool));
+      else if (base_shadowed)
+        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                           &repos_root_url, NULL,
+                                           db, local_abspath,
+                                           result_pool, scratch_pool));
+      else
+        {
+          SVN_ERR_ASSERT(parent_repos_relpath != NULL);
+
+          repos_relpath = svn_relpath_join(parent_repos_relpath,
+                                           svn_dirent_basename(local_abspath,
+                                                               NULL),
+                                           result_pool);
+        }
+    }
+  if (!repos_root_url && parent_repos_root_url)
+    repos_root_url = apr_pstrdup(result_pool, parent_repos_root_url);
 
   /* Examine whether our directory metadata is present, and compensate
      if it is missing.
@@ -662,7 +676,6 @@ assemble_status(svn_wc_status3_t **status,
   stat->file_external = file_external_p;
   stat->copied = copied;
   stat->repos_lock = repos_lock;
-  stat->url = url;
   stat->revision = revision;
   stat->changed_rev = changed_rev;
   stat->changed_author = changed_author;
@@ -1493,22 +1506,6 @@ tweak_statushash(void *baton,
     {
       struct dir_baton *b = this_dir_baton;
 
-      if (b->url)
-        {
-          if (statstruct->repos_text_status == svn_wc_status_deleted)
-            {
-              /* When deleting PATH, BATON is for PATH's parent,
-                 so we must construct PATH's real statstruct->url. */
-              statstruct->url =
-                svn_path_url_add_component2(b->url,
-                                            svn_dirent_basename(local_abspath,
-                                                                NULL),
-                                            pool);
-            }
-          else
-            statstruct->url = apr_pstrdup(pool, b->url);
-        }
-
       /* The last committed date, and author for deleted items
          isn't available. */
       if (statstruct->repos_text_status == svn_wc_status_deleted)
@@ -1540,8 +1537,6 @@ tweak_statushash(void *baton,
   else
     {
       struct file_baton *b = baton;
-      if (b->url)
-        statstruct->url = apr_pstrdup(pool, b->url);
       statstruct->ood_last_cmt_rev = b->ood_last_cmt_rev;
       statstruct->ood_last_cmt_date = b->ood_last_cmt_date;
       statstruct->ood_kind = b->ood_kind;
@@ -1554,14 +1549,14 @@ tweak_statushash(void *baton,
 
 /* Returns the URL for DB, or NULL: */
 static const char *
-find_dir_url(const struct dir_baton *db, apr_pool_t *pool)
+find_dir_repos_relpath(const struct dir_baton *db, apr_pool_t *pool)
 {
   /* If we have no name, we're the root, return the anchor URL. */
   if (! db->name)
-    return db->edit_baton->anchor_status->url;
+    return db->edit_baton->anchor_status->repos_relpath;
   else
     {
-      const char *url;
+      const char *repos_relpath;
       struct dir_baton *pb = db->parent_baton;
       const svn_wc_status3_t *status = apr_hash_get(pb->statii,
                                                     db->local_abspath,
@@ -1570,11 +1565,11 @@ find_dir_url(const struct dir_baton *db, apr_pool_t *pool)
        * directory, which means we need to recurse up another level to
        * get a useful URL. */
       if (status)
-        return status->url;
+        return status->repos_relpath;
 
-      url = find_dir_url(pb, pool);
-      if (url)
-        return svn_path_url_add_component2(url, db->name, pool);
+      repos_relpath = find_dir_repos_relpath(pb, pool);
+      if (repos_relpath)
+        return svn_relpath_join(repos_relpath, db->name, pool);
       else
         return NULL;
     }
@@ -1611,7 +1606,6 @@ make_dir_baton(void **dir_baton,
   d->parent_baton = parent_baton;
   d->pool = pool;
   d->statii = apr_hash_make(pool);
-  d->url = apr_pstrdup(pool, find_dir_url(d, pool));
   d->ood_last_cmt_rev = SVN_INVALID_REVNUM;
   d->ood_last_cmt_date = 0;
   d->ood_kind = svn_node_dir;
@@ -1707,9 +1701,6 @@ make_file_baton(struct dir_baton *parent_dir_baton,
   f->pool = pool;
   f->dir_baton = pb;
   f->edit_baton = eb;
-  f->url = svn_path_url_add_component2(find_dir_url(pb, pool),
-                                       f->name,
-                                       pool);
   f->ood_last_cmt_rev = SVN_INVALID_REVNUM;
   f->ood_last_cmt_date = 0;
   f->ood_kind = svn_node_file;
@@ -2252,21 +2243,26 @@ close_file(void *file_baton,
   /* If this is a new file, add it to the statushash. */
   if (fb->added)
     {
-      const char *url;
       repos_text_status = svn_wc_status_added;
       repos_prop_status = fb->prop_changed ? svn_wc_status_added : 0;
 
       if (fb->edit_baton->wb.repos_locks)
         {
-          url = find_dir_url(fb->dir_baton, pool);
-          if (url)
+          const char *dir_repos_relpath = find_dir_repos_relpath(fb->dir_baton,
+                                                                 pool);
+
+          if (dir_repos_relpath)
             {
-              url = svn_path_url_add_component2(url, fb->name, pool);
-              repos_lock = apr_hash_get
-                (fb->edit_baton->wb.repos_locks,
-                 svn_path_uri_decode(url +
-                                     strlen(fb->edit_baton->wb.repos_root),
-                                     pool), APR_HASH_KEY_STRING);
+              /* repos_lock still uses the deprecated filesystem absolute path
+                 format */
+
+              const char *repos_relpath = svn_relpath_join(dir_repos_relpath,
+                                                           fb->name, pool);
+
+               repos_lock = apr_hash_get(fb->edit_baton->wb.repos_locks,
+                                         svn_uri_join("/", repos_relpath,
+                                                      pool),
+                                         APR_HASH_KEY_STRING);
             }
         }
     }
@@ -2672,9 +2668,6 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
   /* Now go back and dup the deep items into this pool. */
   if (orig_stat->repos_lock)
     new_stat->repos_lock = svn_lock_dup(orig_stat->repos_lock, pool);
-
-  if (orig_stat->url)
-    new_stat->url = apr_pstrdup(pool, orig_stat->url);
 
   if (orig_stat->changed_author)
     new_stat->changed_author = apr_pstrdup(pool, orig_stat->changed_author);

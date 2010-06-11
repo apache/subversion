@@ -3564,8 +3564,14 @@ typedef struct svn_wc_status3_t
   /** The entry's lock in the repository, if any. */
   const svn_lock_t *repos_lock;
 
-  /** Set to the URI (actual or expected) of the item. */
-  const char *url;
+  /** The URL of the repository */
+  const char *repos_root_url;
+
+  /** The in-repository path relative to the repository root. 
+   * Use svn_path_url_component2() to join this value to the
+   * repos_root_url to get the full URL.
+   */
+  const char *repos_relpath;
 
   /**
    * @defgroup svn_wc_status_ood WC out-of-date info from the repository
@@ -3655,13 +3661,6 @@ typedef struct svn_wc_status3_t
 
   /** Which changelist this item is part of, or NULL if not part of any. */
   const char *changelist;
-
-  /** The leading part of the url, not including the wc root and subsequent
-   * paths. */
-  const char *repos_root_url;
-
-  /** The path relative to the wc root. */
-  const char *repos_relpath;
 
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
