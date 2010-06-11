@@ -616,7 +616,6 @@ preserve_pre_merge_files(svn_skel_t **work_items,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
   const char *left_copy, *right_copy, *target_copy;
   const char *tmp_left, *tmp_right, *detranslated_target_copy;
   const char *dir_abspath, *target_name;
@@ -625,9 +624,9 @@ preserve_pre_merge_files(svn_skel_t **work_items,
 
   *work_items = NULL;
 
-  svn_dirent_split(target_abspath, &dir_abspath, &target_name, pool);
+  svn_dirent_split(target_abspath, &dir_abspath, &target_name, scratch_pool);
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
-                                         pool, pool));
+                                         scratch_pool, scratch_pool));
 
   /* I miss Lisp. */
 
@@ -637,7 +636,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
                                      target_name,
                                      left_label,
                                      svn_io_file_del_none,
-                                     pool, pool));
+                                     scratch_pool, scratch_pool));
 
   /* Have I mentioned how much I miss Lisp? */
 
@@ -647,7 +646,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
                                      target_name,
                                      right_label,
                                      svn_io_file_del_none,
-                                     pool, pool));
+                                     scratch_pool, scratch_pool));
 
   /* Why, how much more pleasant to be forced to unroll my loops.
      If I'd been writing in Lisp, I might have mapped an inline
@@ -660,7 +659,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
                                      target_name,
                                      target_label,
                                      svn_io_file_del_none,
-                                     pool, pool));
+                                     scratch_pool, scratch_pool));
 
   /* We preserve all the files with keywords expanded and line
      endings in local (working) form. */
@@ -673,8 +672,8 @@ preserve_pre_merge_files(svn_skel_t **work_items,
     {
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_left, temp_dir,
                                        svn_io_file_del_on_pool_cleanup,
-                                       pool, pool));
-      SVN_ERR(svn_io_copy_file(left_abspath, tmp_left, TRUE, pool));
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_copy_file(left_abspath, tmp_left, TRUE, scratch_pool));
     }
   else
     tmp_left = left_abspath;
@@ -683,8 +682,8 @@ preserve_pre_merge_files(svn_skel_t **work_items,
     {
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_right, temp_dir,
                                        svn_io_file_del_on_pool_cleanup,
-                                       pool, pool));
-      SVN_ERR(svn_io_copy_file(right_abspath, tmp_right, TRUE, pool));
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_copy_file(right_abspath, tmp_right, TRUE, scratch_pool));
     }
   else
     tmp_right = right_abspath;
@@ -720,7 +719,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
            &detranslated_target_copy, target_abspath, db, target_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
            cancel_func, cancel_baton,
-           pool, pool));
+           scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
                                         target_copy, detranslated_target_copy,
                                         target_abspath, result_pool));
@@ -731,10 +730,10 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   SVN_ERR(svn_wc__wq_tmp_build_set_text_conflict_markers(
                     &work_item,
                     db, target_abspath,
-                    svn_dirent_is_child(dir_abspath, left_copy, pool),
-                    svn_dirent_is_child(dir_abspath, right_copy, pool),
-                    svn_dirent_basename(target_copy, pool),
-                    pool, pool));
+                    svn_dirent_basename(left_copy, NULL),
+                    svn_dirent_basename(right_copy, NULL),
+                    svn_dirent_basename(target_copy, NULL),
+                    result_pool, scratch_pool));
 
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
