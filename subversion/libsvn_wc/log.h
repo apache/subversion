@@ -88,28 +88,6 @@ svn_wc__loggy_delete_lock(svn_skel_t **work_item,
                           const char *local_abspath,
                           apr_pool_t *result_pool);
 
-
-/* Queue operations to modify the entry associated with PATH
-   in ADM_ABSPATH according to the flags specified in MODIFY_FLAGS, based on
-   the values supplied in *ENTRY.
-
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   The flags in MODIFY_FLAGS are to be taken from the svn_wc__entry_modify()
-   parameter by the same name.
-
-   Use SCRATCH_POOL for temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_entry_modify(svn_skel_t **work_item,
-                           svn_wc__db_t *db,
-                           const char *adm_abspath,
-                           const char *local_abspath,
-                           const svn_wc_entry_t *entry,
-                           apr_uint64_t modify_flags,
-                           apr_pool_t *result_pool);
-
-
 /* Queue instructions to move the file SRC_PATH to DST_PATH.
 
    The test for existence is made now, not at log run time.

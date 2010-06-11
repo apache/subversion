@@ -70,10 +70,6 @@
 
 /** Log actions. **/
 
-/* Set some attributes on SVN_WC__LOG_ATTR_NAME's entry.  Unmentioned
-   attributes are unaffected. */
-#define SVN_WC__LOG_MODIFY_ENTRY        "modify-entry"
-
 /* Delete lock related fields from the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_LOCK         "delete-lock"
 
@@ -244,31 +240,6 @@ log_do_file_timestamp(struct log_runner *loggy,
     }
 
   return SVN_NO_ERROR;
-}
-
-
-/* */
-static svn_error_t *
-log_do_modify_entry(struct log_runner *loggy,
-                    const char *name,
-                    const char **atts)
-{
-  apr_hash_t *ah = svn_xml_make_att_hash(atts, loggy->pool);
-  const char *local_abspath;
-  svn_wc_entry_t *entry;
-  int modify_flags;
-
-  local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
-  /* Convert the attributes into an entry structure. */
-  SVN_ERR(svn_wc__atts_to_entry(&entry, &modify_flags, ah, loggy->pool));
-
-  /* ### this function never needs to modify a parent stub.
-     ### NOTE: this call to entry_modify MAY create a new node.  */
-  return svn_error_return(svn_wc__entry_modify(loggy->db, local_abspath,
-                                               svn_node_unknown,
-                                               entry, modify_flags,
-                                               loggy->pool));
 }
 
 /* */
@@ -465,10 +436,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
 #endif
 
   /* Dispatch. */
-  if (strcmp(eltname, SVN_WC__LOG_MODIFY_ENTRY) == 0) {
-    err = log_do_modify_entry(loggy, name, atts);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_DELETE_LOCK) == 0) {
+  if (strcmp(eltname, SVN_WC__LOG_DELETE_LOCK) == 0) {
     err = log_do_delete_lock(loggy, name);
   }
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
@@ -687,76 +655,6 @@ svn_wc__loggy_delete_lock(svn_skel_t **work_item,
                         SVN_WC__LOG_ATTR_NAME, loggy_path1,
                         NULL);
 
-  return svn_error_return(svn_wc__wq_build_loggy(work_item,
-                                                 db, adm_abspath, log_accum,
-                                                 result_pool));
-}
-
-
-svn_error_t *
-svn_wc__loggy_entry_modify(svn_skel_t **work_item,
-                           svn_wc__db_t *db,
-                           const char *adm_abspath,
-                           const char *local_abspath,
-                           const svn_wc_entry_t *entry,
-                           apr_uint64_t modify_flags,
-                           apr_pool_t *result_pool)
-{
-  svn_stringbuf_t *log_accum = NULL;
-  const char *loggy_path1;
-  apr_hash_t *prop_hash = apr_hash_make(result_pool);
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(modify_flags != 0);
-
-  /* ### this code has a limited set of modifications. enforce it.  */
-  SVN_ERR_ASSERT((modify_flags & ~(0
-                    /* from props.c  */
-                    | SVN_WC__ENTRY_MODIFY_PREJFILE
-
-                    /* from merge.c  */
-                    | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
-                    | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
-                    | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK)) == 0);
-
-#define ADD_ENTRY_ATTR(attr_flag, attr_name, value) \
-   if (modify_flags & (attr_flag)) \
-     apr_hash_set(prop_hash, (attr_name), APR_HASH_KEY_STRING, value)
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_OLD)
-    SVN_ERR_ASSERT(entry->conflict_old != NULL);
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CONFLICT_OLD,
-                 SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                 entry->conflict_old);
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_NEW)
-    SVN_ERR_ASSERT(entry->conflict_new != NULL);
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CONFLICT_NEW,
-                 SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                 entry->conflict_new);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-                 SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
-                 entry->conflict_wrk ? entry->conflict_wrk : "");
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_PREJFILE)
-    SVN_ERR_ASSERT(entry->prejfile != NULL);
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PREJFILE,
-                 SVN_WC__ENTRY_ATTR_PREJFILE,
-                 entry->prejfile);
-
-#undef ADD_ENTRY_ATTR
-
-  SVN_ERR_ASSERT(apr_hash_count(prop_hash) != 0);
-
-  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, result_pool));
-  apr_hash_set(prop_hash, SVN_WC__LOG_ATTR_NAME,
-               APR_HASH_KEY_STRING, loggy_path1);
-
-  svn_xml_make_open_tag_hash(&log_accum, result_pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             prop_hash);
   return svn_error_return(svn_wc__wq_build_loggy(work_item,
                                                  db, adm_abspath, log_accum,
                                                  result_pool));

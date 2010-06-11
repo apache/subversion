@@ -49,18 +49,6 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CONFLICT_WRK       "conflict-wrk" /* saved wrk file */
 #define SVN_WC__ENTRY_ATTR_PREJFILE           "prop-reject-file"
 
-
-/* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
-   keys and values are both char *.  Allocate the entry and copy
-   attributes into POOL as needed.
-
-   Set MODIFY_FLAGS to reflect the fields that were present in ATTS. */
-svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
-                                   int *modify_flags,
-                                   apr_hash_t *atts,
-                                   apr_pool_t *pool);
-
-
 /* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
    pay attention to.  ### These should track the changes made to the
    SVN_WC__ENTRY_ATTR_* #defines! */

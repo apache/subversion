@@ -769,8 +769,8 @@ extract_string_normalize(int *modify_flags,
 }
 
 
-/* NOTE: this is used for running old logs, and for upgrading old XML-based
-   entries file. Be wary of removing items.
+/* NOTE: this is used for upgrading old XML-based entries file. Be wary of
+         removing items.
 
    ### many attributes are no longer used within the old-style log files.
    ### These attrs need to be recognized for old entries, however. For these
@@ -778,12 +778,17 @@ extract_string_normalize(int *modify_flags,
    ### for that particular field. MODIFY_FLAGS is *only* used by the
    ### log-based entry modification system, and will go way once we
    ### completely move away from loggy.
-*/
-svn_error_t *
-svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
-                      int *modify_flags,
-                      apr_hash_t *atts,
-                      apr_pool_t *pool)
+
+   Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
+   keys and values are both char *.  Allocate the entry and copy
+   attributes into POOL as needed.
+
+   Set MODIFY_FLAGS to reflect the fields that were present in ATTS. */
+static svn_error_t *
+atts_to_entry(svn_wc_entry_t **new_entry,
+              int *modify_flags,
+              apr_hash_t *atts,
+              apr_pool_t *pool)
 {
   svn_wc_entry_t *entry = alloc_entry(pool);
   const char *name;
@@ -1045,7 +1050,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   svn_pool_clear(accum->scratch_pool);
   /* Make an entry from the attributes. */
   attributes = svn_xml_make_att_hash(atts, accum->scratch_pool);
-  err = svn_wc__atts_to_entry(&entry, &modify_flags, attributes, accum->pool);
+  err = atts_to_entry(&entry, &modify_flags, attributes, accum->pool);
   if (err)
     {
       svn_xml_signal_bailout(err, accum->parser);
