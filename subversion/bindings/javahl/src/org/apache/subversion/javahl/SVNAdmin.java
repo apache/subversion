@@ -26,6 +26,7 @@ package org.apache.subversion.javahl;
 import java.util.Set;
 import java.io.OutputStream;
 import java.io.InputStream;
+import java.io.File;
 
 /**
  * This class offers the same commands as the svnadmin commandline
@@ -98,8 +99,8 @@ public class SVNAdmin implements ISVNAdmin
      * @param fstype                the type of the filesystem (BDB or FSFS)
      * @throws ClientException  throw in case of problem
      */
-    public native void create(String path, boolean disableFsyncCommit,
-                              boolean keepLog, String configPath,
+    public native void create(File path, boolean disableFsyncCommit,
+                              boolean keepLog, File configPath,
                               String fstype) throws ClientException;
 
     /**

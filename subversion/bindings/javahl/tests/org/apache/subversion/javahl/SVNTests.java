@@ -233,8 +233,7 @@ class SVNTests extends TestCase
         File greekFiles = buildGreekFiles();
         greekRepos = new File(localTmp, "repos");
         greekDump = new File(localTmp, "greek_dump");
-        admin.create(greekRepos.getAbsolutePath(), true,false, null,
-                     this.fsType);
+        admin.create(greekRepos, true,false, null, this.fsType);
         addExpectedCommitItem(greekFiles.getAbsolutePath(), null, null,
                               NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
@@ -659,8 +658,7 @@ class SVNTests extends TestCase
             File repos = new File(repositories, this.testName);
             removeDirOrFile(repos);
             // create and load the repository from the default repository dump
-            admin.create(repos.getAbsolutePath(), true, false,
-                         conf.getAbsolutePath(), fsType);
+            admin.create(repos, true, false, conf, fsType);
             if (loadGreek)
             {
                 admin.load(repos.getAbsolutePath(),

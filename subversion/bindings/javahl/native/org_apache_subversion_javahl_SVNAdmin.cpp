@@ -34,6 +34,7 @@
 #include "InputStream.h"
 #include "OutputStream.h"
 #include "MessageReceiver.h"
+#include "File.h"
 #include "svn_props.h"
 #include "svn_private_config.h"
 
@@ -72,8 +73,8 @@ Java_org_apache_subversion_javahl_SVNAdmin_finalize
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_create
-(JNIEnv *env, jobject jthis, jstring jpath, jboolean jdisableFsyncCommit,
- jboolean jkeepLog, jstring jconfigpath, jstring jfstype)
+(JNIEnv *env, jobject jthis, jobject jpath, jboolean jdisableFsyncCommit,
+ jboolean jkeepLog, jobject jconfigpath, jstring jfstype)
 {
   JNIEntry(SVNAdmin, create);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -83,11 +84,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_create
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder configpath(jconfigpath);
+  File configpath(jconfigpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -95,8 +96,8 @@ Java_org_apache_subversion_javahl_SVNAdmin_create
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->create(path, jdisableFsyncCommit? true : false, jkeepLog? true : false,
-             configpath, fstype);
+  cl->create(path.getAbsPath(), jdisableFsyncCommit? true : false,
+             jkeepLog? true : false, configpath.getAbsPath(), fstype);
 }
 
 JNIEXPORT void JNICALL
