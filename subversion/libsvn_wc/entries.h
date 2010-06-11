@@ -37,18 +37,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-/* The names of the fields used for storing entries' information.
-   Used for the names of the XML attributes in XML entries files
-   (format 6 and below), for the names of attributes in wc logs,
-   and for error reporting when reading a non-XML entries file.
-   ### If you add or remove items here, you probably want to make sure
-   to do the same for the SVN_WC__ENTRY_MODIFY_* #defines as well. */
-#define SVN_WC__ENTRY_ATTR_CONFLICT_OLD       "conflict-old" /* saved old file */
-#define SVN_WC__ENTRY_ATTR_CONFLICT_NEW       "conflict-new" /* saved new file */
-#define SVN_WC__ENTRY_ATTR_CONFLICT_WRK       "conflict-wrk" /* saved wrk file */
-#define SVN_WC__ENTRY_ATTR_PREJFILE           "prop-reject-file"
-
 /* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
    pay attention to.  ### These should track the changes made to the
    SVN_WC__ENTRY_ATTR_* #defines! */
@@ -62,10 +50,7 @@ extern "C" {
 #define SVN_WC__ENTRY_MODIFY_DELETED            0x00000080
 #define SVN_WC__ENTRY_MODIFY_COPYFROM_URL       0x00000100
 #define SVN_WC__ENTRY_MODIFY_COPYFROM_REV       0x00000200
-#define SVN_WC__ENTRY_MODIFY_CONFLICT_OLD       0x00000400
-#define SVN_WC__ENTRY_MODIFY_CONFLICT_NEW       0x00000800
-#define SVN_WC__ENTRY_MODIFY_CONFLICT_WRK       0x00001000
-#define SVN_WC__ENTRY_MODIFY_PREJFILE           0x00002000
+/* ### gap  */
 #define SVN_WC__ENTRY_MODIFY_ABSENT             0x00004000
 /* ### gap  */
 

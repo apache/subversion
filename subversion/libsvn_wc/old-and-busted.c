@@ -75,6 +75,10 @@
 #define ENTRIES_ATTR_CHECKSUM           "checksum"
 #define ENTRIES_ATTR_WORKING_SIZE       "working-size"
 #define ENTRIES_ATTR_TEXT_TIME          "text-time"
+#define ENTRIES_ATTR_CONFLICT_OLD       "conflict-old" /* saved old file */
+#define ENTRIES_ATTR_CONFLICT_NEW       "conflict-new" /* saved new file */
+#define ENTRIES_ATTR_CONFLICT_WRK       "conflict-wrk" /* saved wrk file */
+#define ENTRIES_ATTR_PREJFILE           "prop-reject-file"
 
 /* Attribute values used in our old XML entries file.  */
 #define ENTRIES_VALUE_FILE     "file"
@@ -748,19 +752,14 @@ extract_string(apr_hash_t *atts,
 
 /* Like extract_string(), but normalizes empty strings to NULL.  */
 static const char *
-extract_string_normalize(int *modify_flags,
-                         apr_hash_t *atts,
+extract_string_normalize(apr_hash_t *atts,
                          const char *att_name,
-                         int flag,
                          apr_pool_t *result_pool)
 {
   const char *value = apr_hash_get(atts, att_name, APR_HASH_KEY_STRING);
 
   if (value == NULL)
     return NULL;
-
-  if (modify_flags)
-    *modify_flags |= flag;
 
   if (*value == '\0')
     return NULL;
@@ -781,19 +780,14 @@ extract_string_normalize(int *modify_flags,
 
    Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
    keys and values are both char *.  Allocate the entry and copy
-   attributes into POOL as needed.
-
-   Set MODIFY_FLAGS to reflect the fields that were present in ATTS. */
+   attributes into POOL as needed. */
 static svn_error_t *
 atts_to_entry(svn_wc_entry_t **new_entry,
-              int *modify_flags,
               apr_hash_t *atts,
               apr_pool_t *pool)
 {
   svn_wc_entry_t *entry = alloc_entry(pool);
   const char *name;
-
-  *modify_flags = 0;
 
   /* Find the name and set up the entry under that name. */
   name = apr_hash_get(atts, ENTRIES_ATTR_NAME, APR_HASH_KEY_STRING);
@@ -876,26 +870,18 @@ atts_to_entry(svn_wc_entry_t **new_entry,
   }
 
   /* Is this entry in a state of mental torment (conflict)? */
-  entry->prejfile = extract_string_normalize(
-                      modify_flags, atts,
-                      SVN_WC__ENTRY_ATTR_PREJFILE,
-                      SVN_WC__ENTRY_MODIFY_PREJFILE,
-                      pool);
-  entry->conflict_old = extract_string_normalize(
-                          modify_flags, atts,
-                          SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                          SVN_WC__ENTRY_MODIFY_CONFLICT_OLD,
-                          pool);
-  entry->conflict_new = extract_string_normalize(
-                          modify_flags, atts,
-                          SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                          SVN_WC__ENTRY_MODIFY_CONFLICT_NEW,
-                          pool);
-  entry->conflict_wrk = extract_string_normalize(
-                          modify_flags, atts,
-                          SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
-                          SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-                          pool);
+  entry->prejfile = extract_string_normalize(atts,
+                                             ENTRIES_ATTR_PREJFILE,
+                                             pool);
+  entry->conflict_old = extract_string_normalize(atts,
+                                                 ENTRIES_ATTR_CONFLICT_OLD,
+                                                 pool);
+  entry->conflict_new = extract_string_normalize(atts,
+                                                 ENTRIES_ATTR_CONFLICT_NEW,
+                                                 pool);
+  entry->conflict_wrk = extract_string_normalize(atts,
+                                                 ENTRIES_ATTR_CONFLICT_WRK,
+                                                 pool);
 
   /* Is this entry copied? */
   /* ### not used by loggy; no need to set MODIFY_FLAGS  */
@@ -1040,7 +1026,6 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   apr_hash_t *attributes;
   svn_wc_entry_t *entry;
   svn_error_t *err;
-  int modify_flags = 0;
 
   /* We only care about the `entry' tag; all other tags, such as `xml'
      and `wc-entries', are ignored. */
@@ -1050,7 +1035,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   svn_pool_clear(accum->scratch_pool);
   /* Make an entry from the attributes. */
   attributes = svn_xml_make_att_hash(atts, accum->scratch_pool);
-  err = atts_to_entry(&entry, &modify_flags, attributes, accum->pool);
+  err = atts_to_entry(&entry, attributes, accum->pool);
   if (err)
     {
       svn_xml_signal_bailout(err, accum->parser);
