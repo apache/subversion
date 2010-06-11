@@ -1818,7 +1818,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   apr_pool_t *iterpool;
   int i;
   svn_boolean_t is_dir;
-  const char *adm_abspath;
   svn_skel_t *conflict_skel = NULL;
 
   SVN_ERR_ASSERT(base_props != NULL);
@@ -1828,11 +1827,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   *new_actual_props = NULL;
 
   is_dir = (kind == svn_wc__db_kind_dir);
-
-  if (is_dir)
-    adm_abspath = local_abspath;
-  else
-    adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
   if (!server_baseprops)
     server_baseprops = base_props;
