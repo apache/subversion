@@ -1365,9 +1365,10 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 
      svn_wc__db_status_excluded
        The node has been excluded from the working copy tree. This may
-       be an exclusion from the BASE tree, or an exclusion for a child
-       node of a copy/move to an ancestor (see BASE_SHADOWED to determine
-       the situation).
+       be an exclusion from the BASE tree, or an exclusion in the
+       WORKING tree for a child node of a copied/moved parent.
+       (### If BASE_SHADOWED is FALSE it is not possible to distinguish
+        between the two trees).
 
      svn_wc__db_status_not_present
        This is a node from the BASE tree, has been marked as "not-present"
@@ -1378,6 +1379,8 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
      svn_wc__db_status_incomplete
        The BASE or WORKING node is incomplete due to an interrupted
        operation.
+       (### If BASE_SHADOWED is FALSE it is not possible to distinguish
+        between the two trees).
 
    If REVISION is requested, it will be set to the revision of the
    unmodified (BASE) node, or to SVN_INVALID_REVNUM if any structural
