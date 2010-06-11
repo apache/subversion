@@ -72,7 +72,7 @@ public interface ISVNAdmin {
 	 * @param end               end revision
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void deltify(String path, Revision start, Revision end)
+	public abstract void deltify(File path, Revision start, Revision end)
 			throws ClientException;
 
 	/**
@@ -87,7 +87,7 @@ public interface ISVNAdmin {
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.5
 	 */
-	public abstract void dump(String path, OutputStream dataOut,
+	public abstract void dump(File path, OutputStream dataOut,
                 OutputStream errorOut, Revision start, Revision end,
                 boolean incremental, boolean useDeltas)
 			throws ClientException;
@@ -100,7 +100,7 @@ public interface ISVNAdmin {
 	 *                          repository
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void hotcopy(String path, String targetPath,
+	public abstract void hotcopy(File path, File targetPath,
 			boolean cleanLogs) throws ClientException;
 
 	/**
@@ -109,7 +109,7 @@ public interface ISVNAdmin {
 	 * @param receiver          interface to receive the logfile names
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void listDBLogs(String path, MessageReceiver receiver)
+	public abstract void listDBLogs(File path, MessageReceiver receiver)
 			throws ClientException;
 
 	/**
@@ -118,7 +118,7 @@ public interface ISVNAdmin {
 	 * @param receiver          interface to receive the logfile names
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void listUnusedDBLogs(String path, MessageReceiver receiver)
+	public abstract void listUnusedDBLogs(File path, MessageReceiver receiver)
 			throws ClientException;
 
 	/**
@@ -136,7 +136,7 @@ public interface ISVNAdmin {
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.5
 	 */
-	public abstract void load(String path, InputStream dataInput,
+	public abstract void load(File path, InputStream dataInput,
 			OutputStream messageOutput, boolean ignoreUUID, boolean forceUUID,
 			boolean usePreCommitHook, boolean usePostCommitHook,
 			String relativePath) throws ClientException;
@@ -147,7 +147,7 @@ public interface ISVNAdmin {
 	 * @param receiver          receives one transaction name per call
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void lstxns(String path, MessageReceiver receiver)
+	public abstract void lstxns(File path, MessageReceiver receiver)
 			throws ClientException;
 
 	/**
@@ -155,7 +155,7 @@ public interface ISVNAdmin {
 	 * @param path              the path to the repository
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract long recover(String path) throws ClientException;
+	public abstract long recover(File path) throws ClientException;
 
 	/**
 	 * remove open transaction in a repository
@@ -163,7 +163,7 @@ public interface ISVNAdmin {
 	 * @param transactions      the transactions to be removed
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void rmtxns(String path, String[] transactions)
+	public abstract void rmtxns(File path, String[] transactions)
 			throws ClientException;
 
 	/**
@@ -182,7 +182,7 @@ public interface ISVNAdmin {
 	 * @throws SubversionException If a problem occurs.
 	 * @since 1.5.0
 	 */
-	public abstract void setRevProp(String path, Revision rev, String propName,
+	public abstract void setRevProp(File path, Revision rev, String propName,
 			String propValue, boolean usePreRevPropChangeHook,
 			boolean usePostRevPropChangeHook) throws SubversionException;
 
@@ -196,7 +196,7 @@ public interface ISVNAdmin {
 	 * @param end               the last revision
 	 * @throws ClientException If an error occurred.
 	 */
-	public abstract void verify(String path, OutputStream messageOut,
+	public abstract void verify(File path, OutputStream messageOut,
 			Revision start, Revision end) throws ClientException;
 
 	/**
@@ -205,7 +205,7 @@ public interface ISVNAdmin {
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.2
 	 */
-	public abstract Set<Lock> lslocks(String path) throws ClientException;
+	public abstract Set<Lock> lslocks(File path) throws ClientException;
 
 	/**
 	 * remove multiple locks from the repository
@@ -214,7 +214,7 @@ public interface ISVNAdmin {
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.2
 	 */
-	public abstract void rmlocks(String path, String[] locks)
+	public abstract void rmlocks(File path, String[] locks)
 			throws ClientException;
 
 }

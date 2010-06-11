@@ -122,7 +122,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.deltify(path,
+            aSVNAdmin.deltify(new File(path),
                               start == null ? null : start.toApache(),
                               end == null ? null : end.toApache());
         }
@@ -169,7 +169,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.dump(path, new OutputWrapper(dataOut),
+            aSVNAdmin.dump(new File(path), new OutputWrapper(dataOut),
                            new OutputWrapper(errorOut),
                            start == null ? null : start.toApache(),
                            end == null ? null : end.toApache(),
@@ -194,7 +194,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.hotcopy(path, targetPath, cleanLogs);
+            aSVNAdmin.hotcopy(new File(path), new File(targetPath), cleanLogs);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -213,7 +213,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.listDBLogs(path, receiver);
+            aSVNAdmin.listDBLogs(new File(path), receiver);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -232,7 +232,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.listUnusedDBLogs(path, receiver);
+            aSVNAdmin.listUnusedDBLogs(new File(path), receiver);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -292,7 +292,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.load(path, new InputWrapper(dataInput),
+            aSVNAdmin.load(new File(path), new InputWrapper(dataInput),
                            new OutputWrapper(messageOutput),
                            ignoreUUID, forceUUID, usePreCommitHook,
                            usePostCommitHook, relativePath);
@@ -314,7 +314,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.lstxns(path, receiver);
+            aSVNAdmin.lstxns(new File(path), receiver);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -332,7 +332,7 @@ public class SVNAdmin
     {
         try
         {
-            return aSVNAdmin.recover(path);
+            return aSVNAdmin.recover(new File(path));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -351,7 +351,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.rmtxns(path, transactions);
+            aSVNAdmin.rmtxns(new File(path), transactions);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -374,7 +374,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.setRevProp(path,
+            aSVNAdmin.setRevProp(new File(path),
                                  rev == null ? null : rev.toApache(),
                                  "svn:log", message,
                                  !bypassHooks, !bypassHooks);
@@ -408,7 +408,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.setRevProp(path,
+            aSVNAdmin.setRevProp(new File(path),
                                  rev == null ? null : rev.toApache(),
                                  propName, propValue,
                                  usePreRevPropChangeHook,
@@ -436,7 +436,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.verify(path, new OutputWrapper(messageOut),
+            aSVNAdmin.verify(new File(path), new OutputWrapper(messageOut),
                              start == null ? null : start.toApache(),
                              end == null ? null : end.toApache());
         }
@@ -458,7 +458,8 @@ public class SVNAdmin
         try
         {
             Set<org.apache.subversion.javahl.Lock> aLocks =
-                                                    aSVNAdmin.lslocks(path);
+                                                    aSVNAdmin.lslocks(
+                                                        new File(path));
             Lock[] locks = new Lock[aLocks.size()];
 
             int i = 0;
@@ -488,7 +489,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.rmlocks(path, locks);
+            aSVNAdmin.rmlocks(new File(path), locks);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {

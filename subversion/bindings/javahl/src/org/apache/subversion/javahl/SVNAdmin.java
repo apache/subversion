@@ -110,7 +110,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param end               end revision
      * @throws ClientException  throw in case of problem
      */
-    public native void deltify(String path, Revision start, Revision end)
+    public native void deltify(File path, Revision start, Revision end)
             throws ClientException;
 
     /**
@@ -125,7 +125,7 @@ public class SVNAdmin implements ISVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.5
      */
-    public native void dump(String path, OutputStream dataOut,
+    public native void dump(File path, OutputStream dataOut,
                             OutputStream errorOut, Revision start,
                             Revision end, boolean incremental,
                             boolean useDeltas)
@@ -139,7 +139,7 @@ public class SVNAdmin implements ISVNAdmin
      *                          repository
      * @throws ClientException  throw in case of problem
      */
-    public native void hotcopy(String path, String targetPath,
+    public native void hotcopy(File path, File targetPath,
                                boolean cleanLogs) throws ClientException;
 
     /**
@@ -148,7 +148,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public native void listDBLogs(String path, MessageReceiver receiver)
+    public native void listDBLogs(File path, MessageReceiver receiver)
             throws ClientException;
 
     /**
@@ -157,7 +157,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public native void listUnusedDBLogs(String path, MessageReceiver receiver)
+    public native void listUnusedDBLogs(File path, MessageReceiver receiver)
             throws ClientException;
 
     /**
@@ -187,7 +187,7 @@ public class SVNAdmin implements ISVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.5
      */
-    public native void load(String path, InputStream dataInput,
+    public native void load(File path, InputStream dataInput,
                             OutputStream messageOutput, boolean ignoreUUID,
                             boolean forceUUID, boolean usePreCommitHook,
                             boolean usePostCommitHook, String relativePath)
@@ -199,7 +199,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param receiver          receives one transaction name per call
      * @throws ClientException  throw in case of problem
      */
-    public native void lstxns(String path, MessageReceiver receiver)
+    public native void lstxns(File path, MessageReceiver receiver)
             throws ClientException;
 
     /**
@@ -207,7 +207,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param path              the path to the repository
      * @throws ClientException  throw in case of problem
      */
-    public native long recover(String path) throws ClientException;
+    public native long recover(File path) throws ClientException;
 
     /**
      * remove open transaction in a repository
@@ -215,7 +215,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param transactions      the transactions to be removed
      * @throws ClientException  throw in case of problem
      */
-    public native void rmtxns(String path, String [] transactions)
+    public native void rmtxns(File path, String[] transactions)
             throws ClientException;
 
     /**
@@ -234,7 +234,7 @@ public class SVNAdmin implements ISVNAdmin
      * @throws SubversionException If a problem occurs.
      * @since 1.5.0
      */
-    public native void setRevProp(String path, Revision rev,
+    public native void setRevProp(File path, Revision rev,
                                   String propName, String propValue,
                                   boolean usePreRevPropChangeHook,
                                   boolean usePostRevPropChangeHook)
@@ -250,7 +250,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param end               the last revision
      * @throws ClientException If an error occurred.
      */
-    public native void verify(String path, OutputStream messageOut,
+    public native void verify(File path, OutputStream messageOut,
                               Revision start, Revision end)
             throws ClientException;
 
@@ -260,7 +260,7 @@ public class SVNAdmin implements ISVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.2
      */
-    public native Set<Lock> lslocks(String path) throws ClientException;
+    public native Set<Lock> lslocks(File path) throws ClientException;
 
     /**
      * remove multiple locks from the repository
@@ -269,6 +269,6 @@ public class SVNAdmin implements ISVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.2
      */
-    public native void rmlocks(String path, String [] locks)
+    public native void rmlocks(File path, String[] locks)
             throws ClientException;
 }
