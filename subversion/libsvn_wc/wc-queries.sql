@@ -221,22 +221,19 @@ conflict_working = ?5
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_TEXT_CONFLICTS
-/* tree conflicts are always recorded on the wcroot node, so the
-   parent_relpath will be null.  */
 insert into actual_node (
-  wc_id, local_relpath, conflict_old, conflict_new, conflict_working)
-values (?1, ?2, ?3, ?4, ?5);
+  wc_id, local_relpath, conflict_old, conflict_new, conflict_working,
+  parent_relpath)
+values (?1, ?2, ?3, ?4, ?5, ?6);
 
 -- STMT_UPDATE_ACTUAL_PROPERTY_CONFLICTS
 update actual_node set prop_reject = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_PROPERTY_CONFLICTS
-/* tree conflicts are always recorded on the wcroot node, so the
-   parent_relpath will be null.  */
 insert into actual_node (
-  wc_id, local_relpath, prop_reject)
-values (?1, ?2, ?3);
+  wc_id, local_relpath, prop_reject, parent_relpath)
+values (?1, ?2, ?3, ?4);
 
 -- STMT_UPDATE_ACTUAL_CHANGELIST
 update actual_node set changelist = ?3

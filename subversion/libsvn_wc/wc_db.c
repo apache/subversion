@@ -8191,6 +8191,9 @@ svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+  /* This should be handled in a transaction, but we can assume a db locl\
+     and this code won't survive until 1.7 */
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
@@ -8207,6 +8210,10 @@ svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                         STMT_INSERT_ACTUAL_TEXT_CONFLICTS));
+
+      SVN_ERR(svn_sqlite__bind_text(stmt, 5,
+                                    svn_relpath_dirname(local_relpath,
+                                                        scratch_pool)));
     }
 
   SVN_ERR(svn_sqlite__bindf(stmt, "issss", pdh->wcroot->wc_id,
@@ -8239,6 +8246,9 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+  /* This should be handled in a transaction, but we can assume a db locl\
+     and this code won't survive until 1.7 */
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
@@ -8255,6 +8265,10 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                         STMT_INSERT_ACTUAL_PROPERTY_CONFLICTS));
+
+      SVN_ERR(svn_sqlite__bind_text(stmt, 4,
+                                    svn_relpath_dirname(local_relpath,
+                                                        scratch_pool)));
     }
 
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", pdh->wcroot->wc_id,
