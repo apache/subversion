@@ -621,7 +621,6 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   const char *tmp_left, *tmp_right, *detranslated_target_copy;
   const char *dir_abspath, *target_name;
   const char *temp_dir;
-  svn_wc_entry_t tmp_entry;
   svn_skel_t *work_item;
 
   *work_items = NULL;
@@ -727,18 +726,16 @@ preserve_pre_merge_files(svn_skel_t **work_items,
                                         target_abspath, result_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
-  tmp_entry.conflict_old = svn_dirent_is_child(dir_abspath, left_copy, pool);
-  tmp_entry.conflict_new = svn_dirent_is_child(dir_abspath, right_copy, pool);
-  tmp_entry.conflict_wrk = svn_dirent_basename(target_copy, pool);
-
   /* Mark TARGET_ABSPATH's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
-  SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, dir_abspath,
-                                     target_abspath, &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
-                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
-                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-                                     result_pool));
+  SVN_ERR(svn_wc__wq_tmp_build_set_text_conflict_markers(
+                    &work_item,
+                    db, target_abspath,
+                    svn_dirent_is_child(dir_abspath, left_copy, pool),
+                    svn_dirent_is_child(dir_abspath, right_copy, pool),
+                    svn_dirent_basename(target_copy, pool),
+                    pool, pool));
+
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   return SVN_NO_ERROR;
@@ -1062,7 +1059,7 @@ merge_binary_file(svn_skel_t **work_items,
   const char *left_copy, *right_copy;
   const char *left_base, *right_base;
   const char *merge_dirpath, *merge_filename;
-  svn_wc_entry_t tmp_entry;
+  const char *conflict_wrk;
   svn_skel_t *work_item;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
@@ -1198,11 +1195,11 @@ merge_binary_file(svn_skel_t **work_items,
 
       mine_copy = svn_dirent_is_child(merge_dirpath,
                                       mine_copy, pool);
-      tmp_entry.conflict_wrk = mine_copy;
+      conflict_wrk = mine_copy;
     }
   else
     {
-      tmp_entry.conflict_wrk = NULL;
+      conflict_wrk = NULL;
     }
 
   /* Derive the basenames of the backup files. */
@@ -1211,16 +1208,14 @@ merge_binary_file(svn_skel_t **work_items,
 
   /* Mark target_abspath's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
-  tmp_entry.conflict_old = left_base;
-  tmp_entry.conflict_new = right_base;
-  SVN_ERR(svn_wc__loggy_entry_modify(
-            &work_item,
-            db, merge_dirpath, target_abspath,
-            &tmp_entry,
-            SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
-              | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
-              | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-            result_pool));
+  SVN_ERR(svn_wc__wq_tmp_build_set_text_conflict_markers(&work_item,
+                                                         db, target_abspath,
+                                                         left_base,
+                                                         right_base,
+                                                         conflict_wrk,
+                                                         result_pool,
+                                                         scratch_pool));
+
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   *merge_outcome = svn_wc_merge_conflict; /* a conflict happened */
