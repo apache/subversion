@@ -8169,3 +8169,99 @@ svn_wc__db_temp_op_remove_working_stub(svn_wc__db_t* db,
 
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
+
+svn_error_t *
+svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
+                                                  const char *local_abspath,
+                                                  const char *old_basename,
+                                                  const char *new_basename,
+                                                  const char *wrk_basename,
+                                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (got_row)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_UPDATE_ACTUAL_TEXT_CONFLICTS));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_INSERT_ACTUAL_TEXT_CONFLICTS));
+    }
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "issss", pdh->wcroot->wc_id,
+                                           local_relpath,
+                                           old_basename,
+                                           new_basename,
+                                           wrk_basename));
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
+
+/* Set the conflict marker information on LOCAL_ABSPATH to the specified
+   values */
+svn_error_t *
+svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
+                                                     const char *local_abspath,
+                                                     const char *prej_basename,
+                                                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (got_row)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_UPDATE_ACTUAL_PROPERTY_CONFLICTS));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_INSERT_ACTUAL_PROPERTY_CONFLICTS));
+    }
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", pdh->wcroot->wc_id,
+                                           local_relpath,
+                                           prej_basename));
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
+
+

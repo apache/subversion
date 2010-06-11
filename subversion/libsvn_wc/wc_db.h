@@ -2405,6 +2405,24 @@ svn_wc__db_temp_op_remove_working_stub(svn_wc__db_t* db,
                                        const char *local_abspath,
                                        apr_pool_t *scratch_pool);
 
+/* Set the conflict marker information on LOCAL_ABSPATH to the specified
+   values */
+svn_error_t *
+svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
+                                                  const char *local_abspath,
+                                                  const char *old_basename,
+                                                  const char *new_basename,
+                                                  const char *wrk_basename,
+                                                  apr_pool_t *scratch_pool);
+
+/* Set the conflict marker information on LOCAL_ABSPATH to the specified
+   values */
+svn_error_t *
+svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
+                                                     const char *local_abspath,
+                                                     const char *prej_basename,
+                                                     apr_pool_t *scratch_pool);
+
 /* @} */
 
 

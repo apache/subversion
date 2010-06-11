@@ -65,7 +65,8 @@
 #define OP_PREJ_INSTALL "prej-install"
 #define OP_WRITE_OLD_PROPS "write-old-props"
 #define OP_RECORD_FILEINFO "record-fileinfo"
-
+#define OP_TMP_SET_TEXT_CONFLICT_MARKERS "tmp-set-text-conflict-markers"
+#define OP_TMP_SET_PROPERTY_CONFLICT_MARKER "tmp-set-property-conflict-marker"
 
 /* For work queue debugging. Generates output about its operation.  */
 /* #define DEBUG_WORK_QUEUE */
@@ -2297,6 +2298,129 @@ svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_TMP_SET_TEXT_CONFLICT_MARKERS  */
+
+
+static svn_error_t *
+run_set_text_conflict_markers(svn_wc__db_t *db,
+                    const svn_skel_t *work_item,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg = work_item->children->next;
+  const char *local_abspath;
+  const char *old_basename;
+  const char *new_basename;
+  const char *wrk_basename;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
+
+  arg = arg->next;
+  old_basename = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                          : NULL;
+
+  arg = arg->next;
+  new_basename = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                          : NULL;
+
+  arg = arg->next;
+  wrk_basename = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                          : NULL;
+
+  return svn_error_return(
+          svn_wc__db_temp_op_set_text_conflict_marker_files(db,
+                                                            local_abspath,
+                                                            old_basename,
+                                                            new_basename,
+                                                            wrk_basename,
+                                                            scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
+                                               svn_wc__db_t *db,
+                                               const char *local_abspath,
+                                               const char *old_basename,
+                                               const char *new_basename,
+                                               const char *wrk_basename,
+                                               apr_pool_t *result_pool,
+                                               apr_pool_t *scratch_pool)
+{
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  svn_skel__prepend_str(wrk_basename ? apr_pstrdup(result_pool, wrk_basename)
+                                     : "", *work_item, result_pool);
+
+  svn_skel__prepend_str(new_basename ? apr_pstrdup(result_pool, new_basename)
+                                     : "", *work_item, result_pool);
+
+  svn_skel__prepend_str(old_basename ? apr_pstrdup(result_pool, old_basename)
+                                     : "", *work_item, result_pool);
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_TMP_SET_TEXT_CONFLICT_MARKERS, *work_item,
+                        result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_TMP_SET_PROPERTY_CONFLICT_MARKER  */
+
+static svn_error_t *
+run_set_property_conflict_marker(svn_wc__db_t *db,
+                                 const svn_skel_t *work_item,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg = work_item->children->next;
+  const char *local_abspath;
+  const char *prej_basename;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
+
+  arg = arg->next;
+  prej_basename = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                           : NULL;
+
+  return svn_error_return(
+          svn_wc__db_temp_op_set_property_conflict_marker_file(db,
+                                                                local_abspath,
+                                                                prej_basename,
+                                                                scratch_pool));
+}
+
+svn_error_t *
+svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
+                                                  svn_wc__db_t *db,
+                                                  const char *local_abspath,
+                                                  const char *prej_basename,
+                                                  apr_pool_t *result_pool,
+                                                  apr_pool_t *scratch_pool)
+{
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  svn_skel__prepend_str(prej_basename ? apr_pstrdup(result_pool, prej_basename)
+                                      : "", *work_item, result_pool);
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_TMP_SET_PROPERTY_CONFLICT_MARKER, *work_item,
+                        result_pool);
+
+  return SVN_NO_ERROR;
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -2314,6 +2438,8 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_WRITE_OLD_PROPS, run_write_old_props },
   { OP_RECORD_FILEINFO, run_record_fileinfo },
+  { OP_TMP_SET_TEXT_CONFLICT_MARKERS, run_set_text_conflict_markers },
+  { OP_TMP_SET_PROPERTY_CONFLICT_MARKER, run_set_property_conflict_marker },
 
 /* See props.h  */
 #ifdef SVN__SUPPORT_BASE_MERGE
