@@ -1389,7 +1389,8 @@ log_do_committed(svn_wc__db_t *db,
     }
 
   /* If it's a file, install the tree changes and the file's text. */
-  if (kind == svn_wc__db_kind_file)
+  if (kind == svn_wc__db_kind_file
+      || kind == svn_wc__db_kind_symlink)
     {
       svn_boolean_t overwrote_working;
       apr_finfo_t finfo;
@@ -1503,24 +1504,8 @@ log_do_committed(svn_wc__db_t *db,
   }
 
   /* Make sure we have a parent stub in a clean/unmodified state.  */
-  {
-    svn_wc_entry_t tmp_entry;
-
-    tmp_entry.schedule = svn_wc_schedule_normal;
-    tmp_entry.copied = FALSE;
-    tmp_entry.deleted = FALSE;
-    /* ### We assume we have the right lock to modify the parent record.
-
-           If this fails for you in the transition to one DB phase, please
-           run svn cleanup one level higher. */
-    SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
-                                      &tmp_entry,
-                                      (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                       | SVN_WC__ENTRY_MODIFY_COPIED
-                                       | SVN_WC__ENTRY_MODIFY_DELETED
-                                       | SVN_WC__ENTRY_MODIFY_FORCE),
-                                      pool));
-  }
+  SVN_ERR(svn_wc__db_temp_set_parent_stub_to_normal(db, local_abspath,
+                                                    TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }

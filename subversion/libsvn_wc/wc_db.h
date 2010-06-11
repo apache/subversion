@@ -2426,6 +2426,20 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                                      const char *prej_basename,
                                                      apr_pool_t *scratch_pool);
 
+/* Ensure that the parent stub of LOCAL_ABSPATH contains a BASE_NODE record with
+   a normal status and optionally remove the WORKING_NODE record for the node;
+   this assumes that the parent directory is in the incomplete state, or the
+   node already exists (either as working or as base node). 
+
+   ### This function is a HACK with assumptions that aren't completely checked.
+   ### Don't add new callers unless you exactly know what 
+   ### you are doing! This call is never needed once we get to a central db. */
+svn_error_t *
+svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          svn_boolean_t delete_working,
+                                          apr_pool_t *scratch_pool);
+
 /* @} */
 
 

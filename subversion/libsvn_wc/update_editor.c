@@ -2577,34 +2577,16 @@ add_directory(const char *path,
     }
 
     {
-      svn_wc_entry_t tmp_entry;
-      int modify_flags = (SVN_WC__ENTRY_MODIFY_KIND
-                          | SVN_WC__ENTRY_MODIFY_DELETED
-                          | SVN_WC__ENTRY_MODIFY_ABSENT);
-
       /* Immediately create an entry for the new directory in the parent.
          Note that the parent must already be either added or opened, and
          thus it's in an 'incomplete' state just like the new dir.
          The entry may already exist if the new directory is already
          scheduled for addition without history, in that case set
          its schedule to normal. */
-      tmp_entry.kind = svn_node_dir;
-      /* Note that there may already exist a 'ghost' entry in the
-         parent with the same name, in a 'deleted' or 'absent' state.
-         If so, it's fine to overwrite it... but we need to make sure
-         we get rid of the state flag when doing so: */
-      tmp_entry.deleted = FALSE;
-      tmp_entry.absent = FALSE;
-
-      if (db->add_existed)
-        {
-          tmp_entry.schedule = svn_wc_schedule_normal;
-          modify_flags |= (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                           | SVN_WC__ENTRY_MODIFY_FORCE);
-        }
-
-      SVN_ERR(svn_wc__entry_modify_stub(eb->db, db->local_abspath,
-                                        &tmp_entry, modify_flags, pool));
+      SVN_ERR(svn_wc__db_temp_set_parent_stub_to_normal(eb->db,
+                                                        db->local_abspath,
+                                                        db->add_existed,
+                                                        pool));
 
       if (db->add_existed)
         {
@@ -2612,10 +2594,12 @@ add_directory(const char *path,
              is no longer scheduled for addition.  Change rev from 0
              to the target revision allowing prep_directory() to do
              its thing without error. */
-          modify_flags = (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                          | SVN_WC__ENTRY_MODIFY_FORCE
-                          | SVN_WC__ENTRY_MODIFY_REVISION);
+          svn_wc_entry_t tmp_entry;
+          int modify_flags = (SVN_WC__ENTRY_MODIFY_SCHEDULE
+                              | SVN_WC__ENTRY_MODIFY_FORCE
+                              | SVN_WC__ENTRY_MODIFY_REVISION);
 
+          tmp_entry.schedule = svn_wc_schedule_normal;
           tmp_entry.revision = *(eb->target_revision);
 
           if (eb->switch_relpath)

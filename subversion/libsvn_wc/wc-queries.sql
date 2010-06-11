@@ -281,6 +281,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 update base_node set presence= ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_PRESENCE_KIND
+update base_node set presence = ?3, kind = ?4
+where wc_id = ?1 and local_relpath = ?2;
+
 -- STMT_UPDATE_WORKING_PRESENCE
 update working_node set presence = ?3
 where wc_id = ?1 and local_relpath =?2;
