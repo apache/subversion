@@ -3594,8 +3594,10 @@ temp_file_create(apr_file_t **new_file,
          disk io) */
       unique_nr = baseNr + 3 * i;
 
-      unique_name = apr_psprintf(scratch_pool, "%s/svn-%X", directory,
-                                 unique_nr);
+      unique_name = svn_dirent_join(directory,
+                                    apr_psprintf(scratch_pool, "svn-%X",
+                                                 unique_nr),
+                                    scratch_pool);
 
       SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, scratch_pool));
 
