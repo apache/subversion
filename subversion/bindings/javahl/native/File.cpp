@@ -24,6 +24,8 @@
  * @brief Implementation of the class File
  */
 
+#include "svn_path.h"
+
 #include "File.h"
 #include "JNIUtil.h"
 #include "JNIByteArray.h"
@@ -46,8 +48,7 @@ File::~File()
 }
 
 /**
- * Create an absolute path from the File object, make it internal style,
- * and return it.
+ * Create an absolute path from the File object and return it.
  * @return the input stream
  */
 const char *File::getAbsPath()
@@ -83,4 +84,18 @@ const char *File::getAbsPath()
     }
 
   return static_cast<const char *>(*stringHolder);
+}
+
+const char *File::getInternalStyle(const SVN::Pool &requestPool)
+{
+  const char *path = getAbsPath();
+  if (path)
+    return svn_dirent_internal_style(path, requestPool.pool());
+  else
+    return NULL;
+}
+
+bool File::isNull()
+{
+  return m_jthis == NULL;
 }

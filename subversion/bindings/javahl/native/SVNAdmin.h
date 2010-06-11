@@ -35,6 +35,7 @@
 #include "InputStream.h"
 #include "MessageReceiver.h"
 #include "StringArray.h"
+#include "File.h"
 
 class SVNAdmin : public SVNBase
 {
@@ -61,8 +62,8 @@ class SVNAdmin : public SVNBase
             Revision &revsionStart, Revision &RevisionEnd,
             bool incremental, bool useDeltas);
   void deltify(const char *path, Revision &start, Revision &end);
-  void create(const char *path, bool ignoreUUID, bool forceUUID,
-              const char *configPath, const char *fstype);
+  void create(File &path, bool ignoreUUID, bool forceUUID, File &configPath,
+              const char *fstype);
   SVNAdmin();
   virtual ~SVNAdmin();
   void dispose(jobject jthis);

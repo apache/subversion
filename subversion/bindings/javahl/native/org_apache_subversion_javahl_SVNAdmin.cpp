@@ -96,8 +96,8 @@ Java_org_apache_subversion_javahl_SVNAdmin_create
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->create(path.getAbsPath(), jdisableFsyncCommit? true : false,
-             jkeepLog? true : false, configpath.getAbsPath(), fstype);
+  cl->create(path, jdisableFsyncCommit? true : false, jkeepLog? true : false,
+             configpath, fstype);
 }
 
 JNIEXPORT void JNICALL
