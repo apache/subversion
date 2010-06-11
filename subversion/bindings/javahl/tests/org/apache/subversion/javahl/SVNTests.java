@@ -238,9 +238,8 @@ class SVNTests extends TestCase
                               NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
                         null, Depth.infinity, false, false, null);
-        admin.dump(greekRepos.getAbsolutePath(),
-                   new FileOutputStream(greekDump), new IgnoreOutputer(),
-                   null, null, false, false);
+        admin.dump(greekRepos, new FileOutputStream(greekDump),
+                   new IgnoreOutputer(), null, null, false, false);
     }
 
     /**
@@ -568,15 +567,6 @@ class SVNTests extends TestCase
         }
 
         /**
-         * Return the name of the directory of the repository
-         * @return the name of repository directory
-         */
-        public String getRepositoryPath()
-        {
-            return repository.getAbsolutePath();
-        }
-
-        /**
          * Return the working copy directory
          * @return the working copy directory
          */
@@ -661,8 +651,7 @@ class SVNTests extends TestCase
             admin.create(repos, true, false, conf, fsType);
             if (loadGreek)
             {
-                admin.load(repos.getAbsolutePath(),
-                           new FileInputStream(greekDump),
+                admin.load(repos, new FileInputStream(greekDump),
                            new IgnoreOutputer(), false, false, false, false,
                            null);
             }

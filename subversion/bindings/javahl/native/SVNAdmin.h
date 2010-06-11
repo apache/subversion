@@ -40,28 +40,28 @@
 class SVNAdmin : public SVNBase
 {
  public:
-  void rmlocks(const char *path, StringArray &locks);
-  jobject lslocks(const char *path);
-  void verify(const char *path, OutputStream &messageOut,
+  void rmlocks(File &path, StringArray &locks);
+  jobject lslocks(File &path);
+  void verify(File &path, OutputStream &messageOut,
               Revision &revisionStart, Revision &revisionEnd);
-  void setRevProp(const char *path, Revision &revision,
+  void setRevProp(File &path, Revision &revision,
                   const char *propName, const char *propValue,
                   bool usePreRevPropChangeHook,
                   bool usePostRevPropChangeHook);
-  void rmtxns(const char *path, StringArray &transactions);
-  jlong recover(const char *path);
-  void lstxns(const char *path, MessageReceiver &messageReceiver);
-  void load(const char *path, InputStream &dataIn, OutputStream &messageOut,
+  void rmtxns(File &path, StringArray &transactions);
+  jlong recover(File &path);
+  void lstxns(File &path, MessageReceiver &messageReceiver);
+  void load(File &path, InputStream &dataIn, OutputStream &messageOut,
             bool ignoreUUID, bool forceUUID, bool usePreCommitHook,
             bool usePostCommitHook, const char *relativePath);
-  void listUnusedDBLogs(const char *path,
+  void listUnusedDBLogs(File &path,
                         MessageReceiver &messageReceiver);
-  void listDBLogs(const char *path, MessageReceiver &messageReceiver);
-  void hotcopy(const char *path, const char *targetPath, bool cleanLogs);
-  void dump(const char *path, OutputStream &dataOut, OutputStream &messageOut,
+  void listDBLogs(File &path, MessageReceiver &messageReceiver);
+  void hotcopy(File &path, File &targetPath, bool cleanLogs);
+  void dump(File &path, OutputStream &dataOut, OutputStream &messageOut,
             Revision &revsionStart, Revision &RevisionEnd,
             bool incremental, bool useDeltas);
-  void deltify(const char *path, Revision &start, Revision &end);
+  void deltify(File &path, Revision &start, Revision &end);
   void create(File &path, bool ignoreUUID, bool forceUUID, File &configPath,
               const char *fstype);
   SVNAdmin();
