@@ -248,9 +248,6 @@ class WinGeneratorBase(GeneratorBase):
     self._find_apr()
     self._find_apr_util()
 
-    # Create Sqlite headers
-    self._create_sqlite_headers()
-
     # Find Sqlite
     self._find_sqlite()
 
@@ -1523,20 +1520,6 @@ class WinGeneratorBase(GeneratorBase):
       sys.exit(1)
     else:
       print(msg % self.sqlite_version)
-
-  def _create_sqlite_headers(self):
-    "Transform sql files into header files"
-
-    import transform_sql
-    sql_sources = [
-      os.path.join('subversion', 'libsvn_fs_fs', 'rep-cache-db'),
-      os.path.join('subversion', 'libsvn_fs_fs', 'revprops-db'),
-      os.path.join('subversion', 'libsvn_wc', 'wc-metadata'),
-      os.path.join('subversion', 'libsvn_wc', 'wc-checks'),
-      ]
-    for sql in sql_sources:
-      transform_sql.main(sql + '.sql', open(sql + '.h', 'w'))
-
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
