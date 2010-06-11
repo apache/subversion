@@ -16397,6 +16397,204 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
                                        None, None, None, None,
                                        None, 1, 0, '--reintegrate')
 
+#----------------------------------------------------------------------
+# Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
+def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
+  "added subtrees with mergeinfo break reintegrate"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  A_path           = os.path.join(wc_dir, "A")
+  nu_path          = os.path.join(wc_dir, "A", "C", "nu")
+  mu_path          = os.path.join(wc_dir, "A", "mu")
+  A_COPY_path      = os.path.join(wc_dir, "A_COPY")
+  lambda_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "lambda")
+  A_COPY_2_path    = os.path.join(wc_dir, "A_COPY_2")
+  nu_COPY_2_path   = os.path.join(wc_dir, "A_COPY_2", "C", "nu")
+  
+  # Branch A@1 to A_COPY and A_COPY_2 in r2 and r3 respectively.
+  # Make some changes under 'A' in r4-7.
+  wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=2)
+
+  # r8 - Add a new file A_COPY_2/C/nu.
+  svntest.main.file_write(nu_COPY_2_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_COPY_2_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add new file in A_COPY_2 branch',
+                                     wc_dir)
+
+  
+  # r9 - Cyclic cherry pick merge r8 from A_COPY_2 back to A.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', '-c', '8',
+                                     sbox.repo_url + '/A_COPY_2',
+                                     A_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Merge r8 from A_COPY_2 to A.',
+                                     wc_dir)
+
+  # r10 - Make an edit to A_COPY_2/C/nu.
+  svntest.main.file_write(nu_COPY_2_path, "A_COPY_2 edit to file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Edit new file on A_COPY_2 branch',
+                                     wc_dir)
+
+  # r11 - Cyclic subtree cherry pick merge r10 from A_COPY_2/C/nu
+  # back to A/C/nu.
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', '-c', '10',
+                                     sbox.repo_url + '/A_COPY_2/C/nu',
+                                     nu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Merge r8 from A_COPY_2/C/nu to A/C/nu.',
+                                     wc_dir)
+
+  # r12 - Edit under A_COPY.
+  svntest.main.file_write(mu_path, "mu edits on A_COPY.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Work on A_COPY branch.',
+                                     wc_dir)
+
+  # r13 - Sync merge A to A_COPY in preparation for reintegrate.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Prep for reintegrate: Sync A to A_COPY.',
+                                     wc_dir)
+
+  # r14 - Reintegrate A_COPY to A.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', '--reintegrate',
+                                     sbox.repo_url + '/A_COPY', A_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Reintegrate A_COPY to A.',
+                                     wc_dir)
+
+  # r15 - Delete A_COPY.
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'delete', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Delete A_COPY branch', wc_dir)
+
+  # r16 - Create new A_COPY from A@HEAD=15.
+  #
+  # Update so we copy HEAD:
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'copy', A_path, A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Create new A_COPY branch from A', wc_dir)
+
+  # r17 - Unrelated edits under both A and A_COPY.  
+  svntest.main.file_write(nu_path, "Trunk work on nu.\n")
+  svntest.main.file_write(lambda_COPY_path, "lambda edit on A_COPY.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Unrelated edits on A and A_COPY branch.',
+                                     wc_dir)
+
+  # r18 - Sync A to A_COPY in preparation for another reintegrate.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Prep for reintegrate: Sync A to A_COPY.',
+                                     wc_dir)
+
+  # Reintegrate A_COPY back to A.  We just synced A_COPY with A, so this
+  # should work.  The only text change should be the change made to
+  # A_COPY/B/lambda in r17 after the new A_COPY was created.
+  #
+  # Currently this fails with:
+  #
+  #  >svn merge ^^/A_COPY A --reintegrate
+  #  svn: Reintegrate can only be used if revisions 2 through 13 were
+  #  previously merged from file:///D:/SVN/src-trunk/Release/subversion/
+  #  tests/cmdline/svn-test-work/repositories/merge_reintegrate_tests-13/A
+  #  to the reintegrate source, but this is not the case:
+  #    A_COPY/C/nu
+  #      Missing ranges: /A/C/nu:9,11
+  #
+  # Marking this test as XFail until this issue is fixed.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_path, {
+    ''         : Item(status=' U'),
+    'B/lambda' : Item(status='U '),
+    'C/nu'     : Item(status=' U'),
+    })
+  expected_status = wc.State(A_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='M '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'C/nu'      : Item(status=' M'),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=18)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO :
+                              '/A_COPY:2-13,16-18\n'
+                              #         ^     ^
+                              #         |     |
+                              #   from _|     |
+                              #    1st        |
+                              # reintegrate   |
+                              #               |
+                              #        from this reintegrate
+                              #
+                              '/A_COPY_2:8'}), # <-- From cyclic merge in r9
+    'B'         : Item(),
+    'mu'        : Item("mu edits on A_COPY.\n"), # From earlier reintegrate.
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("lambda edit on A_COPY.\n"), # From this reintegrate.
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'C/nu'      : Item("Trunk work on nu.\n",
+                       props={SVN_PROP_MERGEINFO :
+                              '/A_COPY/C/nu:2-13,16-18\n'
+                              '/A_COPY_2/C/nu:10'}), # <-- From cyclic
+                                                     # merge in r11
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, {})
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 1, "--reintegrate")
+  
 ########################################################################
 # Run the tests
 
@@ -16620,6 +16818,7 @@ test_list = [ None,
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
               reintegrate_with_self_referential_mergeinfo,
+              XFail(added_subtrees_with_mergeinfo_break_reintegrate),
              ]
 
 if __name__ == '__main__':
