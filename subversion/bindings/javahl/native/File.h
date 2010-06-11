@@ -48,6 +48,8 @@ class File
   File(jobject jthis);
   ~File();
   const char *getAbsPath();
+  const char *getInternalStyle(const SVN::Pool &pool);
+  bool isNull();
 };
 
 #endif // FILE_H

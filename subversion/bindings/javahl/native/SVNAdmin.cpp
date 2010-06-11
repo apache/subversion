@@ -58,35 +58,37 @@ void SVNAdmin::dispose(jobject jthis)
   SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNAdmin");
 }
 
-void SVNAdmin::create(const char *path, bool disableFsyncCommits,
-                      bool keepLogs, const char *configPath,
+void SVNAdmin::create(File &path, bool disableFsyncCommits,
+                      bool keepLogs, File &configPath,
                       const char *fstype)
 {
   SVN::Pool requestPool;
-  SVN_JNI_NULL_PTR_EX(path, "path", );
-  path = svn_dirent_internal_style(path, requestPool.pool());
-  if (configPath != NULL)
-    configPath = svn_dirent_internal_style(configPath, requestPool.pool());
   svn_repos_t *repos;
   apr_hash_t *config;
-  apr_hash_t *fs_config = apr_hash_make (requestPool.pool());
+  apr_hash_t *fs_config = apr_hash_make(requestPool.pool());
 
-  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-                APR_HASH_KEY_STRING,
-                (disableFsyncCommits? "1" : "0"));
+  if (path.isNull())
+    {
+      JNIUtil::throwNullPointerException("path");
+      return;
+    }
 
-  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
-                APR_HASH_KEY_STRING,
-                (keepLogs ? "0" : "1"));
-  apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
-                APR_HASH_KEY_STRING,
-                fstype);
+  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+               APR_HASH_KEY_STRING,
+               (disableFsyncCommits? "1" : "0"));
+
+  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
+               APR_HASH_KEY_STRING,
+               (keepLogs ? "0" : "1"));
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FS_TYPE,
+               APR_HASH_KEY_STRING, fstype);
 
   SVN_JNI_ERR(svn_config_get_config(&config,
-                                    configPath,
+                                    configPath.getInternalStyle(requestPool),
                                     requestPool.pool()),);
-  SVN_JNI_ERR(svn_repos_create(&repos, path, NULL, NULL,
-                               config, fs_config, requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_create(&repos, path.getInternalStyle(requestPool),
+                               NULL, NULL, config, fs_config,
+                               requestPool.pool()), );
 }
 
 void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
