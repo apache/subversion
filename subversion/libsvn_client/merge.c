@@ -4856,13 +4856,12 @@ struct get_mergeinfo_walk_baton
 
    Given PATH, its corresponding ENTRY, and WB, where WB is the WALK_BATON
    of type "struct get_mergeinfo_walk_baton *":  If PATH is switched,
-   has explicit working svn:mergeinfo from the corresponding merge source and
-   this walk is being done as part of a forward merge or has *any* explicit
-   working svn:mergeinfo and this walk is being done as part of a reverse
-   merge, is missing a child due to a sparse checkout, is absent from disk,
-   is scheduled for deletion, then create a svn_client__merge_path_t *
-   representing *PATH, allocated in BATON->POOL, and
-   push it onto the WB->CHILDREN_WITH_MERGEINFO array. */
+   has explicit working svn:mergeinfo, is missing a child due to a sparse
+   checkout, is absent from disk, is scheduled for deletion, or if the walk
+   is being done as part of a reverse merge, then create a
+   svn_client__merge_path_t *representing *PATH, allocated in
+   WB->CHILDREN_WITH_MERGEINFO->POOL, and push it onto the
+   WB->CHILDREN_WITH_MERGEINFO array. */
 static svn_error_t *
 get_mergeinfo_walk_cb(const char *path,
                       const svn_wc_entry_t *entry,
@@ -4871,9 +4870,8 @@ get_mergeinfo_walk_cb(const char *path,
 {
   struct get_mergeinfo_walk_baton *wb = walk_baton;
   const svn_string_t *propval;
-  svn_mergeinfo_t mergehash;
   svn_boolean_t switched = FALSE;
-  svn_boolean_t has_mergeinfo_from_merge_src = FALSE;
+  svn_boolean_t has_mergeinfo = FALSE;
   svn_boolean_t path_is_merge_target =
     !svn_path_compare_paths(path, wb->merge_target_path);
   const char *parent_path = svn_path_dirname(path, pool);
@@ -4902,111 +4900,9 @@ get_mergeinfo_walk_cb(const char *path,
     {
       SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_MERGEINFO, path,
                               wb->base_access, pool));
-      /* We always include the merge target regardless of its mergeinfo.
-         So we don't need to check that PATH's mergeinfo corresponds to
-         the merge source. */
-      if (propval && !path_is_merge_target)
-        {
-          svn_stringbuf_t *merge_src_child_path =
-            svn_stringbuf_create(wb->merge_src_canon_path, pool);
+      if (propval)
+        has_mergeinfo = TRUE;
 
-          /* When the merge target is '' or '.' WB->MERGE_TARGET_PATH is
-             an empty string and PATH will always be relative.  In this case
-             we can safely combine WB->MERGE_SRC_CANON_PATH and PATH with
-             svn_path_add_compent() which will supply the missing '/' separator.
-
-             Otherwise WB->MERGE_TARGET_PATH is relative or absolute and
-             we remove the common root component between WB->MERGE_TARGET_PATH
-             and PATH from PATH before combining it with
-             WB->MERGE_SRC_CANON_PATH.  The +1 is required because if we are
-             here that means WB->MERGE_TARGET_PATH is a proper ancestor of
-             PATH and we must skip the path separator -- svn_path_add_compent()
-             will add missing separators, but won't remove existing ones -- to
-             avoid a merge_src_child_path with "//" in it. */
-          if (strlen(wb->merge_target_path))
-            svn_path_add_component(merge_src_child_path,
-                                   path + strlen(wb->merge_target_path) + 1);
-          else
-            svn_path_add_component(merge_src_child_path,
-                                   path);
-          SVN_ERR(svn_mergeinfo_parse(&mergehash, propval->data, pool));
-          if (wb->revision1 > wb->revision2 /* Reverse merge. */
-              || propval->len == 0 /* empty mergeinfo */
-              || apr_hash_get(mergehash, merge_src_child_path->data,
-                              APR_HASH_KEY_STRING))
-            {
-              /* The easy way: PATH already has mergeinfo
-                 from this source or has empty mergeinfo... */
-              has_mergeinfo_from_merge_src = TRUE;
-            }
-          else
-            {
-              /* ...the slightly harder way: See if PATH exists in the
-                 merge source at the revisions being merged. If it doesn't
-                 exist there is no way this subtree can be affected by the
-                 merge so we can safely leave it, and its mergeinfo, alone. */
-              svn_error_t *err;
-              const char *original_ra_url = NULL;
-              const char *mergeinfo_url =
-                svn_path_url_add_component2(wb->source_root_url,
-                                            /* Skip leading '/'. */
-                                            merge_src_child_path->data + 1,
-                                            pool);
-              svn_opt_revision_t *start_revision, *end_revision;
-              const char *start_url, *end_url;
-              svn_opt_revision_t peg_rev, rev1_opt, rev2_opt;
-
-              peg_rev.value.number = wb->revision1 < wb->revision2
-                ? wb->revision2 : wb->revision1;
-              peg_rev.kind = svn_opt_revision_number;
-
-              rev1_opt.kind = svn_opt_revision_number;
-              rev1_opt.value.number = wb->revision1;
-
-              rev2_opt.kind = svn_opt_revision_number;
-              rev2_opt.value.number = wb->revision2;
-
-              /* Instead of passing NULL to svn_client__repos_locations() and
-                 causing another session to open, reparent WB->RA_SESSION
-                 and use that. */
-              SVN_ERR(svn_client__ensure_ra_session_url(&original_ra_url,
-                                                        wb->ra_session,
-                                                        mergeinfo_url, pool));
-
-              /* Does PATH exist in the merge source? */
-              err = svn_client__repos_locations(&start_url, &start_revision,
-                                                &end_url, &end_revision,
-                                                wb->ra_session, mergeinfo_url,
-                                                &peg_rev, &rev1_opt, &rev2_opt,
-                                                wb->ctx, pool);
-              if (err)
-                {
-                  /* We might see any of these errors depending on the RA
-                     access method, but they all mean that PATH doesn't exist
-                     in the merge source.
-
-                     ### TODO: Make svn_client__repos_locations() more
-                     ###       consistent in the error it returns(?)
-                     */
-                  if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-                      || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
-                    svn_error_clear(err);
-                  else
-                    return err;
-                 }
-              else /* PATH does exist in the merge source*/
-                {
-                  has_mergeinfo_from_merge_src = TRUE;
-                }
-
-              /* Reparent the session to its original URL if necessary. */
-              if (original_ra_url)
-                {
-                  SVN_ERR(svn_ra_reparent(wb->ra_session,
-                                          original_ra_url, pool));
-                }
-            } /* the slightly harder way */
-        }
       /* Regardless of whether PATH has explicit mergeinfo or not, we must
          determine if PATH is switched.  This is so get_mergeinfo_paths()
          can later tweak PATH's parent to reflect a missing child (implying it
@@ -5021,7 +4917,7 @@ get_mergeinfo_walk_cb(const char *path,
      depth is immediates, and/or are file children of the merge target if
      depth is files. */
   if (path_is_merge_target
-      || has_mergeinfo_from_merge_src
+      || has_mergeinfo
       || entry->schedule == svn_wc_schedule_delete
       || switched
       || entry->depth == svn_depth_empty
@@ -5263,9 +5159,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
    Create an svn_client__merge_path_t * for any path which meets one or more
    of the following criteria:
 
-     1) do_directory_merge() is processing a forward merge and path has
-        working svn:mergeinfo from corresponding merge source or has empty
-        mergeinfo.
+     1) Path has working svn:mergeinfo.
      2) Path is switched.
      3) Path is a subtree of the merge target (i.e. is not equal to
         MERGE_CMD_BATON->TARGET) and has no mergeinfo of its own but its

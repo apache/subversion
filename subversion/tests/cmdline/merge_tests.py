@@ -16509,16 +16509,6 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
   # should work.  The only text change should be the change made to
   # A_COPY/B/lambda in r17 after the new A_COPY was created.
   #
-  # Currently this fails with:
-  #
-  #  >svn merge ^^/A_COPY A --reintegrate
-  #  svn: Reintegrate can only be used if revisions 2 through 13 were
-  #  previously merged from file:///D:/SVN/src-trunk/Release/subversion/
-  #  tests/cmdline/svn-test-work/repositories/merge_reintegrate_tests-13/A
-  #  to the reintegrate source, but this is not the case:
-  #    A_COPY/C/nu
-  #      Missing ranges: /A/C/nu:9,11
-  #
   # Marking this test as XFail until this issue is fixed.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(A_path, {
@@ -16818,7 +16808,7 @@ test_list = [ None,
               SkipUnless(handle_gaps_in_implicit_mergeinfo,
                          server_has_mergeinfo),
               reintegrate_with_self_referential_mergeinfo,
-              XFail(added_subtrees_with_mergeinfo_break_reintegrate),
+              added_subtrees_with_mergeinfo_break_reintegrate,
              ]
 
 if __name__ == '__main__':
