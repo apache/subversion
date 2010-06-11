@@ -43,4 +43,12 @@ Server-side storage
 
 Client-side storage
 ===================
-[TODO]
+The client current maintains a global configuration file in
+~/.subversion/config  This feature will introduce the ~/.subversion/repos/
+directory, which will hold additional subdirectories keyed on the UUID of the
+repository.  It is in this subdirectory that the cached version of the
+repository configuration will be stored.
+
+
+Configuration Hierarchy
+=======================
