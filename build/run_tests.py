@@ -41,6 +41,9 @@ and filename of a test program, optionally followed by '#' and a comma-
 separated list of test numbers; the default is to run all the tests in it.
 '''
 
+# A few useful constants
+LINE_LENGTH = 40
+
 import os, sys
 from datetime import datetime
 
@@ -235,7 +238,7 @@ class TestHarness:
       # Using write here because we don't want even a trailing space
       test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
       sys.stdout.write('Running tests in %s' % (test_info, ))
-      sys.stdout.write('.'*(40 - len(test_info)))
+      sys.stdout.write('.'*(LINE_LENGTH - len(test_info)))
 
     log.write('START: %s\n' % progbase)
     log.flush()
