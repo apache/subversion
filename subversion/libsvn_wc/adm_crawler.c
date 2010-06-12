@@ -265,44 +265,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
   /* If "this dir" has "svn:externals" property set on it,
    * call the external_func callback. */
   if (external_func)
-    {
-      const apr_array_header_t *all_children;
-
-      SVN_ERR(read_externals_info(db, dir_abspath, external_func,
-                                  external_baton, dir_depth, iterpool));
-
-      /* Also do this for added children. They aren't part of the base
-       * tree so we don't recurse into them. But our caller might still
-       * want to pull externals into them as part of the update operation. */
-      SVN_ERR(svn_wc__db_read_children(&all_children, db, dir_abspath,
-                                       scratch_pool, iterpool));
-      for (i = 0; i < all_children->nelts; ++i)
-        {
-          const char *child = APR_ARRAY_IDX(all_children, i, const char *);
-          const char *this_abspath;
-          svn_wc__db_status_t this_status;
-          svn_wc__db_kind_t this_kind;
-          svn_depth_t this_depth;
-
-          svn_pool_clear(iterpool);
-
-          this_abspath = svn_dirent_join(dir_abspath, child, iterpool);
-          SVN_ERR(svn_wc__db_read_info(&this_status, &this_kind, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       &this_depth, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       db, this_abspath, iterpool, iterpool));
-          if (this_kind == svn_wc__db_kind_dir &&
-              this_status == svn_wc__db_status_added)
-            {
-              SVN_ERR(read_externals_info(db, this_abspath, external_func,
-                                          external_baton, this_depth,
-                                          iterpool));
-            }
-        }
-    }
-
+    SVN_ERR(read_externals_info(db, dir_abspath, external_func,
+                                external_baton, dir_depth, iterpool));
 
   /* Looping over current directory's BASE children: */
   for (i = 0; i < base_children->nelts; ++i)
