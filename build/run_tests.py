@@ -345,7 +345,7 @@ class TestHarness:
       if self.log:
         os.dup2(self.log.fileno(), 1)
         os.dup2(self.log.fileno(), 2)
-      rv = subprocess.call(arglist)
+      rv = subprocess.call([progname] + arglist[1:])
     except:
       if self.log:
         restore_streams(old_stdout, old_stderr)
