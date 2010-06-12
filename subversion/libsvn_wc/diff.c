@@ -664,7 +664,10 @@ file_diff(struct dir_baton *db,
       /* Get svn:mime-type from pristine props (in BASE or WORKING) of PATH. */
       SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
                                          pool, pool));
-      base_mimetype = get_prop_mimetype(baseprops);
+      if (baseprops)
+        base_mimetype = get_prop_mimetype(baseprops);
+      else
+        base_mimetype = NULL;
 
       SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, NULL, path,
                                           textbase,
