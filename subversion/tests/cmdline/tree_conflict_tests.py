@@ -1191,6 +1191,42 @@ def up_add_onto_add_revert(sbox):
                         wc2_dir)
 
 
+#----------------------------------------------------------------------
+# Regression test for issue #3525 and #3533
+#
+def lock_update_only(sbox):
+  "lock status update shouldn't flag tree conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path_b = os.path.join(wc_b, fname)
+
+  # Lock a file as wc_author, and schedule the file for deletion.
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '-m', '', file_path)
+  svntest.main.run_svn(None, 'delete', file_path)
+
+  # In our other working copy, steal that lock.
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '-m', '', '--force', file_path)
+  
+  # Now update the first working copy.  It should appear as a no-op.
+  expected_disk = main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_status = get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='D ')
+  run_and_verify_update(wc_dir,
+                        None, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc_dir)
+
 
 #######################################################################
 # Run the tests
@@ -1221,6 +1257,7 @@ test_list = [ None,
               XFail(force_del_tc_is_target),
               XFail(query_absent_tree_conflicted_dir),
               XFail(up_add_onto_add_revert),
+              XFail(lock_update_only),
              ]
 
 if __name__ == '__main__':
