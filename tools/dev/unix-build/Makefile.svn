@@ -365,7 +365,6 @@ $(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST) \
 	cd $(SRCDIR)/libiconv-$(GNU_ICONV_VER) && \
 		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff && \
 		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
-	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
 	touch $@
 
 # configure gnu-iconv
