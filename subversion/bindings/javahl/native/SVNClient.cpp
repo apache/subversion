@@ -1661,109 +1661,11 @@ void SVNClient::setRevProperty(const char *path,
                                         requestPool.pool()), );
 }
 
-struct version_status_baton
-{
-    svn_revnum_t min_rev;    /* lowest revision found. */
-    svn_revnum_t max_rev;    /* highest revision found. */
-    svn_boolean_t switched;  /* is anything switched? */
-    svn_boolean_t modified;  /* is anything modified? */
-    svn_boolean_t committed; /* examine last committed revisions */
-    svn_boolean_t done;      /* note completion of our task. */
-    const char *wc_abspath;  /* path whose URL we're looking for. */
-    const char *wc_url;      /* URL for the path whose URL we're looking for. */
-    apr_pool_t *pool;        /* pool in which to store alloc-needy things. */
-};
-
-/* This implements `svn_cancel_func_t'. */
-static svn_error_t *
-cancel(void *baton)
-{
-    struct version_status_baton *sb = (version_status_baton *)baton;
-    if (sb->done)
-        return svn_error_create(SVN_ERR_CANCELLED, NULL, "Finished");
-    else
-        return SVN_NO_ERROR;
-}
-
-/* An svn_wc_status_func4_t callback function for analyzing status
- * structures. */
-static svn_error_t *
-analyze_status(void *baton,
-               const char *local_abspath,
-               const svn_wc_status3_t *status,
-               apr_pool_t *pool)
-{
-    struct version_status_baton *sb = (version_status_baton *)baton;
-
-    if (sb->done)
-        return SVN_NO_ERROR;
-
-    if (! status->versioned)
-        return SVN_NO_ERROR;
-
-    /* Added files have a revision of no interest */
-    if (status->text_status != svn_wc_status_added)
-    {
-        svn_revnum_t item_rev = (sb->committed
-                                 ? status->changed_rev
-                                 : status->revision);
-
-        if (sb->min_rev == SVN_INVALID_REVNUM || item_rev < sb->min_rev)
-            sb->min_rev = item_rev;
-
-        if (sb->max_rev == SVN_INVALID_REVNUM || item_rev > sb->max_rev)
-            sb->max_rev = item_rev;
-    }
-
-    sb->switched |= status->switched;
-    sb->modified |= (status->text_status != svn_wc_status_normal);
-    sb->modified |= (status->prop_status != svn_wc_status_normal
-                     && status->prop_status != svn_wc_status_none);
-
-    if (sb->wc_abspath
-        && (! sb->wc_url)
-        && (strcmp(local_abspath, sb->wc_abspath) == 0)
-        && (status->versioned))
-        sb->wc_url = svn_path_url_add_component2(status->repos_root_url,
-                                                 status->repos_relpath,
-                                                 pool);
-
-    return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_wc_notify_func_t'. */
-static void
-notify(void *baton,
-       const char *path,
-       svn_wc_notify_action_t action,
-       svn_node_kind_t kind,
-       const char *mime_type,
-       svn_wc_notify_state_t content_state,
-       svn_wc_notify_state_t prop_state,
-       svn_revnum_t revision)
-{
-    struct version_status_baton *sb = (version_status_baton *)baton;
-    if ((action == svn_wc_notify_status_external)
-        || (action == svn_wc_notify_status_completed))
-        sb->done = TRUE;
-}
-
 jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
                                   bool lastChanged)
 {
-    struct version_status_baton sb;
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
-    sb.switched = FALSE;
-    sb.modified = FALSE;
-    sb.committed = FALSE;
-    sb.min_rev = SVN_INVALID_REVNUM;
-    sb.max_rev = SVN_INVALID_REVNUM;
-    sb.wc_abspath = NULL;
-    sb.wc_url = NULL;
-    sb.done = FALSE;
-    sb.pool = requestPool.pool();
 
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), NULL);
@@ -1795,48 +1697,30 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
         }
     }
 
-    sb.wc_abspath = intPath.c_str();
-    svn_opt_revision_t rev;
-    rev.kind = svn_opt_revision_unspecified;
+    svn_wc_revision_status_t *result;
+    const char *local_abspath;
 
-    svn_error_t *err;
-    err = svn_client_status5(NULL, intPath.c_str(), &rev, analyze_status,
-                             &sb, svn_depth_infinity, TRUE, FALSE, FALSE,
-                             FALSE, NULL, ctx, requestPool.pool());
-    if (err && (err->apr_err == SVN_ERR_CANCELLED))
-        svn_error_clear(err);
-    else
-        SVN_JNI_ERR(err, NULL);
-
-    if ((! sb.switched ) && (trailUrl))
-    {
-        /* If the trailing part of the URL of the working copy directory
-         * does not match the given trailing URL then the whole working
-         * copy is switched. */
-        if (! sb.wc_url)
-        {
-            sb.switched = TRUE;
-        }
-        else
-        {
-            apr_size_t len1 = strlen(trailUrl);
-            apr_size_t len2 = strlen(sb.wc_url);
-            if ((len1 > len2) || strcmp(sb.wc_url + len2 - len1, trailUrl))
-                sb.switched = TRUE;
-        }
-    }
+    SVN_JNI_ERR(svn_dirent_get_absolute(&local_abspath, intPath.c_str(),
+                                        requestPool.pool()), NULL);
+    SVN_JNI_ERR(svn_wc_revision_status2(&result, ctx->wc_ctx, local_abspath,
+                                        trailUrl, lastChanged,
+                                        ctx->cancel_func, ctx->cancel_baton,
+                                        requestPool.pool(),
+                                        requestPool.pool()), NULL);
 
     std::ostringstream value;
-    value << sb.min_rev;
-    if (sb.min_rev != sb.max_rev)
+    value << result->min_rev;
+    if (result->min_rev != result->max_rev)
     {
         value << ":";
-        value << sb.max_rev;
+        value << result->max_rev;
     }
-    if (sb.modified)
+    if (result->modified)
         value << "M";
-    if (sb.switched)
+    if (result->switched)
         value << "S";
+    if (result->sparse_checkout)
+        value << "P";
 
     return JNIUtil::makeJString(value.str().c_str());
 }
