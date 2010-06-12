@@ -1522,12 +1522,12 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
             void *cancel_baton,
             svn_wc_notify_func2_t notify_func,
             void *notify_baton,
-            apr_pool_t *pool)
+            apr_pool_t *scratch_pool)
 {
   const char *parent_abspath;
   const char *base_name;
-  const svn_wc_entry_t *parent_entry;
-  svn_wc_entry_t tmp_entry;
+  const char *parent_repos_relpath;
+  const char *repos_root_url, *repos_uuid;
   svn_boolean_t is_replace = FALSE;
   svn_node_kind_t kind;
   int modify_flags;
@@ -1538,25 +1538,27 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   svn_boolean_t exists;
   apr_hash_t *props;
 
-  svn_dirent_split(local_abspath, &parent_abspath, &base_name, pool);
-  if (svn_wc_is_adm_dir(base_name, pool))
+  svn_dirent_split(local_abspath, &parent_abspath, &base_name, scratch_pool);
+  if (svn_wc_is_adm_dir(base_name, scratch_pool))
     return svn_error_createf
       (SVN_ERR_ENTRY_FORBIDDEN, NULL,
        _("Can't create an entry with a reserved name while trying to add '%s'"),
-       svn_dirent_local_style(local_abspath, pool));
+       svn_dirent_local_style(local_abspath, scratch_pool));
 
-  SVN_ERR(svn_path_check_valid(local_abspath, pool));
+  SVN_ERR(svn_path_check_valid(local_abspath, scratch_pool));
 
   /* Make sure something's there. */
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("'%s' not found"),
-                             svn_dirent_local_style(local_abspath, pool));
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
   if (kind == svn_node_unknown)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("Unsupported node kind for path '%s'"),
-                             svn_dirent_local_style(local_abspath, pool));
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing).
@@ -1569,7 +1571,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL,
-                             db, local_abspath, pool, pool);
+                             db, local_abspath, scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
@@ -1608,7 +1610,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
             return svn_error_createf(
                              SVN_ERR_ENTRY_EXISTS, NULL,
                              _("'%s' is already under version control"),
-                             svn_dirent_local_style(local_abspath, pool));
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
         }
 
       /* ### Remove this check once we are fully switched to one wcroot db */
@@ -1624,99 +1627,145 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
              _("Can't replace '%s' with a node of a differing type; "
                "the deletion must be committed and the parent updated "
                "before adding '%s'"),
-             svn_dirent_local_style(local_abspath, pool),
-             svn_dirent_local_style(local_abspath, pool));
+             svn_dirent_local_style(local_abspath, scratch_pool),
+             svn_dirent_local_style(local_abspath, scratch_pool));
         }
     }
 
-  SVN_ERR(svn_wc__get_entry(&parent_entry, db, parent_abspath,
-                            TRUE /* allow_unversioned */,
-                            svn_node_dir,
-                            FALSE /* need_parent_stub */,
-                            pool, pool));
-  if (! parent_entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       _("Can't find parent directory's entry while trying to add '%s'"),
-       svn_dirent_local_style(local_abspath, pool));
+  {
+    svn_wc__db_status_t parent_status;
+    svn_wc__db_kind_t parent_kind;
 
-  if (parent_entry->schedule == svn_wc_schedule_delete)
-    return svn_error_createf
-      (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-       _("Can't add '%s' to a parent directory scheduled for deletion"),
-       svn_dirent_local_style(local_abspath, pool));
+    err = svn_wc__db_read_info(&parent_status, &parent_kind, NULL,
+                               &parent_repos_relpath, &repos_root_url,
+                               &repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, parent_abspath, scratch_pool, scratch_pool);
 
-  /* Init the modify flags. */
-  tmp_entry.schedule = svn_wc_schedule_add;
-  tmp_entry.kind = kind;
-  modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
+    if (err
+        || parent_status == svn_wc__db_status_not_present
+        || parent_status == svn_wc__db_status_excluded
+        || parent_status == svn_wc__db_status_absent
+        || parent_status == svn_wc__db_status_obstructed
+        || parent_status == svn_wc__db_status_obstructed_add)
+      {
+        return
+          svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, err,
+                            _("Can't find parent directory's entry while"
+                              " trying to add '%s'"),
+                            svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
+      }
+    else if (parent_status == svn_wc__db_status_deleted
+             || parent_status == svn_wc__db_status_obstructed_delete)
+      {
+        return
+          svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                            _("Can't add '%s' to a parent directory"
+                              " scheduled for deletion"),
+                            svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
+      }
+    else if (parent_kind != svn_wc__db_kind_dir)
+      /* Can't happen until single db; but then it causes serious
+         trouble if we allow this. */
+      return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                               _("Can't schedule an addition of '%s'"
+                                 " below a not-directory node"));
 
-  if (! (is_replace || copyfrom_url))
-    {
-      tmp_entry.revision = 0;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
-    }
+    if (!repos_root_url)
+      {
+        if (parent_status == svn_wc__db_status_added)
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &parent_repos_relpath,
+                                           &repos_root_url, &repos_uuid, NULL,
+                                           NULL, NULL, NULL,
+                                           db, parent_abspath,
+                                           scratch_pool, scratch_pool));
+        else
+          SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
+                                             &repos_root_url, &repos_uuid,
+                                             db, parent_abspath,
+                                             scratch_pool, scratch_pool));
+      }
+  }
 
-  /* If a copy ancestor was given, make sure the copyfrom URL is in the same
-     repository (if possible) and put the proper ancestry info in the new
-     entry */
-  if (copyfrom_url)
-    {
-      if (parent_entry->repos
-          && ! svn_uri_is_ancestor(parent_entry->repos, copyfrom_url))
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("The URL '%s' has a different repository "
-                                   "root than its parent"), copyfrom_url);
-      tmp_entry.copyfrom_url = copyfrom_url;
-      tmp_entry.copyfrom_rev = copyfrom_rev;
-      tmp_entry.copied = TRUE;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-    }
+  {
+    svn_wc_entry_t tmp_entry;
 
-  /* If this is a replacement we want to remove the checksum and the property
-     flags so they are not set to their respective old values. */
-  if (is_replace)
-    {
-      tmp_entry.checksum = NULL;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
-    }
+    /* Init the modify flags. */
+    tmp_entry.schedule = svn_wc_schedule_add;
+    tmp_entry.kind = kind;
+    modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
+
+    if (! (is_replace || copyfrom_url))
+      {
+        tmp_entry.revision = 0;
+        modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
+      }
+
+    /* If a copy ancestor was given, make sure the copyfrom URL is in the same
+       repository (if possible) and put the proper ancestry info in the new
+       entry */
+    if (copyfrom_url)
+      {
+        if (repos_root_url
+            && ! svn_uri_is_ancestor(repos_root_url, copyfrom_url))
+          return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                   _("The URL '%s' has a different repository "
+                                     "root than its parent"), copyfrom_url);
+        tmp_entry.copyfrom_url = copyfrom_url;
+        tmp_entry.copyfrom_rev = copyfrom_rev;
+        tmp_entry.copied = TRUE;
+        modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+        modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+        modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+      }
+
+    /* If this is a replacement we want to remove the checksum and the property
+       flags so they are not set to their respective old values. */
+    if (is_replace)
+      {
+        tmp_entry.checksum = NULL;
+        modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+      }
 
 
-  /* Store the pristine properties to install them on working, because
-     we might delete the base table */
-  if ((exists && status != svn_wc__db_status_not_present)
-      && !is_replace && copyfrom_url != NULL)
-    {
-      /* NOTE: the conditions to reach here *exactly* match the
-         conditions used below when PROPS is referenced.
-         Be careful to keep these sets of conditionals aligned to avoid
-         an uninitialized PROPS value.  */
-      SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
-                                             pool, pool));
-    }
+    /* Store the pristine properties to install them on working, because
+       we might delete the base table */
+    if ((exists && status != svn_wc__db_status_not_present)
+        && !is_replace && copyfrom_url != NULL)
+      {
+        /* NOTE: the conditions to reach here *exactly* match the
+           conditions used below when PROPS is referenced.
+           Be careful to keep these sets of conditionals aligned to avoid
+           an uninitialized PROPS value.  */
+        SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
+                                               scratch_pool, scratch_pool));
+      }
 
-  if (modify_flags)
-    {
-      if (kind == svn_node_dir)
-        SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
-                                          &tmp_entry, modify_flags, pool));
-      else
-        SVN_ERR(svn_wc__entry_modify(db, local_abspath, kind,
-                                     &tmp_entry, modify_flags, pool));
-    }
+    if (modify_flags)
+      {
+        if (kind == svn_node_dir)
+          SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
+                                            &tmp_entry, modify_flags,
+                                            scratch_pool));
+        else
+          SVN_ERR(svn_wc__entry_modify(db, local_abspath, kind,
+                                       &tmp_entry, modify_flags,
+                                       scratch_pool));
+      }
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-  /* If this is a replacement without history, we need to reset the
-     properties for PATH. */
-  /* ### this is totally bogus. we clear these cuz turds might have been
-     ### left around. thankfully, this will be properly managed during the
-     ### wc-ng upgrade process. for now, we try to compensate... */
-  if (((exists && status != svn_wc__db_status_not_present) || is_replace)
-      && copyfrom_url == NULL)
-    SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
-                                 pool));
+    /* If this is a replacement without history, we need to reset the
+       properties for PATH. */
+    /* ### this is totally bogus. we clear these cuz turds might have been
+       ### left around. thankfully, this will be properly managed during the
+       ### wc-ng upgrade process. for now, we try to compensate... */
+    if (((exists && status != svn_wc__db_status_not_present) || is_replace)
+        && copyfrom_url == NULL)
+      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
+                                   scratch_pool));
 #endif
 
   if (is_replace)
@@ -1732,20 +1781,24 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
        * ### I'm leaving it be, though we set up the revert base(s)
        * ### loggily because that's Just How It's Done.
        */
-      SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath, pool));
+      SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath,
+                                              scratch_pool));
       SVN_ERR(svn_wc__wq_run(db, local_abspath,
-                             cancel_func, cancel_baton, pool));
+                             cancel_func, cancel_baton, scratch_pool));
     }
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
       if (! copyfrom_url)
         {
+          const char *new_relpath;
           const char *new_url;
 
           /* Derive the parent path for our new addition here. */
-          new_url = svn_path_url_add_component2(parent_entry->url, base_name,
-                                                pool);
+          new_relpath = svn_relpath_join(parent_repos_relpath, base_name,
+                                         scratch_pool);
+          new_url = svn_path_url_add_component2(repos_root_url, base_name,
+                                                scratch_pool);
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it.
@@ -1754,9 +1807,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
              it should create a WORKING_NODE.  It gets removed by the
              next modify2 call. */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
-                                              new_url, parent_entry->repos,
-                                              parent_entry->uuid, 0,
-                                              depth, pool));
+                                              new_url, repos_root_url,
+                                              repos_uuid, 0,
+                                              depth, scratch_pool));
         }
       else
         {
@@ -1766,9 +1819,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
              copyfrom arguments to the ensure call. */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
                                               copyfrom_url,
-                                              parent_entry->repos,
-                                              parent_entry->uuid,
-                                              copyfrom_rev, depth, pool));
+                                              repos_root_url,
+                                              repos_uuid, copyfrom_rev,
+                                              depth, scratch_pool));
         }
 
       /* ### This block can be removed after we centralise the db and have
@@ -1776,8 +1829,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       if (! exists)
         {
           /* Lock on parent needs to be propogated into the child db. */
-          SVN_ERR(svn_wc__db_wclock_set(db, local_abspath, 0, pool));
-          SVN_ERR(svn_wc__db_temp_mark_locked(db, local_abspath, pool));
+          SVN_ERR(svn_wc__db_wclock_set(db, local_abspath, 0, scratch_pool));
+          SVN_ERR(svn_wc__db_temp_mark_locked(db, local_abspath, scratch_pool));
         }
 
       /* We're making the same mods we made above, but this time we'll
@@ -1794,15 +1847,15 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                 ? svn_wc_schedule_replace
                                 : svn_wc_schedule_add);
           SVN_ERR(svn_wc__entry_modify(db, local_abspath, svn_node_dir,
-                                       &tmp_entry, modify_flags, pool));
+                                       &tmp_entry, modify_flags,
+                                       scratch_pool));
         }
 
-      SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(
-                db, local_abspath, FALSE, pool));
+      SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(db, local_abspath,
+                                                        FALSE, scratch_pool));
 
       if (copyfrom_url)
         {
-          const char *parent_relpath;
           /* If this new directory has ancestry, it's not enough to
              schedule it for addition with copyfrom args.  We also
              need to rewrite its ancestor-url, and rewrite the
@@ -1820,25 +1873,21 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
           /* Recursively add the 'copied' existence flag as well!  */
 
-          parent_relpath = svn_path_uri_decode(
-                                    svn_uri_skip_ancestor(
-                                        parent_entry->repos,
-                                        parent_entry->url), pool);
-
           SVN_ERR(mark_tree_copied(db, local_abspath,
                                    exists ? status : svn_wc__db_status_added,
-                                   svn_relpath_join(parent_relpath, base_name,
-                                                    pool),
-                                   parent_entry->repos,
-                                   parent_entry->uuid,
-                                   pool));
+                                   svn_relpath_join(parent_repos_relpath,
+                                                    base_name, scratch_pool),
+                                   repos_root_url,
+                                   repos_uuid,
+                                   scratch_pool));
 
           /* Clean out the now-obsolete dav cache values.  */
           /* ### put this into above walk. clear all cached values.  */
           SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
-                                                pool));
+                                                scratch_pool));
         }
     }
+  }
 
   /* Set the pristine properties in WORKING_NODE, by copying them from the
      deleted BASE_NODE record. Or set them to empty to make sure we don't
@@ -1852,14 +1901,12 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
              Be careful to keep these sets of conditionals aligned to avoid
              an uninitialized PROPS value.  */
           SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
-                                                    pool));
+                                                    scratch_pool));
         }
       else
-        {
-          SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
-                                                    apr_hash_make(pool),
-                                                    pool));
-        }
+        SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
+                                                  apr_hash_make(scratch_pool),
+                                                  scratch_pool));
     }
 
   /* Report the addition to the caller. */
@@ -1867,9 +1914,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
                                                      svn_wc_notify_add,
-                                                     pool);
+                                                     scratch_pool);
       notify->kind = kind;
-      (*notify_func)(notify_baton, notify, pool);
+      (*notify_func)(notify_baton, notify, scratch_pool);
     }
 
   return SVN_NO_ERROR;
