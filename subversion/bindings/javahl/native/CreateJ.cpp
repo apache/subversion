@@ -471,12 +471,15 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      jUrl = JNIUtil::makeJString(svn_path_url_add_component2(
-                                      status->repos_root_url,
-                                      status->repos_relpath,
-                                      pool));
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
+      if (status->repos_root_url)
+        {
+          jUrl = JNIUtil::makeJString(svn_path_url_add_component2(
+                                        status->repos_root_url,
+                                        status->repos_relpath,
+                                        pool));
+          if (JNIUtil::isJavaExceptionThrown())
+            POP_AND_RETURN_NULL;
+        }
 
       jOODLastCmtRevision = status->ood_last_cmt_rev;
       jOODLastCmtDate = status->ood_last_cmt_date;
