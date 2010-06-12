@@ -48,6 +48,7 @@ class LogMessageCallback;
 class InfoCallback;
 class ListCallback;
 class StatusCallback;
+class PatchCallback;
 class ChangelistCallback;
 class CommitMessage;
 class StringArray;
@@ -59,6 +60,9 @@ class RevpropTable;
 class SVNClient :public SVNBase
 {
  public:
+  void patch(const char *patchPath, const char *targetPath, bool dryRun,
+             int stripCount, bool reverse, bool ignoreWhitespace,
+             bool removeTempfiles, PatchCallback *callback);
   void info2(const char *path, Revision &revision, Revision &pegRevision,
              svn_depth_t depth, StringArray &changelists,
              InfoCallback *callback);

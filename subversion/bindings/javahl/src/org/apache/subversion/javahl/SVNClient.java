@@ -617,4 +617,14 @@ public class SVNClient implements ISVNClient
                              Collection<String> changelists,
                              InfoCallback callback)
             throws ClientException;
+    
+    /**
+     * @since 1.7
+     */
+    public native void patch(String patchPath, String targetPath,
+                             boolean dryRun, int stripCount, boolean reverse,
+                             boolean ignoreWhitespace, boolean removeTempfiles,
+                             PatchCallback callback)
+            throws ClientException;
+
 }

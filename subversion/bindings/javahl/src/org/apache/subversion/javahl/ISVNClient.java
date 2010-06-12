@@ -947,4 +947,21 @@ public interface ISVNClient
      */
     void upgrade(String path)
             throws ClientException;
+    
+    /**
+     * Apply a unidiff patch.
+     * @param patchPath        the path of the patch
+     * @param targetPath       the path to be patched
+     * @param dryRun           whether to actually modify the local content
+     * @param stripCount       how many leading path components should be removed
+     * @param reverse          whether to reverse the patch
+     * @param ignoreWhitespace whether to ignore whitespace
+     * @param removeTempfiles  whether to remove temp files
+     * @param callback         a handler to receive information as files are patched
+     * @throws ClientException
+     */
+    void patch(String patchPath, String targetPath, boolean dryRun,
+               int stripCount, boolean reverse, boolean ignoreWhitespace,
+               boolean removeTempfiles, PatchCallback callback)
+            throws ClientException;
 }
