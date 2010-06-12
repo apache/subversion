@@ -33,7 +33,10 @@ with a configuration of their own, so appropriate server-side enforcement
 
 Server-client transmission mechanism
 ====================================
-[TODO]
+As part of the OPTIONS request, the client will send to the server the 
+sha1 hash of the version of the server-dictated config that it current has
+cached.  If the server has a different version, it will send that to the
+client in the OPTIONS response.
 
 
 Server-side storage
@@ -52,3 +55,4 @@ repository configuration will be stored.
 
 Configuration Hierarchy
 =======================
+[TODO]
