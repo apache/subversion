@@ -1742,7 +1742,7 @@ do_diff_summarize(const struct diff_parameters *diff_param,
 
 
 /* Initialize DIFF_CMD_BATON.diff_cmd and DIFF_CMD_BATON.options,
- * according to OPTIONS and CONFIG.  CONFIG may be null.
+ * according to OPTIONS and CONFIG.  CONFIG and OPTIONS may be null.
  * Allocate the fields in POOL, which should be at least as long-lived
  * as the pool DIFF_CMD_BATON itself is allocated in.
  */
@@ -1753,14 +1753,25 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
 {
   const char *diff_cmd = NULL;
  
-  /* See if there is a command. */
+  /* See if there is a diff command and/or diff arguments. */
   if (config)
     {
       svn_config_t *cfg = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
                                        APR_HASH_KEY_STRING);
       svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
+      if (options == NULL)
+        {
+          const char *diff_extensions;
+          svn_config_get(cfg, &diff_extensions, SVN_CONFIG_SECTION_HELPERS,
+                         SVN_CONFIG_OPTION_DIFF_EXTENSIONS, NULL);
+          if (diff_extensions)
+            options = svn_cstring_split(diff_extensions, " \t\n\r", TRUE, pool);
+        }
     }
+
+  if (options == NULL)
+    options = apr_array_make(pool, 0, sizeof(const char *));
  
   if (diff_cmd)
     SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, diff_cmd,
