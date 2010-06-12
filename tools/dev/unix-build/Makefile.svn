@@ -250,7 +250,7 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 			> $(APR_SRCDIR)/build/apr_hints.m4
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
-		&& $(APR_SRCDIR)/configure \
+		&& env CFLAGS="-O0 -g" $(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
 		--disable-threads
@@ -324,22 +324,58 @@ gnu-iconv-reset:
 
 gnu-iconv-clean:
 	-(cd $(GNU_ICONV_OBJDIR) && make clean)
+	rm -f $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff
+	rm -f $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
 
 # fetch distfile for gnu-iconv
 $(DISTDIR)/$(GNU_ICONV_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(GNU_ICONV_URL)
 
+$(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
+	echo "--- lib/encodings.def.orig	Wed Oct 24 23:41:41 2007" > $@
+	echo "+++ lib/encodings.def	Wed Oct 24 23:43:47 2007" >> $@
+	echo "@@ -37,6 +37,7 @@" >> $@
+	echo " " >> $@
+	echo " " >> $@
+	echo " DEFENCODING(( \"US-ASCII\",               /* IANA */" >> $@
+	echo "+              \"646\"," >> $@
+	echo "               \"ASCII\",                  /* IANA, JDK 1.1 */" >> $@
+	echo "               \"ISO646-US\",              /* IANA */" >> $@
+	echo "               \"ISO_646.IRV:1991\",       /* IANA */" >> $@
+
+$(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
+	echo "--- lib/aliases.gperf.orig	Wed Oct 24 23:41:32 2007" > $@
+	echo "+++ lib/aliases.gperf	Wed Oct 24 23:47:38 2007" >> $@
+	echo "@@ -10,6 +10,7 @@ struct alias { int name; unsigned int encoding_index; " >> $@
+	echo " %pic" >> $@
+	echo " %%" >> $@
+	echo " US-ASCII, ei_ascii" >> $@
+	echo "+646, ei_ascii" >> $@
+	echo " ASCII, ei_ascii" >> $@
+	echo " ISO646-US, ei_ascii" >> $@
+	echo " ISO_646.IRV:1991, ei_ascii" >> $@
+
 # retrieve gnu-iconv
-$(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST)
+# Add 646 as an alias for ASCII to fix prop_test 22 on OpenBSD
+$(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST) \
+		$(GNU_ICONV_OBJDIR)/lib_encodings.def.diff \
+		$(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
 	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GNU_ICONV_DIST)
+	cd $(SRCDIR)/libiconv-$(GNU_ICONV_VER) && \
+		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff && \
+		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
+	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
 	touch $@
 
 # configure gnu-iconv
 $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
+	cd $(SRCDIR)/libiconv-${GNU_ICONV_VER} && \
+		${MAKE} -f Makefile.devel lib/aliases.h
 	cd $(GNU_ICONV_OBJDIR) \
 		&& env CFLAGS="-g" $(GNU_ICONV_SRCDIR)/configure \
-		--prefix=$(PREFIX)/iconv
+		--prefix=$(PREFIX)/iconv \
+		--enable-extra-encodings
 	touch $@
 
 # compile gnu-iconv
@@ -404,6 +440,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved
 	cd $(APR_UTIL_SRCDIR) && ./buildconf --with-apr=$(APR_SRCDIR)
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
+			CFLAGS="-O0 -g" \
 			$(APR_UTIL_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
