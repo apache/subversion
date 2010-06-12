@@ -8331,19 +8331,17 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
 
   if (delete_working)
     {
-      SVN_DBG(("Deleting working\n"));
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                        STMT_DELETE_WORKING_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, basename));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, base));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  SVN_DBG(("Updating presence for %s\n", svn_dirent_local_style(local_abspath, scratch_pool)));
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_UPDATE_BASE_PRESENCE_KIND));
 
-  SVN_ERR(svn_sqlite__bindf(stmt, "istt", pdh->wcroot->wc_id, basename,
+  SVN_ERR(svn_sqlite__bindf(stmt, "istt", pdh->wcroot->wc_id, base,
                             presence_map, svn_wc__db_status_normal,
                             kind_map, svn_wc__db_kind_subdir));
 
@@ -8352,11 +8350,10 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
   if (affected_rows == 0)
     {
       /* Worst case: We have to create a new parent stub */
-      SVN_DBG(("Inserting instead\n"));
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                         STMT_INSERT_BASE_NODE));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, basename));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, base));
       SVN_ERR(svn_sqlite__bind_text(stmt, 5, ""));
       SVN_ERR(svn_sqlite__bind_token(stmt, 6, presence_map,
                                      svn_wc__db_status_normal));
