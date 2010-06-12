@@ -40,6 +40,12 @@
 
 
 typedef struct {
+  /* parameters set by our caller */
+  svn_revnum_t peg_revision;
+  svn_revnum_t start_rev;
+  svn_revnum_t end_rev;
+  const char *path;
+
   /* location segment callback function/baton */
   svn_location_segment_receiver_t receiver;
   void *receiver_baton;
@@ -120,6 +126,45 @@ end_gls(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+serf_bucket_t *create_gls_body(void *baton,
+                               serf_bucket_alloc_t *alloc,
+                               apr_pool_t *pool)
+{
+  serf_bucket_t *buckets;
+  gls_context_t *gls_ctx = baton;
+
+  buckets = serf_bucket_aggregate_create(alloc);
+
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc,
+                                    "S:get-location-segments",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    NULL);
+
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:path", gls_ctx->path,
+                               alloc);
+
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:peg-revision",
+                               apr_ltoa(pool, gls_ctx->peg_revision),
+                               alloc);
+
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:start-revision",
+                               apr_ltoa(pool, gls_ctx->start_rev),
+                               alloc);
+
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:end-revision",
+                               apr_ltoa(pool, gls_ctx->end_rev),
+                               alloc);
+
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc,
+                                     "S:get-location-segments");
+
+  return buckets;
+}
+
 svn_error_t *
 svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                    const char *path,
@@ -134,45 +179,19 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets;
   const char *relative_url, *basecoll_url, *req_url;
   svn_error_t *err;
 
   gls_ctx = apr_pcalloc(pool, sizeof(*gls_ctx));
+  gls_ctx->path = path;
+  gls_ctx->peg_revision = peg_revision;
+  gls_ctx->start_rev = start_rev;
+  gls_ctx->end_rev = end_rev;
   gls_ctx->receiver = receiver;
   gls_ctx->receiver_baton = receiver_baton;
   gls_ctx->subpool = svn_pool_create(pool);
   gls_ctx->inside_report = FALSE;
   gls_ctx->done = FALSE;
-
-  buckets = serf_bucket_aggregate_create(session->bkt_alloc);
-
-  svn_ra_serf__add_open_tag_buckets(buckets, session->bkt_alloc,
-                                    "S:get-location-segments",
-                                    "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:path", path,
-                               session->bkt_alloc);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:peg-revision",
-                               apr_ltoa(pool, peg_revision),
-                               session->bkt_alloc);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:start-revision",
-                               apr_ltoa(pool, start_rev),
-                               session->bkt_alloc);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:end-revision",
-                               apr_ltoa(pool, end_rev),
-                               session->bkt_alloc);
-
-  svn_ra_serf__add_close_tag_buckets(buckets, session->bkt_alloc,
-                                     "S:get-location-segments");
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
                                          NULL, NULL, peg_revision, NULL, pool));
@@ -183,7 +202,8 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
 
   handler->method = "REPORT";
   handler->path = req_url;
-  handler->body_buckets = buckets;
+  handler->body_delegate = create_gls_body;
+  handler->body_delegate_baton = gls_ctx;
   handler->body_type = "text/xml";
   handler->conn = session->conns[0];
   handler->session = session;

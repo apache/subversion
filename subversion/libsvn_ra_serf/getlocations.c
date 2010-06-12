@@ -63,6 +63,11 @@ typedef struct {
   /* pool to allocate memory from */
   apr_pool_t *pool;
 
+  /* parameters set by our caller */
+  const char *path;
+  const apr_array_header_t *location_revisions;
+  svn_revnum_t peg_revision;
+
   /* Returned location hash */
   apr_hash_t *paths;
 
@@ -175,6 +180,45 @@ end_getloc(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+static serf_bucket_t*
+create_get_locations_body(void *baton,
+                          serf_bucket_alloc_t *alloc,
+                          apr_pool_t *pool)
+{
+  serf_bucket_t *buckets;
+  loc_context_t *loc_ctx = baton;
+  int i;
+
+  buckets = serf_bucket_aggregate_create(alloc);
+
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc,
+                                    "S:get-locations",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    "xmlns:D", "DAV:",
+                                    NULL);
+
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:path", loc_ctx->path,
+                               alloc);
+
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:peg-revision", apr_ltoa(pool, loc_ctx->peg_revision),
+                               alloc);
+
+  for (i = 0; i < loc_ctx->location_revisions->nelts; i++)
+    {
+      svn_revnum_t rev = APR_ARRAY_IDX(loc_ctx->location_revisions, i, svn_revnum_t);
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:location-revision", apr_ltoa(pool, rev),
+                                   alloc);
+    }
+
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc,
+                                     "S:get-locations");
+
+  return buckets;
+}
+
 svn_error_t *
 svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                            apr_hash_t **locations,
@@ -187,44 +231,18 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets;
   const char *relative_url, *basecoll_url, *req_url;
-  int i;
   svn_error_t *err;
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
   loc_ctx->pool = pool;
+  loc_ctx->path = path;
+  loc_ctx->peg_revision = peg_revision;
+  loc_ctx->location_revisions = location_revisions;
   loc_ctx->done = FALSE;
   loc_ctx->paths = apr_hash_make(loc_ctx->pool);
 
   *locations = loc_ctx->paths;
-
-  buckets = serf_bucket_aggregate_create(session->bkt_alloc);
-
-  svn_ra_serf__add_open_tag_buckets(buckets, session->bkt_alloc,
-                                    "S:get-locations",
-                                    "xmlns:S", SVN_XML_NAMESPACE,
-                                    "xmlns:D", "DAV:",
-                                    NULL);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:path", path,
-                               session->bkt_alloc);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:peg-revision", apr_ltoa(pool, peg_revision),
-                               session->bkt_alloc);
-
-  for (i = 0; i < location_revisions->nelts; i++)
-    {
-      svn_revnum_t rev = APR_ARRAY_IDX(location_revisions, i, svn_revnum_t);
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:location-revision", apr_ltoa(pool, rev),
-                                   session->bkt_alloc);
-    }
-
-  svn_ra_serf__add_close_tag_buckets(buckets, session->bkt_alloc,
-                                     "S:get-locations");
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
                                          NULL, NULL, peg_revision, NULL,
@@ -236,7 +254,8 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   handler->method = "REPORT";
   handler->path = req_url;
-  handler->body_buckets = buckets;
+  handler->body_delegate = create_get_locations_body;
+  handler->body_delegate_baton = loc_ctx;
   handler->body_type = "text/xml";
   handler->conn = session->conns[0];
   handler->session = session;
