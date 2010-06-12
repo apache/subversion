@@ -44,7 +44,7 @@ separated list of test numbers; the default is to run all the tests in it.
 # A few useful constants
 LINE_LENGTH = 40
 
-import os, sys
+import os, sys, subprocess
 from datetime import datetime
 
 import getopt
@@ -345,7 +345,7 @@ class TestHarness:
       if self.log:
         os.dup2(self.log.fileno(), 1)
         os.dup2(self.log.fileno(), 2)
-      rv = os.spawnv(os.P_WAIT, progname, arglist)
+      rv = subprocess.call(arglist)
     except:
       if self.log:
         restore_streams(old_stdout, old_stderr)
