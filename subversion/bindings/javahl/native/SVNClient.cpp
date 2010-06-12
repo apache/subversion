@@ -40,6 +40,7 @@
 #include "ProplistCallback.h"
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
+#include "PatchCallback.h"
 #include "StatusCallback.h"
 #include "ChangelistCallback.h"
 #include "ListCallback.h"
@@ -1909,5 +1910,32 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
                                  InfoCallback::callback,
                                  callback, depth,
                                  changelists.array(requestPool), ctx,
+                                 requestPool.pool()), );
+}
+
+void
+SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
+                 int stripCount, bool reverse, bool ignoreWhitespace,
+                 bool removeTempfiles, PatchCallback *callback)
+{
+    SVN_JNI_NULL_PTR_EX(patchPath, "patchPath", );
+    SVN_JNI_NULL_PTR_EX(targetPath, "targetPath", );
+
+    SVN::Pool requestPool;
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    Path checkedPatchPath(patchPath);
+    SVN_JNI_ERR(checkedPatchPath.error_occured(), );
+    Path checkedTargetPath(targetPath);
+    SVN_JNI_ERR(checkedTargetPath.error_occured(), );
+
+    SVN_JNI_ERR(svn_client_patch(checkedPatchPath.c_str(),
+                                 checkedTargetPath.c_str(),
+                                 dryRun, stripCount, reverse, ignoreWhitespace,
+                                 removeTempfiles,
+                                 PatchCallback::callback, callback,
+                                 ctx, requestPool.pool(),
                                  requestPool.pool()), );
 }

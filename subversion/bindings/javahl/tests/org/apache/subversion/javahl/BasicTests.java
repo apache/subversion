@@ -2733,6 +2733,42 @@ public class BasicTests extends SVNTests
 
         return thisTest;
     }
+    
+    /**
+     * Test the patch API.  This doesn't yet test the results, it only ensures
+     * that execution goes down to the C layer and back.
+     * @throws Throwable
+     */
+    public void testPatch() throws SubversionException, IOException
+    {
+    	OneTest thisTest = new OneTest(true);
+    	File patchInput = new File(super.localTmp, thisTest.testName);
+    	final String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
+        final String NL = System.getProperty("line.separator");
+    	
+    	final String patchText = "Index: iota" + NL +
+            "===================================================================" + NL +
+            "--- iota\t(revision 1)" + NL +
+            "+++ iota\t(working copy)" + NL +
+            "@@ -1 +1,2 @@" + NL +
+            " This is the file 'iota'." + NL +
+            "+No, this is *really* the file 'iota'." + NL;
+    	
+        PrintWriter writer = new PrintWriter(new FileOutputStream(patchInput));
+        writer.print(patchText);
+        writer.flush();
+        writer.close();
+    	
+    	client.patch(patchInput.getAbsolutePath(), iotaPath, false, 0,
+    			false, true, true,
+    			new PatchCallback() {
+					public boolean singlePatch(String pathFromPatchfile,
+                            String patchPath, String rejectPath) {
+						// Do nothing, right now.
+                        return false;
+					}
+    	});
+    }
 
     /**
      * Test the {@link SVNClientInterface.diff()} APIs.
