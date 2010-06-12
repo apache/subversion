@@ -80,7 +80,7 @@ values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
 -- STMT_INSERT_BASE_NODE_INCOMPLETE
 insert or ignore into base_node (
   wc_id, local_relpath, parent_relpath, presence, kind, revnum)
-values (?1, ?2, ?3, 'incomplete', 'unknown', ?5);
+values (?1, ?2, ?3, 'incomplete', 'unknown', ?4);
 
 -- STMT_INSERT_WORKING_NODE_INCOMPLETE
 INSERT OR IGNORE INTO WORKING_NODE (
