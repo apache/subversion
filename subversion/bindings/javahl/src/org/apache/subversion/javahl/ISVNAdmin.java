@@ -80,17 +80,17 @@ public interface ISVNAdmin {
 	 * dump the data in a repository
 	 * @param path              the path to the repository
 	 * @param dataOut           the data will be outputed here
-	 * @param errorOut          the messages will be outputed here
 	 * @param start             the first revision to be dumped
 	 * @param end               the last revision to be dumped
 	 * @param incremental       the dump will be incremantal
 	 * @param useDeltas         the dump will contain deltas between nodes
+     * @param callback          the callback to recieve notifications
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.5
 	 */
 	public abstract void dump(File path, OutputStream dataOut,
-                OutputStream errorOut, Revision start, Revision end,
-                boolean incremental, boolean useDeltas)
+                Revision start, Revision end, boolean incremental,
+                boolean useDeltas, ReposNotifyCallback callback)
 			throws ClientException;
 
 	/**

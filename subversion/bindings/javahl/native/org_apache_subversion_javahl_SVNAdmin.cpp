@@ -132,8 +132,8 @@ Java_org_apache_subversion_javahl_SVNAdmin_deltify
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_dump
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jdataout,
- jobject jmessageout, jobject jrevisionStart, jobject jrevisionEnd,
- jboolean jincremental, jboolean juseDeltas)
+ jobject jrevisionStart, jobject jrevisionEnd, jboolean jincremental,
+ jboolean juseDeltas, jobject jnotifyCallback)
 {
   JNIEntry(SVNAdmin, dump);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -151,10 +151,6 @@ Java_org_apache_subversion_javahl_SVNAdmin_dump
   if (JNIUtil::isExceptionThrown())
     return;
 
-  OutputStream messageOut(jmessageout);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
   Revision revisionStart(jrevisionStart);
   if (JNIUtil::isExceptionThrown())
     return;
@@ -163,8 +159,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_dump
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->dump(path, dataOut, messageOut, revisionStart, revisionEnd,
-           jincremental ? true : false, juseDeltas ? true : false);
+  ReposNotifyCallback notifyCallback(jnotifyCallback);
+
+  cl->dump(path, dataOut, revisionStart, revisionEnd,
+           jincremental ? true : false, juseDeltas ? true : false,
+           jnotifyCallback != NULL ? &notifyCallback : NULL);
 }
 
 JNIEXPORT void JNICALL
