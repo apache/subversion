@@ -2347,7 +2347,9 @@ svn_client_blame(const char *path_or_url,
  *
  * @a diff_options (an array of <tt>const char *</tt>) is used to pass
  * additional command line options to the diff processes invoked to compare
- * files.
+ * files. @a diff_options is alloed to be @c NULL, in which case a value
+ * for this option might still be obtained from the Subversion configuration
+ * file via client context @a ctx.
  *
  * The authentication baton cached in @a ctx is used to communicate with
  * the repository.

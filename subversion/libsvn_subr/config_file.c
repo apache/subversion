@@ -979,6 +979,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   This will override the compile-time default, which is to use" NL
         "###   Subversion's internal diff implementation."                   NL
         "# diff-cmd = diff_program (diff, gdiff, etc.)"                      NL
+        "### Diff-extensions are arguments passed to an external diff"       NL
+        "### program or to Subversion's internal diff implementation."       NL
+        "### Set diff-extensions to override the default value of the"       NL
+        "### --extensions command line option."                              NL
+        "# diff-extensions = -u -p"                                          NL
         "### Set diff3-cmd to the absolute path of your 'diff3' program."    NL
         "###   This will override the compile-time default, which is to use" NL
         "###   Subversion's internal diff3 implementation."                  NL

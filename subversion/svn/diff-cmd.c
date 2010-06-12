@@ -161,11 +161,10 @@ svn_cl__diff(apr_getopt_t *os,
   const svn_client_diff_summarize_func_t summarize_func =
     (opt_state->xml ? summarize_xml : summarize_regular);
 
-  /* Fall back to "" to get options initialized either way. */
-  {
-    const char *optstr = opt_state->extensions ? opt_state->extensions : "";
-    options = svn_cstring_split(optstr, " \t\n\r", TRUE, pool);
-  }
+  if (opt_state->extensions)
+    options = svn_cstring_split(opt_state->extensions, " \t\n\r", TRUE, pool);
+  else
+    options = NULL;
 
   /* Get an apr_file_t representing stdout and stderr, which is where
      we'll have the external 'diff' program print to. */
