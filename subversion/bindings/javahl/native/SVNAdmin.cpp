@@ -26,6 +26,7 @@
 
 #include "SVNAdmin.h"
 #include "CreateJ.h"
+#include "ReposNotifyCallback.h"
 #include "JNIUtil.h"
 #include "svn_error_codes.h"
 #include "svn_repos.h"
@@ -505,8 +506,9 @@ SVNAdmin::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
   return SVN_NO_ERROR;
 }
 
-void SVNAdmin::verify(File &path, OutputStream &messageOut,
-                      Revision &revisionStart, Revision &revisionEnd)
+void
+SVNAdmin::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
+                 ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -548,10 +550,13 @@ void SVNAdmin::verify(File &path, OutputStream &messageOut,
       (SVN_ERR_INCORRECT_PARAMS, NULL,
        _("Start revision cannot be higher than end revision")), );
 
-  SVN_JNI_ERR(svn_repos_verify_fs(repos, messageOut.getStream(requestPool),
-                                  lower, upper,
-                                  NULL, NULL /* cancel callback/baton */,
-                                  requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_verify_fs2(repos, lower, upper,
+                                   notifyCallback != NULL
+                                    ? ReposNotifyCallback::notify
+                                    : NULL,
+                                   notifyCallback,
+                                   NULL, NULL /* cancel callback/baton */,
+                                   requestPool.pool()), );
 }
 
 jobject SVNAdmin::lslocks(File &path)

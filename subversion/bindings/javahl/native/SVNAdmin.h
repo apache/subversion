@@ -34,6 +34,7 @@
 #include "OutputStream.h"
 #include "InputStream.h"
 #include "MessageReceiver.h"
+#include "ReposNotifyCallback.h"
 #include "StringArray.h"
 #include "File.h"
 
@@ -42,8 +43,8 @@ class SVNAdmin : public SVNBase
  public:
   void rmlocks(File &path, StringArray &locks);
   jobject lslocks(File &path);
-  void verify(File &path, OutputStream &messageOut,
-              Revision &revisionStart, Revision &revisionEnd);
+  void verify(File &path, Revision &revisionStart, Revision &revisionEnd,
+              ReposNotifyCallback *notifyCallback);
   void setRevProp(File &path, Revision &revision,
                   const char *propName, const char *propValue,
                   bool usePreRevPropChangeHook,

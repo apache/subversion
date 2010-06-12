@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.File;
 
 import org.apache.subversion.javahl.SVNAdmin.MessageReceiver;
+import org.apache.subversion.javahl.callback.ReposNotifyCallback;
 
 public interface ISVNAdmin {
 
@@ -191,13 +192,14 @@ public interface ISVNAdmin {
 	 * <code>start</code> and <code>end</code>.
 	 *
 	 * @param path              the path to the repository
-	 * @param messageOut        the receiver of all messages
 	 * @param start             the first revision
 	 * @param end               the last revision
+     * @param callback          the callback to recieve notifications
 	 * @throws ClientException If an error occurred.
 	 */
-	public abstract void verify(File path, OutputStream messageOut,
-			Revision start, Revision end) throws ClientException;
+	public abstract void verify(File path, Revision start, Revision end,
+                ReposNotifyCallback callback)
+            throws ClientException;
 
 	/**
 	 * list all locks in the repository

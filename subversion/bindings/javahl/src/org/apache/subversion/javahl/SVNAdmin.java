@@ -28,6 +28,8 @@ import java.io.OutputStream;
 import java.io.InputStream;
 import java.io.File;
 
+import org.apache.subversion.javahl.callback.ReposNotifyCallback;
+
 /**
  * This class offers the same commands as the svnadmin commandline
  * client.
@@ -240,18 +242,8 @@ public class SVNAdmin implements ISVNAdmin
                                   boolean usePostRevPropChangeHook)
             throws SubversionException;
 
-    /**
-     * Verify the repository at <code>path</code> between revisions
-     * <code>start</code> and <code>end</code>.
-     *
-     * @param path              the path to the repository
-     * @param messageOut        the receiver of all messages
-     * @param start             the first revision
-     * @param end               the last revision
-     * @throws ClientException If an error occurred.
-     */
-    public native void verify(File path, OutputStream messageOut,
-                              Revision start, Revision end)
+    public native void verify(File path, Revision start, Revision end,
+                              ReposNotifyCallback callback)
             throws ClientException;
 
     /**

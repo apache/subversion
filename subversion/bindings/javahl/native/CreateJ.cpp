@@ -691,6 +691,50 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify,
 }
 
 jobject
+CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify,
+                                apr_pool_t *pool)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  static jmethodID midCT = 0;
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/ReposNotifyInformation");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  if (midCT == 0)
+    {
+      midCT = env->GetMethodID(clazz, "<init>",
+                               "(L"JAVA_PACKAGE"/ReposNotifyInformation$Action;"
+                               "JLjava/lang/String;)V");
+      if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
+        POP_AND_RETURN_NULL;
+    }
+
+  // convert the parameters to their Java relatives
+  jobject jAction = EnumMapper::mapReposNotifyAction(reposNotify->action);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jWarning = JNIUtil::makeJString(reposNotify->warning);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jlong jRevision = (jlong)reposNotify->revision;
+
+  // call the Java method
+  jobject jInfo = env->NewObject(clazz, midCT, jAction, jRevision, jWarning);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  return env->PopLocalFrame(jInfo);
+}
+
+jobject
 CreateJ::RevisionRangeList(apr_array_header_t *ranges)
 {
   JNIEnv *env = JNIUtil::getEnv();
