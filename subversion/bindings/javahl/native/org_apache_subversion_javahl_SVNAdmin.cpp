@@ -35,6 +35,7 @@
 #include "OutputStream.h"
 #include "MessageReceiver.h"
 #include "File.h"
+#include "ReposNotifyCallback.h"
 #include "svn_props.h"
 #include "svn_private_config.h"
 
@@ -374,8 +375,8 @@ Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_verify
-(JNIEnv *env, jobject jthis, jobject jpath, jobject jmessageout,
- jobject jrevisionStart, jobject jrevisionEnd)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jrevisionStart,
+ jobject jrevisionEnd, jobject jcallback)
 {
   JNIEntry(SVNAdmin, verify);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -389,10 +390,6 @@ Java_org_apache_subversion_javahl_SVNAdmin_verify
   if (JNIUtil::isExceptionThrown())
     return;
 
-  OutputStream messageOut(jmessageout);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
   Revision revisionStart(jrevisionStart);
   if (JNIUtil::isExceptionThrown())
     return;
@@ -401,7 +398,12 @@ Java_org_apache_subversion_javahl_SVNAdmin_verify
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->verify(path, messageOut, revisionStart, revisionEnd);
+  ReposNotifyCallback callback(jcallback);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->verify(path, revisionStart, revisionEnd,
+             jcallback != NULL ? &callback : NULL);
 }
 
 JNIEXPORT jobject JNICALL

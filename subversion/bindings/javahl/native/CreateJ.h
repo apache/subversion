@@ -29,6 +29,7 @@
 
 #include <jni.h>
 #include "svn_wc.h"
+#include "svn_repos.h"
 #include "svn_client.h"
 
 #include <vector>
@@ -56,6 +57,9 @@ class CreateJ
 
   static jobject
   ClientNotifyInformation(const svn_wc_notify_t *notify, apr_pool_t *pool);
+
+  static jobject
+  ReposNotifyInformation(const svn_repos_notify_t *notify, apr_pool_t *pool);
 
   static jobject
   RevisionRangeList(apr_array_header_t *ranges);

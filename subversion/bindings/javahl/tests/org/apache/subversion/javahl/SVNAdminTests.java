@@ -72,6 +72,16 @@ public class SVNAdminTests extends SVNTests
         String logMessage = new String(pdata.get("svn:log"));
         assertEquals("expect rev prop change to take effect", MSG, logMessage);
     }
+
+    /* This test only tests the call down to the C++ layer. */
+    public void testVerify()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(false);
+        admin.verify(thisTest.getRepository(), Revision.getInstance(0),
+                     Revision.HEAD, null);
+    }
+
     public void testLoadRepo()
         throws SubversionException, IOException
     {
