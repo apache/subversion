@@ -1672,7 +1672,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
          trouble if we allow this. */
       return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                _("Can't schedule an addition of '%s'"
-                                 " below a not-directory node"));
+                                 " below a not-directory node"),
+                               svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
 
     if (!repos_root_url)
       {
