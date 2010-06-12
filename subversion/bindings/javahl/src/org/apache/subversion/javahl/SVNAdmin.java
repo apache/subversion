@@ -115,22 +115,9 @@ public class SVNAdmin implements ISVNAdmin
     public native void deltify(File path, Revision start, Revision end)
             throws ClientException;
 
-    /**
-     * dump the data in a repository
-     * @param path              the path to the repository
-     * @param dataOut           the data will be outputed here
-     * @param errorOut          the messages will be outputed here
-     * @param start             the first revision to be dumped
-     * @param end               the last revision to be dumped
-     * @param incremental       the dump will be incremantal
-     * @param useDeltas         the dump will contain deltas between nodes
-     * @throws ClientException  throw in case of problem
-     * @since 1.5
-     */
     public native void dump(File path, OutputStream dataOut,
-                            OutputStream errorOut, Revision start,
-                            Revision end, boolean incremental,
-                            boolean useDeltas)
+                            Revision start, Revision end, boolean incremental,
+                            boolean useDeltas, ReposNotifyCallback callback)
             throws ClientException;
 
     /**

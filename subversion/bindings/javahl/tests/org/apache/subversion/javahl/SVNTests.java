@@ -239,7 +239,7 @@ class SVNTests extends TestCase
         client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
                         null, Depth.infinity, false, false, null);
         admin.dump(greekRepos, new FileOutputStream(greekDump),
-                   new IgnoreOutputer(), null, null, false, false);
+                   null, null, false, false, null);
     }
 
     /**

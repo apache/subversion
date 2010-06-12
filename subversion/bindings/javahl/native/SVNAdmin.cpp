@@ -160,9 +160,9 @@ void SVNAdmin::deltify(File &path, Revision &revStart, Revision &revEnd)
 }
 
 void SVNAdmin::dump(File &path, OutputStream &dataOut,
-                    OutputStream &messageOut,
                     Revision &revsionStart, Revision &revisionEnd,
-                    bool incremental, bool useDeltas)
+                    bool incremental, bool useDeltas,
+                    ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -221,9 +221,12 @@ void SVNAdmin::dump(File &path, OutputStream &dataOut,
                      " (%ld)"), youngest), );
     }
 
-  SVN_JNI_ERR(svn_repos_dump_fs2(repos, dataOut.getStream(requestPool),
-                                 messageOut.getStream(requestPool),
+  SVN_JNI_ERR(svn_repos_dump_fs3(repos, dataOut.getStream(requestPool),
                                  lower, upper, incremental, useDeltas,
+                                 notifyCallback != NULL
+                                    ? ReposNotifyCallback::notify
+                                    : NULL,
+                                 notifyCallback,
                                  NULL, NULL, requestPool.pool()), );
 }
 
