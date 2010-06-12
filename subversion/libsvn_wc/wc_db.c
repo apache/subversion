@@ -8309,15 +8309,15 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
-  const char *parent_abspath, *basename;
+  const char *parent_abspath, *base;
   int affected_rows;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath)
                  && !svn_dirent_is_root(local_abspath, strlen(local_abspath)));
 
-  svn_dirent_split(local_abspath, &parent_abspath, &basename, scratch_pool);
+  svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
 
-  SVN_ERR_ASSERT(*basename != '\0');
+  SVN_ERR_ASSERT(*base != '\0');
 
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                                              parent_abspath,
