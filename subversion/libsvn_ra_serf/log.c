@@ -86,10 +86,16 @@ typedef struct {
   apr_pool_t *pool;
 
   /* parameters set by our caller */
+  const apr_array_header_t *paths;
+  svn_revnum_t start;
+  svn_revnum_t end;
   int limit;
+  svn_boolean_t changed_paths;
+  svn_boolean_t strict_node_history;
+  svn_boolean_t include_merged_revisions;
+  const apr_array_header_t *revprops;
   int nest_level; /* used to track mergeinfo nesting levels */
   int count; /* only incremented when nest_level == 0 */
-  svn_boolean_t changed_paths;
 
   /* are we done? */
   svn_boolean_t done;
@@ -453,6 +459,100 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+static serf_bucket_t *
+create_log_body(void *baton,
+                serf_bucket_alloc_t *alloc,
+                apr_pool_t *pool)
+{
+  serf_bucket_t *buckets;
+  log_context_t *log_ctx = baton;
+
+  buckets = serf_bucket_aggregate_create(alloc);
+
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc,
+                                    "S:log-report",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    NULL);
+
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:start-revision",
+                               apr_ltoa(pool, log_ctx->start),
+                               alloc);
+  svn_ra_serf__add_tag_buckets(buckets,
+                               "S:end-revision",
+                               apr_ltoa(pool, log_ctx->end),
+                               alloc);
+
+  if (log_ctx->limit)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:limit", apr_ltoa(pool, log_ctx->limit),
+                                   alloc);
+    }
+
+  if (log_ctx->changed_paths)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:discover-changed-paths", NULL,
+                                   alloc);
+    }
+
+  if (log_ctx->strict_node_history)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:strict-node-history", NULL,
+                                   alloc);
+    }
+
+  if (log_ctx->include_merged_revisions)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:include-merged-revisions", NULL,
+                                   alloc);
+    }
+
+  if (log_ctx->revprops)
+    {
+      int i;
+      for (i = 0; i < log_ctx->revprops->nelts; i++)
+        {
+          char *name = APR_ARRAY_IDX(log_ctx->revprops, i, char *);
+          svn_ra_serf__add_tag_buckets(buckets,
+                                       "S:revprop", name,
+                                       alloc);
+        }
+      if (log_ctx->revprops->nelts == 0)
+        {
+          svn_ra_serf__add_tag_buckets(buckets,
+                                       "S:no-revprops", NULL,
+                                       alloc);
+        }
+    }
+  else
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:all-revprops", NULL,
+                                   alloc);
+    }
+
+  if (log_ctx->paths)
+    {
+      int i;
+      for (i = 0; i < log_ctx->paths->nelts; i++)
+        {
+          svn_ra_serf__add_tag_buckets(buckets,
+                                       "S:path", APR_ARRAY_IDX(log_ctx->paths, i,
+                                                               const char*),
+                                       alloc);
+        }
+    }
+
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc,
+                                     "S:log-report");
+
+  return buckets;
+}
+
 svn_error_t *
 svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      const apr_array_header_t *paths,
@@ -471,7 +571,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets;
   svn_boolean_t want_custom_revprops;
   svn_revnum_t peg_rev;
   const char *relative_url, *basecoll_url, *req_url;
@@ -480,52 +579,16 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->pool = pool;
   log_ctx->receiver = receiver;
   log_ctx->receiver_baton = receiver_baton;
+  log_ctx->paths = paths;
+  log_ctx->start = start;
+  log_ctx->end = end;
   log_ctx->limit = limit;
-  log_ctx->nest_level = 0;
   log_ctx->changed_paths = discover_changed_paths;
+  log_ctx->strict_node_history = strict_node_history;
+  log_ctx->include_merged_revisions = include_merged_revisions;
+  log_ctx->revprops = revprops;
+  log_ctx->nest_level = 0;
   log_ctx->done = FALSE;
-
-  buckets = serf_bucket_aggregate_create(session->bkt_alloc);
-
-  svn_ra_serf__add_open_tag_buckets(buckets, session->bkt_alloc,
-                                    "S:log-report",
-                                    "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:start-revision", apr_ltoa(pool, start),
-                               session->bkt_alloc);
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:end-revision", apr_ltoa(pool, end),
-                               session->bkt_alloc);
-
-  if (limit)
-    {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:limit", apr_ltoa(pool, limit),
-                                   session->bkt_alloc);
-    }
-
-  if (discover_changed_paths)
-    {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:discover-changed-paths", NULL,
-                                   session->bkt_alloc);
-    }
-
-  if (strict_node_history)
-    {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:strict-node-history", NULL,
-                                   session->bkt_alloc);
-    }
-
-  if (include_merged_revisions)
-    {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:include-merged-revisions", NULL,
-                                   session->bkt_alloc);
-    }
 
   want_custom_revprops = FALSE;
   if (revprops)
@@ -534,9 +597,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
       for (i = 0; i < revprops->nelts; i++)
         {
           char *name = APR_ARRAY_IDX(revprops, i, char *);
-          svn_ra_serf__add_tag_buckets(buckets,
-                                       "S:revprop", name,
-                                       session->bkt_alloc);
           if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
             log_ctx->want_author = TRUE;
           else if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
@@ -546,18 +606,9 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
           else
             want_custom_revprops = TRUE;
         }
-      if (revprops->nelts == 0)
-        {
-          svn_ra_serf__add_tag_buckets(buckets,
-                                       "S:no-revprops", NULL,
-                                       session->bkt_alloc);
-        }
     }
   else
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:all-revprops", NULL,
-                                   session->bkt_alloc);
       log_ctx->want_author = log_ctx->want_date = log_ctx->want_message = TRUE;
       want_custom_revprops = TRUE;
     }
@@ -572,21 +623,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                 _("Server does not support custom revprops"
                                   " via log"));
     }
-
-  if (paths)
-    {
-      int i;
-      for (i = 0; i < paths->nelts; i++)
-        {
-          svn_ra_serf__add_tag_buckets(buckets,
-                                       "S:path", APR_ARRAY_IDX(paths, i,
-                                                               const char*),
-                                       session->bkt_alloc);
-        }
-    }
-
-  svn_ra_serf__add_close_tag_buckets(buckets, session->bkt_alloc,
-                                     "S:log-report");
   /* At this point, we may have a deleted file.  So, we'll match ra_neon's
    * behavior and use the larger of start or end as our 'peg' rev.
    */
@@ -601,7 +637,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
 
   handler->method = "REPORT";
   handler->path = req_url;
-  handler->body_buckets = buckets;
+  handler->body_delegate = create_log_body;
+  handler->body_delegate_baton = log_ctx;
   handler->body_type = "text/xml";
   handler->conn = session->conns[0];
   handler->session = session;
