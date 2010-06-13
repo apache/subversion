@@ -10,17 +10,24 @@ Content
  * Open items / discussion points
  * Problems in wc-1.0
  * Possible solutions
+   - Developer sanity
+   - Speed
+   - Cross node type change representation
+   - Flexibility of metadata storage
+   - Transaction duration / memory management
+   - Working copy stability
+   - Transactional updates
+   - Work queue
  * Prerequisites for a good wc implementation
  * Modularization
  * Implementation proposals for
-   - metadata storage/access abstraction
-   - BASE tree storage/access abstraction
-   - WORKING tree storage/access abstraction
-   - TARGET & MERGE-END tree storage/access abstraction
-   - transactional manipulation API proposal
-   - delta-application algorithm
-      (in light of metadata, tree and textual conflicts)
-   - 
+   - Mapping of svn_wc_entry_t fields to BASE/WORKING
+   - Basic storage mechanics
+   - Metadata schemas
+   - Commit process
+   - Random notes
+   - Code organization
+   - svn_wc.h API
  * Upgrading old working copies
  * Implementation plan
 
