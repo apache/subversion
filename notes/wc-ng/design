@@ -57,89 +57,48 @@ things come to mind:
    is a cross platform tool and tries to behave the same on all
    filesystems (timestamp resolution may be an example of this).
 
-When considering the wc-1.0 design, one finds that there are a lot
-of situations where the exact state of the versioned tree isn't
-defined.  When explicitly considering which trees relate to the
-working copy at one time or another, the following trees can be
-found:
+When considering the wc-1.0 design, one finds that there are a lot of
+situations where the state of the versioned tree is poorly defined.
+To clarify the tree state, the wc-ng design splits it into several
+pieces.  A versioned item in the working copy is described by one or
+more nodes in the following schema. 
 
-  ###
-  ### WARNING: the following descriptions don't correspond to either
-  ###   the WC-NG DB concepts or the command-line user concepts.
-  ###
+ * BASE: Nodes describing repository data in the WC.
 
- * BASE: The tree of nodes from the repository, against which local changes
-     are made.  Also known as "pristine".  Each node is as it was in the
-     repository at a particular revision and URL, as recorded per node in
-     the WC metadata.  A directory node in the BASE tree knows something
-     about the children it had in the repository (### details?), but its set
-     of children in the WC is independent of that.  In a node or tree
-     scheduled for replacement the BASE is the pristine version of the
-     to-be-added node or tree, not of the deleted one.  For a node that is
-     scheduled for add without history, there is no BASE node.
+     Each BASE node corresponds to a particular repository URL and
+     revision.  Mixed-revision working copies are still common.
+     Pristine file content is kept in the content store.
 
- * WORKING: The tree that represent's the user's view of the WC with their
-     local modifications (assuming the user told Subversion about these
-     modifications with "svn add" etc. as required).  In implementation, the
-     WORKING tree has the structure and properties recorded in the WC, and
-     the file content present on the local disk.  (If a file cannot be
-     accessed because the tree structure on the local disk is incompatible,
-     this is an error, known as an "obstruction".)
+ * WORKING: Nodes describing structural changes to BASE.
 
- * ACTUAL: The tree on the local disk, ignoring Subversion
-     administrative directories and other nodes that Subversion has
-     knowingly put there such as conflict reject files, and regarding
-     every node as having no Subversion properties.
+     An item in the WC may have a BASE node, a WORKING node, or both.
+     The WORKING-only case arises when an item is added, copied-here,
+     or moved-here on a path that doesn't exist in BASE.
 
-     (Variations to consider: Construct properties such as
-     svn:executable, svn:special, and any svn: time-stamp properties
-     from the operating system meta-data. Construct properties from
-     auto-props. Exclude nodes that the operating system says are
-     hidden.)
+ * NODE_DATA: Nodes describing layered structural changes to WORKING.
 
-In the context of the 'svn update' command:
+     An example: suppose a directory is replaced, a directory is
+     copied into it, and a file is added to the subdirectory.  BASE
+     and WORKING describe the replacement, NODE_DATA describes the
+     copied subdirectory, and NODE_DATA (again) describes the added
+     file.
 
- * BASE-TARGET: The tree to which BASE is being updated and for
-     which the changes w.r.t. BASE are integrated into
-     WORKING and ACTUAL
+ * ACTUAL: Nodes describing content modifications and annotations.
 
- * WORKING-TARGET, ACTUAL-TARGET: Trees in which the above mentioned
-     changes have been integrated, but which haven't "gone live" yet;
-     these trees generally represent "in transition" or "intermediary"
-     state with the intent to become the final tree.
+     An ACTUAL node contains one or more of the following:
 
-Additionally, two more trees may be related to the working copy
-when considering the 'svn merge' command:
+       - Text-modified flag (for a file)
+       - Properties
+       - Changelist name
+       - Conflict metadata
 
- * START: The tree used as the base state for the 'merge' command
+     The text-modified flag may be out of sync with the file's real
+     status.  The other data is set directly by Subversion operations.
 
- * END: The tree used as the ending state for the 'merge' command
-    The difference between these trees will be merged into the
-    WORKING and ACTUAL trees.
-
-In the following example 10 == START and 15 == END:
-  $ svn merge -r10:15 http://svn.example.com/svn/ .
-
-Please note that the WORKING-TARGET and ACTUAL-TARGET trees also
-apply to 'svn merge' as they can result in 'add with history' schedules,
-which will place text bases in the WORKING-TARGET tree.  Also note
-that -since merge is by definition an 'edit' operation- the BASE and
-BASE-TARGET trees are not concerned with a merge.
-
-###EHU: To which trees do BASE and TARGET refer when we're in a subdir
-of a replaced tree? And which trees do they refer to in a subdir of
-a replaced tree which itself is replaced? (Preliminary answer: the
-base in a replaced subdir should probably be the base as defined by
-the parent which got copied in, not the base as was deleted, because
-otherwise it won't be possible to delete files from the replaced subdir:
-there would be no way to express a deletion against the new dir.)
-
-A tree can be said to have its files in repository-normal format or
-working-copy format; the difference relates to line endings and keyword
-expansion, as defined elsewhere.  A BASE tree presents itself in
-repository-normal format by default and can be converted to working-copy
-format. A WORKING or ACTUAL tree presents itself in working-copy format by
-default and can be converted to repository-normal format.
+     Some tree conflicts lead to ACTUAL nodes that don't exist in the
+     working copy (e.g., when a merge tries to edit a file that
+     doesn't exist).  These have no corresponding BASE, WORKING or
+     NODE_DATA nodes.
 
 ##BHB: For tree, text and property conflicts it would be nice to handle
 MINE, THEIRS (and OLDER?) as semi-trees too. See this mail thread
