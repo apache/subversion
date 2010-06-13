@@ -126,9 +126,10 @@ end_gls(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-serf_bucket_t *create_gls_body(void *baton,
-                               serf_bucket_alloc_t *alloc,
-                               apr_pool_t *pool)
+static serf_bucket_t *
+create_gls_body(void *baton,
+                serf_bucket_alloc_t *alloc,
+                apr_pool_t *pool)
 {
   serf_bucket_t *buckets;
   gls_context_t *gls_ctx = baton;
