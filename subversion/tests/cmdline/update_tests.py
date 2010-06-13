@@ -396,7 +396,11 @@ def update_ignores_added(sbox):
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/gamma', wc_rev=1, status='R ')
+
+  # Before WC-NG we couldn't bump the wc_rev for gamma from 1 to 2 because it could
+  # be replaced with history and we couldn't store all the revision information.
+  # WC-NG just bumps the revision as it can easily store different revisions.
+  expected_status.tweak('A/D/gamma', wc_rev=2, status='R ')
   expected_status.add({
     'A/B/zeta' : Item(status='A ', wc_rev=0),
     })
