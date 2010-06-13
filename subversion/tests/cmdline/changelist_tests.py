@@ -101,8 +101,8 @@ def clname_from_lastchar_cb(full_path):
 
 # Regular expressions for 'svn changelist' output.
 _re_cl_skip = re.compile("Skipped '(.*)'")
-_re_cl_add  = re.compile("Path '(.*)' is now a member of changelist '(.*)'.")
-_re_cl_rem  = re.compile("Path '(.*)' is no longer a member of a changelist.")
+_re_cl_add  = re.compile("^A \[(.*)\] (.*)")
+_re_cl_rem  = re.compile("^D \[(.*)\] (.*)")
 
 def verify_changelist_output(output, expected_adds=None,
                              expected_removals=None,
@@ -133,21 +133,21 @@ def verify_changelist_output(output, expected_adds=None,
     match = _re_cl_rem.match(line)
     if match \
        and expected_removals \
-       and match.group(1) in expected_removals:
+       and match.group(2) in expected_removals:
         continue
     elif match:
       raise svntest.Failure("Unexpected changelist removal line: " + line)
     match = _re_cl_add.match(line)
     if match \
        and expected_adds \
-       and expected_adds.get(match.group(1)) == match.group(2):
+       and expected_adds.get(match.group(2)) == match.group(1):
         continue
     elif match:
       raise svntest.Failure("Unexpected changelist add line: " + line)
     match = _re_cl_skip.match(line)
     if match \
        and expected_skips \
-       and match.group(1) in expected_skips:
+       and match.group(2) in expected_skips:
         continue
     elif match:
       raise svntest.Failure("Unexpected changelist skip line: " + line)
@@ -277,7 +277,8 @@ def add_remove_changelists(sbox):
     os.path.join(wc_dir, 'A', 'D', 'H', 'psi') : 'bar',
     os.path.join(wc_dir, 'A', 'D', 'gamma') : 'bar',
     }
-  verify_changelist_output(output, expected_adds)
+  expected_removals = expected_adds
+  verify_changelist_output(output, expected_adds, expected_removals)
 
   # svn changelist baz WC_DIR/A/D/H --depth infinity
   exit_code, output, errput = svntest.main.run_svn(".*", "changelist", "baz",
@@ -289,7 +290,8 @@ def add_remove_changelists(sbox):
     os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : 'baz',
     os.path.join(wc_dir, 'A', 'D', 'H', 'psi') : 'baz',
     }
-  verify_changelist_output(output, expected_adds)
+  expected_removals = expected_adds
+  verify_changelist_output(output, expected_adds, expected_removals)
 
   ### Now, let's selectively rename some changelists ###
 
@@ -306,7 +308,8 @@ def add_remove_changelists(sbox):
     os.path.join(wc_dir, 'A', 'mu') : 'foo-rename',
     os.path.join(wc_dir, 'iota') : 'foo-rename',
     }
-  verify_changelist_output(output, expected_adds)
+  expected_removals = expected_adds
+  verify_changelist_output(output, expected_adds, expected_removals)
 
   # svn changelist bar WC_DIR --depth infinity
   #     --changelist foo-rename --changelist baz
@@ -324,7 +327,8 @@ def add_remove_changelists(sbox):
     os.path.join(wc_dir, 'A', 'mu') : 'bar',
     os.path.join(wc_dir, 'iota') : 'bar',
     }
-  verify_changelist_output(output, expected_adds)
+  expected_removals = expected_adds
+  verify_changelist_output(output, expected_adds, expected_removals)
 
   ### Okay.  Time to remove some stuff from changelists now. ###
 
