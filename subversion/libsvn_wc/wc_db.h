@@ -1241,7 +1241,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 
 /* Return a hash @a *tree_conflicts of all the children of @a
  * local_abspath that are in tree conflicts.  The hash maps local
- * abspaths to pointers to svn_wc_conflict_description2_t, all
+ * basenames to pointers to svn_wc_conflict_description2_t, all
  * allocated in result pool.
  */
 svn_error_t *
