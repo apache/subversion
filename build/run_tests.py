@@ -323,31 +323,9 @@ class TestHarness:
     '''Execute the file PROGNAME in a subprocess, with ARGLIST as its
     arguments (a list/tuple of arg0..argN), redirecting standard output and
     error to the log file. Return the command's exit code.'''
-    def restore_streams(stdout, stderr):
-      os.dup2(stdout, 1)
-      os.dup2(stderr, 2)
-      os.close(stdout)
-      os.close(stderr)
-
-    if self.log:
-      sys.stdout.flush()
-      sys.stderr.flush()
-      self.log.flush()
-      old_stdout = os.dup(1)
-      old_stderr = os.dup(2)
-    try:
-      if self.log:
-        os.dup2(self.log.fileno(), 1)
-        os.dup2(self.log.fileno(), 2)
-      rv = subprocess.call(arglist)
-    except:
-      if self.log:
-        restore_streams(old_stdout, old_stderr)
-      raise
-    else:
-      if self.log:
-        restore_streams(old_stdout, old_stderr)
-      return rv
+    prog = subprocess.Popen(arglist, stdout=self.log, stderr=self.log)
+    prog.wait()
+    return prog.returncode
 
 
 def main():
