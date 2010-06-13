@@ -480,6 +480,14 @@ SELECT 1 FROM BASE_NODE WHERE wc_id = ?1 and local_relpath = ?2 and kind = 'subd
 UNION
 SELECT 0 FROM WORKING_NODE WHERE wc_id = ?1 and local_relpath = ?2 and kind = 'subdir';
 
+-- STMT_UPDATE_BASE_REVISION
+UPDATE BASE_NODE SET revnum=?3
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_REPOS
+UPDATE BASE_NODE SET repos_id = ?3, repos_relpath = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

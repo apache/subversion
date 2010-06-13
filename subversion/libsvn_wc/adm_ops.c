@@ -125,16 +125,12 @@ tweak_node(svn_wc__db_t *db,
            svn_boolean_t allow_removal,
            apr_pool_t *scratch_pool)
 {
-  svn_wc_entry_t tmp_entry;
-  int modify_flags = 0;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
   svn_revnum_t revision;
   const char *repos_relpath, *repos_root_url, *repos_uuid;
+  svn_boolean_t set_repos_relpath = FALSE;
   svn_error_t *err;
-  svn_node_kind_t node_kind = (kind == svn_wc__db_kind_dir)
-                                     ? svn_node_dir
-                                     : svn_node_file;
 
   err = svn_wc__db_base_get_info(&status, &db_kind, &revision,
                                  &repos_relpath, &repos_root_url,
@@ -186,41 +182,26 @@ tweak_node(svn_wc__db_t *db,
                                            &repos_uuid, db, local_abspath,
                                            scratch_pool, scratch_pool));
 
-      if (strcmp(repos_relpath, new_repos_relpath)
-          || strcmp(repos_root_url, repos_root_url))
-        {
-          modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
-          tmp_entry.url = svn_path_url_add_component2(new_repos_root_url,
-                                                      new_repos_relpath,
-                                                      scratch_pool);
-        }
+      if (strcmp(repos_relpath, new_repos_relpath))
+          set_repos_relpath = TRUE;
     }
 
-  if (SVN_IS_VALID_REVNUM(new_rev) && new_rev != revision)
-    {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, node_kind,
-                                parent_stub, scratch_pool, scratch_pool));
+  if (SVN_IS_VALID_REVNUM(new_rev) && new_rev == revision)
+    new_rev = SVN_INVALID_REVNUM;
 
-      if ((entry->schedule != svn_wc_schedule_add)
-          && (entry->schedule != svn_wc_schedule_replace)
-          && (entry->copied != TRUE)
-          && (entry->revision != new_rev))
-        {
-          modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
-          tmp_entry.revision = new_rev;
-        }
-    }
-
-  if (modify_flags)
+  if (SVN_IS_VALID_REVNUM(new_rev) || set_repos_relpath)
     {
-      if (db_kind == svn_wc__db_kind_dir && parent_stub)
-        SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
-                                          &tmp_entry, modify_flags,
-                                          scratch_pool));
-      else
-        SVN_ERR(svn_wc__entry_modify(db, local_abspath, node_kind,
-                                     &tmp_entry, modify_flags, scratch_pool));
+      svn_boolean_t update_stub = 
+            (db_kind == svn_wc__db_kind_dir && parent_stub);
+
+      SVN_ERR(svn_wc__db_temp_op_set_rev_and_repos_relpath(db, local_abspath,
+                                                          new_rev,
+                                                          set_repos_relpath,
+                                                          new_repos_relpath,
+                                                          repos_root_url,
+                                                          repos_uuid,
+                                                          update_stub,
+                                                          scratch_pool));
     }
 
   return SVN_NO_ERROR;
