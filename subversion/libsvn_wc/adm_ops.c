@@ -1681,12 +1681,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     tmp_entry.kind = kind;
     modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
 
-    if (! (is_replace || copyfrom_url))
-      {
-        tmp_entry.revision = 0;
-        modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
-      }
-
     /* If a copy ancestor was given, make sure the copyfrom URL is in the same
        repository (if possible) and put the proper ancestry info in the new
        entry */

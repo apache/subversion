@@ -884,6 +884,9 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
                                NULL, wc_ctx->db, local_abspath, result_pool,
                                scratch_pool));
 
+  if (SVN_IS_VALID_REVNUM(*changed_rev) && SVN_IS_VALID_REVNUM(*revision))
+    return SVN_NO_ERROR; /* We got everything we need */
+
   if (status == svn_wc__db_status_deleted)
     {
       const char *work_del_abspath = NULL;
@@ -916,11 +919,21 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
     }
   else if (base_shadowed)
     {
-      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL, NULL,
+      svn_wc__db_status_t base_status;
+      svn_revnum_t base_rev;
+      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &base_rev, NULL, NULL,
                                        NULL, changed_rev, changed_date,
                                        changed_author, NULL, NULL, NULL,
                                        NULL, NULL, NULL, wc_ctx->db, local_abspath,
                                        result_pool, scratch_pool));
+
+      if (revision && !SVN_IS_VALID_REVNUM(*revision)
+          && base_status != svn_wc__db_status_not_present)
+        {
+          /* When we used entries we reset the revision to 0 when we added a new
+             node over an existing not present node */
+          *revision = base_rev;
+        }
     }
   return SVN_NO_ERROR;
 }
