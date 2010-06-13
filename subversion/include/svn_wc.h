@@ -994,7 +994,8 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_changelist_clear,
 
   /** Warn user that a path has moved from one changelist to another.
-      @since New in 1.5. */
+      @since New in 1.5.
+      @deprecated As of 1.7, separate clear and set notifications are sent. */
   svn_wc_notify_changelist_moved,
 
   /** A merge operation (to path) has begun.  See #svn_wc_notify_t.merge_range.
@@ -1209,7 +1210,7 @@ typedef struct svn_wc_notify_t {
    */
   svn_revnum_t revision;
 
-  /** When @c action is #svn_wc_notify_changelist_add or name. (### What?)
+  /** If @c action pertains to a changelist, this is the changelist name.
    * In all other cases, it is @c NULL.  @since New in 1.5 */
   const char *changelist_name;
 

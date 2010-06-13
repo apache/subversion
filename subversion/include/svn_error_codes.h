@@ -470,7 +470,9 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 28,
              "Failed to locate 'copyfrom' path in working copy")
 
-  /** @since New in 1.5. */
+  /** @since New in 1.5.
+   * @deprecated This event is not an error, and is now reported
+   * via the standard notification mechanism instead. */
   SVN_ERRDEF(SVN_ERR_WC_CHANGELIST_MOVE,
              SVN_ERR_WC_CATEGORY_START + 29,
              "Moving a path from one changelist to another")

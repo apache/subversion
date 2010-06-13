@@ -2909,22 +2909,6 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
       && strcmp(existing_changelist, changelist) == 0)
     return SVN_NO_ERROR;
 
-  /* If the path is already a member of a changelist, warn the
-     user about this, but still allow the reassignment to happen. */
-  if (existing_changelist && changelist && notify_func)
-    {
-      svn_error_t *reassign_err =
-        svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
-                          _("Removing '%s' from changelist '%s'."),
-                          local_abspath, existing_changelist);
-      notify = svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_changelist_moved,
-                                    scratch_pool);
-      notify->err = reassign_err;
-      notify_func(notify_baton, notify, scratch_pool);
-      svn_error_clear(notify->err);
-    }
-
   /* Set the changelist. */
   SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db, local_abspath, changelist,
                                        scratch_pool));
@@ -2932,13 +2916,23 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
   /* And tell someone what we've done. */
   if (notify_func)
     {
-      notify = svn_wc_create_notify(local_abspath,
-                                    changelist
-                                    ? svn_wc_notify_changelist_set
-                                    : svn_wc_notify_changelist_clear,
-                                    scratch_pool);
-      notify->changelist_name = changelist;
-      notify_func(notify_baton, notify, scratch_pool);
+      if (existing_changelist)
+        {
+          notify = svn_wc_create_notify(local_abspath,
+                                        svn_wc_notify_changelist_clear,
+                                        scratch_pool);
+          notify->changelist_name = existing_changelist;
+          notify_func(notify_baton, notify, scratch_pool);
+        }
+
+      if (changelist)
+        {
+          notify = svn_wc_create_notify(local_abspath,
+                                        svn_wc_notify_changelist_set,
+                                        scratch_pool);
+          notify->changelist_name = changelist;
+          notify_func(notify_baton, notify, scratch_pool);
+        }
     }
 
   return SVN_NO_ERROR;
