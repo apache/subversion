@@ -163,6 +163,26 @@ Candidate changes:
    Votes:
      +1: stylesen, pburba
 
+ * r953878, r876855
+   Fix issue #3654 'Added subtrees with mergeinfo break reintegrate'
+   Justification:
+     In certain use cases, this bug breaks reintegrate merges.  Love or
+     hate reintegrate, many users like it and rely on it heavily.  See
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3654 for more.
+   Notes:
+     r953878 is a new test for this issue.
+     r876855 is from ^/subversion/branches/subtree-mergeinfo@876855 and is
+     actual fix for this issue on 1.6.x.  The subtree-mergeinfo branch is
+     already on trunk in it's entirety, but we want only this small portion
+     on 1.6.x.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3654
+     When reintegrating the branch use the '-x --ignore-eol-style' option or
+     the entire merge_tests.py file conflicts.  No idea why this is, the file
+     has svn:eolstyle native on both 1.6.x and the branch.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
