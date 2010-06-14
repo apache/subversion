@@ -5320,7 +5320,8 @@ def merge_to_target_with_copied_children(sbox):
     'pi'       : Item("This is the file 'pi'.\n"),
     'rho'      : Item("New content"),
     'rho_copy' : Item("New content",
-                      props={SVN_PROP_MERGEINFO : '/A/D/G/rho:4'}),
+                      props={SVN_PROP_MERGEINFO :
+                             '/A/D/G/rho:4\n/A/D/G/rho_copy:4-5'}),
     'tau'      : Item("This is the file 'tau'.\n"),
     })
   expected_skip = wc.State(G_COPY_path, { })
