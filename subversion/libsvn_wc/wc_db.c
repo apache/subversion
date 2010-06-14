@@ -672,9 +672,9 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
           SVN_ERR(svn_sqlite__bindf(stmt, "issi",
                                     pibb->wc_id,
-                                    svn_dirent_join(pibb->local_relpath,
-                                                    name,
-                                                    scratch_pool),
+                                    svn_relpath_join(pibb->local_relpath,
+                                                     name,
+                                                     scratch_pool),
                                     pibb->local_relpath,
                                     (apr_int64_t)pibb->revision));
           SVN_ERR(svn_sqlite__insert(NULL, stmt));
@@ -8475,3 +8475,103 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
+struct set_new_dir_to_incomplete_baton
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  const char *repos_uuid;
+  svn_revnum_t revision;
+};
+
+static svn_error_t *
+set_new_dir_to_incomplete_baton_txn(void *baton,
+                                    svn_sqlite__db_t *sdb,
+                                    apr_pool_t *scratch_pool)
+{
+  struct set_new_dir_to_incomplete_baton *dtb = baton;
+  svn_sqlite__stmt_t *stmt;
+  apr_int64_t repos_id;
+  const char *parent_relpath = (*dtb->local_relpath == '\0')
+                                  ? NULL
+                                  : svn_relpath_dirname(dtb->local_relpath,
+                                                        scratch_pool);
+
+  SVN_ERR(create_repos_id(&repos_id, dtb->repos_root_url, dtb->repos_uuid,
+                          sdb, scratch_pool));
+
+  /* Delete the working node */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
+                                    STMT_DELETE_WORKING_NODE));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", dtb->pdh->wcroot->wc_id,
+                                        dtb->local_relpath));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Delete the base node if there is a not present one */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
+                                    STMT_DELETE_BASE_NODE));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", dtb->pdh->wcroot->wc_id,
+                                        dtb->local_relpath));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+
+  /* Insert the incomplete base node */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
+                                    STMT_INSERT_BASE_NODE_INCOMPLETE_DIR));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "isissi", dtb->pdh->wcroot->wc_id,
+                                            dtb->local_relpath,
+                                            repos_id,
+                                            dtb->repos_relpath,
+                                            parent_relpath,
+                                            (apr_int64_t)dtb->revision));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
+                                             const char *local_abspath,
+                                             const char *repos_relpath,
+                                             const char *repos_root_url,
+                                             const char *repos_uuid,
+                                             svn_revnum_t revision,
+                                             apr_pool_t *scratch_pool)
+{
+  struct set_new_dir_to_incomplete_baton baton;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(repos_relpath && repos_root_url && repos_uuid);
+
+  baton.repos_relpath = repos_relpath;
+  baton.repos_root_url = repos_root_url;
+  baton.repos_uuid = repos_uuid;
+  baton.revision = revision;
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&baton.pdh, &baton.local_relpath,
+                                             db, local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+
+  VERIFY_USABLE_PDH(baton.pdh);
+
+  flush_entries(baton.pdh);
+
+  SVN_DBG(("Performing on %s\n", local_abspath));
+
+  SVN_ERR(svn_sqlite__with_transaction(baton.pdh->wcroot->sdb,
+                                       set_new_dir_to_incomplete_baton_txn,
+                                       &baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+

@@ -2456,7 +2456,24 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
                                              svn_boolean_t update_stub,
                                              apr_pool_t *scratch_pool);
 
-
+/* Tweak a locally added existing directory LOCAL_ABSPATH to have a base
+   node with incomplete status and revision REVISION instead. If
+   REPOS_RELPATH is not NULL, apply REPOS_RELPATH, REPOS_ROOT_URL and
+   REPOS_UUID.
+   Perform all temporary allocations in SCRATCH_POOL.
+   
+   ### For 1.7 this should probably become a proper tree conflict and
+   ### just handled by putting a base directory below the existing
+   ### working node.
+   */
+svn_error_t *
+svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
+                                             const char *local_abspath,
+                                             const char *repos_relpath,
+                                             const char *repos_root_url,
+                                             const char *repos_uuid,
+                                             svn_revnum_t revision,
+                                             apr_pool_t *scratch_pool);
 
 /* @} */
 
