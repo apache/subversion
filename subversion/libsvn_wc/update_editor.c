@@ -2593,26 +2593,24 @@ add_directory(const char *path,
           /* Immediately tweak the schedule for "this dir" so it too
              is no longer scheduled for addition.  Change rev from 0
              to the target revision allowing prep_directory() to do
-             its thing without error. */
-          svn_wc_entry_t tmp_entry;
-          int modify_flags = (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                              | SVN_WC__ENTRY_MODIFY_FORCE
-                              | SVN_WC__ENTRY_MODIFY_REVISION);
+             its thing without error. 
 
-          tmp_entry.schedule = svn_wc_schedule_normal;
-          tmp_entry.revision = *(eb->target_revision);
+             ### In the future this should probably become a proper
+             ### tree conflict and just handled by putting a base
+             ### directory below the existing working node.
+             */
+          SVN_ERR(svn_wc__db_temp_op_set_new_dir_to_incomplete(
+                                                  eb->db,
+                                                  db->local_abspath,
+                                                  db->new_relpath,
+                                                  eb->repos_root,
+                                                  eb->repos_uuid,
+                                                  *eb->target_revision,
+                                                  pool));
 
-          if (eb->switch_relpath)
-            {
-              tmp_entry.url = svn_path_url_add_component2(eb->repos_root,
-                                                          db->new_relpath,
-                                                          pool);
-              modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
-            }
-
-          SVN_ERR(svn_wc__entry_modify(eb->db, db->local_abspath,
-                                       svn_node_dir,
-                                       &tmp_entry, modify_flags, pool));
+          SVN_ERR(svn_wc__db_temp_set_parent_stub_to_normal(eb->db,
+                                                            db->local_abspath,
+                                                            TRUE, pool));
         }
     }
 
