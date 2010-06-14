@@ -130,7 +130,8 @@ svn_io_check_resolved_path(const char *path,
  * utf-8 encoded @a filename, in the directory @a dirpath.  The file handle is
  * returned in @a *file, and the name, which ends with @a suffix, is returned
  * in @a *unique_name, also utf8-encoded.  Either @a file or @a unique_name
- * may be @c NULL.
+ * may be @c NULL.  If @a file is @c NULL, the file will be created but not
+ * open.
  *
  * If @a delete_when is #svn_io_file_del_on_close, then the @c APR_DELONCLOSE
  * flag will be used when opening the file.  The @c APR_BUFFERED flag will
