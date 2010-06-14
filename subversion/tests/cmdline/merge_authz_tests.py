@@ -408,6 +408,146 @@ def mergeinfo_and_skipped_paths(sbox):
                                        None, None, None, None,
                                        None, 1, 0)
 
+def reintegrate_fails_if_no_root_access(sbox):
+  "reintegrate fails if no root access"
+
+  # If a user is authorized to a reintegrate source and target, they
+  # should be able to reintegrate, regardless of what authorization
+  # they have to parents of the source and target.
+  #
+  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3242#desc78
+
+  # Some paths we'll care about
+  wc_dir = sbox.wc_dir
+  A_path          = os.path.join(wc_dir, 'A')
+  A_COPY_path     = os.path.join(wc_dir, 'A_COPY')
+  beta_COPY_path  = os.path.join(wc_dir, 'A_COPY', 'B', 'E', 'beta')
+  rho_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'rho')
+  omega_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'omega')
+  psi_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+      
+  # Copy A@1 to A_COPY in r2, and then make some changes to A in r3-6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Make a change on the branch, to A_COPY/mu, commit in r7.
+  svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
+                          "Changed on the branch.")
+  expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY/mu', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A_COPY/mu', contents='Changed on the branch.')
+
+  # Update the WC.
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+
+  # Sync A_COPY with A.
+  expected_output = expected_merge_output([[2,7]],
+                                          ['U    ' + beta_COPY_path  + '\n',
+                                           'U    ' + rho_COPY_path   + '\n',
+                                           'U    ' + omega_COPY_path + '\n',
+                                           'U    ' + psi_COPY_path   + '\n',
+                                           # Mergeinfo notification
+                                           ' U   ' + A_COPY_path     + '\n'])
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'synch A_COPY with A', wc_dir)
+
+  # Change authz file so everybody has access to everything but the root.  
+  if is_ra_type_svn() or is_ra_type_dav():
+    write_authz_file(sbox, {"/"       : "* =",
+                            "/A"      : "* = rw",
+                            "/A_COPY" : "* = rw",
+                            "/iota"   : "* = rw"})
+
+  # Now reintegrate A_COPY back to A.  The lack of access to the root of the
+  # repository shouldn't be a problem.  Right now it fails with this error:
+  #
+  #  >svn merge ^/A_COPY A --reintegrate
+  #  ..\..\..\subversion\svn\merge-cmd.c:358: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_client\merge.c:9758: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_client\merge.c:9728: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_client\merge.c:9573: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_ra\ra_loader.c:488: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_ra\ra_loader.c:488: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_ra\ra_loader.c:488: (apr_err=175009)
+  #  svn: Unable to connect to a repository at URL 'http://localhost/
+  #    svn-test-work/repositories/merge_authz_tests-3'
+  #  ..\..\..\subversion\libsvn_ra_serf\options.c:490: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_ra_serf\util.c:595: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_ra_serf\util.c:1436: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_ra_serf\util.c:1127: (apr_err=175009)
+  #  ..\..\..\subversion\libsvn_ra_serf\util.c:1127: (apr_err=175009)
+  #  svn: XML parsing failed: (403 Forbidden)
+  #
+  # This test is set as XFail until this is fixed.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_output = wc.State(A_path, {
+    'mu'           : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_path, {
+    '' : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(A_path, {
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-8'}),
+    'B'         : Item(),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/F'       : Item(),
+    'mu'        : Item("Changed on the branch."),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/omega' : Item("New content"),
+    'D/H/psi'   : Item("New content"),
+  })
+  expected_status = wc.State(A_path, {
+    "B"            : Item(status='  ', wc_rev=8),
+    "B/lambda"     : Item(status='  ', wc_rev=8),
+    "B/E"          : Item(status='  ', wc_rev=8),
+    "B/E/alpha"    : Item(status='  ', wc_rev=8),
+    "B/E/beta"     : Item(status='  ', wc_rev=8),
+    "B/F"          : Item(status='  ', wc_rev=8),
+    "mu"           : Item(status='M ', wc_rev=8),
+    "C"            : Item(status='  ', wc_rev=8),
+    "D"            : Item(status='  ', wc_rev=8),
+    "D/gamma"      : Item(status='  ', wc_rev=8),
+    "D/G"          : Item(status='  ', wc_rev=8),
+    "D/G/pi"       : Item(status='  ', wc_rev=8),
+    "D/G/rho"      : Item(status='  ', wc_rev=8),
+    "D/G/tau"      : Item(status='  ', wc_rev=8),
+    "D/H"          : Item(status='  ', wc_rev=8),
+    "D/H/chi"      : Item(status='  ', wc_rev=8),
+    "D/H/omega"    : Item(status='  ', wc_rev=8),
+    "D/H/psi"      : Item(status='  ', wc_rev=8),
+    ""             : Item(status=' M', wc_rev=8),
+  })
+  expected_skip = wc.State(A_path, {})
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, True, True,
+                                       '--reintegrate')
+  
 ########################################################################
 # Run the tests
 
@@ -417,6 +557,9 @@ test_list = [ None,
               SkipUnless(Skip(mergeinfo_and_skipped_paths,
                               svntest.main.is_ra_type_file),
                          svntest.main.server_has_mergeinfo),
+              XFail(SkipUnless(Skip(reintegrate_fails_if_no_root_access,
+                                    svntest.main.is_ra_type_file),
+                               svntest.main.server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':
