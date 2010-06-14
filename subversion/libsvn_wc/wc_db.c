@@ -8566,8 +8566,6 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
 
   flush_entries(baton.pdh);
 
-  SVN_DBG(("Performing on %s\n", local_abspath));
-
   SVN_ERR(svn_sqlite__with_transaction(baton.pdh->wcroot->sdb,
                                        set_new_dir_to_incomplete_baton_txn,
                                        &baton, scratch_pool));
