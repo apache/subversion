@@ -4866,14 +4866,19 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   if (status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_incomplete)
     {
-      svn_sqlite__stmt_t *stmt;
+      if (base_shadowed)
+        rb.have_base_node = TRUE;
+      else
+        {
+          svn_sqlite__stmt_t *stmt;
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                        STMT_SELECT_BASE_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                pdh->wcroot->wc_id, rb.local_relpath));
-      SVN_ERR(svn_sqlite__step(&rb.have_base_node, stmt));
-      SVN_ERR(svn_sqlite__reset(stmt));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                            STMT_SELECT_BASE_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    pdh->wcroot->wc_id, rb.local_relpath));
+          SVN_ERR(svn_sqlite__step(&rb.have_base_node, stmt));
+          SVN_ERR(svn_sqlite__reset(stmt));
+        }
     }
   else if (base_shadowed || status == svn_wc__db_status_normal
            || status == svn_wc__db_status_absent
