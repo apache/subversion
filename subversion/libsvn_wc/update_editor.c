@@ -4369,7 +4369,7 @@ merge_file(svn_skel_t **work_items,
         }
       else   /* working file or obstruction is locally modified... */
         {
-          svn_node_kind_t wfile_kind = svn_node_unknown;
+          svn_node_kind_t wfile_kind;
 
           SVN_ERR(svn_io_check_path(fb->local_abspath, &wfile_kind, pool));
           if (wfile_kind == svn_node_none && ! fb->added_with_history)
