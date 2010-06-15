@@ -3315,29 +3315,39 @@ svn_wc__temp_mark_missing_not_present(const char *local_abspath,
 {
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
+  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  svn_revnum_t revision;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(svn_wc__db_read_info(&status, &kind,
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision, &repos_relpath,
+                               &repos_root_url, &repos_uuid, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL,
+                               NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
   if (kind == svn_wc__db_kind_dir
       && status == svn_wc__db_status_obstructed_delete)
     {
-      svn_wc_entry_t tmp_entry;
+      if (!repos_relpath)
+        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                           &repos_uuid,
+                                           wc_ctx->db, local_abspath,
+                                           scratch_pool, scratch_pool));
 
-      tmp_entry.deleted = TRUE;
-      tmp_entry.schedule = svn_wc_schedule_normal;
+      SVN_ERR(svn_wc__db_temp_op_remove_entry(wc_ctx->db, local_abspath,
+                                              scratch_pool));
 
-      SVN_ERR(svn_wc__entry_modify_stub(wc_ctx->db, local_abspath,
-                                        &tmp_entry,
-                                        (SVN_WC__ENTRY_MODIFY_DELETED
-                                         | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                         | SVN_WC__ENTRY_MODIFY_FORCE),
-                                        scratch_pool));
+      if (!SVN_IS_VALID_REVNUM(revision))
+        revision = 0; /* Just make one up */
+
+      SVN_ERR(svn_wc__db_base_add_absent_node(wc_ctx->db, local_abspath,
+                                              repos_relpath, repos_root_url,
+                                              repos_uuid, revision,
+                                              svn_wc__db_kind_dir,
+                                              svn_wc__db_status_not_present,
+                                              NULL, NULL, scratch_pool));
+
       return SVN_NO_ERROR;
     }
 
@@ -3345,24 +3355,4 @@ svn_wc__temp_mark_missing_not_present(const char *local_abspath,
                            _("Unexpectedly found '%s': "
                              "path is marked 'missing'"),
                            svn_dirent_local_style(local_abspath, scratch_pool));
-}
-
-svn_error_t *
-svn_wc_mark_missing_deleted(const char *path,
-                            svn_wc_adm_access_t *parent,
-                            apr_pool_t *pool)
-{
-  const char *local_abspath;
-  svn_wc_context_t *wc_ctx;
-
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(parent), pool));
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  SVN_ERR(svn_wc__temp_mark_missing_not_present(local_abspath, wc_ctx, pool));
-
-  SVN_ERR(svn_wc_context_destroy(wc_ctx));
-
-  return SVN_NO_ERROR;
 }

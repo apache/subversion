@@ -1963,6 +1963,35 @@ svn_wc_walk_entries(const char *path,
                               pool);
 }
 
+svn_error_t *
+svn_wc_mark_missing_deleted(const char *path,
+                            svn_wc_adm_access_t *parent,
+                            apr_pool_t *pool)
+{
+#if SINGLE_DB
+  /* With a single DB a node will never be missing */
+  return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
+                           _("Unexpectedly found '%s': "
+                             "path is marked 'missing'"),
+                           svn_dirent_local_style(path, scratch_pool));
+#else
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(parent), pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__temp_mark_missing_not_present(local_abspath, wc_ctx, pool));
+
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+  return SVN_NO_ERROR;
+#endif
+}
+
+
 /*** From props.c ***/
 svn_error_t *
 svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
