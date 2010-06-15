@@ -213,12 +213,9 @@ run_revert(svn_wc__db_t *db,
   const char *local_abspath;
   svn_boolean_t replaced;
   svn_wc__db_kind_t kind;
-  svn_node_kind_t node_kind;
   const char *working_props_path;
   const char *parent_abspath;
   svn_boolean_t conflicted;
-  int modify_flags = 0;
-  svn_wc_entry_t tmp_entry;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
@@ -295,10 +292,10 @@ run_revert(svn_wc__db_t *db,
 #else
           /* For WC-1: If there is a "revert base" file (because the file
            * is replaced), then move that revert base over to the normal
-           * base and update the normal base checksum accordingly. */
+           * base. WC-NG keeps the checksum which we used to recalculate
+           * in the past. */
           const char *revert_base_path;
           const char *text_base_path;
-          svn_checksum_t *checksum;
 
           SVN_ERR(svn_wc__text_revert_path(&revert_base_path, db,
                                            local_abspath, scratch_pool));
@@ -306,19 +303,6 @@ run_revert(svn_wc__db_t *db,
                                          scratch_pool));
           SVN_ERR(move_if_present(revert_base_path, text_base_path,
                                   scratch_pool));
-
-          /* At this point, the regular text base has been restored (just
-             now, or on a prior run). We need to recompute the checksum
-             from that.
-
-             ### in wc-1, this recompute only happened for add-with-history.
-             ### need to investigate, but maybe the checksum was not touched
-             ### for a simple replacing add? regardless, this recompute is
-             ### always okay to do.  */
-          SVN_ERR(svn_io_file_checksum2(&checksum, text_base_path,
-                                        svn_checksum_md5, scratch_pool));
-          tmp_entry.checksum = svn_checksum_to_cstring(checksum, scratch_pool);
-          modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
 #endif
         }
       else if (!reinstall_working)
@@ -418,50 +402,19 @@ run_revert(svn_wc__db_t *db,
                                           scratch_pool));
     }
 
-  /* Clean up the copied state for all replacements.  */
-  if (replaced)
-    {
-      modify_flags |= (SVN_WC__ENTRY_MODIFY_COPIED
-                       | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                       | SVN_WC__ENTRY_MODIFY_COPYFROM_REV);
-      tmp_entry.copied = FALSE;
-      tmp_entry.copyfrom_url = NULL;
-      tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
-    }
+  {
+    svn_boolean_t is_wc_root;
 
-  /* Reset schedule attribute to svn_wc_schedule_normal. It could already be
-     "normal", but no biggy if this is a no-op.  */
-  modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
-  tmp_entry.schedule = svn_wc_schedule_normal;
+    SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
+                                  db, local_abspath, scratch_pool));
 
-  /* We need the old school KIND...  */
-  if (kind == svn_wc__db_kind_dir)
-    {
-      node_kind = svn_node_dir;
-    }
-  else
-    {
-      SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
-                     || kind == svn_wc__db_kind_symlink);
-      node_kind = svn_node_file;
-    }
-
-  SVN_ERR(svn_wc__entry_modify(db, local_abspath, node_kind,
-                               &tmp_entry, modify_flags,
-                               scratch_pool));
-
-  /* ### need to revert some bits in the parent stub. sigh.  */
-  if (kind == svn_wc__db_kind_dir)
-    {
-      svn_boolean_t is_wc_root, is_switched;
-
-      /* There is no parent stub if we're at the root.  */
-      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, &is_switched,
-                                    db, local_abspath, scratch_pool));
-      if (!is_wc_root && !is_switched)
-        SVN_ERR(svn_wc__db_temp_op_remove_working_stub(db, local_abspath,
-                                                       scratch_pool));
-    }
+    /* Remove the WORKING_NODE from the node and (if there) its parent stub */
+    /* ### A working copy root can't have a working node and trying
+       ### to delete it fails because the root doesn't have a stub. */
+    if (!is_wc_root)
+      SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
+                                                scratch_pool));
+  }
 
   return SVN_NO_ERROR;
 }
