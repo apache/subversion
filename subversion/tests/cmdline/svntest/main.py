@@ -1302,7 +1302,6 @@ def run_tests(test_list, serial_only = False):
   # Should the tests be listed (as opposed to executed)?
   list_tests = False
 
-  parallel = 0
   svn_bin = None
   use_jsvn = False
   keep_local_tmp = False
@@ -1481,7 +1480,7 @@ def run_tests(test_list, serial_only = False):
     svntest.actions.setup_pristine_repository()
 
   # Run the tests.
-  exit_code = _internal_run_tests(test_list, testnums, parallel)
+  exit_code = _internal_run_tests(test_list, testnums, options.parallel)
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
