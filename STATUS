@@ -34,11 +34,13 @@ Candidate changes:
  * r879966, r879971
    Reduce the lifetime of the rep-sharing database handles in FSFS to avoid
    having writers blocking readers, and update that database outside the
-   general FSFS write lock.  This address issue #3506.
+   general FSFS write lock.  This addresses issue #3506.
    Justification:
      The performance problems and outright failures of the current code
      are hurting the ASF repository, and presumably other high-concurrency
      repositories, too, when large commits occur.
+   Justification:
+     Pre-requisite for the r934599 group.
    Branch:
      ^/subversion/branches/1.6.x-issue3506
    Votes:
@@ -48,7 +50,9 @@ Candidate changes:
    Fix a concurrency issue in the FSFS rep-cache code.  This indirectly
    concerns issue #3506.
    Justification:
-     Opening the DB twice (and overwriting the handle) is undesired.
+     Thread safety.
+   Thread:
+     http://article.gmane.org/gmane.comp.version-control.subversion.devel/119483
    Notes:
      r934599 updates the svn_atomic__init_once() interface.
      r934603 is the actual fix.
