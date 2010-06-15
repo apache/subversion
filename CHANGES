@@ -8,7 +8,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.12
    * fix errors with 'svn mkdir --parents' (issue #3649)
    * update address to which crash reports are sent (r901304)
    * check for server certificate revocation on Windows (r898048)
-   * disable custome file mutexes on Windows (r879902, -16)
+   * disable custom file mutexes on Windows (r879902, -16)
    * fixed: assertion triggered by tree-conflicted externals (issue #3469)
 
   Developer-visible changes:
