@@ -4446,7 +4446,6 @@ merge_file(svn_skel_t **work_items,
                  ###   place this file into an inconsistent state.
                  ###   in the future, all the state changes should be
                  ###   made atomically.  */
-              /* ### this should return a work_items  */
               SVN_ERR(svn_wc__internal_merge(
                         &work_item,
                         &merge_outcome,
