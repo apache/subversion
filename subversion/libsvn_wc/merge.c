@@ -297,7 +297,12 @@ maybe_update_target_eols(const char **new_target_abspath,
 }
 
 
-/* Helper for do_text_merge_internal() below. */
+/* Set *TARGET_MARKER, *LEFT_MARKER and *RIGHT_MARKER to strings suitable
+   for delimiting the alternative texts in a text conflict.  Include in each
+   marker a string that may be given by TARGET_LABEL, LEFT_LABEL and
+   RIGHT_LABEL respectively or a default value where any of those are NULL.
+
+   Allocate the results in POOL or statically. */
 static void
 init_conflict_markers(const char **target_marker,
                       const char **left_marker,
@@ -600,9 +605,26 @@ eval_conflict_func_result(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
-/* Preserve the three pre-merge files, and modify the
-   entry (mark as conflicted, track the preserved files). */
-static svn_error_t*
+/* Preserve the three pre-merge files, and update the DB to track them.
+
+   Create three empty files, with unique names that each include the
+   basename of TARGET_ABSPATH and one of LEFT_LABEL, RIGHT_LABEL and
+   TARGET_LABEL, in the directory that contains TARGET_ABSPATH.  Typical
+   names are "foo.c.r37" or "foo.c.2.mine".
+
+   Set *WORK_ITEMS to a list of new work items that will write copies of
+   LEFT_ABSPATH, RIGHT_ABSPATH and TARGET_ABSPATH into the three files,
+   translated to working-copy form, and that will then update
+   TARGET_ABSPATH's entry in DB to track these files.
+
+   The translation to working-copy form will be done according to the
+   versioned properties of TARGET_ABSPATH that are current at the point in
+   the work queue where these translating copies are performed.
+
+   ### TODO for WC-NG: Should update the DB outside the work queue: see
+       svn_wc__wq_tmp_build_set_text_conflict_markers()'s doc string.
+*/
+static svn_error_t *
 preserve_pre_merge_files(svn_skel_t **work_items,
                          svn_wc__db_t *db,
                          const char *left_abspath,
@@ -628,38 +650,18 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
                                          scratch_pool, scratch_pool));
 
-  /* I miss Lisp. */
-
-  SVN_ERR(svn_io_open_uniquely_named(NULL,
-                                     &left_copy,
-                                     dir_abspath,
-                                     target_name,
-                                     left_label,
-                                     svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-
-  /* Have I mentioned how much I miss Lisp? */
-
-  SVN_ERR(svn_io_open_uniquely_named(NULL,
-                                     &right_copy,
-                                     dir_abspath,
-                                     target_name,
-                                     right_label,
-                                     svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-
-  /* Why, how much more pleasant to be forced to unroll my loops.
-     If I'd been writing in Lisp, I might have mapped an inline
-     lambda form over a list, or something equally disgusting.
-     Thank goodness C was here to protect me! */
-
-  SVN_ERR(svn_io_open_uniquely_named(NULL,
-                                     &target_copy,
-                                     dir_abspath,
-                                     target_name,
-                                     target_label,
-                                     svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
+  /* Create three empty files in DIR_ABSPATH, naming them with unique names
+     that each include TARGET_NAME and one of {LEFT,RIGHT,TARGET}_LABEL,
+     and set {LEFT,RIGHT,TARGET}_COPY to those names. */
+  SVN_ERR(svn_io_open_uniquely_named(
+            NULL, &left_copy, dir_abspath, target_name, left_label,
+            svn_io_file_del_none, scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_open_uniquely_named(
+            NULL, &right_copy, dir_abspath, target_name, right_label,
+            svn_io_file_del_none, scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_open_uniquely_named(
+            NULL, &target_copy, dir_abspath, target_name, target_label,
+            svn_io_file_del_none, scratch_pool, scratch_pool));
 
   /* We preserve all the files with keywords expanded and line
      endings in local (working) form. */
@@ -795,14 +797,13 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
-  svn_wc_conflict_result_t *result = NULL;
+  svn_wc_conflict_result_t *result;
   const char *dir_abspath;
   svn_skel_t *work_item;
 
   *work_items = NULL;
 
-  dir_abspath = svn_dirent_dirname(target_abspath, pool);
+  dir_abspath = svn_dirent_dirname(target_abspath, scratch_pool);
 
   /* Give the conflict resolution callback a chance to clean
      up the conflicts before we mark the file 'conflicted' */
@@ -811,7 +812,7 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
       /* If there is no interactive conflict resolution then we are effectively
          postponing conflict resolution. */
       result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
-                                             NULL, pool);
+                                             NULL, scratch_pool);
     }
   else
     {
@@ -826,9 +827,9 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
                                        detranslated_target,
                                        mimeprop,
                                        FALSE,
-                                       pool);
+                                       scratch_pool);
 
-      SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
+      SVN_ERR(conflict_func(&result, cdesc, conflict_baton, scratch_pool));
       if (result == NULL)
         return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                 NULL, _("Conflict callback violated API:"
