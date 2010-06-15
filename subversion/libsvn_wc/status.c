@@ -2555,10 +2555,11 @@ internal_status(svn_wc_status3_t **status,
                 apr_pool_t *scratch_pool)
 {
   svn_node_kind_t path_kind;
+  svn_wc__db_kind_t node_kind;
   svn_boolean_t path_special;
-  const svn_wc_entry_t *entry;
   const char *parent_repos_relpath;
   const char *parent_repos_root_url;
+  svn_wc__db_status_t node_status;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -2566,28 +2567,37 @@ internal_status(svn_wc_status3_t **status,
   SVN_ERR(svn_io_check_special_path(local_abspath, &path_kind, &path_special,
                                     scratch_pool));
 
-  err = svn_wc__get_entry(&entry, db, local_abspath, TRUE,
-                          svn_node_unknown, FALSE, scratch_pool, scratch_pool);
-  if (err && (err->apr_err == SVN_ERR_WC_MISSING
-                || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
-                || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-                || err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND))
+  err = svn_wc__db_read_info(&node_status, &node_kind, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, db, local_abspath,
+                             scratch_pool, scratch_pool);
+
+  if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      || node_status == svn_wc__db_status_obstructed
+      || node_status == svn_wc__db_status_obstructed_add
+      || node_status == svn_wc__db_status_obstructed_delete
+      || node_status == svn_wc__db_status_not_present)
     {
       svn_error_clear(err);
-      entry = NULL;
+      node_kind = svn_wc__db_kind_unknown;
     }
-  else if (err)
-    return svn_error_return(err);
+  else
+    SVN_ERR(err);
 
-  if (entry)
+  if (node_kind != svn_wc__db_kind_unknown)
     {
       svn_boolean_t hidden;
 
-      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+      /* Check for hidden in the parent stub */
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath,
+                                     scratch_pool));
+
       if (hidden)
-        entry = NULL;
+        node_kind = svn_wc__db_kind_unknown;
     }
-  if (entry == NULL)
+
+  if (node_kind == svn_wc__db_kind_unknown)
     return svn_error_return(assemble_unversioned(status,
                                                  db, local_abspath,
                                                  path_kind,
@@ -2597,6 +2607,7 @@ internal_status(svn_wc_status3_t **status,
   if (!svn_dirent_is_root(local_abspath, strlen(local_abspath)))
     {
       svn_wc__db_status_t parent_status;
+      svn_error_t *err;
       const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                       scratch_pool);
 
