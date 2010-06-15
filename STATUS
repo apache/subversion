@@ -135,7 +135,7 @@ Candidate changes:
    Notes:
      r950445 fixes the issue and r950468 is a test for this issue.
    Votes:
-     +1: stylesen
+     +1: stylesen, cmpilato
 
  * r950931, 950933
    Fix for issue #3303 "cannot copy broken symlink".
@@ -146,22 +146,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3303
    Votes:
-     +1: stylesen
-
- * r952973, r952992
-   Fix for issue #3651 "svn copy does not eat peg revision within copy target
-   path"
-   Justification:
-     This issue exists in 1.6.x.
-   Notes:
-     r952973 fixes the issue and r952992 is a test for this issue. Both r952973
-     and r952992 are merged into the backport branch 1.6.x-issue3651.
-     Use the private API in the 1.6.x branch since the API was made public in
-     1.7. The backport branch exists in order to resolve this.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3651
-   Votes:
-     +1: stylesen, pburba
+     +1: stylesen, cmpilato
 
  * r953878, r876855
    Fix issue #3654 'Added subtrees with mergeinfo break reintegrate'
@@ -179,9 +164,9 @@ Candidate changes:
      ^/subversion/branches/1.6.x-issue3654
      When reintegrating the branch use the '-x --ignore-eol-style' option or
      the entire merge_tests.py file conflicts.  No idea why this is, the file
-     has svn:eolstyle native on both 1.6.x and the branch.
+     has svn:eol-style native on both 1.6.x and the branch.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
 Veto-blocked changes:
 =====================
@@ -258,3 +243,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r952973, r952992
+   Fix for issue #3651 "svn copy does not eat peg revision within copy target
+   path"
+   Justification:
+     This issue exists in 1.6.x.
+   Notes:
+     r952973 fixes the issue and r952992 is a test for this issue. Both r952973
+     and r952992 are merged into the backport branch 1.6.x-issue3651.
+     Use the private API in the 1.6.x branch since the API was made public in
+     1.7. The backport branch exists in order to resolve this.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3651
+   Votes:
+     +1: stylesen, pburba, cmpilato
