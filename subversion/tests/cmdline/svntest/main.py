@@ -1299,13 +1299,6 @@ def run_tests(test_list, serial_only = False):
   global options
 
   testnums = []
-  # Should the tests be listed (as opposed to executed)?
-  list_tests = False
-
-  svn_bin = None
-  use_jsvn = False
-  keep_local_tmp = False
-  config_file = None
 
   # set up the parser
   usage = 'usage: %prog [options] [<test> ...]'
@@ -1429,23 +1422,26 @@ def run_tests(test_list, serial_only = False):
   # Calculate pristine_url from test_area_url.
   pristine_url = options.test_area_url + '/' + pathname2url(pristine_dir)
 
-  if use_jsvn:
-    if svn_bin is None:
-      svn_bin = ''
-    svn_binary = os.path.join(svn_bin, 'jsvn' + _bat)
-    svnadmin_binary = os.path.join(svn_bin, 'jsvnadmin' + _bat)
-    svnlook_binary = os.path.join(svn_bin, 'jsvnlook' + _bat)
-    svnsync_binary = os.path.join(svn_bin, 'jsvnsync' + _bat)
-    svndumpfilter_binary = os.path.join(svn_bin, 'jsvndumpfilter' + _bat)
-    svnversion_binary = os.path.join(svn_bin, 'jsvnversion' + _bat)
+  if options.use_jsvn:
+    if options.svn_bin is None:
+      options.svn_bin = ''
+    svn_binary = os.path.join(options.svn_bin, 'jsvn' + _bat)
+    svnadmin_binary = os.path.join(options.svn_bin, 'jsvnadmin' + _bat)
+    svnlook_binary = os.path.join(options.svn_bin, 'jsvnlook' + _bat)
+    svnsync_binary = os.path.join(options.svn_bin, 'jsvnsync' + _bat)
+    svndumpfilter_binary = os.path.join(options.svn_bin,
+                                        'jsvndumpfilter' + _bat)
+    svnversion_binary = os.path.join(options.svn_bin,
+                                     'jsvnversion' + _bat)
   else:
-    if svn_bin:
-      svn_binary = os.path.join(svn_bin, 'svn' + _exe)
-      svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
-      svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
-      svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
-      svndumpfilter_binary = os.path.join(svn_bin, 'svndumpfilter' + _exe)
-      svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
+    if options.svn_bin:
+      svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)
+      svnadmin_binary = os.path.join(options.svn_bin, 'svnadmin' + _exe)
+      svnlook_binary = os.path.join(options.svn_bin, 'svnlook' + _exe)
+      svnsync_binary = os.path.join(options.svn_bin, 'svnsync' + _exe)
+      svndumpfilter_binary = os.path.join(options.svn_bin,
+                                          'svndumpfilter' + _exe)
+      svnversion_binary = os.path.join(options.svn_bin, 'svnversion' + _exe)
 
   ######################################################################
 
