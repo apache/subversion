@@ -24,6 +24,7 @@
 
 
 #define APR_WANT_STRFUNC
+#include <apr_version.h>
 #include <apr_want.h>
 
 #include <apr_uri.h>
@@ -308,8 +309,12 @@ struct report_context_t {
   const svn_delta_editor_t *update_editor;
   void *update_baton;
 
-  /* The request body for the REPORT. */
-  serf_bucket_t *buckets;
+  /* The file holding request body for the REPORT.
+   *
+   * ### todo: It will be better for performance to store small
+   * request bodies (like 4k) in memory and bigger bodies on disk.
+   */
+  apr_file_t *body_file;
 
   /* root directory object */
   report_dir_t *root_dir;
@@ -2002,6 +2007,18 @@ cdata_report(svn_ra_serf__xml_parser_t *parser,
 
 /** Editor callbacks given to callers to create request body */
 
+/* Helper to create simple xml tag without attributes. */
+static void
+make_simple_xml_tag(svn_stringbuf_t **buf_p,
+                    const char *tagname,
+                    const char *cdata,
+                    apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(buf_p, pool, svn_xml_protect_pcdata, tagname, NULL);
+  svn_xml_escape_cdata_cstring(buf_p, cdata, pool);
+  svn_xml_make_close_tag(buf_p, pool, tagname);
+}
+
 static svn_error_t *
 set_path(void *report_baton,
          const char *path,
@@ -2012,34 +2029,29 @@ set_path(void *report_baton,
          apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
+  svn_stringbuf_t *buf = NULL;
 
-  /* Copy data to report pool. */
-  lock_token = apr_pstrdup(report->pool, lock_token);
-  path  = apr_pstrdup(report->pool, path);
+  svn_xml_make_open_tag(&buf, pool, svn_xml_protect_pcdata, "S:entry",
+                        "rev", apr_ltoa(pool, revision),
+                        "lock-token", lock_token,
+                        "depth", svn_depth_to_word(depth),
+                        "start-empty", start_empty ? "true" : NULL,
+                        NULL);
+  svn_xml_escape_cdata_cstring(&buf, path, pool);
+  svn_xml_make_close_tag(&buf, pool, "S:entry");
 
-  svn_ra_serf__add_open_tag_buckets(report->buckets, report->sess->bkt_alloc,
-                                    "S:entry",
-                                    "rev", apr_ltoa(report->pool, revision),
-                                    "lock-token", lock_token,
-                                    "depth", svn_depth_to_word(depth),
-                                    "start-empty", start_empty ? "true" : NULL,
-                                    NULL);
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, pool));
 
   if (lock_token)
     {
       apr_hash_set(report->lock_path_tokens,
-                   path,
+                   apr_pstrdup(report->pool, path),
                    APR_HASH_KEY_STRING,
-                   lock_token);
+                   apr_pstrdup(report->pool, lock_token));
     }
 
-  svn_ra_serf__add_cdata_len_buckets(report->buckets, report->sess->bkt_alloc,
-                                     path, strlen(path));
-
-  svn_ra_serf__add_close_tag_buckets(report->buckets, report->sess->bkt_alloc,
-                                     "S:entry");
-
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -2048,11 +2060,14 @@ delete_path(void *report_baton,
             apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
+  svn_stringbuf_t *buf = NULL;
 
-  svn_ra_serf__add_tag_buckets(report->buckets, "S:missing",
-                               apr_pstrdup(report->pool, path),
-                               report->sess->bkt_alloc);
-  return APR_SUCCESS;
+  make_simple_xml_tag(&buf, "S:missing", path, pool);
+
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -2069,6 +2084,7 @@ link_path(void *report_baton,
   const char *link, *report_target;
   apr_uri_t uri;
   apr_status_t status;
+  svn_stringbuf_t *buf = NULL;
 
   /* We need to pass in the baseline relative path.
    *
@@ -2086,33 +2102,28 @@ link_path(void *report_baton,
   SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess,
                                          NULL, pool));
 
-  /* Copy parameters to reporter's pool. */
-  lock_token = apr_pstrdup(report->pool, lock_token);
-  link = apr_pstrcat(report->pool, "/", link, NULL);
-  path = apr_pstrdup(report->pool, path);
+  link = apr_pstrcat(pool, "/", link, NULL);
 
-  svn_ra_serf__add_open_tag_buckets(report->buckets, report->sess->bkt_alloc,
-                                    "S:entry",
-                                    "rev", apr_ltoa(report->pool, revision),
-                                    "lock-token", lock_token,
-                                    "depth", svn_depth_to_word(depth),
-                                    "start-empty", start_empty ? "true" : NULL,
-                                    "linkpath", link,
-                                    NULL);
+  svn_xml_make_open_tag(&buf, pool, svn_xml_protect_pcdata, "S:entry",
+                        "rev", apr_ltoa(pool, revision),
+                        "lock-token", lock_token,
+                        "depth", svn_depth_to_word(depth),
+                        "linkpath", link,
+                        "start-empty", start_empty ? "true" : NULL,
+                        NULL);
+  svn_xml_escape_cdata_cstring(&buf, path, pool);
+  svn_xml_make_close_tag(&buf, pool, "S:entry");
+
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, pool));
 
   if (lock_token)
     {
       apr_hash_set(report->lock_path_tokens,
-                   path,
+                   apr_pstrdup(report->pool, path),
                    APR_HASH_KEY_STRING,
-                   lock_token);
+                   apr_pstrdup(report->pool, lock_token));
     }
-
-  svn_ra_serf__add_cdata_len_buckets(report->buckets, report->sess->bkt_alloc,
-                                     path, strlen(path));
-
-  svn_ra_serf__add_close_tag_buckets(report->buckets, report->sess->bkt_alloc,
-                                     "S:entry");
 
   return APR_SUCCESS;
 }
@@ -2175,6 +2186,20 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
   return SVN_NO_ERROR;
 }
 
+static serf_bucket_t *
+create_update_report_body(void *baton,
+                          serf_bucket_alloc_t *alloc,
+                          apr_pool_t *pool)
+{
+  report_context_t *report = baton;
+  apr_off_t offset;
+
+  offset = 0;
+  apr_file_seek(report->body_file, APR_SET, &offset);
+
+  return serf_bucket_file_create(report->body_file, alloc);
+}
+
 static svn_error_t *
 finish_report(void *report_baton,
               apr_pool_t *pool)
@@ -2188,9 +2213,25 @@ finish_report(void *report_baton,
   apr_status_t status;
   svn_boolean_t closed_root;
   int status_code, i;
+  svn_stringbuf_t *buf = NULL;
 
-  svn_ra_serf__add_close_tag_buckets(report->buckets, report->sess->bkt_alloc,
-                                     "S:update-report");
+  svn_xml_make_close_tag(&buf, pool, "S:update-report");
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, pool));
+
+  /* We need to flush the file, make it unbuffered (so that it can be
+   * zero-copied via mmap), and reset the position before attempting to
+   * deliver the file.
+   *
+   * N.B. If we have APR 1.3+, we can unbuffer the file to let us use mmap
+   * and zero-copy the PUT body.  However, on older APR versions, we can't
+   * check the buffer status; but serf will fall through and create a file
+   * bucket for us on the buffered svndiff handle.
+   */
+  apr_file_flush(report->body_file);
+#if APR_VERSION_AT_LEAST(1, 3, 0)
+  apr_file_buffer_set(report->body_file, NULL, 0);
+#endif
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL, pool));
 
@@ -2201,7 +2242,8 @@ finish_report(void *report_baton,
 
   handler->method = "REPORT";
   handler->path = report->path;
-  handler->body_buckets = report->buckets;
+  handler->body_delegate = create_update_report_body;
+  handler->body_delegate_baton = report;
   handler->body_type = "text/xml";
   handler->conn = sess->conns[0];
   handler->session = sess;
@@ -2430,6 +2472,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   svn_boolean_t has_target = *update_target != '\0';
   svn_boolean_t server_supports_depth;
   svn_ra_serf__session_t *sess = ra_session->priv;
+  svn_stringbuf_t *buf = NULL;
 
   SVN_ERR(svn_ra_serf__has_capability(ra_session, &server_supports_depth,
                                       SVN_RA_CAPABILITY_DEPTH, pool));
@@ -2471,65 +2514,53 @@ make_update_reporter(svn_ra_session_t *ra_session,
   *reporter = &ra_serf_reporter;
   *report_baton = report;
 
-  report->buckets = serf_bucket_aggregate_create(report->sess->bkt_alloc);
+  SVN_ERR(svn_io_open_unique_file3(&report->body_file, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   report->pool, pool));
 
-  svn_ra_serf__add_open_tag_buckets(report->buckets, report->sess->bkt_alloc,
-                                    "S:update-report",
-                                    "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+  svn_xml_make_open_tag(&buf, pool, svn_xml_normal, "S:update-report",
+                        "xmlns:S", SVN_XML_NAMESPACE,
+                        NULL);
 
-  svn_ra_serf__add_tag_buckets(report->buckets,
-                               "S:src-path", report->source,
-                               report->sess->bkt_alloc);
+  make_simple_xml_tag(&buf, "S:src-path", report->source, pool);
 
   if (SVN_IS_VALID_REVNUM(report->target_rev))
     {
-      svn_ra_serf__add_tag_buckets(report->buckets,
-                                   "S:target-revision",
-                                   apr_ltoa(pool, report->target_rev),
-                                   report->sess->bkt_alloc);
+      make_simple_xml_tag(&buf, "S:target-revision",
+                          apr_ltoa(pool, report->target_rev), pool);
     }
 
   if (report->destination && *report->destination)
     {
-      svn_ra_serf__add_tag_buckets(report->buckets,
-                                   "S:dst-path",
-                                   report->destination,
-                                   report->sess->bkt_alloc);
+      make_simple_xml_tag(&buf, "S:dst-path", report->destination, pool);
     }
 
   if (report->update_target && *report->update_target)
     {
-      svn_ra_serf__add_tag_buckets(report->buckets,
-                                   "S:update-target", report->update_target,
-                                   report->sess->bkt_alloc);
+      make_simple_xml_tag(&buf, "S:update-target", report->update_target,
+                          pool);
     }
 
   if (report->ignore_ancestry)
     {
-      svn_ra_serf__add_tag_buckets(report->buckets,
-                                   "S:ignore-ancestry", "yes",
-                                   report->sess->bkt_alloc);
+      make_simple_xml_tag(&buf, "S:ignore-ancestry", "yes", pool);
     }
 
   if (report->send_copyfrom_args)
     {
-      svn_ra_serf__add_tag_buckets(report->buckets,
-                                   "S:send-copyfrom-args", "yes",
-                                   report->sess->bkt_alloc);
+      make_simple_xml_tag(&buf, "S:send-copyfrom-args", "yes", pool);
     }
 
   /* Old servers know "recursive" but not "depth"; help them DTRT. */
   if (depth == svn_depth_files || depth == svn_depth_empty)
     {
-      svn_ra_serf__add_tag_buckets(report->buckets,
-                                   "S:recursive", "no",
-                                   report->sess->bkt_alloc);
+      make_simple_xml_tag(&buf, "S:recursive", "no", pool);
     }
 
-  svn_ra_serf__add_tag_buckets(report->buckets,
-                               "S:depth", svn_depth_to_word(depth),
-                               report->sess->bkt_alloc);
+  make_simple_xml_tag(&buf, "S:depth", svn_depth_to_word(depth), pool);
+
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, pool));
 
   return SVN_NO_ERROR;
 }
