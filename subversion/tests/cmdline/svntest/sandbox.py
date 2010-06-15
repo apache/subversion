@@ -48,7 +48,7 @@ class Sandbox:
     self.wc_dir = os.path.join(svntest.main.general_wc_dir, self.name)
     if not read_only:
       self.repo_dir = os.path.join(svntest.main.general_repo_dir, self.name)
-      self.repo_url = (svntest.main.test_area_url + '/'
+      self.repo_url = (svntest.main.options.test_area_url + '/'
                        + svntest.main.pathname2url(self.repo_dir))
     else:
       self.repo_dir = svntest.main.pristine_dir
@@ -117,7 +117,8 @@ class Sandbox:
        Return (REPOS-PATH, REPOS-URL)."""
     path = (os.path.join(svntest.main.general_repo_dir, self.name)
             + '.' + suffix)
-    url = svntest.main.test_area_url + '/' + svntest.main.pathname2url(path)
+    url = svntest.main.options.test_area_url + \
+                                        '/' + svntest.main.pathname2url(path)
     self.add_test_path(path, remove)
     return path, url
 
@@ -211,7 +212,7 @@ def cleanup_deferred_test_paths():
 
 
 def _cleanup_test_path(path, retrying=False):
-  if svntest.main.verbose_mode:
+  if svntest.main.options.verbose:
     if retrying:
       print("CLEANUP: RETRY: %s" % path)
     else:

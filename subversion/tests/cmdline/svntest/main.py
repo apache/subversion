@@ -33,6 +33,8 @@ import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
 import threading
+import optparse # for argument parsing
+
 try:
   # Python >=3.0
   import queue
@@ -43,12 +45,6 @@ except ImportError:
   import Queue as queue
   from urllib import quote as urllib_parse_quote
   from urllib import unquote as urllib_parse_unquote
-
-import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 
 import svntest
 from svntest import Failure
@@ -167,56 +163,12 @@ svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 
-# Global variable indicating if we want verbose output, that is,
-# details of what commands each test does as it does them.  This is
-# incompatible with quiet_mode.
-verbose_mode = False
-
-# Global variable indicating if we want quiet output, that is, don't
-# show PASS, XFAIL, or SKIP notices, but do show FAIL and XPASS.  This
-# is incompatible with verbose_mode.
-quiet_mode = False
-
-# Global variable indicating if we want test data cleaned up after success
-cleanup_mode = False
-
-# Global variable indicating if svnserve should use Cyrus SASL
-enable_sasl = False
-
-# Global variable indicating that SVNKit binaries should be used
-use_jsvn = False
-
-# Global variable indicating which DAV library to use if both are available
-# ('neon', 'serf').
-preferred_http_library = 'serf'
-
-# Global variable: Number of shards to use in FSFS
-# 'None' means "use FSFS's default"
-fsfs_sharding = None
-
-# Global variable: automatically pack FSFS repositories after every commit
-fsfs_packing = None
-
-# Configuration file (copied into FSFS fsfs.conf).
-config_file = None
-
-# Global variable indicating what the minor version of the server
-# tested against is (4 for 1.4.x, for example).
-server_minor_version = 7
-
-# Global variable indicating if this is a child process and no cleanup
-# of global directories is needed.
-is_child_process = False
-
-# Global URL to testing area.  Default to ra_local, current working dir.
-test_area_url = file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd()))
-
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
 pristine_url = None
 
-# Global variable indicating the FS type for repository creations.
-fs_type = None
+# Global variable to track all of our options
+options = None
 
 # End of command-line-set global variables.
 ######################################################################
@@ -467,14 +419,14 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     if stderr_lines is not None:
       sys.stderr.write("".join(stderr_lines))
       sys.stderr.flush()
-    if verbose_mode:
+    if options.verbose:
       # show the whole path to make it easier to start a debugger
       sys.stderr.write("CMD: %s terminated by signal %d\n"
                        % (command_string, exit_signal))
       sys.stderr.flush()
     raise SVNProcessTerminatedBySignal
   else:
-    if exit_code and verbose_mode:
+    if exit_code and options.verbose:
       sys.stderr.write("CMD: %s exited with %d\n"
                        % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
@@ -494,7 +446,7 @@ def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
     raise TypeError("stdin_lines should have list type")
 
   # Log the command line
-  if verbose_mode and not command.endswith('.py'):
+  if options.verbose and not command.endswith('.py'):
     sys.stdout.write('CMD: %s %s\n' % (os.path.basename(command),
                                       ' '.join([_quote_arg(x) for x in varargs])))
     sys.stdout.flush()
@@ -527,7 +479,7 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
   line terminators).
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
-  if verbose_mode:
+  if options.verbose:
     start = time.time()
 
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
@@ -536,7 +488,7 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                                                         stdin_lines,
                                                         *varargs)
 
-  if verbose_mode:
+  if options.verbose:
     stop = time.time()
     print('<TIME = %.6f>' % (stop - start))
     for x in stdout_lines:
@@ -545,7 +497,7 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
       sys.stdout.write(x)
 
   if (not error_expected) and (stderr_lines):
-    if not verbose_mode:
+    if not options.verbose:
       for x in stderr_lines:
         sys.stdout.write(x)
     raise Failure
@@ -579,8 +531,8 @@ interactive-conflicts = false
   # define default server file contents if none provided
   if server_contents is None:
     http_library_str = ""
-    if preferred_http_library:
-      http_library_str = "http-library=%s" % (preferred_http_library)
+    if options.http_library:
+      http_library_str = "http-library=%s" % (options.http_library)
     server_contents = """
 #
 [global]
@@ -645,7 +597,7 @@ def run_entriesdump(path):
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
                                                         0, 0, None, path)
-  if verbose_mode:
+  if options.verbose:
     ### finish the CMD output
     print
   if exit_code or stderr_lines:
@@ -721,14 +673,14 @@ def create_repos(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
-  if server_minor_version < 5:
+  if options.server_minor_version < 5:
     opts += ("--pre-1.5-compatible",)
-  elif server_minor_version < 6:
+  elif options.server_minor_version < 6:
     opts += ("--pre-1.6-compatible",)
-  elif server_minor_version < 7:
+  elif options.server_minor_version < 7:
     opts += ("--pre-1.7-compatible",)
-  if fs_type is not None:
-    opts += ("--fs-type=" + fs_type,)
+  if options.fs_type is not None:
+    opts += ("--fs-type=" + options.fs_type,)
   exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
                                           path, *opts)
 
@@ -744,7 +696,7 @@ def create_repos(path):
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
              "[general]\nauth-access = write\n");
-  if enable_sasl:
+  if options.enable_sasl:
     file_append(get_svnserve_conf_file_path(path),
                 "realm = svntest\n[sasl]\nuse-sasl = true\n")
   else:
@@ -752,17 +704,17 @@ def create_repos(path):
     file_append(os.path.join(path, "conf", "passwd"),
                 "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
 
-  if fs_type is None or fs_type == 'fsfs':
+  if options.fs_type is None or options.fs_type == 'fsfs':
     # fsfs.conf file
-    if config_file is not None:
-      shutil.copy(config_file, get_fsfs_conf_file_path(path))
+    if options.config_file is not None:
+      shutil.copy(options.config_file, get_fsfs_conf_file_path(path))
 
     # format file
-    if fsfs_sharding is not None:
+    if options.fsfs_sharding is not None:
       def transform_line(line):
         if line.startswith('layout '):
-          if fsfs_sharding > 0:
-            line = 'layout sharded %d' % fsfs_sharding
+          if options.fsfs_sharding > 0:
+            line = 'layout sharded %d' % options.fsfs_sharding
           else:
             line = 'layout linear'
         return line
@@ -785,7 +737,7 @@ def create_repos(path):
     # post-commit
     # Note that some tests (currently only commit_tests) create their own
     # post-commit hooks, which would override this one. :-(
-    if fsfs_packing:
+    if options.fsfs_packing:
       # some tests chdir.
       abs_path = os.path.abspath(path)
       create_python_hook_script(get_post_commit_hook_path(abs_path),
@@ -814,7 +766,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   if ignore_uuid:
     load_args = load_args + ['--ignore-uuid']
-  if verbose_mode:
+  if options.verbose:
     sys.stdout.write('CMD: %s %s | %s %s\n' %
                      (os.path.basename(svnadmin_binary), ' '.join(dump_args),
                       os.path.basename(svnadmin_binary), ' '.join(load_args)))
@@ -828,7 +780,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
     stdin=dump_out) # Attached to dump_kid
 
   stop = time.time()
-  if verbose_mode:
+  if options.verbose:
     print('<TIME = %.6f>' % (stop - start))
 
   load_stdout, load_stderr, load_exit_code = wait_on_pipe(load_kid, True)
@@ -1039,36 +991,36 @@ def _check_command_line_parsed():
 
 def is_ra_type_dav():
   _check_command_line_parsed()
-  return test_area_url.startswith('http')
+  return options.test_area_url.startswith('http')
 
 def is_ra_type_dav_neon():
   """Return True iff running tests over RA-Neon.
      CAUTION: Result is only valid if svn was built to support both."""
   _check_command_line_parsed()
-  return test_area_url.startswith('http') and \
-    (preferred_http_library == "neon")
+  return options.test_area_url.startswith('http') and \
+    (options.http_library == "neon")
 
 def is_ra_type_dav_serf():
   """Return True iff running tests over RA-Serf.
      CAUTION: Result is only valid if svn was built to support both."""
   _check_command_line_parsed()
-  return test_area_url.startswith('http') and \
-    (preferred_http_library == "serf")
+  return options.test_area_url.startswith('http') and \
+    (options.http_library == "serf")
 
 def is_ra_type_svn():
   """Return True iff running tests over RA-svn."""
   _check_command_line_parsed()
-  return test_area_url.startswith('svn')
+  return options.test_area_url.startswith('svn')
 
 def is_ra_type_file():
   """Return True iff running tests over RA-local."""
   _check_command_line_parsed()
-  return test_area_url.startswith('file')
+  return options.test_area_url.startswith('file')
 
 def is_fs_type_fsfs():
   _check_command_line_parsed()
   # This assumes that fsfs is the default fs implementation.
-  return fs_type == 'fsfs' or fs_type is None
+  return options.fs_type == 'fsfs' or options.fs_type is None
 
 def is_os_windows():
   return os.name == 'nt'
@@ -1084,31 +1036,31 @@ def is_fs_case_insensitive():
 
 def server_has_mergeinfo():
   _check_command_line_parsed()
-  return server_minor_version >= 5
+  return options.server_minor_version >= 5
 
 def server_has_revprop_commit():
   _check_command_line_parsed()
-  return server_minor_version >= 5
+  return options.server_minor_version >= 5
 
 def server_sends_copyfrom_on_update():
   _check_command_line_parsed()
-  return server_minor_version >= 5
+  return options.server_minor_version >= 5
 
 def server_authz_has_aliases():
   _check_command_line_parsed()
-  return server_minor_version >= 5
+  return options.server_minor_version >= 5
 
 def server_gets_client_capabilities():
   _check_command_line_parsed()
-  return server_minor_version >= 5
+  return options.server_minor_version >= 5
 
 def server_has_partial_replay():
   _check_command_line_parsed()
-  return server_minor_version >= 5
+  return options.server_minor_version >= 5
 
 def server_enforces_date_syntax():
   _check_command_line_parsed()
-  return server_minor_version >= 5
+  return options.server_minor_version >= 5
 
 ######################################################################
 
@@ -1138,20 +1090,20 @@ class TestSpawningThread(threading.Thread):
     args.append(str(index))
     args.append('-c')
     # add some startup arguments from this process
-    if fs_type:
-      args.append('--fs-type=' + fs_type)
-    if test_area_url:
-      args.append('--url=' + test_area_url)
-    if verbose_mode:
+    if options.fs_type:
+      args.append('--fs-type=' + options.fs_type)
+    if options.test_area_url:
+      args.append('--url=' + options.test_area_url)
+    if options.verbose:
       args.append('-v')
-    if cleanup_mode:
+    if options.cleanup:
       args.append('--cleanup')
-    if enable_sasl:
+    if options.enable_sasl:
       args.append('--enable-sasl')
-    if preferred_http_library:
-      args.append('--http-library=' + preferred_http_library)
-    if server_minor_version:
-      args.append('--server-minor-version=' + str(server_minor_version))
+    if options.http_library:
+      args.append('--http-library=' + options.http_library)
+    if options.server_minor_version:
+      args.append('--server-minor-version=' + str(options.server_minor_version))
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
                                                        *args)
@@ -1173,7 +1125,7 @@ class TestRunner:
     self.index = index
 
   def list(self):
-    if verbose_mode and self.pred.inprogress:
+    if options.verbose and self.pred.inprogress:
       print(" %2d     %-5s  %s [[%s]]" % (self.index,
                                         self.pred.list_mode(),
                                         self.pred.description,
@@ -1219,7 +1171,7 @@ class TestRunner:
     os.environ['SVN_EDITOR'] = ''
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
 
-    if use_jsvn:
+    if options.use_jsvn:
       # Set this SVNKit specific variable to the current test (test name plus
       # its index) being run so that SVNKit daemon could use this test name
       # for its separate log file
@@ -1267,9 +1219,9 @@ class TestRunner:
 
     os.chdir(saved_dir)
     exit_code, result_text, result_benignity = self.pred.results(result)
-    if not (quiet_mode and result_benignity):
+    if not (options.quiet and result_benignity):
       self._print_name(result_text)
-    if sandbox is not None and exit_code != 1 and cleanup_mode:
+    if sandbox is not None and exit_code != 1 and options.cleanup:
       sandbox.cleanup_test_paths()
     return exit_code
 
@@ -1349,48 +1301,6 @@ def _internal_run_tests(test_list, testnums, parallel):
   return exit_code
 
 
-def usage():
-  prog_name = os.path.basename(sys.argv[0])
-  print("%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" %
-        prog_name)
-  print("%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]"
-      % (" " * len(prog_name)))
-  print("%s " % (" " * len(prog_name)))
-  print("%s [--list] [<test> ...]\n" % prog_name)
-  print("Arguments:")
-  print(" <test>  The number of the test to run, or a range of test\n"
-        "         numbers, like 10:12 or 10-12. Multiple numbers and\n"
-        "         ranges are ok. If you supply none, all tests are run.\n"
-        "         You can also pass the name of a test function to run.\n")
-  print("Options:")
-  print(" --list          Print test doc strings instead of running them")
-  print(" --fs-type       Subversion file system type (fsfs or bdb)")
-  print(" --http-library  Make svn use this DAV library (neon or serf) if\n"
-        "                 it supports both, else assume it's using this one;\n"
-        "                 the default is neon")
-  print(" --url           Base url to the repos (e.g. svn://localhost)")
-  print(" --verbose       Print binary command-lines (not with --quiet)")
-  print(" --quiet         Print only unexpected results (not with --verbose)")
-  print(" --cleanup       Whether to clean up")
-  print(" --enable-sasl   Whether to enable SASL authentication")
-  print(" --parallel      Run the tests in parallel")
-  print(" --bin           Use the svn binaries installed in this path")
-  print(" --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n"
-        "                 combined with --bin to point to a specific path")
-  print(" --development   Test development mode: provides more detailed test\n"
-        "                 output and ignores all exceptions in the \n"
-        "                 run_and_verify* functions. This option is only \n"
-        "                 useful during test development!")
-  print(" --server-minor-version  Set the minor version for the server ('4',\n"
-        "                 '5', or '6').")
-  print(" --fsfs-sharding Default shard size (for fsfs)\n"
-        " --fsfs-packing  Run 'svnadmin pack' automatically")
-  print(" --config-file   Configuration file for tests.")
-  print(" --keep-local-tmp  Don't remove svn-test-work/local_tmp after test\n"
-        "                 run is complete.  Useful for debugging failures.")
-  print(" --help          This information")
-
-
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
@@ -1402,14 +1312,7 @@ def run_tests(test_list, serial_only = False):
         appropriate exit code.
   """
 
-  global test_area_url
   global pristine_url
-  global fs_type
-  global verbose_mode
-  global quiet_mode
-  global cleanup_mode
-  global enable_sasl
-  global is_child_process
   global svn_binary
   global svnadmin_binary
   global svnlook_binary
@@ -1417,12 +1320,7 @@ def run_tests(test_list, serial_only = False):
   global svndumpfilter_binary
   global svnversion_binary
   global command_line_parsed
-  global preferred_http_library
-  global fsfs_sharding
-  global fsfs_packing
-  global config_file
-  global server_minor_version
-  global use_jsvn
+  global options
 
   testnums = []
   # Should the tests be listed (as opposed to executed)?
@@ -1434,146 +1332,127 @@ def run_tests(test_list, serial_only = False):
   keep_local_tmp = False
   config_file = None
 
-  try:
-    opts, args = my_getopt(sys.argv[1:], 'vqhpc',
-                           ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
-                            'list', 'enable-sasl', 'help', 'parallel',
-                            'bin=', 'http-library=', 'server-minor-version=',
-                            'fsfs-packing', 'fsfs-sharding=',
-                            'use-jsvn', 'development', 'keep-local-tmp',
-                            'config-file='])
-  except getopt.GetoptError, e:
-    print("ERROR: %s\n" % e)
-    usage()
-    sys.exit(1)
+  # set up the parser
+  usage = 'usage: %prog [options] [<test> ...]'
+  parser = optparse.OptionParser(usage=usage)
+  parser.add_option('-l', '--list', action='store_true', dest='list_tests',
+                    help='Print test doc strings instead of running them')
+  parser.add_option('-v', '--verbose', action='store_true',
+                    help='Print binary command-lines (not with --quiet)')
+  parser.add_option('-q', '--quiet', action='store_true',
+                    help='Print only unexpected results (not with --verbose)')
+  parser.add_option('-p', '--parallel', action='store_const', const=5,
+                    dest='parallel',
+                    help='Run the tests in parallel')
+  parser.add_option('-c', action='store_true', dest='is_child_process',
+                    help='Flag if we are running this python test as a ' +
+                         'child process')
+  parser.add_option('--url', action='store',
+                    help='Base url to the repos (e.g. svn://localhost)')
+  parser.add_option('--fs-type', action='store',
+                    help='Subversion file system type (fsfs or bdb)')
+  parser.add_option('--cleanup', action='store_true',
+                    help='Whether to clean up')
+  parser.add_option('--enable-sasl', action='store_true',
+                    help='Whether to enable SASL authentication')
+  parser.add_option('--bin', action='store', dest='svn_bin',
+                    help='Use the svn binaries installed in this path')
+  parser.add_option('--use-jsvn', action='store_true',
+                    help="Use the jsvn (SVNKit based) binaries. Can be " +
+                         "combined with --bin to point to a specific path")
+  parser.add_option('--http-library', action='store',
+                    help="Make svn use this DAV library (neon or serf) if " +
+                         "it supports both, else assume it's using this " +
+                         "one; the default is neon")
+  parser.add_option('--server-minor-version', type='int', action='store',
+                    help="Set the minor version for the server ('4', " +
+                         "'5', or '6').")
+  parser.add_option('--fsfs-packing', action='store_true',
+                    help="Run 'svnadmin pack' automatically")
+  parser.add_option('--fsfs-sharding', action='store', type='int',
+                    help='Default shard size (for fsfs)')
+  parser.add_option('--config-file', action='store',
+                    help="Configuration file for tests.")
+  parser.add_option('--keep-local-tmp', action='store_true',
+                    help="Don't remove svn-test-work/local_tmp after test " +
+                         "run is complete.  Useful for debugging failures.")
+  parser.add_option('--development', action='store_true',
+                    help='Test development mode: provides more detailed ' +
+                         'test output and ignores all exceptions in the ' +
+                         'run_and_verify* functions. This option is only ' +
+                         'useful during test development!')
 
-  for arg in args:
-    if arg == "list":
-      # This is an old deprecated variant of the "--list" option:
-      list_tests = True
-    elif arg.startswith('BASE_URL='):
-      test_area_url = arg[9:]
+  # most of the defaults are None, but some are other values, set them here
+  parser.set_defaults(
+        server_minor_version=7,
+        url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
+        http_library='serf')
+
+  (options, args) = parser.parse_args()
+
+  # some sanity checking
+  if options.verbose and options.quiet:
+    parser.error("'verbose' and 'quiet' are incompatible")
+  if options.fsfs_packing and not options.fsfs_sharding:
+    parser.error("--fsfs-packing requires --fsfs-sharding")
+  if options.server_minor_version < 4 or options.server_minor_version > 7:
+    parser.error("test harness only supports server minor versions 4-7")
+
+  if options.url:
+    if options.url[-1:] == '/': # Normalize url to have no trailing slash
+      options.test_area_url = options.url[:-1]
     else:
+      options.test_area_url = options.url
+
+  # parse the positional arguments (test nums, names)
+  for arg in args:
+    appended = False
+    try:
+      testnums.append(int(arg))
+      appended = True
+    except ValueError:
+      # Do nothing for now.
       appended = False
+
+    if not appended:
       try:
-        testnums.append(int(arg))
-        appended = True
+        # Check if the argument is a range
+        numberstrings = arg.split(':');
+        if len(numberstrings) != 2:
+          numberstrings = arg.split('-');
+          if len(numberstrings) != 2:
+            raise ValueError
+        left = int(numberstrings[0])
+        right = int(numberstrings[1])
+        if left > right:
+          raise ValueError
+
+        for nr in range(left,right+1):
+          testnums.append(nr)
+        else:
+          appended = True
       except ValueError:
-        # Do nothing for now.
         appended = False
 
-      if not appended:
-        try:
-          # Check if the argument is a range
-          numberstrings = arg.split(':');
-          if len(numberstrings) != 2:
-            numberstrings = arg.split('-');
-            if len(numberstrings) != 2:
-              raise ValueError
-          left = int(numberstrings[0])
-          right = int(numberstrings[1])
-          if left > right:
-            raise ValueError
-
-          for nr in range(left,right+1):
-            testnums.append(nr)
-          else:
+    if not appended:
+      try:
+        # Check if the argument is a function name, and translate
+        # it to a number if possible
+        for testnum in list(range(1, len(test_list))):
+          test_case = TestRunner(test_list[testnum], testnum)
+          if test_case.get_function_name() == str(arg):
+            testnums.append(testnum)
             appended = True
-        except ValueError:
-          appended = False
+            break
+      except ValueError:
+        appended = False
 
-      if not appended:
-        try:
-          # Check if the argument is a function name, and translate
-          # it to a number if possible
-          for testnum in list(range(1, len(test_list))):
-            test_case = TestRunner(test_list[testnum], testnum)
-            if test_case.get_function_name() == str(arg):
-              testnums.append(testnum)
-              appended = True
-              break
-        except ValueError:
-          appended = False
-
-      if not appended:
-        print("ERROR: invalid test number, range of numbers, " +
-              "or function '%s'\n" % arg)
-        usage()
-        sys.exit(1)
-
-  for opt, val in opts:
-    if opt == "--url":
-      test_area_url = val
-
-    elif opt == "--fs-type":
-      fs_type = val
-
-    elif opt == "-v" or opt == "--verbose":
-      verbose_mode = True
-
-    elif opt == "-q" or opt == "--quiet":
-      quiet_mode = True
-
-    elif opt == "--cleanup":
-      cleanup_mode = True
-
-    elif opt == "--list":
-      list_tests = True
-
-    elif opt == "--enable-sasl":
-      enable_sasl = True
-
-    elif opt == "-h" or opt == "--help":
-      usage()
-      sys.exit(0)
-
-    elif opt == '-p' or opt == "--parallel":
-      parallel = 5   # use 5 parallel threads.
-
-    elif opt == '-c':
-      is_child_process = True
-
-    elif opt == '--bin':
-      svn_bin = val
-
-    elif opt == '--http-library':
-      preferred_http_library = val
-
-    elif opt == '--fsfs-sharding':
-      fsfs_sharding = int(val)
-    elif opt == '--fsfs-packing':
-      fsfs_packing = 1
-
-    elif opt == '--server-minor-version':
-      server_minor_version = int(val)
-      if server_minor_version < 4 or server_minor_version > 7:
-        print("ERROR: test harness only supports server minor versions 4-6")
-        sys.exit(1)
-
-    elif opt == '--use-jsvn':
-      use_jsvn = True
-
-    elif opt == '--keep-local-tmp':
-      keep_local_tmp = True
-
-    elif opt == '--development':
-      setup_development_mode()
-
-    elif opt == '--config-file':
-      config_file = val
-
-  if fsfs_packing is not None and fsfs_sharding is None:
-    raise Exception('--fsfs-packing requires --fsfs-sharding')
-
-  if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
-    test_area_url = test_area_url[:-1]
-
-  if verbose_mode and quiet_mode:
-    sys.stderr.write("ERROR: 'verbose' and 'quiet' are incompatible\n")
-    sys.exit(1)
+    if not appended:
+      parser.error("invalid test number, range of numbers, " +
+                   "or function '%s'\n" % arg)
 
   # Calculate pristine_url from test_area_url.
-  pristine_url = test_area_url + '/' + pathname2url(pristine_dir)
+  pristine_url = options.test_area_url + '/' + pathname2url(pristine_dir)
 
   if use_jsvn:
     if svn_bin is None:
@@ -1599,14 +1478,14 @@ def run_tests(test_list, serial_only = False):
 
   # Cleanup: if a previous run crashed or interrupted the python
   # interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
-  if not is_child_process:
+  if not options.is_child_process:
     safe_rmtree(temp_dir, 1)
 
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
     testnums = list(range(1, len(test_list)))
 
-  if list_tests:
+  if options.list_tests:
     print("Test #  Mode   Test Description")
     print("------  -----  ----------------")
     for testnum in testnums:
@@ -1618,9 +1497,9 @@ def run_tests(test_list, serial_only = False):
   # don't run tests in parallel when the tests don't support it or there
   # are only a few tests to run.
   if serial_only or len(testnums) < 2:
-    parallel = 0
+    options.parallel = 0
 
-  if not is_child_process:
+  if not options.is_child_process:
     # Build out the default configuration directory
     create_config_dir(default_config_dir)
 
@@ -1632,7 +1511,7 @@ def run_tests(test_list, serial_only = False):
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
-  if not is_child_process and not keep_local_tmp:
+  if not options.is_child_process and not options.keep_local_tmp:
     safe_rmtree(temp_dir, 1)
 
   # Cleanup after ourselves.

@@ -1609,7 +1609,7 @@ def get_wc_base_rev(wc_dir):
 def hook_failure_message(hook_name):
   """Return the error message that the client prints for failure of the
   specified hook HOOK_NAME. The wording changed with Subversion 1.5."""
-  if svntest.main.server_minor_version < 5:
+  if svntest.main.options.server_minor_version < 5:
     return "'%s' hook failed with error output:\n" % hook_name
   else:
     if hook_name in ["start-commit", "pre-commit"]:
