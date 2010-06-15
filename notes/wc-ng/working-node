@@ -1,0 +1,116 @@
+WORKING_NODE
+============
+
+This file is an attempt to document some aspects of the WORKING_NODE table.
+It is based on the documentation in 'wc-metadata.sql' and other knowledge
+and guesswork about how things ought to work, and does not yet indicate how
+the Subversion code base currently behaves.
+
+The possible tree-structure changes represented by a WORKING_NODE row are
+categorized in two parts.  The table is indexed by path, and a single path
+can have both a node that has "gone away" from that path and a different
+node that has come to that path.  The "gone away" node is a node that was at
+this path but is being deleted or moved away; we don't store much
+information about that one in this table.  The "created" node is a node that
+is being added or copied or moved to this path.
+
+There is under recent consideration the problem that there can be more than
+two nodes associated with a single path, when multiple directory tree copies
+overlap.  This document does not (yet) consider that problem.
+
+
+WORKING_NODE.presence at a particular path
+------------------------------------------
+
+A table showing the possible tree-structure changes that a WORKING_NODE row
+can represent.  "Base node" refers to the node that was at this path before
+we locally deleted it or moved it away.  "New node" refers to the node that
+is locally present at this path, the one that the WORKING_NODE table mostly
+describes and that is present on disk and perhaps in the ACTUAL_NODE table.
+
+  +---------------+-------------------------------------+
+  |               |           New node                  |
+  |               |-------------------------------------|
+  |               |     |   Root of   |   Child of      |
+  | Base node     | n/a | Add Cp- Mv- | Add Cp- Mv-here |
+  +---------------+-------------------------------------+
+  |               |     |             |                 |
+  |   none [B]    |  x  | nor nor nor |  ?   ?   ?      |
+  |               |     |             |                 |
+  | Root of ...   |     |             |                 |
+  |   deleted     | b-d | nor nor nor |  ?   ?   ?      |
+  |               |     |             |                 |
+  |   moved away  | b-d | nor nor nor |  ?   ?   ?      |
+  |               |     |             |                 |
+  | Child of ...  |     |             |                 |
+  |   deleted     |  ?  |  ?   ?   ?  |  ?   ?   ?      |
+  |               |     |             |                 |
+  |   moved away  |  ?  |  ?   ?   ?  |  ?   ?   ?      |
+  |               |     |             |                 |
+  +---------------+-------------------------------------+
+
+  nor Normal
+  abs Absent
+  exc Excluded
+  inc Incomplete
+  b-d Base-deleted
+  n-p Not-present
+  x   No WORKING_NODE entry exists for this path in this case.
+
+  [B] "None" means the BASE_NODE table indicates this path is not present in
+      the repository and is not absent or excluded from the WC.
+
+
+A table showing when each WORKING_NODE column should have a meaningful value
+----------------------------------------------------------------------------
+
+  +-----------------------------+----------------------------------+
+  |                             |                                  |
+  |                             |      Root of     Child of        |
+  | About the new node ...      |  n/a Add Cp- Mv- Add Cp- Mv-here |
+  |                             |  --- --- --- --- --- --- ---     |
+  |                             |                                  |
+  |   kind                      | =unk  Y   Y   Y   ?   ?   ?      |
+  |                             |                                  |
+  |   properties                |   n   Y   Y   Y   ?   ?   ?      |
+  |                             |                                  |
+  |   checksum (=> pristine)    |   n   n   Y   Y   n   ?   ?  [F] |
+  |   translated_size           |   n   n   Y   Y   n   ?   ?  [F] |
+  |                             |                                  |
+  |   symlink_target            |   n   Y   Y   Y   ?   ?   ?  [S] |
+  |                             |                                  |
+  |   changed_rev      )        |                                  |
+  |   changed_date     )        |   n   n   Y   Y   n   ?   ?      |
+  |   changed_author   )        |                                  |
+  |                             |                                  |
+  |   copyfrom_repos   )        |                                  |
+  |   copyfrom_path    )        |   n   n   Y   Y   n   n   n      |
+  |   copyfrom_rev     )        |                                  |
+  |                             |                                  |
+  |   moved_here                |  =0  =0  =0  =1  =0  =0   ?      |
+  |                             |                                  |
+  |                             |                                  |
+  |                             |      Root of Child of            |
+  | About the old base node ... |  n/a Del Mv- Del Mv-away         |
+  |                             |  --- --- --- --- ---             |
+  |                             |                                  |
+  |   moved_to                  |   n   n   Y   ?   ?              |
+  |                             |                                  |
+  |                             |                                  |
+  | About ??? ...               |                                  |
+  |                             |                                  |
+  |   depth                     |                                  |
+  |                             |                                  |
+  |   last_mode_time            |                                  |
+  |                             |                                  |
+  |   keep_local                |                                  |
+  |                             |                                  |
+  +-----------------------------+----------------------------------+
+
+  n   Field is null
+  Y   Field is non-null and has an appropriate value
+  =   Field has the specified value
+
+  [F] Only when kind = file
+  [S] Only when kind = symlink
+
