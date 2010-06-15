@@ -233,6 +233,7 @@ class TestHarness:
       test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
       sys.stdout.write('Running tests in %s' % (test_info, ))
       sys.stdout.write('.'*(LINE_LENGTH - len(test_info)))
+      sys.stdout.flush()
 
     log.write('START: %s\n' % progbase)
     log.flush()
