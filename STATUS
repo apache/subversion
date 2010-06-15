@@ -251,18 +251,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r952973, r952992
-   Fix for issue #3651 "svn copy does not eat peg revision within copy target
-   path"
-   Justification:
-     This issue exists in 1.6.x.
-   Notes:
-     r952973 fixes the issue and r952992 is a test for this issue. Both r952973
-     and r952992 are merged into the backport branch 1.6.x-issue3651.
-     Use the private API in the 1.6.x branch since the API was made public in
-     1.7. The backport branch exists in order to resolve this.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3651
-   Votes:
-     +1: stylesen, pburba, cmpilato
