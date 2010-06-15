@@ -457,14 +457,14 @@ def verify_windows_paths_in_repos(sbox):
 # numbered REV in REPO_DIR, which must be in the first shard if we're
 # using a sharded repository.
 def fsfs_file(repo_dir, kind, rev):
-  if svntest.main.server_minor_version >= 5:
-    if svntest.main.fsfs_sharding is None:
+  if svntest.main.options.server_minor_version >= 5:
+    if svntest.main.options.fsfs_sharding is None:
       return os.path.join(repo_dir, 'db', kind, '0', rev)
     else:
       shard = int(rev) // svntest.main.fsfs_sharding
       path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
 
-      if svntest.main.fsfs_packing is None or kind == 'revprops':
+      if svntest.main.options.fsfs_packing is None or kind == 'revprops':
         # we don't pack revprops
         return path
       elif os.path.exists(path):

@@ -46,7 +46,7 @@ AnyOutput = svntest.verify.AnyOutput
 
 # If verbose mode is enabled, print the LINE and a newline.
 def verbose_print(line):
-  if main.verbose_mode:
+  if main.options.verbose:
     print(line)
 
 # If verbose mode is enabled, print the (assumed newline-terminated) LINES.
