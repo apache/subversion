@@ -39,15 +39,21 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Each path argument to the svn_wc__loggy_* functions in this section can
-   be either absolute or relative to the adm_abspath argument.
+/* Common arguments:
+
+   Each svn_wc__loggy_* function in this section takes an ADM_ABSPATH
+   argument which is the working copy directory inside which the operation
+   is to be performed.  Any other *_ABSPATH arguments must be paths inside
+   ADM_ABSPATH (or equal to it, where that makes sense).
 */
 
 
-/* Insert into DB a work queue instruction to generate a translated
-   file from SRC to DST with translation settings from VERSIONED.
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-   DST and SRC and VERSIONED are relative to ADM_ABSPATH.  */
+/* Set *WORK_ITEM to a work queue instruction to generate a translated
+   file from SRC_ABSPATH to DST_ABSPATH with translation settings from
+   VERSIONED_ABSPATH.
+
+   ADM_ABSPATH is described above.
+*/
 svn_error_t *
 svn_wc__loggy_translated_file(svn_skel_t **work_item,
                               svn_wc__db_t *db,
@@ -57,13 +63,14 @@ svn_wc__loggy_translated_file(svn_skel_t **work_item,
                               const char *versioned_abspath,
                               apr_pool_t *result_pool);
 
-/* Insert into DB a work queue instruction to delete the entry
-   associated with PATH from the entries file.
-   ADM_ABSPATH is the absolute path for the access baton for PATH.
+/* Set *WORK_ITEM to a work queue instruction to delete the entry
+   associated with LOCAL_ABSPATH from the entries file.
 
-   ### REVISION and KIND
+   REVISION and KIND are used to insert a "not present" base node row if
+   REVISION is not SVN_INVALID_REVNUM: see svn_wc__db_base_add_absent_node()
+   for details.
 
-   Use SCRATCH_POOL for temporary allocations.
+   ADM_ABSPATH is described above.
 */
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_skel_t **work_item,
@@ -75,11 +82,10 @@ svn_wc__loggy_delete_entry(svn_skel_t **work_item,
                            apr_pool_t *result_pool);
 
 
-/* Insert into DB a work queue instruction to delete lock related
-   fields from the entry belonging to PATH.
-   ADM_ABSPATH is the absolute path for the access baton for PATH.
+/* Set *WORK_ITEM to a work queue instruction to delete lock related
+   fields from the entry belonging to LOCAL_ABSPATH.
 
-   Use SCRATCH_POOL for temporary allocations.
+   ADM_ABSPATH is described above.
 */
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_skel_t **work_item,
@@ -88,16 +94,17 @@ svn_wc__loggy_delete_lock(svn_skel_t **work_item,
                           const char *local_abspath,
                           apr_pool_t *result_pool);
 
-/* Queue instructions to move the file SRC_PATH to DST_PATH.
+/* Set *WORK_ITEM to a work queue instruction to move the file SRC_ABSPATH
+   to DST_ABSPATH.
 
-   The test for existence is made now, not at log run time.
-
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-   SRC_PATH and DST_PATH are relative to ADM_ABSPATH.
+   The file SRC_ABSPATH must exist.  The test for existence is made now, not
+   at log run time.
 
    Set *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate whether the
    destination path will have been modified after running the log: if either
    the move or the remove will have been carried out.
+
+   ADM_ABSPATH is described above.
 */
 svn_error_t *
 svn_wc__loggy_move(svn_skel_t **work_item,
@@ -108,10 +115,10 @@ svn_wc__loggy_move(svn_skel_t **work_item,
                    apr_pool_t *result_pool);
 
 
-/* Queue instructions to set the timestamp of PATH to
-   the time TIMESTR.
+/* Set *WORK_ITEM to a work queue instruction to set the timestamp of
+   LOCAL_ABSPATH to the time TIMESTR.
 
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
+   ADM_ABSPATH is described above.
 */
 svn_error_t *
 svn_wc__loggy_set_timestamp(svn_skel_t **work_item,
@@ -121,7 +128,11 @@ svn_wc__loggy_set_timestamp(svn_skel_t **work_item,
                             const char *timestr,
                             apr_pool_t *result_pool);
 
-/* */
+/* Set *WORK_ITEM to a work queue instruction to
+   ### ...
+
+   ADM_ABSPATH is described above.
+*/
 svn_error_t *
 svn_wc__loggy_add_tree_conflict(svn_skel_t **work_item,
                                 svn_wc__db_t *db,
