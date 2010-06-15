@@ -1278,27 +1278,11 @@ def _internal_run_tests(test_list, testnums, parallel):
   return exit_code
 
 
-# Main func.  This is the "entry point" that all the test scripts call
-# to run their list of tests.
-#
-# This routine parses sys.argv to decide what to do.
-def run_tests(test_list, serial_only = False):
-  """Main routine to run all tests in TEST_LIST.
+def _parse_options():
+  """Parse the arguments in arg_list, and set the global options object with
+     the results"""
 
-  NOTE: this function does not return. It does a sys.exit() with the
-        appropriate exit code.
-  """
-
-  global pristine_url
-  global svn_binary
-  global svnadmin_binary
-  global svnlook_binary
-  global svnsync_binary
-  global svndumpfilter_binary
-  global svnversion_binary
   global options
-
-  testnums = []
 
   # set up the parser
   usage = 'usage: %prog [options] [<test> ...]'
@@ -1371,6 +1355,36 @@ def run_tests(test_list, serial_only = False):
       options.test_area_url = options.url[:-1]
     else:
       options.test_area_url = options.url
+
+  return args
+
+
+# Main func.  This is the "entry point" that all the test scripts call
+# to run their list of tests.
+#
+# This routine parses sys.argv to decide what to do.
+def run_tests(test_list, serial_only = False):
+  """Main routine to run all tests in TEST_LIST.
+
+  NOTE: this function does not return. It does a sys.exit() with the
+        appropriate exit code.
+  """
+
+  global pristine_url
+  global svn_binary
+  global svnadmin_binary
+  global svnlook_binary
+  global svnsync_binary
+  global svndumpfilter_binary
+  global svnversion_binary
+  global options
+
+  testnums = []
+
+  if not options:
+    args = _parse_options()
+  else:
+    args = []
 
   # parse the positional arguments (test nums, names)
   for arg in args:
