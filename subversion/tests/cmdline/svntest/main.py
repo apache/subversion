@@ -146,11 +146,6 @@ def url2pathname(path):
   return os.path.normpath(urllib_parse_unquote(path))
 
 ######################################################################
-# Global variables set during option parsing.  These should not be used
-# until the variable command_line_parsed has been set to True, as is
-# done in run_tests below.
-command_line_parsed = False
-
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
 # Use --bin to override these defaults.
@@ -984,41 +979,30 @@ def make_log_msg():
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
-def _check_command_line_parsed():
-  """Raise an exception if the command line has not yet been parsed."""
-  if not command_line_parsed:
-    raise Failure("Condition cannot be tested until command line is parsed")
-
 def is_ra_type_dav():
-  _check_command_line_parsed()
   return options.test_area_url.startswith('http')
 
 def is_ra_type_dav_neon():
   """Return True iff running tests over RA-Neon.
      CAUTION: Result is only valid if svn was built to support both."""
-  _check_command_line_parsed()
   return options.test_area_url.startswith('http') and \
     (options.http_library == "neon")
 
 def is_ra_type_dav_serf():
   """Return True iff running tests over RA-Serf.
      CAUTION: Result is only valid if svn was built to support both."""
-  _check_command_line_parsed()
   return options.test_area_url.startswith('http') and \
     (options.http_library == "serf")
 
 def is_ra_type_svn():
   """Return True iff running tests over RA-svn."""
-  _check_command_line_parsed()
   return options.test_area_url.startswith('svn')
 
 def is_ra_type_file():
   """Return True iff running tests over RA-local."""
-  _check_command_line_parsed()
   return options.test_area_url.startswith('file')
 
 def is_fs_type_fsfs():
-  _check_command_line_parsed()
   # This assumes that fsfs is the default fs implementation.
   return options.fs_type == 'fsfs' or options.fs_type is None
 
@@ -1035,31 +1019,24 @@ def is_fs_case_insensitive():
   return (is_os_darwin() or is_os_windows())
 
 def server_has_mergeinfo():
-  _check_command_line_parsed()
   return options.server_minor_version >= 5
 
 def server_has_revprop_commit():
-  _check_command_line_parsed()
   return options.server_minor_version >= 5
 
 def server_sends_copyfrom_on_update():
-  _check_command_line_parsed()
   return options.server_minor_version >= 5
 
 def server_authz_has_aliases():
-  _check_command_line_parsed()
   return options.server_minor_version >= 5
 
 def server_gets_client_capabilities():
-  _check_command_line_parsed()
   return options.server_minor_version >= 5
 
 def server_has_partial_replay():
-  _check_command_line_parsed()
   return options.server_minor_version >= 5
 
 def server_enforces_date_syntax():
-  _check_command_line_parsed()
   return options.server_minor_version >= 5
 
 ######################################################################
@@ -1319,7 +1296,6 @@ def run_tests(test_list, serial_only = False):
   global svnsync_binary
   global svndumpfilter_binary
   global svnversion_binary
-  global command_line_parsed
   global options
 
   testnums = []
@@ -1471,8 +1447,6 @@ def run_tests(test_list, serial_only = False):
       svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
       svndumpfilter_binary = os.path.join(svn_bin, 'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
-
-  command_line_parsed = True
 
   ######################################################################
 
