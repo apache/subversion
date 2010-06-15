@@ -1461,8 +1461,8 @@ merge_file_changed(const char *local_dir_abspath,
             {
               if (older_revision_exists && !merge_b->dry_run)
                 {
-                  SVN_ERR(svn_io_file_rename(yours_abspath, mine_abspath,
-                                             subpool));
+                  SVN_ERR(svn_io_file_move(yours_abspath, mine_abspath,
+                                           subpool));
                 }
               merge_outcome = svn_wc_merge_merged;
               merge_required = FALSE;
