@@ -1278,7 +1278,13 @@ def _internal_run_tests(test_list, testnums, parallel):
   return exit_code
 
 
-def _parse_options():
+def create_default_options():
+  """Set the global options to the defaults, as provided by the argument
+     parser."""
+  _parse_options([])
+
+
+def _parse_options(arglist=sys.argv[1:]):
   """Parse the arguments in arg_list, and set the global options object with
      the results"""
 
@@ -1340,7 +1346,7 @@ def _parse_options():
         url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
         http_library='serf')
 
-  (options, args) = parser.parse_args()
+  (options, args) = parser.parse_args(arglist)
 
   # some sanity checking
   if options.verbose and options.quiet:
