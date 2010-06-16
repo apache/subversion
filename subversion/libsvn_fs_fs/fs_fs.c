@@ -7167,6 +7167,7 @@ struct change_rev_prop_baton {
   svn_fs_t *fs;
   svn_revnum_t rev;
   const char *name;
+  const svn_string_t **old_value_p;
   const svn_string_t *value;
 };
 
@@ -7182,6 +7183,23 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_fs_fs__revision_proplist(&table, cb->fs, cb->rev, pool));
 
+  if (cb->old_value_p)
+    {
+      const svn_string_t *wanted_value = *cb->old_value_p;
+      const svn_string_t *present_value = apr_hash_get(table, cb->name,
+                                                       APR_HASH_KEY_STRING);
+      if ((!wanted_value != !present_value)
+          || (wanted_value && present_value
+              && !svn_string_compare(wanted_value, present_value)))
+        {
+          /* What we expected isn't what we found. */
+          return svn_error_createf(SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+                                   _("revprop '%s' has unexpected value in "
+                                     "filesystem"),
+                                   cb->name);
+        }
+      /* Fall through. */
+    }
   apr_hash_set(table, cb->name, APR_HASH_KEY_STRING, cb->value);
 
   return set_revision_proplist(cb->fs, cb->rev, table, pool);
@@ -7191,6 +7209,7 @@ svn_error_t *
 svn_fs_fs__change_rev_prop(svn_fs_t *fs,
                            svn_revnum_t rev,
                            const char *name,
+                           const svn_string_t **old_value_p,
                            const svn_string_t *value,
                            apr_pool_t *pool)
 {
@@ -7201,6 +7220,7 @@ svn_fs_fs__change_rev_prop(svn_fs_t *fs,
   cb.fs = fs;
   cb.rev = rev;
   cb.name = name;
+  cb.old_value_p = old_value_p;
   cb.value = value;
 
   return svn_fs_fs__with_write_lock(fs, change_rev_prop_body, &cb, pool);

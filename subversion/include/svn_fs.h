@@ -1894,6 +1894,10 @@ svn_fs_revision_proplist(apr_hash_t **table_p,
  * - @a fs is a filesystem, and @a rev is the revision in that filesystem
  *   whose property should change.
  * - @a name is the name of the property to change.
+ * - if @a old_value_p is not @c NULL, then @a *old_value_p is the expected old
+ *   value of the property, and changing the value will fail with error
+ *   #SVN_ERR_BAD_PROPERTY_VALUE if the present value of the property is not @a
+ *   *old_value_p.
  * - @a value is the new value of the property, or zero if the property should
  *   be removed altogether.
  *
@@ -1902,7 +1906,25 @@ svn_fs_revision_proplist(apr_hash_t **table_p,
  * via transactions.
  *
  * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_fs_change_rev_prop2(svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        const char *name,
+                        const svn_string_t **old_value_p,
+                        const svn_string_t *value,
+                        apr_pool_t *pool);
+
+
+/** 
+ * Similar to svn_fs_change_rev_prop2(), but with @a old_value_p passed as
+ * @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_change_rev_prop(svn_fs_t *fs,
                        svn_revnum_t rev,
