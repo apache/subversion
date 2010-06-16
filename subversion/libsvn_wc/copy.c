@@ -808,7 +808,7 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
   const char *tmpdir_abspath;
 #ifndef SVN_EXPERIMENTAL_PRISTINE
   svn_stream_t *src_pristine;
-  svn_wc__db_status_t status;
+  svn_wc__db_status_t src_status; 
 #endif
   const char *tmp_dst_abspath;
   svn_node_kind_t kind;
@@ -817,20 +817,43 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
                                          dst_abspath,
                                          scratch_pool, scratch_pool));
 
+  
+  /* This goes away when we stop using revert bases. */
+  {
+    svn_wc__db_status_t dst_status; 
+    svn_boolean_t will_replace;
+    svn_error_t *err;
+
+    err = svn_wc__db_read_info(&dst_status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               wc_ctx->db, dst_abspath,
+                               scratch_pool, scratch_pool);
+    if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+      return svn_error_return(err);
+    will_replace = (!err && dst_status == svn_wc__db_status_deleted);
+    svn_error_clear(err);
+    if (will_replace)
+      SVN_ERR(svn_wc__wq_prepare_revert_files(wc_ctx->db, dst_abspath,
+                                              scratch_pool));
+  }
+
 #ifndef SVN_EXPERIMENTAL_PRISTINE
   /* This goes away when the pristine store is enabled; the copy
      shares the same pristine as the source so nothing needs to be
      copied. */
-  SVN_ERR(svn_wc__db_read_info(&status,
+  SVN_ERR(svn_wc__db_read_info(&src_status,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL,
                                wc_ctx->db, src_abspath,
                                scratch_pool, scratch_pool));
-  if (status == svn_wc__db_status_absent
-      || status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_not_present)
+  if (src_status == svn_wc__db_status_absent
+      || src_status == svn_wc__db_status_excluded
+      || src_status == svn_wc__db_status_not_present)
     src_pristine = NULL;
   else
     SVN_ERR(svn_wc__get_pristine_contents(&src_pristine, wc_ctx->db,
@@ -855,6 +878,43 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
                                  scratch_pool));
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
+#endif
+
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
+  /* This goes away when we move to in-db-props. */
+  {
+    apr_hash_t *src_props;
+
+    SVN_ERR(svn_wc__get_pristine_props(&src_props, wc_ctx->db, src_abspath,
+                                       scratch_pool, scratch_pool));
+    if (src_props && apr_hash_count(src_props))
+      {
+        svn_skel_t *work_item;
+        const char *props_abspath;
+
+        SVN_ERR(svn_wc__prop_path(&props_abspath, dst_abspath, 
+                                  svn_wc__db_kind_file, svn_wc__props_base,
+                                  scratch_pool));
+        SVN_ERR(svn_wc__wq_build_write_old_props(&work_item, props_abspath,
+                                                 src_props, scratch_pool));
+        work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+      }
+
+    SVN_ERR(svn_wc__get_actual_props(&src_props, wc_ctx->db, src_abspath,
+                                     scratch_pool, scratch_pool));
+    if (src_props && apr_hash_count(src_props))
+      {
+        svn_skel_t *work_item;
+        const char *props_abspath;
+
+        SVN_ERR(svn_wc__prop_path(&props_abspath, dst_abspath, 
+                                  svn_wc__db_kind_file, svn_wc__props_working,
+                                  scratch_pool));
+        SVN_ERR(svn_wc__wq_build_write_old_props(&work_item, props_abspath,
+                                                 src_props, scratch_pool));
+        work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+      }
+  }
 #endif
 
   SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, src_abspath, tmpdir_abspath,
@@ -996,6 +1056,43 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
                                                    scratch_pool));
         }
     }
+
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
+  /* This goes away when we move to in-db-props. */
+  {
+    apr_hash_t *src_props;
+
+    SVN_ERR(svn_wc__get_pristine_props(&src_props, wc_ctx->db, src_abspath,
+                                       scratch_pool, scratch_pool));
+    if (src_props && apr_hash_count(src_props))
+      {
+        svn_skel_t *work_item;
+        const char *props_abspath;
+
+        SVN_ERR(svn_wc__prop_path(&props_abspath, dst_abspath, 
+                                  svn_wc__db_kind_dir, svn_wc__props_base,
+                                  scratch_pool));
+        SVN_ERR(svn_wc__wq_build_write_old_props(&work_item, props_abspath,
+                                                 src_props, scratch_pool));
+        work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+      }
+
+    SVN_ERR(svn_wc__get_actual_props(&src_props, wc_ctx->db, src_abspath,
+                                     scratch_pool, scratch_pool));
+    if (src_props && apr_hash_count(src_props))
+      {
+        svn_skel_t *work_item;
+        const char *props_abspath;
+
+        SVN_ERR(svn_wc__prop_path(&props_abspath, dst_abspath, 
+                                  svn_wc__db_kind_dir, svn_wc__props_working,
+                                  scratch_pool));
+        SVN_ERR(svn_wc__wq_build_write_old_props(&work_item, props_abspath,
+                                                 src_props, scratch_pool));
+        work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+      }
+  }
+#endif
 
   SVN_ERR(svn_wc__db_op_copy(wc_ctx->db, src_abspath, dst_abspath,
                              work_items, scratch_pool));
