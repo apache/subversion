@@ -2790,29 +2790,30 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   flush_entries(pdh);
 
   /* Add a parent stub.  */
-  {
-    svn_error_t *err;
+  if (*local_relpath == '\0')
+    {
+      svn_error_t *err;
 
-    err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
-                             scratch_pool);
-    if (err)
-      {
-        /* Prolly fell off the top of the wcroot. Just call it a day.  */
-        svn_error_clear(err);
-        return SVN_NO_ERROR;
-      }
+      err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                               scratch_pool);
+      if (err)
+        {
+          /* Prolly fell off the top of the wcroot. Just call it a day.  */
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
 
-    blank_iwb(&iwb);
+      blank_iwb(&iwb);
 
-    iwb.presence = svn_wc__db_status_normal;
-    iwb.kind = svn_wc__db_kind_subdir;
-    iwb.wc_id = pdh->wcroot->wc_id;
-    iwb.local_relpath = svn_dirent_basename(local_abspath, scratch_pool);
+      iwb.presence = svn_wc__db_status_normal;
+      iwb.kind = svn_wc__db_kind_subdir;
+      iwb.wc_id = pdh->wcroot->wc_id;
+      iwb.local_relpath = svn_dirent_basename(local_abspath, scratch_pool);
 
-    /* No children or work items, so a txn is not needed.  */
-    SVN_ERR(insert_working_node(&iwb, pdh->wcroot->sdb, scratch_pool));
-    flush_entries(pdh);
-  }
+      /* No children or work items, so a txn is not needed.  */
+      SVN_ERR(insert_working_node(&iwb, pdh->wcroot->sdb, scratch_pool));
+      flush_entries(pdh);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2988,29 +2989,30 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
   flush_entries(pdh);
 
   /* Add a parent stub.  */
-  {
-    svn_error_t *err;
+  if (*local_relpath == '\0')
+    {
+      svn_error_t *err;
 
-    err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
-                             scratch_pool);
-    if (err)
-      {
-        /* Prolly fell off the top of the wcroot. Just call it a day.  */
-        svn_error_clear(err);
-        return SVN_NO_ERROR;
-      }
+      err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                               scratch_pool);
+      if (err)
+        {
+          /* Prolly fell off the top of the wcroot. Just call it a day.  */
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
 
-    blank_iwb(&iwb);
+      blank_iwb(&iwb);
 
-    iwb.presence = svn_wc__db_status_normal;
-    iwb.kind = svn_wc__db_kind_subdir;
-    iwb.wc_id = pdh->wcroot->wc_id;
-    iwb.local_relpath = svn_dirent_basename(local_abspath, scratch_pool);
+      iwb.presence = svn_wc__db_status_normal;
+      iwb.kind = svn_wc__db_kind_subdir;
+      iwb.wc_id = pdh->wcroot->wc_id;
+      iwb.local_relpath = svn_dirent_basename(local_abspath, scratch_pool);
 
-    /* No children or work items, so a txn is not needed.  */
-    SVN_ERR(insert_working_node(&iwb, pdh->wcroot->sdb, scratch_pool));
-    flush_entries(pdh);
-  }
+      /* No children or work items, so a txn is not needed.  */
+      SVN_ERR(insert_working_node(&iwb, pdh->wcroot->sdb, scratch_pool));
+      flush_entries(pdh);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3638,23 +3640,6 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
 
   flush_entries(pdh);
 
-  /* Check if we should remove it from the parent db instead */
-  /* (In theory, we should remove it from the parent db *as well*.  However,
-     we must be looking at a separate per-directory database, and deleting
-     the "this-dir" entry implies the caller is about to delete this whole
-     directory including the database from disk, so we don't bother deleting
-     the rows from here as well.) */
-  if (*local_relpath == '\0')
-    {
-      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
-                                 scratch_pool));
-      VERIFY_USABLE_PDH(pdh);
-
-      local_relpath = svn_dirent_basename(local_abspath, NULL);
-
-      flush_entries(pdh);
-    }
-
   sdb = pdh->wcroot->sdb;
   wc_id = pdh->wcroot->wc_id;
 
@@ -3669,7 +3654,37 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
 
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Check if we should also remove it from the parent db */
+  if (*local_relpath == '\0')
+    {
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                                 scratch_pool));
+      VERIFY_USABLE_PDH(pdh);
+
+      local_relpath = svn_dirent_basename(local_abspath, NULL);
+
+      flush_entries(pdh);
+
+      sdb = pdh->wcroot->sdb;
+      wc_id = pdh->wcroot->wc_id;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_BASE_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_WORKING_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
