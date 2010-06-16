@@ -158,7 +158,7 @@ typedef struct fs_vtable_t
                                     svn_revnum_t rev, apr_pool_t *pool);
   svn_error_t *(*change_rev_prop)(svn_fs_t *fs, svn_revnum_t rev,
                                   const char *name,
-                                  const svn_string_t **old_value_p,
+                                  const svn_string_t *const *old_value_p,
                                   const svn_string_t *value,
                                   apr_pool_t *pool);
   svn_error_t *(*get_uuid)(svn_fs_t *fs, const char **uuid, apr_pool_t *pool);

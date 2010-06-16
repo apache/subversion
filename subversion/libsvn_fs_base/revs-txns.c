@@ -241,7 +241,7 @@ svn_error_t *
 svn_fs_base__set_rev_prop(svn_fs_t *fs,
                           svn_revnum_t rev,
                           const char *name,
-                          const svn_string_t **old_value_p,
+                          const svn_string_t *const *old_value_p,
                           const svn_string_t *value,
                           trail_t *trail,
                           apr_pool_t *pool)
@@ -287,7 +287,7 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
 struct change_rev_prop_args {
   svn_revnum_t rev;
   const char *name;
-  const svn_string_t **old_value_p;
+  const svn_string_t *const *old_value_p;
   const svn_string_t *value;
 };
 
@@ -307,7 +307,7 @@ svn_error_t *
 svn_fs_base__change_rev_prop(svn_fs_t *fs,
                              svn_revnum_t rev,
                              const char *name,
-                             const svn_string_t **old_value_p,
+                             const svn_string_t *const *old_value_p,
                              const svn_string_t *value,
                              apr_pool_t *pool)
 {
