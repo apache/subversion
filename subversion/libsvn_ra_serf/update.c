@@ -2187,6 +2187,7 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
   return SVN_NO_ERROR;
 }
 
+/* Serf callback to create update request body bucket. */
 static serf_bucket_t *
 create_update_report_body(void *baton,
                           serf_bucket_alloc_t *alloc,
