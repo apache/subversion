@@ -76,6 +76,12 @@ jobject EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
   return mapEnum(JAVA_PACKAGE"/ClientNotifyInformation$Action", (int) action);
 }
 
+jobject EnumMapper::mapReposNotifyNodeAction(svn_node_action action)
+{
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/ReposNotifyInformation$NodeAction", (int) action);
+}
+
 /**
  * Map a C repos notify action constant to the Java constant.
  */
