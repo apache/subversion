@@ -4300,29 +4300,20 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 
               work_status = svn_sqlite__column_token(stmt_work, 0,
                                                      presence_map);
-#ifdef SVN_EXPERIMENTAL_COPY
               SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
                              || work_status == svn_wc__db_status_not_present
                              || work_status == svn_wc__db_status_base_deleted
                              || work_status == svn_wc__db_status_incomplete
                              || work_status == svn_wc__db_status_excluded);
-#else
-              SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
-                             || work_status == svn_wc__db_status_not_present
-                             || work_status == svn_wc__db_status_base_deleted
-                             || work_status == svn_wc__db_status_incomplete);
-#endif
 
               if (work_status == svn_wc__db_status_incomplete)
                 {
                   *status = svn_wc__db_status_incomplete;
                 }
-#ifdef SVN_EXPERIMENTAL_COPY
               else if (work_status == svn_wc__db_status_excluded)
                 {
                   *status = svn_wc__db_status_excluded;
                 }
-#endif
               else if (work_status == svn_wc__db_status_not_present
                        || work_status == svn_wc__db_status_base_deleted)
                 {
