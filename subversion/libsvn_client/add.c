@@ -565,21 +565,15 @@ add_parent_dirs(svn_client_ctx_t *ctx,
   parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
   SVN_ERR(add_parent_dirs(ctx, parent_abspath, scratch_pool));
-
-  /* ### New dir gets added with its own per-directory lock which we
-     must release. To do this we first lock the parent directory.
-     This code might be redundant when we move to a single db and
-     can get the locking strategy worked out for adding nodes. *
-  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, parent_abspath,
-                                     scratch_pool, scratch_pool));
-
   SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
                       NULL, SVN_INVALID_REVNUM,
                       ctx->cancel_func, ctx->cancel_baton,
                       ctx->notify_func2, ctx->notify_baton2,
                       scratch_pool));
-  /* Releases lock for parent directory and new subdir */
-  SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, parent_abspath, scratch_pool));
+  /* ### New dir gets added with its own per-directory lock which we
+     must release.  This code should be redundant when we move to a
+     single db. */
+  SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
