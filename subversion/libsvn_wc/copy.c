@@ -695,35 +695,9 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
     if ((src_status == svn_wc__db_status_copied)
         || (src_status == svn_wc__db_status_moved_here))
       {
-        const svn_wc_entry_t *dst_entry;
-        svn_wc_entry_t tmp_entry;
-
-        SVN_ERR(svn_wc__get_entry(&dst_entry, db, dst_abspath, TRUE,
-                                  svn_node_dir, TRUE,
-                                  scratch_pool, scratch_pool));
         SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
                                                NULL, wc_ctx, src_abspath,
                                                scratch_pool, scratch_pool));
-
-        /* If the COPYFROM information is the SAME as the destination
-           URL/REVISION, then omit the copyfrom info.  */
-        if (dst_entry != NULL
-            && dst_entry->revision == copyfrom_rev
-            && copyfrom_url != NULL
-            && dst_entry->url != NULL
-            && strcmp(copyfrom_url, dst_entry->url) == 0)
-          {
-            copyfrom_url = NULL;
-            copyfrom_rev = SVN_INVALID_REVNUM;
-          }
-
-        /* The URL for a copied dir won't exist in the repository, which
-           will cause  svn_wc_add4() below to fail.  Set the URL to the
-           URL of the first copy for now to prevent this. */
-        tmp_entry.url = apr_pstrdup(scratch_pool, copyfrom_url);
-        SVN_ERR(svn_wc__entry_modify(db, dst_abspath, svn_node_dir,
-                                     &tmp_entry, SVN_WC__ENTRY_MODIFY_URL,
-                                     scratch_pool));
       }
     else
       {
