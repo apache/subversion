@@ -23,7 +23,6 @@
 
 package org.apache.subversion.javahl;
 
-import java.util.Map;
 import java.util.EventObject;
 
 /**
@@ -57,6 +56,16 @@ public class ReposNotifyInformation extends EventObject
      * The warning text.
      */
     private String warning;
+    
+    private long shard;
+    
+    private long newRevision;
+    
+    private long oldRevision;
+    
+    private NodeAction nodeAction;
+    
+    private String path;
 
     /**
      * This constructor is to be used by the native code.
@@ -64,12 +73,20 @@ public class ReposNotifyInformation extends EventObject
      * @param action The {@link NotifyAction} which triggered this event.
      * @param revision potentially the revision.
      */
-    public ReposNotifyInformation(Action action, long revision, String warning)
+    public ReposNotifyInformation(Action action, long revision, String warning,
+                                  long shard, long newRevision,
+                                  long oldRevision, NodeAction nodeAction,
+                                  String path)
     {
         super(action);
         this.action = action;
         this.revision = revision;
         this.warning = warning;
+        this.shard = shard;
+        this.newRevision = newRevision;
+        this.oldRevision = oldRevision;
+        this.nodeAction = nodeAction;
+        this.path = path;
     }
 
     /**
@@ -95,7 +112,32 @@ public class ReposNotifyInformation extends EventObject
     {
         return warning;
     }
+    
+    public long getShard()
+    {
+       return shard;
+    }
+    
+    public long getNewRevision()
+    {
+       return newRevision;
+    }
+    
+    public long getOldRevision()
+    {
+       return oldRevision;
+    }
 
+    public NodeAction getNodeAction()
+    {
+       return nodeAction;
+    }
+    
+    public String getPath()
+    {
+       return path;
+    }
+    
     /**
      * The type of action triggering the notification
      */
@@ -148,5 +190,13 @@ public class ReposNotifyInformation extends EventObject
 
         /** Upgrade has started. */
         upgrade_start;
+    }
+    
+    public enum NodeAction
+    {
+         svn_node_action_change,
+         svn_node_action_add,
+         svn_node_action_delete,
+         svn_node_action_replace;
     }
 }

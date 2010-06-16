@@ -710,7 +710,9 @@ CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify,
     {
       midCT = env->GetMethodID(clazz, "<init>",
                                "(L"JAVA_PACKAGE"/ReposNotifyInformation$Action;"
-                               "JLjava/lang/String;)V");
+                               "JLjava/lang/String;JJJ"
+                               "L"JAVA_PACKAGE"/ReposNotifyInformation$NodeAction;"
+                               "Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         POP_AND_RETURN_NULL;
     }
@@ -725,9 +727,23 @@ CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify,
     POP_AND_RETURN_NULL;
 
   jlong jRevision = (jlong)reposNotify->revision;
+  jlong jShard = (jlong)reposNotify->shard;
+  jlong jnewRevision = (jlong)reposNotify->new_revision;
+  jlong joldRevision = (jlong)reposNotify->old_revision;
+
+  jobject jnodeAction = EnumMapper::mapReposNotifyNodeAction(
+                                                    reposNotify->node_action);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jpath = JNIUtil::makeJString(reposNotify->path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   // call the Java method
-  jobject jInfo = env->NewObject(clazz, midCT, jAction, jRevision, jWarning);
+  jobject jInfo = env->NewObject(clazz, midCT, jAction, jRevision, jWarning,
+                                 jShard, jnewRevision, joldRevision,
+                                 jnodeAction, jpath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 

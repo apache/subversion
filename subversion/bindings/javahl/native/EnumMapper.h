@@ -53,6 +53,7 @@ class EnumMapper
   static jint mapCommitMessageStateFlags(apr_byte_t flags);
   static jobject mapNotifyState(svn_wc_notify_state_t state);
   static jobject mapNotifyAction(svn_wc_notify_action_t action);
+  static jobject mapReposNotifyNodeAction(svn_node_action action);
   static jobject mapReposNotifyAction(svn_repos_notify_action_t action);
   static jobject mapNodeKind(svn_node_kind_t nodeKind);
   static jobject mapNotifyLockState(svn_wc_notify_lock_state_t state);
