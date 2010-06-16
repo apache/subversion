@@ -232,23 +232,6 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r935631
-   Fix one of the sanity checks in the 'svn merge --reintegrate' logic.
-   Justification:
-     Sanity checks should themselves be sane.  Without this change we are
-     checking that the repository root URL of the reintegrate target is
-     equal to itself, which unsurprisingly it always is :-)
-     Reintegrate merges from foreign repositories do fail without this
-     change, but with the somewhat unhelpful message:
-     "URL '%REINTEGRATE_SOURCE_URL%' is not a child of repository root
-     URL '%REINTEGRATE_TARGET_URL%'".  With this r935631 in place we get
-     a much more helpful error message: "svn: '%REINTEGRATE_SOURCE_URL%' must
-     be from the same repository as 'WC-TARGET-PATH'".
-   Branch:
-     ^/subversion/branches/1.6.x-r935631
-   Votes:
-     +1: cmpilato, pburba, rhuijben
  
  * r950931, 950933
    Fix for issue #3303 "cannot copy broken symlink".
