@@ -677,8 +677,8 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  */
 
 /** Callback type used by svn_client_blame5() to notify the caller
- * that line @a line_no of the blamed file was last changed in
- * @a revision by @a author on @a date, and that the contents were
+ * that line @a line_no of the blamed file was last changed in @a revision
+ * which has the revision properties @a rev_props, and that the contents were
  * @a line.
  *
  * If svn_client_blame4() was called with @a include_merged_revisions set to
@@ -691,7 +691,7 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  * @note If there is no blame information for this line, @a revision will be
  * invalid and @a rev_props will be NULL. In this case @a local_change
  * will be true if the reason there is no blame information is that the line
- * was modified locally, In all other cases @a local_change will be false.
+ * was modified locally. In all other cases @a local_change will be false.
  *
  * @since New in 1.7.
  */
@@ -708,8 +708,9 @@ typedef svn_error_t *(*svn_client_blame_receiver3_t)(
   apr_pool_t *pool);
 
 /**
- * Similar to #svn_client_blame_receiver3_t, but with separate revision
- * properties and without information about local_only changes
+ * Similar to #svn_client_blame_receiver3_t, but with separate author and
+ * date revision properties instead of all revision properties, and without
+ * information about local changes.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  *
