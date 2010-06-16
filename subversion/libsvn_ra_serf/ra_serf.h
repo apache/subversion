@@ -473,18 +473,6 @@ typedef struct {
   /* The resource to the execute the method on. */
   const char *path;
 
-  /* The request's body buckets.
-   *
-   * May be NULL if there is no body to send or ->body_delegate is set.
-   *
-   * Using the body_delegate function is preferred as it delays the
-   * creation of the body until we're about to deliver the request
-   * instead of creating it earlier.
-   *
-   * @see svn_ra_serf__request_body_delegate_t
-   */
-  serf_bucket_t *body_buckets;
-
   /* The content-type of the request body. */
   const char *body_type;
 
@@ -522,6 +510,9 @@ typedef struct {
    *
    * It will be executed after the request has been set up but before it is
    * delivered.
+   *
+   * May be NULL if there is no body to send.
+   *
    */
   svn_ra_serf__request_body_delegate_t body_delegate;
   void *body_delegate_baton;
@@ -529,9 +520,6 @@ typedef struct {
   /* The connection and session to be used for this request. */
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__session_t *session;
-
-  /* Marks whether a snapshot was set on the body bucket. */
-  svn_boolean_t body_snapshot_set;
 } svn_ra_serf__handler_t;
 
 /*
