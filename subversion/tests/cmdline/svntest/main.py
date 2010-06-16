@@ -1284,12 +1284,8 @@ def create_default_options():
   _parse_options([])
 
 
-def _parse_options(arglist=sys.argv[1:]):
-  """Parse the arguments in arg_list, and set the global options object with
-     the results"""
-
-  global options
-
+def _create_parser():
+  """Return a parser for our test suite."""
   # set up the parser
   usage = 'usage: %prog [options] [<test> ...]'
   parser = optparse.OptionParser(usage=usage)
@@ -1346,6 +1342,16 @@ def _parse_options(arglist=sys.argv[1:]):
         url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
         http_library='serf')
 
+  return parser
+
+
+def _parse_options(arglist=sys.argv[1:]):
+  """Parse the arguments in arg_list, and set the global options object with
+     the results"""
+
+  global options
+
+  parser = _create_parser()
   (options, args) = parser.parse_args(arglist)
 
   # some sanity checking
@@ -1362,7 +1368,7 @@ def _parse_options(arglist=sys.argv[1:]):
     else:
       options.test_area_url = options.url
 
-  return args
+  return (parser, args)
 
 
 # Main func.  This is the "entry point" that all the test scripts call
@@ -1388,9 +1394,10 @@ def run_tests(test_list, serial_only = False):
   testnums = []
 
   if not options:
-    args = _parse_options()
+    (parser, args) = _parse_options()
   else:
     args = []
+    parser = _create_parser()
 
   # parse the positional arguments (test nums, names)
   for arg in args:
