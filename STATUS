@@ -133,6 +133,9 @@ Candidate changes:
      r950445 fixes the issue and r950468 is a test for this issue.
    Votes:
      +1: stylesen, cmpilato
+     -0: julianfoad (Tested and works fine, but changes semantics of
+           svn_io_dir_walk() which we should not do in a back-port.
+           Discussing on list.)
 
 Veto-blocked changes:
 =====================
