@@ -138,9 +138,10 @@ public interface ISVNAdmin {
 	 * @since 1.5
 	 */
 	public abstract void load(File path, InputStream dataInput,
-			OutputStream messageOutput, boolean ignoreUUID, boolean forceUUID,
-			boolean usePreCommitHook, boolean usePostCommitHook,
-			String relativePath) throws ClientException;
+			boolean ignoreUUID, boolean forceUUID, boolean usePreCommitHook,
+            boolean usePostCommitHook, String relativePath,
+            ReposNotifyCallback callback)
+        throws ClientException;
 
 	/**
 	 * list all open transactions in a repository

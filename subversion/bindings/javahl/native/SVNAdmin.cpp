@@ -295,12 +295,12 @@ void SVNAdmin::listUnusedDBLogs(File &path,
 
 void SVNAdmin::load(File &path,
                     InputStream &dataIn,
-                    OutputStream &messageOut,
                     bool ignoreUUID,
                     bool forceUUID,
                     bool usePreCommitHook,
                     bool usePostCommitHook,
-                    const char *relativePath)
+                    const char *relativePath,
+                    ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -319,10 +319,13 @@ void SVNAdmin::load(File &path,
   SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
                              requestPool.pool()), );
 
-  SVN_JNI_ERR(svn_repos_load_fs2(repos, dataIn.getStream(requestPool),
-                                 messageOut.getStream(requestPool),
+  SVN_JNI_ERR(svn_repos_load_fs3(repos, dataIn.getStream(requestPool),
                                  uuid_action, relativePath,
                                  usePreCommitHook, usePostCommitHook,
+                                 notifyCallback != NULL
+                                    ? ReposNotifyCallback::notify
+                                    : NULL,
+                                 notifyCallback,
                                  NULL, NULL, requestPool.pool()), );
 }
 

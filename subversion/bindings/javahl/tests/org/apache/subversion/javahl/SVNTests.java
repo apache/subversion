@@ -427,18 +427,6 @@ class SVNTests extends TestCase
     }
 
     /**
-     * internal class extends OutputStream, but ignores the data
-     */
-    public class IgnoreOutputer extends OutputStream
-    {
-        public void write(int b) throws IOException
-        {
-            /* Just do nothing. */
-            return;
-        }
-    }
-
-    /**
      * Represents the repository and (possibly) the working copy for
      * one test.
      */
@@ -651,9 +639,8 @@ class SVNTests extends TestCase
             admin.create(repos, true, false, conf, fsType);
             if (loadGreek)
             {
-                admin.load(repos, new FileInputStream(greekDump),
-                           new IgnoreOutputer(), false, false, false, false,
-                           null);
+                admin.load(repos, new FileInputStream(greekDump), false, false,
+                           false, false, null, null);
             }
             return repos;
         }

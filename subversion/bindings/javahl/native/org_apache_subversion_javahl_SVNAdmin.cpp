@@ -239,8 +239,8 @@ Java_org_apache_subversion_javahl_SVNAdmin_listUnusedDBLogs
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_load
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jinputData,
- jobject joutputMsg, jboolean jignoreUUID, jboolean jforceUUID,
- jboolean jusePreCommitHook, jboolean jusePostCommitHook, jstring jrelativePath)
+ jboolean jignoreUUID, jboolean jforceUUID, jboolean jusePreCommitHook,
+ jboolean jusePostCommitHook, jstring jrelativePath, jobject jnotifyCallback)
 {
   JNIEntry(SVNAdmin, load);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -258,18 +258,16 @@ Java_org_apache_subversion_javahl_SVNAdmin_load
   if (JNIUtil::isExceptionThrown())
     return;
 
-
-  OutputStream outputMsg(joutputMsg);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
   JNIStringHolder relativePath(jrelativePath);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->load(path, inputData, outputMsg, jignoreUUID ? true : false,
+  ReposNotifyCallback notifyCallback(jnotifyCallback);
+
+  cl->load(path, inputData, jignoreUUID ? true : false,
            jforceUUID ? true : false, jusePreCommitHook ? true : false,
-           jusePostCommitHook ? true : false, relativePath);
+           jusePostCommitHook ? true : false, relativePath,
+           jnotifyCallback != NULL ? &notifyCallback : NULL);
 }
 
 JNIEXPORT void JNICALL

@@ -194,9 +194,9 @@ public class ReposNotifyInformation extends EventObject
     
     public enum NodeAction
     {
-         svn_node_action_change,
-         svn_node_action_add,
-         svn_node_action_delete,
-         svn_node_action_replace;
+         change,
+         add,
+         deleted,
+         replace;
     }
 }
