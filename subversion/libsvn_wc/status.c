@@ -2607,7 +2607,6 @@ internal_status(svn_wc_status3_t **status,
   if (!svn_dirent_is_root(local_abspath, strlen(local_abspath)))
     {
       svn_wc__db_status_t parent_status;
-      svn_error_t *err;
       const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                       scratch_pool);
 
