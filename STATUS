@@ -110,23 +110,6 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r935631
-   Fix one of the sanity checks in the 'svn merge --reintegrate' logic.
-   Justification:
-     Sanity checks should themselves be sane.  Without this change we are
-     checking that the repository root URL of the reintegrate target is
-     equal to itself, which unsurprisingly it always is :-)
-     Reintegrate merges from foreign repositories do fail without this
-     change, but with the somewhat unhelpful message:
-     "URL '%REINTEGRATE_SOURCE_URL%' is not a child of repository root
-     URL '%REINTEGRATE_TARGET_URL%'".  With this r935631 in place we get
-     a much more helpful error message: "svn: '%REINTEGRATE_SOURCE_URL%' must
-     be from the same repository as 'WC-TARGET-PATH'".
-   Branch:
-     ^/subversion/branches/1.6.x-r935631
-   Votes:
-     +1: cmpilato, pburba
-
  * r939375-939376
    Fix issue #3623, a bug in foreign repository merges that causes properties
    on merge-added files to be dropped from commits of those merges.
@@ -150,39 +133,6 @@ Candidate changes:
      r950445 fixes the issue and r950468 is a test for this issue.
    Votes:
      +1: stylesen, cmpilato
-
- * r950931, 950933
-   Fix for issue #3303 "cannot copy broken symlink".
-   Justification:
-     A broken symlink could be added by subversion to the working copy, on
-     the other hand a copy is not possible which is a serious bug which is
-     fixed via these commits.
-   Notes:
-     r950933 fixes the issue and r950931 is a test for this issue.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3303
-   Votes:
-     +1: stylesen, cmpilato
-
- * r953878, r876855
-   Fix issue #3654 'Added subtrees with mergeinfo break reintegrate'
-   Justification:
-     In certain use cases, this bug breaks reintegrate merges.  Love or
-     hate reintegrate, many users like it and rely on it heavily.  See
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3654 for more.
-   Notes:
-     r953878 is a new test for this issue.
-     r876855 is from ^/subversion/branches/subtree-mergeinfo@876855 and is
-     actual fix for this issue on 1.6.x.  The subtree-mergeinfo branch is
-     already on trunk in it's entirety, but we want only this small portion
-     on 1.6.x.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3654
-     When reintegrating the branch use the '-x --ignore-eol-style' option or
-     the entire merge_tests.py file conflicts.  No idea why this is, the file
-     has svn:eol-style native on both 1.6.x and the branch.
-   Votes:
-     +1: pburba, cmpilato
 
 Veto-blocked changes:
 =====================
@@ -243,7 +193,7 @@ Veto-blocked changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3020
    Votes:
-     +1: rhuijben, kameshj
+     +1: kameshj
      -1: pburba (There is a regression with this fix, see
          http://svn.haxx.se/dev/archive-2010-03/0716.shtml)
 
@@ -259,3 +209,53 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r935631
+   Fix one of the sanity checks in the 'svn merge --reintegrate' logic.
+   Justification:
+     Sanity checks should themselves be sane.  Without this change we are
+     checking that the repository root URL of the reintegrate target is
+     equal to itself, which unsurprisingly it always is :-)
+     Reintegrate merges from foreign repositories do fail without this
+     change, but with the somewhat unhelpful message:
+     "URL '%REINTEGRATE_SOURCE_URL%' is not a child of repository root
+     URL '%REINTEGRATE_TARGET_URL%'".  With this r935631 in place we get
+     a much more helpful error message: "svn: '%REINTEGRATE_SOURCE_URL%' must
+     be from the same repository as 'WC-TARGET-PATH'".
+   Branch:
+     ^/subversion/branches/1.6.x-r935631
+   Votes:
+     +1: cmpilato, pburba, rhuijben
+ 
+ * r950931, 950933
+   Fix for issue #3303 "cannot copy broken symlink".
+   Justification:
+     A broken symlink could be added by subversion to the working copy, on
+     the other hand a copy is not possible which is a serious bug which is
+     fixed via these commits.
+   Notes:
+     r950933 fixes the issue and r950931 is a test for this issue.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3303
+   Votes:
+     +1: stylesen, cmpilato, rhuijben
+
+ * r953878, r876855
+   Fix issue #3654 'Added subtrees with mergeinfo break reintegrate'
+   Justification:
+     In certain use cases, this bug breaks reintegrate merges.  Love or
+     hate reintegrate, many users like it and rely on it heavily.  See
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3654 for more.
+   Notes:
+     r953878 is a new test for this issue.
+     r876855 is from ^/subversion/branches/subtree-mergeinfo@876855 and is
+     actual fix for this issue on 1.6.x.  The subtree-mergeinfo branch is
+     already on trunk in it's entirety, but we want only this small portion
+     on 1.6.x.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3654
+     When reintegrating the branch use the '-x --ignore-eol-style' option or
+     the entire merge_tests.py file conflicts.  No idea why this is, the file
+     has svn:eol-style native on both 1.6.x and the branch.
+   Votes:
+     +1: pburba, cmpilato, rhuijben
