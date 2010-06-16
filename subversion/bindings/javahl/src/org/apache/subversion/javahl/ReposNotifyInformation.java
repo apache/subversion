@@ -108,6 +108,45 @@ public class ReposNotifyInformation extends EventObject
         dump_rev_end,
 
         /** A revision has finished being verified. */
-        verify_rev_end;
+        verify_rev_end,
+
+        /** packing of an FSFS shard has commenced */
+        pack_shard_start,
+
+        /** packing of an FSFS shard is completed */
+        pack_shard_end,
+
+        /** packing of the shard revprops has commenced */
+        pack_shard_start_revprop,
+
+        /** packing of the shard revprops has completed */
+        pack_shard_end_revprop,
+
+        /** A revision has begun loading */
+        load_txn_start,
+
+        /** A revision has finished loading */
+        load_txn_committed,
+
+        /** A node has begun loading */
+        load_node_start,
+
+        /** A node has finished loading */
+        load_node_done,
+
+        /** A copied node has been encountered */
+        load_copied_node,
+
+        /** Mergeinfo has been normalized */
+        load_normalized_mergeinfo,
+
+        /** The operation has acquired a mutex for the repo. */
+        mutex_acquired,
+
+        /** Recover has started. */
+        recover_start,
+
+        /** Upgrade has started. */
+        upgrade_start;
     }
 }
