@@ -1199,11 +1199,21 @@ svn_fs_revision_proplist(apr_hash_t **table_p, svn_fs_t *fs, svn_revnum_t rev,
 }
 
 svn_error_t *
+svn_fs_change_rev_prop2(svn_fs_t *fs, svn_revnum_t rev, const char *name,
+                        const svn_string_t **old_value_p,
+                        const svn_string_t *value, apr_pool_t *pool)
+{
+  return svn_error_return(fs->vtable->change_rev_prop(fs, rev, name,
+                                                      old_value_p,
+                                                      value, pool));
+}
+
+svn_error_t *
 svn_fs_change_rev_prop(svn_fs_t *fs, svn_revnum_t rev, const char *name,
                        const svn_string_t *value, apr_pool_t *pool)
 {
-  return svn_error_return(fs->vtable->change_rev_prop(fs, rev, name, value,
-                                                      pool));
+  return svn_error_return(
+           svn_fs_change_rev_prop2(fs, rev, name, NULL, value, pool));
 }
 
 svn_error_t *

@@ -61,6 +61,7 @@ svn_error_t *svn_fs_base__rev_get_txn_id(const char **txn_id_p,
 svn_error_t *svn_fs_base__set_rev_prop(svn_fs_t *fs,
                                        svn_revnum_t rev,
                                        const char *name,
+                                       const svn_string_t **old_value_p,
                                        const svn_string_t *value,
                                        trail_t *trail,
                                        apr_pool_t *pool);
@@ -180,6 +181,7 @@ svn_error_t *svn_fs_base__revision_proplist(apr_hash_t **table_p,
 
 svn_error_t *svn_fs_base__change_rev_prop(svn_fs_t *fs, svn_revnum_t rev,
                                           const char *name,
+                                          const svn_string_t **old_value_p,
                                           const svn_string_t *value,
                                           apr_pool_t *pool);
 

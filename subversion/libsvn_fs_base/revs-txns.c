@@ -241,6 +241,7 @@ svn_error_t *
 svn_fs_base__set_rev_prop(svn_fs_t *fs,
                           svn_revnum_t rev,
                           const char *name,
+                          const svn_string_t **old_value_p,
                           const svn_string_t *value,
                           trail_t *trail,
                           apr_pool_t *pool)
@@ -259,6 +260,23 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
     txn->proplist = apr_hash_make(pool);
 
   /* Set the property. */
+  if (old_value_p)
+    {
+      const svn_string_t *wanted_value = *old_value_p;
+      const svn_string_t *present_value = apr_hash_get(txn->proplist, name,
+                                                       APR_HASH_KEY_STRING);
+      if ((!wanted_value != !present_value)
+          || (wanted_value && present_value
+              && !svn_string_compare(wanted_value, present_value)))
+        {
+          /* What we expected isn't what we found. */
+          return svn_error_createf(SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+                                   _("revprop '%s' has unexpected value in "
+                                     "filesystem"),
+                                   name);
+        }
+      /* Fall through. */
+    }
   apr_hash_set(txn->proplist, name, APR_HASH_KEY_STRING, value);
 
   /* Overwrite the revision. */
@@ -269,6 +287,7 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
 struct change_rev_prop_args {
   svn_revnum_t rev;
   const char *name;
+  const svn_string_t **old_value_p;
   const svn_string_t *value;
 };
 
@@ -279,7 +298,7 @@ txn_body_change_rev_prop(void *baton, trail_t *trail)
   struct change_rev_prop_args *args = baton;
 
   return svn_fs_base__set_rev_prop(trail->fs, args->rev,
-                                   args->name, args->value,
+                                   args->name, args->old_value_p, args->value,
                                    trail, trail->pool);
 }
 
@@ -288,6 +307,7 @@ svn_error_t *
 svn_fs_base__change_rev_prop(svn_fs_t *fs,
                              svn_revnum_t rev,
                              const char *name,
+                             const svn_string_t **old_value_p,
                              const svn_string_t *value,
                              apr_pool_t *pool)
 {
@@ -297,6 +317,7 @@ svn_fs_base__change_rev_prop(svn_fs_t *fs,
 
   args.rev = rev;
   args.name = name;
+  args.old_value_p = old_value_p;
   args.value = value;
   return svn_fs_base__retry_txn(fs, txn_body_change_rev_prop, &args,
                                 TRUE, pool);

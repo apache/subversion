@@ -251,7 +251,7 @@ txn_body_dag_init_fs(void *baton,
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring(apr_time_now(), trail->pool);
   date.len = strlen(date.data);
-  return svn_fs_base__set_rev_prop(fs, 0, SVN_PROP_REVISION_DATE, &date,
+  return svn_fs_base__set_rev_prop(fs, 0, SVN_PROP_REVISION_DATE, NULL, &date,
                                    trail, trail->pool);
 }
 
@@ -1644,7 +1644,7 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   date.data = svn_time_to_cstring(apr_time_now(), pool);
   date.len = strlen(date.data);
   return svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
-                                   &date, trail, pool);
+                                   NULL, &date, trail, pool);
 }
 
 /* Modify all entries in the "node-origins" table that have a txn-id of
