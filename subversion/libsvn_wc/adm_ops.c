@@ -1166,12 +1166,12 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             &base_shadowed, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             &have_base, NULL, NULL, NULL,
                              db, local_abspath, pool, pool);
 
   if (delete_unversioned_target &&
@@ -1212,7 +1212,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       was_copied = (status == svn_wc__db_status_copied ||
                     status == svn_wc__db_status_moved_here);
 
-      if (!base_shadowed)
+      if (!have_base)
         was_add = strcmp(op_root_abspath, local_abspath) == 0;
       else
         was_replace = TRUE;

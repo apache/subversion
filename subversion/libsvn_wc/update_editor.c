@@ -1570,7 +1570,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 {
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_node_kind;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
   svn_wc_conflict_reason_t reason = SVN_WC_CONFLICT_REASON_NONE;
   svn_boolean_t locally_replaced = FALSE;
   svn_boolean_t modified = FALSE;
@@ -1582,9 +1582,9 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                                &db_node_kind,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               &base_shadowed,
                                NULL, NULL,
+                               &have_base,
+                               NULL, NULL, NULL,
                                eb->db,
                                local_abspath,
                                pool,
@@ -1599,7 +1599,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       case svn_wc__db_status_moved_here:
       case svn_wc__db_status_copied:
         /* Is it a replace? */
-        if (base_shadowed)
+        if (have_base)
           {
             svn_wc__db_status_t base_status;
             SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
@@ -2664,7 +2664,7 @@ open_directory(const char *path,
 {
   struct dir_baton *db, *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_work;
   svn_boolean_t already_conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_wc__db_status_t status, base_status;
@@ -2694,11 +2694,11 @@ open_directory(const char *path,
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &db->old_revision, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                &db->ambient_depth, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               &base_shadowed, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, &have_work, NULL, NULL,
                                eb->db, db->local_abspath, pool, pool));
 
-  if (!base_shadowed)
+  if (!have_work)
     base_status = status;
   else
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
@@ -5808,14 +5808,14 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     else if (status == svn_wc__db_status_normal ||
              status == svn_wc__db_status_incomplete)
       {
-        svn_boolean_t base_shadowed;
+        svn_boolean_t have_work;
 
         SVN_ERR(svn_wc__db_read_info(
                   &status, NULL, NULL,
                   NULL, NULL, NULL, NULL, NULL, NULL,
                   NULL, NULL, NULL, NULL, NULL, NULL,
                   NULL, NULL, NULL, NULL,
-                  NULL, NULL, &base_shadowed,
+                  NULL, NULL, &have_work,
                   NULL, NULL,
                   db, local_abspath,
                   pool, pool));
@@ -5823,7 +5823,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
         /* If there is a WORKING node present AND it is not an "add",
            then we need to move the base/props. If an add is present,
            that would imply we've done this move before.  */
-        if (base_shadowed
+        if (have_work
             && status != svn_wc__db_status_added
             && status != svn_wc__db_status_obstructed_add)
           {

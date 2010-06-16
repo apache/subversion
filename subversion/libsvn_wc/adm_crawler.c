@@ -646,18 +646,18 @@ find_base_rev(svn_revnum_t *base_rev,
 {
   const char *op_root_abspath;
   svn_wc__db_status_t status;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, base_rev, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               &base_shadowed, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               &have_base, NULL, NULL, NULL,
                                db, local_abspath, pool, pool));
 
   if (SVN_IS_VALID_REVNUM(*base_rev))
       return SVN_NO_ERROR;
 
-  if (base_shadowed)
+  if (have_base)
     return svn_error_return(
         svn_wc__db_base_get_info(NULL, NULL, base_rev, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,

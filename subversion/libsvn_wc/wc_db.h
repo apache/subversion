@@ -180,7 +180,7 @@ typedef enum {
     svn_wc__db_status_normal,
 
     /* The node has been added (potentially obscuring a delete or move of
-       the BASE node; see BASE_SHADOWED param). The text will be marked as
+       the BASE node; see HAVE_BASE param). The text will be marked as
        modified, and if properties exist, they will be marked as modified.
 
        In many cases svn_wc__db_status_added means any of added, moved-here
@@ -1329,9 +1329,9 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
      ORIGINAL_ROOT_URL       NULL
      ORIGINAL_UUID           NULL
      ORIGINAL_REVISION       SVN_INVALID_REVNUM
-     TEXT_MOD                n/a (always available)
      PROPS_MOD               n/a (always available)
-     BASE_SHADOWED           n/a (always available)
+     HAVE_BASE               n/a (always available)
+     HAVE_WORK               n/a (always available)
      CONFLICTED              FALSE
      LOCK                    NULL
 
@@ -1342,7 +1342,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 
      svn_wc__db_status_added
      svn_wc__db_status_obstructed_add
-       A node has been added/copied/moved to here. See BASE_SHADOWED to see
+       A node has been added/copied/moved to here. See HAVE_BASE to see
        if this change overwrites a BASE node. Use scan_addition() to resolve
        whether this has been added, copied, or moved, and the details of the
        operation (this function only looks at LOCAL_ABSPATH, but resolving
@@ -1367,8 +1367,6 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
        The node has been excluded from the working copy tree. This may
        be an exclusion from the BASE tree, or an exclusion in the
        WORKING tree for a child node of a copied/moved parent.
-       (### If BASE_SHADOWED is FALSE it is not possible to distinguish
-        between the two trees).
 
      svn_wc__db_status_not_present
        This is a node from the BASE tree, has been marked as "not-present"
@@ -1379,8 +1377,6 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
      svn_wc__db_status_incomplete
        The BASE or WORKING node is incomplete due to an interrupted
        operation.
-       (### If BASE_SHADOWED is FALSE it is not possible to distinguish
-        between the two trees).
 
    If REVISION is requested, it will be set to the revision of the
    unmodified (BASE) node, or to SVN_INVALID_REVNUM if any structural
@@ -1463,10 +1459,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_revnum_t *original_revision,
 
                      /* ### the followed are derived fields */
-                     svn_boolean_t *text_mod,  /* ### possibly modified */
                      svn_boolean_t *props_mod,
-                     svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
-                                                       ### deleted BASE? */
+                     svn_boolean_t *have_base,
+                     svn_boolean_t *have_work,
 
                      svn_boolean_t *conflicted,
 
