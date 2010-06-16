@@ -52,9 +52,9 @@ class SVNAdmin : public SVNBase
   void rmtxns(File &path, StringArray &transactions);
   jlong recover(File &path);
   void lstxns(File &path, MessageReceiver &messageReceiver);
-  void load(File &path, InputStream &dataIn, OutputStream &messageOut,
-            bool ignoreUUID, bool forceUUID, bool usePreCommitHook,
-            bool usePostCommitHook, const char *relativePath);
+  void load(File &path, InputStream &dataIn, bool ignoreUUID, bool forceUUID,
+            bool usePreCommitHook, bool usePostCommitHook,
+            const char *relativePath, ReposNotifyCallback *notifyCallback);
   void listUnusedDBLogs(File &path,
                         MessageReceiver &messageReceiver);
   void listDBLogs(File &path, MessageReceiver &messageReceiver);

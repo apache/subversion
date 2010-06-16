@@ -293,9 +293,9 @@ public class SVNAdmin
         try
         {
             aSVNAdmin.load(new File(path), new InputWrapper(dataInput),
-                           new OutputWrapper(messageOutput),
                            ignoreUUID, forceUUID, usePreCommitHook,
-                           usePostCommitHook, relativePath);
+                           usePostCommitHook, relativePath,
+                           new ReposNotifyHandler(messageOutput));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -579,6 +579,63 @@ public class SVNAdmin
 
                 case verify_rev_end:
                     val = "* Verified revision " + info.getRevision() + ".\n";
+                    break;
+
+                case load_txn_committed:
+                    if (info.getOldRevision() == Revision.SVN_INVALID_REVNUM)
+                        val = "\n------- Committed revision " +
+                              info.getNewRevision() + " >>>\n\n";
+                    else
+                        val = "\n------- Committed new rev " +
+                               info.getNewRevision() +
+                              " (loaded from original rev " +
+                              info.getOldRevision() +
+                              ") >>>\n\n";
+                    break;
+
+                case load_node_start:
+                    switch (info.getNodeAction())
+                    {
+                        case change:
+                            val = "     * editing path : " + info.getPath() +
+                                  " ...";
+                            break;
+
+                        case deleted:
+                            val = "     * deleting path : " + info.getPath() +
+                                  " ...";
+                            break;
+
+                        case add:
+                            val = "     * adding path : " + info.getPath() +
+                                  " ...";
+                            break;
+
+                        case replace:
+                            val = "     * replacing path : " + info.getPath() +
+                                  " ...";
+                            break;
+
+                        default:
+                            val = null;
+                    }
+                    break;
+
+                case load_node_done:
+                    val = " done.\n";
+                    break;
+
+                case load_copied_node:
+                    val = "COPIED...";
+                    break;
+
+                case load_txn_start:
+                    val = "<<< Started new transaction, based on " +
+                          "original revision " + info.getOldRevision() + "\n";
+                    break;
+
+                case load_normalized_mergeinfo:
+                    val = " removing '\\r' from svn:mergeinfo ...";
                     break;
 
                 default:

@@ -161,25 +161,10 @@ public class SVNAdmin implements ISVNAdmin
         public void receiveMessageLine(String message);
     }
 
-    /**
-     * load the data of a dump into a repository,
-     * @param path              the path to the repository
-     * @param dataInput         the data input source
-     * @param messageOutput     the target for processing messages
-     * @param ignoreUUID        ignore any UUID found in the input stream
-     * @param forceUUID         set the repository UUID to any found in the
-     *                          stream
-     * @param usePreCommitHook  use the pre-commit hook when processing commits
-     * @param usePostCommitHook use the post-commit hook when processing commits
-     * @param relativePath      the directory in the repository, where the data
-     *                          in put optional.
-     * @throws ClientException  throw in case of problem
-     * @since 1.5
-     */
     public native void load(File path, InputStream dataInput,
-                            OutputStream messageOutput, boolean ignoreUUID,
-                            boolean forceUUID, boolean usePreCommitHook,
-                            boolean usePostCommitHook, String relativePath)
+                            boolean ignoreUUID, boolean forceUUID,
+                            boolean usePreCommitHook, boolean usePostCommitHook,
+                            String relativePath, ReposNotifyCallback callback)
             throws ClientException;
 
     /**

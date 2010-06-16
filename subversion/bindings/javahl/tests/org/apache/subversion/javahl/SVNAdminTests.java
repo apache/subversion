@@ -111,9 +111,8 @@ public class SVNAdminTests extends SVNTests
                 "subversion/bindings/javahl");
         File dump = new File(testSrcdir, "tests/data/issue2979.dump");
         InputStream input = new FileInputStream(dump);
-        OutputStream loadLog = new IgnoreOutputer();
         admin.load(thisTest.getRepository(),
-                   input, loadLog, true, true, false, false, null);
+                   input, true, true, false, false, null, null);
         // should have two revs after the load
         infoHolder[0] = null;
         client.info2(repoUrl, Revision.HEAD, Revision.HEAD,
