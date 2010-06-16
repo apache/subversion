@@ -118,13 +118,15 @@ Candidate changes:
      +1: kameshj
 
  * r917523
-   ???
+     If the configured slave url has the *uri encodable* characters(<space>,
+     '?', '%') *write through* is not happening rather commit happens in
+     slave itself.
    Notes:
      This backport depends on the r878590 and r916286 groups only for the
      conflict free port.
    Justification:
-     If the configured slave url has the *encodable* characters *write through*
-     is not happening rather commit happens in slave itself.
+    With this commit we avoid accidental commit to the slave and hence 
+    making it unusable as a proxy anymore.
    Votes:
      +1: kameshj
 
