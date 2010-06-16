@@ -1994,6 +1994,12 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     'B/lambda' : Item(status='U '),
     'C/nu'     : Item(status=' U'),
     })
+  expected_mergeinfo_output = wc.State(A_path, {
+    ''     : Item(status=' G'),
+    'C/nu' : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(A_path, {
+    })
   expected_status = wc.State(A_path, {
     ''          : Item(status=' M'),
     'B'         : Item(status='  '),
@@ -2055,8 +2061,10 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     })
   expected_skip = wc.State(A_COPY_path, {})
   svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY',
+                                       sbox.repo_url + '/A_COPY', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
