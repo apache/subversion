@@ -9615,10 +9615,12 @@ calculate_left_hand_side(const char **url_left,
        hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
+      const char *path_rel_to_session =
+        svn_relpath_skip_ancestor(target_repos_rel_path, path);
 
       SVN_ERR(svn_client__repos_location_segments(&segments,
                                                   target_ra_session,
-                                                  "",
+                                                  path_rel_to_session,
                                                   target_rev, target_rev,
                                                   SVN_INVALID_REVNUM,
                                                   ctx, subpool));
