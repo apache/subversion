@@ -101,12 +101,20 @@ copy_added_file_administratively(const char *src_path,
                                  void *notify_baton,
                                  apr_pool_t *pool)
 {
+  svn_node_kind_t kind;
+  svn_boolean_t is_special;
   const char *dst_path
     = svn_path_join(svn_wc_adm_access_path(dst_parent_access),
                     dst_basename, pool);
 
-  /* Copy this file and possibly put it under version control. */
-  SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, pool));
+  /* Check to see if this is a special file. */
+  SVN_ERR(svn_io_check_special_path(src_path, &kind, &is_special,
+                                    pool));
+
+  if (is_special)
+    SVN_ERR(svn_io_copy_link(src_path, dst_path, pool));
+  else
+    SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, pool));
 
   if (src_is_added)
     {
