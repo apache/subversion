@@ -2044,7 +2044,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     'C'         : Item(),
     'C/nu'      : Item("Trunk work on nu.\n",
                        props={SVN_PROP_MERGEINFO :
-                              '/A_COPY/C/nu:2-13,16-18\n'
+                              '/A_COPY/C/nu:16-18\n'
                               '/A_COPY_2/C/nu:10'}), # <-- From cyclic
                                                      # merge in r11
     'D'         : Item(),
