@@ -3010,11 +3010,6 @@ svn_wc__entry_modify_stub(svn_wc__db_t *db,
                     | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
                     | SVN_WC__ENTRY_MODIFY_COPIED
                     | SVN_WC__ENTRY_MODIFY_CHECKSUM
-
-                    /* from entries.c  */
-                    | SVN_WC__ENTRY_MODIFY_DELETED
-                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                    | SVN_WC__ENTRY_MODIFY_FORCE
                                    )) == 0);
   return svn_error_return(entry_modify(db, local_abspath,
                                        svn_node_dir, TRUE,
