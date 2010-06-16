@@ -589,7 +589,7 @@ file_diff(struct dir_baton *db,
   svn_wc__db_status_t status;
   svn_revnum_t revision;
   svn_revnum_t revert_base_revnum;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
   svn_wc__db_status_t base_status;
   const char *local_abspath;
 
@@ -607,10 +607,10 @@ file_diff(struct dir_baton *db,
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &base_shadowed, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &have_base, NULL, NULL, NULL,
                                eb->db, local_abspath, pool, pool));
-  if (base_shadowed)
+  if (have_base)
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
@@ -618,7 +618,7 @@ file_diff(struct dir_baton *db,
 
   replaced = ((status == svn_wc__db_status_added
                || status == svn_wc__db_status_obstructed_add)
-              && base_shadowed
+              && have_base
               && base_status != svn_wc__db_status_not_present);
 
   /* Now refine ADDED to one of: ADDED, COPIED, MOVED_HERE. Note that only

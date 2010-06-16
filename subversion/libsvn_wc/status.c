@@ -291,7 +291,7 @@ assemble_status(svn_wc_status3_t **status,
   const char *changed_author;
   apr_time_t changed_date;
   const char *changelist;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
   svn_boolean_t conflicted;
   svn_boolean_t copied = FALSE;
   svn_depth_t depth;
@@ -315,7 +315,7 @@ assemble_status(svn_wc_status3_t **status,
                                &changed_rev, &changed_date,
                                &changed_author, NULL, &depth, NULL, NULL,
                                NULL, &changelist, NULL, NULL, NULL, NULL,
-                               NULL, &prop_modified_p, &base_shadowed,
+                               &prop_modified_p, &have_base, NULL,
                                &conflicted, &lock, db, local_abspath,
                                result_pool, scratch_pool));
 
@@ -358,7 +358,7 @@ assemble_status(svn_wc_status3_t **status,
                                          NULL, NULL,
                                          db, local_abspath,
                                          result_pool, scratch_pool));
-      else if (base_shadowed)
+      else if (have_base)
         SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
                                            &repos_root_url, NULL,
                                            db, local_abspath,
@@ -790,17 +790,17 @@ send_status_structure(const struct walk_status_baton *wb,
     {
       const char *repos_relpath;
       svn_wc__db_status_t status;
-      svn_boolean_t base_shadowed;
+      svn_boolean_t have_base;
 
       SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, &base_shadowed, NULL, NULL, 
+                                   NULL, &have_base, NULL, NULL, NULL, 
                                    wb->db, local_abspath,
                                    scratch_pool, scratch_pool));
 
       /* A switched path can be deleted: check the right relpath */
-      if (status == svn_wc__db_status_deleted && base_shadowed)
+      if (status == svn_wc__db_status_deleted && have_base)
         SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, NULL,
                                            NULL, wb->db, local_abspath,
                                            scratch_pool, scratch_pool));

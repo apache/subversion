@@ -523,7 +523,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   const char *original_repos_relpath;
   const char *original_root_url;
   svn_boolean_t conflicted;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
 
   entry->name = name;
 
@@ -550,8 +550,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
             NULL,
             &entry->copyfrom_rev,
             NULL,
+            &have_base,
             NULL,
-            &base_shadowed,
             &conflicted,
             &lock,
             db,
@@ -706,7 +706,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           entry->revision = parent_entry->revision;
         }
 
-      if (base_shadowed)
+      if (have_base)
         {
           svn_wc__db_status_t base_status;
 

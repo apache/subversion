@@ -329,20 +329,20 @@ svn_wc__internal_node_get_url(const char **url,
   svn_wc__db_status_t status;
   const char *repos_relpath;
   const char *repos_root_url;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
                                &repos_root_url,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &base_shadowed, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &have_base, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
   if (repos_relpath == NULL)
     {
       if (status == svn_wc__db_status_normal
           || status == svn_wc__db_status_incomplete
-          || (base_shadowed
+          || (have_base
               && (status == svn_wc__db_status_deleted
                   || status == svn_wc__db_status_obstructed_delete)))
         {
@@ -362,7 +362,7 @@ svn_wc__internal_node_get_url(const char **url,
       else if (status == svn_wc__db_status_absent
                || status == svn_wc__db_status_excluded
                || status == svn_wc__db_status_not_present
-               || (!base_shadowed
+               || (!have_base
                    && (status == svn_wc__db_status_deleted
                        || status == svn_wc__db_status_obstructed_delete)))
         {
@@ -786,7 +786,7 @@ svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
   svn_wc__db_status_t base_status;
 
   SVN_ERR(svn_wc__db_read_info(
@@ -794,11 +794,11 @@ svn_wc__internal_is_replaced(svn_boolean_t *replaced,
             NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
-            NULL, NULL, &base_shadowed,
+            NULL, &have_base, NULL,
             NULL, NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
-  if (base_shadowed)
+  if (have_base)
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
                                      NULL, NULL, NULL,
                                      NULL, NULL, NULL,
@@ -809,7 +809,7 @@ svn_wc__internal_is_replaced(svn_boolean_t *replaced,
 
   *replaced = ((status == svn_wc__db_status_added
                 || status == svn_wc__db_status_obstructed_add)
-               && base_shadowed
+               && have_base
                && base_status != svn_wc__db_status_not_present);
 
   return SVN_NO_ERROR;
@@ -835,13 +835,13 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
 
   SVN_ERR(svn_wc__db_read_info(&status,
                                NULL, base_revision,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &base_shadowed,
+                               NULL, NULL, NULL, &have_base, NULL,
                                NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
@@ -849,7 +849,7 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
   if (SVN_IS_VALID_REVNUM(*base_revision))
     return SVN_NO_ERROR;
 
-  if (base_shadowed)
+  if (have_base)
     {
       /* The node was replaced with something else. Look at the base.  */
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, base_revision,
@@ -875,12 +875,12 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
                                   apr_pool_t *result_pool)
 {
   svn_wc__db_status_t status;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, NULL, NULL, NULL,
                                changed_rev, changed_date, changed_author,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &base_shadowed, NULL,
+                               NULL, NULL, NULL, &have_base, NULL, NULL,
                                NULL, wc_ctx->db, local_abspath, result_pool,
                                scratch_pool));
 
@@ -902,7 +902,7 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
                                        NULL, changed_rev, changed_date,
                                        changed_author, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, &base_shadowed,
+                                       NULL, NULL, NULL, NULL, 
                                        NULL, NULL, wc_ctx->db, work_del_abspath,
                                        result_pool, scratch_pool));
         }
@@ -917,7 +917,7 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
                                            scratch_pool));
         }
     }
-  else if (base_shadowed)
+  else if (have_base)
     {
       svn_wc__db_status_t base_status;
       svn_revnum_t base_rev;
@@ -946,13 +946,13 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
                                  apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL,
                                commit_base_revision,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, &base_shadowed, NULL, NULL,
+                               NULL, &have_base, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 
@@ -971,7 +971,7 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
 
-      if (! SVN_IS_VALID_REVNUM(*commit_base_revision) && base_shadowed)
+      if (! SVN_IS_VALID_REVNUM(*commit_base_revision) && have_base)
         /* It is a replace that does not feature a copy/move-here.
            Return the revert-base revision. */
         return svn_error_return(

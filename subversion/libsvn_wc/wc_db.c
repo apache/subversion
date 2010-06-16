@@ -2434,9 +2434,9 @@ temp_cross_db_copy(svn_wc__db_t *db,
                                NULL /* original_root_url */,
                                NULL /* original_uuid */,
                                NULL /* original_revision */,
-                               NULL /* text_mod */,
                                NULL /* props_mod */,
-                               NULL /* base_shadowed */,
+                               NULL /* have_base */,
+                               NULL /* have_work */,
                                NULL /* conflicted */,
                                NULL /* lock */,
                                db, src_abspath, scratch_pool, scratch_pool));
@@ -2516,6 +2516,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   const char *repos_relpath, *repos_root_url, *repos_uuid, *copyfrom_relpath;
   svn_revnum_t revision, copyfrom_rev;
   svn_wc__db_status_t status, dst_status;
+  svn_boolean_t have_work;
   apr_int64_t copyfrom_id;
   svn_wc__db_kind_t kind;
   const apr_array_header_t *children;
@@ -2554,9 +2555,9 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                NULL /* original_root_url */,
                                NULL /* original_uuid */,
                                NULL /* original_revision */,
-                               NULL /* text_mod */,
                                NULL /* props_mod */,
-                               NULL /* base_shadowed */,
+                               NULL /* have_base */,
+                               &have_work,
                                NULL /* conflicted */,
                                NULL /* lock */,
                                db, src_abspath, scratch_pool, scratch_pool));
@@ -2666,10 +2667,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
                                                            scratch_pool);
 
-      /* ### Need a better way to determine whether a WORKING_NODE exists */
-      if (status == svn_wc__db_status_added
-          || status == svn_wc__db_status_copied
-          || status == svn_wc__db_status_moved_here)
+      if (have_work)
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
                                   STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING));
       else
@@ -4037,7 +4035,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   svn_error_t *err;
   svn_boolean_t base_none, working_none, new_working_none;
   svn_wc__db_status_t base_status, working_status, new_working_status;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_work;
 
   err = svn_wc__db_base_get_info(&base_status,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -4064,7 +4062,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_info(&working_status, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &base_shadowed, NULL, NULL,
+                               NULL, NULL, NULL, &have_work, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
   if (working_status == svn_wc__db_status_deleted
@@ -4075,10 +4073,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       return SVN_NO_ERROR;
     }
 
-  /* We must have a WORKING node if there is no BASE node (gotta have
-     something!). If there IS a BASE node, then we have a WORKING node
-     if BASE_SHADOWED is TRUE.  */
-  working_none = !(base_none || base_shadowed);
+  working_none = !have_work;
 
   new_working_none = working_none;
   new_working_status = working_status;
@@ -4211,9 +4206,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      const char **original_root_url,
                      const char **original_uuid,
                      svn_revnum_t *original_revision,
-                     svn_boolean_t *text_mod,
                      svn_boolean_t *props_mod,
-                     svn_boolean_t *base_shadowed,
+                     svn_boolean_t *have_base,
+                     svn_boolean_t *have_work,
                      svn_boolean_t *conflicted,
                      svn_wc__db_lock_t **lock,
                      svn_wc__db_t *db,
@@ -4226,8 +4221,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   svn_sqlite__stmt_t *stmt_base;
   svn_sqlite__stmt_t *stmt_work;
   svn_sqlite__stmt_t *stmt_act;
-  svn_boolean_t have_base;
-  svn_boolean_t have_work;
+  svn_boolean_t local_have_base;
+  svn_boolean_t local_have_work;
   svn_boolean_t have_act;
   svn_error_t *err = NULL;
 
@@ -4238,18 +4233,23 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+  if (!have_base)
+    have_base = &local_have_base;
+  if (!have_work)
+    have_work = &local_have_work;
+    
   SVN_ERR(svn_sqlite__get_statement(&stmt_base, pdh->wcroot->sdb,
                                     lock ? STMT_SELECT_BASE_NODE_WITH_LOCK
                                          : STMT_SELECT_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt_base, "is",
                             pdh->wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_base, stmt_base));
+  SVN_ERR(svn_sqlite__step(have_base, stmt_base));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt_work, pdh->wcroot->sdb,
                                     STMT_SELECT_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt_work, "is",
                             pdh->wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_work, stmt_work));
+  SVN_ERR(svn_sqlite__step(have_work, stmt_work));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt_act, pdh->wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
@@ -4257,18 +4257,18 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                             pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
 
-  if (have_base || have_work)
+  if (*have_base || *have_work)
     {
       svn_wc__db_kind_t node_kind;
 
-      if (have_work)
+      if (*have_work)
         node_kind = svn_sqlite__column_token(stmt_work, 1, kind_map);
       else
         node_kind = svn_sqlite__column_token(stmt_base, 3, kind_map);
 
       if (status)
         {
-          if (have_base)
+          if (*have_base)
             {
               *status = svn_sqlite__column_token(stmt_base, 2, presence_map);
 
@@ -4280,7 +4280,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
               SVN_ERR_ASSERT((*status != svn_wc__db_status_absent
                               && *status != svn_wc__db_status_excluded
                               /* && *status != svn_wc__db_status_incomplete */)
-                             || !have_work);
+                             || !*have_work);
 
               if (node_kind == svn_wc__db_kind_subdir
                   && *status == svn_wc__db_status_normal)
@@ -4294,7 +4294,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                 }
             }
 
-          if (have_work)
+          if (*have_work)
             {
               svn_wc__db_status_t work_status;
 
@@ -4365,14 +4365,14 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (revision)
         {
-          if (have_work)
+          if (*have_work)
             *revision = SVN_INVALID_REVNUM;
           else
             *revision = svn_sqlite__column_revnum(stmt_base, 4);
         }
       if (repos_relpath)
         {
-          if (have_work)
+          if (*have_work)
             {
               /* Our path is implied by our parent somewhere up the tree.
                  With the NULL value and status, the caller will know to
@@ -4389,7 +4389,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
              WORKING_NODE (and have been added), then the repository
              we're being added to will be dependent upon a parent. The
              caller can scan upwards to locate the repository.  */
-          if (have_work || svn_sqlite__column_is_null(stmt_base, 0))
+          if (*have_work || svn_sqlite__column_is_null(stmt_base, 0))
             {
               if (repos_root_url)
                 *repos_root_url = NULL;
@@ -4407,21 +4407,21 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (changed_rev)
         {
-          if (have_work)
+          if (*have_work)
             *changed_rev = svn_sqlite__column_revnum(stmt_work, 4);
           else
             *changed_rev = svn_sqlite__column_revnum(stmt_base, 7);
         }
       if (changed_date)
         {
-          if (have_work)
+          if (*have_work)
             *changed_date = svn_sqlite__column_int64(stmt_work, 5);
           else
             *changed_date = svn_sqlite__column_int64(stmt_base, 8);
         }
       if (changed_author)
         {
-          if (have_work)
+          if (*have_work)
             *changed_author = svn_sqlite__column_text(stmt_work, 6,
                                                       result_pool);
           else
@@ -4430,7 +4430,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (last_mod_time)
         {
-          if (have_work)
+          if (*have_work)
             *last_mod_time = svn_sqlite__column_int64(stmt_work, 14);
           else
             *last_mod_time = svn_sqlite__column_int64(stmt_base, 12);
@@ -4446,7 +4446,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
             {
               const char *depth_str;
 
-              if (have_work)
+              if (*have_work)
                 depth_str = svn_sqlite__column_text(stmt_work, 7, NULL);
               else
                 depth_str = svn_sqlite__column_text(stmt_base, 10, NULL);
@@ -4466,7 +4466,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
           else
             {
               svn_error_t *err2;
-              if (have_work)
+              if (*have_work)
                 err2 = svn_sqlite__column_checksum(checksum, stmt_work, 2,
                                                    result_pool);
               else
@@ -4485,7 +4485,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (translated_size)
         {
-          if (have_work)
+          if (*have_work)
             *translated_size = get_translated_size(stmt_work, 3);
           else
             *translated_size = get_translated_size(stmt_base, 6);
@@ -4494,7 +4494,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         {
           if (node_kind != svn_wc__db_kind_symlink)
             *target = NULL;
-          else if (have_work)
+          else if (*have_work)
             *target = svn_sqlite__column_text(stmt_work, 8, result_pool);
           else
             *target = svn_sqlite__column_text(stmt_base, 11, result_pool);
@@ -4508,13 +4508,13 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (original_repos_relpath)
         {
-          if (have_work)
+          if (*have_work)
             *original_repos_relpath = svn_sqlite__column_text(stmt_work, 10,
                                                               result_pool);
           else
             *original_repos_relpath = NULL;
         }
-      if (!have_work || svn_sqlite__column_is_null(stmt_work, 9))
+      if (!*have_work || svn_sqlite__column_is_null(stmt_work, 9))
         {
           if (original_root_url)
             *original_root_url = NULL;
@@ -4533,23 +4533,14 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         }
       if (original_revision)
         {
-          if (have_work)
+          if (*have_work)
             *original_revision = svn_sqlite__column_revnum(stmt_work, 11);
           else
             *original_revision = SVN_INVALID_REVNUM;
         }
-      if (text_mod)
-        {
-          /* ### fix this */
-          *text_mod = FALSE;
-        }
       if (props_mod)
         {
           *props_mod = have_act && !svn_sqlite__column_is_null(stmt_act, 6);
-        }
-      if (base_shadowed)
-        {
-          *base_shadowed = have_base && have_work;
         }
       if (conflicted)
         {
@@ -4857,7 +4848,6 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   struct relocate_baton rb;
   const char *old_repos_root_url, *stored_local_dir_abspath;
-  svn_boolean_t base_shadowed;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
@@ -4872,35 +4862,11 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                                &rb.repos_relpath, &old_repos_root_url,
                                &rb.repos_uuid,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &base_shadowed,
-                               NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &rb.have_base_node,
+                               NULL, NULL, NULL,
                                db, local_dir_abspath,
                                scratch_pool, scratch_pool));
-
-  if (status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_incomplete)
-    {
-      if (base_shadowed)
-        rb.have_base_node = TRUE;
-      else
-        {
-          svn_sqlite__stmt_t *stmt;
-
-          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                            STMT_SELECT_BASE_NODE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                    pdh->wcroot->wc_id, rb.local_relpath));
-          SVN_ERR(svn_sqlite__step(&rb.have_base_node, stmt));
-          SVN_ERR(svn_sqlite__reset(stmt));
-        }
-    }
-  else if (base_shadowed || status == svn_wc__db_status_normal
-           || status == svn_wc__db_status_absent
-           || status == svn_wc__db_status_not_present)
-    rb.have_base_node = TRUE;
-  else
-    rb.have_base_node = FALSE;
 
   if (status == svn_wc__db_status_excluded)
     {
