@@ -143,7 +143,9 @@ Candidate changes:
  * r950445, 950468
    Fix for issue #2591 "'svnadmin hotcopy' does not replicate symlinks".
    Justification:
-     This issue is waiting for resolution for more than 3 years.
+     This fix helps server administrators who has common files symlinked
+     across their repositories and take frequent backups of their repos
+     using svnadmin hotcopy.
    Notes:
      r950445 fixes the issue and r950468 is a test for this issue.
    Votes:
@@ -152,7 +154,9 @@ Candidate changes:
  * r950931, 950933
    Fix for issue #3303 "cannot copy broken symlink".
    Justification:
-     This issue was reported in 1.5.x hence it is nice to have in 1.6.x.
+     A broken symlink could be added by subversion to the working copy, on
+     the other hand a copy is not possible which is a serious bug which is
+     fixed via these commits.
    Notes:
      r950933 fixes the issue and r950931 is a test for this issue.
    Branch:
