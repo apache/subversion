@@ -586,6 +586,19 @@ list_directory(const svn_test_opts_t *opts,
 }
 
 
+/* If EXPR raises SVN_ERR_BAD_PROPERTY_VALUE, continue; else, fail
+ * the test. */
+#define FAILS_WITH_BPV(expr) \
+  do { \
+      svn_error_t *__err = (expr); \
+      if (!__err || __err->apr_err != SVN_ERR_BAD_PROPERTY_VALUE) \
+        return svn_error_create(SVN_ERR_TEST_FAILED, __err, \
+                                "svn_fs_change_rev_prop2() failed to " \
+                                "detect unexpected old value"); \
+      else \
+        svn_error_clear(__err); \
+  } while (0)
+
 static svn_error_t *
 revision_props(const svn_test_opts_t *opts,
                apr_pool_t *pool)
@@ -593,11 +606,8 @@ revision_props(const svn_test_opts_t *opts,
   svn_fs_t *fs;
   apr_hash_t *proplist;
   svn_string_t *value;
-  svn_error_t *err;
   int i;
   svn_string_t s1;
-  const svn_string_t s2 = { "wrong value", 11 };
-  const svn_string_t *s2_p = &s2;
 
   const char *initial_props[4][2] = {
     { "color", "red" },
@@ -641,13 +651,33 @@ revision_props(const svn_test_opts_t *opts,
   s1.len = value->len;
   SVN_ERR(svn_fs_change_rev_prop(fs, 0, "flower", &s1, pool));
 
-  err = svn_fs_change_rev_prop2(fs, 0, "flower", &s2_p, &s1, pool);
-  if (!err || err->apr_err != SVN_ERR_BAD_PROPERTY_VALUE)
-    return svn_error_create(SVN_ERR_TEST_FAILED, err,
-                            "svn_fs_change_rev_prop2() failed to "
-                            "detect unexpected old value");
-  else
-    svn_error_clear(err);
+  /* Test svn_fs_change_rev_prop2().  If the whole block goes through, then
+   * it is a no-op (it undoes all changes it makes). */
+    {
+      const svn_string_t s2 = { "wrong value", 11 };
+      const svn_string_t *s2_p = &s2;
+      const svn_string_t *s1_p = &s1;
+      const svn_string_t *unset = NULL;
+      const svn_string_t *s1_dup;
+
+      /* Value of "flower" is 's1'. */
+
+      FAILS_WITH_BPV(svn_fs_change_rev_prop2(fs, 0, "flower", &s2_p, s1_p, pool));
+      s1_dup = svn_string_dup(&s1, pool);
+      SVN_ERR(svn_fs_change_rev_prop2(fs, 0, "flower", &s1_dup, s2_p, pool));
+
+      /* Value of "flower" is 's2'. */
+
+      FAILS_WITH_BPV(svn_fs_change_rev_prop2(fs, 0, "flower", &s1_p, NULL, pool));
+      SVN_ERR(svn_fs_change_rev_prop2(fs, 0, "flower", &s2_p, NULL, pool));
+
+      /* Value of "flower" is <not set>. */
+
+      FAILS_WITH_BPV(svn_fs_change_rev_prop2(fs, 0, "flower", &s2_p, s1_p, pool));
+      SVN_ERR(svn_fs_change_rev_prop2(fs, 0, "flower", &unset, s1_p, pool));
+
+      /* Value of "flower" is 's1'. */
+    }
 
   /* Obtain a list of all current properties, and make sure it matches
      the expected values. */
