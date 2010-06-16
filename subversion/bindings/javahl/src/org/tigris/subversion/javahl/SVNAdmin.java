@@ -170,10 +170,10 @@ public class SVNAdmin
         try
         {
             aSVNAdmin.dump(new File(path), new OutputWrapper(dataOut),
-                           new OutputWrapper(errorOut),
                            start == null ? null : start.toApache(),
                            end == null ? null : end.toApache(),
-                           incremental, useDeltas);
+                           incremental, useDeltas,
+                           new ReposNotifyHandler(errorOut));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -436,9 +436,10 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.verify(new File(path), new OutputWrapper(messageOut),
+            aSVNAdmin.verify(new File(path),
                              start == null ? null : start.toApache(),
-                             end == null ? null : end.toApache());
+                             end == null ? null : end.toApache(),
+                             new ReposNotifyHandler(messageOut));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -548,6 +549,51 @@ public class SVNAdmin
         public void close() throws IOException
         {
             inputer.close();
+        }
+    }
+
+    private class ReposNotifyHandler
+        implements org.apache.subversion.javahl.callback.ReposNotifyCallback
+    {
+        private OutputInterface outputer;
+
+        public ReposNotifyHandler(OutputInterface outputer)
+        {
+            this.outputer = outputer;
+        }
+
+        public void onNotify(org.apache.subversion.javahl.ReposNotifyInformation
+                                                                           info)
+        {
+            String val;
+
+            switch (info.getAction())
+            {
+                case warning:
+                    val = info.getWarning();
+                    break;
+
+                case dump_rev_end:
+                    val = "* Dumped revision " + info.getRevision() + ".\n";
+                    break;
+
+                case verify_rev_end:
+                    val = "* Verified revision " + info.getRevision() + ".\n";
+                    break;
+
+                default:
+                    val = null;
+            }
+
+            if (val != null)
+                try 
+                {
+                    outputer.write(val.getBytes());
+                }
+                catch (IOException ex)
+                {
+                    ; // ignore
+                }
         }
     }
 }

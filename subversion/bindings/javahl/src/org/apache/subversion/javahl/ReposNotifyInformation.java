@@ -89,6 +89,14 @@ public class ReposNotifyInformation extends EventObject
     }
 
     /**
+     * @return The warning text.
+     */
+    public String getWarning()
+    {
+        return warning;
+    }
+
+    /**
      * The type of action triggering the notification
      */
     public enum Action
