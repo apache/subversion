@@ -1144,8 +1144,8 @@ test_list = [ None,
               tree_conflicts_and_changelists_on_commit1,
               tree_conflicts_and_changelists_on_commit2,
               tree_conflicts_and_changelists_on_commit3,
-              XFail(move_keeps_changelist),
-              XFail(move_added_keeps_changelist),
+              move_keeps_changelist,
+              move_added_keeps_changelist,
              ]
 
 if __name__ == '__main__':
