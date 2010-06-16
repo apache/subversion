@@ -627,20 +627,29 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *src_entry;
+  svn_wc__db_status_t src_status;
   svn_wc__db_t *db = wc_ctx->db;
   const char *dir_abspath;
   const char *name;
 
   /* Sanity check 1: You cannot make a copy of something that's not
      under version control. */
-  SVN_ERR(svn_wc__get_entry(&src_entry, db, src_abspath, FALSE,
-                            svn_node_dir, FALSE, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&src_status, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, db, src_abspath,
+                               scratch_pool, scratch_pool));
 
   /* Sanity check 2: You cannot make a copy of something that's not
      in the repository unless it's a copy of an uncommitted copy. */
-  if ((src_entry->schedule == svn_wc_schedule_add && (! src_entry->copied))
-      || (! src_entry->url))
+  if (src_status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&src_status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, db, src_abspath,
+                                     scratch_pool, scratch_pool));
+
+  if ((src_status == svn_wc__db_status_added)
+      && ((src_status != svn_wc__db_status_copied) 
+          || (src_status != svn_wc__db_status_moved_here)))
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
@@ -683,7 +692,8 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
     svn_revnum_t copyfrom_rev;
 
     /* Are we copying a dir that is already copied but not committed? */
-    if (src_entry->copied)
+    if ((src_status == svn_wc__db_status_copied)
+        || (src_status == svn_wc__db_status_moved_here))
       {
         const svn_wc_entry_t *dst_entry;
         svn_wc_entry_t tmp_entry;
