@@ -4550,8 +4550,8 @@ record_skips(const char *mergeinfo_path,
          might be an unversioned obstruction. */
       SVN_ERR(svn_wc_status3(&status, merge_b->ctx->wc_ctx,
                              skipped_abspath, pool, pool));
-      if (status->text_status == svn_wc_status_none
-          || status->text_status == svn_wc_status_unversioned)
+      if (status->node_status == svn_wc_status_none
+          || status->node_status == svn_wc_status_unversioned)
         continue;
 
       /* Add an empty range list for this path.

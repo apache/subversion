@@ -1028,8 +1028,8 @@ check_nonrecursive_dir_delete(const char *target_path,
                  pristine compare etc. */
           SVN_ERR(svn_wc_status3(&status, wc_ctx, target_abspath, pool,
                                  pool));
-          if (status->text_status == svn_wc_status_deleted ||
-              status->text_status == svn_wc_status_replaced)
+          if (status->node_status == svn_wc_status_deleted ||
+              status->node_status == svn_wc_status_replaced)
             {
               const apr_array_header_t *children;
 
