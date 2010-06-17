@@ -530,17 +530,16 @@ get_revnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
   else if (revision->kind == svn_opt_revision_head)
     *revnum = youngest;
   else if (revision->kind == svn_opt_revision_date)
-    SVN_ERR(svn_repos_dated_revision
-            (revnum, repos, revision->value.date, pool));
+    SVN_ERR(svn_repos_dated_revision(revnum, repos, revision->value.date,
+                                     pool));
   else if (revision->kind == svn_opt_revision_unspecified)
     *revnum = SVN_INVALID_REVNUM;
   else
-    return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL, _("Invalid revision specifier"));
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Invalid revision specifier"));
 
   if (*revnum > youngest)
-    return svn_error_createf
-      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("Revisions must not be greater than the youngest revision (%ld)"),
        youngest);
 
@@ -627,8 +626,7 @@ subcommand_deltify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     end = start;
 
   if (start > end)
-    return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("First revision cannot be higher than second"));
 
   /* Loop over the requested revision range, performing the
@@ -883,8 +881,7 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
 
   if (lower > upper)
-    return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("First revision cannot be higher than second"));
 
   SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
@@ -1142,9 +1139,8 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         }
       else if (! opt_state->quiet)
         {
-          SVN_ERR
-            (svn_cmdline_printf(subpool, _("Transaction '%s' removed.\n"),
-                                txn_name));
+          SVN_ERR(svn_cmdline_printf(subpool, _("Transaction '%s' removed.\n"),
+                                     txn_name));
         }
     }
 
@@ -1184,18 +1180,19 @@ set_revprop(const char *prop_name, const char *filename,
   if (opt_state->use_pre_revprop_change_hook ||
       opt_state->use_post_revprop_change_hook)
     {
-      SVN_ERR(svn_repos_fs_change_rev_prop3
-              (repos, opt_state->start_revision.value.number,
-               NULL, prop_name, prop_value,
-               opt_state->use_pre_revprop_change_hook,
-               opt_state->use_post_revprop_change_hook, NULL, NULL, pool));
+      SVN_ERR(svn_repos_fs_change_rev_prop3(repos,
+                            opt_state->start_revision.value.number,
+                            NULL, prop_name, prop_value,
+                            opt_state->use_pre_revprop_change_hook,
+                            opt_state->use_post_revprop_change_hook, NULL,
+                            NULL, pool));
     }
   else
     {
       svn_fs_t *fs = svn_repos_fs(repos);
-      SVN_ERR(svn_fs_change_rev_prop2
-              (fs, opt_state->start_revision.value.number,
-               prop_name, NULL, prop_value, pool));
+      SVN_ERR(svn_fs_change_rev_prop2(fs,
+                                      opt_state->start_revision.value.number,
+                                      prop_name, NULL, prop_value, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1531,15 +1528,15 @@ subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         }
       else if (err->apr_err == SVN_ERR_FS_UNSUPPORTED_UPGRADE)
         {
-          return svn_error_quick_wrap
-            (err, _("Upgrade of this repository's underlying versioned "
+          return svn_error_quick_wrap(err,
+                    _("Upgrade of this repository's underlying versioned "
                     "filesystem is not supported; consider "
                     "dumping and loading the data elsewhere"));
         }
       else if (err->apr_err == SVN_ERR_REPOS_UNSUPPORTED_UPGRADE)
         {
-          return svn_error_quick_wrap
-            (err, _("Upgrade of this repository is not supported; consider "
+          return svn_error_quick_wrap(err,
+                    _("Upgrade of this repository is not supported; consider "
                     "dumping and loading the data elsewhere"));
         }
     }
@@ -1637,8 +1634,7 @@ main(int argc, const char *argv[])
         {
           if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
             {
-              err = svn_error_create
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Multiple revision arguments encountered; "
                    "try '-r N:M' instead of '-r N -r M'"));
               return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
@@ -1651,10 +1647,9 @@ main(int argc, const char *argv[])
                                             pool);
 
               if (! err)
-                err = svn_error_createf
-                  (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                   _("Syntax error in revision argument '%s'"),
-                   utf8_opt_arg);
+                err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                        _("Syntax error in revision argument '%s'"),
+                        utf8_opt_arg);
               return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
             }
         }
@@ -1771,9 +1766,8 @@ main(int argc, const char *argv[])
             }
           else
             {
-              svn_error_clear
-                (svn_cmdline_fprintf(stderr, pool,
-                                     _("subcommand argument required\n")));
+              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                                        _("subcommand argument required\n")));
               subcommand_help(NULL, NULL, pool);
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
@@ -1789,10 +1783,9 @@ main(int argc, const char *argv[])
               err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg, pool);
               if (err)
                 return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
-              svn_error_clear
-                (svn_cmdline_fprintf(stderr, pool,
-                                     _("Unknown command: '%s'\n"),
-                                     first_arg_utf8));
+              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                                                  _("Unknown command: '%s'\n"),
+                                                  first_arg_utf8));
               subcommand_help(NULL, NULL, pool);
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
@@ -1846,9 +1839,8 @@ main(int argc, const char *argv[])
           if (subcommand->name[0] == '-')
             subcommand_help(NULL, NULL, pool);
           else
-            svn_error_clear
-              (svn_cmdline_fprintf
-               (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
+            svn_error_clear(svn_cmdline_fprintf(stderr, pool
+                            , _("Subcommand '%s' doesn't accept option '%s'\n"
                                 "Type 'svnadmin help %s' for usage.\n"),
                 subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
