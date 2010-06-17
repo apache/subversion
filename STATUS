@@ -34,11 +34,13 @@ Candidate changes:
  * r879966, r879971
    Reduce the lifetime of the rep-sharing database handles in FSFS to avoid
    having writers blocking readers, and update that database outside the
-   general FSFS write lock.  This address issue #3506.
+   general FSFS write lock.  This addresses issue #3506.
    Justification:
      The performance problems and outright failures of the current code
      are hurting the ASF repository, and presumably other high-concurrency
      repositories, too, when large commits occur.
+   Justification:
+     Pre-requisite for the r934599 group.
    Branch:
      ^/subversion/branches/1.6.x-issue3506
    Votes:
@@ -48,7 +50,9 @@ Candidate changes:
    Fix a concurrency issue in the FSFS rep-cache code.  This indirectly
    concerns issue #3506.
    Justification:
-     Opening the DB twice (and overwriting the handle) is undesired.
+     Thread safety.
+   Thread:
+     http://article.gmane.org/gmane.comp.version-control.subversion.devel/119483
    Notes:
      r934599 updates the svn_atomic__init_once() interface.
      r934603 is the actual fix.
@@ -86,34 +90,45 @@ Candidate changes:
            the r878607 log msg.)
 
  * r916286, r917512
-   ???
+   Issue description:
+    With the below apache configuration(See the trailing slash at the 
+    end of '/svn/').
+
+    <Location /svn/>
+     DAV svn
+     SVNParentPath /repositories
+     #See the trailing slash on the master URI also can cause the confusion.
+     SVNMasterURI http://master/svn/
+     SVNAdvertiseV2Protocol Off
+    </Location>
+
+   Vague and useless error message *without* this fix on client side is
+   snipped below.
+   <snip>
+   svn: Commit failed (details follow):
+   svn: MKACTIVITY of '/svn/demujin/!svn/act/4b6d547c-018d-4e02-9d3f-2b283076cc06': Could not read status line: connection was closed by server (http://localhost)
+   </snip>
+
+
    Notes:
      This backport depends on the r878590 group only for the conflict free port.
    Justification:
-     Vague commit error when server has been configured with <Location /svn/>
-     and write through proxy.
+    With this fix commit successfully gets proxied and succeeds.
    Votes:
      +1: kameshj
 
  * r917523
-   ???
+     If the configured slave url has the *uri encodable* characters(<space>,
+     '?', '%') *write through* is not happening rather commit happens in
+     slave itself.
    Notes:
      This backport depends on the r878590 and r916286 groups only for the
      conflict free port.
    Justification:
-     If the configured slave url has the *encodable* characters *write through*
-     is not happening rather commit happens in slave itself.
+    With this commit we avoid accidental commit to the slave and hence 
+    making it unusable as a proxy anymore.
    Votes:
      +1: kameshj
-
- * r935631
-   Fix one of the sanity checks in the 'svn merge --reintegrate' logic.
-   Justification:
-     Sanity checks should themselves be sane.
-   Branch:
-     ^/subversion/branches/1.6.x-r935631
-   Votes:
-     +1: cmpilato, pburba
 
  * r939375-939376
    Fix issue #3623, a bug in foreign repository merges that causes properties
@@ -131,57 +146,16 @@ Candidate changes:
  * r950445, 950468
    Fix for issue #2591 "'svnadmin hotcopy' does not replicate symlinks".
    Justification:
-     This issue is waiting for resolution for more than 3 years.
+     This fix helps server administrators who has common files symlinked
+     across their repositories and take frequent backups of their repos
+     using svnadmin hotcopy.
    Notes:
      r950445 fixes the issue and r950468 is a test for this issue.
    Votes:
-     +1: stylesen
-
- * r950931, 950933
-   Fix for issue #3303 "cannot copy broken symlink".
-   Justification:
-     This issue was reported in 1.5.x hence it is nice to have in 1.6.x.
-   Notes:
-     r950933 fixes the issue and r950931 is a test for this issue.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3303
-   Votes:
-     +1: stylesen
-
- * r952973, r952992
-   Fix for issue #3651 "svn copy does not eat peg revision within copy target
-   path"
-   Justification:
-     This issue exists in 1.6.x.
-   Notes:
-     r952973 fixes the issue and r952992 is a test for this issue. Both r952973
-     and r952992 are merged into the backport branch 1.6.x-issue3651.
-     Use the private API in the 1.6.x branch since the API was made public in
-     1.7. The backport branch exists in order to resolve this.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3651
-   Votes:
-     +1: stylesen, pburba
-
- * r953878, r876855
-   Fix issue #3654 'Added subtrees with mergeinfo break reintegrate'
-   Justification:
-     In certain use cases, this bug breaks reintegrate merges.  Love or
-     hate reintegrate, many users like it and rely on it heavily.  See
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3654 for more.
-   Notes:
-     r953878 is a new test for this issue.
-     r876855 is from ^/subversion/branches/subtree-mergeinfo@876855 and is
-     actual fix for this issue on 1.6.x.  The subtree-mergeinfo branch is
-     already on trunk in it's entirety, but we want only this small portion
-     on 1.6.x.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3654
-     When reintegrating the branch use the '-x --ignore-eol-style' option or
-     the entire merge_tests.py file conflicts.  No idea why this is, the file
-     has svn:eolstyle native on both 1.6.x and the branch.
-   Votes:
-     +1: pburba
+     +1: stylesen, cmpilato
+     -0: julianfoad (Tested and works fine, but changes semantics of
+           svn_io_dir_walk() which we should not do in a back-port.
+           Discussing on list.)
 
 Veto-blocked changes:
 =====================
@@ -242,7 +216,7 @@ Veto-blocked changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3020
    Votes:
-     +1: rhuijben, kameshj
+     +1: kameshj
      -1: pburba (There is a regression with this fix, see
          http://svn.haxx.se/dev/archive-2010-03/0716.shtml)
 
@@ -258,3 +232,23 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r953878, r876855
+   Fix issue #3654 'Added subtrees with mergeinfo break reintegrate'
+   Justification:
+     In certain use cases, this bug breaks reintegrate merges.  Love or
+     hate reintegrate, many users like it and rely on it heavily.  See
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3654 for more.
+   Notes:
+     r953878 is a new test for this issue.
+     r876855 is from ^/subversion/branches/subtree-mergeinfo@876855 and is
+     actual fix for this issue on 1.6.x.  The subtree-mergeinfo branch is
+     already on trunk in it's entirety, but we want only this small portion
+     on 1.6.x.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3654
+     When reintegrating the branch use the '-x --ignore-eol-style' option or
+     the entire merge_tests.py file conflicts.  No idea why this is, the file
+     has svn:eol-style native on both 1.6.x and the branch.
+   Votes:
+     +1: pburba, cmpilato, rhuijben

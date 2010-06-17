@@ -8617,11 +8617,9 @@ svn_client_merge_reintegrate(const char *source,
   SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath,
                                      &working_revision, adm_access, ctx, pool));
 
-  /* Open an RA session to our source URL, and determine its root URL. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, wc_repos_root,
-                                               NULL, NULL, NULL,
-                                               FALSE, FALSE, ctx, pool));
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
+  /* Determine the source's repository root URL. */
+  SVN_ERR(svn_client__get_repos_root(&source_repos_root, url2,
+                                     peg_revision, adm_access, ctx, pool));
 
   /* source_repos_root and wc_repos_root are required to be the same,
      as mergeinfo doesn't come into play for cross-repository merging. */
@@ -8630,6 +8628,16 @@ svn_client_merge_reintegrate(const char *source,
                              _("'%s' must be from the same repository as "
                                "'%s'"), svn_path_local_style(source, pool),
                              svn_path_local_style(target_wcpath, pool));
+
+  /* Open an RA session to our (common) repository root URL */
+
+  /* ### FIXME: Oops!  Can we open this session to a more conservative
+     ### location, in case the user lacks read access at the
+     ### repository root? */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, wc_repos_root,
+                                               NULL, NULL, NULL,
+                                               FALSE, FALSE, ctx,
+                                               pool));
 
   SVN_ERR(ensure_wc_reflects_repository_subtree(target_wcpath, ctx, pool));
 

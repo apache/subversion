@@ -3352,10 +3352,11 @@ def copy_peg_rev_url(sbox):
                                      wc_dir)
 
   # Copy using a peg rev
+  # Add peg rev '@HEAD' to sigma_url when copying which tests for issue #3651.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp',
                                      iota_url + '@HEAD', '-r', '1',
-                                     sigma_url, '-m', 'rev 3')
+                                     sigma_url + '@HEAD', '-m', 'rev 3')
 
   # Validate the copy destination's mergeinfo (we expect none).
   svntest.actions.run_and_verify_svn(None, [], [],
@@ -4092,6 +4093,37 @@ def path_copy_in_repo_2475(sbox):
                                         expected_status)
 
 
+def copy_broken_symlink(sbox):
+  """copy broken symlink"""
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3303. ##
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  new_symlink = os.path.join(wc_dir, 'new_symlink');
+  copied_symlink = os.path.join(wc_dir, 'copied_symlink');
+  os.symlink('linktarget', new_symlink)
+
+  # Alias for svntest.actions.run_and_verify_svn
+  rav_svn = svntest.actions.run_and_verify_svn
+
+  rav_svn(None, None, [], 'add', new_symlink)
+  rav_svn(None, None, [], 'cp', new_symlink, copied_symlink)
+
+  # Check whether both new_symlink and copied_symlink are added to the
+  # working copy
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  expected_status.add(
+    {
+      'new_symlink'       : Item(status='A ', wc_rev='0'),
+      'copied_symlink'    : Item(status='A ', wc_rev='0'),
+    })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -4174,6 +4206,7 @@ test_list = [ None,
               find_copyfrom_information_upstairs,
               path_move_and_copy_between_wcs_2475,
               path_copy_in_repo_2475,
+              SkipUnless(copy_broken_symlink, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':

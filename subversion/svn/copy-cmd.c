@@ -28,6 +28,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_opt_private.h"
 
 
 /*** Code. ***/
@@ -71,6 +72,8 @@ svn_cl__copy(apr_getopt_t *os,
 
       APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = source;
     }
+
+  SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
   /* Figure out which type of trace editor to use.
      If the src_paths are not homogeneous, setup_copy will return an error. */
