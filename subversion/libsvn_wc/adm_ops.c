@@ -1768,12 +1768,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     {
       if (! copyfrom_url)
         {
-          const char *new_relpath;
           const char *new_url;
 
           /* Derive the parent path for our new addition here. */
-          new_relpath = svn_relpath_join(parent_repos_relpath, base_name,
-                                         scratch_pool);
           new_url = svn_path_url_add_component2(repos_root_url, base_name,
                                                 scratch_pool);
 
