@@ -2175,6 +2175,7 @@ def excluded_path_misc_operation(sbox):
   A_path = os.path.join(wc_dir, 'A')
   B_path = os.path.join(A_path, 'B')
   L_path = os.path.join(A_path, 'L')
+  M_path = os.path.join(A_path, 'M')
   E_path = os.path.join(B_path, 'E')
   LE_path = os.path.join(L_path, 'E')
 
@@ -2211,19 +2212,27 @@ def excluded_path_misc_operation(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', '--force', L_path)
 
-  # copy A/B to A/L again, excluded entry should be copied too
+  # copy A/B to A/L and then cp A/L to A/M, excluded entry should be
+  # copied both times
   expected_output = ['A         '+L_path+'\n']
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'cp', B_path, L_path)
+  expected_output = ['A         '+M_path+'\n']
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'cp', L_path, M_path)
 
   # commit this copy, with an excluded item.
-  expected_output = svntest.wc.State(wc_dir, { 'A/L' : Item(verb='Adding'), })
+  expected_output = svntest.wc.State(wc_dir, { 'A/L' : Item(verb='Adding'),
+                                               'A/M' : Item(verb='Adding'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
   expected_status.add({
     'A/L'        : Item(status='  ', wc_rev=2),
     'A/L/lambda' : Item(status='  ', wc_rev=2),
     'A/L/F'      : Item(status='  ', wc_rev=2),
+    'A/M'        : Item(status='  ', wc_rev=2),
+    'A/M/lambda' : Item(status='  ', wc_rev=2),
+    'A/M/F'      : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,

@@ -2521,6 +2521,115 @@ temp_cross_db_copy(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Set *COPYFROM_ID, *COPYFROM_RELPATH, *COPYFROM_REV to the values
+   appropriate for the copy. Also return *STATUS, *KIND and *HAVE_WORK
+   since they are available.  This is a helper for
+   svn_wc__db_op_copy. */
+static svn_error_t *
+get_info_for_copy(apr_int64_t *copyfrom_id,
+                  const char **copyfrom_relpath,
+                  svn_revnum_t *copyfrom_rev,
+                  svn_wc__db_status_t *status,
+                  svn_wc__db_kind_t *kind,
+                  svn_boolean_t *have_work,
+                  svn_wc__db_pdh_t *pdh,
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  svn_revnum_t revision;
+
+  SVN_ERR(svn_wc__db_read_info(status, kind, &revision,
+                               &repos_relpath, &repos_root_url, &repos_uuid,
+                               NULL /* changed_rev */,
+                               NULL /* changed_date */,
+                               NULL /* changed_author */,
+                               NULL /* last_mod_time */,
+                               NULL /* depth */,
+                               NULL /* checksum */,
+                               NULL /* translated_size */,
+                               NULL /* target */,
+                               NULL /* changelist */,
+                               NULL /* original_repos_relpath */,
+                               NULL /* original_root_url */,
+                               NULL /* original_uuid */,
+                               NULL /* original_revision */,
+                               NULL /* props_mod */,
+                               NULL /* have_base */,
+                               have_work,
+                               NULL /* conflicted */,
+                               NULL /* lock */,
+                               db, local_abspath, result_pool, scratch_pool));
+
+  if (*status == svn_wc__db_status_excluded)
+    {
+      /* The parent cannot be excluded, so look at the parent and then
+         adjust the relpath */
+      const char *parent_abspath, *base_name;
+      svn_wc__db_status_t parent_status;
+      svn_wc__db_kind_t parent_kind;
+      svn_boolean_t parent_have_work;
+
+      svn_dirent_split(local_abspath, &parent_abspath, &base_name,
+                       scratch_pool);
+      SVN_ERR(get_info_for_copy(copyfrom_id, copyfrom_relpath, copyfrom_rev,
+                                &parent_status, &parent_kind, &parent_have_work,
+                                pdh, db, parent_abspath,
+                                scratch_pool, scratch_pool));
+      if (*copyfrom_relpath)
+        *copyfrom_relpath = svn_relpath_join(*copyfrom_relpath, base_name,
+                                             result_pool);
+    }
+  else if (*status != svn_wc__db_status_added)
+    {
+      *copyfrom_relpath = repos_relpath;
+      *copyfrom_rev = revision;
+      SVN_ERR(create_repos_id(copyfrom_id,
+                              repos_root_url, repos_uuid,
+                              pdh->wcroot->sdb, scratch_pool));
+    }
+  else
+    {
+      const char *op_root_abspath;
+      const char *original_repos_relpath, *original_root_url, *original_uuid;
+      svn_revnum_t original_revision;
+
+      SVN_ERR(svn_wc__db_scan_addition(status, &op_root_abspath,
+                                       NULL /* repos_relpath */,
+                                       NULL /* repos_root_url */,
+                                       NULL /* repos_uuid */,
+                                       &original_repos_relpath,
+                                       &original_root_url, &original_uuid,
+                                       &original_revision,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      if (*status == svn_wc__db_status_copied
+          || *status == svn_wc__db_status_moved_here)
+        {
+          *copyfrom_relpath
+            = svn_relpath_join(original_repos_relpath,
+                               svn_dirent_skip_ancestor(op_root_abspath,
+                                                        local_abspath),
+                               scratch_pool);
+          *copyfrom_rev = original_revision;
+          SVN_ERR(create_repos_id(copyfrom_id,
+                                  original_root_url, original_uuid,
+                                  pdh->wcroot->sdb, scratch_pool));
+        }
+      else
+        {
+          *copyfrom_relpath = NULL;
+          *copyfrom_rev = SVN_INVALID_REVNUM;
+          *copyfrom_id = 0;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
@@ -2529,9 +2638,8 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *src_pdh, *dst_pdh;
-  const char *src_relpath, *dst_relpath;
-  const char *repos_relpath, *repos_root_url, *repos_uuid, *copyfrom_relpath;
-  svn_revnum_t revision, copyfrom_rev;
+  const char *src_relpath, *dst_relpath, *copyfrom_relpath;
+  svn_revnum_t copyfrom_rev;
   svn_wc__db_status_t status, dst_status;
   svn_boolean_t have_work;
   apr_int64_t copyfrom_id;
@@ -2556,74 +2664,12 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(dst_pdh);
 
-
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision,
-                               &repos_relpath, &repos_root_url, &repos_uuid,
-                               NULL /* changed_rev */,
-                               NULL /* changed_date */,
-                               NULL /* changed_author */,
-                               NULL /* last_mod_time */,
-                               NULL /* depth */,
-                               NULL /* checksum */,
-                               NULL /* translated_size */,
-                               NULL /* target */,
-                               NULL /* changelist */,
-                               NULL /* original_repos_relpath */,
-                               NULL /* original_root_url */,
-                               NULL /* original_uuid */,
-                               NULL /* original_revision */,
-                               NULL /* props_mod */,
-                               NULL /* have_base */,
-                               &have_work,
-                               NULL /* conflicted */,
-                               NULL /* lock */,
-                               db, src_abspath, scratch_pool, scratch_pool));
+  SVN_ERR(get_info_for_copy(&copyfrom_id, &copyfrom_relpath, &copyfrom_rev,
+                            &status, &kind, &have_work,
+                            src_pdh, db, src_abspath,
+                            scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_dir);
-
-  if (status != svn_wc__db_status_added)
-    {
-      copyfrom_relpath = repos_relpath;
-      copyfrom_rev = revision;
-      SVN_ERR(create_repos_id(&copyfrom_id,
-                              repos_root_url, repos_uuid,
-                              src_pdh->wcroot->sdb, scratch_pool));
-    }
-  else
-    {
-      const char *op_root_abspath;
-      const char *original_repos_relpath, *original_root_url, *original_uuid;
-      svn_revnum_t original_revision;
-
-      SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
-                                       NULL /* repos_relpath */,
-                                       NULL /* repos_root_url */,
-                                       NULL /* repos_uuid */,
-                                       &original_repos_relpath,
-                                       &original_root_url, &original_uuid,
-                                       &original_revision,
-                                       db, src_abspath,
-                                       scratch_pool, scratch_pool));
-
-      if (status == svn_wc__db_status_copied
-          || status == svn_wc__db_status_moved_here)
-        {
-          copyfrom_relpath
-            = svn_relpath_join(original_repos_relpath,
-                               svn_dirent_skip_ancestor(op_root_abspath,
-                                                        src_abspath),
-                               scratch_pool);
-          copyfrom_rev = original_revision;
-          SVN_ERR(create_repos_id(&copyfrom_id,
-                                  original_root_url, original_uuid,
-                                  src_pdh->wcroot->sdb, scratch_pool));
-        }
-      else
-        {
-          copyfrom_relpath = NULL;
-          copyfrom_rev = SVN_INVALID_REVNUM;
-        }
-    }
 
   /* ### New status, not finished, see notes/wc-ng/copying */
   switch (status)
