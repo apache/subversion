@@ -332,7 +332,7 @@ public class SVNAdmin
     {
         try
         {
-            return aSVNAdmin.recover(new File(path));
+            return aSVNAdmin.recover(new File(path), null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {

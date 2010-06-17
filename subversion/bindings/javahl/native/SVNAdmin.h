@@ -50,7 +50,7 @@ class SVNAdmin : public SVNBase
                   bool usePreRevPropChangeHook,
                   bool usePostRevPropChangeHook);
   void rmtxns(File &path, StringArray &transactions);
-  jlong recover(File &path);
+  jlong recover(File &path, ReposNotifyCallback *notifyCallback);
   void lstxns(File &path, MessageReceiver &messageReceiver);
   void load(File &path, InputStream &dataIn, bool ignoreUUID, bool forceUUID,
             bool usePreCommitHook, bool usePostCommitHook,

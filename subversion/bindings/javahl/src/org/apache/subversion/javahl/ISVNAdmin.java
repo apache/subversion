@@ -157,7 +157,8 @@ public interface ISVNAdmin {
 	 * @param path              the path to the repository
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract long recover(File path) throws ClientException;
+	public abstract long recover(File path, ReposNotifyCallback callback)
+            throws ClientException;
 
 	/**
 	 * remove open transaction in a repository

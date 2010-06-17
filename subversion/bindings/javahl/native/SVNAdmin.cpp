@@ -356,7 +356,7 @@ void SVNAdmin::lstxns(File &path, MessageReceiver &messageReceiver)
 
 }
 
-jlong SVNAdmin::recover(File &path)
+jlong SVNAdmin::recover(File &path, ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
   svn_revnum_t youngest_rev;
@@ -368,8 +368,12 @@ jlong SVNAdmin::recover(File &path)
       return -1;
     }
 
-  SVN_JNI_ERR(svn_repos_recover3(path.getInternalStyle(requestPool), FALSE,
-                                 NULL, NULL, NULL, NULL, requestPool.pool()),
+  SVN_JNI_ERR(svn_repos_recover4(path.getInternalStyle(requestPool), FALSE,
+                                 notifyCallback != NULL
+                                    ? ReposNotifyCallback::notify
+                                    : NULL,
+                                 notifyCallback,
+                                 NULL, NULL, requestPool.pool()),
               -1);
 
   /* Since db transactions may have been replayed, it's nice to tell
