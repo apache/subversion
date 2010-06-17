@@ -1419,7 +1419,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
    ###   repos_* will be NULL
    ###   changed_rev will be SVN_INVALID_REVNUM
    ###   changed_date will be 0
-   ###   changed_author will be NULLn
+   ###   changed_author will be NULL
    ###   status will be svn_wc__db_status_added
    ###   text_mod will be TRUE
    ###   prop_mod will be TRUE if any props have been set
