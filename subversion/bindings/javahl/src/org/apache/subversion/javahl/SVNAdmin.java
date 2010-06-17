@@ -233,4 +233,6 @@ public class SVNAdmin implements ISVNAdmin
             throws ClientException;
 
     public native void upgrade(File path, ReposNotifyCallback callback);
+
+    public native void pack(File path, ReposNotifyCallback callback);
 }

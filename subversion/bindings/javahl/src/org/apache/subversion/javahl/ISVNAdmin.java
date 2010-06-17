@@ -229,4 +229,13 @@ public interface ISVNAdmin {
      */
     public abstract void upgrade(File path, ReposNotifyCallback callback)
 			throws ClientException;
+
+    /**
+     * pack the repository
+     * @param path              the path to the repository
+     * @param callback          for notification
+	 * @throws ClientException  throw in case of problem
+     */
+    public abstract void pack(File path, ReposNotifyCallback callback)
+			throws ClientException;
 }
