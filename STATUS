@@ -31,24 +31,6 @@ Candidate changes:
                    works correctly. I think the not interactive code path
                    needs the same fix).
 
- * r934599, r934603
-   Fix a concurrency issue in the FSFS rep-cache code.  This indirectly
-   concerns issue #3506.
-   Justification:
-     Thread safety.
-   Thread:
-     http://article.gmane.org/gmane.comp.version-control.subversion.devel/119483
-   Notes:
-     r934599 updates the svn_atomic__init_once() interface.
-     r934603 is the actual fix.
-   Notes:
-     Depends on the r879966 group, which does not merge cleanly.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3506-init_once
-     (based on ^/subversion/branches/1.6.x-issue3506)
-   Votes:
-     +1: danielsh, hwright
-
  * r878590, r878607, r878625, r878626, r878627
    In trunk we optimized the common case of 'find-and-replace with same uri'
    of proxied content thanks to issue 3445 "WebDAV proxy code munging user
@@ -217,3 +199,21 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r934599, r934603
+   Fix a concurrency issue in the FSFS rep-cache code.  This indirectly
+   concerns issue #3506.
+   Justification:
+     Thread safety.
+   Thread:
+     http://article.gmane.org/gmane.comp.version-control.subversion.devel/119483
+   Notes:
+     r934599 updates the svn_atomic__init_once() interface.
+     r934603 is the actual fix.
+   Notes:
+     Depends on the r879966 group, which does not merge cleanly.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3506-init_once
+     (based on ^/subversion/branches/1.6.x-issue3506)
+   Votes:
+     +1: danielsh, hwright, philip
