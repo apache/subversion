@@ -615,11 +615,24 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
         }
     }
 
-  (*status)->text_status = old_status->text_status;
+  (*status)->text_status = old_status->node_status;
   (*status)->prop_status = old_status->prop_status;
 
-  (*status)->repos_text_status = old_status->repos_text_status;
+  (*status)->repos_text_status = old_status->repos_node_status;
   (*status)->repos_prop_status = old_status->repos_prop_status;
+
+  /* Some values might be inherited from properties */
+  if (old_status->node_status == svn_wc_status_modified
+      || old_status->node_status == svn_wc_status_conflicted)
+    (*status)->text_status = old_status->text_status;
+
+  /* (Currently a no-op, but just make sure it is ok) */
+  if (old_status->repos_node_status == svn_wc_status_modified
+      || old_status->repos_node_status == svn_wc_status_conflicted)
+    (*status)->text_status = old_status->repos_text_status;
+
+  if (old_status->node_status == svn_wc_status_added)
+    (*status)->prop_status = svn_wc_status_none; /* No separate info */
 
   /* Find pristine_text_status value */
   switch (old_status->text_status)
@@ -643,7 +656,14 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
       case svn_wc_status_none:
       case svn_wc_status_normal:
       case svn_wc_status_modified:
-        (*status)->pristine_prop_status = old_status->prop_status;
+        if (old_status->node_status != svn_wc_status_added
+            && old_status->node_status != svn_wc_status_deleted
+            && old_status->node_status != svn_wc_status_replaced)
+          {
+            (*status)->pristine_prop_status = old_status->prop_status;
+          }
+        else
+          (*status)->pristine_prop_status = svn_wc_status_none;
         break;
       case svn_wc_status_conflicted:
       default:
@@ -652,6 +672,40 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
         (*status)->pristine_prop_status = svn_wc_status_none;
         break;
     }
+
+  if (old_status->conflicted)
+    {
+      svn_boolean_t text_conflict_p, prop_conflict_p, tree_conflict_p;
+
+      /* The entry says there was a conflict, but the user might have
+         marked it as resolved by deleting the artifact files, so check
+         for that. */
+      SVN_ERR(svn_wc__internal_conflicted_p(&text_conflict_p,
+                                            &prop_conflict_p,
+                                            &tree_conflict_p,
+                                            wc_ctx->db, local_abspath,
+                                            scratch_pool));
+
+      if (text_conflict_p)
+        (*status)->text_status = svn_wc_status_conflicted;
+
+      if (prop_conflict_p)
+        (*status)->prop_status = svn_wc_status_conflicted;
+
+      if (tree_conflict_p)
+        {
+          svn_wc_conflict_description2_t *tree_conflict;
+          SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict,
+                                                   wc_ctx->db, local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
+
+          (*status)->tree_conflict =
+              svn_wc__cd2_to_cd(tree_conflict, result_pool);
+        }
+
+    }
+
 
   return SVN_NO_ERROR;
 }

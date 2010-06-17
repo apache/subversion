@@ -3540,6 +3540,10 @@ typedef struct svn_wc_status3_t
   /** Set to TRUE if the item is the victim of a conflict. */
   svn_boolean_t conflicted;
 
+  /** The status of the node itself. In order of precendence: Tree conflicts,
+   * structural changes, text changes (including text conflicts). */
+  enum svn_wc_status_kind node_status;
+
   /** The status of the entry itself, including its text if it is a file. */
   enum svn_wc_status_kind text_status;
 
@@ -3599,6 +3603,9 @@ typedef struct svn_wc_status3_t
    * if not out of date. */
   svn_node_kind_t ood_kind;
 
+  /** The status of the node, based on the text status if the node has no
+   * restructuring changes */
+  enum svn_wc_status_kind repos_node_status;
 
   /** The entry's text status in the repository. */
   enum svn_wc_status_kind repos_text_status;

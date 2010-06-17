@@ -241,13 +241,13 @@ internal_status(svn_wc_status3_t **status,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
 
-/* Fill in *STATUS for LOCAL_ABSPATH, whose entry data is in ENTRY.  Allocate
-   *STATUS in POOL.  LOCAL_ABSPATH must be absolute.  Use SCRATCH_POOL for
-   temporary allocations.
+/* Fill in *STATUS for LOCAL_ABSPATH, whose entry data is available in DB.
+   Allocate *STATUS in RESULT_POOL.  Use SCRATCH_POOL for temporary
+   allocations.
 
-   PARENT_ENTRY is the entry for the parent directory of LOCAL_ABSPATH, it
-   may be NULL if LOCAL_ABSPATH is a working copy root.
-   The lifetime of PARENT_ENTRY's pool is not important.
+   PARENT_REPOS_ROOT_URL and PARENT_REPOS_RELPATH are the the repository root
+   and repository relative path of the parent of LOCAL_ABSPATH or NULL if
+   LOCAL_ABSPATH doesn't have a versioned parent directory.
 
    PATH_KIND is the node kind of LOCAL_ABSPATH as determined by the caller.
    PATH_SPECIAL indicates whether the entry is a special file.
@@ -255,11 +255,6 @@ internal_status(svn_wc_status3_t **status,
    If GET_ALL is zero, and ENTRY is not locally modified, then *STATUS
    will be set to NULL.  If GET_ALL is non-zero, then *STATUS will be
    allocated and returned no matter what.
-
-   If IS_IGNORED is non-zero and this is a non-versioned entity, set
-   the text_status to svn_wc_status_none.  Otherwise set the
-   text_status to svn_wc_status_unversioned.
-
    The status struct's repos_lock field will be set to REPOS_LOCK.
 */
 static svn_error_t *
@@ -281,7 +276,6 @@ assemble_status(svn_wc_status3_t **status,
   const char *repos_relpath;
   const char *repos_root_url;
   svn_boolean_t switched_p = FALSE;
-  const svn_wc_conflict_description2_t *tree_conflict;
   svn_boolean_t prop_modified_p;
   svn_wc__db_lock_t *lock;
   svn_revnum_t revision;
@@ -296,17 +290,9 @@ assemble_status(svn_wc_status3_t **status,
   svn_error_t *err;
 
   /* Defaults for two main variables. */
-  enum svn_wc_status_kind final_text_status = svn_wc_status_normal;
-  enum svn_wc_status_kind final_prop_status = svn_wc_status_none;
-  /* And some intermediate results */
-  enum svn_wc_status_kind pristine_text_status = svn_wc_status_none;
-  enum svn_wc_status_kind pristine_prop_status = svn_wc_status_none;
-
-  /* Find out whether the path is a tree conflict victim.
-   * This function will set tree_conflict to NULL if the path
-   * is not a victim. */
-  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, db, local_abspath,
-                                           scratch_pool, scratch_pool));
+  enum svn_wc_status_kind node_status = svn_wc_status_normal;
+  enum svn_wc_status_kind text_status = svn_wc_status_normal;
+  enum svn_wc_status_kind prop_status = svn_wc_status_none;
 
   SVN_ERR(svn_wc__db_read_info(&db_status, &db_kind, &revision,
                                &repos_relpath, &repos_root_url, NULL,
@@ -376,15 +362,15 @@ assemble_status(svn_wc_status3_t **status,
       if (db_status == svn_wc__db_status_incomplete)
         {
           /* Highest precedence.  */
-          final_text_status = svn_wc_status_incomplete;
+          node_status = svn_wc_status_incomplete;
         }
       else if (db_status == svn_wc__db_status_obstructed_delete)
         {
           /* Deleted directories are never reported as missing.  */
           if (path_kind == svn_node_none)
-            final_text_status = svn_wc_status_deleted;
+            node_status = svn_wc_status_deleted;
           else
-            final_text_status = svn_wc_status_obstructed;
+            node_status = svn_wc_status_obstructed;
         }
       else if (db_status == svn_wc__db_status_obstructed
                || db_status == svn_wc__db_status_obstructed_add)
@@ -392,19 +378,36 @@ assemble_status(svn_wc_status3_t **status,
           /* A present or added directory should be on disk, so it is
              reported missing or obstructed.  */
           if (path_kind == svn_node_none)
-            final_text_status = svn_wc_status_missing;
+            node_status = svn_wc_status_missing;
           else
-            final_text_status = svn_wc_status_obstructed;
+            node_status = svn_wc_status_obstructed;
+        }
+      else if (db_status == svn_wc__db_status_deleted)
+        node_status = svn_wc_status_deleted;
+    }
+  else
+    {
+      if (db_status == svn_wc__db_status_deleted)
+        node_status = svn_wc_status_deleted;
+      else if (path_kind != svn_node_file)
+        {
+          /* A present or added file should be on disk, so it is
+             reported missing or obstructed.  */
+          if (path_kind == svn_node_none)
+            node_status = svn_wc_status_missing;
+          else
+            node_status = svn_wc_status_obstructed;
         }
     }
 
-  /* If FINAL_TEXT_STATUS is still normal, after the above checks, then
+  /* If NODE_STATUS is still normal, after the above checks, then
      we should proceed to refine the status.
 
      If it was changed, then the subdir is incomplete or missing/obstructed.
      It means that no further information is available, and we should skip
      all this work.  */
-  if (final_text_status == svn_wc_status_normal)
+  if (node_status == svn_wc_status_normal
+      || (node_status == svn_wc_status_missing && db_kind != svn_wc__db_kind_dir))
     {
       svn_boolean_t has_props;
       svn_boolean_t text_modified_p = FALSE;
@@ -419,7 +422,9 @@ assemble_status(svn_wc_status3_t **status,
             precedence over M. */
 
       /* Does the node have props? */
-      if (prop_modified_p)
+      if (db_status == svn_wc__db_status_deleted)
+        has_props = FALSE; /* Not interesting */
+      else if (prop_modified_p)
         has_props = TRUE;
       else
         {
@@ -439,22 +444,22 @@ assemble_status(svn_wc_status3_t **status,
             }
         }
       if (has_props)
-        final_prop_status = svn_wc_status_normal;
+        prop_status = svn_wc_status_normal;
 
       /* If the entry has a property file, see if it has local changes. */
       /* ### we could compute this ourself, based on the prop hashes
          ### fetched above. but for now, there is some trickery we may
          ### need to rely upon in ths function. keep it for now.  */
       /* ### see r944980 as an example of the brittleness of this stuff.  */
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
       if (has_props)
-        SVN_ERR(svn_wc__props_modified(&prop_modified_p, db, local_abspath,
-                                       scratch_pool));
+        {
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
+          SVN_ERR(svn_wc__props_modified(&prop_modified_p, db, local_abspath,
+                                         scratch_pool));
 #endif
-
-      /* Record actual property status */
-      pristine_prop_status = prop_modified_p ? svn_wc_status_modified
-                                             : svn_wc_status_normal;
+          prop_status = prop_modified_p ? svn_wc_status_modified
+                                        : svn_wc_status_normal;
+        }
 
 #ifdef HAVE_SYMLINK
       if (has_props)
@@ -465,7 +470,8 @@ assemble_status(svn_wc_status3_t **status,
 #endif /* HAVE_SYMLINK */
 
       /* If the entry is a file, check for textual modifications */
-      if ((db_kind == svn_wc__db_kind_file)
+      if ((db_kind == svn_wc__db_kind_file
+           || db_kind == svn_wc__db_kind_symlink)
 #ifdef HAVE_SYMLINK
           && (wc_special == path_special)
 #endif /* HAVE_SYMLINK */
@@ -487,38 +493,39 @@ assemble_status(svn_wc_status3_t **status,
                  should have really errored. */
               svn_error_clear(err);
             }
-          else
-            {
-              /* Record actual text status */
-              pristine_text_status = text_modified_p ? svn_wc_status_modified
-                                                     : svn_wc_status_normal;
-            }
         }
 
       if (text_modified_p)
-        final_text_status = svn_wc_status_modified;
+        text_status = svn_wc_status_modified;
+    }
 
-      if (prop_modified_p)
-        final_prop_status = svn_wc_status_modified;
+  /* While tree conflicts aren't stored on the node themselves, check
+     explicitly for tree conflicts to allow our users to ignore this detail */
+  if (!conflicted)
+    {
+      svn_wc_conflict_description2_t *tree_conflict;
 
-      if (conflicted)
-        {
-          svn_boolean_t text_conflict_p, prop_conflict_p;
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, db, local_abspath,
+                                              scratch_pool, scratch_pool));
 
-          /* The entry says there was a conflict, but the user might have
-             marked it as resolved by deleting the artifact files, so check
-             for that. */
-            SVN_ERR(svn_wc__internal_conflicted_p(&text_conflict_p,
-                                                  &prop_conflict_p, NULL, db,
-                                                  local_abspath,
-                                                  scratch_pool));
+      conflicted = (tree_conflict != NULL);
+    }
+  else
+    {
+      svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
 
-          if (text_conflict_p)
-            final_text_status = svn_wc_status_conflicted;
-          if (prop_conflict_p)
-            final_prop_status = svn_wc_status_conflicted;
-        }
+      /* ### Check if the conflict was resolved by removing the marker files.
+         ### This should really be moved to the users of this API */
+      SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted, &prop_conflicted,
+                                            &tree_conflicted,
+                                            db, local_abspath, scratch_pool));
 
+      if (!text_conflicted && !prop_conflicted && !tree_conflicted)
+        conflicted = FALSE; 
+    }
+
+  if (node_status == svn_wc_status_normal)
+    {
       /* 2. Possibly overwrite the text_status variable with "scheduled"
             states from the entry (A, D, R).  As a group, these states are
             of medium precedence.  They also override any C or M that may
@@ -543,77 +550,32 @@ assemble_status(svn_wc_status3_t **status,
 
           copied = entry->copied;
 
-          if (entry->schedule == svn_wc_schedule_add
-              && final_text_status != svn_wc_status_conflicted)
-            {
-              final_text_status = svn_wc_status_added;
-              final_prop_status = svn_wc_status_none;
-            }
-
-          else if (entry->schedule == svn_wc_schedule_replace
-                   && final_text_status != svn_wc_status_conflicted)
-            {
-              final_text_status = svn_wc_status_replaced;
-              final_prop_status = svn_wc_status_none;
-            }
+          if (entry->schedule == svn_wc_schedule_add)
+            node_status = svn_wc_status_added;
+          else if (entry->schedule == svn_wc_schedule_replace)
+            node_status = svn_wc_status_replaced;
         }
-      else if (db_status == svn_wc__db_status_deleted
-               && final_text_status != svn_wc_status_conflicted)
-        {
-          /* ### Set copied for working_node only delete? */
-          final_text_status = svn_wc_status_deleted;
-          final_prop_status = svn_wc_status_none;
-        }
-
-      /* 3. Highest precedence:
-
-            a. check to see if file or dir is just missing, or
-               incomplete.  This overrides every possible state
-               *except* deletion.  (If something is deleted or
-               scheduled for it, we don't care if the working file
-               exists.)
-
-            b. check to see if the file or dir is present in the
-               file system as the same kind it was versioned as.
-
-         4. Check for locked directory (only for directories). */
-
-      if (db_status == svn_wc__db_status_incomplete
-          && (final_text_status != svn_wc_status_deleted)
-          && (final_text_status != svn_wc_status_added))
-        {
-          final_text_status = svn_wc_status_incomplete;
-        }
-      else if (path_kind == svn_node_none)
-        {
-          if (final_text_status != svn_wc_status_deleted)
-            final_text_status = svn_wc_status_missing;
-        }
-      /* ### We can do this db_kind to node_kind translation since the cases
-       * where db_kind would have been unknown are treated as unversioned
-       * paths and thus have already returned. */
-      else if (path_kind != (db_kind == svn_wc__db_kind_dir ?  
-                                        svn_node_dir : svn_node_file))
-        final_text_status = svn_wc_status_obstructed;
-#ifdef HAVE_SYMLINK
-      else if ( wc_special != path_special)
-        final_text_status = svn_wc_status_obstructed;
-#endif /* HAVE_SYMLINK */
     }
+
+  if (node_status == svn_wc_status_normal)
+    node_status = text_status;
+  
+  if (node_status == svn_wc_status_normal
+      && prop_status != svn_wc_status_none)
+    node_status = prop_status;
 
   /* 5. Easy out:  unless we're fetching -every- entry, don't bother
      to allocate a struct for an uninteresting entry. */
 
   if (! get_all)
-    if (((final_text_status == svn_wc_status_none)
-         || (final_text_status == svn_wc_status_normal))
-        && ((final_prop_status == svn_wc_status_none)
-            || (final_prop_status == svn_wc_status_normal))
+    if (((node_status == svn_wc_status_none)
+         || (node_status == svn_wc_status_normal))
+
         && (! switched_p)
         && (! lock) 
         && (! repos_lock)
         && (! changelist)
-        && (! tree_conflict))
+        && (! conflicted))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -638,8 +600,10 @@ assemble_status(svn_wc_status3_t **status,
         stat->kind = svn_node_unknown;
     }
   stat->depth = depth;
-  stat->text_status = final_text_status;
-  stat->prop_status = final_prop_status;
+  stat->node_status = node_status;
+  stat->text_status = text_status;
+  stat->prop_status = prop_status;
+  stat->repos_node_status = svn_wc_status_none;   /* default */
   stat->repos_text_status = svn_wc_status_none;   /* default */
   stat->repos_prop_status = svn_wc_status_none;   /* default */
   stat->switched = switched_p;
@@ -679,7 +643,14 @@ assemble_status(svn_wc_status3_t **status,
   return SVN_NO_ERROR;
 }
 
+/* Fill in *STATUS for the unversioned path LOCAL_ABSPATH, using data
+   available in DB. Allocate *STATUS in POOL. Use SCRATCH_POOL for
+   temporary allocations.
 
+   If IS_IGNORED is non-zero and this is a non-versioned entity, set
+   the node_status to svn_wc_status_none.  Otherwise set the
+   node_status to svn_wc_status_unversioned.
+ */
 static svn_error_t *
 assemble_unversioned(svn_wc_status3_t **status,
                      svn_wc__db_t *db,
@@ -705,28 +676,30 @@ assemble_unversioned(svn_wc_status3_t **status,
   /*stat->versioned = FALSE;*/
   stat->kind = svn_node_unknown; /* not versioned */
   stat->depth = svn_depth_unknown;
+  stat->node_status = svn_wc_status_none;
   stat->text_status = svn_wc_status_none;
   stat->prop_status = svn_wc_status_none;
+  stat->repos_node_status = svn_wc_status_none;
   stat->repos_text_status = svn_wc_status_none;
   stat->repos_prop_status = svn_wc_status_none;
 
   /* If this path has no entry, but IS present on disk, it's
      unversioned.  If this file is being explicitly ignored (due
-     to matching an ignore-pattern), the text_status is set to
-     svn_wc_status_ignored.  Otherwise the text_status is set to
+     to matching an ignore-pattern), the node_status is set to
+     svn_wc_status_ignored.  Otherwise the node_status is set to
      svn_wc_status_unversioned. */
   if (path_kind != svn_node_none)
     {
       if (is_ignored)
-        stat->text_status = svn_wc_status_ignored;
+        stat->node_status = svn_wc_status_ignored;
       else
-        stat->text_status = svn_wc_status_unversioned;
+        stat->node_status = svn_wc_status_unversioned;
     }
   else if (tree_conflict != NULL)
     {
       /* If this path has no entry, is NOT present on disk, and IS a
          tree conflict victim, count it as missing. */
-      stat->text_status = svn_wc_status_missing;
+      stat->node_status = svn_wc_status_missing;
     }
 
   stat->revision = SVN_INVALID_REVNUM;
@@ -938,7 +911,7 @@ send_unversioned_item(const struct walk_status_baton *wb,
 
   is_external = is_external_path(wb->externals, local_abspath, scratch_pool);
   if (is_external)
-    status->text_status = svn_wc_status_external;
+    status->node_status = svn_wc_status_external;
 
   /* We can have a tree conflict on an unversioned path, i.e. an incoming
    * delete on a locally deleted path during an update. Don't ever ignore
@@ -1386,8 +1359,8 @@ hash_stash(void *baton,
 
 /* Look up the key PATH in BATON->STATII.  IS_DIR_BATON indicates whether
    baton is a struct *dir_baton or struct *file_baton.  If the value doesn't
-   yet exist, and the REPOS_TEXT_STATUS indicates that this is an
-   addition, create a new status struct using the hash's pool.
+   yet exist, and the REPOS_NODE_STATUS indicates that this is an addition,
+   create a new status struct using the hash's pool.
 
    If IS_DIR_BATON is true, THIS_DIR_BATON is a *dir_baton cotaining the out
    of date (ood) information we want to set in BATON.  This is necessary
@@ -1397,20 +1370,20 @@ hash_stash(void *baton,
    contains the ood info we want to bubble up to ancestor directories so these
    accurately reflect the fact they have an ood descendant.
 
-   Merge REPOS_TEXT_STATUS and REPOS_PROP_STATUS into the status structure's
-   "network" fields.
+   Merge REPOS_NODE_STATUS, REPOS_TEXT_STATUS and REPOS_PROP_STATUS into the
+   status structure's "network" fields.
 
    Iff IS_DIR_BATON is true, DELETED_REV is used as follows, otherwise it
    is ignored:
 
-       If REPOS_TEXT_STATUS is svn_wc_status_deleted then DELETED_REV is
+       If REPOS_NODE_STATUS is svn_wc_status_deleted then DELETED_REV is
        optionally the revision path was deleted, in all other cases it must
        be set to SVN_INVALID_REVNUM.  If DELETED_REV is not
        SVN_INVALID_REVNUM and REPOS_TEXT_STATUS is svn_wc_status_deleted,
-       then use DELETED_REV to set PATH's ood_changed_rev field in BATON.
-       If DELETED_REV is SVN_INVALID_REVNUM and REPOS_TEXT_STATUS is
-       svn_wc_status_deleted, set PATH's ood_changed_rev to its parent's
-       ood_changed_rev value - see comment below.
+       then use DELETED_REV to set PATH's ood_last_cmt_rev field in BATON.
+       If DELETED_REV is SVN_INVALID_REVNUM and REPOS_NODE_STATUS is
+       svn_wc_status_deleted, set PATH's ood_last_cmt_rev to its parent's
+       ood_last_cmt_rev value - see comment below.
 
    If a new struct was added, set the repos_lock to REPOS_LOCK. */
 static svn_error_t *
@@ -1420,6 +1393,7 @@ tweak_statushash(void *baton,
                  svn_wc__db_t *db,
                  const char *local_abspath,
                  svn_boolean_t is_dir,
+                 enum svn_wc_status_kind repos_node_status,
                  enum svn_wc_status_kind repos_text_status,
                  enum svn_wc_status_kind repos_prop_status,
                  svn_revnum_t deleted_rev,
@@ -1453,7 +1427,7 @@ tweak_statushash(void *baton,
          as an 'add' or not mentioned at all, depending on how we
          eventually fix the bugs in non-recursivity.  See issue
          #2122 for details. */
-      if (repos_text_status != svn_wc_status_added)
+      if (repos_node_status != svn_wc_status_added)
         return SVN_NO_ERROR;
 
       /* Use the public API to get a statstruct, and put it into the hash. */
@@ -1465,11 +1439,13 @@ tweak_statushash(void *baton,
     }
 
   /* Merge a repos "delete" + "add" into a single "replace". */
-  if ((repos_text_status == svn_wc_status_added)
-      && (statstruct->repos_text_status == svn_wc_status_deleted))
-    repos_text_status = svn_wc_status_replaced;
+  if ((repos_node_status == svn_wc_status_added)
+      && (statstruct->repos_node_status == svn_wc_status_deleted))
+    repos_node_status = svn_wc_status_replaced;
 
   /* Tweak the structure's repos fields. */
+  if (repos_node_status)
+    statstruct->repos_node_status = repos_node_status;
   if (repos_text_status)
     statstruct->repos_text_status = repos_text_status;
   if (repos_prop_status)
@@ -1482,7 +1458,7 @@ tweak_statushash(void *baton,
 
       /* The last committed date, and author for deleted items
          isn't available. */
-      if (statstruct->repos_text_status == svn_wc_status_deleted)
+      if (statstruct->repos_node_status == svn_wc_status_deleted)
         {
           statstruct->ood_kind = is_dir ? svn_node_dir : svn_node_file;
 
@@ -1618,11 +1594,11 @@ make_dir_baton(void **dir_baton,
      might indicate that the parent is unversioned ("unversioned" for
      our purposes includes being an external or ignored item). */
   if (status_in_parent
-      && (status_in_parent->text_status != svn_wc_status_unversioned)
-      && (status_in_parent->text_status != svn_wc_status_missing)
-      && (status_in_parent->text_status != svn_wc_status_obstructed)
-      && (status_in_parent->text_status != svn_wc_status_external)
-      && (status_in_parent->text_status != svn_wc_status_ignored)
+      && (status_in_parent->node_status != svn_wc_status_unversioned)
+      && (status_in_parent->node_status != svn_wc_status_missing)
+      && (status_in_parent->node_status != svn_wc_status_obstructed)
+      && (status_in_parent->node_status != svn_wc_status_external)
+      && (status_in_parent->node_status != svn_wc_status_ignored)
       && (status_in_parent->kind == svn_node_dir)
       && (! d->excluded)
       && (d->depth == svn_depth_unknown
@@ -1689,9 +1665,7 @@ svn_wc__is_sendable_status(const svn_wc_status3_t *status,
                            svn_boolean_t get_all)
 {
   /* If the repository status was touched at all, it's interesting. */
-  if (status->repos_text_status != svn_wc_status_none)
-    return TRUE;
-  if (status->repos_prop_status != svn_wc_status_none)
+  if (status->repos_node_status != svn_wc_status_none)
     return TRUE;
 
   /* If there is a lock in the repository, send it. */
@@ -1699,7 +1673,7 @@ svn_wc__is_sendable_status(const svn_wc_status3_t *status,
     return TRUE;
 
   /* If the item is ignored, and we don't want ignores, skip it. */
-  if ((status->text_status == svn_wc_status_ignored) && (! no_ignore))
+  if ((status->node_status == svn_wc_status_ignored) && (! no_ignore))
     return FALSE;
 
   /* If we want everything, we obviously want this single-item subset
@@ -1708,15 +1682,12 @@ svn_wc__is_sendable_status(const svn_wc_status3_t *status,
     return TRUE;
 
   /* If the item is unversioned, display it. */
-  if (status->text_status == svn_wc_status_unversioned)
+  if (status->node_status == svn_wc_status_unversioned)
     return TRUE;
 
   /* If the text, property or tree state is interesting, send it. */
-  if ((status->text_status != svn_wc_status_none)
-      && (status->text_status != svn_wc_status_normal))
-    return TRUE;
-  if ((status->prop_status != svn_wc_status_none)
-      && (status->prop_status != svn_wc_status_normal))
+  if ((status->node_status != svn_wc_status_none
+       && (status->node_status != svn_wc_status_normal)))
     return TRUE;
   if (status->conflicted)
     return TRUE;
@@ -1730,7 +1701,7 @@ svn_wc__is_sendable_status(const svn_wc_status3_t *status,
     return TRUE;
 
   /* If the entry is associated with a changelist, send it. */
-  if (status->versioned && status->changelist)
+  if (status->changelist)
     return TRUE;
 
   /* Otherwise, don't send it. */
@@ -1746,7 +1717,7 @@ struct status_baton
 };
 
 /* A status callback function which wraps the *real* status
-   function/baton.   It simply sets the "repos_text_status" field of the
+   function/baton.   It simply sets the "repos_node_status" field of the
    STATUS to svn_wc_status_deleted and passes it off to the real
    status func/baton. Implements svn_wc_status_func4_t */
 static svn_error_t *
@@ -1757,7 +1728,7 @@ mark_deleted(void *baton,
 {
   struct status_baton *sb = baton;
   svn_wc_status3_t *new_status = svn_wc_dup_status3(status, scratch_pool);
-  new_status->repos_text_status = svn_wc_status_deleted;
+  new_status->repos_node_status = svn_wc_status_deleted;
   return sb->real_status_func(sb->real_status_baton, local_abspath,
                               new_status, scratch_pool);
 }
@@ -1804,8 +1775,8 @@ handle_statii(struct edit_baton *eb,
 
       /* Now, handle the status.  We don't recurse for svn_depth_immediates
          because we already have the subdirectories' statii. */
-      if (status->text_status != svn_wc_status_obstructed
-          && status->text_status != svn_wc_status_missing
+      if (status->node_status != svn_wc_status_obstructed
+          && status->node_status != svn_wc_status_missing
           && status->versioned && status->kind == svn_node_dir
           && (depth == svn_depth_unknown
               || depth == svn_depth_infinity))
@@ -1818,7 +1789,7 @@ handle_statii(struct edit_baton *eb,
                                  eb->cancel_baton, iterpool));
         }
       if (dir_was_deleted)
-        status->repos_text_status = svn_wc_status_deleted;
+        status->repos_node_status = svn_wc_status_deleted;
       if (svn_wc__is_sendable_status(status, eb->no_ignore, eb->get_all))
         SVN_ERR((eb->status_func)(eb->status_baton, local_abspath, status,
                                   iterpool));
@@ -1880,7 +1851,7 @@ delete_entry(const char *path,
   SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, local_abspath, FALSE, pool));
   SVN_ERR(tweak_statushash(db, db, TRUE, eb->db,
                            local_abspath, kind == svn_wc__db_kind_dir,
-                           svn_wc_status_deleted, 0, revision, NULL, pool));
+                           svn_wc_status_deleted, 0, 0, revision, NULL, pool));
 
   /* Mark the parent dir -- it lost an entry (unless that parent dir
      is the root node and we're not supposed to report on the root
@@ -1889,8 +1860,8 @@ delete_entry(const char *path,
     SVN_ERR(tweak_statushash(db->parent_baton, db, TRUE,eb->db,
                              db->local_abspath,
                              kind == svn_wc__db_kind_dir,
-                             svn_wc_status_modified, 0, SVN_INVALID_REVNUM,
-                             NULL, pool));
+                             svn_wc_status_modified, svn_wc_status_modified,
+                             0, SVN_INVALID_REVNUM, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1980,18 +1951,23 @@ close_directory(void *dir_baton,
   if (db->added || db->prop_changed || db->text_changed
       || db->ood_changed_rev != SVN_INVALID_REVNUM)
     {
+      enum svn_wc_status_kind repos_node_status;
       enum svn_wc_status_kind repos_text_status;
       enum svn_wc_status_kind repos_prop_status;
 
       /* If this is a new directory, add it to the statushash. */
       if (db->added)
         {
+          repos_node_status = svn_wc_status_added;
           repos_text_status = svn_wc_status_added;
           repos_prop_status = db->prop_changed ? svn_wc_status_added
                               : svn_wc_status_none;
         }
       else
         {
+          repos_node_status = (db->text_changed || db->prop_changed)
+                                       ? svn_wc_status_modified
+                                       : svn_wc_status_none;
           repos_text_status = db->text_changed ? svn_wc_status_modified
                               : svn_wc_status_none;
           repos_prop_status = db->prop_changed ? svn_wc_status_modified
@@ -2006,14 +1982,16 @@ close_directory(void *dir_baton,
           /* ### When we add directory locking, we need to find a
              ### directory lock here. */
           SVN_ERR(tweak_statushash(pb, db, TRUE, eb->db, db->local_abspath,
-                                   TRUE, repos_text_status, repos_prop_status,
-                                   SVN_INVALID_REVNUM, NULL, pool));
+                                   TRUE, repos_node_status, repos_text_status,
+                                   repos_prop_status, SVN_INVALID_REVNUM, NULL,
+                                   pool));
         }
       else
         {
           /* We're editing the root dir of the WC.  As its repos
              status info isn't otherwise set, set it directly to
              trigger invocation of the status callback below. */
+          eb->anchor_status->repos_node_status = repos_node_status;
           eb->anchor_status->repos_prop_status = repos_prop_status;
           eb->anchor_status->repos_text_status = repos_text_status;
 
@@ -2040,8 +2018,8 @@ close_directory(void *dir_baton,
       dir_status = apr_hash_get(pb->statii, db->local_abspath,
                                 APR_HASH_KEY_STRING);
       if (dir_status &&
-          ((dir_status->repos_text_status == svn_wc_status_deleted)
-           || (dir_status->repos_text_status == svn_wc_status_replaced)))
+          ((dir_status->repos_node_status == svn_wc_status_deleted)
+           || (dir_status->repos_node_status == svn_wc_status_replaced)))
         was_deleted = TRUE;
 
       /* Now do the status reporting. */
@@ -2049,7 +2027,7 @@ close_directory(void *dir_baton,
                             dir_status ? dir_status->repos_relpath : NULL,
                             db->statii, was_deleted, db->depth, pool));
       if (dir_status && svn_wc__is_sendable_status(dir_status, eb->no_ignore,
-                                                  eb->get_all))
+                                                   eb->get_all))
         SVN_ERR((eb->status_func)(eb->status_baton, db->local_abspath,
                                   dir_status, pool));
       apr_hash_set(pb->statii, db->local_abspath, APR_HASH_KEY_STRING, NULL);
@@ -2202,6 +2180,7 @@ close_file(void *file_baton,
            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
+  enum svn_wc_status_kind repos_node_status;
   enum svn_wc_status_kind repos_text_status;
   enum svn_wc_status_kind repos_prop_status;
   const svn_lock_t *repos_lock = NULL;
@@ -2213,6 +2192,7 @@ close_file(void *file_baton,
   /* If this is a new file, add it to the statushash. */
   if (fb->added)
     {
+      repos_node_status = svn_wc_status_added;
       repos_text_status = svn_wc_status_added;
       repos_prop_status = fb->prop_changed ? svn_wc_status_added : 0;
 
@@ -2238,14 +2218,16 @@ close_file(void *file_baton,
     }
   else
     {
+      repos_node_status = (fb->text_changed || fb->prop_changed)
+                                 ? svn_wc_status_modified : 0;
       repos_text_status = fb->text_changed ? svn_wc_status_modified : 0;
       repos_prop_status = fb->prop_changed ? svn_wc_status_modified : 0;
     }
 
   return tweak_statushash(fb, NULL, FALSE, fb->edit_baton->db,
-                          fb->local_abspath, FALSE, repos_text_status,
-                          repos_prop_status, SVN_INVALID_REVNUM, repos_lock,
-                          pool);
+                          fb->local_abspath, FALSE, repos_node_status,
+                          repos_text_status, repos_prop_status,
+                          SVN_INVALID_REVNUM, repos_lock, pool);
 }
 
 /* */

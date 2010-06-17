@@ -598,8 +598,7 @@ create_client_status(svn_client_status_t **cst,
 
   (*cst)->conflicted = status->conflicted;
 
-  /* ### libsvn_wc doesn't have node status yet */
-  (*cst)->node_status = status->text_status;
+  (*cst)->node_status = status->node_status;
   (*cst)->text_status = status->text_status;
   (*cst)->prop_status = status->prop_status;
 
@@ -644,7 +643,7 @@ create_client_status(svn_client_status_t **cst,
 
   /* Out of date information */
   (*cst)->ood_kind = status->ood_kind;
-  (*cst)->repos_node_status = status->repos_text_status;
+  (*cst)->repos_node_status = status->repos_node_status;
   (*cst)->repos_text_status = status->repos_text_status;
   (*cst)->repos_prop_status = status->repos_prop_status;
   (*cst)->repos_lock = status->repos_lock;
@@ -656,6 +655,28 @@ create_client_status(svn_client_status_t **cst,
   /* When changing the value of backwards_compatibility_baton, also
      change its use in status4_wrapper_func in deprecated.c */
   (*cst)->backwards_compatibility_baton = status;
+
+  if (status->versioned && status->conflicted)
+    {
+      svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+
+      /* Note: This checks the on disk markers to automatically hide
+               text/property conflicts that are hidden by removing their
+               markers */
+      SVN_ERR(svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                                   &tree_conflicted, wc_ctx, local_abspath,
+                                   scratch_pool));
+
+      if (text_conflicted)
+        (*cst)->text_status = svn_wc_status_conflicted;
+
+      if (prop_conflicted)
+        (*cst)->prop_status = svn_wc_status_conflicted;
+
+      /* ### Also set this for tree_conflicts? */
+      if (text_conflicted || prop_conflicted)
+        (*cst)->node_status = svn_wc_status_conflicted;
+    }
 
   return SVN_NO_ERROR;
 }
