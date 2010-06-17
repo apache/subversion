@@ -369,7 +369,7 @@ clear_cache(void *data)
 static volatile svn_atomic_t bdb_cache_state;
 
 static svn_error_t *
-bdb_init_cb(apr_pool_t *pool)
+bdb_init_cb(void *baton, apr_pool_t *pool)
 {
 #if APR_HAS_THREADS
   apr_status_t apr_err;
@@ -396,7 +396,7 @@ bdb_init_cb(apr_pool_t *pool)
 svn_error_t *
 svn_fs_bdb__init(apr_pool_t* pool)
 {
-  return svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, pool);
+  return svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, NULL, pool);
 }
 
 static APR_INLINE void

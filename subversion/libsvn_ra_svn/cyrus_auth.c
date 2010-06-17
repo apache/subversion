@@ -163,7 +163,7 @@ apr_status_t svn_ra_svn__sasl_common_init(apr_pool_t *pool)
   return apr_err;
 }
 
-static svn_error_t *sasl_init_cb(apr_pool_t *pool)
+static svn_error_t *sasl_init_cb(void *baton, apr_pool_t *pool)
 {
   if (svn_ra_svn__sasl_common_init(pool) != APR_SUCCESS
       || sasl_client_init(NULL) != SASL_OK)
@@ -174,7 +174,8 @@ static svn_error_t *sasl_init_cb(apr_pool_t *pool)
 
 svn_error_t *svn_ra_svn__sasl_init(void)
 {
-  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, sasl_init_cb, NULL));
+  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status,
+                                sasl_init_cb, NULL, NULL));
   return SVN_NO_ERROR;
 }
 

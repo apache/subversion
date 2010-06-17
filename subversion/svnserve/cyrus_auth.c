@@ -97,7 +97,7 @@ static sasl_callback_t callbacks[] =
   { SASL_CB_LIST_END, NULL, NULL }
 };
 
-static svn_error_t *initialize(apr_pool_t *pool)
+static svn_error_t *initialize(void *baton, apr_pool_t *pool)
 {
   int result;
   apr_status_t status;
@@ -122,7 +122,8 @@ static svn_error_t *initialize(apr_pool_t *pool)
 
 svn_error_t *cyrus_init(apr_pool_t *pool)
 {
-  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, initialize, pool));
+  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status,
+                                initialize, NULL, pool));
   return SVN_NO_ERROR;
 }
 
