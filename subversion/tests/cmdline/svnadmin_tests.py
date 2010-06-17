@@ -1197,25 +1197,57 @@ def hotcopy_symlink(sbox):
   original_repo = sbox.repo_dir
 
   hotcopy_repo, hotcopy_url = sbox.add_repo_path('hotcopy')
-  orig_symlink_path = os.path.join(original_repo, 'conf', 'newconf')
-  hotcopy_symlink_path = os.path.join(hotcopy_repo, 'conf', 'newconf')
-  linktarget_path = os.path.join(original_repo, 'conf', 'linktarget')
 
   # Create a repository.
   svntest.main.safe_rmtree(original_repo, 1)
   svntest.main.create_repos(original_repo)
 
-  # Create a symlink within the repository directory.
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
-  os.symlink('linktarget', orig_symlink_path)
+  # Create a file, a dir and a missing path outside the repoitory.
+  svntest.main.safe_rmtree(sbox.wc_dir, 1)
+  os.mkdir(sbox.wc_dir)
+  external_file_path = os.path.join(sbox.wc_dir, "file")
+  svntest.main.file_write(external_file_path, "An existing file")
+  external_dir_path = os.path.join(sbox.wc_dir, "dir")
+  os.mkdir(external_dir_path)
+  external_missing_path = os.path.join(sbox.wc_dir, "missing")
+
+  # Symlink definitions: base name -> target relpath.
+  # Check both existing and nonexistent targets.
+  # Check targets both within and outside the source repository.
+  symlinks = [
+    ('in_repos_file',    'format'),
+    ('in_repos_dir',     'conf'),
+    ('in_repos_missing', 'missing'),
+    ('external_file',    os.path.join('..', '..', '..', external_file_path)),
+    ('external_dir',     os.path.join('..', '..', '..', external_dir_path)),
+    ('external_missing', os.path.join('..', '..', '..', external_missing_path)),
+  ]
+
+  # Create symlinks within the repository directory.
+  for name, target_relpath in symlinks:
+    target_path = os.path.join(original_repo, target_relpath)
+    target_abspath = os.path.abspath(target_path)
+
+    # Create two symlinks to each target - one relative, one absolute.
+    symlink_path = os.path.join(original_repo, name)
+    os.symlink(target_relpath, symlink_path + '_rel')
+    os.symlink(target_abspath, symlink_path + '_abs')
 
   svntest.actions.run_and_verify_svnadmin(
     None, None, [],
     "hotcopy", original_repo, hotcopy_repo)
 
-  # Check if the symlink was hotcopied.
-  if (not (os.path.exists(hotcopy_symlink_path))):
-    raise svntest.Failure
+  # Check if the symlinks were copied correctly.
+  for name, target_relpath in symlinks:
+    target_path = os.path.join(original_repo, target_relpath)
+    target_abspath = os.path.abspath(target_path)
+
+    # Check two symlinks to each target - one relative, one absolute.
+    symlink_path = os.path.join(hotcopy_repo, name)
+    if os.readlink(symlink_path + '_rel') != target_relpath:
+      raise svntest.Failure
+    if os.readlink(symlink_path + '_abs') != target_abspath:
+      raise svntest.Failure
 
 ########################################################################
 # Run the tests
