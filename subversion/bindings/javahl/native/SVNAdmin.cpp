@@ -476,8 +476,9 @@ void SVNAdmin::setRevProp(File &path, Revision &revision,
   else
     {
       svn_fs_t *fs = svn_repos_fs (repos);
-      err = svn_fs_change_rev_prop(fs, revision.revision()->value.number,
-                                   propName, propValStr, requestPool.pool());
+      err = svn_fs_change_rev_prop2(fs, revision.revision()->value.number,
+                                    propName, NULL, propValStr,
+                                    requestPool.pool());
     }
   SVN_JNI_ERR(err, );
 }

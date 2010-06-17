@@ -1244,7 +1244,8 @@ set_revision_property(void *baton,
       SVN_ERR(svn_fs_youngest_rev(&youngest_rev, pb->fs, rb->pool));
 
       if (youngest_rev == 0)
-        SVN_ERR(svn_fs_change_rev_prop(pb->fs, 0, name, value, rb->pool));
+        SVN_ERR(svn_fs_change_rev_prop2(pb->fs, 0, name, NULL, value,
+                                        rb->pool));
     }
 
   return SVN_NO_ERROR;

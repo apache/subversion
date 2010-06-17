@@ -1193,9 +1193,9 @@ set_revprop(const char *prop_name, const char *filename,
   else
     {
       svn_fs_t *fs = svn_repos_fs(repos);
-      SVN_ERR(svn_fs_change_rev_prop
+      SVN_ERR(svn_fs_change_rev_prop2
               (fs, opt_state->start_revision.value.number,
-               prop_name, prop_value, pool));
+               prop_name, NULL, prop_value, pool));
     }
 
   return SVN_NO_ERROR;
