@@ -217,18 +217,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r879966, r879971
-   Reduce the lifetime of the rep-sharing database handles in FSFS to avoid
-   having writers blocking readers, and update that database outside the
-   general FSFS write lock.  This addresses issue #3506.
-   Justification:
-     The performance problems and outright failures of the current code
-     are hurting the ASF repository, and presumably other high-concurrency
-     repositories, too, when large commits occur.
-   Justification:
-     Pre-requisite for the r934599 group.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3506
-   Votes:
-     +1: danielsh, cmpilato, hwright

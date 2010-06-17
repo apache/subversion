@@ -235,6 +235,10 @@ typedef struct
 
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
+
+  /* Whether rep-sharing is supported by the filesystem
+   * and allowed by the configuration. */
+  svn_boolean_t rep_sharing_allowed;
 } fs_fs_data_t;
 
 
