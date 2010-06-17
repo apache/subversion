@@ -553,8 +553,6 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
                        apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *entry = NULL;
-  const svn_wc_conflict_description2_t *tree_conflict;
-  svn_wc_conflict_description_t *old_tree_conflict;
 
   if (old_status == NULL)
     {
@@ -577,11 +575,6 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
         SVN_ERR(err);
     }
 
-  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, wc_ctx->db,
-                                           local_abspath, scratch_pool,
-                                           scratch_pool));
-  old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
-
   (*status)->entry = entry;
   (*status)->copied = old_status->copied;
   (*status)->repos_lock = svn_lock_dup(old_status->repos_lock, result_pool);
@@ -594,7 +587,15 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
   (*status)->ood_last_cmt_date = old_status->ood_changed_date;
   (*status)->ood_kind = old_status->ood_kind;
   (*status)->ood_last_cmt_author = old_status->ood_changed_author;
-  (*status)->tree_conflict = old_tree_conflict;
+
+  if (old_status->conflicted)
+    {
+      const svn_wc_conflict_description2_t *tree_conflict;
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, wc_ctx->db,
+                                               local_abspath, scratch_pool,
+                                               scratch_pool));
+      (*status)->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
+    }
 
   (*status)->switched = old_status->switched;
 
@@ -673,16 +674,20 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
         break;
     }
 
-  if (old_status->conflicted)
+  if (old_status->versioned
+      && old_status->conflicted
+      && old_status->node_status != svn_wc_status_obstructed
+      && (old_status->kind == svn_node_file 
+          || old_status->kind != svn_wc_status_missing))
     {
-      svn_boolean_t text_conflict_p, prop_conflict_p, tree_conflict_p;
+      svn_boolean_t text_conflict_p, prop_conflict_p;
 
       /* The entry says there was a conflict, but the user might have
          marked it as resolved by deleting the artifact files, so check
          for that. */
       SVN_ERR(svn_wc__internal_conflicted_p(&text_conflict_p,
                                             &prop_conflict_p,
-                                            &tree_conflict_p,
+                                            NULL,
                                             wc_ctx->db, local_abspath,
                                             scratch_pool));
 
@@ -691,21 +696,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
       if (prop_conflict_p)
         (*status)->prop_status = svn_wc_status_conflicted;
-
-      if (tree_conflict_p)
-        {
-          svn_wc_conflict_description2_t *tree_conflict;
-          SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict,
-                                                   wc_ctx->db, local_abspath,
-                                                   scratch_pool,
-                                                   scratch_pool));
-
-          (*status)->tree_conflict =
-              svn_wc__cd2_to_cd(tree_conflict, result_pool);
-        }
-
     }
-
 
   return SVN_NO_ERROR;
 }
