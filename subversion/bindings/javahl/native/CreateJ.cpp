@@ -425,9 +425,18 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
   jstring jChangelist = NULL;
   if (status != NULL)
     {
-      /* ### Node status is more like the old text_status, then the new text_status
-         ### Maybe this should be handled on the tigris/apache boundary */
-      jTextType = EnumMapper::mapStatusKind(status->node_status);
+      /* ### Calculate the old style text_status value to make
+         ### the tests pass. It is probably better to do this in
+         ### the tigris package and then switch the apache package
+         ### to three statuses. */
+      enum svn_wc_status_kind text_status = status->node_status;
+
+      /* Avoid using values that might come from prop changes */
+      if (text_status == svn_wc_status_modified
+          || text_status == svn_wc_status_conflicted)
+        text_status = status->text_status;
+
+      jTextType = EnumMapper::mapStatusKind(text_status);
       jPropType = EnumMapper::mapStatusKind(status->prop_status);
       jRepositoryTextType = EnumMapper::mapStatusKind(
                                                       status->repos_text_status);
