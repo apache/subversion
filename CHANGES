@@ -9,7 +9,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.12
    * update address to which crash reports are sent (r901304)
    * check for server certificate revocation on Windows (r898048)
    * disable custom file mutexes on Windows (r879902, -16)
-   * make 'svn cp' work with peg revision'd paths (issue #3651)
+   * fix handling of peg revision'd copy targets (issue #3651)
    * more improvements to 'svn merge --reintegrate' (r935631)
    * allow copying of broken symlinks (issue #3303)
    * improve rep-sharing performance on high-concurrency repos (issue #3506)
