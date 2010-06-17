@@ -451,7 +451,7 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_upgrade
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
 {
-  JNIEntry(SVNAdmin, rmlocks);
+  JNIEntry(SVNAdmin, upgrade);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
   if (cl == NULL)
     {
