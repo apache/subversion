@@ -583,25 +583,75 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
   old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
 
   (*status)->entry = entry;
+  (*status)->copied = old_status->copied;
+  (*status)->repos_lock = svn_lock_dup(old_status->repos_lock, result_pool);
+
+  if (old_status->repos_relpath)
+    (*status)->url = svn_path_url_add_component2(old_status->repos_root_url,
+                                                 old_status->repos_relpath,
+                                                 result_pool);
+  (*status)->ood_last_cmt_rev = old_status->ood_changed_rev;
+  (*status)->ood_last_cmt_date = old_status->ood_changed_date;
+  (*status)->ood_kind = old_status->ood_kind;
+  (*status)->ood_last_cmt_author = old_status->ood_changed_author;
+  (*status)->tree_conflict = old_tree_conflict;
+
+  (*status)->switched = old_status->switched;
+
+  if (old_status->versioned
+      && old_status->switched
+      && old_status->kind == svn_node_file)
+    {
+      svn_boolean_t file_external;
+
+      SVN_ERR(svn_wc__internal_is_file_external(&file_external,
+                                            wc_ctx->db, local_abspath,
+                                            scratch_pool));
+
+      if (file_external)
+        {
+          (*status)->switched = FALSE;
+          (*status)->file_external = TRUE;
+        }
+    }
+
   (*status)->text_status = old_status->text_status;
   (*status)->prop_status = old_status->prop_status;
-  (*status)->locked = old_status->locked;
-  (*status)->copied = old_status->copied;
-  (*status)->switched = old_status->switched;
+
   (*status)->repos_text_status = old_status->repos_text_status;
   (*status)->repos_prop_status = old_status->repos_prop_status;
-  (*status)->repos_lock = svn_lock_dup(old_status->repos_lock, result_pool);
-  (*status)->url = svn_path_url_add_component2(old_status->repos_root_url,
-                                               old_status->repos_relpath,
-                                               result_pool);
-  (*status)->ood_last_cmt_rev = old_status->ood_last_cmt_rev;
-  (*status)->ood_last_cmt_date = old_status->ood_last_cmt_date;
-  (*status)->ood_kind = old_status->ood_kind;
-  (*status)->ood_last_cmt_author = old_status->ood_last_cmt_author;
-  (*status)->tree_conflict = old_tree_conflict;
-  (*status)->file_external = old_status->file_external;
-  (*status)->pristine_text_status = old_status->pristine_text_status;
-  (*status)->pristine_prop_status = old_status->pristine_prop_status;
+
+  /* Find pristine_text_status value */
+  switch (old_status->text_status)
+    {
+      case svn_wc_status_none:
+      case svn_wc_status_normal:
+      case svn_wc_status_modified:
+        (*status)->pristine_text_status = old_status->text_status;
+        break;
+      case svn_wc_status_conflicted:
+      default:
+        /* ### Fetch compare data, or fall back to the documented
+               not retrieved behavior? */
+        (*status)->pristine_text_status = svn_wc_status_none;
+        break;
+    }
+
+  /* Find pristine_prop_status value */
+  switch (old_status->prop_status)
+    {
+      case svn_wc_status_none:
+      case svn_wc_status_normal:
+      case svn_wc_status_modified:
+        (*status)->pristine_prop_status = old_status->prop_status;
+        break;
+      case svn_wc_status_conflicted:
+      default:
+        /* ### Fetch compare data, or fall back to the documented
+               not retrieved behavior? */
+        (*status)->pristine_prop_status = svn_wc_status_none;
+        break;
+    }
 
   return SVN_NO_ERROR;
 }

@@ -62,6 +62,7 @@ struct status_baton
 /* Create svn_client_status_t from svn_wc_satus3_t */
 static svn_error_t *
 create_client_status(svn_client_status_t **cst,
+                     svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
                      const svn_wc_status3_t *status,
                      apr_pool_t *result_pool,
@@ -105,7 +106,7 @@ tweak_status(void *baton,
                                  sb->changelist_hash, scratch_pool))
     return SVN_NO_ERROR;
 
-  SVN_ERR(create_client_status(&cst, local_abspath, status,
+  SVN_ERR(create_client_status(&cst, sb->wc_ctx, local_abspath, status,
                                scratch_pool, scratch_pool));
 
   /* Call the real status function/baton. */
@@ -583,6 +584,7 @@ svn_client_status_dup(const svn_client_status_t *status,
  */
 static svn_error_t *
 create_client_status(svn_client_status_t **cst,
+                     svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
                      const svn_wc_status3_t *status,
                      apr_pool_t *result_pool,
@@ -603,7 +605,10 @@ create_client_status(svn_client_status_t **cst,
 
   (*cst)->switched = status->switched;
 
-  (*cst)->locked = status->locked;
+  if (status->kind == svn_node_dir)
+    SVN_ERR(svn_wc__temp_get_wclocked(&(*cst)->locked, wc_ctx, local_abspath,
+                                      scratch_pool));
+
   (*cst)->copied = status->copied;
   (*cst)->revision = status->revision;
 
@@ -615,22 +620,24 @@ create_client_status(svn_client_status_t **cst,
   (*cst)->repos_relpath = status->repos_relpath;
 
   (*cst)->switched = status->switched;
-  (*cst)->file_external = status->file_external;
+  (*cst)->file_external = FALSE;
 
-  if (status->lock_token)
+  if (status->versioned
+      && status->switched
+      && status->kind == svn_node_file)
     {
-      svn_lock_t *lock = apr_pcalloc(result_pool, sizeof(*lock));
+      svn_boolean_t is_file_external;
+      SVN_ERR(svn_wc__node_is_file_external(&is_file_external, wc_ctx,
+                                            local_abspath, scratch_pool));
 
-      lock->path = status->repos_relpath;
-      lock->token = status->lock_token;
-      lock->owner = status->lock_owner;
-      lock->comment = status->lock_comment;
-      lock->creation_date = status->lock_creation_date;
-
-      (*cst)->lock = lock;
+      if (is_file_external)
+        {
+          (*cst)->file_external = is_file_external;
+          (*cst)->switched = FALSE; /* ### Keep switched true now? */
+        }
     }
-  else
-    (*cst)->lock = NULL;
+
+  (*cst)->lock = status->lock;
 
   (*cst)->changelist = status->changelist;
   (*cst)->depth = status->depth;
@@ -642,9 +649,9 @@ create_client_status(svn_client_status_t **cst,
   (*cst)->repos_prop_status = status->repos_prop_status;
   (*cst)->repos_lock = status->repos_lock;
 
-  (*cst)->ood_changed_rev = status->ood_last_cmt_rev;
-  (*cst)->ood_changed_date = status->ood_last_cmt_date;
-  (*cst)->ood_changed_author = status->ood_last_cmt_author;
+  (*cst)->ood_changed_rev = status->ood_changed_rev;
+  (*cst)->ood_changed_date = status->ood_changed_date;
+  (*cst)->ood_changed_author = status->ood_changed_author;
 
   /* When changing the value of backwards_compatibility_baton, also
      change its use in status4_wrapper_func in deprecated.c */
