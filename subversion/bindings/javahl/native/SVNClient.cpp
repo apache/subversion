@@ -178,14 +178,14 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     rev.kind = svn_opt_revision_unspecified;
 
-    SVN_JNI_ERR(svn_client_status5(&youngest, checkedPath.c_str(),
-                                   &rev, StatusCallback::callback,
-                                   callback,
+    SVN_JNI_ERR(svn_client_status5(&youngest, ctx, checkedPath.c_str(),
+                                   &rev,
                                    depth,
                                    getAll, onServer, noIgnore,
                                    ignoreExternals,
                                    changelists.array(requestPool),
-                                   ctx, requestPool.pool()), );
+                                   StatusCallback::callback, callback,
+                                   requestPool.pool()), );
 }
 
 void SVNClient::username(const char *pi_username)

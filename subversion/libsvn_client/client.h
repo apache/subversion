@@ -1028,14 +1028,14 @@ svn_client__fetch_externals(apr_hash_t *externals,
 /* Perform status operations on each external in TRAVERSAL_INFO.  All
    other options are the same as those passed to svn_client_status(). */
 svn_error_t *
-svn_client__do_external_status(apr_hash_t *external_defs,
-                               svn_wc_status_func4_t status_func,
-                               void *status_baton,
+svn_client__do_external_status(svn_client_ctx_t *ctx,
+                               apr_hash_t *external_defs,
                                svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
-                               svn_client_ctx_t *ctx,
+                               svn_client_status_func_t status_func,
+                               void *status_baton,
                                apr_pool_t *pool);
 
 

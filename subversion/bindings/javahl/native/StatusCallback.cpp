@@ -51,7 +51,7 @@ StatusCallback::~StatusCallback()
 svn_error_t *
 StatusCallback::callback(void *baton,
                          const char *local_abspath,
-                         const svn_wc_status3_t *status,
+                         const svn_client_status_t *status,
                          apr_pool_t *pool)
 {
   if (baton)
@@ -65,7 +65,7 @@ StatusCallback::callback(void *baton,
  */
 svn_error_t *
 StatusCallback::doStatus(const char *local_abspath,
-                         const svn_wc_status3_t *status,
+                         const svn_client_status_t *status,
                          apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();

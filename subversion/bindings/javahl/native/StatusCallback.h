@@ -44,12 +44,12 @@ class StatusCallback
 
   static svn_error_t* callback(void *baton,
                                const char *local_abspath,
-                               const svn_wc_status3_t *status,
+                               const svn_client_status_t *status,
                                apr_pool_t *pool);
 
  protected:
   svn_error_t *doStatus(const char *local_abspath,
-                        const svn_wc_status3_t *status,
+                        const svn_client_status_t *status,
                         apr_pool_t *pool);
 
  private:

@@ -45,16 +45,16 @@
 /*** Code. ***/
 
 
-/* An svn_wc_status_func4_t callback function for finding
+/* An svn_client_status_func_t callback function for finding
    status structures which are not safely deletable. */
 static svn_error_t *
 find_undeletables(void *baton,
                   const char *path,
-                  const svn_wc_status3_t *status,
+                  const svn_client_status_t *status,
                   apr_pool_t *pool)
 {
   /* Check for error-ful states. */
-  if (status->text_status == svn_wc_status_obstructed)
+  if (status->node_status == svn_wc_status_obstructed)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("'%s' is in the way of the resource "
                                "actually under version control"),
@@ -64,9 +64,9 @@ find_undeletables(void *baton,
                              _("'%s' is not under version control"),
                              svn_dirent_local_style(path, pool));
 
-  else if ((status->text_status != svn_wc_status_normal
-            && status->text_status != svn_wc_status_deleted
-            && status->text_status != svn_wc_status_missing)
+  else if ((status->node_status != svn_wc_status_normal
+            && status->node_status != svn_wc_status_deleted
+            && status->node_status != svn_wc_status_missing)
            ||
            (status->prop_status != svn_wc_status_none
             && status->prop_status != svn_wc_status_normal))
@@ -82,7 +82,7 @@ find_undeletables(void *baton,
 svn_error_t *
 svn_client__can_delete(const char *path,
                        svn_client_ctx_t *ctx,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   svn_opt_revision_t revision;
   svn_boolean_t file_external;
@@ -90,21 +90,22 @@ svn_client__can_delete(const char *path,
 
   revision.kind = svn_opt_revision_unspecified;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   /* A file external should not be deleted since the file external is
      implemented as a switched file and it would delete the file the
      file external is switched to, which is not the behavior the user
      would probably want. */
   SVN_ERR(svn_wc__node_is_file_external(&file_external, ctx->wc_ctx,
-                                        local_abspath, pool));
+                                        local_abspath, scratch_pool));
 
   if (file_external)
     return svn_error_createf(SVN_ERR_WC_CANNOT_DELETE_FILE_EXTERNAL, NULL,
                              _("Cannot remove the file external at '%s'; "
                                "please propedit or propdel the svn:externals "
                                "description that created it"),
-                             svn_dirent_local_style(local_abspath, pool));
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
 
   /* Use an infinite-depth status check to see if there's anything in
@@ -112,11 +113,12 @@ svn_client__can_delete(const char *path,
      status callback function find_undeletables() makes the
      determination, returning an error if it finds anything that shouldn't
      be deleted. */
-  return svn_error_return(svn_client_status5(NULL, path, &revision,
-                                             find_undeletables, NULL,
+  return svn_error_return(svn_client_status5(NULL, ctx, path, &revision,
                                              svn_depth_infinity, FALSE,
                                              FALSE, FALSE, FALSE,
-                                             NULL, ctx, pool));
+                                             NULL,
+                                             find_undeletables, NULL,
+                                             scratch_pool));
 }
 
 

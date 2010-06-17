@@ -63,7 +63,7 @@ generate_status_code(enum svn_wc_status_kind status)
 /* Return the single character representation of the switched column
    status. */
 static char
-generate_switch_column_code(const svn_wc_status3_t *status)
+generate_switch_column_code(const svn_client_status_t *status)
 {
   if (status->switched)
     return 'S';
@@ -105,7 +105,7 @@ print_status(const char *path,
              svn_boolean_t detailed,
              svn_boolean_t show_last_committed,
              svn_boolean_t repos_locks,
-             const svn_wc_status3_t *status,
+             const svn_client_status_t *status,
              unsigned int *text_conflicts,
              unsigned int *prop_conflicts,
              unsigned int *tree_conflicts,
@@ -193,9 +193,9 @@ print_status(const char *path,
         {
           if (status->repos_lock)
             {
-              if (status->lock_token)
+              if (status->lock)
                 {
-                  if (strcmp(status->repos_lock->token, status->lock_token)
+                  if (strcmp(status->repos_lock->token, status->lock->token)
                       == 0)
                     lock_status = 'K';
                   else
@@ -204,13 +204,13 @@ print_status(const char *path,
               else
                 lock_status = 'O';
             }
-          else if (status->lock_token)
+          else if (status->lock)
             lock_status = 'B';
           else
             lock_status = ' ';
         }
       else
-        lock_status = (status->lock_token) ? 'K' : ' ';
+        lock_status = (status->lock) ? 'K' : ' ';
 
       if (show_last_committed)
         {
@@ -271,7 +271,7 @@ print_status(const char *path,
                           status->locked ? 'L' : ' ',
                           status->copied ? '+' : ' ',
                           generate_switch_column_code(status),
-                          ((status->lock_token)
+                          ((status->lock)
                            ? 'K' : ' '),
                           tree_status_code,
                           path,
@@ -283,7 +283,7 @@ print_status(const char *path,
 
 svn_error_t *
 svn_cl__print_status_xml(const char *path,
-                         const svn_wc_status3_t *status,
+                         const svn_client_status_t *status,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
@@ -335,27 +335,27 @@ svn_cl__print_status_xml(const char *path,
                                pool);
     }
 
-  if (status->lock_token)
+  if (status->lock)
     {
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
 
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", status->lock_token);
+      svn_cl__xml_tagged_cdata(&sb, pool, "token", status->lock->token);
 
       /* If lock_owner is NULL, assume WC is corrupt. */
-      if (status->lock_owner)
+      if (status->lock->owner)
         svn_cl__xml_tagged_cdata(&sb, pool, "owner",
-                                 status->lock_owner);
+                                 status->lock->owner);
       else
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("'%s' has lock token, but no lock owner"),
                                  svn_dirent_local_style(path, pool));
 
       svn_cl__xml_tagged_cdata(&sb, pool, "comment",
-                               status->lock_comment);
+                               status->lock->comment);
 
       svn_cl__xml_tagged_cdata(&sb, pool, "created",
                                svn_time_to_cstring
-                               (status->lock_creation_date, pool));
+                               (status->lock->creation_date, pool));
 
       svn_xml_make_close_tag(&sb, pool, "lock");
     }
@@ -411,7 +411,7 @@ svn_cl__print_status_xml(const char *path,
 /* Called by status-cmd.c */
 svn_error_t *
 svn_cl__print_status(const char *path,
-                     const svn_wc_status3_t *status,
+                     const svn_client_status_t *status,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
@@ -422,10 +422,9 @@ svn_cl__print_status(const char *path,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  const char *local_abspath;
+  const char *local_abspath = status->local_abspath;
   svn_boolean_t tree_conflicted;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__node_check_conflicts(NULL, NULL, &tree_conflicted,
                                        ctx->wc_ctx, local_abspath, pool,
                                        pool));
