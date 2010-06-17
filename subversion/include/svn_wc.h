@@ -3537,33 +3537,31 @@ typedef struct svn_wc_status3_t
    * FALSE. */
   svn_boolean_t versioned;
 
+  /** Set to TRUE if the item is the victim of a conflict. */
+  svn_boolean_t conflicted;
+
   /** The status of the entry itself, including its text if it is a file. */
   enum svn_wc_status_kind text_status;
 
   /** The status of the entry's properties. */
   enum svn_wc_status_kind prop_status;
 
-  /** a directory can be 'locked' if a working copy update was interrupted. */
-  svn_boolean_t locked;
-
   /** a file or directory can be 'copied' if it's scheduled for
    * addition-with-history (or part of a subtree that is scheduled as such.).
    */
   svn_boolean_t copied;
 
-  /** a file or directory can be 'switched' if the switch command has been
-   * used.  If this is TRUE, then file_external will be FALSE.
-   */
-  svn_boolean_t switched;
+  /** Base revision. */
+  svn_revnum_t revision;
 
-  /** The entry's text status in the repository. */
-  enum svn_wc_status_kind repos_text_status;
+  /** Last revision this was changed */
+  svn_revnum_t changed_rev;
 
-  /** The entry's property status in the repository. */
-  enum svn_wc_status_kind repos_prop_status;
+  /** Date of last commit. */
+  apr_time_t changed_date;
 
-  /** The entry's lock in the repository, if any. */
-  const svn_lock_t *repos_lock;
+  /** Last commit author of this item */
+  const char *changed_author;
 
   /** The URL of the repository */
   const char *repos_root_url;
@@ -3573,6 +3571,18 @@ typedef struct svn_wc_status3_t
    * repos_root_url to get the full URL.
    */
   const char *repos_relpath;
+
+    /** a file or directory can be 'switched' if the switch command has been
+   * used.  If this is TRUE, then file_external will be FALSE.
+   */
+  svn_boolean_t switched;
+
+  /** The locally present lock. (Values of path, token, owner, comment and
+   * are available if a lock is present) */
+  const svn_lock_t *lock;
+
+  /** Which changelist this item is part of, or NULL if not part of any. */
+  const char *changelist;
 
   /**
    * @defgroup svn_wc_status_ood WC out-of-date info from the repository
@@ -3585,83 +3595,35 @@ typedef struct svn_wc_status3_t
    * below.
    */
 
-  /** Set to the youngest committed revision, or #SVN_INVALID_REVNUM
-   * if not out of date.
-   */
-  svn_revnum_t ood_last_cmt_rev;
-
-  /** Set to the most recent commit date, or @c 0 if not out of date.
-   */
-  apr_time_t ood_last_cmt_date;
-
   /** Set to the node kind of the youngest commit, or #svn_node_none
-   * if not out of date.
-   */
+   * if not out of date. */
   svn_node_kind_t ood_kind;
+
+
+  /** The entry's text status in the repository. */
+  enum svn_wc_status_kind repos_text_status;
+
+  /** The entry's property status in the repository. */
+  enum svn_wc_status_kind repos_prop_status;
+
+  /** The entry's lock in the repository, if any. */
+  const svn_lock_t *repos_lock;
+
+  /** Set to the youngest committed revision, or #SVN_INVALID_REVNUM
+   * if not out of date. */
+  svn_revnum_t ood_changed_rev;
+
+  /** Set to the most recent commit date, or @c 0 if not out of date. */
+  apr_time_t ood_changed_date;
 
   /** Set to the user name of the youngest commit, or @c NULL if not
    * out of date or non-existent.  Because a non-existent @c
    * svn:author property has the same behavior as an out-of-date
    * working copy, examine @c ood_last_cmt_rev to determine whether
-   * the working copy is out of date.
-   */
-  const char *ood_last_cmt_author;
+   * the working copy is out of date. */
+  const char *ood_changed_author;
 
   /** @} */
-
-  /** If the item is a file that was added to the working copy with an
-   * svn:externals; if file_external is TRUE, then switched is always
-   * FALSE.
-   */
-  svn_boolean_t file_external;
-
-  /** The actual status of the text compared to the pristine base of the
-   * file. This value isn't masked by other working copy statuses.
-   * @c pristine_text_status is #svn_wc_status_none if this value was
-   * not calculated during the status walk.
-   */
-  enum svn_wc_status_kind pristine_text_status;
-
-  /** The actual status of the properties compared to the pristine base of
-   * the node. This value isn't masked by other working copy statuses.
-   * @c pristine_prop_status is #svn_wc_status_none if this value was
-   * not calculated during the status walk.
-   */
-  enum svn_wc_status_kind pristine_prop_status;
-
-  /** Base revision.  */
-  svn_revnum_t revision;
-
-  /** Last revision this was changed */
-  svn_revnum_t changed_rev;
-
-  /** Last commit author of this item */
-  const char *changed_author;
-
-  /** Date of last commit. */
-  apr_time_t changed_date;
-
-  /** The locally present lock token.
-   */
-  const char *lock_token;
-
-  /** The locally present lock owner.
-   */
-  const char *lock_owner;
-
-  /** The locally present lock comment.
-   */
-  const char *lock_comment;
-
-  /** The locally present lock creation date.
-   */
-  apr_time_t lock_creation_date;
-  
-  /** Set to TRUE if the item is the victim of a conflict. */
-  svn_boolean_t conflicted;
-
-  /** Which changelist this item is part of, or NULL if not part of any. */
-  const char *changelist;
 
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
