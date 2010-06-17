@@ -188,10 +188,11 @@ svn_io_open_uniquely_named(apr_file_t **file,
                            apr_pool_t *scratch_pool);
 
 
-/** Create a writable file in the directory @a dirpath. The file will have
- * an arbitrary and unique name, and the full path will be returned in
- * @a temp_path. The file will be returned in @a file. Both will be
- * allocated from @a result_pool.
+/** Create a writable file, with an arbitrary and unique name, in the
+ * directory @a dirpath.  Set @a *temp_path to its full path, and set
+ * @a *file to the file handle, both allocated from @a result_pool.  Either
+ * @a file or @a unique_name may be @c NULL.  If @a file is @c NULL, the file
+ * will be created but not open.
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
