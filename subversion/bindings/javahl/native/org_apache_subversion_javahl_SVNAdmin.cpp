@@ -446,3 +446,24 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmlocks
 
   cl->rmlocks(path, locks);
 }
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNAdmin_upgrade
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
+{
+  JNIEntry(SVNAdmin, rmlocks);
+  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  File path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  ReposNotifyCallback callback(jnotifyCallback);
+
+  cl->upgrade(path, jnotifyCallback != NULL ? &callback : NULL);
+}

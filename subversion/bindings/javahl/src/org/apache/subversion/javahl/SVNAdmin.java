@@ -231,4 +231,6 @@ public class SVNAdmin implements ISVNAdmin
      */
     public native void rmlocks(File path, String[] locks)
             throws ClientException;
+
+    public native void upgrade(File path, ReposNotifyCallback callback);
 }

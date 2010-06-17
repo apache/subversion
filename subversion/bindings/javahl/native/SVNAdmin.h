@@ -65,6 +65,7 @@ class SVNAdmin : public SVNBase
   void deltify(File &path, Revision &start, Revision &end);
   void create(File &path, bool ignoreUUID, bool forceUUID, File &configPath,
               const char *fstype);
+  void upgrade(File &path, ReposNotifyCallback *callback);
   SVNAdmin();
   virtual ~SVNAdmin();
   void dispose(jobject jthis);

@@ -570,6 +570,25 @@ SVNAdmin::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
                                    requestPool.pool()), );
 }
 
+void SVNAdmin::upgrade(File &path, ReposNotifyCallback *notifyCallback)
+{
+  SVN::Pool requestPool;
+
+  if (path.isNull())
+    {
+      JNIUtil::throwNullPointerException("path");
+      return;
+    }
+
+  SVN_JNI_ERR(svn_repos_upgrade2(path.getInternalStyle(requestPool), FALSE,
+                                 notifyCallback != NULL
+                                    ? ReposNotifyCallback::notify
+                                    : NULL,
+                                 notifyCallback,
+                                 requestPool.pool()),
+              );
+}
+
 jobject SVNAdmin::lslocks(File &path)
 {
   SVN::Pool requestPool;

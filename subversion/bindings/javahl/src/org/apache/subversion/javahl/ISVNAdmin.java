@@ -221,4 +221,12 @@ public interface ISVNAdmin {
 	public abstract void rmlocks(File path, String[] locks)
 			throws ClientException;
 
+    /**
+     * upgrade the repository format
+     * @param path              the path to the repository
+     * @param callback          for notification
+	 * @throws ClientException  throw in case of problem
+     */
+    public abstract void upgrade(File path, ReposNotifyCallback callback)
+			throws ClientException;
 }

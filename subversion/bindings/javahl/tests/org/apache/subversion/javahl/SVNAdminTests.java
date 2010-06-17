@@ -82,6 +82,14 @@ public class SVNAdminTests extends SVNTests
                      Revision.HEAD, null);
     }
 
+    /* This test only tests the call down to the C++ layer. */
+    public void testUpgrade()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(false);
+        admin.upgrade(thisTest.getRepository(), null);
+    }
+
     public void testLoadRepo()
         throws SubversionException, IOException
     {
