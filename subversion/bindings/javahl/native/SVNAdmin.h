@@ -66,6 +66,7 @@ class SVNAdmin : public SVNBase
   void create(File &path, bool ignoreUUID, bool forceUUID, File &configPath,
               const char *fstype);
   void upgrade(File &path, ReposNotifyCallback *callback);
+  void pack(File &path, ReposNotifyCallback *callback);
   SVNAdmin();
   virtual ~SVNAdmin();
   void dispose(jobject jthis);

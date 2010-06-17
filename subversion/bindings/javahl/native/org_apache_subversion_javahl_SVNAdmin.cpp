@@ -467,3 +467,24 @@ Java_org_apache_subversion_javahl_SVNAdmin_upgrade
 
   cl->upgrade(path, jnotifyCallback != NULL ? &callback : NULL);
 }
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNAdmin_pack
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
+{
+  JNIEntry(SVNAdmin, pack);
+  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  File path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  ReposNotifyCallback callback(jnotifyCallback);
+
+  cl->pack(path, jnotifyCallback != NULL ? &callback : NULL);
+}
