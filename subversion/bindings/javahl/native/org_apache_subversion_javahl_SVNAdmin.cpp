@@ -295,7 +295,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_lstxns
 
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_recover
-(JNIEnv *env, jobject jthis, jobject jpath)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
 {
   JNIEntry(SVNAdmin, recover);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -309,7 +309,9 @@ Java_org_apache_subversion_javahl_SVNAdmin_recover
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  return cl->recover(path);
+  ReposNotifyCallback callback(jnotifyCallback);
+
+  return cl->recover(path, jnotifyCallback != NULL ? &callback : NULL);
 }
 
 JNIEXPORT void JNICALL

@@ -176,12 +176,8 @@ public class SVNAdmin implements ISVNAdmin
     public native void lstxns(File path, MessageReceiver receiver)
             throws ClientException;
 
-    /**
-     * recover the berkeley db of a repository, returns youngest revision
-     * @param path              the path to the repository
-     * @throws ClientException  throw in case of problem
-     */
-    public native long recover(File path) throws ClientException;
+    public native long recover(File path, ReposNotifyCallback callback)
+            throws ClientException;
 
     /**
      * remove open transaction in a repository
