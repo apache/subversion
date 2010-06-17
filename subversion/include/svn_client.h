@@ -1843,6 +1843,183 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  */
 
 /**
+ * Structure for holding the "status" of a working copy item.
+ *
+ * The item's entry data is in @a entry, augmented and possibly shadowed
+ * by the other fields.  @a entry is @c NULL if this item is not under
+ * version control.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
+ *
+ * @since New in 1.7.
+ */
+typedef struct svn_client_status_t
+{
+  /** The kind of node as recorded in the working copy */
+  svn_node_kind_t kind;
+
+  /** The absolute path to the node */
+  const char *local_abspath;
+
+  /** If the path is under version control, versioned is TRUE, otherwise
+   * FALSE. */
+  svn_boolean_t versioned;
+
+  /** Set to TRUE if the node is the victim of some kind of conflict. */
+  svn_boolean_t conflicted;
+
+  /** The status of the node, based on the restructuring changes and if the
+   * node has no restructuring changes the text and prop status. */
+  enum svn_wc_status_kind node_status;
+
+  /** The status of the text of the node, not including restructuring changes.
+   * Valid values are: svn_wc_status_none, svn_wc_status_normal,
+   * svn_wc_status_modified and svn_wc_status_conflicted. */
+  enum svn_wc_status_kind text_status;
+
+  /** The status of the entry's properties.
+   * Valid values are: svn_wc_status_none, svn_wc_status_normal,
+   * svn_wc_status_modified and svn_wc_status_conflicted. */
+  enum svn_wc_status_kind prop_status;
+
+  /** a node can be 'locked' if a working copy update is in progress or
+   * was interrupted. */
+  svn_boolean_t locked;
+
+  /** a file or directory can be 'copied' if it's scheduled for
+   * addition-with-history (or part of a subtree that is scheduled as such.).
+   */
+  svn_boolean_t copied;
+
+  /** Base revision. */
+  svn_revnum_t revision;
+
+  /** Last revision this was changed */
+  svn_revnum_t changed_rev;
+
+  /** Date of last commit. */
+  apr_time_t changed_date;
+
+  /** Last commit author of this item */
+  const char *changed_author;
+
+  /** The URL of the repository */
+  const char *repos_root_url;
+
+  /** The in-repository path relative to the repository root. 
+   * Use svn_path_url_component2() to join this value to the
+   * repos_root_url to get the full URL.
+   */
+  const char *repos_relpath;
+
+    /** a file or directory can be 'switched' if the switch command has been
+   * used.  If this is TRUE, then file_external will be FALSE.
+   */
+  svn_boolean_t switched;
+
+  /** If the item is a file that was added to the working copy with an
+   * svn:externals; if file_external is TRUE, then switched is always
+   * FALSE.
+   */
+  svn_boolean_t file_external;
+
+  /** The locally present lock. (Values of path, token, owner, comment and
+   * are available if a lock is present) */
+  const svn_lock_t *lock;
+
+  /** Which changelist this item is part of, or NULL if not part of any. */
+  const char *changelist;
+
+  /** The depth of the node as recorded in the working copy
+   * (#svn_depth_unknown for files or when no depth is recorded) */
+  svn_depth_t depth;
+
+  /**
+   * @defgroup svn_wc_status_ood WC out-of-date info from the repository
+   * @{
+   *
+   * When the working copy item is out-of-date compared to the
+   * repository, the following fields represent the state of the
+   * youngest revision of the item in the repository.  If the working
+   * copy is not out of date, the fields are initialized as described
+   * below.
+   */
+
+  /** Set to the node kind of the youngest commit, or #svn_node_none
+   * if not out of date. */
+  svn_node_kind_t ood_kind;
+
+  /** The status of the node, based on the text status if the node has no
+   * restructuring changes */
+  enum svn_wc_status_kind repos_node_status;
+
+  /** The entry's text status in the repository. */
+  enum svn_wc_status_kind repos_text_status;
+
+  /** The entry's property status in the repository. */
+  enum svn_wc_status_kind repos_prop_status;
+
+  /** The entry's lock in the repository, if any. */
+  const svn_lock_t *repos_lock;
+
+  /** Set to the youngest committed revision, or #SVN_INVALID_REVNUM
+   * if not out of date. */
+  svn_revnum_t ood_changed_rev;
+
+  /** Set to the most recent commit date, or @c 0 if not out of date. */
+  apr_time_t ood_changed_date;
+
+  /** Set to the user name of the youngest commit, or @c NULL if not
+   * out of date or non-existent.  Because a non-existent @c
+   * svn:author property has the same behavior as an out-of-date
+   * working copy, examine @c ood_last_cmt_rev to determine whether
+   * the working copy is out of date. */
+  const char *ood_changed_author;
+
+  /** @} */
+
+  /** Reserved for libsvn_clients internal use; this value is only to be used for
+   * libsvn_client backwards compatibility wrappers, This value may be NULL or
+   * to other data in future versions. */
+  const void *backwards_compatibility_baton;
+
+  /* NOTE! Please update svn_client_status_dup() when adding new fields here. */
+} svn_client_status_t;
+
+/**
+ * Return a duplicate of @a status, allocated in @a result_pool. No part of the new
+ * structure will be shared with @a status.
+ *
+ * @since New in 1.7.
+ */
+svn_client_status_t *
+svn_client_status_dup(const svn_client_status_t *status,
+                      apr_pool_t *result_pool);
+
+/**
+ * A callback for reporting a @a status about @a local_abspath.
+ *
+ * @a baton is a closure object; it should be provided by the
+ * implementation, and passed by the caller.
+ *
+ * @a scratch_pool will be cleared between invocations to the callback.
+ *
+ * ### we might be revamping the status infrastructure, and this callback
+ * ### could totally disappear by the end of 1.7 development. however, we
+ * ### need to mark the STATUS parameter as "const" so that it is easier
+ * ### to reason about who/what can modify those structures.
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_client_status_func_t)(
+                                            void *baton,
+                                            const char *path,
+                                            const svn_client_status_t *status,
+                                            apr_pool_t *scratch_pool);
+
+/**
  * Given @a path to a working copy directory (or single file), call
  * @a status_func/status_baton with a set of #svn_wc_status_t *
  * structures which describe the status of @a path, and its children
@@ -1885,17 +2062,17 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  */
 svn_error_t *
 svn_client_status5(svn_revnum_t *result_rev,
+                   svn_client_ctx_t *ctx,
                    const char *path,
                    const svn_opt_revision_t *revision,
-                   svn_wc_status_func4_t status_func,
-                   void *status_baton,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
                    const apr_array_header_t *changelists,
-                   svn_client_ctx_t *ctx,
+                   svn_client_status_func_t status_func,
+                   void *status_baton,
                    apr_pool_t *scratch_pool);
 
 /**

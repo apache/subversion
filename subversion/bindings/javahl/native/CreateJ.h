@@ -53,7 +53,7 @@ class CreateJ
 
   static jobject
   Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
-         const svn_wc_status3_t *status, apr_pool_t *pool);
+         const svn_client_status_t *status, apr_pool_t *pool);
 
   static jobject
   ClientNotifyInformation(const svn_wc_notify_t *notify, apr_pool_t *pool);

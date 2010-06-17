@@ -350,7 +350,7 @@ CreateJ::Lock(const svn_lock_t *lock)
 
 jobject
 CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
-                const svn_wc_status3_t *status, apr_pool_t *pool)
+                const svn_client_status_t *status, apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -425,7 +425,9 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
   jstring jChangelist = NULL;
   if (status != NULL)
     {
-      jTextType = EnumMapper::mapStatusKind(status->text_status);
+      /* ### Node status is more like the old text_status, then the new text_status
+         ### Maybe this should be handled on the tigris/apache boundary */
+      jTextType = EnumMapper::mapStatusKind(status->node_status);
       jPropType = EnumMapper::mapStatusKind(status->prop_status);
       jRepositoryTextType = EnumMapper::mapStatusKind(
                                                       status->repos_text_status);
@@ -465,6 +467,16 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
               if (JNIUtil::isJavaExceptionThrown())
                 POP_AND_RETURN_NULL;
             }
+
+          if (text_conflicted)
+            {
+              /* ### Fetch conflict marker files, still handled via svn_wc_entry_t */
+            }
+
+          if (prop_conflicted)
+            {
+              /* ### Fetch conflict marker file, still handled via svn_wc_entry_t */
+            }
         }
 
       jLock = CreateJ::Lock(status->repos_lock);
@@ -481,12 +493,45 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
             POP_AND_RETURN_NULL;
         }
 
-      jOODLastCmtRevision = status->ood_last_cmt_rev;
-      jOODLastCmtDate = status->ood_last_cmt_date;
+      jOODLastCmtRevision = status->ood_changed_rev;
+      jOODLastCmtDate = status->ood_changed_date;
       jOODKind = EnumMapper::mapNodeKind(status->ood_kind);
-      jOODLastCmtAuthor = JNIUtil::makeJString(status->ood_last_cmt_author);
+      jOODLastCmtAuthor = JNIUtil::makeJString(status->ood_changed_author);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
+
+      if (status->versioned)
+        {
+          jNodeKind = EnumMapper::mapNodeKind(status->kind);
+          jRevision = status->revision;
+          jLastChangedRevision = status->changed_rev;
+          jLastChangedDate = status->changed_date;
+          jLastCommitAuthor = JNIUtil::makeJString(status->changed_author);
+
+          if (JNIUtil::isJavaExceptionThrown())
+            POP_AND_RETURN_NULL;
+
+          if (status->lock)
+            {
+              jLockToken = JNIUtil::makeJString(status->lock->token);
+              if (JNIUtil::isJavaExceptionThrown())
+                POP_AND_RETURN_NULL;
+
+              jLockComment = JNIUtil::makeJString(status->lock->comment);
+              if (JNIUtil::isJavaExceptionThrown())
+                POP_AND_RETURN_NULL;
+
+              jLockOwner = JNIUtil::makeJString(status->lock->owner);
+              if (JNIUtil::isJavaExceptionThrown())
+                POP_AND_RETURN_NULL;
+
+              jLockCreationDate = status->lock->creation_date;
+            }
+
+          jChangelist = JNIUtil::makeJString(status->changelist);
+          if (JNIUtil::isJavaExceptionThrown())
+            POP_AND_RETURN_NULL;
+        }
 
       const svn_wc_entry_t *entry = NULL;
 
@@ -508,15 +553,6 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
 
       if (entry != NULL)
         {
-          /* ### Some of these values are also available in status */
-          jNodeKind = EnumMapper::mapNodeKind(entry->kind);
-          jRevision = entry->revision;
-          jLastChangedRevision = entry->cmt_rev;
-          jLastChangedDate = entry->cmt_date;
-          jLastCommitAuthor = JNIUtil::makeJString(entry->cmt_author);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
           jConflictNew = JNIUtil::makeJString(entry->conflict_new);
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NULL;
@@ -534,23 +570,6 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
             POP_AND_RETURN_NULL;
 
           jRevisionCopiedFrom = entry->copyfrom_rev;
-          jLockToken = JNIUtil::makeJString(entry->lock_token);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          jLockComment = JNIUtil::makeJString(entry->lock_comment);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          jLockOwner = JNIUtil::makeJString(entry->lock_owner);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          jLockCreationDate = entry->lock_creation_date;
-
-          jChangelist = JNIUtil::makeJString(entry->changelist);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
         }
     }
 

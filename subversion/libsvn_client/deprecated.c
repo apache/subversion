@@ -1432,18 +1432,20 @@ struct status4_wrapper_baton
   void *old_baton;
 };
 
+/* Implements svn_client_status_func_t */
 static svn_error_t *
 status4_wrapper_func(void *baton,
                      const char *path,
-                     const svn_wc_status3_t *status,
+                     const svn_client_status_t *status,
                      apr_pool_t *scratch_pool)
 {
   struct status4_wrapper_baton *swb = baton;
   svn_wc_status2_t *dup;
   const char *local_abspath;
+  const svn_wc_status3_t *wc_status = status->backwards_compatibility_baton;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  SVN_ERR(svn_wc__status2_from_3(&dup, status, swb->wc_ctx,
+  SVN_ERR(svn_wc__status2_from_3(&dup, wc_status, swb->wc_ctx,
                                  local_abspath, scratch_pool,
                                  scratch_pool));
 
@@ -1468,9 +1470,9 @@ svn_client_status4(svn_revnum_t *result_rev,
   struct status4_wrapper_baton swb = { status_func, ctx->wc_ctx,
                                        status_baton };
 
-  return svn_client_status5(result_rev, path, revision, status4_wrapper_func,
-                            &swb, depth, get_all, update, no_ignore,
-                            ignore_externals, changelists, ctx, pool);
+  return svn_client_status5(result_rev, ctx, path, revision, depth, get_all,
+                            update, no_ignore, ignore_externals, changelists,
+                            status4_wrapper_func, &swb, pool);
 }
 
 struct status3_wrapper_baton
