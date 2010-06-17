@@ -526,6 +526,8 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
 {
   const char *parent_abspath;
   const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
 
   if ((*parent_pdh = child_pdh->parent) != NULL
       && (*parent_pdh)->wcroot != NULL)
@@ -540,6 +542,21 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
                               parent_abspath, smode,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(*parent_pdh);
+
+  /* Check that the parent has an entry for the child */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, (*parent_pdh)->wcroot->sdb,
+                                    STMT_SELECT_SUBDIR));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", (*parent_pdh)->wcroot->wc_id,
+                            svn_dirent_basename(child_pdh->local_abspath,
+                                                NULL)));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (!got_row)
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                              _("'%s' does not have a parent."),
+                              svn_dirent_local_style(child_pdh->local_abspath,
+                                                     scratch_pool));
 
   child_pdh->parent = *parent_pdh;
 
@@ -7081,8 +7098,6 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t got_row;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -7115,20 +7130,8 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
 
       VERIFY_USABLE_PDH(pdh);
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                     STMT_SELECT_SUBDIR));
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
-                                svn_dirent_basename(local_abspath, NULL)));
-
-      SVN_ERR(svn_sqlite__step(&got_row, stmt));
-      SVN_ERR(svn_sqlite__reset(stmt));
-
-      if (got_row)
-        {
-          *is_root = FALSE;
-          return SVN_NO_ERROR;
-        }
+      *is_root = FALSE;
+      return SVN_NO_ERROR;
     }  
 #endif
    *is_root = TRUE;
