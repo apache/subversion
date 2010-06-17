@@ -494,6 +494,10 @@ assemble_status(svn_wc_status3_t **status,
               svn_error_clear(err);
             }
         }
+#ifdef HAVE_SYMLINK
+      else if ( wc_special != path_special)
+        node_status = svn_wc_status_obstructed;
+#endif /* HAVE_SYMLINK */
 
       if (text_modified_p)
         text_status = svn_wc_status_modified;
