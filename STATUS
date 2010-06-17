@@ -31,39 +31,6 @@ Candidate changes:
                    works correctly. I think the not interactive code path
                    needs the same fix).
 
- * r879966, r879971
-   Reduce the lifetime of the rep-sharing database handles in FSFS to avoid
-   having writers blocking readers, and update that database outside the
-   general FSFS write lock.  This addresses issue #3506.
-   Justification:
-     The performance problems and outright failures of the current code
-     are hurting the ASF repository, and presumably other high-concurrency
-     repositories, too, when large commits occur.
-   Justification:
-     Pre-requisite for the r934599 group.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3506
-   Votes:
-     +1: danielsh, cmpilato
-
- * r934599, r934603
-   Fix a concurrency issue in the FSFS rep-cache code.  This indirectly
-   concerns issue #3506.
-   Justification:
-     Thread safety.
-   Thread:
-     http://article.gmane.org/gmane.comp.version-control.subversion.devel/119483
-   Notes:
-     r934599 updates the svn_atomic__init_once() interface.
-     r934603 is the actual fix.
-   Notes:
-     Depends on the r879966 group, which does not merge cleanly.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3506-init_once
-     (based on ^/subversion/branches/1.6.x-issue3506)
-   Votes:
-     +1: danielsh
-
  * r878590, r878607, r878625, r878626, r878627
    In trunk we optimized the common case of 'find-and-replace with same uri'
    of proxied content thanks to issue 3445 "WebDAV proxy code munging user
@@ -152,10 +119,10 @@ Candidate changes:
    Notes:
      r950445 fixes the issue and r950468 is a test for this issue.
    Votes:
-     +1: stylesen, cmpilato
-     -0: julianfoad (Tested and works fine, but changes semantics of
-           svn_io_dir_walk() which we should not do in a back-port.
-           Discussing on list.)
+     +1: stylesen,
+     -0: julianfoad, cmpilato (Tested and works fine, but changes
+           semantics of svn_io_dir_walk() which we should not do in a
+           back-port.  Discussing on list.)
 
 Veto-blocked changes:
 =====================
@@ -232,23 +199,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r953878, r876855
-   Fix issue #3654 'Added subtrees with mergeinfo break reintegrate'
-   Justification:
-     In certain use cases, this bug breaks reintegrate merges.  Love or
-     hate reintegrate, many users like it and rely on it heavily.  See
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3654 for more.
-   Notes:
-     r953878 is a new test for this issue.
-     r876855 is from ^/subversion/branches/subtree-mergeinfo@876855 and is
-     actual fix for this issue on 1.6.x.  The subtree-mergeinfo branch is
-     already on trunk in it's entirety, but we want only this small portion
-     on 1.6.x.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3654
-     When reintegrating the branch use the '-x --ignore-eol-style' option or
-     the entire merge_tests.py file conflicts.  No idea why this is, the file
-     has svn:eol-style native on both 1.6.x and the branch.
-   Votes:
-     +1: pburba, cmpilato, rhuijben

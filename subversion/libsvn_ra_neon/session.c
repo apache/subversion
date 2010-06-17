@@ -724,7 +724,7 @@ parse_url(ne_uri *uri, const char *url)
 /* Initializer function matching the prototype accepted by
    svn_atomic__init_once(). */
 static svn_error_t *
-initialize_neon(apr_pool_t *ignored_pool)
+initialize_neon(void *baton, apr_pool_t *ignored_pool)
 {
   if (ne_sock_init() != 0)
     return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
@@ -737,7 +737,7 @@ initialize_neon(apr_pool_t *ignored_pool)
 static svn_error_t *
 ensure_neon_initialized(void)
 {
-  return svn_atomic__init_once(&neon_initialized, initialize_neon, NULL);
+  return svn_atomic__init_once(&neon_initialized, initialize_neon, NULL, NULL);
 }
 
 static svn_error_t *

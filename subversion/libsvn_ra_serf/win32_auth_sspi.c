@@ -76,7 +76,7 @@ static unsigned int ntlm_maxtokensize = 0;
  * Accepted by svn_atomic__init_once()
  */
 static svn_error_t *
-initialize_sspi(apr_pool_t* pool)
+initialize_sspi(void *baton, apr_pool_t* pool)
 {
   sspi = InitSecurityInterface();
 
@@ -118,7 +118,8 @@ init_sspi_connection(svn_ra_serf__session_t *session,
   const char *tmp;
   apr_size_t tmp_len;
 
-  SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
+  SVN_ERR(svn_atomic__init_once(&sspi_initialized,
+                                initialize_sspi, NULL, pool));
 
   conn->sspi_context = (serf_sspi_context_t*)
     apr_palloc(pool, sizeof(serf_sspi_context_t));
@@ -300,7 +301,8 @@ init_proxy_sspi_connection(svn_ra_serf__session_t *session,
   const char *tmp;
   apr_size_t tmp_len;
 
-  SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
+  SVN_ERR(svn_atomic__init_once(&sspi_initialized,
+                                initialize_sspi, NULL, pool));
 
   conn->proxy_sspi_context = (serf_sspi_context_t*)
     apr_palloc(pool, sizeof(serf_sspi_context_t));
