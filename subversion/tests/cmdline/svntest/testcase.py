@@ -47,6 +47,14 @@ class TextColors:
     cls.FAILURE = ''
     cls.SUCCESS = ''
 
+  @classmethod
+  def success(cls, str):
+    return lambda: cls.SUCCESS + str + cls.ENDC
+
+  @classmethod
+  def failure(cls, str):
+    return lambda: cls.FAILURE + str + cls.ENDC
+
 
 if not sys.stdout.isatty() or sys.platform == 'win32':
   TextColors.disable()
@@ -57,9 +65,9 @@ class TestCase:
   several methods that need to be overridden."""
 
   _result_map = {
-    RESULT_OK:   (0, TextColors.SUCCESS + 'PASS: ' + TextColors.ENDC, True),
-    RESULT_FAIL: (1, TextColors.FAILURE + 'FAIL: ' + TextColors.ENDC, False),
-    RESULT_SKIP: (2, TextColors.SUCCESS + 'SKIP: ' + TextColors.ENDC, True),
+    RESULT_OK:   (0, TextColors.success('PASS: '), True),
+    RESULT_FAIL: (1, TextColors.failure('FAIL: '), False),
+    RESULT_SKIP: (2, TextColors.success('SKIP: '), True),
     }
 
   def __init__(self, delegate=None, cond_func=lambda: True, doc=None, wip=None):
@@ -105,7 +113,9 @@ class TestCase:
   def results(self, result):
     # if our condition applied, then use our result map. otherwise, delegate.
     if self._cond_func():
-      return self._result_map[result]
+      val = list(self._result_map[result])
+      val[1] = val[1]()
+      return val
     return self._delegate.results(result)
 
 
@@ -164,9 +174,9 @@ class XFail(TestCase):
   """A test that is expected to fail, if its condition is true."""
 
   _result_map = {
-    RESULT_OK:   (1, TextColors.FAILURE + 'XPASS:' + TextColors.ENDC, False),
-    RESULT_FAIL: (0, TextColors.SUCCESS + 'XFAIL:' + TextColors.ENDC, True),
-    RESULT_SKIP: (2, TextColors.SUCCESS + 'SKIP: ' + TextColors.ENDC, True),
+    RESULT_OK:   (1, TextColors.failure('XPASS:'), False),
+    RESULT_FAIL: (0, TextColors.success('XFAIL:'), True),
+    RESULT_SKIP: (2, TextColors.success('SKIP: '), True),
     }
 
   def __init__(self, test_case, cond_func=lambda: True, wip=None):
@@ -193,9 +203,9 @@ class Wimp(XFail):
   is not considered a test failure."""
 
   _result_map = {
-    RESULT_OK:   (0, TextColors.SUCCESS + 'XPASS:' + TextColors.ENDC, True),
-    RESULT_FAIL: (0, TextColors.SUCCESS + 'XFAIL:' + TextColors.ENDC, True),
-    RESULT_SKIP: (2, TextColors.SUCCESS + 'SKIP: ' + TextColors.ENDC, True),
+    RESULT_OK:   (0, TextColors.success('XPASS:'), True),
+    RESULT_FAIL: (0, TextColors.success('XFAIL:'), True),
+    RESULT_SKIP: (2, TextColors.success('SKIP: '), True),
     }
 
   def __init__(self, wip, test_case, cond_func=lambda: True):
