@@ -44,7 +44,7 @@ separated list of test numbers; the default is to run all the tests in it.
 # A few useful constants
 LINE_LENGTH = 40
 
-import os, sys, subprocess
+import os, sys, subprocess, imp
 from datetime import datetime
 
 import getopt
@@ -215,43 +215,11 @@ class TestHarness:
       self.log.close()
       self.log = None
 
-  def _run_test(self, prog, test_nr, total_tests):
-    "Run a single test. Return the test's exit code."
-
-    if self.log:
-      log = self.log
-    else:
-      log = sys.stdout
-
-    test_nums = None
-    if '#' in prog:
-      prog, test_nums = prog.split('#')
-
+  def _run_c_test(self, prog, test_nums):
+    'Run a c test, escaping parameters as required.'
     progdir, progbase = os.path.split(prog)
-    if self.log:
-      # Using write here because we don't want even a trailing space
-      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
-      sys.stdout.write('Running tests in %s' % (test_info, ))
-      sys.stdout.write('.'*(LINE_LENGTH - len(test_info)))
-      sys.stdout.flush()
 
-    log.write('START: %s\n' % progbase)
-    log.flush()
-
-    start_time = datetime.now()
-    if progbase[-3:] == '.py':
-      progname = sys.executable
-      cmdline = [progname,
-                 os.path.join(self.srcdir, prog)]
-      if self.base_url is not None:
-        cmdline.append('--url=' + self.base_url)
-      if self.enable_sasl is not None:
-        cmdline.append('--enable-sasl')
-      if self.parallel is not None:
-        cmdline.append('--parallel')
-      if self.config_file is not None:
-        cmdline.append('--config-file=' + self.config_file)
-    elif os.access(prog, os.X_OK):
+    if os.access(progbase, os.X_OK):
       progname = './' + progbase
       cmdline = [progname,
                  '--srcdir=' + os.path.join(self.srcdir, progdir)]
@@ -284,10 +252,111 @@ class TestHarness:
       test_nums = test_nums.split(',')
       cmdline.extend(test_nums)
 
+    return self._run_prog(progname, cmdline)
+
+  def _run_py_test(self, prog, test_nums):
+    'Run a python test, passing parameters as needed.'
+    progdir, progbase = os.path.split(prog)
+
+    old_path = sys.path[:]
+    sys.path = [progdir] + sys.path
+
+    try:
+      prog_mod = imp.load_module(progbase[:-3], open(progbase, 'r'), prog,
+                                 ('.py', 'U', imp.PY_SOURCE))
+    except:
+      print('Don\'t know what to do about ' + progbase)
+      sys.exit(1)
+
+    import svntest.main
+
+    # set up our options
+    svntest.main.create_default_options()
+    if self.base_url is not None:
+      svntest.main.options.test_area_url = self.base_url
+    if self.enable_sasl is not None:
+      svntest.main.options.enable_sasl = True
+    if self.parallel is not None:
+      svntest.main.options.parallel = True
+    if self.config_file is not None:
+      svntest.main.options.config_file = self.config_file
+    if self.verbose is not None:
+      svntest.main.options.verbose = True
+    if self.cleanup is not None:
+      svntest.main.options.cleanup = True
+    if self.fs_type is not None:
+      svntest.main.options.fs_type = self.fs_type
+    if self.http_library is not None:
+      svntest.main.options.http_library = self.http_library
+    if self.server_minor_version is not None:
+      svntest.main.options.server_minor_version = self.server_minor_version
+    if self.list_tests is not None:
+      svntest.main.options.list_tests = True
+    if self.svn_bin is not None:
+      svntest.main.options.svn_bin = self.svn_bin
+    if self.fsfs_sharding is not None:
+      svntest.main.options.fsfs_sharding = self.fsfs_sharding
+    if self.fsfs_packing is not None:
+      svntest.main.options.fsfs_packing = self.fsfs_packing
+
+    # setup the output pipes
+    if self.log:
+      sys.stdout.flush()
+      sys.stderr.flush()
+      self.log.flush()
+      old_stdout = os.dup(1)
+      old_stderr = os.dup(2)
+      os.dup2(self.log.fileno(), 1)
+      os.dup2(self.log.fileno(), 2)
+
+    # run the tests
+    svntest.testcase.TextColors.disable()
+    failed = svntest.main.execute_tests(prog_mod.test_list,
+                                        test_name=progbase)
+
+    # restore some values
+    sys.path = old_path
+    if self.log:
+      os.dup2(old_stdout, 1)
+      os.dup2(old_stderr, 2)
+      os.close(old_stdout)
+      os.close(old_stderr)
+
+    return failed
+
+  def _run_test(self, prog, test_nr, total_tests):
+    "Run a single test. Return the test's exit code."
+
+    if self.log:
+      log = self.log
+    else:
+      log = sys.stdout
+
+    test_nums = None
+    if '#' in prog:
+      prog, test_nums = prog.split('#')
+
+    progdir, progbase = os.path.split(prog)
+    if self.log:
+      # Using write here because we don't want even a trailing space
+      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
+      sys.stdout.write('Running tests in %s' % (test_info, ))
+      sys.stdout.write('.'*(LINE_LENGTH - len(test_info)))
+      sys.stdout.flush()
+
+    log.write('START: %s\n' % progbase)
+    log.flush()
+
+    start_time = datetime.now()
+
+    progabs = os.path.abspath(prog)
     old_cwd = os.getcwd()
     try:
       os.chdir(progdir)
-      failed = self._run_prog(progname, cmdline)
+      if progbase[-3:] == '.py':
+        failed = self._run_py_test(progabs, test_nums)
+      else:
+        failed = self._run_c_test(prog, test_nums)
     except:
       os.chdir(old_cwd)
       raise
