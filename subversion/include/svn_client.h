@@ -681,7 +681,12 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  * which has the revision properties @a rev_props, and that the contents were
  * @a line.
  *
- * If svn_client_blame4() was called with @a include_merged_revisions set to
+ * @a start_revnum and @a end_revnum contain the start and end revision 
+ * number of the entire blame operation, as determined from the repository
+ * inside svn_client_blame5(). This can be useful for the blame receiver 
+ * to format the blame output.
+ *
+ * If svn_client_blame5() was called with @a include_merged_revisions set to
  * TRUE, @a merged_revision, @a merged_rev_props and @a merged_path will be
  * set, otherwise they will be NULL. @a merged_path will be set to the
  * absolute repository path.
@@ -697,6 +702,8 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  */
 typedef svn_error_t *(*svn_client_blame_receiver3_t)(
   void *baton,
+  svn_revnum_t start_revnum,
+  svn_revnum_t end_revnum,
   apr_int64_t line_no,
   svn_revnum_t revision,
   apr_hash_t *rev_props,

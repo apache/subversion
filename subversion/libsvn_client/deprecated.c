@@ -119,6 +119,8 @@ struct blame_receiver_wrapper_baton2 {
 
 static svn_error_t *
 blame_wrapper_receiver2(void *baton,
+   svn_revnum_t start_revnum,
+   svn_revnum_t end_revnum,
    apr_int64_t line_no,
    svn_revnum_t revision,
    apr_hash_t *rev_props,
