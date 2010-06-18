@@ -320,7 +320,6 @@ class TestHarness:
       dots_to_write = dots - self.dots_written
       if self.log:
         os.write(old_stdout, '.' * dots_to_write)
-        os.fsync(old_stdout)
       else:
         sys.stdout.write(old_stdout, '.' * dots_to_write)
         sys.stdout.flush()
