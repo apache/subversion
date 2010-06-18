@@ -51,6 +51,8 @@ typedef struct
    XML to stdout. */
 static svn_error_t *
 blame_receiver_xml(void *baton,
+                   svn_revnum_t start_revnum,
+                   svn_revnum_t end_revnum,
                    apr_int64_t line_no,
                    svn_revnum_t revision,
                    apr_hash_t *rev_props,
@@ -117,13 +119,26 @@ print_line_info(svn_stream_t *out,
                 const char *date,
                 const char *path,
                 svn_boolean_t verbose,
+                svn_revnum_t end_revnum,
                 apr_pool_t *pool)
 {
   const char *time_utf8;
   const char *time_stdout;
-  const char *rev_str = SVN_IS_VALID_REVNUM(revision)
-    ? apr_psprintf(pool, "%6ld", revision)
-                        : "     -";
+  const char *rev_str;
+  int rev_maxlength;
+
+  /* The standard column width for the revision number is 6 characters.
+     If the revision number can potentially be larger (i.e. if the end_revnum
+     is larger than 1000000), we increase the column width as needed. */
+  rev_maxlength = 6;
+  while (end_revnum >= 1000000)
+    {
+      rev_maxlength++;
+      end_revnum = end_revnum / 10;
+    }
+  rev_str = SVN_IS_VALID_REVNUM(revision)
+    ? apr_psprintf(pool, "%*ld", rev_maxlength, revision)
+    : apr_psprintf(pool, "%*s", rev_maxlength, "-");
 
   if (verbose)
     {
@@ -162,6 +177,8 @@ print_line_info(svn_stream_t *out,
 /* This implements the svn_client_blame_receiver3_t interface. */
 static svn_error_t *
 blame_receiver(void *baton,
+               svn_revnum_t start_revnum,
+               svn_revnum_t end_revnum,
                apr_int64_t line_no,
                svn_revnum_t revision,
                apr_hash_t *rev_props,
@@ -199,14 +216,16 @@ blame_receiver(void *baton,
                                                SVN_PROP_REVISION_AUTHOR),
                             svn_prop_get_value(merged_rev_props,
                                                SVN_PROP_REVISION_DATE),
-                            merged_path, opt_state->verbose, pool));
+                            merged_path, opt_state->verbose, end_revnum,
+                            pool));
   else
     SVN_ERR(print_line_info(out, revision,
                             svn_prop_get_value(rev_props,
                                                SVN_PROP_REVISION_AUTHOR),
                             svn_prop_get_value(rev_props,
                                                SVN_PROP_REVISION_DATE),
-                            NULL, opt_state->verbose, pool));
+                            NULL, opt_state->verbose, end_revnum,
+                            pool));
 
   return svn_stream_printf(out, pool, "%s%s", line, APR_EOL_STR);
 }

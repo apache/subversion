@@ -787,13 +787,16 @@ svn_client_blame5(const char *target,
           if (!eof || sb->len)
             {
               if (walk->rev)
-                SVN_ERR(receiver(receiver_baton, line_no, walk->rev->revision,
+                SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
+                                 line_no, walk->rev->revision,
                                  walk->rev->rev_props, merged_rev,
                                  merged_rev_props, merged_path,
                                  sb->data, FALSE, iterpool));
               else
-                SVN_ERR(receiver(receiver_baton, line_no, SVN_INVALID_REVNUM,
-                                 NULL, SVN_INVALID_REVNUM, NULL, NULL,
+                SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
+                                 line_no, SVN_INVALID_REVNUM,
+                                 NULL, SVN_INVALID_REVNUM,
+                                 NULL, NULL,
                                  sb->data, TRUE, iterpool));
             }
           if (eof) break;
