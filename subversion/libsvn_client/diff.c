@@ -248,11 +248,11 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         continue;
 
       if (! original_value)
-        action = _("Added");
+        action = "Added";
       else if (! propchange->value)
-        action = _("Deleted");
+        action = "Deleted";
       else
-        action = _("Modified");
+        action = "Modified";
       SVN_ERR(file_printf_from_utf8(file, encoding, "%s: %s%s", action,
                                     propchange->name, APR_EOL_STR));
 

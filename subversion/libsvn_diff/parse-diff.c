@@ -100,14 +100,14 @@ parse_range(svn_linenum_t *start, svn_linenum_t *length, char *range)
 }
 
 /* Try to parse a hunk header in string HEADER, putting parsed information
- * into HUNK. Return TRUE if the header parsed correctly.
+ * into HUNK. Return TRUE if the header parsed correctly. ATAT is the
+ * character string used to delimit the hunk header.
  * If REVERSE is TRUE, invert the hunk header while parsing it.
  * Do all allocations in POOL. */
 static svn_boolean_t
 parse_hunk_header(const char *header, svn_hunk_t *hunk,
-                  svn_boolean_t reverse, apr_pool_t *pool)
+                  const char *atat, svn_boolean_t reverse, apr_pool_t *pool)
 {
-  static const char * const atat = "@@";
   const char *p;
   svn_stringbuf_t *range;
 
@@ -233,10 +233,19 @@ reverse_diff_transformer(svn_stringbuf_t **buf,
   /* ### Pass the already parsed hunk via the baton?
    * ### Maybe we should really make svn_stream_readline() a proper stream
    * ### method and override it instead of adding special callbacks? */
-  if (parse_hunk_header(line, &hunk, FALSE, scratch_pool))
+  if (parse_hunk_header(line, &hunk, "@@", FALSE, scratch_pool))
     {
       *buf = svn_stringbuf_createf(result_pool,
                                    "@@ -%lu,%lu +%lu,%lu @@",
+                                   hunk.modified_start,
+                                   hunk.modified_length,
+                                   hunk.original_start,
+                                   hunk.original_length);
+    }
+  else if (parse_hunk_header(line, &hunk, "##", FALSE, scratch_pool))
+    {
+      *buf = svn_stringbuf_createf(result_pool,
+                                   "## -%lu,%lu +%lu,%lu ##",
                                    hunk.modified_start,
                                    hunk.modified_length,
                                    hunk.original_start,
@@ -258,14 +267,31 @@ reverse_diff_transformer(svn_stringbuf_t **buf,
   return SVN_NO_ERROR;
 }
 
+/* Parse PROP_NAME from HEADER as the part after the INDICATOR line. */
+static svn_error_t *
+parse_prop_name(const char **prop_name, const char *header, 
+                const char *indicator, apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_utf_cstring_to_utf8(prop_name,
+                                  header + strlen(indicator),
+                                  result_pool));
+
+  /* ### Are we guarenteed that there are no trailing or leading
+   * ### whitespaces in the name? */
+
+  return SVN_NO_ERROR;
+}
+
 /* Return the next *HUNK from a PATCH, using STREAM to read data
- * from the patch file. If no hunk can be found, set *HUNK to NULL.
- * If REVERSE is TRUE, invert the hunk while parsing it. If
- * IGNORE_WHiTESPACES is TRUE, let lines without leading spaces be
- * recognized as context lines.  Allocate results in RESULT_POOL.  Use
- * SCRATCH_POOL for all other allocations. */
+ * from the patch file. If no hunk can be found, set *HUNK to NULL. If we
+ * have a property hunk, PROP_NAME will be set. If we have a text hunk,
+ * PROP_NAME will be NULL. If REVERSE is TRUE, invert the hunk while
+ * parsing it. If IGNORE_WHiTESPACES is TRUE, let lines without leading
+ * spaces be recognized as context lines.  Allocate results in RESULT_POOL.
+ * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 parse_next_hunk(svn_hunk_t **hunk,
+                const char **prop_name,
                 svn_patch_t *patch,
                 svn_stream_t *stream,
                 svn_boolean_t reverse,
@@ -274,7 +300,8 @@ parse_next_hunk(svn_hunk_t **hunk,
                 apr_pool_t *scratch_pool)
 {
   static const char * const minus = "--- ";
-  static const char * const atat = "@@";
+  static const char * const text_atat = "@@";
+  static const char * const prop_atat = "##";
   svn_stringbuf_t *line;
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
@@ -288,6 +315,12 @@ parse_next_hunk(svn_hunk_t **hunk,
   svn_linenum_t trailing_context;
   svn_boolean_t changed_line_seen;
   apr_pool_t *iterpool;
+
+  /* We only set this if we have a property hunk. 
+   * ### prop_name acts as both a state flag inside this function and a
+   * ### qualifier to discriminate between props and text hunks. Is that
+   * ### kind of overloading ok? */
+  *prop_name = NULL;
 
   if (apr_file_eof(patch->patch_file) == APR_EOF)
     {
@@ -407,16 +440,44 @@ parse_next_hunk(svn_hunk_t **hunk,
         }
       else
         {
-          if (starts_with(line->data, atat))
+          if (starts_with(line->data, text_atat))
             {
               /* Looks like we have a hunk header, try to rip it apart. */
-              in_hunk = parse_hunk_header(line->data, *hunk, reverse,
-                                          iterpool);
+              in_hunk = parse_hunk_header(line->data, *hunk, text_atat,
+                                          reverse, iterpool);
+              if (in_hunk)
+                {
+                  original_lines = (*hunk)->original_length;
+                  modified_lines = (*hunk)->modified_length;
+                  *prop_name = NULL;
+                }
+              }
+          else if (starts_with(line->data, prop_atat) && *prop_name)
+            {
+              /* Looks like we have a property hunk header, try to rip it
+               * apart. */
+              in_hunk = parse_hunk_header(line->data, *hunk, prop_atat,
+                                          reverse, iterpool);
               if (in_hunk)
                 {
                   original_lines = (*hunk)->original_length;
                   modified_lines = (*hunk)->modified_length;
                 }
+            }
+          else if (starts_with(line->data, "Added: "))
+            {
+              SVN_ERR(parse_prop_name(prop_name, line->data, "Added: ",
+                                      result_pool));
+            }
+          else if (starts_with(line->data, "Deleted: "))
+            {
+              SVN_ERR(parse_prop_name(prop_name, line->data, "Deleted: ",
+                                      result_pool));
+            }
+          else if (starts_with(line->data, "Modified: "))
+            {
+              SVN_ERR(parse_prop_name(prop_name, line->data, "Modified: ",
+                                      result_pool));
             }
           else if (starts_with(line->data, minus))
             /* This could be a header of another patch. Bail out. */
@@ -532,6 +593,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
   svn_stream_t *stream;
   svn_boolean_t eof, in_header;
   svn_hunk_t *hunk;
+  const char *prop_name;
+
   apr_pool_t *iterpool;
 
   if (apr_file_eof(patch_file) == APR_EOF)
@@ -624,14 +687,33 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
     {
       /* Parse hunks. */
       (*patch)->hunks = apr_array_make(result_pool, 10, sizeof(svn_hunk_t *));
+      (*patch)->property_hunks = apr_hash_make(result_pool);
       do
         {
           svn_pool_clear(iterpool);
 
-          SVN_ERR(parse_next_hunk(&hunk, *patch, stream, reverse,
-                                  ignore_whitespace, result_pool, iterpool));
-          if (hunk)
+          SVN_ERR(parse_next_hunk(&hunk, &prop_name, *patch, stream,
+                                  reverse, ignore_whitespace,
+                                  result_pool, iterpool));
+          if (hunk && prop_name)
+            {
+              apr_array_header_t *hunks;
+
+              hunks = apr_hash_get((*patch)->property_hunks, prop_name,
+                                    APR_HASH_KEY_STRING);
+              if (! hunks)
+                {
+                  hunks = apr_array_make(result_pool, 1, 
+                                          sizeof(svn_hunk_t *));
+                  apr_hash_set((*patch)->property_hunks, prop_name,
+                                       APR_HASH_KEY_STRING, hunks);
+                }
+
+              APR_ARRAY_PUSH(hunks, svn_hunk_t *) = hunk;
+            }
+          else if (hunk)
             APR_ARRAY_PUSH((*patch)->hunks, svn_hunk_t *) = hunk;
+
         }
       while (hunk);
     }
