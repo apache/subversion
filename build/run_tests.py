@@ -262,7 +262,7 @@ class TestHarness:
     sys.path = [progdir] + sys.path
 
     try:
-      prog_mod = imp.load_module(progbase[:-3], open(progbase, 'r'), prog,
+      prog_mod = imp.load_module(progbase[:-3], open(prog, 'r'), prog,
                                  ('.py', 'U', imp.PY_SOURCE))
     except:
       print('Don\'t know what to do about ' + progbase)
