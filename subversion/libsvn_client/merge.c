@@ -1452,7 +1452,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   int i;
-  apr_hash_t *new_props;
+  apr_hash_t *file_props;
 
   /* In most cases, we just leave prop_state as unknown, and let the
      content_state what happened, so we set prop_state here to avoid that
@@ -1464,7 +1464,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
     *tree_conflicted = FALSE;
 
   /* Apply the prop changes to a new hash table. */
-  new_props = apr_hash_copy(subpool, original_props);
+  file_props = apr_hash_copy(subpool, original_props);
   for (i = 0; i < prop_changes->nelts; ++i)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
@@ -1488,7 +1488,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
           && strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
         continue;
 
-      apr_hash_set(new_props, prop->name, APR_HASH_KEY_STRING, prop->value);
+      apr_hash_set(file_props, prop->name, APR_HASH_KEY_STRING, prop->value);
     }
 
   /* Easy out:  if we have no adm_access for the parent directory,
@@ -1502,7 +1502,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         {
           if (content_state)
             *content_state = svn_wc_notify_state_changed;
-          if (prop_state && apr_hash_count(new_props))
+          if (prop_state && apr_hash_count(file_props))
             *prop_state = svn_wc_notify_state_changed;
         }
       else
@@ -1536,14 +1536,15 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       {
         if (! merge_b->dry_run)
           {
-            const char *copyfrom_url = NULL;
-            svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
-            svn_stream_t *new_base_contents;
+            const char *copyfrom_url;
+            svn_revnum_t copyfrom_rev;
+            svn_stream_t *new_contents, *new_base_contents;
+            apr_hash_t *new_base_props, *new_props;
             svn_wc_conflict_description_t *existing_conflict;
 
-            /* If this is a merge from the same repository as our working copy,
-               we handle adds as add-with-history.  Otherwise, we'll use a pure
-               add. */
+            /* If this is a merge from the same repository as our
+               working copy, we handle adds as add-with-history.
+               Otherwise, we'll use a pure add. */
             if (merge_b->same_repos)
               {
                 const char *child = svn_path_is_child(merge_b->target,
@@ -1556,10 +1557,22 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                   copyfrom_url = merge_b->merge_source.url2;
                 copyfrom_rev = rev2;
                 SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
+                new_base_props = file_props;
+                new_props = NULL; /* inherit from new_base_props */
+                SVN_ERR(svn_stream_open_readonly(&new_base_contents, yours,
+                                                 subpool, subpool));
+                new_contents = NULL; /* inherit from new_base_contents */
               }
-
-            SVN_ERR(svn_stream_open_readonly(&new_base_contents, yours,
-                                             subpool, subpool));
+            else
+              {
+                copyfrom_url = NULL;
+                copyfrom_rev = SVN_INVALID_REVNUM;
+                new_base_props = apr_hash_make(subpool);
+                new_props = file_props;
+                new_base_contents = svn_stream_empty(subpool);
+                SVN_ERR(svn_stream_open_readonly(&new_contents, yours,
+                                                 subpool, subpool));
+              }
 
             SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict,
                                               mine, adm_access,
@@ -1588,7 +1601,8 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                 /* ### would be nice to have cancel/notify funcs to pass */
                 SVN_ERR(svn_wc_add_repos_file3(
                             mine, adm_access,
-                            new_base_contents, NULL, new_props, NULL,
+                            new_base_contents, new_contents,
+                            new_base_props, new_props,
                             copyfrom_url, copyfrom_rev,
                             NULL, NULL, NULL, NULL, subpool));
 
@@ -1597,7 +1611,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
-        if (prop_state && apr_hash_count(new_props))
+        if (prop_state && apr_hash_count(file_props))
           *prop_state = svn_wc_notify_state_changed;
       }
       break;
