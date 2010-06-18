@@ -3660,7 +3660,7 @@ svn_wc__db_op_read_tree_conflict(
   err = svn_wc__db_op_read_all_tree_conflicts(&tree_conflicts, db,
                                               parent_abspath,
                                               result_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+  if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
     {
        /* We walked off the top of a working copy.  */
        svn_error_clear(err);
@@ -3862,7 +3862,7 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
                                scratch_pool);
       if (err)
         {
-          if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+          if (! SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
             return svn_error_return(err);
 
           /* No parent to update */
@@ -7166,7 +7166,7 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
                                             svn_sqlite__mode_readwrite,
                                             scratch_pool);
 
-      if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+      if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
         {
           svn_error_clear(err);
           *is_root = TRUE;
@@ -7265,7 +7265,7 @@ is_wclocked(svn_boolean_t *locked,
 
   err = get_statement_for_path(&stmt, db, local_abspath,
                                STMT_SELECT_WC_LOCK, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+  if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
     {
       svn_error_clear(err);
       *locked = FALSE;

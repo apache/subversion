@@ -1936,11 +1936,9 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
       if (err)
         {
-          if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY &&
-              err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
-            {
-              return svn_error_return(err);
-            }
+          if (! SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
+            return svn_error_return(err);
+
           svn_error_clear(err);
           break;
         }

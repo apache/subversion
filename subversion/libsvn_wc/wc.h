@@ -159,6 +159,14 @@ extern "C" {
 /* A version < this does not store properties in wc.db.  */
 #define SVN_WC__PROPS_IN_DB 17
 
+/* Return true iff error E indicates an "is not a working copy" type
+   of error, either because something wasn't a working copy at all, or
+   because it's a working copy from a previous version (in need of
+   upgrade). */
+#define SVN_WC__ERR_IS_NOT_CURRENT_WC(e) \
+            ((e->apr_err == SVN_ERR_WC_NOT_WORKING_COPY) || \
+             (e->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
+
 
 
 /*** Context handling ***/

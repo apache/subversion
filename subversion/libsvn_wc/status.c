@@ -2574,8 +2574,8 @@ internal_status(svn_wc_status3_t **status,
                                  NULL, db, parent_abspath, result_pool,
                                  scratch_pool);
 
-      if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
-                  || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                  || SVN_WC__ERR_IS_NOT_CURRENT_WC(err)))
         {
           svn_error_clear(err);
           parent_repos_root_url = NULL;
