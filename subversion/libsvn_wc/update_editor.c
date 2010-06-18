@@ -5208,10 +5208,12 @@ make_editor(svn_revnum_t *target_revision,
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
 
-  /* Get the anchor entry, so we can fetch the repository root. */
-  SVN_ERR(svn_wc__node_get_repos_info(&repos_root, &repos_uuid, wc_ctx,
-                                      anchor_abspath, TRUE, FALSE,
-                                      result_pool, scratch_pool));
+  /* Get the anchor's repository root and uuid. */
+  SVN_ERR(svn_wc__db_read_info(NULL,NULL, NULL, NULL, &repos_root, &repos_uuid,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, wc_ctx->db, anchor_abspath,
+                               result_pool, scratch_pool));
 
   /* With WC-NG we need a valid repository root */
   SVN_ERR_ASSERT(repos_root != NULL && repos_uuid != NULL);
