@@ -31,6 +31,9 @@
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
+/* ### There's a lot of duplicated code in the tests. It would be a good
+ * ### idea to gather the boilerplate code in functions. */
+
 static const char *unidiff =
   "Index: A/mu (deleted)"                                               NL
   "===================================================================" NL
@@ -110,6 +113,23 @@ static const char *git_unidiff =
   "## -1 +1 ##"                                                         NL
   "-value"                                                              NL
   "+new value"                                                          NL;
+
+  /* ### Add edge cases like context lines stripped from leading whitespaces
+   * ### that starts with 'Added: ', 'Deleted: ' or 'Modified: '. */
+  static const char *property_and_text_unidiff =
+  "Index: iota"                                                         NL
+  "===================================================================" NL
+  "--- iota"                                                            NL
+  "+++ iota"                                                            NL
+  "@@ -1 +1,2 @@"                                                       NL
+  " This is the file 'iota'."                                           NL
+  "+some more bytes to 'iota'"                                          NL
+  ""                                                                    NL
+  "Property changes on: iota"                                           NL
+  "___________________________________________________________________" NL
+  "Added: prop_add"                                                     NL
+  "## -0,0 +1 ##"                                                       NL
+  "+value"                                                              NL;
 
 static svn_error_t *
 test_parse_unidiff(apr_pool_t *pool)
@@ -464,6 +484,96 @@ test_parse_property_diff(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_parse_property_and_text_diff(apr_pool_t *pool)
+{
+  apr_file_t *patch_file;
+  apr_status_t status;
+  apr_size_t len;
+  svn_patch_t *patch;
+  svn_stringbuf_t *buf;
+  svn_boolean_t eof;
+  svn_hunk_t *hunk;
+  apr_off_t pos;
+  svn_stream_t *original_text;
+  svn_stream_t *modified_text;
+  apr_array_header_t *hunks;
+  const char *fname = "test_parse_property_and_text_diff.patch";
+
+  /* Create a patch file. */
+  status = apr_file_open(&patch_file, fname,
+                        (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE |
+                         APR_DELONCLOSE), APR_OS_DEFAULT, pool);
+  if (status != APR_SUCCESS)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
+                             fname);
+  /* Write to the file */
+  len = strlen(property_and_text_unidiff);
+  status = apr_file_write_full(patch_file, property_and_text_unidiff, len, &len);
+  if (status || len != strlen(property_and_text_unidiff))
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Cannot write to '%s'", fname);
+  /* Reset file pointer. */
+  pos = 0;
+  SVN_ERR(svn_io_file_seek(patch_file, APR_SET, &pos, pool));
+
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota"));
+  SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  SVN_TEST_ASSERT(apr_hash_count(patch->property_hunks) == 1);
+
+  /* Check contents of text hunk */
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+  original_text = hunk->original_text;
+  modified_text = hunk->modified_text;
+
+  /* Make sure original text was parsed correctly. */
+  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof);
+  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'iota'."));
+  /* Now we should get EOF. */
+  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+  SVN_ERR_ASSERT(eof);
+  SVN_ERR_ASSERT(buf->len == 0);
+
+  /* Make sure modified text was parsed correctly. */
+  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof);
+  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'iota'."));
+  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof);
+  SVN_ERR_ASSERT(! strcmp(buf->data, "some more bytes to 'iota'"));
+  /* Now we should get EOF. */
+  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+  SVN_ERR_ASSERT(eof);
+  SVN_ERR_ASSERT(buf->len == 0);
+
+  /* Check the added property */
+  hunks = apr_hash_get(patch->property_hunks, "prop_add", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(hunks->nelts == 1);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+  original_text = hunk->original_text;
+  modified_text = hunk->modified_text;
+
+  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+  SVN_TEST_ASSERT(eof);
+  SVN_TEST_ASSERT(buf->len == 0);
+
+  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+  SVN_TEST_ASSERT(! eof);
+  SVN_TEST_ASSERT(! strcmp(buf->data, "value"));
+  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+  SVN_TEST_ASSERT(eof);
+  SVN_TEST_ASSERT(buf->len == 0);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -475,5 +585,7 @@ struct svn_test_descriptor_t test_funcs[] =
                     "test git unidiff parsing"),
     SVN_TEST_PASS2(test_parse_property_diff,
                    "test property unidiff parsing"),
+    SVN_TEST_PASS2(test_parse_property_and_text_diff,
+                   "test property and text unidiff parsing"),
     SVN_TEST_NULL
   };
