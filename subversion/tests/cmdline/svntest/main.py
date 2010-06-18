@@ -424,6 +424,7 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     if exit_code and options.verbose:
       sys.stderr.write("CMD: %s exited with %d\n"
                        % (command_string, exit_code))
+      sys.stderr.flush()
     return stdout_lines, stderr_lines, exit_code
 
 def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
