@@ -319,10 +319,6 @@ class TestHarness:
     def progress_func(completed, total):
       dots = (completed * dot_count) / total
 
-      print dot_count
-      print self.dots_written
-      print dots
-
       dots_to_write = dots - self.dots_written
       os.write(old_stdout, '.' * dots_to_write)
       os.fsync(old_stdout)
