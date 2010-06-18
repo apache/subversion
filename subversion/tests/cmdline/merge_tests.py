@@ -10364,17 +10364,17 @@ def foreign_repos(sbox):
   zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
   fred_path = os.path.join(wc_dir, 'A', 'C', 'fred')
 
-  # Add new directories, with properties
+  # Add new directories, with and without properties.
   svntest.main.run_svn(None, 'mkdir', Q_path, Z_path)
-  svntest.main.run_svn(None, 'pset', 'foo', 'bar', Q_path, Z_path)
+  svntest.main.run_svn(None, 'pset', 'foo', 'bar', Z_path)
 
-  # Add new files, with contents and properties.
+  # Add new files, with contents, with and without properties.
   zeta_contents = "This is the file 'zeta'.\n"
   fred_contents = "This is the file 'fred'.\n"
   svntest.main.file_append(zeta_path, zeta_contents)
   svntest.main.file_append(fred_path, fred_contents)
   svntest.main.run_svn(None, 'add', zeta_path, fred_path)
-  svntest.main.run_svn(None, 'pset', 'foo', 'bar', zeta_path, fred_path)
+  svntest.main.run_svn(None, 'pset', 'foo', 'bar', fred_path)
   
   # Modify existing files and directories.
   added_contents = "This is another line of text.\n"
@@ -10409,9 +10409,9 @@ def foreign_repos(sbox):
                          'A/D/H/psi', 'A/D/H/omega')
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'Q'            : Item(props={'foo':'bar'}),
+    'Q'            : Item(),
     'A/D/G/Z'      : Item(props={'foo':'bar'}),
-    'A/D/G/Z/zeta' : Item(contents=zeta_contents,props={'foo':'bar'}),
+    'A/D/G/Z/zeta' : Item(contents=zeta_contents),
     'A/C/fred'     : Item(contents=fred_contents,props={'foo':'bar'}),
     })
   expected_disk.remove('A/B/E/alpha', 'A/D/H', 'A/D/H/chi',
@@ -10438,10 +10438,13 @@ def foreign_repos(sbox):
   ### TODO: Use run_and_verify_merge() ###
   svntest.main.run_svn(None, 'merge', '-c2', sbox.repo_url, wc_dir2)
   svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
+  svntest.actions.verify_disk(wc_dir2, expected_disk, True)
 
   # Now, let's make a third checkout -- our second from the original
   # repository -- and make sure that all the data there is correct.
   # It should look just like the original EXPECTED_DISK.
+  # This is a regression test for issue #3623 in which wc_dir2 had the
+  # correct state but the committed state was wrong.
   wc_dir3 = sbox.add_wc_path('wc3')
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
                                      sbox2.repo_url, wc_dir3)
