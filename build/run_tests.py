@@ -349,7 +349,7 @@ class TestHarness:
 
     start_time = datetime.now()
 
-    progabs = os.path.abspath(prog)
+    progabs = os.path.abspath(os.path.join(self.srcdir, prog))
     old_cwd = os.getcwd()
     try:
       os.chdir(progdir)
