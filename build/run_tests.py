@@ -42,7 +42,7 @@ separated list of test numbers; the default is to run all the tests in it.
 '''
 
 # A few useful constants
-LINE_LENGTH = 40
+LINE_LENGTH = 45
 
 import os, sys, subprocess, imp
 from datetime import datetime
@@ -215,9 +215,12 @@ class TestHarness:
       self.log.close()
       self.log = None
 
-  def _run_c_test(self, prog, test_nums):
+  def _run_c_test(self, prog, test_nums, dot_count):
     'Run a c test, escaping parameters as required.'
     progdir, progbase = os.path.split(prog)
+
+    sys.stdout.write('.' * dot_count)
+    sys.stdout.flush()
 
     if os.access(progbase, os.X_OK):
       progname = './' + progbase
@@ -254,7 +257,7 @@ class TestHarness:
 
     return self._run_prog(progname, cmdline)
 
-  def _run_py_test(self, prog, test_nums):
+  def _run_py_test(self, prog, test_nums, dot_count):
     'Run a python test, passing parameters as needed.'
     progdir, progbase = os.path.split(prog)
 
@@ -308,11 +311,28 @@ class TestHarness:
       old_stderr = os.dup(2)
       os.dup2(self.log.fileno(), 1)
       os.dup2(self.log.fileno(), 2)
+    else:
+      old_stdout = sys.stdout
+
+    # This has to be class-scoped for use in the progress_func()
+    self.dots_written = 0
+    def progress_func(completed, total):
+      dots = (completed * dot_count) / total
+
+      print dot_count
+      print self.dots_written
+      print dots
+
+      dots_to_write = dots - self.dots_written
+      os.write(old_stdout, '.' * dots_to_write)
+      os.fsync(old_stdout)
+      self.dots_written = dots
 
     # run the tests
     svntest.testcase.TextColors.disable()
     failed = svntest.main.execute_tests(prog_mod.test_list,
-                                        test_name=progbase)
+                                        test_name=progbase,
+                                        progress_func=progress_func)
 
     # restore some values
     sys.path = old_path
@@ -341,7 +361,6 @@ class TestHarness:
       # Using write here because we don't want even a trailing space
       test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
       sys.stdout.write('Running tests in %s' % (test_info, ))
-      sys.stdout.write('.'*(LINE_LENGTH - len(test_info)))
       sys.stdout.flush()
 
     log.write('START: %s\n' % progbase)
@@ -354,9 +373,11 @@ class TestHarness:
     try:
       os.chdir(progdir)
       if progbase[-3:] == '.py':
-        failed = self._run_py_test(progabs, test_nums)
+        failed = self._run_py_test(progabs, test_nums,
+                                   (LINE_LENGTH - len(test_info)))
       else:
-        failed = self._run_c_test(prog, test_nums)
+        failed = self._run_c_test(prog, test_nums,
+                                  (LINE_LENGTH - len(test_info)))
     except:
       os.chdir(old_cwd)
       raise
