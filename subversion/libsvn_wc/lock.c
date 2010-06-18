@@ -1564,7 +1564,7 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
       parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
       err = svn_wc__db_read_kind(&parent_kind, wc_ctx->db, parent_abspath, TRUE,
                                  scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+      if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
         {
           svn_error_clear(err);
           parent_kind = svn_wc__db_kind_unknown;
