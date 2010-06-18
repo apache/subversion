@@ -180,10 +180,10 @@ test_parse_unidiff(apr_pool_t *pool)
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse,
                                         ignore_whitespace, iterpool, 
                                         iterpool));
-      SVN_ERR_ASSERT(patch);
-      SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
-      SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
-      SVN_ERR_ASSERT(patch->hunks->nelts == 1);
+      SVN_TEST_ASSERT(patch);
+      SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
+      SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
+      SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
       hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
       if (reverse)
@@ -201,40 +201,40 @@ test_parse_unidiff(apr_pool_t *pool)
 
       /* Make sure original text was parsed correctly. */
       SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(! eof);
-      SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+      SVN_TEST_ASSERT(! eof);
+      SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
       /* Now we should get EOF. */
       SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(eof);
-      SVN_ERR_ASSERT(buf->len == 0);
+      SVN_TEST_ASSERT(eof);
+      SVN_TEST_ASSERT(buf->len == 0);
 
       /* Make sure modified text was parsed correctly. */
       SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(! eof);
-      SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+      SVN_TEST_ASSERT(! eof);
+      SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
       SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(! eof);
-      SVN_ERR_ASSERT(! strcmp(buf->data, "some more bytes to 'gamma'"));
+      SVN_TEST_ASSERT(! eof);
+      SVN_TEST_ASSERT(! strcmp(buf->data, "some more bytes to 'gamma'"));
       /* Now we should get EOF. */
       SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(eof);
-      SVN_ERR_ASSERT(buf->len == 0);
+      SVN_TEST_ASSERT(eof);
+      SVN_TEST_ASSERT(buf->len == 0);
 
       /* Parse the second patch. */
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse, 
                                         ignore_whitespace, pool, pool));
-      SVN_ERR_ASSERT(patch);
+      SVN_TEST_ASSERT(patch);
       if (reverse)
         {
-          SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/D/gamma.orig"));
-          SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/D/gamma"));
+          SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/D/gamma.orig"));
+          SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/D/gamma"));
         }
       else
         {
-          SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
-          SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));
+          SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
+          SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));
         }
-      SVN_ERR_ASSERT(patch->hunks->nelts == 1);
+      SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
       hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
       if (reverse)
@@ -252,24 +252,24 @@ test_parse_unidiff(apr_pool_t *pool)
 
       /* Make sure original text was parsed correctly. */
       SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(! eof);
-      SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+      SVN_TEST_ASSERT(! eof);
+      SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
       SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(! eof);
-      SVN_ERR_ASSERT(! strcmp(buf->data, "some less bytes to 'gamma'"));
+      SVN_TEST_ASSERT(! eof);
+      SVN_TEST_ASSERT(! strcmp(buf->data, "some less bytes to 'gamma'"));
       /* Now we should get EOF. */
       SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(eof);
-      SVN_ERR_ASSERT(buf->len == 0);
+      SVN_TEST_ASSERT(eof);
+      SVN_TEST_ASSERT(buf->len == 0);
 
       /* Make sure modified text was parsed correctly. */
       SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(! eof);
-      SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+      SVN_TEST_ASSERT(! eof);
+      SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
       /* Now we should get EOF. */
       SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_ERR_ASSERT(eof);
-      SVN_ERR_ASSERT(buf->len == 0);
+      SVN_TEST_ASSERT(eof);
+      SVN_TEST_ASSERT(buf->len == 0);
 
       reverse = !reverse;
     }
@@ -534,24 +534,24 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
 
   /* Make sure original text was parsed correctly. */
   SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'iota'."));
+  SVN_TEST_ASSERT(! eof);
+  SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'iota'."));
   /* Now we should get EOF. */
   SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(eof);
-  SVN_ERR_ASSERT(buf->len == 0);
+  SVN_TEST_ASSERT(eof);
+  SVN_TEST_ASSERT(buf->len == 0);
 
   /* Make sure modified text was parsed correctly. */
   SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'iota'."));
+  SVN_TEST_ASSERT(! eof);
+  SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'iota'."));
   SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "some more bytes to 'iota'"));
+  SVN_TEST_ASSERT(! eof);
+  SVN_TEST_ASSERT(! strcmp(buf->data, "some more bytes to 'iota'"));
   /* Now we should get EOF. */
   SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(eof);
-  SVN_ERR_ASSERT(buf->len == 0);
+  SVN_TEST_ASSERT(eof);
+  SVN_TEST_ASSERT(buf->len == 0);
 
   /* Check the added property */
   hunks = apr_hash_get(patch->property_hunks, "prop_add", APR_HASH_KEY_STRING);
