@@ -404,7 +404,6 @@ test_parse_property_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
   SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota"));
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
-  /* SVN_TEST_ASSERT(patch->operation == svn_diff_op_deleted); */
   SVN_TEST_ASSERT(apr_hash_count(patch->property_hunks) == 3);
 
   /* Check the added property */
