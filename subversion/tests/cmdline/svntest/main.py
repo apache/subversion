@@ -1371,16 +1371,24 @@ def _parse_options(arglist=sys.argv[1:]):
   return (parser, args)
 
 
-# Main func.  This is the "entry point" that all the test scripts call
-# to run their list of tests.
-#
-# This routine parses sys.argv to decide what to do.
 def run_tests(test_list, serial_only = False):
   """Main routine to run all tests in TEST_LIST.
 
   NOTE: this function does not return. It does a sys.exit() with the
         appropriate exit code.
   """
+
+  sys.exit(execute_tests(test_list, serial_only))
+
+
+# Main func.  This is the "entry point" that all the test scripts call
+# to run their list of tests.
+#
+# This routine parses sys.argv to decide what to do.
+def execute_tests(test_list, serial_only = False, test_name = None):
+  """Similar to run_tests(), but just returns the exit code, rather than
+  exiting the process.  This function can be used when a caller doesn't
+  want the process to die."""
 
   global pristine_url
   global svn_binary
@@ -1390,6 +1398,9 @@ def run_tests(test_list, serial_only = False):
   global svndumpfilter_binary
   global svnversion_binary
   global options
+
+  if test_name:
+    sys.argv[0] = test_name
 
   testnums = []
 
@@ -1514,4 +1525,4 @@ def run_tests(test_list, serial_only = False):
   svntest.sandbox.cleanup_deferred_test_paths()
 
   # Return the appropriate exit code from the tests.
-  sys.exit(exit_code)
+  return exit_code
