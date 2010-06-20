@@ -943,12 +943,16 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
                             const svn_ra_serf__dav_props_t *props,
                             apr_pool_t *pool);
 
-/* ### TODO: doco. */
+/* Set PROPS for PATH at REV revision with a NS:NAME VAL.
+ *
+ * The POOL governs allocation.
+ */
 void
 svn_ra_serf__set_ver_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name,
                           const svn_string_t *val, apr_pool_t *pool);
+#define svn_ra_serf__set_rev_prop svn_ra_serf__set_ver_prop
 
 /** Property walker functions **/
 
@@ -1024,16 +1028,6 @@ svn_ra_serf__get_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns,
                       const char *name);
-
-/* Set PROPS for PATH at REV revision with a NS:NAME VAL.
- *
- * The POOL governs allocation.
- */
-void
-svn_ra_serf__set_rev_prop(apr_hash_t *props,
-                          const char *path, svn_revnum_t rev,
-                          const char *ns, const char *name,
-                          const svn_string_t *val, apr_pool_t *pool);
 
 /* Same as set_rev_prop, but sets it for the unknown revision. */
 void
