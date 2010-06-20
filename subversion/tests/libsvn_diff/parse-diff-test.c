@@ -131,30 +131,43 @@ static const char *git_unidiff =
   "## -0,0 +1 ##"                                                       NL
   "+value"                                                              NL;
 
+/* Create a PATCH_FILE with name FNAME containing the contents of DIFF. */
+static svn_error_t *
+create_patch_file(apr_file_t **patch_file, const char *fname,
+                  const char *diff, apr_pool_t *pool)
+{
+  apr_off_t pos = 0;
+  apr_size_t len;
+  apr_status_t status;
+
+  /* Create a patch file. */
+  status = apr_file_open(patch_file, fname,
+                        (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE |
+                         APR_DELONCLOSE), APR_OS_DEFAULT, pool);
+  if (status != APR_SUCCESS)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
+                             fname);
+  len = strlen(diff);
+  status = apr_file_write_full(*patch_file, diff, len, &len);
+  if (status || len != strlen(diff))
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Cannot write to '%s'", fname);
+  SVN_ERR(svn_io_file_seek(*patch_file, APR_SET, &pos, pool));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 test_parse_unidiff(apr_pool_t *pool)
 {
   apr_file_t *patch_file;
-  apr_status_t status;
-  apr_size_t len;
   const char *fname = "test_parse_unidiff.patch";
   svn_boolean_t reverse;
   svn_boolean_t ignore_whitespace;
   int i;
   apr_pool_t *iterpool;
 
-  /* Create a patch file. */
-  status = apr_file_open(&patch_file, fname,
-                        (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE |
-                         APR_DELONCLOSE), APR_OS_DEFAULT, pool);
-  if (status != APR_SUCCESS)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
-                             fname);
-  len = strlen(unidiff);
-  status = apr_file_write_full(patch_file, unidiff, len, &len);
-  if (status || len != strlen(unidiff))
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "Cannot write to '%s'", fname);
+  SVN_ERR(create_patch_file(fname, &patch_file, unidiff, pool));
 
   reverse = FALSE;
   ignore_whitespace = FALSE;
@@ -283,8 +296,6 @@ test_parse_git_diff(apr_pool_t *pool)
   /* ### Should we check for reversed diffs? */
 
   apr_file_t *patch_file;
-  apr_status_t status;
-  apr_size_t len;
   svn_patch_t *patch;
   svn_stringbuf_t *buf;
   svn_boolean_t eof;
@@ -293,19 +304,7 @@ test_parse_git_diff(apr_pool_t *pool)
   svn_stream_t *modified_text;
   const char *fname = "test_parse_git_diff.patch";
 
-  /* Create a patch file. */
-  status = apr_file_open(&patch_file, fname,
-                        (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE |
-                         APR_DELONCLOSE), APR_OS_DEFAULT, pool);
-  if (status != APR_SUCCESS)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
-                             fname);
-  /* Write to the file */
-  len = strlen(git_unidiff);
-  status = apr_file_write_full(patch_file, git_unidiff, len, &len);
-  if (status || len != strlen(git_unidiff))
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "Cannot write to '%s'", fname);
+  SVN_ERR(create_patch_file(fname, &patch_file, git_unidiff, pool));
 
   /* Parse a deleted empty file */
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
@@ -387,34 +386,16 @@ static svn_error_t *
 test_parse_property_diff(apr_pool_t *pool)
 {
   apr_file_t *patch_file;
-  apr_status_t status;
-  apr_size_t len;
   svn_patch_t *patch;
   svn_stringbuf_t *buf;
   svn_boolean_t eof;
   svn_hunk_t *hunk;
-  apr_off_t pos;
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_diff.patch";
 
-  /* Create a patch file. */
-  status = apr_file_open(&patch_file, fname,
-                        (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE |
-                         APR_DELONCLOSE), APR_OS_DEFAULT, pool);
-  if (status != APR_SUCCESS)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
-                             fname);
-  /* Write to the file */
-  len = strlen(property_unidiff);
-  status = apr_file_write_full(patch_file, property_unidiff, len, &len);
-  if (status || len != strlen(property_unidiff))
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "Cannot write to '%s'", fname);
-  /* Reset file pointer. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(patch_file, APR_SET, &pos, pool));
+  SVN_ERR(create_patch_file(fname, &patch_file, property_unidiff, pool));
 
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
                                     FALSE, /* reverse */
@@ -488,34 +469,17 @@ static svn_error_t *
 test_parse_property_and_text_diff(apr_pool_t *pool)
 {
   apr_file_t *patch_file;
-  apr_status_t status;
-  apr_size_t len;
   svn_patch_t *patch;
   svn_stringbuf_t *buf;
   svn_boolean_t eof;
   svn_hunk_t *hunk;
-  apr_off_t pos;
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_and_text_diff.patch";
 
-  /* Create a patch file. */
-  status = apr_file_open(&patch_file, fname,
-                        (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE |
-                         APR_DELONCLOSE), APR_OS_DEFAULT, pool);
-  if (status != APR_SUCCESS)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
-                             fname);
-  /* Write to the file */
-  len = strlen(property_and_text_unidiff);
-  status = apr_file_write_full(patch_file, property_and_text_unidiff, len, &len);
-  if (status || len != strlen(property_and_text_unidiff))
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "Cannot write to '%s'", fname);
-  /* Reset file pointer. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(patch_file, APR_SET, &pos, pool));
+  SVN_ERR(create_patch_file(fname, &patch_file, property_and_text_unidiff,
+                            pool));
 
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
                                     FALSE, /* reverse */
