@@ -167,7 +167,7 @@ test_parse_unidiff(apr_pool_t *pool)
   int i;
   apr_pool_t *iterpool;
 
-  SVN_ERR(create_patch_file(fname, &patch_file, unidiff, pool));
+  SVN_ERR(create_patch_file(&patch_file, fname, unidiff, pool));
 
   reverse = FALSE;
   ignore_whitespace = FALSE;
@@ -304,7 +304,7 @@ test_parse_git_diff(apr_pool_t *pool)
   svn_stream_t *modified_text;
   const char *fname = "test_parse_git_diff.patch";
 
-  SVN_ERR(create_patch_file(fname, &patch_file, git_unidiff, pool));
+  SVN_ERR(create_patch_file(&patch_file, fname, git_unidiff, pool));
 
   /* Parse a deleted empty file */
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
@@ -395,7 +395,7 @@ test_parse_property_diff(apr_pool_t *pool)
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_diff.patch";
 
-  SVN_ERR(create_patch_file(fname, &patch_file, property_unidiff, pool));
+  SVN_ERR(create_patch_file(&patch_file, fname, property_unidiff, pool));
 
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
                                     FALSE, /* reverse */
@@ -478,7 +478,7 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_and_text_diff.patch";
 
-  SVN_ERR(create_patch_file(fname, &patch_file, property_and_text_unidiff,
+  SVN_ERR(create_patch_file(&patch_file, fname, property_and_text_unidiff,
                             pool));
 
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
