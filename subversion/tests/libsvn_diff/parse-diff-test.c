@@ -31,9 +31,6 @@
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
-/* ### There's a lot of duplicated code in the tests. It would be a good
- * ### idea to gather the boilerplate code in functions. */
-
 static const char *unidiff =
   "Index: A/mu (deleted)"                                               NL
   "===================================================================" NL
@@ -157,6 +154,38 @@ create_patch_file(apr_file_t **patch_file, const char *fname,
   return SVN_NO_ERROR;
 }
 
+/* Check that CONTENT equals what's inside EXPECTED. */
+static svn_error_t *
+check_content(svn_stream_t *content, const char *expected, apr_pool_t *pool)
+{
+  svn_stream_t *exp;
+  svn_stringbuf_t *exp_buf;
+  svn_stringbuf_t *content_buf;
+  svn_boolean_t exp_eof;
+  svn_boolean_t content_eof;
+
+  exp = svn_stream_from_string(svn_string_create(expected, pool), 
+                               pool);
+
+  while (TRUE)
+  {
+    SVN_ERR(svn_stream_readline(exp, &exp_buf, NL, &exp_eof, pool));
+    SVN_ERR(svn_stream_readline(content, &content_buf, NL, &content_eof,
+                                pool));
+    SVN_TEST_ASSERT(exp_eof == content_eof);
+    if (exp_eof)
+      break;
+    if (strcmp(exp_buf->data, content_buf->data))
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "Expected '%s' but was '%s'", exp_buf->data,
+                               content_buf->data);
+  }
+
+  SVN_TEST_ASSERT(content_buf->len == 0);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 test_parse_unidiff(apr_pool_t *pool)
 {
@@ -176,8 +205,6 @@ test_parse_unidiff(apr_pool_t *pool)
     {
       svn_patch_t *patch;
       svn_hunk_t *hunk;
-      svn_stringbuf_t *buf;
-      svn_boolean_t eof;
       apr_off_t pos;
       svn_stream_t *original_text;
       svn_stream_t *modified_text;
@@ -212,26 +239,14 @@ test_parse_unidiff(apr_pool_t *pool)
           modified_text = hunk->modified_text;
         }
 
-      /* Make sure original text was parsed correctly. */
-      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(! eof);
-      SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-      /* Now we should get EOF. */
-      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(eof);
-      SVN_TEST_ASSERT(buf->len == 0);
+      SVN_ERR(check_content(original_text,
+                            "This is the file 'gamma'." NL,
+                            pool));
 
-      /* Make sure modified text was parsed correctly. */
-      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(! eof);
-      SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(! eof);
-      SVN_TEST_ASSERT(! strcmp(buf->data, "some more bytes to 'gamma'"));
-      /* Now we should get EOF. */
-      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(eof);
-      SVN_TEST_ASSERT(buf->len == 0);
+      SVN_ERR(check_content(modified_text,
+                            "This is the file 'gamma'." NL
+                            "some more bytes to 'gamma'" NL,
+                            pool));
 
       /* Parse the second patch. */
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse, 
@@ -263,26 +278,14 @@ test_parse_unidiff(apr_pool_t *pool)
           modified_text = hunk->modified_text;
         }
 
-      /* Make sure original text was parsed correctly. */
-      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(! eof);
-      SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(! eof);
-      SVN_TEST_ASSERT(! strcmp(buf->data, "some less bytes to 'gamma'"));
-      /* Now we should get EOF. */
-      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(eof);
-      SVN_TEST_ASSERT(buf->len == 0);
+      SVN_ERR(check_content(original_text,
+                            "This is the file 'gamma'." NL
+                            "some less bytes to 'gamma'" NL,
+                            pool));
 
-      /* Make sure modified text was parsed correctly. */
-      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(! eof);
-      SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-      /* Now we should get EOF. */
-      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-      SVN_TEST_ASSERT(eof);
-      SVN_TEST_ASSERT(buf->len == 0);
+      SVN_ERR(check_content(modified_text,
+                            "This is the file 'gamma'." NL,
+                            pool));
 
       reverse = !reverse;
     }
@@ -297,11 +300,7 @@ test_parse_git_diff(apr_pool_t *pool)
 
   apr_file_t *patch_file;
   svn_patch_t *patch;
-  svn_stringbuf_t *buf;
-  svn_boolean_t eof;
   svn_hunk_t *hunk;
-  svn_stream_t *original_text;
-  svn_stream_t *modified_text;
   const char *fname = "test_parse_git_diff.patch";
 
   SVN_ERR(create_patch_file(&patch_file, fname, git_unidiff, pool));
@@ -329,29 +328,15 @@ test_parse_git_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
-  original_text = hunk->original_text;
-  modified_text = hunk->modified_text;
 
-  /* Make sure original text was parsed correctly. */
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-  /* Now we should get EOF. */
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->original_text,
+                        "This is the file 'gamma'." NL,
+                        pool));
 
-  /* Make sure modified text was parsed correctly. */
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "some more bytes to 'gamma'"));
-  /* Now we should get EOF. */
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->modified_text,
+                        "This is the file 'gamma'." NL
+                        "some more bytes to 'gamma'" NL,
+                        pool));
 
   /* Parse a copied empty file */
   SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
@@ -387,11 +372,7 @@ test_parse_property_diff(apr_pool_t *pool)
 {
   apr_file_t *patch_file;
   svn_patch_t *patch;
-  svn_stringbuf_t *buf;
-  svn_boolean_t eof;
   svn_hunk_t *hunk;
-  svn_stream_t *original_text;
-  svn_stream_t *modified_text;
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_diff.patch";
 
@@ -411,56 +392,40 @@ test_parse_property_diff(apr_pool_t *pool)
   hunks = apr_hash_get(patch->property_hunks, "prop_add", APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
-  original_text = hunk->original_text;
-  modified_text = hunk->modified_text;
 
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->original_text,
+                        "",
+                        pool));
 
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "value"));
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->modified_text,
+                        "value" NL,
+                        pool));
 
   /* Check the deleted property */
   hunks = apr_hash_get(patch->property_hunks, "prop_del", APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
-  original_text = hunk->original_text;
-  modified_text = hunk->modified_text;
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "value"));
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
 
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->original_text,
+                        "value" NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk->modified_text,
+                        "",
+                        pool));
 
   /* Check the modified property */
   hunks = apr_hash_get(patch->property_hunks, "prop_mod", APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
-  original_text = hunk->original_text;
-  modified_text = hunk->modified_text;
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "value"));
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
 
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "new value"));
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->original_text,
+                        "value" NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk->modified_text,
+                        "new value" NL,
+                        pool));
 
   return SVN_NO_ERROR;
 }
@@ -470,11 +435,7 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
 {
   apr_file_t *patch_file;
   svn_patch_t *patch;
-  svn_stringbuf_t *buf;
-  svn_boolean_t eof;
   svn_hunk_t *hunk;
-  svn_stream_t *original_text;
-  svn_stream_t *modified_text;
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_and_text_diff.patch";
 
@@ -493,47 +454,28 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
 
   /* Check contents of text hunk */
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
-  original_text = hunk->original_text;
-  modified_text = hunk->modified_text;
 
-  /* Make sure original text was parsed correctly. */
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'iota'."));
-  /* Now we should get EOF. */
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->original_text,
+                        "This is the file 'iota'." NL,
+                        pool));
 
-  /* Make sure modified text was parsed correctly. */
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "This is the file 'iota'."));
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "some more bytes to 'iota'"));
-  /* Now we should get EOF. */
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->modified_text,
+                        "This is the file 'iota'." NL
+                        "some more bytes to 'iota'" NL,
+                        pool));
 
   /* Check the added property */
   hunks = apr_hash_get(patch->property_hunks, "prop_add", APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
-  original_text = hunk->original_text;
-  modified_text = hunk->modified_text;
 
-  SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->original_text,
+                        "",
+                        pool));
 
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(! eof);
-  SVN_TEST_ASSERT(! strcmp(buf->data, "value"));
-  SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
-  SVN_TEST_ASSERT(eof);
-  SVN_TEST_ASSERT(buf->len == 0);
+  SVN_ERR(check_content(hunk->modified_text,
+                        "value" NL,
+                        pool));
 
   return SVN_NO_ERROR;
 }
