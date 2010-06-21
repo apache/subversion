@@ -424,7 +424,6 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     if exit_code and options.verbose:
       sys.stderr.write("CMD: %s exited with %d\n"
                        % (command_string, exit_code))
-      sys.stderr.flush()
     return stdout_lines, stderr_lines, exit_code
 
 def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
@@ -1227,7 +1226,7 @@ def run_one_test(n, test_list, finished_tests = None):
   exit_code = TestRunner(test_list[n], n).run()
   return exit_code
 
-def _internal_run_tests(test_list, testnums, parallel, progress_func):
+def _internal_run_tests(test_list, testnums, parallel):
   """Run the tests from TEST_LIST whose indices are listed in TESTNUMS.
 
   If we're running the tests in parallel spawn as much parallel processes
@@ -1240,12 +1239,9 @@ def _internal_run_tests(test_list, testnums, parallel, progress_func):
   tests_started = 0
 
   if not parallel:
-    for i, testnum in enumerate(testnums):
+    for testnum in testnums:
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
-      # signal progress
-      if progress_func:
-        progress_func(i+1, len(testnums))
   else:
     number_queue = queue.Queue()
     for num in testnums:
@@ -1263,10 +1259,6 @@ def _internal_run_tests(test_list, testnums, parallel, progress_func):
     for t in threads:
       results += t.results
     results.sort()
-
-    # signal some kind of progress
-    if progress_func:
-      progress_func(len(testnums), len(testnums))
 
     # terminate the line of dots
     print("")
@@ -1379,25 +1371,16 @@ def _parse_options(arglist=sys.argv[1:]):
   return (parser, args)
 
 
+# Main func.  This is the "entry point" that all the test scripts call
+# to run their list of tests.
+#
+# This routine parses sys.argv to decide what to do.
 def run_tests(test_list, serial_only = False):
   """Main routine to run all tests in TEST_LIST.
 
   NOTE: this function does not return. It does a sys.exit() with the
         appropriate exit code.
   """
-
-  sys.exit(execute_tests(test_list, serial_only))
-
-
-# Main func.  This is the "entry point" that all the test scripts call
-# to run their list of tests.
-#
-# This routine parses sys.argv to decide what to do.
-def execute_tests(test_list, serial_only = False, test_name = None,
-                  progress_func = None):
-  """Similar to run_tests(), but just returns the exit code, rather than
-  exiting the process.  This function can be used when a caller doesn't
-  want the process to die."""
 
   global pristine_url
   global svn_binary
@@ -1407,9 +1390,6 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svndumpfilter_binary
   global svnversion_binary
   global options
-
-  if test_name:
-    sys.argv[0] = test_name
 
   testnums = []
 
@@ -1523,8 +1503,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     svntest.actions.setup_pristine_repository()
 
   # Run the tests.
-  exit_code = _internal_run_tests(test_list, testnums, options.parallel,
-                                  progress_func)
+  exit_code = _internal_run_tests(test_list, testnums, options.parallel)
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
@@ -1535,4 +1514,4 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   svntest.sandbox.cleanup_deferred_test_paths()
 
   # Return the appropriate exit code from the tests.
-  return exit_code
+  sys.exit(exit_code)
