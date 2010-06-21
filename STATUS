@@ -111,6 +111,27 @@ Candidate changes:
            semantics of svn_io_dir_walk() which we should not do in a
            back-port.  Discussing on list.)
 
+ * r945350, r946767, r955369
+   Fix issue #3242 'Subversion demands unnecessary access to parent
+   directories of operations' as relates to reintegrate merges.
+   Justification:
+     Without this backport, reintegrate merges fail if the user isn't
+     authorized to the root of the repository.
+   Branch:
+     Drift between trunk and 1.6.x, particularly in libsvn_client/merge.c
+     necessitated a backport branch.
+     ^/subversion/branches/1.6.x-issue3242-reintegrate
+   Notes:
+    r945350 adds a new merge_authz test for the issue.
+    r946767 is the fix for the issue.
+    r955369 is a fix for issue #3564 'added subtrees with mergeinfo break
+    reintegrate', which was a regression introduced by r946767.  So despite
+    having it's own issue number, it is a logical part of the issue #3242
+    group.
+    The rest of the issue #3242 fixes have already been backported in r934494.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
