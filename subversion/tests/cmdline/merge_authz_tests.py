@@ -31,7 +31,10 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
 from merge_tests import set_up_branch
+from merge_tests import expected_merge_output
 
+from svntest.main import is_ra_type_dav
+from svntest.main import is_ra_type_svn
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
@@ -488,11 +491,6 @@ def reintegrate_fails_if_no_root_access(sbox):
   expected_output = wc.State(A_path, {
     'mu'           : Item(status='U '),
     })
-  expected_mergeinfo_output = wc.State(A_path, {
-    '' : Item(status=' G'),
-    })
-  expected_elision_output = wc.State(A_path, {
-    })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-8'}),
     'B'         : Item(),
@@ -537,10 +535,8 @@ def reintegrate_fails_if_no_root_access(sbox):
   })
   expected_skip = wc.State(A_path, {})
   svntest.actions.run_and_verify_merge(A_path, None, None,
-                                       sbox.repo_url + '/A_COPY', None,
+                                       sbox.repo_url + '/A_COPY',
                                        expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
