@@ -10,7 +10,7 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.6.12:
+Status of 1.6.13:
 ================
 
 Candidate changes:
@@ -96,19 +96,6 @@ Candidate changes:
     making it unusable as a proxy anymore.
    Votes:
      +1: kameshj
-
- * r939375-939376
-   Fix issue #3623, a bug in foreign repository merges that causes properties
-   on merge-added files to be dropped from commits of those merges.
-   Justification:
-     This can actually result in what is arguably a corrupt working copy,
-     one that thinks it is in sync with the repository but actually is not.
-   Notes:
-     r939375 tweaks a test to cover this case.  r939376 is the fix.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3623
-   Votes:
-     +1: cmpilato, pburba
 
  * r950445, 950468
    Fix for issue #2591 "'svnadmin hotcopy' does not replicate symlinks".

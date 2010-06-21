@@ -1,3 +1,27 @@
+Version 1.6.12
+(21 Jun 2010, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.12
+
+  User-visible changes:
+   * further improvements for issue #3242
+   * allow deletion of uris which need character escaping (issue #3636)
+   * fix errors with 'svn mkdir --parents' (issue #3649)
+   * update address to which crash reports are sent (r901304)
+   * check for server certificate revocation on Windows (r898048)
+   * disable custom file mutexes on Windows (r879902, -16)
+   * fix handling of peg revision'd copy targets (issue #3651)
+   * more improvements to 'svn merge --reintegrate' (r935631)
+   * allow copying of broken symlinks (issue #3303)
+   * improve rep-sharing performance on high-concurrency repos (issue #3506)
+   * fixed: added subtrees with mergeinfo break reintegrate (issue #3654)
+   * fixed: assertion triggered by tree-conflicted externals (issue #3469)
+
+  Developer-visible changes:
+   * give windows devs more flexibility with sqlite versions (r944635)
+   * allow the pack tests to work with low file descriptor limits (r937610)
+   * improve exception handling on Windows Vista and 7 (r878447, -910, -916)
+
+
 Version 1.6.11
 (19 Apr 2010, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.11
