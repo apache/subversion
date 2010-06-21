@@ -459,35 +459,19 @@ def reintegrate_fails_if_no_root_access(sbox):
                                      sbox.repo_url + '/A', A_COPY_path)
   svntest.main.run_svn(None, 'ci', '-m', 'synch A_COPY with A', wc_dir)
 
+  # Update so we are ready for reintegrate.
+  svntest.main.run_svn(None, 'up', wc_dir)
+
   # Change authz file so everybody has access to everything but the root.  
   if is_ra_type_svn() or is_ra_type_dav():
+    write_restrictive_svnserve_conf(sbox.repo_dir)
     write_authz_file(sbox, {"/"       : "* =",
                             "/A"      : "* = rw",
                             "/A_COPY" : "* = rw",
                             "/iota"   : "* = rw"})
 
   # Now reintegrate A_COPY back to A.  The lack of access to the root of the
-  # repository shouldn't be a problem.  Right now it fails with this error:
-  #
-  #  >svn merge ^/A_COPY A --reintegrate
-  #  ..\..\..\subversion\svn\merge-cmd.c:358: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_client\merge.c:9758: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_client\merge.c:9728: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_client\merge.c:9573: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_ra\ra_loader.c:488: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_ra\ra_loader.c:488: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_ra\ra_loader.c:488: (apr_err=175009)
-  #  svn: Unable to connect to a repository at URL 'http://localhost/
-  #    svn-test-work/repositories/merge_authz_tests-3'
-  #  ..\..\..\subversion\libsvn_ra_serf\options.c:490: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_ra_serf\util.c:595: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_ra_serf\util.c:1436: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_ra_serf\util.c:1127: (apr_err=175009)
-  #  ..\..\..\subversion\libsvn_ra_serf\util.c:1127: (apr_err=175009)
-  #  svn: XML parsing failed: (403 Forbidden)
-  #
-  # This test is set as XFail until this is fixed.
-  svntest.main.run_svn(None, 'up', wc_dir)
+  # repository shouldn't be a problem.
   expected_output = wc.State(A_path, {
     'mu'           : Item(status='U '),
     })
@@ -553,9 +537,9 @@ test_list = [ None,
               SkipUnless(Skip(mergeinfo_and_skipped_paths,
                               svntest.main.is_ra_type_file),
                          svntest.main.server_has_mergeinfo),
-              XFail(SkipUnless(Skip(reintegrate_fails_if_no_root_access,
-                                    svntest.main.is_ra_type_file),
-                               svntest.main.server_has_mergeinfo)),
+              SkipUnless(Skip(reintegrate_fails_if_no_root_access,
+                              svntest.main.is_ra_type_file),
+                         svntest.main.server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
