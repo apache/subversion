@@ -178,7 +178,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                                               target,
                                               None,  # SvnConfig
                                               True,  # recursive
-                                              False, # get_all
+                                              True, # get_all
                                               False, # no_ignore
                                               status_func,
                                               None,  # cancel_func
@@ -439,8 +439,8 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.assertEqual(got_diffs, expected_diffs)
 
   def tearDown(self):
-      wc.adm_close(self.wc)
-      core.svn_io_remove_dir(self.path)
+      #wc.adm_close(self.wc)
+      #core.svn_io_remove_dir(self.path)
       self.fs = None
       self.repos = None
 
