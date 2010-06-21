@@ -65,18 +65,20 @@ generate_status_code(enum svn_wc_status_kind status)
 static enum svn_wc_status_kind
 combined_status(const svn_client_status_t *status)
 {
-  enum svn_wc_status_kind combined_status = status->node_status;
+  enum svn_wc_status_kind new_status = status->node_status;
 
   switch (status->node_status)
     {
       case svn_wc_status_modified:
       case svn_wc_status_conflicted:
         /* This value might be the property status */
-        combined_status = status->text_status;
+        new_status = status->text_status;
+        break;
+      default:
         break;
     }
 
-  return combined_status;
+  return new_status;
 }
 
 /* Return the single character representation of the switched column
