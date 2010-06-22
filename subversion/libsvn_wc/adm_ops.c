@@ -1321,31 +1321,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__internal_get_ancestry(const char **url,
-                              svn_revnum_t *rev,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool)
-{
-  const svn_wc_entry_t *ent;
-
-  SVN_ERR(svn_wc__get_entry(&ent, db, local_abspath, FALSE,
-                            svn_node_unknown, FALSE,
-                            scratch_pool, scratch_pool));
-
-  if (url)
-    *url = apr_pstrdup(result_pool, ent->url);
-
-  if (rev)
-    *rev = ent->revision;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Helper for mark_tree_copied(), handling the property juggling and
    state changes for a single item LOCAL_ABSPATH (of kind LOCAL_KIND). */
 static svn_error_t *

@@ -38,6 +38,7 @@
 #include "private/svn_wc_private.h"
 
 #include "wc.h"
+#include "entries.h"
 #include "lock.h"
 #include "props.h"
 #include "workqueue.h"
@@ -1053,14 +1054,22 @@ svn_wc_get_ancestry(char **url,
                     apr_pool_t *pool)
 {
   const char *local_abspath;
+  const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  return svn_error_return(svn_wc__internal_get_ancestry(
-                            (const char **)url, rev,
-                            svn_wc__adm_get_db(adm_access),
-                            local_abspath,
+  SVN_ERR(svn_wc__get_entry(&entry, svn_wc__adm_get_db(adm_access),
+                            local_abspath, FALSE,
+                            svn_node_unknown, FALSE,
                             pool, pool));
+
+  if (url)
+    *url = apr_pstrdup(pool, entry->url);
+
+  if (rev)
+    *rev = entry->revision;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
