@@ -592,8 +592,6 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
   const char *fname;
   svn_stream_t *stream;
   svn_boolean_t eof, in_header;
-  svn_hunk_t *hunk;
-  const char *prop_name;
 
   apr_pool_t *iterpool;
 
@@ -685,6 +683,9 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
     }
   else
     {
+      svn_hunk_t *hunk;
+      const char *prop_name;
+
       /* Parse hunks. */
       (*patch)->hunks = apr_array_make(result_pool, 10, sizeof(svn_hunk_t *));
       (*patch)->property_hunks = apr_hash_make(result_pool);
