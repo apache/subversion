@@ -53,7 +53,6 @@
 #include "adm_ops.h"
 #include "entries.h"
 #include "lock.h"
-#include "props.h"
 #include "translate.h"
 #include "tree_conflicts.h"
 #include "workqueue.h"

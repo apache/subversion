@@ -28,7 +28,6 @@
 #include "svn_pools.h"
 
 #include "wc.h"
-#include "entries.h"
 #include "adm_files.h"
 #include "translate.h"
 #include "log.h"

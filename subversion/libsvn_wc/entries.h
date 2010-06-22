@@ -40,14 +40,12 @@ extern "C" {
 /* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
    pay attention to.  ### These should track the changes made to the
    SVN_WC__ENTRY_ATTR_* #defines! */
-#define SVN_WC__ENTRY_MODIFY_REVISION           0x00000001
-#define SVN_WC__ENTRY_MODIFY_URL                0x00000002
+/* ### gap */
 #define SVN_WC__ENTRY_MODIFY_KIND               0x00000004
 /* ### gap  */
 #define SVN_WC__ENTRY_MODIFY_CHECKSUM           0x00000010
 #define SVN_WC__ENTRY_MODIFY_SCHEDULE           0x00000020
 #define SVN_WC__ENTRY_MODIFY_COPIED             0x00000040
-#define SVN_WC__ENTRY_MODIFY_DELETED            0x00000080
 #define SVN_WC__ENTRY_MODIFY_COPYFROM_URL       0x00000100
 #define SVN_WC__ENTRY_MODIFY_COPYFROM_REV       0x00000200
 /* ### gap  */

@@ -33,8 +33,6 @@
 #include "wc.h"
 #include "wc_db.h"
 #include "workqueue.h"
-#include "entries.h"
-#include "props.h"
 #include "adm_files.h"
 #include "translate.h"
 #include "log.h"

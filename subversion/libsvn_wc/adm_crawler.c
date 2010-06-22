@@ -45,8 +45,6 @@
 #include "adm_files.h"
 #include "props.h"
 #include "translate.h"
-#include "entries.h"
-#include "lock.h"
 #include "workqueue.h"
 #include "conflicts.h"
 

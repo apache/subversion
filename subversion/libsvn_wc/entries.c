@@ -2608,13 +2608,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
   if (! cur_entry->name)
     cur_entry->name = apr_pstrdup(pool, name);
 
-  /* Revision */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_REVISION)
-    cur_entry->revision = entry->revision;
-
-  /* Ancestral URL in repository */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_URL)
-    cur_entry->url = entry->url ? apr_pstrdup(pool, entry->url) : NULL;
+  /* Revision and URL are no longer passed to entry_modify() */
 
   /* Kind */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KIND)
@@ -2640,11 +2634,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_COPYFROM_REV)
     cur_entry->copyfrom_rev = entry->copyfrom_rev;
 
-  /* Deleted state */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_DELETED)
-    cur_entry->deleted = entry->deleted;
-
-  /* Absent state is no longer passed to entry_modify() */
+  /* Deleted and absent are no longer passed to entry_modify() */
 
   /* text_time, prop_time no longer passed to entry_modify()  */
 
@@ -3005,7 +2995,6 @@ svn_wc__entry_modify_stub(svn_wc__db_t *db,
                     /* from adm_ops.c  */
                     SVN_WC__ENTRY_MODIFY_SCHEDULE
                     | SVN_WC__ENTRY_MODIFY_KIND
-                    | SVN_WC__ENTRY_MODIFY_REVISION
                     | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
                     | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
                     | SVN_WC__ENTRY_MODIFY_COPIED

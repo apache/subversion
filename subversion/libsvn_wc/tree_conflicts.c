@@ -27,9 +27,6 @@
 #include "svn_pools.h"
 
 #include "tree_conflicts.h"
-#include "log.h"
-#include "entries.h"
-#include "lock.h"
 #include "wc.h"
 
 #include "private/svn_skel.h"

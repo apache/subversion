@@ -45,7 +45,6 @@
 #include "svn_private_config.h"
 
 #include "wc.h"
-#include "lock.h"
 #include "props.h"
 #include "entries.h"
 #include "translate.h"

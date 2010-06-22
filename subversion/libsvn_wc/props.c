@@ -54,7 +54,6 @@
 #include "wc.h"
 #include "log.h"
 #include "adm_files.h"
-#include "entries.h"
 #include "props.h"
 #include "translate.h"
 #include "lock.h"  /* for svn_wc__write_check()  */
