@@ -922,19 +922,19 @@ run_deletion_postcommit(svn_wc__db_t *db,
       if (kind == svn_wc__db_kind_dir)
         {
           svn_boolean_t keep_local;
-          svn_wc_entry_t tmp_entry;
 
           /* Bump the revision number of this_dir anyway, so that it
              might be higher than its parent's revnum.  If it's
              higher, then the process that sees KILLME and destroys
              the directory can also place a 'deleted' dir entry in the
              parent. */
-          tmp_entry.revision = new_revision;
-          SVN_ERR(svn_wc__entry_modify(db, local_abspath,
-                                       svn_node_dir,
-                                       &tmp_entry,
-                                       SVN_WC__ENTRY_MODIFY_REVISION,
-                                       scratch_pool));
+          SVN_ERR(svn_wc__db_temp_op_set_rev_and_repos_relpath(db,
+                                                               local_abspath,
+                                                               new_revision,
+                                                               FALSE,
+                                                               NULL, NULL,
+                                                               NULL, FALSE,
+                                                               scratch_pool));
 
           SVN_ERR(svn_wc__db_temp_determine_keep_local(&keep_local, db,
                                                        local_abspath,
