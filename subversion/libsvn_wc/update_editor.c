@@ -4987,15 +4987,7 @@ close_file(void *file_baton,
      that tree. We need to schedule this file for deletion.  */
   if (fb->dir_baton->in_deleted_and_tree_conflicted_subtree && fb->adding_file)
     {
-      /* ### temporary hack. we should simply write a WORKING_NODE.  */
-
-      svn_wc_entry_t tmp_entry;
-
-      tmp_entry.schedule = svn_wc_schedule_delete;
-      SVN_ERR(svn_wc__entry_modify(eb->db, fb->local_abspath,
-                                   svn_node_file,
-                                   &tmp_entry, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                   pool));
+      SVN_ERR(svn_wc__db_temp_op_delete(eb->db, fb->local_abspath, pool));
     }
 
   /* If this file was locally-added and is now being added by the update, we
