@@ -528,15 +528,6 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc_get_ancestry(). */
-svn_error_t *
-svn_wc__internal_get_ancestry(const char **url,
-                              svn_revnum_t *rev,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
-
 /* Library-internal version of svn_wc_ensure_adm4(). */
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
