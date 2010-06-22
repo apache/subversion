@@ -3763,12 +3763,7 @@ svn_io_open_unique_file3(apr_file_t **file,
     *unique_path = tempname; /* Was allocated in result_pool */
 
   if (baton)
-    {
-      if (unique_path)
-        baton->name = *unique_path;
-      else
-        baton->name = tempname; /* Was allocated in result_pool */
-    }
+    SVN_ERR(cstring_from_utf8(&baton->name, tempname, result_pool));
 
   return SVN_NO_ERROR;
 }
