@@ -439,8 +439,11 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.assertEqual(got_diffs, expected_diffs)
 
   def tearDown(self):
-      #wc.adm_close(self.wc)
-      #core.svn_io_remove_dir(self.path)
+      try
+        wc.adm_close(self.wc)
+        core.svn_io_remove_dir(self.path)
+      except:
+        print('Error in tearDown: %s' % sys.exc_info()[0])
       self.fs = None
       self.repos = None
 
