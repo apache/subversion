@@ -605,8 +605,8 @@ create_client_status(svn_client_status_t **cst,
   (*cst)->switched = status->switched;
 
   if (status->kind == svn_node_dir)
-    SVN_ERR(svn_wc__temp_get_wclocked(&(*cst)->locked, wc_ctx, local_abspath,
-                                      scratch_pool));
+    SVN_ERR(svn_wc_locked2(NULL, &(*cst)->locked, wc_ctx, local_abspath,
+                           scratch_pool));
 
   (*cst)->copied = status->copied;
   (*cst)->revision = status->revision;

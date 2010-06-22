@@ -1134,14 +1134,3 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_wc__temp_get_wclocked(svn_boolean_t *locked,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool)
-{
-  return svn_error_return(
-              svn_wc__db_wclocked(locked, wc_ctx->db, local_abspath,
-                                  scratch_pool));
-}

@@ -697,14 +697,6 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool);
 
-/* Set *LOCKED to true when a lock for LOCAL_ABSPATH exists */
-svn_error_t *
-svn_wc__temp_get_wclocked(svn_boolean_t *locked,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool);
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
