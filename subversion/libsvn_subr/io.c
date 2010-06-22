@@ -243,20 +243,20 @@ io_check_path(const char *path,
 }
 
 
-/* Wrapper for apr_file_open(). */
+/* Wrapper for apr_file_open(), taking an APR-encoded filename. */
 static apr_status_t
 file_open(apr_file_t **f,
-          const char *fname,
+          const char *fname_apr,
           apr_int32_t flag,
           apr_fileperms_t perm,
           svn_boolean_t retry_on_failure,
           apr_pool_t *pool)
 {
-  apr_status_t status = apr_file_open(f, fname, flag, perm, pool);
+  apr_status_t status = apr_file_open(f, fname_apr, flag, perm, pool);
 
   if (retry_on_failure)
     {
-      WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+      WIN32_RETRY_LOOP(status, apr_file_open(f, fname_apr, flag, perm, pool));
     }
   return status;
 }
@@ -292,7 +292,9 @@ svn_io_check_special_path(const char *path,
 struct temp_file_cleanup_s
 {
   apr_pool_t *pool;
-  const char *name;
+  /* The (APR-encoded) full path of the file to be removed, or NULL if
+   * nothing to do. */
+  const char *fname_apr;
 };
 
 
@@ -302,10 +304,10 @@ temp_file_plain_cleanup_handler(void *baton)
   struct  temp_file_cleanup_s *b = baton;
   apr_status_t apr_err = APR_SUCCESS;
 
-  if (b->name)
+  if (b->fname_apr)
     {
-      apr_err = apr_file_remove(b->name, b->pool);
-      WIN32_RETRY_LOOP(apr_err, apr_file_remove(b->name, b->pool));
+      apr_err = apr_file_remove(b->fname_apr, b->pool);
+      WIN32_RETRY_LOOP(apr_err, apr_file_remove(b->fname_apr, b->pool));
     }
 
   return apr_err;
@@ -354,7 +356,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
       baton = apr_palloc(result_pool, sizeof(*baton));
 
       baton->pool = result_pool;
-      baton->name = NULL;
+      baton->fname_apr = NULL;
 
       /* Because cleanups are run LIFO, we need to make sure to register
          our cleanup before the apr_file_close cleanup:
@@ -447,7 +449,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
       else
         {
           if (delete_when == svn_io_file_del_on_pool_cleanup)
-            baton->name = apr_pstrdup(result_pool, unique_name_apr);
+            baton->fname_apr = apr_pstrdup(result_pool, unique_name_apr);
 
           if (file)
             *file = try_file;
@@ -786,7 +788,7 @@ svn_io_copy_file(const char *src,
   return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
-/* Wrapper for apr_file_perms_set(). */
+/* Wrapper for apr_file_perms_set(), taking a UTF8-encoded filename. */
 static svn_error_t *
 file_perms_set(const char *fname, apr_fileperms_t perms,
                apr_pool_t *pool)
@@ -3665,7 +3667,7 @@ temp_file_create(apr_file_t **new_file,
 #endif
 }
 
-/* Wrapper for apr_file_name_get(). */
+/* Wrapper for apr_file_name_get(), passing out a UTF8-encoded filename. */
 svn_error_t *
 svn_io_file_name_get(const char **filename,
                      apr_file_t *file,
@@ -3718,7 +3720,7 @@ svn_io_open_unique_file3(apr_file_t **file,
       case svn_io_file_del_on_pool_cleanup:
         baton = apr_palloc(result_pool, sizeof(*baton));
         baton->pool = result_pool;
-        baton->name = NULL;
+        baton->fname_apr = NULL;
 
         /* Because cleanups are run LIFO, we need to make sure to register
            our cleanup before the apr_file_close cleanup:
@@ -3763,7 +3765,7 @@ svn_io_open_unique_file3(apr_file_t **file,
     *unique_path = tempname; /* Was allocated in result_pool */
 
   if (baton)
-    SVN_ERR(cstring_from_utf8(&baton->name, tempname, result_pool));
+    SVN_ERR(cstring_from_utf8(&baton->fname_apr, tempname, result_pool));
 
   return SVN_NO_ERROR;
 }
