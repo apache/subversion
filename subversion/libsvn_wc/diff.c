@@ -58,8 +58,6 @@
 #include "wc.h"
 #include "props.h"
 #include "adm_files.h"
-#include "lock.h"
-#include "entries.h"
 #include "translate.h"
 
 #include "svn_private_config.h"

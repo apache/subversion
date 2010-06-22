@@ -31,9 +31,6 @@
 #include "svn_path.h"
 
 #include "wc.h"
-#include "lock.h"
-#include "entries.h"
-#include "adm_files.h"
 
 #include "svn_private_config.h"
 

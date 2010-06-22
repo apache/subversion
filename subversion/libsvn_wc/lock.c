@@ -36,7 +36,6 @@
 #include "lock.h"
 #include "props.h"
 #include "log.h"
-#include "entries.h"
 #include "wc_db.h"
 
 #include "svn_private_config.h"

@@ -37,10 +37,8 @@
 #include "log.h"
 #include "workqueue.h"
 #include "adm_files.h"
-#include "entries.h"
 #include "props.h"
 #include "translate.h"
-#include "lock.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
