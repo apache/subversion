@@ -1052,8 +1052,8 @@ EOE
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
       access.set_changelist(path, "456", nil, notify_collector)
     end
-    assert_equal([[File.expand_path(path), nil],
-                  [File.expand_path(path), nil]],
+    assert_equal([[File.expand_path(path), Svn::Wc::NOTIFY_CHANGELIST_CLEAR],
+                  [File.expand_path(path), Svn::Wc::NOTIFY_CHANGELIST_SET]],
                  notifies.collect {|notify| [notify.path, notify.action]})
 
     notifies = []
