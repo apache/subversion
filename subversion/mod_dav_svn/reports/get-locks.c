@@ -187,7 +187,6 @@ dav_svn__get_locks_report(const dav_resource *resource,
   apr_hash_t *locks;
   dav_svn__authz_read_baton arb;
   svn_depth_t depth = svn_depth_unknown;
-  apr_pool_t *pool = resource->pool;
   apr_xml_attr *this_attr;
 
   /* The request URI should be a public one representing an fs path. */
