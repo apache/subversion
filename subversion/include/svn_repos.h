@@ -1954,7 +1954,30 @@ svn_repos_fs_unlock(svn_repos_t *repos,
  * authz_read_func and @a authz_read_baton to "screen" all returned
  * locks.  That is: do not return any locks on any paths that are
  * unreadable in HEAD, just silently omit them.
+ *
+ * @depth limits the returned locks to those associated with paths
+ * within the specified depth of @path, and must be one of the
+ * following values:  #svn_depth_empty, #svn_depth_files,
+ * #svn_depth_immediates, or #svn_depth_infinity.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_repos_fs_get_locks2(apr_hash_t **locks,
+                        svn_repos_t *repos,
+                        const char *path,
+                        svn_depth_t depth,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool);
+
+/** 
+ * Similar to svn_repos_fs_get_locks2(), but with @a depth always
+ * passed as svn_depth_infinity.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_get_locks(apr_hash_t **locks,
                        svn_repos_t *repos,

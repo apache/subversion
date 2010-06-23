@@ -230,6 +230,7 @@ typedef struct svn_ra__vtable_t {
   svn_error_t *(*get_locks)(svn_ra_session_t *session,
                             apr_hash_t **locks,
                             const char *path,
+                            svn_depth_t depth,
                             apr_pool_t *pool);
   svn_error_t *(*replay)(svn_ra_session_t *session,
                          svn_revnum_t revision,

@@ -1689,6 +1689,11 @@ svn_ra_get_lock(svn_ra_session_t *session,
  * Set @a *locks to a hashtable which represents all locks on or
  * below @a path.
  *
+ * @depth limits the returned locks to those associated with paths
+ * within the specified depth of @path, and must be one of the
+ * following values:  #svn_depth_empty, #svn_depth_files,
+ * #svn_depth_immediates, or #svn_depth_infinity.
+ *
  * The hashtable maps (const char *) absolute fs paths to (const
  * svn_lock_t *) structures.  The hashtable -- and all keys and
  * values -- are allocated in @a pool.
@@ -1700,8 +1705,23 @@ svn_ra_get_lock(svn_ra_session_t *session,
  * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
  * returned.
  *
- * @since New in 1.2.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_ra_get_locks2(svn_ra_session_t *session,
+                  apr_hash_t **locks,
+                  const char *path,
+                  svn_depth_t depth,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_locks2(), but with @a depth always passed as
+ * #svn_depth_infinity.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_locks(svn_ra_session_t *session,
                  apr_hash_t **locks,

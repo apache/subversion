@@ -1022,6 +1022,7 @@ svn_error_t *
 svn_ra_neon__get_locks(svn_ra_session_t *session,
                        apr_hash_t **locks,
                        const char *path,
+                       svn_depth_t depth,
                        apr_pool_t *pool);
 
 /*

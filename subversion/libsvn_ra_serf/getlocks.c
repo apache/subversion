@@ -76,6 +76,10 @@ typedef struct {
 typedef struct {
   apr_pool_t *pool;
 
+  /* target and requested depth of the operation. */
+  const char *path; 
+  svn_depth_t requested_depth;
+
   /* return hash */
   apr_hash_t *hash;
 
@@ -180,8 +184,32 @@ end_getlocks(svn_ra_serf__xml_parser_t *parser,
   else if (state == LOCK &&
            strcmp(name.name, "lock") == 0)
     {
-      apr_hash_set(lock_ctx->hash, info->lock->path, APR_HASH_KEY_STRING,
-                   info->lock);
+      /* Filter out unwanted paths.  Since Subversion only allows
+         locks on files, we can treat depth=immediates the same as
+         depth=files for filtering purposes.  Meaning, we'll keep
+         this lock if:
+
+         a) its path is the very path we queried, or
+         b) we've asked for a fully recursive answer, or
+         c) we've asked for depth=files or depth=immediates, and this
+            lock is on an immediate child of our query path.
+      */
+      if ((strcmp(lock_ctx->path, info->lock->path) == 0)
+          || (lock_ctx->requested_depth == svn_depth_infinity))
+        {
+          apr_hash_set(lock_ctx->hash, info->lock->path,
+                       APR_HASH_KEY_STRING, info->lock);
+        }
+      else if ((lock_ctx->requested_depth == svn_depth_files) ||
+               (lock_ctx->requested_depth == svn_depth_immediates))
+        {
+          const char *rel_uri = svn_uri_is_child(lock_ctx->path,
+                                                 info->lock->path,
+                                                 info->pool);
+          if (rel_uri && (svn_path_component_count(rel_uri) == 1))
+            apr_hash_set(lock_ctx->hash, info->lock->path,
+                         APR_HASH_KEY_STRING, info->lock);
+        }
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -272,13 +300,14 @@ create_getlocks_body(void *baton,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
+  lock_context_t *lock_ctx = baton;
   serf_bucket_t *buckets;
 
   buckets = serf_bucket_aggregate_create(alloc);
 
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "S:get-locks-report",
-                                    "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+  svn_ra_serf__add_open_tag_buckets(
+    buckets, alloc, "S:get-locks-report", "xmlns:S", SVN_XML_NAMESPACE,
+    "depth", svn_depth_to_word(lock_ctx->requested_depth), NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "S:get-locks-report");
 
   return buckets;
@@ -288,21 +317,26 @@ svn_error_t *
 svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        apr_hash_t **locks,
                        const char *path,
+                       svn_depth_t depth,
                        apr_pool_t *pool)
 {
   lock_context_t *lock_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *req_url;
+  const char *req_url, *rel_path;
   int status_code;
+
+  req_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
+  SVN_ERR(svn_ra_serf__get_relative_path(&rel_path, req_url, session,
+                                         NULL, pool));
 
   lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
   lock_ctx->pool = pool;
+  lock_ctx->path = apr_pstrcat(pool, "/", rel_path, NULL);
+  lock_ctx->requested_depth = depth;
   lock_ctx->hash = apr_hash_make(pool);
   lock_ctx->done = FALSE;
-
-  req_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

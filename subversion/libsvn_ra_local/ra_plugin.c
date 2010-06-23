@@ -1323,6 +1323,7 @@ static svn_error_t *
 svn_ra_local__get_locks(svn_ra_session_t *session,
                         apr_hash_t **locks,
                         const char *path,
+                        svn_depth_t depth,
                         apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
@@ -1330,8 +1331,8 @@ svn_ra_local__get_locks(svn_ra_session_t *session,
 
   /* Kinda silly to call the repos wrapper, since we have no authz
      func to give it.  But heck, why not. */
-  return svn_repos_fs_get_locks(locks, sess->repos, abs_path,
-                                NULL, NULL, pool);
+  return svn_repos_fs_get_locks2(locks, sess->repos, abs_path, depth,
+                                 NULL, NULL, pool);
 }
 
 

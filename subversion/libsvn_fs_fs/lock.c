@@ -901,20 +901,82 @@ svn_fs_fs__get_lock(svn_lock_t **lock_p,
 }
 
 
+/* Baton for get_locks_filter_func(). */
+typedef struct
+{
+  const char *path;
+  svn_depth_t requested_depth;
+  svn_fs_get_locks_callback_t get_locks_func;
+  void *get_locks_baton;
+
+} get_locks_filter_baton_t;
+
+
+/* A wrapper for the GET_LOCKS_FUNC passed to svn_fs_fs__get_locks()
+   which filters out locks on paths that aren't within
+   BATON->requested_depth of BATON->path before called
+   BATON->get_locks_func() with BATON->get_locks_baton.
+
+   NOTE: See issue #3660 for details about how the FSFS lock
+   management code is inconsistent.  Until that inconsistency is
+   resolved, we take this filtering approach rather than honoring
+   depth requests closer to the crawling code.  In other words, once
+   we decide how to resolve issue #3660, there might be a more
+   performant way to honor the depth passed to svn_fs_fs__get_locks().  */
+static svn_error_t *
+get_locks_filter_func(void *baton,
+                      svn_lock_t *lock,
+                      apr_pool_t *pool)
+{
+  get_locks_filter_baton_t *b = baton;
+
+  /* Filter out unwanted paths.  Since Subversion only allows
+     locks on files, we can treat depth=immediates the same as
+     depth=files for filtering purposes.  Meaning, we'll keep
+     this lock if:
+
+     a) its path is the very path we queried, or
+     b) we've asked for a fully recursive answer, or
+     c) we've asked for depth=files or depth=immediates, and this
+        lock is on an immediate child of our query path.
+  */
+  if ((strcmp(b->path, lock->path) == 0) 
+      || (b->requested_depth == svn_depth_infinity))
+    {
+      SVN_ERR(b->get_locks_func(b->get_locks_baton, lock, pool));
+    }
+  else if ((b->requested_depth == svn_depth_files) ||
+           (b->requested_depth == svn_depth_immediates))
+    {
+      const char *rel_uri = svn_uri_is_child(b->path, lock->path, pool);
+      if (rel_uri && (svn_path_component_count(rel_uri) == 1))
+        SVN_ERR(b->get_locks_func(b->get_locks_baton, lock, pool));
+    }
+
+  return SVN_NO_ERROR; 
+}
+
 svn_error_t *
 svn_fs_fs__get_locks(svn_fs_t *fs,
                      const char *path,
+                     svn_depth_t depth,
                      svn_fs_get_locks_callback_t get_locks_func,
                      void *get_locks_baton,
                      apr_pool_t *pool)
 {
   const char *digest_path;
+  get_locks_filter_baton_t glfb;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   path = svn_fs__canonicalize_abspath(path, pool);
 
+  glfb.path = path;
+  glfb.requested_depth = depth; 
+  glfb.get_locks_func = get_locks_func;
+  glfb.get_locks_baton = get_locks_baton;
+
   /* Get the top digest path in our tree of interest, and then walk it. */
   digest_path = digest_path_from_path(fs, path, pool);
-  return walk_digest_files(fs, digest_path, get_locks_func,
-                           get_locks_baton, FALSE, pool);
+  return walk_digest_files(fs, digest_path, get_locks_filter_func, &glfb,
+                           FALSE, pool);
 }

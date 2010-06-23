@@ -396,6 +396,7 @@ svn_fs_base__get_lock(svn_lock_t **lock,
 struct locks_get_args
 {
   const char *path;
+  svn_depth_t depth;
   svn_fs_get_locks_callback_t get_locks_func;
   void *get_locks_baton;
 };
@@ -405,7 +406,7 @@ static svn_error_t *
 txn_body_get_locks(void *baton, trail_t *trail)
 {
   struct locks_get_args *args = baton;
-  return svn_fs_bdb__locks_get(trail->fs, args->path,
+  return svn_fs_bdb__locks_get(trail->fs, args->path, args->depth,
                                args->get_locks_func, args->get_locks_baton,
                                trail, trail->pool);
 }
@@ -414,6 +415,7 @@ txn_body_get_locks(void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_base__get_locks(svn_fs_t *fs,
                        const char *path,
+                       svn_depth_t depth,
                        svn_fs_get_locks_callback_t get_locks_func,
                        void *get_locks_baton,
                        apr_pool_t *pool)
@@ -422,6 +424,7 @@ svn_fs_base__get_locks(svn_fs_t *fs,
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   args.path = svn_fs__canonicalize_abspath(path, pool);
+  args.depth = depth;
   args.get_locks_func = get_locks_func;
   args.get_locks_baton = get_locks_baton;
   return svn_fs_base__retry_txn(fs, txn_body_get_locks, &args, FALSE, pool);
@@ -490,7 +493,8 @@ svn_fs_base__allow_locked_operation(const char *path,
   if (recurse)
     {
       /* Discover all locks at or below the path. */
-      SVN_ERR(svn_fs_bdb__locks_get(trail->fs, path, get_locks_callback,
+      SVN_ERR(svn_fs_bdb__locks_get(trail->fs, path, svn_depth_infinity,
+                                    get_locks_callback,
                                     trail->fs, trail, pool));
     }
   else

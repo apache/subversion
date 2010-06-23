@@ -245,7 +245,7 @@ svn_client_list2(const char *path_or_url,
     {
       /* IMPORTANT: If locks are stored in a more temporary pool, we need
          to fix store_dirent below to duplicate the locks. */
-      err = svn_ra_get_locks(ra_session, &locks, "", pool);
+      err = svn_ra_get_locks2(ra_session, &locks, "", depth, pool);
 
       if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
         {
