@@ -2126,8 +2126,8 @@ typedef svn_error_t *(*svn_fs_get_locks_callback_t)(void *baton,
  * get_locks_func / @a get_locks_baton.  Use @a pool for necessary
  * allocations.
  *
- * @depth limits the reported locks to those associated with paths
- * within the specified depth of @path, and must be one of the
+ * @a depth limits the reported locks to those associated with paths
+ * within the specified depth of @a path, and must be one of the
  * following values:  #svn_depth_empty, #svn_depth_files,
  * #svn_depth_immediates, or #svn_depth_infinity.
  *
