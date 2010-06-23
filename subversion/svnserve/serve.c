@@ -2572,21 +2572,23 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   const char *path;
   const char *full_path;
+  const char *depth_word;
+  svn_depth_t depth;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c?w", &path, &depth_word));
 
-  full_path = svn_uri_join(b->fs_path->data, svn_uri_canonicalize(path,
-                                                                  pool),
-                           pool);
+  depth = depth_word ? svn_depth_from_word(depth_word) : svn_depth_infinity;
+  full_path = svn_uri_join(b->fs_path->data,
+                           svn_uri_canonicalize(path, pool), pool);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
   SVN_ERR(log_command(b, conn, pool, "get-locks %s",
                       svn_path_uri_encode(full_path, pool)));
-  SVN_CMD_ERR(svn_repos_fs_get_locks(&locks, b->repos, full_path,
-                                     authz_check_access_cb_func(b), b, pool));
+  SVN_CMD_ERR(svn_repos_fs_get_locks2(&locks, b->repos, full_path, depth,
+                                      authz_check_access_cb_func(b), b, pool));
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))

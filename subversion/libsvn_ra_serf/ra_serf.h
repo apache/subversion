@@ -1347,6 +1347,7 @@ svn_error_t *
 svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        apr_hash_t **locks,
                        const char *path,
+                       svn_depth_t depth,
                        apr_pool_t *pool);
 
 svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
