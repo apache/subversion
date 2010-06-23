@@ -1977,7 +1977,7 @@ svn_wc_mark_missing_deleted(const char *path,
                             svn_wc_adm_access_t *parent,
                             apr_pool_t *pool)
 {
-#if SINGLE_DB
+#ifdef SINGLE_DB
   /* With a single DB a node will never be missing */
   return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                            _("Unexpectedly found '%s': "
