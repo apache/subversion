@@ -506,10 +506,11 @@ assemble_status(svn_wc_status3_t **status,
      explicitly for tree conflicts to allow our users to ignore this detail */
   if (!conflicted)
     {
-      svn_wc_conflict_description2_t *tree_conflict;
+      const svn_wc_conflict_description2_t *tree_conflict;
 
-      SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, db, local_abspath,
-                                              scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict,
+                                               db, local_abspath,
+                                               scratch_pool, scratch_pool));
 
       conflicted = (tree_conflict != NULL);
     }
