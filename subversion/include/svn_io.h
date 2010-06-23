@@ -1893,6 +1893,16 @@ svn_io_dir_read(apr_finfo_t *finfo,
                 apr_dir_t *thedir,
                 apr_pool_t *pool);
 
+/** Wrapper for apr_file_name_get().  @a *filename is utf8-encoded.
+ *
+ * @note The file name may be NULL.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_name_get(const char **filename,
+                     apr_file_t *file,
+                     apr_pool_t *pool);
+
 
 
 /** Version/format files.
@@ -1920,14 +1930,6 @@ svn_error_t *
 svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
-
-/** Wrapper for apr_file_name_get().
- *
- * @since New in 1.7. */
-svn_error_t *
-svn_io_file_name_get(const char **filename,
-                     apr_file_t *file,
-                     apr_pool_t *pool);
 
 /** @} */
 
