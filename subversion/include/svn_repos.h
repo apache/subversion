@@ -1959,8 +1959,8 @@ svn_repos_fs_unlock(svn_repos_t *repos,
  * locks.  That is: do not return any locks on any paths that are
  * unreadable in HEAD, just silently omit them.
  *
- * @depth limits the returned locks to those associated with paths
- * within the specified depth of @path, and must be one of the
+ * @a depth limits the returned locks to those associated with paths
+ * within the specified depth of @a path, and must be one of the
  * following values:  #svn_depth_empty, #svn_depth_files,
  * #svn_depth_immediates, or #svn_depth_infinity.
  *
