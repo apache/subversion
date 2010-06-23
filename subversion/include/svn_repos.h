@@ -1900,7 +1900,7 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
 
 /** @defgroup svn_repos_fs_locks Repository lock wrappers
  * @{
- * @since New in 1.2. */
+ */
 
 /** Like svn_fs_lock(), but invoke the @a repos's pre- and
  * post-lock hooks before and after the locking action.  Use @a pool
@@ -1915,6 +1915,8 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * The pre-lock hook may cause a different token to be used for the
  * lock, instead of @a token; see the pre-lock-hook documentation for
  * more.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *
 svn_repos_fs_lock(svn_lock_t **lock,
@@ -1938,6 +1940,8 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * hook, return the original error wrapped with
  * SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the unlock succeeded anyway.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *
 svn_repos_fs_unlock(svn_repos_t *repos,
@@ -1975,6 +1979,7 @@ svn_repos_fs_get_locks2(apr_hash_t **locks,
  * Similar to svn_repos_fs_get_locks2(), but with @a depth always
  * passed as svn_depth_infinity.
  *
+ * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
