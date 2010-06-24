@@ -273,9 +273,6 @@ svn_client_status5(svn_revnum_t *result_rev,
   if (result_rev)
     *result_rev = SVN_INVALID_REVNUM;
 
-  if (depth == svn_depth_unknown)
-    depth = svn_depth_infinity;
-
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
@@ -470,7 +467,11 @@ svn_client_status5(svn_revnum_t *result_rev,
           rb.set_locks_baton = set_locks_baton;
           rb.ctx = ctx;
           rb.pool = pool;
-          rb.depth = depth;
+
+          if (depth == svn_depth_unknown)
+            rb.depth = svn_depth_infinity;
+          else
+            rb.depth = depth;
 
           SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                         SVN_RA_CAPABILITY_DEPTH, pool));
