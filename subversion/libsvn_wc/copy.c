@@ -39,6 +39,7 @@
 #include "adm_files.h"
 #include "props.h"
 #include "translate.h"
+#include "entries.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"

@@ -46,6 +46,7 @@
 
 #include "wc.h"
 #include "props.h"
+#include "entries.h"
 #include "log.h"
 #include "wc_db.h"
 
