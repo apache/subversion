@@ -121,6 +121,7 @@ typedef struct report_baton_t {
   /* The common ancestor URL of all paths included in the report. */
   char *ancestor;
   void *set_locks_baton;
+  svn_depth_t depth;
   svn_client_ctx_t *ctx;
   /* Pool to store locks in. */
   apr_pool_t *pool;
@@ -161,14 +162,17 @@ reporter_link_path(void *report_baton, const char *path, const char *url,
   const char *ancestor;
   apr_size_t len;
 
-  ancestor = svn_dirent_get_longest_ancestor(url, rb->ancestor, pool);
+  ancestor = svn_uri_get_longest_ancestor(url, rb->ancestor, pool);
 
   /* If we got a shorter ancestor, truncate our current ancestor.
      Note that svn_dirent_get_longest_ancestor will allocate its return
      value even if it identical to one of its arguments. */
   len = strlen(ancestor);
   if (len < strlen(rb->ancestor))
-    rb->ancestor[len] = '\0';
+    {
+      rb->ancestor[len] = '\0';
+      rb->depth = svn_depth_infinity;
+    }
 
   return rb->wrapped_reporter->link_path(rb->wrapped_report_baton, path, url,
                                          revision, depth, start_empty,
@@ -195,7 +199,7 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
   /* The locks need to live throughout the edit.  Note that if the
      server doesn't support lock discovery, we'll just not do locky
      stuff. */
-  err = svn_ra_get_locks2(ras, &locks, "", svn_depth_infinity, rb->pool);
+  err = svn_ra_get_locks2(ras, &locks, "", rb->depth, rb->pool);
   if (err && ((err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
               || (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)))
     {
@@ -268,6 +272,9 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   if (result_rev)
     *result_rev = SVN_INVALID_REVNUM;
+
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
@@ -463,6 +470,7 @@ svn_client_status5(svn_revnum_t *result_rev,
           rb.set_locks_baton = set_locks_baton;
           rb.ctx = ctx;
           rb.pool = pool;
+          rb.depth = depth;
 
           SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                         SVN_RA_CAPABILITY_DEPTH, pool));
