@@ -5038,8 +5038,8 @@ close_file(void *file_baton,
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
 
-  /* Skip notifications about files which were already notified for
-     another reason */
+  /* Send a notification to the callback function.  (Skip notifications
+     about files which were already notified for another reason.) */
   if (eb->notify_func && !fb->already_notified)
     {
       const svn_string_t *mime_type;
