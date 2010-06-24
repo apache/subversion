@@ -2225,7 +2225,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
                                            abs_path, pool));
   abs_path = apr_pstrcat(pool, "/", abs_path, NULL);
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-locks", "c?w", path,
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-locks", "c(w)", path,
                                svn_depth_to_word(depth)));
 
   /* Servers before 1.2 doesn't support locking.  Check this here. */
