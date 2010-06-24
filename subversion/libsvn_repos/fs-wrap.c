@@ -298,7 +298,8 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
         SVN_ERR(svn_repos__hooks_pre_revprop_change(repos, rev, author, name,
                                                     new_value, action, pool));
 
-      SVN_ERR(svn_fs_change_rev_prop(repos->fs, rev, name, new_value, pool));
+      SVN_ERR(svn_fs_change_rev_prop2(repos->fs, rev, name, NULL, 
+                                      new_value, pool));
 
       if (use_post_revprop_change_hook)
         SVN_ERR(svn_repos__hooks_post_revprop_change(repos, rev, author,  name,
