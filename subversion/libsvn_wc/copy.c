@@ -135,10 +135,7 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
   svn_skel_t *work_items = NULL;
   const char *dir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
   const char *tmpdir_abspath;
-#ifndef SVN_EXPERIMENTAL_PRISTINE
   svn_stream_t *src_pristine;
-  svn_wc__db_status_t src_status; 
-#endif
   const char *tmp_dst_abspath;
   svn_node_kind_t kind;
 
@@ -169,44 +166,95 @@ copy_versioned_file(svn_wc_context_t *wc_ctx,
                                               scratch_pool));
   }
 
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-  /* This goes away when the pristine store is enabled; the copy
-     shares the same pristine as the source so nothing needs to be
-     copied. */
-  SVN_ERR(svn_wc__db_read_info(&src_status,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL,
-                               wc_ctx->db, src_abspath,
-                               scratch_pool, scratch_pool));
-  if (src_status == svn_wc__db_status_absent
-      || src_status == svn_wc__db_status_excluded
-      || src_status == svn_wc__db_status_not_present)
-    src_pristine = NULL;
-  else
-    SVN_ERR(svn_wc__get_pristine_contents(&src_pristine, wc_ctx->db,
-                                          src_abspath,
-                                          scratch_pool, scratch_pool));
-
-  if (src_pristine)
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  /* This goes away when we centralise, but until then we might need
+     to do a cross-db pristine copy. */
+  if (strcmp(svn_dirent_dirname(src_abspath, scratch_pool),
+             svn_dirent_dirname(dst_abspath, scratch_pool)))
     {
-      svn_skel_t *work_item;
-      svn_stream_t *tmp_pristine;
-      const char *tmp_pristine_abspath, *dst_pristine_abspath;
+      const svn_checksum_t *checksum;
 
-      SVN_ERR(svn_stream_open_unique(&tmp_pristine, &tmp_pristine_abspath,
-                                     tmpdir_abspath, svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-      SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
-                               cancel_func, cancel_baton, scratch_pool));
-      SVN_ERR(svn_wc__text_base_path(&dst_pristine_abspath, wc_ctx->db,
-                                     dst_abspath, scratch_pool));
-      SVN_ERR(svn_wc__loggy_move(&work_item, wc_ctx->db, dir_abspath,
-                                 tmp_pristine_abspath, dst_pristine_abspath,
-                                 scratch_pool));
-      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   &checksum,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   wc_ctx->db, src_abspath,
+                                   scratch_pool, scratch_pool));
+      if (checksum)
+        {
+          svn_stream_t *tmp_pristine;
+          const char *tmp_pristine_abspath;
+          const svn_checksum_t *sha1_checksum, *md5_checksum;
+
+          if (checksum->kind == svn_checksum_md5)
+            {
+              md5_checksum = checksum;
+              SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, wc_ctx->db,
+                                                   src_abspath, checksum,
+                                                   scratch_pool, scratch_pool));
+            }
+          else
+            {
+              sha1_checksum = checksum;
+              SVN_ERR(svn_wc__db_pristine_get_md5(&md5_checksum, wc_ctx->db,
+                                                  src_abspath, checksum,
+                                                  scratch_pool, scratch_pool));
+            }
+          SVN_ERR(svn_wc__db_pristine_read(&src_pristine, wc_ctx->db,
+                                           src_abspath, sha1_checksum,
+                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_open_unique(&tmp_pristine, &tmp_pristine_abspath,
+                                         tmpdir_abspath, svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
+                                   cancel_func, cancel_baton, scratch_pool));
+          SVN_ERR(svn_wc__db_pristine_install(wc_ctx->db, tmp_pristine_abspath,
+                                              sha1_checksum, md5_checksum,
+                                              scratch_pool));
+        }
     }
+#else
+  {
+    /* This goes away when the pristine store is enabled, but until
+       then we may need to copy the text-base. */
+    svn_wc__db_status_t src_status; 
+
+    SVN_ERR(svn_wc__db_read_info(&src_status,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL,
+                                 wc_ctx->db, src_abspath,
+                                 scratch_pool, scratch_pool));
+    if (src_status == svn_wc__db_status_absent
+        || src_status == svn_wc__db_status_excluded
+        || src_status == svn_wc__db_status_not_present)
+      src_pristine = NULL;
+    else
+      SVN_ERR(svn_wc__get_pristine_contents(&src_pristine, wc_ctx->db,
+                                            src_abspath,
+                                            scratch_pool, scratch_pool));
+
+    if (src_pristine)
+      {
+        svn_skel_t *work_item;
+        svn_stream_t *tmp_pristine;
+        const char *tmp_pristine_abspath, *dst_pristine_abspath;
+
+        SVN_ERR(svn_stream_open_unique(&tmp_pristine, &tmp_pristine_abspath,
+                                       tmpdir_abspath, svn_io_file_del_none,
+                                       scratch_pool, scratch_pool));
+        SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
+                                 cancel_func, cancel_baton, scratch_pool));
+        SVN_ERR(svn_wc__text_base_path(&dst_pristine_abspath, wc_ctx->db,
+                                       dst_abspath, scratch_pool));
+        SVN_ERR(svn_wc__loggy_move(&work_item, wc_ctx->db, dir_abspath,
+                                   tmp_pristine_abspath, dst_pristine_abspath,
+                                   scratch_pool));
+        work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+      }
+  }
 #endif
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
