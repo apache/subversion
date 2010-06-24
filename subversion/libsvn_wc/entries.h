@@ -144,6 +144,24 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                   apr_pool_t *scratch_pool);
 
 
+/** Similar to svn_wc__get_entry() and svn_wc__entry_versioned().
+ *
+ * This function allows callers in libsvn_client to directly fetch entry data
+ * without having to open up an adm_access baton.  Its error and return
+ * semantics are the same as svn_wc__entry_versioned(), and parameters are the
+ * same as svn_wc__get_entry() (defined in libsvn_wc/entries.h).
+ */
+svn_error_t *
+svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            svn_node_kind_t kind,
+                            svn_boolean_t show_hidden,
+                            svn_boolean_t need_parent_stub,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /* Is ENTRY in a 'hidden' state in the sense of the 'show_hidden'
  * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
 svn_error_t *
