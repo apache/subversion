@@ -2154,16 +2154,22 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
   if (SVN_IS_VALID_REVNUM(start_rev)
       && SVN_IS_VALID_REVNUM(end_rev)
       && (end_rev > start_rev))
-    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             "Get-location-segments end revision must not be "
-                             "younger than start revision");
+    {
+      err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                              "Get-location-segments end revision must not be "
+                              "younger than start revision");
+      return log_fail_and_flush(err, b, conn, pool);
+    }
 
   if (SVN_IS_VALID_REVNUM(peg_revision)
       && SVN_IS_VALID_REVNUM(start_rev)
       && (start_rev > peg_revision))
-    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             "Get-location-segments start revision must not "
-                             "be younger than peg revision");
+    {
+      err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                              "Get-location-segments start revision must not "
+                              "be younger than peg revision");
+      return log_fail_and_flush(err, b, conn, pool);
+    }
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_ERR(log_command(baton, conn, pool, "%s",
