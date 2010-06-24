@@ -195,7 +195,7 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
   /* The locks need to live throughout the edit.  Note that if the
      server doesn't support lock discovery, we'll just not do locky
      stuff. */
-  err = svn_ra_get_locks(ras, &locks, "", rb->pool);
+  err = svn_ra_get_locks2(ras, &locks, "", svn_depth_infinity, rb->pool);
   if (err && ((err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
               || (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)))
     {
