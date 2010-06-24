@@ -542,13 +542,12 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
             POP_AND_RETURN_NULL;
         }
 
-      const svn_wc_entry_t *entry = NULL;
-
       if (status->versioned)
         {
           const char *conflict_new, *conflict_old, *conflict_wrk;
           const char *copyfrom_url;
           svn_revnum_t copyfrom_rev;
+          svn_boolean_t is_copy_target;
 
           /* This call returns SVN_ERR_ENTRY_NOT_FOUND for some hidden
              cases, which we can just ignore here as hidden nodes
@@ -584,15 +583,17 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
 
           SVN_JNI_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url,
                                                      &copyfrom_rev,
-                                                     NULL,
+                                                     &is_copy_target,
                                                      wc_ctx, local_abspath,
                                                      pool, pool), NULL);
 
-          jURLCopiedFrom = JNIUtil::makeJString(entry->copyfrom_url);
+          jURLCopiedFrom = JNIUtil::makeJString(is_copy_target ? copyfrom_url
+                                                               : NULL);
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NULL;
 
-          jRevisionCopiedFrom = entry->copyfrom_rev;
+          jRevisionCopiedFrom = is_copy_target ? copyfrom_rev
+                                               : SVN_INVALID_REVNUM;
         }
     }
 

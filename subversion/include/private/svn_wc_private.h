@@ -607,7 +607,8 @@ svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
 /**
  * A hack to remove the last entry from libsvn_client.  This simply fetches an
  * entry, and puts the needed bits into the output parameters, allocated in
- * @a result_pool.
+ * @a result_pool. All output arguments can be NULL to indicate that the
+ * caller is not interested in the specific result.
  *
  * @a local_abspath and @a wc_ctx are what you think they are.
  */
