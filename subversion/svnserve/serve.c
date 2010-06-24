@@ -175,6 +175,21 @@ error_create_and_log(apr_status_t apr_err, svn_error_t *child,
   return err;
 }
 
+/* Log a failure ERR, transmit ERR back to the client (as part of a
+   "failure" notification), consume ERR, and flush the connection. */
+static svn_error_t *
+log_fail_and_flush(svn_error_t *err, server_baton_t *server,
+                   svn_ra_svn_conn_t *conn, apr_pool_t *pool)
+{
+  svn_error_t *io_err;
+
+  log_server_error(err, server, conn, pool);
+  io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
+  svn_error_clear(err);
+  SVN_ERR(io_err);
+  return svn_ra_svn_flush(conn, pool);
+}
+
 /* Log a client command. */
 static svn_error_t *log_command(server_baton_t *b,
                                 svn_ra_svn_conn_t *conn,
@@ -2576,10 +2591,21 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_depth_t depth;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
+  svn_error_t *err;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c?(?w)", &path, &depth_word));
 
   depth = depth_word ? svn_depth_from_word(depth_word) : svn_depth_infinity;
+  if ((depth != svn_depth_empty) &&
+      (depth != svn_depth_files) &&
+      (depth != svn_depth_immediates) &&
+      (depth != svn_depth_infinity))
+    {
+      err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "Invalid 'depth' specified in get-locks request");
+      return log_fail_and_flush(err, b, conn, pool);
+    }
+
   full_path = svn_uri_join(b->fs_path->data,
                            svn_uri_canonicalize(path, pool), pool);
 
