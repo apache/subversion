@@ -50,7 +50,6 @@
 #include "wc.h"
 #include "log.h"
 #include "adm_files.h"
-#include "adm_ops.h"
 #include "entries.h"
 #include "lock.h"
 #include "translate.h"
@@ -5080,6 +5079,369 @@ close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
+/* Helper for svn_wc__do_update_cleanup().
+ *
+ * Tweak the information for LOCAL_ABSPATH in DB.  If NEW_REPOS_RELPATH is
+ * non-NULL update the entry to the new url specified by NEW_REPOS_RELPATH,
+ * NEW_REPOS_ROOT_URL, NEW_REPOS_UUID..  If NEW_REV is valid, make this the
+ * node's working revision.
+ *
+ * If ALLOW_REMOVAL is TRUE the tweaks might cause the node for
+ * LOCAL_ABSPATH to be removed from the WC; if ALLOW_REMOVAL is FALSE this
+ * will not happen.
+ */
+static svn_error_t *
+tweak_node(svn_wc__db_t *db,
+           const char *local_abspath,
+           svn_wc__db_kind_t kind,
+           svn_boolean_t parent_stub,
+           const char *new_repos_relpath,
+           const char *new_repos_root_url,
+           const char *new_repos_uuid,
+           svn_revnum_t new_rev,
+           svn_boolean_t allow_removal,
+           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t db_kind;
+  svn_revnum_t revision;
+  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  svn_boolean_t set_repos_relpath = FALSE;
+  svn_error_t *err;
+
+  err = svn_wc__db_base_get_info(&status, &db_kind, &revision,
+                                 &repos_relpath, &repos_root_url,
+                                 &repos_uuid, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, db, local_abspath,
+                                 scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      /* ### Tweaking should never be necessary for nodes that don't
+         ### have a base node, but we still get here from many tests */
+      svn_error_clear(err);
+      return SVN_NO_ERROR; /* No BASE_NODE -> Added node */
+    }
+  else
+    SVN_ERR(err);
+
+  SVN_ERR_ASSERT(db_kind == kind);
+
+  /* As long as this function is only called as a helper to
+     svn_wc__do_update_cleanup, then it's okay to remove any entry
+     under certain circumstances:
+
+     If the entry is still marked 'deleted', then the server did not
+     re-add it.  So it's really gone in this revision, thus we remove
+     the entry.
+
+     If the entry is still marked 'absent' and yet is not the same
+     revision as new_rev, then the server did not re-add it, nor
+     re-absent it, so we can remove the entry.
+
+     ### This function cannot always determine whether removal is
+     ### appropriate, hence the ALLOW_REMOVAL flag.  It's all a bit of a
+     ### mess. */
+  if (allow_removal
+      && (status == svn_wc__db_status_not_present
+          || (status == svn_wc__db_status_absent && revision != new_rev)))
+    {
+      return svn_error_return(
+                svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                scratch_pool));
+
+    }
+
+  if (new_repos_relpath != NULL)
+    {
+      if (!repos_relpath)
+        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                           &repos_uuid, db, local_abspath,
+                                           scratch_pool, scratch_pool));
+
+      if (strcmp(repos_relpath, new_repos_relpath))
+          set_repos_relpath = TRUE;
+    }
+
+  if (SVN_IS_VALID_REVNUM(new_rev) && new_rev == revision)
+    new_rev = SVN_INVALID_REVNUM;
+
+  if (SVN_IS_VALID_REVNUM(new_rev) || set_repos_relpath)
+    {
+      svn_boolean_t update_stub = 
+            (db_kind == svn_wc__db_kind_dir && parent_stub);
+
+      SVN_ERR(svn_wc__db_temp_op_set_rev_and_repos_relpath(db, local_abspath,
+                                                          new_rev,
+                                                          set_repos_relpath,
+                                                          new_repos_relpath,
+                                                          repos_root_url,
+                                                          repos_uuid,
+                                                          update_stub,
+                                                          scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* The main body of svn_wc__do_update_cleanup. */
+static svn_error_t *
+tweak_entries(svn_wc__db_t *db,
+              const char *dir_abspath,
+              const char *new_repos_relpath,
+              const char *new_repos_root_url,
+              const char *new_repos_uuid,
+              svn_revnum_t new_rev,
+              svn_wc_notify_func2_t notify_func,
+              void *notify_baton,
+              svn_depth_t depth,
+              apr_hash_t *exclude_paths,
+              apr_pool_t *pool)
+{
+  apr_pool_t *iterpool;
+  svn_wc_notify_t *notify;
+  const apr_array_header_t *children;
+  int i;
+
+  /* Skip an excluded path and its descendants. */
+  if (apr_hash_get(exclude_paths, dir_abspath, APR_HASH_KEY_STRING))
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(pool);
+
+  /* Tweak "this_dir" */
+  SVN_ERR(tweak_node(db, dir_abspath, svn_wc__db_kind_dir, FALSE,
+                     new_repos_relpath, new_repos_root_url, new_repos_uuid,
+                     new_rev, FALSE /* allow_removal */, iterpool));
+
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
+  /* Early out */
+  if (depth <= svn_depth_empty)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__db_base_get_children(&children, db, dir_abspath,
+                                       pool, iterpool));
+  for (i = 0; i < children->nelts; i++)
+    {
+      const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+      svn_wc__db_kind_t kind;
+      svn_wc__db_status_t status;
+
+      const char *child_repos_relpath = NULL;
+      svn_boolean_t excluded;
+
+      svn_pool_clear(iterpool);
+
+      /* Derive the new URL for the current (child) entry */
+      if (new_repos_relpath)
+        child_repos_relpath = svn_relpath_join(new_repos_relpath,
+                                               child_basename, iterpool);
+
+      child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
+      excluded = (apr_hash_get(exclude_paths, child_abspath,
+                               APR_HASH_KEY_STRING) != NULL);
+
+      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   db, child_abspath, iterpool, iterpool));
+
+      /* If a file, or deleted, excluded or absent dir, then tweak the
+         entry but don't recurse.
+
+         ### how does this translate into wc_db land? */
+      if (kind == svn_wc__db_kind_file
+            || status == svn_wc__db_status_not_present
+            || status == svn_wc__db_status_absent
+            || status == svn_wc__db_status_excluded)
+        {
+          if (excluded)
+            continue;
+
+          if (kind == svn_wc__db_kind_dir)
+            SVN_ERR(tweak_node(db, child_abspath, svn_wc__db_kind_dir, TRUE,
+                               child_repos_relpath, new_repos_root_url,
+                               new_repos_uuid, new_rev,
+                               TRUE /* allow_removal */, iterpool));
+          else
+            SVN_ERR(tweak_node(db, child_abspath, kind, FALSE,
+                               child_repos_relpath, new_repos_root_url,
+                               new_repos_uuid, new_rev,
+                               TRUE /* allow_removal */, iterpool));
+        }
+
+      /* If a directory and recursive... */
+      else if ((depth == svn_depth_infinity
+                || depth == svn_depth_immediates)
+               && (kind == svn_wc__db_kind_dir))
+        {
+          svn_depth_t depth_below_here = depth;
+
+          if (depth == svn_depth_immediates)
+            depth_below_here = svn_depth_empty;
+
+          /* If the directory is 'missing', remove it.  This is safe as
+             long as this function is only called as a helper to
+             svn_wc__do_update_cleanup, since the update will already have
+             restored any missing items that it didn't want to delete. */
+          if (svn_wc__adm_missing(db, child_abspath, iterpool))
+            {
+              if ( (status == svn_wc__db_status_added
+                    || status == svn_wc__db_status_obstructed_add)
+                  && !excluded)
+                {
+                  SVN_ERR(svn_wc__db_temp_op_remove_entry(db, child_abspath,
+                                                          iterpool));
+
+                  if (notify_func)
+                    {
+                      notify = svn_wc_create_notify(child_abspath,
+                                                    svn_wc_notify_delete,
+                                                    iterpool);
+
+                      if (kind == svn_wc__db_kind_dir)
+                        notify->kind = svn_node_dir;
+                      else if (kind == svn_wc__db_kind_file)
+                        notify->kind = svn_node_file;
+                      else
+                        notify->kind = svn_node_unknown;
+
+                      (* notify_func)(notify_baton, notify, iterpool);
+                    }
+                }
+              /* Else if missing item is schedule-add, do nothing. */
+            }
+
+          /* Not missing, deleted, or absent, so recurse. */
+          else
+            {
+              SVN_ERR(tweak_entries(db, child_abspath, child_repos_relpath,
+                                    new_repos_root_url, new_repos_uuid,
+                                    new_rev, notify_func, notify_baton,
+                                    depth_below_here,
+                                    exclude_paths, iterpool));
+            }
+        }
+    }
+
+  /* Cleanup */
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Modify the entry of working copy LOCAL_ABSPATH, presumably after an update
+   completes.   If LOCAL_ABSPATH doesn't exist, this routine does nothing.
+
+   Set the entry's 'url' and 'working revision' fields to BASE_URL and
+   NEW_REVISION.  If BASE_URL is null, the url field is untouched; if
+   NEW_REVISION in invalid, the working revision field is untouched.
+   The modifications are mutually exclusive.
+
+   If REPOS is non-NULL, set the repository root of the entry to REPOS, but
+   only if REPOS is an ancestor of the entries URL (after possibly modifying
+   it).  In addition to that requirement, if the LOCAL_ABSPATH refers to a
+   directory, the repository root is only set if REPOS is an ancestor of the
+   URLs all file entries which don't already have a repository root set.  This
+   prevents the entries file from being corrupted by this operation.
+
+   If LOCAL_ABSPATH is a directory, then, walk entries below LOCAL_ABSPATH
+   according to DEPTH thusly:
+
+   If DEPTH is svn_depth_infinity, perform the following actions on
+   every entry below PATH; if svn_depth_immediates, svn_depth_files,
+   or svn_depth_empty, perform them only on LOCAL_ABSPATH.
+
+   If NEW_REVISION is valid, then tweak every entry to have this new
+   working revision (excluding files that are scheduled for addition
+   or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
+   all urls to be "telescoping" children of the base_url.
+
+   EXCLUDE_PATHS is a hash containing const char * pathnames.  Entries
+   for pathnames contained in EXCLUDE_PATHS are not touched by this
+   function.  These pathnames should be absolute paths.
+*/
+static svn_error_t *
+do_update_cleanup(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          svn_depth_t depth,
+                          const char *new_repos_relpath,
+                          const char *new_repos_root_url,
+                          const char *new_repos_uuid,
+                          svn_revnum_t new_revision,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_hash_t *exclude_paths,
+                          apr_pool_t *pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_error_t *err;
+
+  if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
+    return SVN_NO_ERROR;
+
+  err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
+                             db, local_abspath, pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+
+  switch (status)
+    {
+      case svn_wc__db_status_excluded:
+      case svn_wc__db_status_absent:
+      case svn_wc__db_status_not_present:
+        return SVN_NO_ERROR;
+      case svn_wc__db_status_obstructed:
+      case svn_wc__db_status_obstructed_add:
+      case svn_wc__db_status_obstructed_delete:
+        /* There is only a parent stub. That's fine... just tweak it
+           and avoid directory recursion.  */
+        SVN_ERR(tweak_node(db, local_abspath, svn_wc__db_kind_dir, TRUE,
+                           new_repos_relpath, new_repos_root_url,
+                           new_repos_uuid, new_revision,
+                           FALSE /* allow_removal */, pool));
+        return SVN_NO_ERROR;
+
+      /* Explicitly ignore other statii */
+      default:
+        break;
+    }
+
+  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
+    {
+      /* Parent not updated so don't remove PATH entry.  */
+      SVN_ERR(tweak_node(db, local_abspath, kind, FALSE,
+                         new_repos_relpath, new_repos_root_url, new_repos_uuid,
+                         new_revision, FALSE /* allow_removal */, pool));
+    }
+  else if (kind == svn_wc__db_kind_dir)
+    {
+      SVN_ERR(tweak_entries(db, local_abspath, new_repos_relpath,
+                            new_repos_root_url, new_repos_uuid, new_revision,
+                            notify_func, notify_baton,
+                            depth, exclude_paths, pool));
+    }
+  else
+    return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                             _("Unrecognized node kind: '%s'"),
+                             svn_dirent_local_style(local_abspath, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* An svn_delta_editor_t function. */
 static svn_error_t *
@@ -5130,16 +5492,17 @@ close_edit(void *edit_baton,
      will only remove the deleted entry!  */
   if (! eb->target_deleted)
     {
-      SVN_ERR(svn_wc__do_update_cleanup(eb->db, eb->target_abspath,
-                                        eb->requested_depth,
-                                        eb->switch_relpath,
-                                        eb->repos_root,
-                                        eb->repos_uuid,
-                                        *(eb->target_revision),
-                                        eb->notify_func,
-                                        eb->notify_baton,
-                                        eb->skipped_trees,
-                                        eb->pool));
+      SVN_ERR(do_update_cleanup(eb->db,
+                                eb->target_abspath,
+                                eb->requested_depth,
+                                eb->switch_relpath,
+                                eb->repos_root,
+                                eb->repos_uuid,
+                                *(eb->target_revision),
+                                eb->notify_func,
+                                eb->notify_baton,
+                                eb->skipped_trees,
+                                eb->pool));
     }
 
   /* The edit is over, free its pool.
