@@ -4396,22 +4396,34 @@ svn_wc_register_file_external(svn_wc_context_t *wc_ctx,
                               apr_pool_t *scratch_pool);
 
 /**
- * Put @a local_abspath under version control by adding an entry in its
- * parent, and if @a local_abspath is a directory, adding an
- * administrative area.  The new node and anything under it is scheduled
- * for addition to the repository.  @a wc_ctx should hold a write lock
- * for the parent directory of @a local_abspath.  If @a local_abspath is
- * a directory then an access baton for @a local_abspath will be added
- * to the set containing @a parent_access.
+ * Put @a local_abspath under version control by registering it as addition
+ * or copy in the database containing its parent. The new node is scheduled
+ * for addition to the repository below its parent node.
  *
- * If @a local_abspath does not exist, return #SVN_ERR_WC_PATH_NOT_FOUND.
+ * 1) If the node already exists, it MUST BE the root of a separate working
+ * copy from the same repository as the parent working copy. The new node
+ * and anything below it will be scheduled for addition inside the parent
+ * working copy as a copy of the original location. The separate working
+ * copy will be integrated by this step. In this case, which is only used
+ * by code like that of 'svn cp URL@rev path' @a copyfrom_url and
+ * @a copyfrom_rev MUST BE the the url and revision of @a local_abspath
+ * in the separate working copy.
  *
- * If @a local_abspath is a directory, add it at @a depth; otherwise, ignore
- * @a depth.
+ * 2a) If the node was not versioned before it will be scheduled as a local
+ * addition or 2b) if @a copyfrom_url and @a copyfrom_rev are set as a copy
+ * of that location. In this last case the function doesn't set the pristine
+ * version (of a file) and/or pristine properties, which callers should
+ * handle via different APIs. Usually it is easier to call
+ * svn_wc_add_repos_file4() (### or a possible svn_wc_add_repos_dir()) then
+ * using this variant.
  *
- * If @a copyfrom_url is non-NULL, it and @a copyfrom_rev are used as
- * `copyfrom' args.  This is for copy operations, where one wants
- * to schedule @a local_abspath for addition with a particular history.
+ * If @a local_abspath does not exist as file, directory or symlink, return
+ * #SVN_ERR_WC_PATH_NOT_FOUND.
+ *
+ * If @a local_abspath is an unversioned directory, record @a depth on it;
+ * otherwise, ignore @a depth. (Use #svn_depth_infinity unless you exactly
+ * know what you are doing, or you may create an unexpected sparse working
+ * copy)
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -4419,39 +4431,6 @@ svn_wc_register_file_external(svn_wc_context_t *wc_ctx,
  *
  * When the @a local_abspath has been added, then @a notify_func will be
  * called (if it is not @c NULL) with the @a notify_baton and the path.
- *
- * Return #SVN_ERR_WC_NODE_KIND_CHANGE if @a local_abspath is both an
- * unversioned directory and a file that is scheduled for deletion or in
- * state deleted.
- *
- *<pre> ### This function currently does double duty -- it is also
- * ### responsible for "switching" a working copy directory over to a
- * ### new copyfrom ancestry and scheduling it for addition.  Here is
- * ### the old doc string from Ben, lightly edited to bring it
- * ### up-to-date, explaining the TRUE, secret life of this function:</pre>
- *
- * Given a @a path within a working copy of type KIND, follow this algorithm:
- *
- *    - if @a path is not under version control:
- *       - Place it under version control and schedule for addition;
- *         if @a copyfrom_url is non-NULL, use it and @a copyfrom_rev as
- *         'copyfrom' history
- *
- *    - if @a path is already under version control:
- *          (This can only happen when a directory is copied, in which
- *           case ancestry must have been supplied as well.)
- *
- *       -  Schedule the directory itself for addition with copyfrom history.
- *       -  Mark all its children with a 'copied' flag
- *       -  Rewrite all the URLs to what they will be after a commit.
- *       -  ### @todo Remove old wcprops too, see the '###' below.
- *
- *<pre> ### I think possibly the "switchover" functionality should be
- * ### broken out into a separate function, but it's all intertwined in
- * ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve?</pre>
- *
- * ### Update: see "###" comment in svn_wc_add_repos_file3()'s doc
- * string about this.
  *
  * @since New in 1.7.
  */
