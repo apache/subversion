@@ -1134,3 +1134,31 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__node_get_info_bits(svn_wc_schedule_t *schedule,
+                           apr_time_t *text_time,
+                           const char **conflict_old,
+                           const char **conflict_new,
+                           const char **conflict_wrk,
+                           const char **prejfile,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  const svn_wc_entry_t *entry;
+
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                      svn_node_unknown, TRUE, FALSE,
+                                      result_pool, scratch_pool));
+
+  *schedule = entry->schedule;
+  *text_time = entry->text_time;
+  *conflict_old = entry->conflict_old;
+  *conflict_new = entry->conflict_new;
+  *conflict_wrk = entry->conflict_wrk;
+  *prejfile = entry->prejfile;
+
+  return SVN_NO_ERROR;
+}

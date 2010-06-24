@@ -91,14 +91,9 @@ build_info_for_entry(svn_info_t **info,
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;
   svn_boolean_t is_copy_target;
-  const svn_wc_entry_t *entry;
   const char *lock_token, *lock_owner, *lock_comment;
   apr_time_t lock_date;
   const svn_checksum_t *checksum;
-
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, TRUE, FALSE,
-                                      pool, pool));
 
   SVN_ERR(svn_wc_read_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE, pool));
   SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
@@ -158,14 +153,16 @@ build_info_for_entry(svn_info_t **info,
   if (tmpinfo->depth == svn_depth_unknown)
     tmpinfo->depth = svn_depth_infinity;
 
-  /* entry-specific stuff */
+  /* Some random stuffs we don't have wc-ng apis for yet */
+  SVN_ERR(svn_wc__node_get_info_bits(&tmpinfo->schedule, &tmpinfo->text_time,
+                                     &tmpinfo->conflict_old,
+                                     &tmpinfo->conflict_new,
+                                     &tmpinfo->conflict_wrk,
+                                     &tmpinfo->prejfile,
+                                     wc_ctx, local_abspath, pool, pool));
+
+  /* Some defaults */
   tmpinfo->has_wc_info          = TRUE;
-  tmpinfo->schedule             = entry->schedule;
-  tmpinfo->text_time            = entry->text_time;
-  tmpinfo->conflict_old         = entry->conflict_old;
-  tmpinfo->conflict_new         = entry->conflict_new;
-  tmpinfo->conflict_wrk         = entry->conflict_wrk;
-  tmpinfo->prejfile             = entry->prejfile;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size64               = SVN_INVALID_FILESIZE;
 

@@ -622,6 +622,25 @@ svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/**
+ * A hack to remove the last entry from libsvn_client.  This simply fetches an
+ * entry, and puts the needed bits into the output parameters, allocated in
+ * @a result_pool.
+ *
+ * @a local_abspath and @a wc_ctx are what you think they are.
+ */
+svn_error_t *
+svn_wc__node_get_info_bits(svn_wc_schedule_t *schedule,
+                           apr_time_t *text_time,
+                           const char **conflict_old,
+                           const char **conflict_new,
+                           const char **conflict_wrk,
+                           const char **prejfile,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 
 /**
  * Recursively acquire write locks for @a local_abspath if
