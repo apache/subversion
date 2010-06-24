@@ -1124,7 +1124,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   apr_hash_t *props;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(!copyfrom_url || SVN_IS_VALID_REVNUM(copyfrom_rev));
+  SVN_ERR_ASSERT(!copyfrom_url || (svn_uri_is_canonical(copyfrom_url,
+                                                        scratch_pool)
+                                   && SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   svn_dirent_split(local_abspath, &parent_abspath, &base_name, scratch_pool);
   if (svn_wc_is_adm_dir(base_name, scratch_pool))
@@ -1276,6 +1278,47 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                              scratch_pool, scratch_pool));
       }
   }
+
+  /* Verify that we can actually integrate the inner working copy */
+  if (is_wc_root)
+    {
+      const char *repos_relpath, *inner_repos_root_url, *inner_repos_uuid;
+      const char *inner_url;
+
+      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                         &inner_repos_root_url,
+                                         &inner_repos_uuid,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+      if (strcmp(inner_repos_uuid, repos_uuid)
+          || strcmp(repos_root_url, inner_repos_root_url))
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Can't schedule the working copy at '%s' "
+                                   "from repository '%s' with uuid '%s' "
+                                   "for addition under a working copy from "
+                                   "repository '%s' with uuid '%s'."),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool),
+                                 inner_repos_root_url, inner_repos_uuid,
+                                 repos_root_url, repos_uuid);
+
+      if (!svn_uri_is_ancestor(repos_root_url, copyfrom_url))
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("The URL '%s' is not in repository '%s'"),
+                                 copyfrom_url, repos_root_url);
+
+      inner_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                             scratch_pool);
+
+      if (strcmp(copyfrom_url, inner_url))
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Can't add '%s' with URL '%s', but with "
+                                   "the data from '%s'"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool),
+                                 copyfrom_url, inner_url);
+    }
 
   {
     svn_wc_entry_t tmp_entry;
