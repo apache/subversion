@@ -495,6 +495,9 @@ svn_client_info3(const char *abspath_or_url,
   svn_info_t *info;
   svn_error_t *err;
 
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_empty;
+
   if ((revision == NULL
        || revision->kind == svn_opt_revision_unspecified)
       && (peg_revision == NULL
