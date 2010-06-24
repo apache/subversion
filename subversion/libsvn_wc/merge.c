@@ -606,27 +606,27 @@ eval_conflict_func_result(svn_skel_t **work_items,
   return SVN_NO_ERROR;
 }
 
-/* Preserve the three pre-merge files, and update the DB to track them.
+/* Preserve the three pre-merge files.
 
    Create three empty files, with unique names that each include the
    basename of TARGET_ABSPATH and one of LEFT_LABEL, RIGHT_LABEL and
    TARGET_LABEL, in the directory that contains TARGET_ABSPATH.  Typical
-   names are "foo.c.r37" or "foo.c.2.mine".
+   names are "foo.c.r37" or "foo.c.2.mine".  Set *LEFT_COPY, *RIGHT_COPY and
+   *TARGET_COPY to their absolute paths.
 
    Set *WORK_ITEMS to a list of new work items that will write copies of
    LEFT_ABSPATH, RIGHT_ABSPATH and TARGET_ABSPATH into the three files,
-   translated to working-copy form, and that will then update
-   TARGET_ABSPATH's entry in DB to track these files.
+   translated to working-copy form.
 
    The translation to working-copy form will be done according to the
-   versioned properties of TARGET_ABSPATH that are current at the point in
-   the work queue where these translating copies are performed.
-
-   ### TODO for WC-NG: Should update the DB outside the work queue: see
-       svn_wc__wq_tmp_build_set_text_conflict_markers()'s doc string.
+   versioned properties of TARGET_ABSPATH that are current when the work
+   queue items are executed.
 */
 static svn_error_t *
 preserve_pre_merge_files(svn_skel_t **work_items,
+                         const char **left_copy,
+                         const char **right_copy,
+                         const char **target_copy,
                          svn_wc__db_t *db,
                          const char *left_abspath,
                          const char *right_abspath,
@@ -639,7 +639,6 @@ preserve_pre_merge_files(svn_skel_t **work_items,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  const char *left_copy, *right_copy, *target_copy;
   const char *tmp_left, *tmp_right, *detranslated_target_copy;
   const char *dir_abspath, *target_name;
   const char *temp_dir;
@@ -653,15 +652,15 @@ preserve_pre_merge_files(svn_skel_t **work_items,
 
   /* Create three empty files in DIR_ABSPATH, naming them with unique names
      that each include TARGET_NAME and one of {LEFT,RIGHT,TARGET}_LABEL,
-     and set {LEFT,RIGHT,TARGET}_COPY to those names. */
+     and set *{LEFT,RIGHT,TARGET}_COPY to those names. */
   SVN_ERR(svn_io_open_uniquely_named(
-            NULL, &left_copy, dir_abspath, target_name, left_label,
+            NULL, left_copy, dir_abspath, target_name, left_label,
             svn_io_file_del_none, scratch_pool, scratch_pool));
   SVN_ERR(svn_io_open_uniquely_named(
-            NULL, &right_copy, dir_abspath, target_name, right_label,
+            NULL, right_copy, dir_abspath, target_name, right_label,
             svn_io_file_del_none, scratch_pool, scratch_pool));
   SVN_ERR(svn_io_open_uniquely_named(
-            NULL, &target_copy, dir_abspath, target_name, target_label,
+            NULL, target_copy, dir_abspath, target_name, target_label,
             svn_io_file_del_none, scratch_pool, scratch_pool));
 
   /* We preserve all the files with keywords expanded and line
@@ -707,12 +706,12 @@ preserve_pre_merge_files(svn_skel_t **work_items,
      We use TARGET_ABSPATH's current properties to do the translation. */
   /* Derive the basenames of the 3 backup files. */
   SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        left_copy, tmp_left,
+                                        *left_copy, tmp_left,
                                         target_abspath, result_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        right_copy, tmp_right,
+                                        *right_copy, tmp_right,
                                         target_abspath, result_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
@@ -724,20 +723,8 @@ preserve_pre_merge_files(svn_skel_t **work_items,
            cancel_func, cancel_baton,
            scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        target_copy, detranslated_target_copy,
+                                        *target_copy, detranslated_target_copy,
                                         target_abspath, result_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-
-  /* Mark TARGET_ABSPATH's entry as "Conflicted", and start tracking
-     the backup files in the entry as well. */
-  SVN_ERR(svn_wc__wq_tmp_build_set_text_conflict_markers(
-                    &work_item,
-                    db, target_abspath,
-                    svn_dirent_basename(left_copy, NULL),
-                    svn_dirent_basename(right_copy, NULL),
-                    svn_dirent_basename(target_copy, NULL),
-                    result_pool, scratch_pool));
-
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   return SVN_NO_ERROR;
@@ -874,18 +861,6 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
     return SVN_NO_ERROR;
 
   /* The conflicts have not been dealt with. */
-  SVN_ERR(preserve_pre_merge_files(&work_item,
-                                   db,
-                                   left_abspath,
-                                   right_abspath,
-                                   target_abspath,
-                                   left_label,
-                                   right_label,
-                                   target_label,
-                                   cancel_func, cancel_baton,
-                                   result_pool, scratch_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-
   *merge_outcome = svn_wc_merge_conflict;
 
   return SVN_NO_ERROR;
@@ -992,6 +967,34 @@ merge_text_file(svn_skel_t **work_items,
                                       conflict_func, conflict_baton,
                                       cancel_func, cancel_baton,
                                       result_pool, scratch_pool));
+
+      if (*merge_outcome == svn_wc_merge_conflict)
+        {
+          svn_skel_t *work_item;
+          const char *left_copy, *right_copy, *target_copy;
+
+          /* Preserve the three conflict files */
+          SVN_ERR(preserve_pre_merge_files(
+                    &work_item,
+                    &left_copy, &right_copy, &target_copy,
+                    db,
+                    left_abspath, right_abspath, target_abspath,
+                    left_label, right_label, target_label,
+                    cancel_func, cancel_baton,
+                    result_pool, scratch_pool));
+          *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+
+          /* Track the three conflict files in the metadata.
+           * ### TODO WC-NG: Do this outside the work queue: see
+           * svn_wc__wq_tmp_build_set_text_conflict_markers()'s doc string. */
+          SVN_ERR(svn_wc__wq_tmp_build_set_text_conflict_markers(
+                            &work_item, db, target_abspath,
+                            svn_dirent_basename(left_copy, NULL),
+                            svn_dirent_basename(right_copy, NULL),
+                            svn_dirent_basename(target_copy, NULL),
+                            result_pool, scratch_pool));
+          *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+        }
 
       if (*merge_outcome == svn_wc_merge_merged)
         return SVN_NO_ERROR;
