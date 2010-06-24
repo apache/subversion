@@ -1154,12 +1154,23 @@ svn_wc__node_get_info_bits(svn_wc_schedule_t *schedule,
                                       svn_node_unknown, TRUE, FALSE,
                                       result_pool, scratch_pool));
 
-  *schedule = entry->schedule;
-  *text_time = entry->text_time;
-  *conflict_old = entry->conflict_old;
-  *conflict_new = entry->conflict_new;
-  *conflict_wrk = entry->conflict_wrk;
-  *prejfile = entry->prejfile;
+  if (schedule)
+    *schedule = entry->schedule;
+
+  if (text_time)
+    *text_time = entry->text_time;
+
+  if (conflict_old)
+    *conflict_old = entry->conflict_old;
+
+  if (conflict_new)
+    *conflict_new = entry->conflict_new;
+
+  if (conflict_wrk)
+    *conflict_wrk = entry->conflict_wrk;
+
+  if (prejfile)
+    *prejfile = entry->prejfile;
 
   return SVN_NO_ERROR;
 }
