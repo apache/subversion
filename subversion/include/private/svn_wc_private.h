@@ -374,8 +374,8 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
                                apr_pool_t *scratch_pool);
 
 /**
- * Recursively call @a callbacks->found_node for all nodes underneath
- * @a local_abspath.
+ * Recursively call @a walk_callback for all nodes underneath
+ * @a local_abspath, restricted by @a walk_depth.
  */
 svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,

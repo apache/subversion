@@ -622,26 +622,28 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_kind_t kind;
-  svn_depth_t depth;
+  svn_wc__db_status_t status;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &depth, NULL,
+  SVN_ERR_ASSERT(walk_depth >= svn_depth_empty
+                 && walk_depth <= svn_depth_infinity);
+
+  /* Check if the node exists before the first callback */
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
-  if (kind == svn_wc__db_kind_file || depth == svn_depth_exclude)
-    {
-      return svn_error_return(
-        walk_callback(local_abspath, walk_baton, scratch_pool));
-    }
+  SVN_ERR(walk_callback(local_abspath, walk_baton, scratch_pool));
+
+  if (kind == svn_wc__db_kind_file
+      || status == svn_wc__db_status_not_present
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_absent)
+    return SVN_NO_ERROR;
 
   if (kind == svn_wc__db_kind_dir)
     {
-      /* Return the directory first, before starting recursion, since it
-         won't get returned as part of the recursion. */
-      SVN_ERR(walk_callback(local_abspath, walk_baton, scratch_pool));
-
       return svn_error_return(
         walker_helper(db, local_abspath, show_hidden, walk_callback, walk_baton,
                       walk_depth, cancel_func, cancel_baton, scratch_pool));
