@@ -1112,7 +1112,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   const char *parent_repos_relpath;
   const char *repos_root_url, *repos_uuid;
   svn_boolean_t is_replace = FALSE;
+  svn_boolean_t is_wc_root = FALSE;
   svn_node_kind_t kind;
+  svn_boolean_t node_exists;
   int modify_flags;
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
@@ -1120,6 +1122,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   svn_wc__db_kind_t db_kind;
   svn_boolean_t exists;
   apr_hash_t *props;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(!copyfrom_url || SVN_IS_VALID_REVNUM(copyfrom_rev));
 
   svn_dirent_split(local_abspath, &parent_abspath, &base_name, scratch_pool);
   if (svn_wc_is_adm_dir(base_name, scratch_pool))
@@ -1143,77 +1148,74 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  /* Get the original entry for this path if one exists (perhaps
-     this is actually a replacement of a previously deleted thing).
-
-     Note that this is one of the few functions that is allowed to see
-     'deleted' entries;  it's totally fine to have an entry that is
-     scheduled for addition and still previously 'deleted'.  */
-
+  /* Get the node information for this path if one exists (perhaps
+     this is actually a replacement of a previously deleted thing). */
   err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL,
-                             db, local_abspath, scratch_pool, scratch_pool);
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
+                             db, local_abspath,
+                             scratch_pool, scratch_pool);
 
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  if (err)
     {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
       svn_error_clear(err);
       exists = FALSE;
+      is_wc_root = FALSE;
     }
   else
     {
-      svn_wc__db_kind_t on_disk;
-
-      SVN_ERR(err);
+      is_wc_root = FALSE;
       exists = TRUE;
-
-      on_disk = ((kind == svn_node_dir)
-                   ? svn_wc__db_kind_dir
-                   : svn_wc__db_kind_file);
-
+      node_exists = TRUE;
       switch (status)
         {
           case svn_wc__db_status_not_present:
-            exists = TRUE; /* ### Make FALSE once we use SHA1 based pristine */
-            break; /* Already gone */
+            node_exists = FALSE;
+            break;
           case svn_wc__db_status_deleted:
           case svn_wc__db_status_obstructed_delete:
-            exists = TRUE; /* ### Make FALSE once we use SHA1 based pristine */
+            /* A working copy root should never have a WORKING_NODE */
+            SVN_ERR_ASSERT(!is_wc_root);
+            node_exists = FALSE;
             is_replace = TRUE;
-            break; /* Safe to add */
+            break;
+          case svn_wc__db_status_normal:
+            if (copyfrom_url)
+              {
+                SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
+                                              db, local_abspath,
+                                              scratch_pool));
+
+                if (is_wc_root)
+                  break;
+              }
+            /* else: Fall through in default error */
 
           default:
-            if (copyfrom_url != NULL)
-              break; /* Just register as copied */
-            /* else fall through */
-
-          case svn_wc__db_status_excluded:
-          case svn_wc__db_status_absent:
             return svn_error_createf(
                              SVN_ERR_ENTRY_EXISTS, NULL,
                              _("'%s' is already under version control"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
         }
+    } /* err */
 
-      /* ### Remove this check once we are fully switched to one wcroot db */
-      if (exists && db_kind != on_disk)
-        {
-          /* ### todo: At some point, we obviously don't want to block
-             replacements where the node kind changes.  When this
-             happens, svn_wc_revert3() needs to learn how to revert
-             this situation.  At present we are using a specific node-change
-             error so that clients can detect it. */
-          return svn_error_createf
-            (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
-             _("Can't replace '%s' with a node of a differing type; "
-               "the deletion must be committed and the parent updated "
-               "before adding '%s'"),
-             svn_dirent_local_style(local_abspath, scratch_pool),
-             svn_dirent_local_style(local_abspath, scratch_pool));
-        }
-    }
+#ifndef SINGLE_DB
+    if (exists 
+        && ((kind == svn_node_dir && db_kind != svn_wc__db_kind_dir)
+            || (kind == svn_node_file && db_kind != svn_wc__db_kind_file)))
+      return svn_error_createf(
+                 SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
+                 _("Can't replace '%s' with a node of a differing type; "
+                   "the deletion must be committed and the parent updated "
+                   "before adding '%s'"),
+                 svn_dirent_local_style(local_abspath, scratch_pool),
+                 svn_dirent_local_style(local_abspath, scratch_pool));
+#endif
 
   {
     svn_wc__db_status_t parent_status;
