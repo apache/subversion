@@ -626,7 +626,7 @@ svn_client_info3(const char *abspath_or_url,
 pre_1_2_recurse:
       if (peg_revision->kind == svn_opt_revision_head)
         {
-          err = svn_ra_get_locks2(ra_session, &locks, "", svn_depth_infinity,
+          err = svn_ra_get_locks2(ra_session, &locks, "", depth,
                                   pool);
 
           /* Catch specific errors thrown by old mod_dav_svn or svnserve. */
