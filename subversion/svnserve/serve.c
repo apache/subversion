@@ -2577,7 +2577,7 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_t *locks;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c?w", &path, &depth_word));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c?(?w)", &path, &depth_word));
 
   depth = depth_word ? svn_depth_from_word(depth_word) : svn_depth_infinity;
   full_path = svn_uri_join(b->fs_path->data,
