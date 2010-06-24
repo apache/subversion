@@ -606,10 +606,10 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
 
   svn_dirent_split(dst_abspath, &dstdir_abspath, &dst_basename, scratch_pool);
 
-  SVN_ERR(svn_wc__get_entry_versioned(&dst_entry, wc_ctx, dstdir_abspath,
+  SVN_ERR(svn_wc__get_entry_versioned(&dst_entry, wc_ctx->db, dstdir_abspath,
                                       svn_node_dir, FALSE, FALSE,
                                       scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_entry_versioned(&src_entry, wc_ctx, src_abspath,
+  SVN_ERR(svn_wc__get_entry_versioned(&src_entry, wc_ctx->db, src_abspath,
                                       svn_node_unknown, FALSE, FALSE,
                                       scratch_pool, scratch_pool));
 

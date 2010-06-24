@@ -3884,21 +3884,15 @@ svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
                                  int caller_lineno,
                                  apr_pool_t *pool)
 {
-  svn_wc_context_t *wc_ctx;
   const char *local_abspath;
-
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__get_entry_versioned(entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, show_hidden,
+  SVN_ERR(svn_wc__get_entry_versioned(entry, svn_wc__adm_get_db(adm_access),
+                                      local_abspath, svn_node_unknown,
+                                      show_hidden,
                                       FALSE, /* NEED_PARENT_STUB */
                                       pool, pool));
-
-  SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   return SVN_NO_ERROR;
 }

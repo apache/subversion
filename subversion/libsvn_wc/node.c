@@ -1150,7 +1150,7 @@ svn_wc__node_get_info_bits(svn_wc_schedule_t *schedule,
 {
   const svn_wc_entry_t *entry;
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx->db, local_abspath,
                                       svn_node_unknown, TRUE, FALSE,
                                       result_pool, scratch_pool));
 

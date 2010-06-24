@@ -1528,7 +1528,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
 
 svn_error_t *
 svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
-                            svn_wc_context_t *wc_ctx,
+                            svn_wc__db_t *db,
                             const char *local_abspath,
                             svn_node_kind_t kind,
                             svn_boolean_t show_hidden,
@@ -1543,7 +1543,7 @@ svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
   /* We call this with allow_unversioned=TRUE, since the error returned is
      different than our callers currently expect.  We catch the NULL entry
      below and return the correct error. */
-  err = svn_wc__get_entry(entry, wc_ctx->db, local_abspath, TRUE, kind,
+  err = svn_wc__get_entry(entry, db, local_abspath, TRUE, kind,
                           need_parent_stub, result_pool, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_WC_MISSING
                 || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
