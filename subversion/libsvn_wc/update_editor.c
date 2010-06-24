@@ -4690,10 +4690,16 @@ close_file(void *file_baton,
      checksum.  In the old WC-1 way, installation of this file happens later
      (in merge_file()) as a single move into place, being part of the loggy
      action of updating the WC metadata. */
-  if (fb->new_text_base_tmp_abspath)
-    SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->new_text_base_tmp_abspath,
-                                        new_text_base_sha1_checksum,
-                                        new_text_base_md5_checksum, pool));
+  if (new_text_base_abspath)
+    {
+      SVN_ERR(svn_wc__db_pristine_install(eb->db, new_text_base_abspath,
+                                          new_text_base_sha1_checksum,
+                                          new_text_base_md5_checksum, pool));
+      SVN_ERR(svn_wc__db_pristine_get_path(&new_text_base_abspath, eb->db,
+                                           fb->local_abspath,
+                                           new_text_base_sha1_checksum,
+                                           pool, pool));
+    }
 #endif
 
   SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, fb->local_abspath, TRUE, pool));
