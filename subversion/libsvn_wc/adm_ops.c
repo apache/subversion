@@ -1366,19 +1366,11 @@ static svn_error_t *
 mark_tree_copied(svn_wc__db_t *db,
                  const char *dir_abspath,
                  svn_wc__db_status_t dir_status,
-                 const char *new_repos_relpath,
-                 const char *new_repos_root_url,
-                 const char *new_repos_uuid,
                  apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
   const apr_array_header_t *children;
   int i;
-
-  /* Tweak "this_dir" */
-  SVN_ERR(tweak_node(db, dir_abspath, svn_wc__db_kind_dir, FALSE,
-                     new_repos_relpath, new_repos_root_url, new_repos_uuid,
-                     SVN_INVALID_REVNUM, FALSE /* allow_removal */, iterpool));
 
   /* Read the entries file for this directory. */
   SVN_ERR(svn_wc__db_read_children(&children, db, dir_abspath,
@@ -1391,16 +1383,11 @@ mark_tree_copied(svn_wc__db_t *db,
       const char *child_abspath;
       svn_wc__db_status_t child_status;
       svn_wc__db_kind_t child_kind;
-      const char *child_relpath = NULL;
 
       /* Clear our per-iteration pool. */
       svn_pool_clear(iterpool);
 
       /* Derive the new URL for the current (child) entry */
-      if (new_repos_relpath)
-        child_relpath = svn_relpath_join(new_repos_relpath, child_basename,
-                                         iterpool);
-
       child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
 
       SVN_ERR(svn_wc__db_read_info(&child_status, &child_kind, NULL, NULL,
@@ -1415,26 +1402,6 @@ mark_tree_copied(svn_wc__db_t *db,
       /* If a file, or deleted, excluded or absent dir, then tweak the
          entry but don't recurse.
 
-         ### how does this translate into wc_db land? */
-      if (child_kind == svn_wc__db_kind_file
-          || child_status == svn_wc__db_status_not_present
-          || child_status == svn_wc__db_status_absent
-          || child_status == svn_wc__db_status_excluded)
-        {
-          if (child_kind == svn_wc__db_kind_dir)
-            SVN_ERR(tweak_node(db, child_abspath, svn_wc__db_kind_dir,
-                               TRUE /* parent_stub */, child_relpath,
-                               new_repos_root_url, new_repos_uuid,
-                               SVN_INVALID_REVNUM, TRUE /* allow_removal */,
-                               iterpool));
-          else
-            SVN_ERR(tweak_node(db, child_abspath, child_kind,
-                               FALSE /* parent_stub */, child_relpath,
-                               new_repos_root_url, new_repos_uuid,
-                               SVN_INVALID_REVNUM, TRUE /* allow_removal */,
-                               iterpool));
-        }
-
       /* Skip deleted items, or otherwise "not really here" nodes.  */
       if (child_status == svn_wc__db_status_deleted
           || child_status == svn_wc__db_status_obstructed_delete
@@ -1446,8 +1413,7 @@ mark_tree_copied(svn_wc__db_t *db,
       /* If this is a directory, recurse; otherwise, do real work. */
       if (child_kind == svn_wc__db_kind_dir)
         {
-          SVN_ERR(mark_tree_copied(db, child_abspath, child_status, child_relpath,
-                                   new_repos_root_url, new_repos_uuid, iterpool));
+          SVN_ERR(mark_tree_copied(db, child_abspath, child_status, iterpool));
         }
       else
         {
@@ -1743,20 +1709,15 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     {
       if (! copyfrom_url)
         {
-          const char *new_url;
-
-          /* Derive the parent path for our new addition here. */
-          new_url = svn_path_url_add_component2(repos_root_url, base_name,
-                                                scratch_pool);
-
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it.
 
              This creates a BASE_NODE for an added directory, really
              it should create a WORKING_NODE.  It gets removed by the
-             next modify2 call. */
+             next modify2 call. That is why we don't have to provide a
+             valid url */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
-                                              new_url, repos_root_url,
+                                              repos_root_url, repos_root_url,
                                               repos_uuid, 0,
                                               depth, scratch_pool));
         }
@@ -1824,10 +1785,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
           SVN_ERR(mark_tree_copied(db, local_abspath,
                                    exists ? status : svn_wc__db_status_added,
-                                   svn_relpath_join(parent_repos_relpath,
-                                                    base_name, scratch_pool),
-                                   repos_root_url,
-                                   repos_uuid,
                                    scratch_pool));
 
           /* Clean out the now-obsolete dav cache values.  */
