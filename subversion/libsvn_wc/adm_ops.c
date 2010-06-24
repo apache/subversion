@@ -1399,9 +1399,6 @@ mark_tree_copied(svn_wc__db_t *db,
       /* ### "svn add" won't create excluded nodes, but "svn copy" will.
          ### it copies all metadata, carrying over the excluded nodes.  */
 
-      /* If a file, or deleted, excluded or absent dir, then tweak the
-         entry but don't recurse.
-
       /* Skip deleted items, or otherwise "not really here" nodes.  */
       if (child_status == svn_wc__db_status_deleted
           || child_status == svn_wc__db_status_obstructed_delete
