@@ -7073,16 +7073,17 @@ svn_wc_translated_file(const char **xlated_p,
                        apr_pool_t *pool);
 
 
-/** Returns a @a stream allocated in @a result_pool with access to the given
- * @a local_abspath taking the file properties from @a versioned_abspath
- * using @a wc_ctx.
+/** Set @a stream to a stream allocated in @a result_pool, that will
+ * translate *to* normal form while reading, or *from* normal form while
+ * writing @a local_abspath.  The translation will take the file properties
+ * from @a versioned_abspath using @a wc_ctx.
  *
- * When translation from normal form is requested
- * (#SVN_WC_TRANSLATE_FROM_NF is specified in @a flags), @a path
- * is used as target path and stream read operations are not supported.
- * Conversely, if translation to normal form is requested
- * (#SVN_WC_TRANSLATE_TO_NF is specified in @a flags), @a path is
- * used as source path and stream write operations are not supported.
+ * If @a flags includes #SVN_WC_TRANSLATE_FROM_NF, the stream will
+ * translate from Normal Form to working copy form while writing to
+ * @a local_abspath; stream read operations are not supported.
+ * Conversely, if @a flags includes #SVN_WC_TRANSLATE_TO_NF, the stream will
+ * translate from working copy form to Normal Form while reading from
+ * @a local_abspath; stream write operations are not supported.
  *
  * The @a flags are the same constants as those used for
  * svn_wc_translated_file().
