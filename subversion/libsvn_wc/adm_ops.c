@@ -1166,6 +1166,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       svn_error_clear(err);
       exists = FALSE;
       is_wc_root = FALSE;
+      node_exists = FALSE;
     }
   else
     {
@@ -1318,6 +1319,29 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                         scratch_pool),
                                  copyfrom_url, inner_url);
     }
+#ifndef SINGLE_DB
+  else if (kind == svn_node_dir && !node_exists && !is_replace)
+    {
+      /* Make sure this new directory has an admistrative subdirectory
+         created inside of it.
+
+         This creates a BASE_NODE for an added directory, really
+         it should create a WORKING_NODE.  It gets removed by the
+         next modify2 call. That is why we don't have to provide a
+         valid url */
+      SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
+                                          repos_root_url, repos_root_url,
+                                          repos_uuid, 0,
+                                          depth, scratch_pool));
+    }
+#endif
+
+  if (kind == svn_node_dir && !exists)
+    {
+      /* Lock on parent needs to be propogated into the child db. */
+      SVN_ERR(svn_wc__db_wclock_set(db, local_abspath, 0, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_mark_locked(db, local_abspath, scratch_pool));
+    }
 
   {
     svn_wc_entry_t tmp_entry;
@@ -1392,6 +1416,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                    scratch_pool));
 #endif
 
+#if !defined(SVN_EXPERIMENTAL_PRISTINE) || (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
     if (is_replace)
       {
         /* We don't want the old base text (if any) and base props to be
@@ -1410,34 +1435,10 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
         SVN_ERR(svn_wc__wq_run(db, local_abspath,
                                cancel_func, cancel_baton, scratch_pool));
       }
+#endif
 
     if (kind == svn_node_dir) /* scheduling a directory for addition */
       {
-        if (!is_wc_root)
-          {
-            /* Make sure this new directory has an admistrative subdirectory
-               created inside of it.
-
-               This creates a BASE_NODE for an added directory, really
-               it should create a WORKING_NODE.  It gets removed by the
-               next modify2 call. That is why we don't have to provide a
-               valid url */
-            SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
-                                                repos_root_url, repos_root_url,
-                                                repos_uuid, 0,
-                                                depth, scratch_pool));
-          }
-    
-        /* ### This block can be removed after we centralise the db and have
-           ### infinite depth admin locks. */
-        if (! exists)
-          {
-            /* Lock on parent needs to be propogated into the child db. */
-            SVN_ERR(svn_wc__db_wclock_set(db, local_abspath, 0, scratch_pool));
-            SVN_ERR(svn_wc__db_temp_mark_locked(db, local_abspath,
-                                                scratch_pool));
-          }
-
         /* We're making the same mods we made above, but this time we'll
            force the scheduling.  Also make sure to undo the
            'incomplete' flag which svn_wc__internal_ensure_adm() sets by
