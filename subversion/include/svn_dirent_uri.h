@@ -779,6 +779,16 @@ svn_dirent_is_under_root(char **full_path,
                          const char *path,
                          apr_pool_t *pool);
 
+/* Converts a file:// url into a proper dirent by using the platform specific
+ * files:// rules.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_uri_get_dirent_from_file_url(const char **dirent,
+                                 const char *url,
+                                 apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
