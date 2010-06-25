@@ -132,6 +132,22 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r948512, r949307
+   Fix issue #3646 'record-only merges create self-referential mergeinfo'.
+   Justification:
+     Prevents creation of self-referential mergeinfo (i.e. mergeinfo that
+     is redundant with a path's natural history).  Self-referential mergeinfo
+     is a source of confusion at best and a source of bugs at worst (e.g.
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3294#desc1 and
+     http://svn.apache.org/viewvc?view=revision&revision=873767).
+   Branch:
+     WCNG work on trunk necessitated a backport branch.
+     ^/subversion/branches/1.6.x-issue3646
+   Notes:
+     r948512 is a new test for the issue and r949307 is the fix.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
