@@ -1367,7 +1367,30 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       }
 #endif
 
-  {
+  if (kind == svn_node_file)
+    {
+      if (!copyfrom_url)
+        SVN_ERR(svn_wc__db_op_add_file(db, local_abspath, NULL, scratch_pool));
+      else
+        {
+          /* This code should never be used, as it doesn't install proper
+             pristine and/or properties. But it was not an error in the old
+             version of this function. 
+
+             ===> Use svn_wc_add_repos_file4() directly! */
+          svn_stream_t *content = svn_stream_empty(scratch_pool);
+
+          SVN_ERR(svn_wc_add_repos_file4(wc_ctx, local_abspath,
+                                         content, NULL,
+                                         NULL, NULL,
+                                         copyfrom_url, copyfrom_rev,
+                                         cancel_func, cancel_baton,
+                                         NULL, NULL,
+                                         scratch_pool));
+        }
+    }
+  else
+  { /* ### Wrong indentation - Work in progress */
     svn_wc_entry_t tmp_entry;
     int modify_flags;
 
@@ -1480,27 +1503,27 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                   scratch_pool));
           }
       }
-  }
 
-  /* Set the pristine properties in WORKING_NODE, by copying them from the
-     deleted BASE_NODE record. Or set them to empty to make sure we don't
-     inherit wrong properties from BASE */
-  if (exists && status != svn_wc__db_status_not_present)
-    {
-      if (!is_replace && copyfrom_url != NULL)
-        {
-          /* NOTE: the conditions to reach here *exactly* match the
-             conditions that were used to initialize the PROPS localvar.
-             Be careful to keep these sets of conditionals aligned to avoid
-             an uninitialized PROPS value.  */
-          SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
+    /* Set the pristine properties in WORKING_NODE, by copying them from the
+       deleted BASE_NODE record. Or set them to empty to make sure we don't
+       inherit wrong properties from BASE */
+    if (exists && status != svn_wc__db_status_not_present)
+      {
+        if (!is_replace && copyfrom_url != NULL)
+          {
+            /* NOTE: the conditions to reach here *exactly* match the
+               conditions that were used to initialize the PROPS localvar.
+               Be careful to keep these sets of conditionals aligned to avoid
+               an uninitialized PROPS value.  */
+            SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
+                                                      scratch_pool));
+          }
+        else
+          SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
+                                                    apr_hash_make(scratch_pool),
                                                     scratch_pool));
-        }
-      else
-        SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
-                                                  apr_hash_make(scratch_pool),
-                                                  scratch_pool));
-    }
+      }
+  } /* ### /Wrong indentation - /Work in progress */
 
   /* Report the addition to the caller. */
   if (notify_func != NULL)
