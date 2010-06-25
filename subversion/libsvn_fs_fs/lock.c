@@ -213,7 +213,7 @@ write_digest_file(apr_hash_t *children,
   SVN_ERR(svn_stream_close(stream));
   SVN_ERR(svn_io_file_rename(tmp_path, digest_path, pool));
   SVN_ERR(svn_fs_fs__path_rev_absolute(&rev_0_path, fs, 0, pool));
-  return svn_fs_fs__dup_perms(digest_path, rev_0_path, pool);
+  return svn_io_copy_perms(rev_0_path, digest_path, pool);
 }
 
 
