@@ -2670,6 +2670,45 @@ test_relpath_internal_style(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_dirent_from_file_url(apr_pool_t *pool)
+{
+  struct {
+    const char *url;
+    const char *result;
+  } tests[] = {
+    { "file:///dir",               "/dir" },
+    { "file:///dir/path",          "/dir/path" },
+    { "file://localhost/dir",      "/dir" },
+    { "file://localhost/dir/path", "/dir/path" },
+#if defined(WIN32)
+    { "file://server/share",       "//server/share" },
+    { "file://server/share/dir",   "//server/share/dir" },
+    { "file:///A:",                "A:/" },
+    { "file:///A:/dir",            "A:/dir" },
+    { "file:///A:dir",             "A:dir" },
+    { "file:///A%7C",              "A:/" },
+    { "file:///A%7C/dir",          "A:/dir" },
+    { "file:///A%7Cdir",           "A:dir" },
+#endif
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *result;
+      
+      SVN_ERR(svn_uri_get_dirent_from_file_url(&result, tests[i].url, pool));
+
+      if (strcmp(result, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_internal_style(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].url, result, tests[i].result);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -2762,5 +2801,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_dirent_internal_style"),
     SVN_TEST_PASS2(test_relpath_internal_style,
                    "test svn_relpath_internal_style"),
+    SVN_TEST_PASS2(test_dirent_from_file_url,
+                   "test svn_uri_get_dirent_from_file_url"),
     SVN_TEST_NULL
   };
