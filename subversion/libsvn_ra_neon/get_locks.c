@@ -357,7 +357,6 @@ getlocks_end_element(void *userdata, int state,
 }
 
 
-
 svn_error_t *
 svn_ra_neon__get_locks(svn_ra_session_t *session,
                        apr_hash_t **locks,
@@ -376,7 +375,8 @@ svn_ra_neon__get_locks(svn_ra_session_t *session,
      possibly be a lock, so we just return no locks. */
   url = svn_path_url_add_component2(ras->url->data, path, pool);
 
-  SVN_ERR(svn_ra_get_path_relative_to_root(session, &rel_path, url, pool));
+  SVN_ERR(svn_ra_neon__get_path_relative_to_root(session, &rel_path,
+                                                 url, pool));
 
   baton.lock_hash = apr_hash_make(pool);
   baton.path = apr_pstrcat(pool, "/", rel_path, NULL);
@@ -393,7 +393,6 @@ svn_ra_neon__get_locks(svn_ra_session_t *session,
                       "xmlns:D=\"DAV:\" depth=\"%s\">"
                       "</S:get-locks-report>",
                       svn_depth_to_word(depth));
-
 
   err = svn_ra_neon__parsed_request(ras, "REPORT", url,
                                     body, NULL, NULL,
