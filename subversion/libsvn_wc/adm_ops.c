@@ -1115,7 +1115,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   svn_boolean_t is_wc_root = FALSE;
   svn_node_kind_t kind;
   svn_boolean_t node_exists;
-  int modify_flags;
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
   svn_wc__db_status_t status;
@@ -1322,6 +1321,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   {
     svn_wc_entry_t tmp_entry;
+    int modify_flags;
 
     /* Init the modify flags. */
     tmp_entry.schedule = svn_wc_schedule_add;
@@ -1392,113 +1392,102 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                    scratch_pool));
 #endif
 
-  if (is_replace)
-    {
-      /* We don't want the old base text (if any) and base props to be
-         mistakenly used as the bases for the new, replacement object.
-         So, move them out of the way. */
+    if (is_replace)
+      {
+        /* We don't want the old base text (if any) and base props to be
+           mistakenly used as the bases for the new, replacement object.
+           So, move them out of the way. */
 
-      /* ### TODO: In an ideal world, this whole function would be loggy.
-       * ### But the directory recursion code below is already tangled
-       * ### enough, and re-doing the code above would require setting
-       * ### up more of tmp_entry.  It's more than a SMOP.  For now,
-       * ### I'm leaving it be, though we set up the revert base(s)
-       * ### loggily because that's Just How It's Done.
-       */
-      SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath,
-                                              scratch_pool));
-      SVN_ERR(svn_wc__wq_run(db, local_abspath,
-                             cancel_func, cancel_baton, scratch_pool));
-    }
-
-  if (kind == svn_node_dir) /* scheduling a directory for addition */
-    {
-      if (! copyfrom_url)
-        {
-          /* Make sure this new directory has an admistrative subdirectory
-             created inside of it.
-
-             This creates a BASE_NODE for an added directory, really
-             it should create a WORKING_NODE.  It gets removed by the
-             next modify2 call. That is why we don't have to provide a
-             valid url */
-          SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
-                                              repos_root_url, repos_root_url,
-                                              repos_uuid, 0,
-                                              depth, scratch_pool));
-        }
-      else
-        {
-          /* When we are called with the copyfrom arguments set and with
-             the admin directory already in existence, then the dir will
-             contain the copyfrom settings.  So we need to pass the
-             copyfrom arguments to the ensure call. */
-          SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
-                                              copyfrom_url,
-                                              repos_root_url,
-                                              repos_uuid, copyfrom_rev,
-                                              depth, scratch_pool));
-        }
-
-      /* ### This block can be removed after we centralise the db and have
-         ### infinite depth admin locks. */
-      if (! exists)
-        {
-          /* Lock on parent needs to be propogated into the child db. */
-          SVN_ERR(svn_wc__db_wclock_set(db, local_abspath, 0, scratch_pool));
-          SVN_ERR(svn_wc__db_temp_mark_locked(db, local_abspath, scratch_pool));
-        }
-
-      /* We're making the same mods we made above, but this time we'll
-         force the scheduling.  Also make sure to undo the
-         'incomplete' flag which svn_wc__internal_ensure_adm() sets by
-         default.
-
-         This deletes the erroneous BASE_NODE for added directories and
-         adds a WORKING_NODE. */
-      if (modify_flags)
-        {
-          modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
-          tmp_entry.schedule = (is_replace
-                                ? svn_wc_schedule_replace
-                                : svn_wc_schedule_add);
-          SVN_ERR(svn_wc__entry_modify(db, local_abspath, svn_node_dir,
-                                       &tmp_entry, modify_flags,
-                                       scratch_pool));
-        }
-
-      SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(db, local_abspath,
-                                                        FALSE, scratch_pool));
-
-      if (copyfrom_url)
-        {
-          /* If this new directory has ancestry, it's not enough to
-             schedule it for addition with copyfrom args.  We also
-             need to rewrite its ancestor-url, and rewrite the
-             ancestor-url of ALL its children!
-
-             We're doing this because our current commit model (for
-             hysterical raisins, presumably) assumes an entry's URL is
-             correct before commit -- i.e. the URL is not tweaked in
-             the post-commit bumping process.  We might want to change
-             this model someday. */
-
-          /* ### copy.c will copy .svn subdirs, which means the whole
-             ### subtree is already "versioned". we now need to rejigger
-             ### the metadata to make it Proper for this location.  */
-
-          /* Recursively add the 'copied' existence flag as well!  */
-
-          SVN_ERR(mark_tree_copied(db, local_abspath,
-                                   exists ? status : svn_wc__db_status_added,
-                                   scratch_pool));
-
-          /* Clean out the now-obsolete dav cache values.  */
-          /* ### put this into above walk. clear all cached values.  */
-          SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
+        /* ### TODO: In an ideal world, this whole function would be loggy.
+         * ### But the directory recursion code below is already tangled
+         * ### enough, and re-doing the code above would require setting
+         * ### up more of tmp_entry.  It's more than a SMOP.  For now,
+         * ### I'm leaving it be, though we set up the revert base(s)
+         * ### loggily because that's Just How It's Done.
+         */
+        SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath,
                                                 scratch_pool));
-        }
-    }
+        SVN_ERR(svn_wc__wq_run(db, local_abspath,
+                               cancel_func, cancel_baton, scratch_pool));
+      }
+
+    if (kind == svn_node_dir) /* scheduling a directory for addition */
+      {
+        if (!is_wc_root)
+          {
+            /* Make sure this new directory has an admistrative subdirectory
+               created inside of it.
+
+               This creates a BASE_NODE for an added directory, really
+               it should create a WORKING_NODE.  It gets removed by the
+               next modify2 call. That is why we don't have to provide a
+               valid url */
+            SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
+                                                repos_root_url, repos_root_url,
+                                                repos_uuid, 0,
+                                                depth, scratch_pool));
+          }
+    
+        /* ### This block can be removed after we centralise the db and have
+           ### infinite depth admin locks. */
+        if (! exists)
+          {
+            /* Lock on parent needs to be propogated into the child db. */
+            SVN_ERR(svn_wc__db_wclock_set(db, local_abspath, 0, scratch_pool));
+            SVN_ERR(svn_wc__db_temp_mark_locked(db, local_abspath,
+                                                scratch_pool));
+          }
+
+        /* We're making the same mods we made above, but this time we'll
+           force the scheduling.  Also make sure to undo the
+           'incomplete' flag which svn_wc__internal_ensure_adm() sets by
+           default.
+
+           This deletes the erroneous BASE_NODE for added directories and
+           adds a WORKING_NODE. */
+        if (modify_flags)
+          {
+            modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
+            tmp_entry.schedule = (is_replace
+                                  ? svn_wc_schedule_replace
+                                  : svn_wc_schedule_add);
+            SVN_ERR(svn_wc__entry_modify(db, local_abspath, svn_node_dir,
+                                         &tmp_entry, modify_flags,
+                                         scratch_pool));
+          }
+
+        SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(db, local_abspath,
+                                                          FALSE, scratch_pool));
+
+        if (is_wc_root)
+          {
+            /* If this new directory has ancestry, it's not enough to
+               schedule it for addition with copyfrom args.  We also
+               need to rewrite its ancestor-url, and rewrite the
+               ancestor-url of ALL its children!
+
+               We're doing this because our current commit model (for
+               hysterical raisins, presumably) assumes an entry's URL is
+               correct before commit -- i.e. the URL is not tweaked in
+               the post-commit bumping process.  We might want to change
+               this model someday. */
+
+            /* ### copy.c will copy .svn subdirs, which means the whole
+               ### subtree is already "versioned". we now need to rejigger
+               ### the metadata to make it Proper for this location.  */
+
+            /* Recursively add the 'copied' existence flag as well!  */
+
+            SVN_ERR(mark_tree_copied(db, local_abspath,
+                                     exists ? status : svn_wc__db_status_added,
+                                     scratch_pool));
+
+            /* Clean out the now-obsolete dav cache values.  */
+            /* ### put this into above walk. clear all cached values.  */
+            SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
+                                                  scratch_pool));
+          }
+      }
   }
 
   /* Set the pristine properties in WORKING_NODE, by copying them from the
