@@ -2378,9 +2378,9 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
   if (hostname)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("Local URL '%s' contains unsupported hostname"),
-                             URL);
+                             url);
 
-  repos_root = svn_path_uri_decode(path, pool);
+  *dirent = svn_path_uri_decode(path, pool);
 #endif
   return SVN_NO_ERROR;
 }
