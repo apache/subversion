@@ -1568,8 +1568,8 @@ svn_fs_fs__hotcopy(const char *src_path,
             {
               SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
                                       iterpool));
-              SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
-                                           iterpool));
+              SVN_ERR(svn_io_copy_perms(dst_subdir, dst_subdir_shard,
+                                        iterpool));
             }
         }
 
@@ -1630,8 +1630,8 @@ svn_fs_fs__hotcopy(const char *src_path,
             {
               SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
                                       iterpool));
-              SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
-                                           iterpool));
+              SVN_ERR(svn_io_copy_perms(dst_subdir, dst_subdir_shard,
+                                        iterpool));
             }
         }
 
@@ -2591,7 +2591,10 @@ get_root_changes_offset(apr_off_t *root_offset,
 /* Move a file into place from OLD_FILENAME in the transactions
    directory to its final location NEW_FILENAME in the repository.  On
    Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from POOL. */
+   PERMS_REFERENCE.  Temporary allocations are from POOL.
+   
+   This function almost duplicates svn_io_file_move(), but it tries to
+   guarantee a flush. */
 static svn_error_t *
 move_into_place(const char *old_filename,
                 const char *new_filename,
@@ -2600,7 +2603,7 @@ move_into_place(const char *old_filename,
 {
   svn_error_t *err;
 
-  SVN_ERR(svn_fs_fs__dup_perms(old_filename, perms_reference, pool));
+  SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, pool));
 
   /* Move the file into place. */
   err = svn_io_file_rename(old_filename, new_filename, pool);
@@ -2616,6 +2619,11 @@ move_into_place(const char *old_filename,
       /* Flush the target of the copy to disk. */
       SVN_ERR(svn_io_file_open(&file, new_filename, APR_READ,
                                APR_OS_DEFAULT, pool));
+      /* ### BH: Does this really guarantee a flush of the data written
+         ### via a completely different handle on all operating systems?
+         ###
+         ### Maybe we should perform the copy ourselves instead of making
+         ### apr do that and flush the real handle? */
       SVN_ERR(svn_io_file_flush_to_disk(file, pool));
       SVN_ERR(svn_io_file_close(file, pool));
     }
@@ -5709,34 +5717,6 @@ write_final_changed_path_info(apr_off_t *offset_p,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_fs_fs__dup_perms(const char *filename,
-                     const char *perms_reference,
-                     apr_pool_t *pool)
-{
-#ifndef WIN32
-  apr_status_t status;
-  apr_finfo_t finfo;
-  const char *filename_apr, *perms_reference_apr;
-
-  SVN_ERR(svn_path_cstring_from_utf8(&filename_apr, filename, pool));
-  SVN_ERR(svn_path_cstring_from_utf8(&perms_reference_apr, perms_reference,
-                                     pool));
-
-  status = apr_stat(&finfo, perms_reference_apr, APR_FINFO_PROT, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't stat '%s'"),
-                              svn_dirent_local_style(perms_reference, pool));
-  status = apr_file_perms_set(filename_apr, finfo.protection);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't chmod '%s'"),
-                              svn_dirent_local_style(filename, pool));
-#endif
-  return SVN_NO_ERROR;
-}
-
-
 /* Atomically update the 'current' file to hold the specifed REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
    ignored and may be NULL if the FS format does not use them.)
@@ -5980,13 +5960,12 @@ commit_body(void *baton, apr_pool_t *pool)
       const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
       err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
       if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
-        SVN_ERR(err);
+        return svn_error_return(err);
       svn_error_clear(err);
-      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
-                                   svn_dirent_join(cb->fs->path,
-                                                   PATH_REVS_DIR,
-                                                   pool),
-                                   pool));
+      SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
+                                                PATH_REVS_DIR,
+                                                pool),
+                                new_dir, pool));
 
       if (ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT ||
           new_rev >= ffd->min_unpacked_revprop)
@@ -5996,11 +5975,10 @@ commit_body(void *baton, apr_pool_t *pool)
           if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
             SVN_ERR(err);
           svn_error_clear(err);
-          SVN_ERR(svn_fs_fs__dup_perms(new_dir,
-                                       svn_dirent_join(cb->fs->path,
-                                                       PATH_REVPROPS_DIR,
-                                                       pool),
-                                       pool));
+          SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
+                                                    PATH_REVPROPS_DIR,
+                                                    pool),
+                                    new_dir, pool));
         }
     }
 
@@ -6896,7 +6874,7 @@ svn_fs_fs__ensure_dir_exists(const char *path,
 
   /* We successfully created a new directory.  Dup the permissions
      from FS->path. */
-  return svn_fs_fs__dup_perms(path, fs->path, pool);
+  return svn_io_copy_perms(path, fs->path, pool);
 }
 
 /* Set *NODE_ORIGINS to a hash mapping 'const char *' node IDs to
@@ -7419,7 +7397,7 @@ pack_shard(const char *revs_dir,
 
   SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_stream_close(pack_stream));
-  SVN_ERR(svn_fs_fs__dup_perms(pack_file_dir, shard_path, pool));
+  SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, pool));
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
    * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)

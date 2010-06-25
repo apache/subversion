@@ -819,21 +819,17 @@ svn_io_copy_perms(const char *src,
 
 #ifndef WIN32
   {
-    apr_file_t *src_file;
-    apr_file_t *dst_file;
     apr_finfo_t finfo;
+    svn_node_kind_t kind;
+    svn_boolean_t is_special;
     svn_error_t *err;
 
     /* If DST is a symlink, don't bother copying permissions. */
-    SVN_ERR(svn_io_file_open(&dst_file, dst, APR_READ, APR_OS_DEFAULT, pool));
-    SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_TYPE, dst_file, pool));
-    SVN_ERR(svn_io_file_close(dst_file, pool));
-    if (finfo.filetype == APR_LNK)
+    SVN_ERR(svn_io_check_special_path(dst, &kind, &is_special, pool));
+    if (is_special)
       return SVN_NO_ERROR;
 
-    SVN_ERR(svn_io_file_open(&src_file, src, APR_READ, APR_OS_DEFAULT, pool));
-    SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file, pool));
-    SVN_ERR(svn_io_file_close(src_file, pool));
+    SVN_ERR(svn_io_stat(&finfo, src, APR_FINFO_PROT, pool));
     err = file_perms_set(dst, finfo.protection, pool);
     if (err)
       {
