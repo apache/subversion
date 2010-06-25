@@ -406,8 +406,8 @@ svn_wc__node_get_url(const char **url,
  * ### code duplication.*/
 svn_error_t *
 svn_wc__node_get_repos_relpath(const char **repos_relpath,
-                               const char *local_abspath,
                                svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
