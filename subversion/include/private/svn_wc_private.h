@@ -349,6 +349,20 @@ svn_wc__node_get_url(const char **url,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+/**
+ * Set @a *repos_relpath to the corresponding repos_relpath for @a
+ * local_abspath, using @a wc_ctx. If the node is added, return the
+ * repos_relpath it will have in the repository.
+ *
+ * If @a local_abspath is not in the working copy, return @c
+ * SVN_ERR_WC_PATH_NOT_FOUND. 
+ * */
+svn_error_t *
+svn_wc__node_get_repos_relpath(const char **repos_relpath,
+                               const char *local_abspath,
+                               svn_wc_context_t *wc_ctx,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 /**
  * Set @a *copyfrom_url to the corresponding copy-from URL (allocated
