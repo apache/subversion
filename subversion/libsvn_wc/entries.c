@@ -2616,11 +2616,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
 
   /* Schedule: handled by caller.  */
 
-  /* Checksum */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CHECKSUM)
-    cur_entry->checksum = entry->checksum
-      ? apr_pstrdup(pool, entry->checksum)
-                          : NULL;
+  /* Checksum is  no longer passed to entry_modify() */
 
   /* Copy-related stuff */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
@@ -2998,7 +2994,6 @@ svn_wc__entry_modify_stub(svn_wc__db_t *db,
                     | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
                     | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
                     | SVN_WC__ENTRY_MODIFY_COPIED
-                    | SVN_WC__ENTRY_MODIFY_CHECKSUM
                                    )) == 0);
   return svn_error_return(entry_modify(db, local_abspath,
                                        svn_node_dir, TRUE,

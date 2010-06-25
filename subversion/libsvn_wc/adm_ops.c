@@ -1417,15 +1417,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
         modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
       }
 
-    /* If this is a replacement we want to remove the checksum and the property
-       flags so they are not set to their respective old values. */
-    if (is_replace)
-      {
-        tmp_entry.checksum = NULL;
-        modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
-      }
-
-
     /* Store the pristine properties to install them on working, because
        we might delete the base table */
     if ((exists && status != svn_wc__db_status_not_present)

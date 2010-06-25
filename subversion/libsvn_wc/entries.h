@@ -43,7 +43,6 @@ extern "C" {
 /* ### gap */
 #define SVN_WC__ENTRY_MODIFY_KIND               0x00000004
 /* ### gap  */
-#define SVN_WC__ENTRY_MODIFY_CHECKSUM           0x00000010
 #define SVN_WC__ENTRY_MODIFY_SCHEDULE           0x00000020
 #define SVN_WC__ENTRY_MODIFY_COPIED             0x00000040
 #define SVN_WC__ENTRY_MODIFY_COPYFROM_URL       0x00000100
