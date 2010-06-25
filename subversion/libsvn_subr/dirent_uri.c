@@ -50,6 +50,11 @@
    the OS! */
 #define SVN_PATH_IS_PLATFORM_EMPTY(s,n) ((n) == 1 && (s)[0] == '.')
 
+/* This check must match the check on to of dirent_uri-tests.c */
+#if defined(WIN32) || defined(__CYGWIN__) || defined(__OS2__)
+#define SVN_USE_DOS_PATHS
+#endif
+
 /* Path type definition. Used only by internal functions. */
 typedef enum {
   type_uri,
@@ -169,7 +174,7 @@ canonicalize_to_upper(char c)
 static apr_size_t
 dirent_root_length(const char *dirent, apr_size_t len)
 {
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   if (len >= 2 && dirent[1] == ':' &&
       ((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
        (dirent[0] >= 'a' && dirent[0] <= 'z')))
@@ -194,7 +199,7 @@ dirent_root_length(const char *dirent, apr_size_t len)
 
       return i;
     }
-#endif
+#endif /* SVN_USE_DOS_PATHS */
   if (len >= 1 && dirent[0] == '/')
     return 1;
 
@@ -218,9 +223,9 @@ dirent_previous_segment(const char *dirent,
 
   --len;
   while (len > 0 && dirent[len] != '/'
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
                  && (dirent[len] != ':' || len != 1)
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
         )
     --len;
 
@@ -277,12 +282,12 @@ dirent_is_rooted(const char *dirent)
 
   /* On Windows, dirent is also absolute when it starts with 'H:' or 'H:/'
      where 'H' is any letter. */
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   if (((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
        (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
       (dirent[1] == ':'))
      return TRUE;
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
 
   return FALSE;
 }
@@ -429,14 +434,14 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         {
           *(dst++) = *(src++);
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
           /* On Windows permit two leading separator characters which means an
            * UNC path. */
           if ((type == type_dirent) && *src == '/')
             *(dst++) = *(src++);
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
         }
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
       /* On Windows the first segment can be a drive letter, which we normalize
          to upper case. */
       else if (type == type_dirent &&
@@ -449,7 +454,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
              by the following code block, so we need not care whether it has
              a slash after it. */
         }
-#endif
+#endif /* SVN_USE_DOS_PATHS */
     }
 
   while (*src)
@@ -465,7 +470,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         {
           /* Noop segment, so do nothing. */
         }
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
       /* If this is the first path segment of a file:// URI and it contains a
          windows drive letter, convert the drive letter to upper case. */
       else if (url && canon_segments == 1 && seglen == 2 &&
@@ -478,7 +483,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             *(dst++) = *next;
           canon_segments++;
         }
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
       else
         {
           /* An actual segment, append it to the destination path */
@@ -509,7 +514,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 
   *dst = '\0';
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   /* Skip leading double slashes when there are less than 2
    * canon segments. UNC paths *MUST* have two segments. */
   if ((type == type_dirent) && canon[0] == '/' && canon[1] == '/')
@@ -529,7 +534,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             *(dst++) = canonicalize_to_lower(*dst);
         }
     }
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
 
   /* Check the normalization of characters in a uri */
   if (schema_data)
@@ -642,7 +647,7 @@ get_longest_ancestor_length(path_type_t types,
   apr_size_t path1_len, path2_len;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   svn_boolean_t unc = FALSE;
 #endif
 
@@ -675,7 +680,7 @@ get_longest_ancestor_length(path_type_t types,
     return 0;
 
   /* Handle some windows specific cases */
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   if (types == type_dirent)
     {
       /* don't count the '//' from UNC paths */
@@ -703,7 +708,7 @@ get_longest_ancestor_length(path_type_t types,
       if (path1[i - 1] == ':' || path2[i - 1] == ':')
           return i;
     }
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
 
   /* last_dirsep is now the offset of the last directory separator we
      crossed before reaching a non-matching byte.  i is the offset of
@@ -718,7 +723,7 @@ get_longest_ancestor_length(path_type_t types,
     {
       /* Nothing in common but the root folder '/' or 'X:/' for Windows
          dirents. */
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
       if (! unc)
         {
           /* X:/foo and X:/bar returns X:/ */
@@ -726,10 +731,10 @@ get_longest_ancestor_length(path_type_t types,
               last_dirsep == 2 && path1[1] == ':' && path1[2] == '/'
                                && path2[1] == ':' && path2[2] == '/')
             return 3;
-#endif
+#endif /* SVN_USE_DOS_PATHS */
           if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
             return 1;
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
         }
 #endif
     }
@@ -807,9 +812,9 @@ is_child(path_type_t type, const char *path1, const char *path2,
   if (path1[i] == '\0' && path2[i])
     {
       if (path1[i - 1] == '/'
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
           || ((type == type_dirent) && path1[i - 1] == ':')
-#endif /* WIN32 or Cygwin */
+#endif
            )
         {
           if (path2[i] == '/')
@@ -870,9 +875,9 @@ is_ancestor(path_type_t type, const char *path1, const char *path2)
   path1_len = strlen(path1);
   if (strncmp(path1, path2, path1_len) == 0)
     return path1[path1_len - 1] == '/'
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
       || ((type == type_dirent) && path1[path1_len - 1] == ':')
-#endif /* WIN32 or Cygwin */
+#endif
       || (path2[path1_len] == '/' || path2[path1_len] == '\0');
 
   return FALSE;
@@ -913,7 +918,7 @@ svn_relpath_local_style(const char *dirent,
 svn_boolean_t
 svn_dirent_is_root(const char *dirent, apr_size_t len)
 {
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   /* On Windows and Cygwin, 'H:' or 'H:/' (where 'H' is any letter)
      are also root directories */
   if ((len == 2 || ((len == 3) && (dirent[2] == '/'))) &&
@@ -987,7 +992,7 @@ char *svn_dirent_join(const char *base,
   if (SVN_PATH_IS_EMPTY(component))
     return apr_pmemdup(pool, base, blen + 1);
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   if (component[0] == '/')
     {
       /* '/' is drive relative on Windows, not absolute like on Posix */
@@ -1015,14 +1020,14 @@ char *svn_dirent_join(const char *base,
     }
   else if (dirent_is_rooted(component))
     return apr_pmemdup(pool, component, clen + 1);
-#endif
+#endif /* SVN_USE_DOS_PATHS */
 
   /* if last character of base is already a separator, don't add a '/' */
   add_separator = 1;
   if (base[blen - 1] == '/'
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
        || base[blen - 1] == ':'
-#endif /* WIN32 or Cygwin */
+#endif
         )
           add_separator = 0;
 
@@ -1058,9 +1063,9 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
   add_separator = 1;
   if (total_len == 0
        || base[total_len - 1] == '/'
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
        || base[total_len - 1] == ':'
-#endif /* WIN32 or Cygwin */
+#endif
         )
           add_separator = 0;
 
@@ -1087,7 +1092,7 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
           total_len = len;
           base_arg = nargs;
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
           if (!svn_dirent_is_absolute(s)) /* Handle non absolute roots */
             {
               /* Set new base and skip the current argument */
@@ -1096,7 +1101,7 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
               saved_lengths[0] = total_len = len = strlen(s);
             }
           else
-#endif
+#endif /* SVN_USE_DOS_PATHS */
             {
               base = ""; /* Don't add base */
               saved_lengths[0] = 0;
@@ -1104,9 +1109,9 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
 
           add_separator = 1;
           if (s[len - 1] == '/'
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
              || s[len - 1] == ':'
-#endif /* WIN32 or Cygwin */
+#endif
               )
              add_separator = 0;
         }
@@ -1274,9 +1279,9 @@ svn_dirent_basename(const char *dirent, apr_pool_t *pool)
     {
       start = len;
       while (start > 0 && dirent[start - 1] != '/'
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
              && dirent[start - 1] != ':'
-#endif /* WIN32 or Cygwin */
+#endif
             )
         --start;
     }
@@ -1541,7 +1546,7 @@ svn_dirent_skip_ancestor(const char *dirent1,
   if (dirent2[len] == '/')
     return dirent2 + len + 1;
 
-#ifdef WIN32
+#ifdef SVN_USE_DOS_PATHS
   if (root_len == len && len > 0 && dirent2[len-1])
     return dirent2 + len;
 #endif
@@ -1601,7 +1606,7 @@ svn_dirent_is_absolute(const char *dirent)
   /* dirent is absolute if it starts with '/' on non-Windows platforms
      or with '//' on Windows platforms */
   if (dirent[0] == '/'
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
       && dirent[1] == '/' /* Single '/' depends on current drive */
 #endif
       )
@@ -1609,11 +1614,11 @@ svn_dirent_is_absolute(const char *dirent)
 
   /* On Windows, dirent is also absolute when it starts with 'H:/'
      where 'H' is any letter. */
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   if (((dirent[0] >= 'A' && dirent[0] <= 'Z')) &&
       (dirent[1] == ':') && (dirent[2] == '/'))
      return TRUE;
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
 
   return FALSE;
 }
@@ -1675,7 +1680,7 @@ svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 {
   const char *dst = canonicalize(type_dirent, dirent, pool);
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   /* Handle a specific case on Windows where path == "X:/". Here we have to
      append the final '/', as svn_path_canonicalize will chop this of. */
   if (((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
@@ -1691,7 +1696,7 @@ svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 
       return dst_slash;
     }
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
 
   return dst;
 }
@@ -1703,7 +1708,7 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
   if (*ptr == '/')
     {
       ptr++;
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
       /* Check for UNC paths */
       if (*ptr == '/')
         {
@@ -1712,9 +1717,9 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
           /* ### Fall back to old implementation */
           return (strcmp(dirent, svn_dirent_canonicalize(dirent, pool)) == 0);
         }
-#endif
+#endif /* SVN_USE_DOS_PATHS */
     }
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   else if (((*ptr >= 'a' && *ptr <= 'z') || (*ptr >= 'A' && *ptr <= 'Z')) &&
            (ptr[1] == ':'))
     {
@@ -1727,7 +1732,7 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
       if (*ptr == '/')
         ptr++;
     }
-#endif
+#endif /* SVN_USE_DOS_PATHS */
 
   return svn_relpath_is_canonical(ptr, pool);
 }
@@ -1844,7 +1849,7 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
         }
     }
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   if (schema_data && *ptr == '/')
     {
       /* If this is a file url, ptr now points to the third '/' in
@@ -1855,7 +1860,7 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
           *(ptr+2) == ':')
         return FALSE;
     }
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
 
   /* Now validate the rest of the URI. */
   while(1)
@@ -2318,7 +2323,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
 
   /* Duplicate the URL, starting at the top of the path.
      At the same time, we URI-decode the path. */
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   /* On Windows, we'll typically have to skip the leading / if the
      path starts with a drive letter.  Like most Web browsers, We
      support two variants of this scheme:
@@ -2372,7 +2377,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
     else
       *dirent = dup_path;
   }
-#else
+#else /* !SVN_USE_DOS_PATHS */
   /* Currently, the only hostnames we are allowing on non-Win32 platforms
      are the empty string and 'localhost'. */
   if (hostname)
@@ -2381,6 +2386,6 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
                              url);
 
   *dirent = svn_path_uri_decode(path, pool);
-#endif
+#endif /* SVN_USE_DOS_PATHS */
   return SVN_NO_ERROR;
 }
