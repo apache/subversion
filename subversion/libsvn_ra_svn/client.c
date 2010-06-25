@@ -2207,6 +2207,33 @@ static svn_error_t *ra_svn_get_lock(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Copied from svn_ra_get_path_relative_to_root() and de-vtable-ized
+   to prevent a dependency cycle. */
+static svn_error_t *path_relative_to_root(svn_ra_session_t *session,
+                                          const char **rel_path,
+                                          const char *url,
+                                          apr_pool_t *pool)
+{
+  const char *root_url;
+
+  SVN_ERR(ra_svn_get_repos_root(session, &root_url, pool));
+  if (strcmp(root_url, url) == 0)
+    {
+      *rel_path = "";
+    }
+  else
+    {
+      *rel_path = svn_uri_is_child(root_url, url, pool);
+      if (! *rel_path)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("'%s' isn't a child of repository root "
+                                   "URL '%s'"),
+                                 url, root_url);
+      *rel_path = svn_path_uri_decode(*rel_path, pool);
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
                                      apr_hash_t **locks,
                                      const char *path,
@@ -2221,8 +2248,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
 
   /* Figure out the repository abspath from PATH. */
   abs_path = svn_path_url_add_component2(sess->url, path, pool);
-  SVN_ERR(svn_ra_get_path_relative_to_root(session, &abs_path,
-                                           abs_path, pool));
+  SVN_ERR(path_relative_to_root(session, &abs_path, abs_path, pool));
   abs_path = apr_pstrcat(pool, "/", abs_path, NULL);
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-locks", "c(w)", path,

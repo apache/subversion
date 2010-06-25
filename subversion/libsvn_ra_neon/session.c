@@ -1128,6 +1128,33 @@ static svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Copied from svn_ra_get_path_relative_to_root() and de-vtable-ized
+   to prevent a dependency cycle. */
+svn_error_t *
+svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
+                                       const char **rel_path,
+                                       const char *url,
+                                       apr_pool_t *pool)
+{
+  const char *root_url;
+
+  SVN_ERR(svn_ra_neon__get_repos_root(session, &root_url, pool));
+  if (strcmp(root_url, url) == 0)
+    {
+      *rel_path = "";
+    }
+  else
+    {
+      *rel_path = svn_uri_is_child(root_url, url, pool);
+      if (! *rel_path)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("'%s' isn't a child of repository root "
+                                   "URL '%s'"),
+                                 url, root_url);
+      *rel_path = svn_path_uri_decode(*rel_path, pool);
+    }
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *svn_ra_neon__do_get_uuid(svn_ra_session_t *session,
                                              const char **uuid,

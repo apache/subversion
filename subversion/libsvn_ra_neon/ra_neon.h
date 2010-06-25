@@ -383,6 +383,13 @@ svn_error_t *svn_ra_neon__get_file_revs(svn_ra_session_t *session,
                                         apr_pool_t *pool);
 
 
+/* Local duplicate of svn_ra_get_path_relative_to_root(). */
+svn_error_t *svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
+                                                    const char **rel_path,
+                                                    const char *url,
+                                                    apr_pool_t *pool);
+
+
 /*
 ** SVN_RA_NEON__LP_*: local properties for RA/DAV
 **
