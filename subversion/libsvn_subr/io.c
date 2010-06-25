@@ -1589,9 +1589,10 @@ svn_io_is_file_executable(svn_boolean_t *executable,
 
 
 /*** File locking. ***/
+#if !defined(WIN32) && !defined(__OS2__)
 /* Clear all outstanding locks on ARG, an open apr_file_t *. */
 static apr_status_t
-svn_io__file_clear_and_close(void *arg)
+file_clear_locks(void *arg)
 {
   apr_status_t apr_err;
   apr_file_t *f = arg;
@@ -1601,26 +1602,15 @@ svn_io__file_clear_and_close(void *arg)
   if (apr_err)
     return apr_err;
 
-  /* Close the file. */
-  apr_err = apr_file_close(f);
-  if (apr_err)
-    return apr_err;
-
   return 0;
 }
+#endif
 
-
-svn_error_t *svn_io_file_lock(const char *lock_file,
-                              svn_boolean_t exclusive,
-                              apr_pool_t *pool)
-{
-  return svn_io_file_lock2(lock_file, exclusive, FALSE, pool);
-}
-
-svn_error_t *svn_io_file_lock2(const char *lock_file,
-                               svn_boolean_t exclusive,
-                               svn_boolean_t nonblocking,
-                               apr_pool_t *pool)
+svn_error_t *
+svn_io_file_lock2(const char *lock_file,
+                  svn_boolean_t exclusive,
+                  svn_boolean_t nonblocking,
+                  apr_pool_t *pool)
 {
   int locktype = APR_FLOCK_SHARED;
   apr_file_t *lockfile_handle;
@@ -1660,9 +1650,13 @@ svn_error_t *svn_io_file_lock2(const char *lock_file,
         }
     }
 
+/* On Windows and OS/2 file locks are automatically released when
+   the file handle closes */
+#if !defined(WIN32) && !defined(__OS2__)
   apr_pool_cleanup_register(pool, lockfile_handle,
-                            svn_io__file_clear_and_close,
+                            file_clear,
                             apr_pool_cleanup_null);
+#endif
 
   return SVN_NO_ERROR;
 }

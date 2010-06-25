@@ -722,6 +722,14 @@ svn_io_remove_file(const char *path,
   return svn_error_return(svn_io_remove_file2(path, FALSE, scratch_pool));
 }
 
+svn_error_t *svn_io_file_lock(const char *lock_file,
+                              svn_boolean_t exclusive,
+                              apr_pool_t *pool)
+{
+  return svn_io_file_lock2(lock_file, exclusive, FALSE, pool);
+}
+
+
 /*** From constructors.c ***/
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
