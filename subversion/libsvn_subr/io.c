@@ -788,6 +788,7 @@ svn_io_copy_file(const char *src,
   return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
+#if !defined(WIN32) && !defined(__OS2__)
 /* Wrapper for apr_file_perms_set(), taking a UTF8-encoded filename. */
 static svn_error_t *
 file_perms_set(const char *fname, apr_fileperms_t perms,
@@ -805,19 +806,20 @@ file_perms_set(const char *fname, apr_fileperms_t perms,
   else
     return SVN_NO_ERROR;
 }
+#endif /* !WIN32 && !__OS2__ */
 
 svn_error_t *
 svn_io_copy_perms(const char *src,
                   const char *dst,
                   apr_pool_t *pool)
 {
-  /* ### On Windows, apr_file_perms_set always returns APR_ENOTIMPL,
+  /* ### On Windows or OS/2, apr_file_perms_set always returns APR_ENOTIMPL,
          and the path passed to apr_file_perms_set must be encoded
          in the platform-specific path encoding; not necessary UTF-8.
          We need a platform-specific implementation to get the
          permissions right. */
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
   {
     apr_finfo_t finfo;
     svn_node_kind_t kind;
@@ -850,7 +852,7 @@ svn_io_copy_perms(const char *src,
           }
       }
   }
-#endif /* ! WIN32 */
+#endif /* !WIN32 && !__OS2__ */
 
   return SVN_NO_ERROR;
 }
@@ -1237,7 +1239,7 @@ svn_io_file_checksum(unsigned char digest[],
 
 /*** Permissions and modes. ***/
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
 /* Given the file specified by PATH, attempt to create an
    identical version of it owned by the current user.  This is done by
    moving it to a temporary location, copying the file back to its old
@@ -1452,7 +1454,7 @@ io_set_file_perms(const char *path,
                             _("Can't change perms of file '%s'"),
                             svn_dirent_local_style(path, pool));
 }
-#endif /* !WIN32 */
+#endif /* !WIN32 && !__OS2__ */
 
 
 svn_error_t *
@@ -1471,9 +1473,9 @@ svn_io_set_file_read_only(const char *path,
                           svn_boolean_t ignore_enoent,
                           apr_pool_t *pool)
 {
-  /* On Windows, just set the file attributes -- on unix call
+  /* On Windows and OS/2, just set the file attributes -- on unix call
      our internal function which attempts to honor the umask. */
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
   return io_set_file_perms(path, TRUE, FALSE, FALSE, FALSE,
                            ignore_enoent, pool);
 #else
@@ -1503,9 +1505,9 @@ svn_io_set_file_read_write(const char *path,
                            svn_boolean_t ignore_enoent,
                            apr_pool_t *pool)
 {
-  /* On Windows, just set the file attributes -- on unix call
+  /* On Windows and OS/2, just set the file attributes -- on unix call
      our internal function which attempts to honor the umask. */
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
   return io_set_file_perms(path, TRUE, TRUE, FALSE, FALSE,
                            ignore_enoent, pool);
 #else
@@ -1535,9 +1537,9 @@ svn_io_set_file_executable(const char *path,
                            svn_boolean_t ignore_enoent,
                            apr_pool_t *pool)
 {
-  /* On Windows, just exit -- on unix call our internal function
+  /* On Windows and OS/2, just exit -- on unix call our internal function
   which attempts to honor the umask. */
-#ifndef WIN32
+#if (!defined(WIN32) && !defined(__OS2__))
   return io_set_file_perms(path, FALSE, FALSE, TRUE, executable,
                            ignore_enoent, pool);
 #else
@@ -1551,7 +1553,7 @@ svn_io_is_file_executable(svn_boolean_t *executable,
                           const char *path,
                           apr_pool_t *pool)
 {
-#if defined(APR_HAS_USER) && !defined(WIN32)
+#if defined(APR_HAS_USER) && !defined(WIN32) &&!defined(__OS2__)
   apr_finfo_t file_info;
   apr_status_t apr_err;
   apr_uid_t uid;
@@ -1578,7 +1580,7 @@ svn_io_is_file_executable(svn_boolean_t *executable,
   else
     *executable = (file_info.protection & APR_WEXECUTE);
 
-#else  /* defined(WIN32) || !defined(APR_HAS_USER) */
+#else  /* WIN32 || __OS2__ || !APR_HAS_USER */
   *executable = FALSE;
 #endif
 
@@ -1847,8 +1849,8 @@ svn_io_remove_file2(const char *path,
   apr_status_t apr_err;
   const char *path_apr;
 
-#ifdef WIN32
-  /* Set the file writable but only on Windows, because Windows
+#if defined(WIN32) || defined(__OS2__)
+  /* Set the file writable but only on Windows & OS/2, because Windows and OS/2
      will not allow us to remove files that are read-only. */
   SVN_ERR(svn_io_set_file_read_write(path, TRUE, scratch_pool));
 #endif /* WIN32 */
@@ -2947,7 +2949,7 @@ svn_io_file_rename(const char *from_path, const char *to_path,
 
   status = apr_file_rename(from_path_apr, to_path_apr, pool);
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__OS2__)
   /* If the target file is read only NTFS reports EACCESS and
      FAT/FAT32 reports EEXIST */
   if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
@@ -2960,7 +2962,7 @@ svn_io_file_rename(const char *from_path, const char *to_path,
       status = apr_file_rename(from_path_apr, to_path_apr, pool);
     }
   WIN32_RETRY_LOOP(status, apr_file_rename(from_path_apr, to_path_apr, pool));
-#endif /* WIN32 */
+#endif /* WIN32 || __OS2__ */
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't move '%s' to '%s'"),
@@ -3380,11 +3382,11 @@ svn_io_write_version_file(const char *path,
                               format_contents, strlen(format_contents),
                               svn_io_file_del_none, pool));
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__OS2__)
   /* make the destination writable, but only on Windows, because
      Windows does not let us replace read-only files. */
   SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
-#endif /* WIN32 */
+#endif /* WIN32 || __OS2__ */
 
   /* rename the temp file as the real destination */
   SVN_ERR(svn_io_file_rename(path_tmp, path, pool));
@@ -3738,9 +3740,9 @@ svn_io_open_unique_file3(apr_file_t **file,
   SVN_ERR(temp_file_create(&tempfile, &tempname, dirpath, flags,
                            result_pool, scratch_pool));
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
   /* ### file_mktemp() creates files with mode 0600.
-   * ### As of r40264, tempfiles created by svn_io_open_unique_file3()
+   * ### As of r880338, tempfiles created by svn_io_open_unique_file3()
    * ### often end up being copied or renamed into the working copy.
    * ### This will cause working files having mode 0600 while users might
    * ### expect to see 644 or 664. Ideally, permissions should be tweaked
