@@ -1343,6 +1343,30 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_temp_mark_locked(db, local_abspath, scratch_pool));
     }
 
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
+  /* ### this is totally bogus. we clear these cuz turds might have been
+     ### left around. Thankfully, this will gone soon... */
+  if (!is_wc_root && (node_exists || is_replace))
+    SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
+                                 scratch_pool));
+#endif
+
+#if !defined(SVN_EXPERIMENTAL_PRISTINE) || (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
+    if (is_replace)
+      {
+        /* We don't want the old base text (if any) and base props to be
+           mistakenly used as the bases for the new, replacement object.
+           So, move them out of the way. */
+
+        /* ### TODO: In an ideal world, this whole function would be loggy.
+           ### Thankfully this code will be gone soon. */
+        SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath,
+                                                scratch_pool));
+        SVN_ERR(svn_wc__wq_run(db, local_abspath,
+                               cancel_func, cancel_baton, scratch_pool));
+      }
+#endif
+
   {
     svn_wc_entry_t tmp_entry;
     int modify_flags;
@@ -1403,39 +1427,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                        &tmp_entry, modify_flags,
                                        scratch_pool));
       }
-
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-    /* If this is a replacement without history, we need to reset the
-       properties for PATH. */
-    /* ### this is totally bogus. we clear these cuz turds might have been
-       ### left around. thankfully, this will be properly managed during the
-       ### wc-ng upgrade process. for now, we try to compensate... */
-    if (((exists && status != svn_wc__db_status_not_present) || is_replace)
-        && copyfrom_url == NULL)
-      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
-                                   scratch_pool));
-#endif
-
-#if !defined(SVN_EXPERIMENTAL_PRISTINE) || (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-    if (is_replace)
-      {
-        /* We don't want the old base text (if any) and base props to be
-           mistakenly used as the bases for the new, replacement object.
-           So, move them out of the way. */
-
-        /* ### TODO: In an ideal world, this whole function would be loggy.
-         * ### But the directory recursion code below is already tangled
-         * ### enough, and re-doing the code above would require setting
-         * ### up more of tmp_entry.  It's more than a SMOP.  For now,
-         * ### I'm leaving it be, though we set up the revert base(s)
-         * ### loggily because that's Just How It's Done.
-         */
-        SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath,
-                                                scratch_pool));
-        SVN_ERR(svn_wc__wq_run(db, local_abspath,
-                               cancel_func, cancel_baton, scratch_pool));
-      }
-#endif
 
     if (kind == svn_node_dir) /* scheduling a directory for addition */
       {
