@@ -3734,6 +3734,9 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
   int merge_target_len = strlen(merge_b->target);
   int i;
   svn_revnum_t gap_start, gap_end;
+  svn_boolean_t child_inherits_implicit;
+  svn_client__merge_path_t *parent;
+  int parent_index;
 
   iterpool = svn_pool_create(pool);
 
@@ -3756,6 +3759,47 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
           child->remaining_ranges =
             apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
           APR_ARRAY_PUSH(child->remaining_ranges, svn_merge_range_t *) = range;
+
+          parent = NULL;
+          svn_pool_clear(iterpool);
+
+          /* Issue #3646 'record-only merges create self-referential
+             mergeinfo'.  Get the merge target's implicit mergeinfo (natural
+             history).  We'll use it later to avoid setting self-referential
+             mergeinfo -- see filter_natural_history_from_mergeinfo(). */
+          if (i == 0) /* First item is always the merge target. */
+            {
+              SVN_ERR(get_full_mergeinfo(NULL, &(child->implicit_mergeinfo),
+                                         NULL, NULL,
+                                         svn_mergeinfo_inherited, ra_session,
+                                         child->path,
+                                         MAX(revision1, revision2),
+                                         MIN(revision1, revision2),
+                                         adm_access, merge_b->ctx, pool));
+            }
+          else
+            {
+              const svn_wc_entry_t *entry;
+            
+              /* Issue #3443 - Subtrees of the merge target can inherit
+                 their parent's implicit mergeinfo in most cases. */
+              parent_index = find_nearest_ancestor(children_with_mergeinfo,
+                                                   FALSE, child->path);
+              parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
+                                     svn_client__merge_path_t *);
+              /* If CHILD is a subtree then its parent must be in
+                 CHILDREN_WITH_MERGEINFO, see the global comment
+                 'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
+              SVN_ERR_ASSERT(parent);
+ 
+              child_inherits_implicit = (parent && !child->switched);
+              SVN_ERR(svn_wc_entry(&entry, child->path, adm_access, TRUE, pool));
+              SVN_ERR(ensure_implicit_mergeinfo(parent, child,
+                                                child_inherits_implicit,
+                                                entry, revision1, revision2,
+                                                ra_session, adm_access,
+                                                merge_b->ctx, pool, iterpool));
+            }
         }
       return SVN_NO_ERROR;
     }
@@ -3792,8 +3836,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       const char *child_url1, *child_url2;
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-      svn_client__merge_path_t *parent = NULL;
-      svn_boolean_t child_inherits_implicit;
+
+      parent = NULL;
 
       /* If the path is absent don't do subtree merge either. */
       SVN_ERR_ASSERT(child);
@@ -3834,7 +3878,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       /* If CHILD isn't the merge target find its parent. */
       if (i > 0)
         {
-          int parent_index = find_nearest_ancestor(children_with_mergeinfo,
+          parent_index = find_nearest_ancestor(children_with_mergeinfo,
                                                    FALSE, child->path);
           parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
                                  svn_client__merge_path_t *);
