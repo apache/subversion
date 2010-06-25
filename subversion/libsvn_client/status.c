@@ -459,8 +459,8 @@ svn_client_status5(svn_revnum_t *result_rev,
           /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR(svn_ra_do_status2(ra_session, &rb.wrapped_reporter,
                                     &rb.wrapped_report_baton,
-                                    target_basename, revnum, depth, editor,
-                                    edit_baton, pool));
+                                    target_basename, revnum, svn_depth_unknown,
+                                    editor, edit_baton, pool));
 
           /* Init the report baton. */
           rb.ancestor = apr_pstrdup(pool, URL); /* Edited later */
