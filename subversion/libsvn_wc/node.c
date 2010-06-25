@@ -339,11 +339,7 @@ svn_wc__internal_node_get_url(const char **url,
                                scratch_pool, scratch_pool));
   if (repos_relpath == NULL)
     {
-      if (status == svn_wc__db_status_normal
-          || status == svn_wc__db_status_incomplete
-          || (have_base
-              && (status == svn_wc__db_status_deleted
-                  || status == svn_wc__db_status_obstructed_delete)))
+      if (have_base)
         {
           SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
                                              NULL,
@@ -422,11 +418,7 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                                scratch_pool, scratch_pool));
   if (*repos_relpath == NULL)
     {
-      if (status == svn_wc__db_status_normal
-          || status == svn_wc__db_status_incomplete
-          || (have_base
-              && (status == svn_wc__db_status_deleted
-                  || status == svn_wc__db_status_obstructed_delete)))
+      if (have_base)
         {
           SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath, NULL,
                                              NULL,
