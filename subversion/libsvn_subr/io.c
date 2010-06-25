@@ -1654,7 +1654,7 @@ svn_io_file_lock2(const char *lock_file,
    the file handle closes */
 #if !defined(WIN32) && !defined(__OS2__)
   apr_pool_cleanup_register(pool, lockfile_handle,
-                            file_clear,
+                            file_clear_locks,
                             apr_pool_cleanup_null);
 #endif
 
