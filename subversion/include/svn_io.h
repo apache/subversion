@@ -301,6 +301,8 @@ svn_io_copy_file(const char *src,
 
 /** Copy permission flags from @a src onto the file at @a dst. Both
  * filenames are utf8-encoded filenames.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_io_copy_perms(const char *src,
