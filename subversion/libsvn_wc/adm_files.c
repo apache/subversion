@@ -771,8 +771,14 @@ init_adm(svn_wc__db_t *db,
 
   /** Make subdirectories. ***/
 
+#ifndef SVN_EXPERIMENTAL_PRISTINE
+  /* ### The absence of this directory is used to indicate to the
+     ### regression tests that SHA1 pristines are enabled.  This is a
+     ### temporary hack, to avoid bumping the wc format. */
+
   /* SVN_WC__ADM_TEXT_BASE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_TEXT_BASE, FALSE, pool));
+#endif
 
   /* SVN_WC__ADM_PROP_BASE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROP_BASE, FALSE, pool));
