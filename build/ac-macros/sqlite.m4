@@ -190,7 +190,7 @@ SQLITE_VERSION_OKAY
                   AC_DEFINE(SVN_SQLITE_INLINE, 1,
                   [Defined if svn should use the amalgamated version of sqlite])
                   SVN_SQLITE_INCLUDES="-I`dirname $sqlite_amalg`"
-                  SVN_SQLITE_LIBS="-lpthread"
+                  SVN_SQLITE_LIBS="-ldl -lpthread"
                   svn_lib_sqlite="yes"],
                  [AC_MSG_RESULT([unsupported amalgamation SQLite version])])
   fi
