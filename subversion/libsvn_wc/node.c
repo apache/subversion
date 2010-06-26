@@ -339,20 +339,20 @@ svn_wc__internal_node_get_url(const char **url,
                                scratch_pool, scratch_pool));
   if (repos_relpath == NULL)
     {
-      if (have_base)
-        {
-          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                             NULL,
-                                             db, local_abspath,
-                                             scratch_pool, scratch_pool));
-        }
-      else if (status == svn_wc__db_status_added)
+      if (status == svn_wc__db_status_added)
         {
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
                                            &repos_root_url, NULL, NULL, NULL,
                                            NULL, NULL,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
+        }
+      else if (have_base)
+        {
+          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                             NULL,
+                                             db, local_abspath,
+                                             scratch_pool, scratch_pool));
         }
       else if (status == svn_wc__db_status_absent
                || status == svn_wc__db_status_excluded
@@ -418,20 +418,20 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                                scratch_pool, scratch_pool));
   if (*repos_relpath == NULL)
     {
-      if (have_base)
-        {
-          SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath, NULL,
-                                             NULL,
-                                             wc_ctx->db, local_abspath,
-                                             scratch_pool, scratch_pool));
-        }
-      else if (status == svn_wc__db_status_added)
+      if (status == svn_wc__db_status_added)
         {
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, repos_relpath,
                                            NULL, NULL, NULL, NULL,
                                            NULL, NULL,
                                            wc_ctx->db, local_abspath,
                                            scratch_pool, scratch_pool));
+        }
+      else if (have_base)
+        {
+          SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath, NULL,
+                                             NULL,
+                                             wc_ctx->db, local_abspath,
+                                             scratch_pool, scratch_pool));
         }
       else if (status == svn_wc__db_status_absent
                || status == svn_wc__db_status_excluded
