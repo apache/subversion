@@ -830,6 +830,8 @@ insert_working_node(void *baton,
 }
 
 
+/* Return the number of children under PARENT_RELPATH in the given WC_ID.
+   The table is implicitly defined by the STMT_IDX query.  */
 static svn_error_t *
 count_children(int *count,
                int stmt_idx,
@@ -877,6 +879,9 @@ add_children_to_hash(apr_hash_t *children,
 }
 
 
+/* When children of PARENT_RELPATH are in both BASE_NODE and WORKING_NODE,
+   this function can be used to union those two sets, returning the set
+   in *CHILDREN (allocated in RESULT_POOL).  */
 static svn_error_t *
 union_children(const apr_array_header_t **children,
                svn_sqlite__db_t *sdb,
@@ -902,6 +907,13 @@ union_children(const apr_array_header_t **children,
 }
 
 
+/* Return all the children of PARENT_RELPATH from a single table, implicitly
+   defined by STMT_IDX. If the caller happens to know the count of children,
+   it should be passed as START_SIZE to pre-allocate space in the *CHILDREN
+   return value.
+
+   If the caller doesn't know the count, then it should pass a reasonable
+   idea of how many children may be present.  */
 static svn_error_t *
 single_table_children(const apr_array_header_t **children,
                       int stmt_idx,
@@ -939,7 +951,10 @@ single_table_children(const apr_array_header_t **children,
 }
 
 
-/* */
+/* Return in *CHILDREN all of the children of the directory LOCAL_ABSPATH.
+   If BASE_ONLY is true, then *only* the children from BASE_NODE are
+   returned (those in WORKING_NODE are ignored). The result children are
+   allocated in RESULT_POOl.  */
 static svn_error_t *
 gather_children(const apr_array_header_t **children,
                 svn_boolean_t base_only,
