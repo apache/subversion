@@ -2431,11 +2431,9 @@ svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
 {
   *work_item = svn_skel__make_empty_list(result_pool);
 
-  svn_skel__prepend_str(pristine_sha1
-                          ? svn_checksum_serialize(pristine_sha1,
-                                                   scratch_pool, scratch_pool)
-                          : "",
-                        *work_item, scratch_pool);
+  svn_skel__prepend_str(svn_checksum_serialize(pristine_sha1,
+                                               result_pool, scratch_pool),
+                        *work_item, result_pool);
   svn_skel__prepend_str(apr_pstrdup(result_pool, new_abspath),
                         *work_item, result_pool);
   svn_skel__prepend_str(apr_pstrdup(result_pool, versioned_abspath),
