@@ -804,7 +804,7 @@ dnl Use -Wl,--no-undefined during linking of some libraries
 AC_ARG_ENABLE(disallowing-of-undefined-references,
   [AS_HELP_STRING([--enable-disallowing-of-undefined-references],
                   [Use -Wl,--no-undefined flag during linking of some libraries to disallow undefined references])])
-if test "$enable_disallowing_of_undefined_references" = "yes"; then
+if test "$enable_disallowing_of_undefined_references" != "no"; then
   AC_MSG_CHECKING([for -Wl,--no-undefined])
   old_LDFLAGS="$LDFLAGS"
   LDFLAGS="$LDFLAGS -Wl,--no-undefined"
@@ -818,7 +818,9 @@ if test "$enable_disallowing_of_undefined_references" = "yes"; then
     done
   else
     AC_MSG_RESULT([no])
-    AC_MSG_ERROR([--enable-disallowing-of-undefined-references explicitly requested, but -Wl,--no-undefined not supported])
+    if test "$enable_disallowing_of_undefined_references" = "yes"; then
+      AC_MSG_ERROR([--enable-disallowing-of-undefined-references explicitly requested, but -Wl,--no-undefined not supported])
+    fi
   fi
 fi
 AC_SUBST([libsvn_auth_gnome_keyring_LDFLAGS])
