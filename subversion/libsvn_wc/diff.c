@@ -1535,7 +1535,7 @@ apply_textdelta(void *file_baton,
                                      NULL, NULL, NULL, eb->db,
                                      fb->local_abspath, pool, pool));
 
-  svn_dirent_split(fb->wc_path, &parent, &base_name, fb->pool);
+  svn_dirent_split(&parent, &base_name, fb->wc_path, fb->pool);
 
   /* If the node is added-with-history, then this is not actually
      an add, but a modification. */
@@ -1935,7 +1935,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
       target = "";
     }
   else
-    svn_dirent_split(target_path, &anchor_path, &target, pool);
+    svn_dirent_split(&anchor_path, &target, target_path, pool);
 
   SVN_ERR(make_edit_baton(&eb,
                           wc_ctx->db,

@@ -70,7 +70,7 @@ file_fetcher(void *baton,
   struct ff_baton *ffb = (struct ff_baton *)baton;
   const char *dirpath, *base_name, *session_url, *old_session_url;
 
-  svn_relpath_split(path, &dirpath, &base_name, pool);
+  svn_relpath_split(&dirpath, &base_name, path, pool);
   session_url = svn_path_url_add_component2(ffb->repos_root, 
                                             dirpath, pool);
 

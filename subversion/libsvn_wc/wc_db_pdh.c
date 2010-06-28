@@ -423,7 +423,7 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
          For both of these cases, strip the basename off of the path and
          move up one level. Keep record of what we strip, though, since
          we'll need it later to construct local_relpath.  */
-      svn_dirent_split(local_abspath, &local_abspath, &build_relpath,
+      svn_dirent_split(&local_abspath, &build_relpath, local_abspath,
                        scratch_pool);
 
       /* ### if *pdh != NULL (from further above), then there is (quite

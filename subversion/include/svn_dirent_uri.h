@@ -256,9 +256,9 @@ svn_dirent_dirname(const char *dirent,
  * @since New in 1.7.
  */
 void
-svn_dirent_split(const char *dirent,
-                 const char **dirpath,
+svn_dirent_split(const char **dirpath,
                  const char **base_name,
+                 const char *dirent,
                  apr_pool_t *pool);
 
 /** Divide the canonicalized @a relpath into @a *dirpath and @a
@@ -280,9 +280,9 @@ svn_dirent_split(const char *dirent,
  * @since New in 1.7.
  */
 void
-svn_relpath_split(const char *relpath,
-                  const char **dirpath,
+svn_relpath_split(const char **dirpath,
                   const char **base_name,
+                  const char *relpath,
                   apr_pool_t *pool);
 
 /** Get the basename of the specified canonicalized @a relpath.  The
@@ -338,9 +338,9 @@ svn_relpath_dirname(const char *relpath,
  * @since New in 1.7.
  */
 void
-svn_uri_split(const char *dirent,
-              const char **dirpath,
+svn_uri_split(const char **dirpath,
               const char **base_name,
+              const char *uri,
               apr_pool_t *pool);
 
 /** Get the basename of the specified canonicalized @a uri.  The

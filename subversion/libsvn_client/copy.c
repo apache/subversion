@@ -483,8 +483,8 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
           _("Path '%s' already exists"),
           svn_dirent_local_style(pair->dst_abspath_or_url, pool));
 
-      svn_dirent_split(pair->dst_abspath_or_url, &pair->dst_parent_abspath,
-                       &pair->base_name, pool);
+      svn_dirent_split(&pair->dst_parent_abspath, &pair->base_name,
+                       pair->dst_abspath_or_url, pool);
 
       /* Make sure the destination parent is a directory and produce a clear
          error message if it is not. */
@@ -703,7 +703,7 @@ find_absent_parents2(svn_ra_session_t *ra_session,
   while (kind == svn_node_none)
     {
       APR_ARRAY_PUSH(new_dirs, const char *) = root_url;
-      svn_uri_split(root_url, &root_url, NULL, pool);
+      root_url = svn_uri_dirname(root_url, pool);
 
       SVN_ERR(svn_ra_reparent(ra_session, root_url, pool));
       SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
@@ -1205,7 +1205,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
    *     It looks like the entire block of code hanging off this comment
    *     is redundant. */
   first_pair = APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *);
-  svn_uri_split(first_pair->dst_abspath_or_url, &top_dst_url, NULL, pool);
+  top_dst_url = svn_uri_dirname(first_pair->dst_abspath_or_url, pool);
   for (i = 1; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,

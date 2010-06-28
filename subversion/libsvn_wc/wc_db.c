@@ -472,7 +472,7 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
 
       /* Strip a path segment off the end, and append it to the suffix
          that we'll use when we finally find a base relpath.  */
-      svn_relpath_split(current_relpath, &current_relpath, &current_basename,
+      svn_relpath_split(&current_relpath, &current_basename, current_relpath,
                         scratch_pool);
       relpath_suffix = svn_relpath_join(relpath_suffix, current_basename,
                                         scratch_pool);
@@ -2587,7 +2587,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       svn_wc__db_kind_t parent_kind;
       svn_boolean_t parent_have_work;
 
-      svn_dirent_split(local_abspath, &parent_abspath, &base_name,
+      svn_dirent_split(&parent_abspath, &base_name, local_abspath,
                        scratch_pool);
       SVN_ERR(get_info_for_copy(copyfrom_id, copyfrom_relpath, copyfrom_rev,
                                 &parent_status, &parent_kind, &parent_have_work,
@@ -4070,7 +4070,7 @@ is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
       svn_revnum_t parent_original_revision;
       svn_error_t *err;
 
-      svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
+      svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
 
       err = svn_wc__db_scan_addition(&parent_status,
                                      NULL, NULL, NULL, NULL,
@@ -6811,7 +6811,7 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
   SVN_ERR_ASSERT(not_present != NULL);
   SVN_ERR_ASSERT(base_revision != NULL);
 
-  svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
+  svn_dirent_split(&parent_abspath, &base_name, local_dir_abspath,
                    scratch_pool);
 
   /* The parent should be a working copy if this function is called.
@@ -7978,7 +7978,7 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
 
   /* If this node is copied/moved, then there MUST be a parent. The above
      copyfrom values cannot be set on a wcroot.  */
-  svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
+  svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
   err = svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL, NULL,
                                  &parent_repos_relpath,
                                  NULL,
@@ -8094,7 +8094,7 @@ svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
+  svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
 
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                               local_abspath, svn_sqlite__mode_readwrite,
@@ -8356,7 +8356,7 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath)
                  && !svn_dirent_is_root(local_abspath, strlen(local_abspath)));
 
-  svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
+  svn_dirent_split(&parent_abspath, &base, local_abspath, scratch_pool);
 
   SVN_ERR_ASSERT(*base != '\0');
 

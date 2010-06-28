@@ -161,7 +161,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
   if (! targets->nelts)
     {
       const char *bname;
-      svn_uri_split(common, &common, &bname, pool);
+      svn_uri_split(&common, &bname, common, pool);
       APR_ARRAY_PUSH(targets, const char *) = svn_path_uri_decode(bname, pool);
     }
 

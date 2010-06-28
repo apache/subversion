@@ -116,7 +116,7 @@ relegate_dir_external(void *baton,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
-      svn_dirent_split(b->local_abspath, &parent_dir, &dirname, scratch_pool);
+      svn_dirent_split(&parent_dir, &dirname, b->local_abspath, scratch_pool);
 
       /* Reserve the new dir name. */
       SVN_ERR(svn_io_open_uniquely_named(NULL, &new_path,

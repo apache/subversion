@@ -1043,7 +1043,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
   svn_boolean_t found_in_parent = FALSE;
   int i;
 
-  svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
+  svn_dirent_split(&parent_abspath, &base, local_abspath, scratch_pool);
 
   /* Check if the parent directory knows about this node */
   err = svn_wc__db_read_children(&children, db, parent_abspath, scratch_pool,

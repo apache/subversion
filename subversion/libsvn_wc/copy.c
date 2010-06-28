@@ -372,7 +372,7 @@ copy_versioned_dir(svn_wc_context_t *wc_ctx,
           svn_depth_t depth;
           svn_wc__db_status_t status;
 
-          svn_dirent_split(dst_abspath, &dst_parent_abspath, &name,
+          svn_dirent_split(&dst_parent_abspath, &name, dst_abspath,
                            scratch_pool);
           SVN_ERR(svn_wc__node_get_url(&parent_url, wc_ctx, dst_parent_abspath,
                                        scratch_pool, scratch_pool));
@@ -604,7 +604,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
   svn_wc__db_kind_t kind;
   const char *dstdir_abspath, *dst_basename;
 
-  svn_dirent_split(dst_abspath, &dstdir_abspath, &dst_basename, scratch_pool);
+  svn_dirent_split(&dstdir_abspath, &dst_basename, dst_abspath, scratch_pool);
 
   SVN_ERR(svn_wc__get_entry_versioned(&dst_entry, wc_ctx->db, dstdir_abspath,
                                       svn_node_dir, FALSE, FALSE,

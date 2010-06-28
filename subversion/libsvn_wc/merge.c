@@ -427,7 +427,7 @@ save_merge_result(svn_skel_t **work_item,
   const char *dir_abspath;
   const char *filename;
 
-  svn_dirent_split(versioned_abspath, &dir_abspath, &filename,
+  svn_dirent_split(&dir_abspath, &filename, versioned_abspath,
                    scratch_pool);
 
   /* ### Should use preserved-conflict-file-exts. */
@@ -646,7 +646,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
 
   *work_items = NULL;
 
-  svn_dirent_split(target_abspath, &dir_abspath, &target_name, scratch_pool);
+  svn_dirent_split(&dir_abspath, &target_name, target_abspath, scratch_pool);
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
                                          scratch_pool, scratch_pool));
 
@@ -902,7 +902,7 @@ merge_text_file(svn_skel_t **work_items,
 
   *work_items = NULL;
 
-  svn_dirent_split(target_abspath, &dir_abspath, &base_name, pool);
+  svn_dirent_split(&dir_abspath, &base_name, target_abspath, pool);
 
   /* Open a second temporary file for writing; this is where diff3
      will write the merged results.  We want to use a tempfile
@@ -1072,7 +1072,7 @@ merge_binary_file(svn_skel_t **work_items,
 
   *work_items = NULL;
 
-  svn_dirent_split(target_abspath, &merge_dirpath, &merge_filename, pool);
+  svn_dirent_split(&merge_dirpath, &merge_filename, target_abspath, pool);
 
   /* Give the conflict resolution callback a chance to clean
      up the conflict before we mark the file 'conflicted' */
