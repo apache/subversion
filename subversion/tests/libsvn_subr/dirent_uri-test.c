@@ -2714,6 +2714,38 @@ test_dirent_from_file_url(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_dirent_from_file_url_errors(apr_pool_t *pool)
+{
+  const char *bad_file_urls[] = {
+    /* error if scheme is not "file" */
+    "http://localhost/dir",
+    "file+ssh://localhost/dir",
+#ifndef SVN_USE_DOS_PATHS
+    "file://localhostwrongname/dir",  /* error if host name not "localhost" */
+#endif
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(bad_file_urls); i++)
+    {
+      const char *result;
+      svn_error_t *err;
+
+      err = svn_uri_get_dirent_from_file_url(&result, bad_file_urls[i],
+                                             pool);
+
+      if (err == NULL)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_relpath_internal_style(\"%s\") did "
+                                 "not return an error",
+                                 bad_file_urls[i]);
+      svn_error_clear(err);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -2808,5 +2840,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_relpath_internal_style"),
     SVN_TEST_PASS2(test_dirent_from_file_url,
                    "test svn_uri_get_dirent_from_file_url"),
+    SVN_TEST_PASS2(test_dirent_from_file_url_errors,
+                   "test svn_uri_get_dirent_from_file_url errors"),
     SVN_TEST_NULL
   };

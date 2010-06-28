@@ -2314,7 +2314,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
         {
           hostname = svn_path_uri_decode(apr_pstrmemdup(pool, hostname,
                                                         path - hostname), pool);
-          if (strncmp(hostname, "localhost", 9) == 0)
+          if (strcmp(hostname, "localhost") == 0)
             hostname = NULL;
         }
       else
