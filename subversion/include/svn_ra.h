@@ -1155,7 +1155,10 @@ svn_ra_do_switch(svn_ra_session_t *session,
  * represented by the @a session's URL, or empty if the entire directory
  * is meant to be examined.
  *
- * Get status only as deeply as @a depth indicates.
+ * Get status as deeply as @a depth indicates. If @a depth is
+ * #svn_depth_unknown, get the status down to the current depth of the
+ * working copy. If @depth is deeper than the working copy, include changes
+ * that would be needed to populate the working copy to that depth.
  *
  * The caller may not perform any RA operations using @a session
  * before finishing the report, and may not perform any RA operations
