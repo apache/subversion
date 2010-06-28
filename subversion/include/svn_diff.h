@@ -382,6 +382,8 @@ typedef struct svn_diff_file_options_t
     * @c FALSE.
     */
   svn_boolean_t show_c_function;
+  /** Whether to use git's extended diff format. The default is @c FALSE. */
+  svn_boolean_t use_git_format;
 } svn_diff_file_options_t;
 
 /** Allocate a @c svn_diff_file_options_t structure in @a pool, initializing
@@ -403,6 +405,7 @@ svn_diff_file_options_create(apr_pool_t *pool);
  * - --ignore-space-change, -b
  * - --ignore-all-space, -w
  * - --ignore-eol-style
+ * - --git-diff -g.
  * - --unified, -u (for compatibility, does nothing).
  */
 svn_error_t *
