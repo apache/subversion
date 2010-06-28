@@ -1276,6 +1276,12 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                              db, parent_abspath,
                                              scratch_pool, scratch_pool));
       }
+
+    if (copyfrom_url
+        && !svn_uri_is_ancestor(repos_root_url, copyfrom_url))
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("The URL '%s' has a different repository "
+                                 "root than its parent"), copyfrom_url);
   }
 
   /* Verify that we can actually integrate the inner working copy */
@@ -1332,6 +1338,11 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                           repos_root_url, repos_root_url,
                                           repos_uuid, 0,
                                           depth, scratch_pool));
+
+      /* ### The entries based code still needs the incomplete base record,
+         ### remove it for the direct db code. */
+      if (!copyfrom_url)
+        SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
     }
 #endif
 
@@ -1388,6 +1399,11 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                          scratch_pool));
         }
     }
+  else if (!copyfrom_url)
+    {
+      SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
+                                          scratch_pool));
+    }
   else
     {
       svn_wc_entry_t tmp_entry;
@@ -1408,7 +1424,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
       /* Init the modify flags. */
       tmp_entry.schedule = svn_wc_schedule_add;
-      tmp_entry.kind = kind;
+      tmp_entry.kind = svn_node_dir;
       modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
 
       /* If a copy ancestor was given, make sure the copyfrom URL is in the same
@@ -1416,12 +1432,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
          entry */
       if (copyfrom_url)
         {
-          if (repos_root_url
-              && ! svn_uri_is_ancestor(repos_root_url, copyfrom_url))
-            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                     _("The URL '%s' has a different "
-                                       "repository root than its parent"),
-                                     copyfrom_url);
           tmp_entry.copyfrom_url = copyfrom_url;
           tmp_entry.copyfrom_rev = copyfrom_rev;
           tmp_entry.copied = TRUE;
