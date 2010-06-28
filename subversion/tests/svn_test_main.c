@@ -383,6 +383,8 @@ main(int argc, const char *argv[])
   cleanup_pool = svn_pool_create(pool);
   test_pool = svn_pool_create(pool);
 
+  svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
+
   if (argc >= 2)  /* notice command-line arguments */
     {
       if (! strcmp(argv[1], "list") || list_mode)
