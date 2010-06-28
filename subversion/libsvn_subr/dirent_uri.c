@@ -2289,35 +2289,25 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
                              _("Local URL '%s' does not contain 'file://' "
                                "prefix"), url);
 
-  /* Then, skip what's between the "file://" prefix and the next
-     occurance of '/' -- this is the hostname, and we are considering
-     everything from that '/' until the end of the URL to be the
-     absolute path portion of the URL.
+  /* Find the HOSTNAME portion and the PATH portion of the URL.  The host
+     name is between the "file://" prefix and the next occurence of '/'.  We
+     are considering everything from that '/' until the end of the URL to be
+     the absolute path portion of the URL.
      If we got just "file://", treat it the same as "file:///". */
   hostname = url + 7;
+  path = strchr(hostname, '/');
+  if (path)
+    hostname = apr_pstrmemdup(pool, hostname, path - hostname);
+  else
+    path = "/";
+
+  /* URI-decode HOSTNAME, and set it to NULL if it is "" or "localhost". */
   if (*hostname == '\0')
-    {
-      path = "/";
-      hostname = NULL;
-    }
+    hostname = NULL;
   else
     {
-      path = strchr(hostname, '/');
-      if (! path)
-        return
-           svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             _("Local URL '%s' contains only a hostname, "
-                               "no path"), url);
-
-      /* Treat localhost as an empty hostname. */
-      if (hostname != path)
-        {
-          hostname = svn_path_uri_decode(apr_pstrmemdup(pool, hostname,
-                                                        path - hostname), pool);
-          if (strcmp(hostname, "localhost") == 0)
-            hostname = NULL;
-        }
-      else
+      hostname = svn_path_uri_decode(hostname, pool);
+      if (strcmp(hostname, "localhost") == 0)
         hostname = NULL;
     }
 
