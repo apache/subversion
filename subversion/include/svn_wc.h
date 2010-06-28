@@ -4379,23 +4379,6 @@ svn_wc_delete(const char *path,
               apr_pool_t *pool);
 
 /**
- * Register @a local_abspath as a new file external aimed at
- * @a external_url, @a external_peg_rev, and @a external_rev.
- *
- * If not @c NULL, @a external_peg_rev and @a external_rev must each
- * be of kind @c svn_opt_revision_number or @c svn_opt_revision_head.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_wc_register_file_external(svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              const char *external_url,
-                              const svn_opt_revision_t *external_peg_rev,
-                              const svn_opt_revision_t *external_rev,
-                              apr_pool_t *scratch_pool);
-
-/**
  * Put @a local_abspath under version control by registering it as addition
  * or copy in the database containing its parent. The new node is scheduled
  * for addition to the repository below its parent node.

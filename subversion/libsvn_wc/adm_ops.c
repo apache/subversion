@@ -1530,24 +1530,24 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc_register_file_external(svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              const char *external_url,
-                              const svn_opt_revision_t *external_peg_rev,
-                              const svn_opt_revision_t *external_rev,
-                              apr_pool_t *scratch_pool)
+svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               const char *external_url,
+                               const svn_opt_revision_t *external_peg_rev,
+                               const svn_opt_revision_t *external_rev,
+                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
   const char *parent_abspath, *base_name, *repos_root_url;
 
   svn_dirent_split(&parent_abspath, &base_name, local_abspath, scratch_pool);
 
-  SVN_ERR(svn_wc_add4(wc_ctx, local_abspath, svn_depth_infinity,
-                      NULL, SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL,
-                      scratch_pool));
   SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url, NULL, db,
                                      parent_abspath, scratch_pool,
                                      scratch_pool));
+
+  SVN_ERR(svn_wc__db_op_add_file(wc_ctx->db, local_abspath, NULL, scratch_pool));
+
   SVN_ERR(svn_wc__set_file_external_location(wc_ctx, local_abspath,
                                              external_url, external_peg_rev,
                                              external_rev, repos_root_url,

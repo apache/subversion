@@ -713,6 +713,23 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool);
 
+/**
+ * Register @a local_abspath as a new file external aimed at
+ * @a external_url, @a external_peg_rev, and @a external_rev.
+ *
+ * If not @c NULL, @a external_peg_rev and @a external_rev must each
+ * be of kind @c svn_opt_revision_number or @c svn_opt_revision_head.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               const char *external_url,
+                               const svn_opt_revision_t *external_peg_rev,
+                               const svn_opt_revision_t *external_rev,
+                               apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
