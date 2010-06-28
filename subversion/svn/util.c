@@ -167,7 +167,7 @@ svn_cl__edit_file_externally(const char *path,
   int sys_err;
   apr_status_t apr_err;
 
-  svn_dirent_split(path, &base_dir, &file_name, pool);
+  svn_dirent_split(&base_dir, &file_name, path, pool);
 
   SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
 

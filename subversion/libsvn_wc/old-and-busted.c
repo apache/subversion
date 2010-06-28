@@ -1307,7 +1307,7 @@ svn_wc_entry(const svn_wc_entry_t **entry,
 
       const char *dir_abspath;
 
-      svn_dirent_split(local_abspath, &dir_abspath, &entry_name, pool);
+      svn_dirent_split(&dir_abspath, &entry_name, local_abspath, pool);
 
       dir_access = svn_wc__adm_retrieve_internal2(db, dir_abspath, pool);
     }

@@ -1127,7 +1127,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                         scratch_pool)
                                    && SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
-  svn_dirent_split(local_abspath, &parent_abspath, &base_name, scratch_pool);
+  svn_dirent_split(&parent_abspath, &base_name, local_abspath, scratch_pool);
   if (svn_wc_is_adm_dir(base_name, scratch_pool))
     return svn_error_createf
       (SVN_ERR_ENTRY_FORBIDDEN, NULL,
@@ -1540,7 +1540,7 @@ svn_wc_register_file_external(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   const char *parent_abspath, *base_name, *repos_root_url;
 
-  svn_dirent_split(local_abspath, &parent_abspath, &base_name, scratch_pool);
+  svn_dirent_split(&parent_abspath, &base_name, local_abspath, scratch_pool);
 
   SVN_ERR(svn_wc_add4(wc_ctx, local_abspath, svn_depth_infinity,
                       NULL, SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL,

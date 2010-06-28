@@ -2293,19 +2293,18 @@ static const char *
 get_parent_path(const char *path, apr_pool_t *pool)
 {
   apr_size_t len;
-  const char *parentpath, *base_name;
+  const char *parentpath;
   char *tmp = apr_pstrdup(pool, path);
 
   len = strlen(tmp);
 
   if (len > 0)
     {
-      /* Remove any trailing slash; else svn_uri_split() asserts. */
+      /* Remove any trailing slash; else svn_uri_dirname() asserts. */
       if (tmp[len-1] == '/')
         tmp[len-1] = '\0';
-      svn_uri_split(tmp, &parentpath, &base_name, pool);
 
-      return parentpath;
+      return svn_uri_dirname(tmp, pool);
     }
 
   return path;

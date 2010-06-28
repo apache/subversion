@@ -1390,7 +1390,7 @@ get_entry_access_info(const char **adm_abspath,
       /* FILE node needs to read the parent directory. Or a DIR node
          needs to read from the parent to get at the stub entry. Or this
          is an UNKNOWN node, and we need to examine the parent.  */
-      svn_dirent_split(local_abspath, adm_abspath, entry_name, result_pool);
+      svn_dirent_split(adm_abspath, entry_name, local_abspath, result_pool);
     }
 
   return SVN_NO_ERROR;

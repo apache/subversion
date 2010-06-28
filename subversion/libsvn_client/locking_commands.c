@@ -206,9 +206,9 @@ organize_lock_targets(const char **common_parent_url,
     {
       const char *parent, *base;
       if (url_mode)
-        svn_uri_split(*common_parent_url, &parent, &base, pool);
+        svn_uri_split(&parent, &base, *common_parent_url, pool);
       else
-        svn_dirent_split(*common_parent_url, &parent, &base, pool);
+        svn_dirent_split(&parent, &base, *common_parent_url, pool);
 
       *common_parent_url = parent;
       APR_ARRAY_PUSH(rel_targets, const char *) = base;

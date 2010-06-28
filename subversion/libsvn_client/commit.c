@@ -728,7 +728,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
           else
             svn_error_clear(err);
 
-          svn_uri_split(url, &temp, &dir, pool);
+          svn_uri_split(&temp, &dir, url, pool);
           APR_ARRAY_PUSH(new_entries, const char *) =
             svn_path_uri_decode(dir, pool);
           url = temp;

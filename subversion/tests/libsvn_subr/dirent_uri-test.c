@@ -1345,7 +1345,7 @@ test_dirent_split(apr_pool_t *pool)
     {
       const char *dir, *base_name;
 
-      svn_dirent_split(paths[i][0], &dir, &base_name, pool);
+      svn_dirent_split(&dir, &base_name, paths[i][0], pool);
       if (strcmp(dir, paths[i][1]))
         {
           return svn_error_createf
@@ -1380,7 +1380,7 @@ test_relpath_split(apr_pool_t *pool)
     {
       const char *dir, *base_name;
 
-      svn_relpath_split(paths[i][0], &dir, &base_name, pool);
+      svn_relpath_split( &dir, &base_name, paths[i][0], pool);
       if (strcmp(dir, paths[i][1]))
         {
           return svn_error_createf
@@ -1419,7 +1419,7 @@ test_uri_split(apr_pool_t *pool)
     {
       const char *dir, *base_name;
 
-      svn_uri_split(paths[i][0], &dir, &base_name, pool);
+      svn_uri_split(&dir, &base_name, paths[i][0], pool);
       if (strcmp(dir, paths[i][1]))
         {
           return svn_error_createf

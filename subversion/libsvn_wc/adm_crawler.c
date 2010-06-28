@@ -928,7 +928,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       svn_wc__db_status_t parent_status;
       const char *parent_repos_relpath;
 
-      svn_dirent_split(local_abspath, &parent_abspath, &base,
+      svn_dirent_split(&parent_abspath, &base, local_abspath,
                        scratch_pool);
 
       /* We can assume a file is in the same repository as its parent

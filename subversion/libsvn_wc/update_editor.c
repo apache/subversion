@@ -5925,7 +5925,7 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
   if (!*wc_root && switched == NULL )
     return SVN_NO_ERROR; /* No more info needed */
 
-  svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
+  svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
 
   /* Check if the node is recorded in the parent */
   if (*wc_root)
@@ -6052,7 +6052,7 @@ svn_wc_get_actual_target2(const char **anchor,
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
   if (!(is_wc_root || is_switched) || (kind != svn_wc__db_kind_dir))
     {
-      svn_dirent_split(path, anchor, target, result_pool);
+      svn_dirent_split(anchor, target, path, result_pool);
     }
   else
     {

@@ -363,7 +363,7 @@ svn_wc__internal_node_get_url(const char **url,
         {
           const char *parent_abspath;
 
-          svn_dirent_split(local_abspath, &parent_abspath, &repos_relpath,
+          svn_dirent_split(&parent_abspath, &repos_relpath, local_abspath,
                            scratch_pool);
           SVN_ERR(svn_wc__internal_node_get_url(&repos_root_url, db,
                                                 parent_abspath,
@@ -442,7 +442,7 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
         {
           const char *parent_abspath;
 
-          svn_dirent_split(local_abspath, &parent_abspath, repos_relpath,
+          svn_dirent_split(&parent_abspath, repos_relpath, local_abspath,
                            scratch_pool);
           SVN_ERR(svn_wc__node_get_repos_relpath(repos_relpath, wc_ctx,
                                                  parent_abspath,
@@ -523,7 +523,7 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
           const char *base_name;
           const char *parent_copyfrom_url;
 
-          svn_dirent_split(local_abspath, &parent_abspath, &base_name,
+          svn_dirent_split(&parent_abspath, &base_name, local_abspath,
                            scratch_pool);
 
           /* This is a copied node, so we should never fall off the top of a

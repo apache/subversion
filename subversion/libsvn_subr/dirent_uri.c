@@ -1293,9 +1293,9 @@ svn_dirent_basename(const char *dirent, apr_pool_t *pool)
 }
 
 void
-svn_dirent_split(const char *dirent,
-                 const char **dirpath,
+svn_dirent_split(const char **dirpath,
                  const char **base_name,
+                 const char *dirent,
                  apr_pool_t *pool)
 {
   assert(dirpath != base_name);
@@ -1339,9 +1339,9 @@ svn_relpath_basename(const char *relpath,
 }
 
 void
-svn_relpath_split(const char *relpath,
-                  const char **dirpath,
+svn_relpath_split(const char **dirpath,
                   const char **base_name,
+                  const char *relpath,
                   apr_pool_t *pool)
 {
   assert(dirpath != base_name);
@@ -1390,9 +1390,9 @@ svn_uri_basename(const char *uri, apr_pool_t *pool)
 }
 
 void
-svn_uri_split(const char *uri,
-              const char **dirpath,
+svn_uri_split(const char **dirpath,
               const char **base_name,
+              const char *uri,
               apr_pool_t *pool)
 {
   assert(dirpath != base_name);

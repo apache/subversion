@@ -1961,7 +1961,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
               reject_filename = SVN_WC__THIS_DIR_PREJ;
             }
           else
-            svn_dirent_split(local_abspath, &reject_dirpath, &reject_filename,
+            svn_dirent_split(&reject_dirpath, &reject_filename, local_abspath,
                              scratch_pool);
 
           SVN_ERR(svn_io_open_uniquely_named(NULL, &reject_path,
