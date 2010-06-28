@@ -2278,8 +2278,8 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
 {
   const char *hostname, *path;
 
-  assert(svn_uri_is_canonical(url, pool));
-  assert(svn_path_is_url(url));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(url, pool));
+  SVN_ERR_ASSERT(svn_path_is_url(url));
 
   /* Verify that the URL is well-formed (loosely) */
 
