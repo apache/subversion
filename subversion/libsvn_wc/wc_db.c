@@ -2872,12 +2872,20 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
 
       err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
                                scratch_pool);
-      if (err)
+      if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
         {
-          /* Prolly fell off the top of the wcroot. Just call it a day.  */
+          /* Not registered in the parent; register as addition */
           svn_error_clear(err);
-          return SVN_NO_ERROR;
+
+          SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              svn_dirent_dirname(local_abspath, scratch_pool),
+                              svn_sqlite__mode_readwrite, scratch_pool,
+                              scratch_pool));
+
+          VERIFY_USABLE_PDH(pdh);
         }
+      else
+        SVN_ERR(err);
 
       blank_iwb(&iwb);
 
