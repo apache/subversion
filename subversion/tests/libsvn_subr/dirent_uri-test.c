@@ -41,7 +41,7 @@
 
 #define SVN_EMPTY_PATH ""
 
-/* This check must match the check on to of dirent_uri.c */
+/* This check must match the check on top of dirent_uri.c */
 #if defined(WIN32) || defined(__CYGWIN__) || defined(__OS2__)
 #define SVN_USE_DOS_PATHS
 #endif

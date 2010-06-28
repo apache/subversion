@@ -50,7 +50,7 @@
    the OS! */
 #define SVN_PATH_IS_PLATFORM_EMPTY(s,n) ((n) == 1 && (s)[0] == '.')
 
-/* This check must match the check on to of dirent_uri-tests.c */
+/* This check must match the check on top of dirent_uri-tests.c */
 #if defined(WIN32) || defined(__CYGWIN__) || defined(__OS2__)
 #define SVN_USE_DOS_PATHS
 #endif
