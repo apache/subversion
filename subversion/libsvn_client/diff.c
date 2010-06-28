@@ -306,6 +306,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN_EXPERIMENTAL_PATCH
+
 /*
  * Print a git diff header for PATH to the stream OS using HEADER_ENCODING.
  * All allocations are done in RESULT_POOL. */
@@ -389,6 +391,7 @@ print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding,
                                       path, path, APR_EOL_STR));
   return SVN_NO_ERROR;
 }
+#endif
 
 /*-----------------------------------------------------------------*/
 
@@ -691,48 +694,47 @@ diff_content_changed(const char *path,
                   (os, diff_cmd_baton->header_encoding, subpool,
                    "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
                    path, equal_string));
-          if (diff_cmd_baton->options.for_internal->use_git_format)
+#ifdef SVN_EXPERIMENTAL_PATCH
+
+          /* Add git headers and adjust the labels. 
+           * ### Once we're using the git format everywhere, we can create
+           * ### one func that sets the correct labels in one place. */
+          if (operation == svn_diff_op_deleted)
             {
+              SVN_ERR(print_git_diff_header_deleted(
+                                            os, 
+                                            diff_cmd_baton->header_encoding,
+                                            path, subpool));
+              svn_pool_destroy(subpool);
 
-              /* Add git headers and adjust the labels. 
-               * ### Once we're using the git format everywhere, we can create
-               * ### one func that sets the correct labels in one place. */
-              if (operation == svn_diff_op_deleted)
-                {
-                  SVN_ERR(print_git_diff_header_deleted(
-                                              os, 
-                                              diff_cmd_baton->header_encoding,
-                                              path, subpool));
-                  svn_pool_destroy(subpool);
+              /* We only display the git diff header for deletes. */
+              return SVN_NO_ERROR;
 
-                  /* We only display the git diff header for deletes. */
-                  return SVN_NO_ERROR;
-
-                }
-              else if (operation == svn_diff_op_added)
-                {
-                  SVN_ERR(print_git_diff_header_added(
-                                                os, 
-                                                diff_cmd_baton->header_encoding,
-                                                path, subpool));
-                  label1 = diff_label("/dev/null", rev1, subpool);
-                  label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), 
-                                      rev2, subpool);
-                }
-              else if (operation == svn_diff_op_modified)
-                {
-                  SVN_ERR(print_git_diff_header_modified(
-                                                os, 
-                                                diff_cmd_baton->header_encoding,
-                                                path, subpool));
-                  label1 = diff_label(apr_psprintf(subpool, "a/%s", path1), rev1,
-                                      subpool);
-                  label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), rev2,
-                                      subpool);
-                }
-
-              /* ### Print git headers for copies and renames too. */
             }
+          else if (operation == svn_diff_op_added)
+            {
+              SVN_ERR(print_git_diff_header_added(
+                                            os, 
+                                            diff_cmd_baton->header_encoding,
+                                            path, subpool));
+              label1 = diff_label("/dev/null", rev1, subpool);
+              label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), rev2,
+                                  subpool);
+            }
+          else if (operation == svn_diff_op_modified)
+            {
+              SVN_ERR(print_git_diff_header_modified(
+                                            os, 
+                                            diff_cmd_baton->header_encoding,
+                                            path, subpool));
+              label1 = diff_label(apr_psprintf(subpool, "a/%s", path1), rev1,
+                                  subpool);
+              label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), rev2,
+                                  subpool);
+            }
+
+          /* ### Print git headers for copies and renames too. */
+#endif
           /* Output the actual diff */
           SVN_ERR(svn_diff_file_output_unified3
                   (os, diff, tmpfile1, tmpfile2, label1, label2,

@@ -74,8 +74,6 @@ Valid options:
                                    Ignore changes in EOL style.
                                 -p (--show-c-function):
                                    Show C function name in diff output.
-                                -g (--git-diff):
-                                   Use git's extended diff format.
 
 Global options:
   --username ARG           : specify a username ARG
