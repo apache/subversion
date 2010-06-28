@@ -1156,7 +1156,7 @@ svn_ra_do_switch(svn_ra_session_t *session,
  * is meant to be examined.
  *
  * Get status as deeply as @a depth indicates. If @a depth is
- * #svn_depth_unknown, get the status down to the current depth of the
+ * #svn_depth_unknown, get the status down to the ambient depth of the
  * working copy. If @depth is deeper than the working copy, include changes
  * that would be needed to populate the working copy to that depth.
  *
