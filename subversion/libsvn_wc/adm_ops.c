@@ -1422,37 +1422,25 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     {
       svn_wc_entry_t tmp_entry;
       int modify_flags;
-      apr_hash_t *props = NULL;
+      apr_hash_t *props;
 
       /* Store the pristine properties to install them on working, because
          we might delete the base table */
-      if (exists && status != svn_wc__db_status_not_present)
-        {
-          if (!is_replace && copyfrom_url != NULL)
-            SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
-                                                   scratch_pool,
-                                                   scratch_pool));
-          else
-            props = apr_hash_make(scratch_pool);
-        }
+      SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
+                                             scratch_pool, scratch_pool));
 
       /* Init the modify flags. */
       tmp_entry.schedule = svn_wc_schedule_add;
       tmp_entry.kind = svn_node_dir;
-      modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
+      tmp_entry.copyfrom_url = copyfrom_url;
+      tmp_entry.copyfrom_rev = copyfrom_rev;
+      tmp_entry.copied = TRUE;
 
-      /* If a copy ancestor was given, make sure the copyfrom URL is in the same
-         repository (if possible) and put the proper ancestry info in the new
-         entry */
-      if (copyfrom_url)
-        {
-          tmp_entry.copyfrom_url = copyfrom_url;
-          tmp_entry.copyfrom_rev = copyfrom_rev;
-          tmp_entry.copied = TRUE;
-          modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
-          modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-          modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-        }
+      modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE
+                     | SVN_WC__ENTRY_MODIFY_KIND
+                     | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+                     | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+                     | SVN_WC__ENTRY_MODIFY_COPIED;
 
       SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
                                         &tmp_entry, modify_flags,
@@ -1472,32 +1460,24 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__entry_modify(db, local_abspath, svn_node_dir,
                                    &tmp_entry, modify_flags, scratch_pool));
 
-      SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(db, local_abspath,
-                                                        FALSE, scratch_pool));
+      /* It's not enough to schedule it for addition with copyfrom args.
+         We also need to rewrite all its BASE nodes to move them into WORKING.
 
-      if (is_wc_root)
-        {
-          /* If this new directory has ancestry, it's not enough to
-             schedule it for addition with copyfrom args.  We also
-             need to rewrite all its BASE nodes to move them into WORKING.
+         Currently we still handle this by setting copied on all
+         subnodes. */
 
-             Currently we still handle this by setting copied on all
-             subnodes. */
+      SVN_ERR(mark_tree_copied(db, local_abspath,
+                               exists ? status : svn_wc__db_status_added,
+                               scratch_pool));
 
-          SVN_ERR(mark_tree_copied(db, local_abspath,
-                                   exists ? status : svn_wc__db_status_added,
-                                   scratch_pool));
-
-          /* Clean out the now-obsolete dav cache values.  */
-          /* ### put this into above walk. clear all cached values.  */
-          SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
-                                                scratch_pool));
-        }
+      /* Clean out the now-obsolete dav cache values.  */
+      /* ### put this into above walk. clear all cached values.  */
+      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
+                                            scratch_pool));
 
       /* Set the WORKING_NODE properties from the values we saved earlier */
-      if (props != NULL)
-        SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
-                                                  scratch_pool));
+      SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
+                                               scratch_pool));
     }
 
   /* Report the addition to the caller. */
