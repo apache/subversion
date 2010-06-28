@@ -543,6 +543,7 @@ static const apr_getopt_option_t diff_options[] =
   { "ignore-all-space", 'w', 0, NULL },
   { "ignore-eol-style", SVN_DIFF__OPT_IGNORE_EOL_STYLE, 0, NULL },
   { "show-c-function", 'p', 0, NULL },
+  { "git-diff", 'g', 0, NULL },
   /* ### For compatibility; we don't support the argument to -u, because
    * ### we don't have optional argument support. */
   { "unified", 'u', 0, NULL },
@@ -598,6 +599,8 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
         case 'p':
           options->show_c_function = TRUE;
           break;
+        case 'g':
+          options->use_git_format = TRUE;
         default:
           break;
         }

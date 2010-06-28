@@ -196,7 +196,11 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                            "
                        "    -p (--show-c-function):\n"
                        "                            "
-                       "       Show C function name in diff output.")},
+                       "       Show C function name in diff output.\n"
+                       "                            "
+                       "    -g (--git-diff):\n"
+                       "                            "
+                       "       Use git's extended diff format.")},
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         opt_depth, 1,
