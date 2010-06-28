@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef _MSC_VER
+#if defined(WIN32) || defined(__OS2__)
 #include <direct.h>
 #define getcwd _getcwd
 #define getdcwd _getdcwd

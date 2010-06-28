@@ -24,13 +24,6 @@
 #include <string.h>
 #include <apr_pools.h>
 
-#ifdef _MSC_VER
-#include <direct.h>
-#define getcwd _getcwd
-#else
-#include <unistd.h> /* for getcwd() */
-#endif
-
 #include "svn_test.h"
 
 #include "svn_string.h"
@@ -248,18 +241,14 @@ svn_test__current_directory_url(const char **url,
                                 apr_pool_t *pool)
 {
   /* 8KB is a lot, but it almost guarantees that any path will fit. */
-  char curdir[8192];
-  const char *utf8_ls_curdir, *utf8_is_curdir, *unencoded_url;
+  const char* curdir;
+  const char *unencoded_url;
 
-  if (! getcwd(curdir, sizeof(curdir)))
-    return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
-
-  SVN_ERR(svn_utf_cstring_to_utf8(&utf8_ls_curdir, curdir, pool));
-  utf8_is_curdir = svn_path_internal_style(utf8_ls_curdir, pool);
+  SVN_ERR(svn_dirent_get_absolute(&curdir, "", pool));
 
   unencoded_url = apr_psprintf(pool, "file://%s%s%s%s",
-                               (utf8_is_curdir[0] != '/') ? "/" : "",
-                               utf8_is_curdir,
+                               (curdir[0] != '/') ? "/" : "",
+                               curdir,
                                (suffix[0] && suffix[0] != '/') ? "/" : "",
                                suffix);
 
