@@ -4827,8 +4827,6 @@ def tree_conflicts_on_update_3(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3354 'update fails when file with local mods is moved
 # and modified'
-#
-# Marked as XFail until issue #3354 is resolved.
 def update_moves_and_modifies_an_edited_file(sbox):
   "update moves and modifies a file with edits"
 
