@@ -2362,8 +2362,15 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
           }
       }
     if (hostname)
-      /* We still know that the path starts with a slash. */
-      *dirent = apr_pstrcat(pool, "//", hostname, dup_path, NULL);
+      {
+        if (dup_path[0] == '/' && dup_path[1] == '\0')
+          return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                   _("Local URL '%s' contains only a hostname, "
+                                     "no path"), url);
+
+        /* We still know that the path starts with a slash. */
+        *dirent = apr_pstrcat(pool, "//", hostname, dup_path, NULL);
+      }
     else
       *dirent = dup_path;
   }
