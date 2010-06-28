@@ -1120,7 +1120,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
   svn_boolean_t exists;
-  apr_hash_t *props;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(!copyfrom_url || (svn_uri_is_canonical(copyfrom_url,
@@ -1390,131 +1389,92 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
         }
     }
   else
-  { /* ### Wrong indentation - Work in progress */
-    svn_wc_entry_t tmp_entry;
-    int modify_flags;
+    {
+      svn_wc_entry_t tmp_entry;
+      int modify_flags;
+      apr_hash_t *props = NULL;
 
-    /* Init the modify flags. */
-    tmp_entry.schedule = svn_wc_schedule_add;
-    tmp_entry.kind = kind;
-    modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
+      /* Store the pristine properties to install them on working, because
+         we might delete the base table */
+      if (exists && status != svn_wc__db_status_not_present)
+        {
+          if (!is_replace && copyfrom_url != NULL)
+            SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
+          else
+            props = apr_hash_make(scratch_pool);
+        }
 
-    /* If a copy ancestor was given, make sure the copyfrom URL is in the same
-       repository (if possible) and put the proper ancestry info in the new
-       entry */
-    if (copyfrom_url)
-      {
-        if (repos_root_url
-            && ! svn_uri_is_ancestor(repos_root_url, copyfrom_url))
-          return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                   _("The URL '%s' has a different repository "
-                                     "root than its parent"), copyfrom_url);
-        tmp_entry.copyfrom_url = copyfrom_url;
-        tmp_entry.copyfrom_rev = copyfrom_rev;
-        tmp_entry.copied = TRUE;
-        modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
-        modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-        modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-      }
+      /* Init the modify flags. */
+      tmp_entry.schedule = svn_wc_schedule_add;
+      tmp_entry.kind = kind;
+      modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
 
-    /* Store the pristine properties to install them on working, because
-       we might delete the base table */
-    if ((exists && status != svn_wc__db_status_not_present)
-        && !is_replace && copyfrom_url != NULL)
-      {
-        /* NOTE: the conditions to reach here *exactly* match the
-           conditions used below when PROPS is referenced.
-           Be careful to keep these sets of conditionals aligned to avoid
-           an uninitialized PROPS value.  */
-        SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
-                                               scratch_pool, scratch_pool));
-      }
+      /* If a copy ancestor was given, make sure the copyfrom URL is in the same
+         repository (if possible) and put the proper ancestry info in the new
+         entry */
+      if (copyfrom_url)
+        {
+          if (repos_root_url
+              && ! svn_uri_is_ancestor(repos_root_url, copyfrom_url))
+            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                     _("The URL '%s' has a different "
+                                       "repository root than its parent"),
+                                     copyfrom_url);
+          tmp_entry.copyfrom_url = copyfrom_url;
+          tmp_entry.copyfrom_rev = copyfrom_rev;
+          tmp_entry.copied = TRUE;
+          modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+          modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+          modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+        }
 
-    if (modify_flags)
-      {
-        if (kind == svn_node_dir)
-          SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
-                                            &tmp_entry, modify_flags,
-                                            scratch_pool));
-        else
-          SVN_ERR(svn_wc__entry_modify(db, local_abspath, kind,
-                                       &tmp_entry, modify_flags,
-                                       scratch_pool));
-      }
+      SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
+                                        &tmp_entry, modify_flags,
+                                        scratch_pool));
 
-    if (kind == svn_node_dir) /* scheduling a directory for addition */
-      {
-        /* We're making the same mods we made above, but this time we'll
-           force the scheduling.  Also make sure to undo the
-           'incomplete' flag which svn_wc__internal_ensure_adm() sets by
-           default.
+      /* We're making the same mods we made above, but this time we'll
+         force the scheduling.  Also make sure to undo the
+         'incomplete' flag which svn_wc__internal_ensure_adm() sets by
+         default.
 
-           This deletes the erroneous BASE_NODE for added directories and
-           adds a WORKING_NODE. */
-        if (modify_flags)
-          {
-            modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
-            tmp_entry.schedule = (is_replace
-                                  ? svn_wc_schedule_replace
-                                  : svn_wc_schedule_add);
-            SVN_ERR(svn_wc__entry_modify(db, local_abspath, svn_node_dir,
-                                         &tmp_entry, modify_flags,
-                                         scratch_pool));
-          }
+         This deletes the erroneous BASE_NODE for added directories and
+         adds a WORKING_NODE. */
+      modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
+      tmp_entry.schedule = (is_replace
+                            ? svn_wc_schedule_replace
+                            : svn_wc_schedule_add);
+      SVN_ERR(svn_wc__entry_modify(db, local_abspath, svn_node_dir,
+                                   &tmp_entry, modify_flags, scratch_pool));
 
-        SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(db, local_abspath,
-                                                          FALSE, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(db, local_abspath,
+                                                        FALSE, scratch_pool));
 
-        if (is_wc_root)
-          {
-            /* If this new directory has ancestry, it's not enough to
-               schedule it for addition with copyfrom args.  We also
-               need to rewrite its ancestor-url, and rewrite the
-               ancestor-url of ALL its children!
+      if (is_wc_root)
+        {
+          /* If this new directory has ancestry, it's not enough to
+             schedule it for addition with copyfrom args.  We also
+             need to rewrite all its BASE nodes to move them into WORKING.
 
-               We're doing this because our current commit model (for
-               hysterical raisins, presumably) assumes an entry's URL is
-               correct before commit -- i.e. the URL is not tweaked in
-               the post-commit bumping process.  We might want to change
-               this model someday. */
+             Currently we still handle this by setting copied on all
+             subnodes. */
 
-            /* ### copy.c will copy .svn subdirs, which means the whole
-               ### subtree is already "versioned". we now need to rejigger
-               ### the metadata to make it Proper for this location.  */
+          SVN_ERR(mark_tree_copied(db, local_abspath,
+                                   exists ? status : svn_wc__db_status_added,
+                                   scratch_pool));
 
-            /* Recursively add the 'copied' existence flag as well!  */
+          /* Clean out the now-obsolete dav cache values.  */
+          /* ### put this into above walk. clear all cached values.  */
+          SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
+                                                scratch_pool));
+        }
 
-            SVN_ERR(mark_tree_copied(db, local_abspath,
-                                     exists ? status : svn_wc__db_status_added,
-                                     scratch_pool));
-
-            /* Clean out the now-obsolete dav cache values.  */
-            /* ### put this into above walk. clear all cached values.  */
-            SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
+      /* Set the WORKING_NODE properties from the values we saved earlier */
+      if (props != NULL)
+        SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
                                                   scratch_pool));
-          }
-      }
-
-    /* Set the pristine properties in WORKING_NODE, by copying them from the
-       deleted BASE_NODE record. Or set them to empty to make sure we don't
-       inherit wrong properties from BASE */
-    if (exists && status != svn_wc__db_status_not_present)
-      {
-        if (!is_replace && copyfrom_url != NULL)
-          {
-            /* NOTE: the conditions to reach here *exactly* match the
-               conditions that were used to initialize the PROPS localvar.
-               Be careful to keep these sets of conditionals aligned to avoid
-               an uninitialized PROPS value.  */
-            SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
-                                                      scratch_pool));
-          }
-        else
-          SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
-                                                    apr_hash_make(scratch_pool),
-                                                    scratch_pool));
-      }
-  } /* ### /Wrong indentation - /Work in progress */
+    }
 
   /* Report the addition to the caller. */
   if (notify_func != NULL)
