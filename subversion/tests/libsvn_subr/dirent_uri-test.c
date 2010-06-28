@@ -2682,10 +2682,10 @@ test_dirent_from_file_url(apr_pool_t *pool)
     const char *url;
     const char *result;
   } tests[] = {
-    { "file:///",                  "/" },
+    { "file://",                   "/" },
     { "file:///dir",               "/dir" },
     { "file:///dir/path",          "/dir/path" },
-    { "file://localhost/",         "/" },
+    { "file://localhost",          "/" },
     { "file://localhost/dir",      "/dir" },
     { "file://localhost/dir/path", "/dir/path" },
 #ifdef SVN_USE_DOS_PATHS
