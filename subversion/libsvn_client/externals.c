@@ -439,8 +439,8 @@ switch_file_external(const char *path,
       if (err)
         goto cleanup;
 
-      err = svn_wc_register_file_external(ctx->wc_ctx, local_abspath, url,
-                                          peg_revision, revision, subpool);
+      err = svn_wc__register_file_external(ctx->wc_ctx, local_abspath, url,
+                                           peg_revision, revision, subpool);
       if (err)
         goto cleanup;
     }
