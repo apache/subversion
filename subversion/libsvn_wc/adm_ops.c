@@ -1331,18 +1331,15 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
          created inside of it.
 
          This creates a BASE_NODE for an added directory, really
-         it should create a WORKING_NODE.  It gets removed by the
-         next modify2 call. That is why we don't have to provide a
-         valid url */
+         it should create a WORKING_NODE.  We just remove the
+         node directly (without touching a possible not-present
+         node in the parent stub) */
       SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
                                           repos_root_url, repos_root_url,
                                           repos_uuid, 0,
                                           depth, scratch_pool));
 
-      /* ### The entries based code still needs the incomplete base record,
-         ### remove it for the direct db code. */
-      if (!copyfrom_url)
-        SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
     }
 #endif
 
@@ -1400,10 +1397,27 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
         }
     }
   else if (!copyfrom_url)
-    {
-      SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
-                                          scratch_pool));
-    }
+    SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
+                                        scratch_pool));
+  else if (!is_wc_root)
+    SVN_ERR(svn_wc__db_op_copy_dir(db,
+                                   local_abspath,
+                                   apr_hash_make(scratch_pool),
+                                   copyfrom_rev,
+                                   0,
+                                   NULL,
+                                   svn_path_uri_decode(
+                                        svn_uri_skip_ancestor(repos_root_url,
+                                                              copyfrom_url),
+                                        scratch_pool),
+                                   repos_root_url,
+                                   repos_uuid,
+                                   copyfrom_rev,
+                                   NULL,
+                                   depth,
+                                   NULL,
+                                   NULL,
+                                   scratch_pool));
   else
     {
       svn_wc_entry_t tmp_entry;
