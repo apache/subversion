@@ -3479,9 +3479,9 @@ copy_regular_props(apr_hash_t *props_in,
    normal versioned file.  (Local edits are copied as well.)  If not
    found, then resort to fetching the file in a special RA request.
 
-   After the file is fully installed, call the editor's open_file() on
-   it, so that any subsequent apply_textdelta() commands coming from
-   the server can further alter the file.
+   Store the resulting base and working text and properties in the file
+   baton TFB, so that any subsequent apply_textdelta() commands coming from
+   the server can further alter the file before it is installed.
 */
 static svn_error_t *
 add_file_with_history(const char *path,
