@@ -2682,8 +2682,10 @@ test_dirent_from_file_url(apr_pool_t *pool)
     const char *url;
     const char *result;
   } tests[] = {
+    { "file:///",                  "/" },
     { "file:///dir",               "/dir" },
     { "file:///dir/path",          "/dir/path" },
+    { "file://localhost/",         "/" },
     { "file://localhost/dir",      "/dir" },
     { "file://localhost/dir/path", "/dir/path" },
 #ifdef SVN_USE_DOS_PATHS
@@ -2838,7 +2840,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_dirent_internal_style"),
     SVN_TEST_PASS2(test_relpath_internal_style,
                    "test svn_relpath_internal_style"),
-    SVN_TEST_PASS2(test_dirent_from_file_url,
+    SVN_TEST_XFAIL2(test_dirent_from_file_url,
                    "test svn_uri_get_dirent_from_file_url"),
     SVN_TEST_PASS2(test_dirent_from_file_url_errors,
                    "test svn_uri_get_dirent_from_file_url errors"),
