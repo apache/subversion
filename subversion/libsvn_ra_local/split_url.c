@@ -40,13 +40,6 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   const char *repos_root_dirent;
   svn_stringbuf_t *urlbuf;
 
-  /* Verify that the URL is well-formed (loosely) */
-  /* First, check for the "file://" prefix, to avoid assertion in tests */
-  if (strncmp(URL, "file://", 7) != 0)
-    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             _("Local URL '%s' does not contain 'file://' "
-                               "prefix"), URL);
-
   SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dirent, URL, pool));
 
   /* Search for a repository in the full path. */
