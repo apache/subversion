@@ -2840,7 +2840,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_dirent_internal_style"),
     SVN_TEST_PASS2(test_relpath_internal_style,
                    "test svn_relpath_internal_style"),
-    SVN_TEST_XFAIL2(test_dirent_from_file_url,
+    SVN_TEST_PASS2(test_dirent_from_file_url,
                    "test svn_uri_get_dirent_from_file_url"),
     SVN_TEST_PASS2(test_dirent_from_file_url_errors,
                    "test svn_uri_get_dirent_from_file_url errors"),
