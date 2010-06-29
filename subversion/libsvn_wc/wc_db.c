@@ -2178,6 +2178,36 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
 
 
 svn_error_t *
+svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  const char *like_arg;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath,
+                                             db, local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  if (local_relpath[0] == 0)
+    like_arg = "%";
+  else
+    like_arg = apr_pstrcat(scratch_pool,
+                           escape_sqlite_like(local_relpath, scratch_pool),
+                           "/%", NULL);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_CLEAR_BASE_RECURSIVE_DAV_CACHE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", pdh->wcroot->wc_id, local_relpath,
+                            like_arg));
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
+
+svn_error_t *
 svn_wc__db_pristine_get_path(const char **pristine_abspath,
                              svn_wc__db_t *db,
                              const char *wri_abspath,
