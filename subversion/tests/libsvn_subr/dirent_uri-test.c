@@ -2709,8 +2709,8 @@ test_dirent_from_file_url(apr_pool_t *pool)
 
       if (strcmp(result, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_relpath_internal_style(\"%s\") returned "
-                                 "\"%s\" expected \"%s\"",
+                                 "svn_uri_get_dirent_from_file_url(\"%s\") "
+                                 "returned \"%s\" expected \"%s\"",
                                  tests[i].url, result, tests[i].result);
     }
 
@@ -2740,14 +2740,56 @@ test_dirent_from_file_url_errors(apr_pool_t *pool)
 
       if (err == NULL)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_relpath_internal_style(\"%s\") did "
-                                 "not return an error",
+                                 "svn_uri_get_dirent_from_file_url(\"%s\") "
+                                 "returned \"%s\" expected \"%s\"",
                                  bad_file_urls[i]);
       svn_error_clear(err);
     }
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_file_url_from_dirent(apr_pool_t *pool)
+{
+  struct {
+    const char *dirent;
+    const char *result;
+  } tests[] = {
+#ifdef SVN_USE_DOS_PATHS
+    { "C:/file",                   "file:///C:/file" },
+    { "C:/",                       "file:///C:/" },
+    { "C:/File#$",                 "file:///C:/File%23$" },
+    /* We can't check these as svn_dirent_get_absolute() won't work
+       on shares that don't exist */
+    /*{ "//server/share",            "file://server/share" },
+    { "//server/share/file",       "file://server/share/file" },*/
+#else
+    { "/a/b",                      "file:///a/b" }
+    { "/a",                        "file:///a" }
+    { "/",                         "file:///" },
+    { "/File#$",                   "file:///File%23$" },
+#endif
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *result;
+      
+      SVN_ERR(svn_uri_get_file_url_from_dirent(&result, tests[i].dirent,
+                                               pool));
+
+      if (strcmp(result, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_get_file_url_from_dirent(\"%s\") "
+                                 "returned \"%s\" expected \"%s\"",
+                                 tests[i].dirent, result, tests[i].result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -2844,5 +2886,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_get_dirent_from_file_url"),
     SVN_TEST_PASS2(test_dirent_from_file_url_errors,
                    "test svn_uri_get_dirent_from_file_url errors"),
+    SVN_TEST_PASS2(test_file_url_from_dirent,
+                   "test svn_uri_get_file_url_from_dirent"),
     SVN_TEST_NULL
   };

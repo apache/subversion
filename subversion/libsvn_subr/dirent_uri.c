@@ -2386,3 +2386,31 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
 #endif /* SVN_USE_DOS_PATHS */
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_uri_get_file_url_from_dirent(const char **url,
+                                 const char *dirent,
+                                 apr_pool_t *pool)
+{
+  assert(svn_dirent_is_canonical(dirent, pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&dirent, dirent, pool));
+
+  dirent = svn_path_uri_encode(dirent, pool);
+
+#ifndef SVN_USE_DOS_PATHS
+  *url = apr_pstrcat(pool, "file://", dirent, NULL);
+#else
+  if (dirent[0] == '/')
+    {
+      /* Handle UNC paths */
+      assert(dirent[1] != '/'); /* Not absolute! */
+
+      *url = apr_pstrcat(pool, "file://", dirent+1, NULL);
+    }
+  else
+    *url = apr_pstrcat(pool, "file:///", dirent, NULL);
+#endif
+
+  return SVN_NO_ERROR;
+}
