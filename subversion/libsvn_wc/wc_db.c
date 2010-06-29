@@ -1628,8 +1628,6 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
 
   if (*local_abspath == '\0')
     {
-      svn_error_t *err;
-
       SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
                                  scratch_pool));
       VERIFY_USABLE_PDH(pdh);
