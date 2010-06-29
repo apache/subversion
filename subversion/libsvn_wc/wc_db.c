@@ -1625,6 +1625,48 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                        scratch_pool));
 
   flush_entries(pdh);
+
+  if (*local_abspath == '\0')
+    {
+      svn_error_t *err;
+
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                                 scratch_pool));
+      VERIFY_USABLE_PDH(pdh);
+
+      SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
+                          pdh->wcroot->sdb, scratch_pool));
+
+      blank_ibb(&ibb);
+      
+      ibb.status = status;
+      ibb.kind = svn_wc__db_kind_subdir;
+      ibb.wc_id = pdh->wcroot->wc_id;
+      ibb.local_relpath = svn_dirent_basename(local_abspath, scratch_pool);
+      ibb.repos_id = repos_id;
+      ibb.repos_relpath = repos_relpath;
+      ibb.revision = revision;
+      
+      /* Depending upon KIND, any of these might get used. */
+      ibb.children = NULL;
+      ibb.depth = svn_depth_unknown;
+      ibb.checksum = NULL;
+      ibb.translated_size = SVN_INVALID_FILESIZE;
+      ibb.target = NULL;
+      
+      ibb.conflict = conflict;
+      ibb.work_items = work_items;
+      
+      /* ### hmm. if this used to be a directory, we should remove children.
+         ### or maybe let caller deal with that, if there is a possibility
+         ### of a node kind change (rather than eat an extra lookup here).  */
+      
+      SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                           insert_base_node, &ibb,
+                                           scratch_pool));
+
+      flush_entries(pdh);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1888,6 +1930,108 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
             *target = NULL;
           else
             *target = svn_sqlite__column_text(stmt, 11, result_pool);
+        }
+    }
+  else
+    {
+      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              _("The node '%s' was not found."),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool));
+    }
+
+  /* Note: given the composition, no need to wrap for tracing.  */
+  return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+}
+
+svn_error_t *
+svn_wc__db_base_get_info_from_parent(svn_wc__db_status_t *status,
+                                     svn_wc__db_kind_t *kind,
+                                     svn_revnum_t *revision,
+                                     const char **repos_relpath,
+                                     const char **repos_root_url,
+                                     const char **repos_uuid,
+                                     svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_error_t *err = SVN_NO_ERROR;
+  const char *parent_abspath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              parent_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  local_relpath = svn_relpath_join(local_relpath,
+                                   svn_dirent_basename(local_abspath, NULL),
+                                   scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      svn_wc__db_kind_t node_kind = svn_sqlite__column_token(stmt, 3,
+                                                             kind_map);
+
+      if (kind)
+        {
+          if (node_kind == svn_wc__db_kind_subdir)
+            *kind = svn_wc__db_kind_dir;
+          else
+            *kind = node_kind;
+        }
+      if (status)
+        {
+          *status = svn_sqlite__column_token(stmt, 2, presence_map);
+
+          if (node_kind == svn_wc__db_kind_subdir
+              && *status == svn_wc__db_status_normal)
+            {
+              /* We're looking at the subdir record in the *parent* directory,
+                 which implies per-dir .svn subdirs. We should be looking
+                 at the subdir itself; therefore, it is missing or obstructed
+                 in some way. Inform the caller.  */
+              *status = svn_wc__db_status_obstructed;
+            }
+        }
+      if (revision)
+        {
+          *revision = svn_sqlite__column_revnum(stmt, 4);
+        }
+      if (repos_relpath)
+        {
+          *repos_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
+        }
+      if (repos_root_url || repos_uuid)
+        {
+          /* Fetch repository information via REPOS_ID. */
+          if (svn_sqlite__column_is_null(stmt, 0))
+            {
+              if (repos_root_url)
+                *repos_root_url = NULL;
+              if (repos_uuid)
+                *repos_uuid = NULL;
+            }
+          else
+            {
+              err = fetch_repos_info(repos_root_url, repos_uuid,
+                                     pdh->wcroot->sdb,
+                                     svn_sqlite__column_int64(stmt, 0),
+                                     result_pool);
+            }
         }
     }
   else
