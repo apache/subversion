@@ -477,6 +477,10 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
   svn_revnum_t original_revision;
   svn_wc__db_status_t status;
 
+  if (copyfrom_root_url)
+    *copyfrom_root_url = NULL;
+  if (copyfrom_repos_relpath)
+    *copyfrom_repos_relpath = NULL;
   if (copyfrom_url)
     *copyfrom_url = NULL;
   if (copyfrom_rev)
