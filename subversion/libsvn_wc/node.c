@@ -461,7 +461,9 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
 }
 
 svn_error_t *
-svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
+svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
+                               const char **copyfrom_repos_relpath,
+                               const char **copyfrom_url,
                                svn_revnum_t *copyfrom_rev,
                                svn_boolean_t *is_copy_target,
                                svn_wc_context_t *wc_ctx,
@@ -499,6 +501,10 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
                                                       original_repos_relpath,
                                                       result_pool);
 
+      if (copyfrom_root_url)
+        *copyfrom_root_url = original_root_url;
+      if (copyfrom_repos_relpath)
+        *copyfrom_repos_relpath = original_repos_relpath;
       if (copyfrom_url)
         *copyfrom_url = my_copyfrom_url;
 
@@ -528,7 +534,8 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
 
           /* This is a copied node, so we should never fall off the top of a
            * working copy here. */
-          SVN_ERR(svn_wc__node_get_copyfrom_info(&parent_copyfrom_url,
+          SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
+                                                 &parent_copyfrom_url,
                                                  NULL, NULL,
                                                  wc_ctx, parent_abspath,
                                                  scratch_pool, scratch_pool));
@@ -570,6 +577,12 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
                                             scratch_pool);
           if (src_relpath)
             {
+              if (copyfrom_root_url)
+                *copyfrom_root_url = original_root_url;
+              if (copyfrom_repos_relpath)
+                *copyfrom_repos_relpath = svn_dirent_join(
+                                            original_repos_relpath,
+                                            src_relpath, result_pool);
               if (copyfrom_url)
                 *copyfrom_url = svn_path_url_add_component2(src_parent_url,
                                                             src_relpath,

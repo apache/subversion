@@ -126,7 +126,8 @@ build_info_for_entry(svn_info_t **info,
   if (! SVN_IS_VALID_REVNUM(tmpinfo->rev))
     tmpinfo->rev = 0;
 
-  SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
+  SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
+                                         &copyfrom_url, &copyfrom_rev,
                                          &is_copy_target, wc_ctx,
                                          local_abspath, pool, pool));
   if (is_copy_target)

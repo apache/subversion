@@ -92,18 +92,18 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
   if (local_abspath)
     {
       svn_boolean_t is_added;
-      const char *copyfrom_url;
+      const char *is_copied;
 
       SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
       SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx,
                                     local_abspath, pool));
       if (is_added)
-        SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, NULL, NULL,
-                                               ctx->wc_ctx, local_abspath,
-                                               pool, pool));
+        SVN_ERR(svn_wc__node_get_copyfrom_info(&is_copied, NULL, NULL,
+                                               NULL, NULL, ctx->wc_ctx,
+                                               local_abspath, pool, pool));
 
-      if (is_added && !copyfrom_url)
+      if (is_added && ! is_copied)
         {
           locally_added = TRUE;
         }
@@ -2102,8 +2102,8 @@ try_copy(svn_commit_info_t **commit_info_p,
                   SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src_abspath_or_url));
 
                   SVN_ERR(svn_wc__node_get_copyfrom_info(
-                    &copyfrom_url, &copyfrom_rev, NULL, ctx->wc_ctx,
-                    pair->src_abspath_or_url, pool, iterpool));
+                    NULL, NULL, &copyfrom_url, &copyfrom_rev, NULL,
+                    ctx->wc_ctx, pair->src_abspath_or_url, pool, iterpool));
 
                   if (copyfrom_url)
                     {

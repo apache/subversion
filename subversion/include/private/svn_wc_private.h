@@ -372,14 +372,20 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
  * copy information (versus being a member of the subtree beneath such
  * a copy target).
  *
- * If @a local_abspath is not copied, set @a *copyfrom_rev to NULL and
+ * @a copyfrom_root_url and @a copyfrom_repos_relpath return the exact same
+ * information as @a copyfrom_url, just still separated as root and relpath.
+ *
+ * If @a local_abspath is not copied, set @a *copyfrom_root_url, 
+ * @a *copyfrom_repos_relpath and @a copyfrom_url to NULL and
  * @a *copyfrom_rev to @c SVN_INVALID_REVNUM.
  *
- * Any of @a copyfrom_url, @a copyfrom_rev, or @a is_copy_target may
- * be NULL if the caller doesn't care about those values.
+ * Any out parameters may be NULL if the caller doesn't care about those
+ * values.
  */
 svn_error_t *
-svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
+svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
+                               const char **copyfrom_repos_relpath,
+                               const char **copyfrom_url,
                                svn_revnum_t *copyfrom_rev,
                                svn_boolean_t *is_copy_target,
                                svn_wc_context_t *wc_ctx,

@@ -522,7 +522,7 @@ harvest_committables(apr_hash_t *committables,
           svn_boolean_t is_copy_target;
           /* ### TODO: sensibly align this call of get_copyfrom_info() with
            * the same call below (when checking added nodes). */
-          SVN_ERR(svn_wc__node_get_copyfrom_info(&is_copy, NULL,
+          SVN_ERR(svn_wc__node_get_copyfrom_info(&is_copy, NULL, NULL, NULL,
                                                  &is_copy_target, ctx->wc_ctx,
                                                  local_abspath, scratch_pool,
                                                  scratch_pool));
@@ -543,7 +543,7 @@ harvest_committables(apr_hash_t *committables,
     {
       svn_boolean_t is_copy_target;
 
-      SVN_ERR(svn_wc__node_get_copyfrom_info(&node_copyfrom_url,
+      SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL, &node_copyfrom_url,
                                              &node_copyfrom_rev,
                                              &is_copy_target,
                                              ctx->wc_ctx, local_abspath,
@@ -572,7 +572,8 @@ harvest_committables(apr_hash_t *committables,
           const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                           scratch_pool);
 
-          SVN_ERR(svn_wc__node_get_copyfrom_info(&parent_copyfrom_url,
+          SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
+                                                 &parent_copyfrom_url,
                                                  &parent_copyfrom_rev,
                                                  NULL,
                                                  ctx->wc_ctx, parent_abspath,
