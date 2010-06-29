@@ -889,7 +889,7 @@ typedef enum {
    ### This is temporary - callers should not be looking at the file
    directly.
 
-   Allocate the stream in RESULT_POOL. */
+   Allocate the path in RESULT_POOL. */
 svn_error_t *
 svn_wc__db_pristine_get_path(const char **pristine_abspath,
                              svn_wc__db_t *db,
