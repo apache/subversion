@@ -309,7 +309,14 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   if (write_lock)
     {
-      SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, 0, scratch_pool));
+      svn_boolean_t owns_lock;
+
+      /* If the db already owns a lock, we can't add an extra lock record */
+      SVN_ERR(svn_wc__db_temp_own_lock(&owns_lock, db, path, scratch_pool));
+
+      if (!owns_lock)
+        SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, 0, scratch_pool));
+
       SVN_ERR(svn_wc__db_temp_mark_locked(db, lock->abspath, scratch_pool));
     }
 
