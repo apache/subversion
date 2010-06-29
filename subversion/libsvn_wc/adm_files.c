@@ -603,7 +603,7 @@ svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
                                  NULL, NULL, NULL, NULL, NULL, &checksum,
                                  NULL, NULL, NULL,
                                  db, local_abspath,
-                                 scratch_pool, scratch_pool);
+                                 result_pool, scratch_pool);
   if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
       || checksum == NULL)
     {
@@ -622,14 +622,14 @@ svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
       if (md5_checksum)
         SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, db, local_abspath,
                                             checksum,
-                                            scratch_pool, scratch_pool));
+                                            result_pool, scratch_pool));
     }
   else
     {
       if (sha1_checksum)
         SVN_ERR(svn_wc__db_pristine_get_sha1(sha1_checksum, db, local_abspath,
                                              checksum,
-                                             scratch_pool, scratch_pool));
+                                             result_pool, scratch_pool));
       if (md5_checksum)
         *md5_checksum = checksum;
     }
