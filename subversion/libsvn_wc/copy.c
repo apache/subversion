@@ -599,52 +599,118 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
              void *notify_baton,
              apr_pool_t *scratch_pool)
 {
+  svn_wc__db_t *db = wc_ctx->db;
   svn_node_kind_t src_kind;
-  const svn_wc_entry_t *dst_entry, *src_entry;
-  svn_wc__db_kind_t kind;
-  const char *dstdir_abspath, *dst_basename;
+  svn_wc__db_kind_t src_db_kind, dst_kind;
+  const char *dstdir_abspath;
+  
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+  
+  dstdir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
 
-  svn_dirent_split(&dstdir_abspath, &dst_basename, dst_abspath, scratch_pool);
+  {
+    svn_wc__db_status_t src_status, dstdir_status;
+    const char *src_repos_root_url, *dst_repos_root_url;
+    const char *src_repos_uuid, *dst_repos_uuid;
+    svn_error_t *err;
 
-  SVN_ERR(svn_wc__get_entry_versioned(&dst_entry, wc_ctx->db, dstdir_abspath,
-                                      svn_node_dir, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_entry_versioned(&src_entry, wc_ctx->db, src_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
+    err = svn_wc__db_read_info(&src_status, &src_db_kind, NULL, NULL,
+                               &src_repos_root_url, &src_repos_uuid, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               db, src_abspath, scratch_pool, scratch_pool);
 
-  if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
-      strcmp(src_entry->repos, dst_entry->repos) != 0)
-    return svn_error_createf
-      (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
-       _("Cannot copy to '%s', as it is not from repository '%s'; "
-         "it is from '%s'"),
-       svn_dirent_local_style(dst_abspath, scratch_pool),
-       src_entry->repos, dst_entry->repos);
-  if (dst_entry->schedule == svn_wc_schedule_delete)
-    return svn_error_createf
-      (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
-       _("Cannot copy to '%s' as it is scheduled for deletion"),
-       svn_dirent_local_style(dst_abspath, scratch_pool));
+    if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      {
+        /* Replicate old error code and text */
+        svn_error_clear(err);
+        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                                 _("'%s' is not under version control"),
+                                 svn_dirent_local_style(src_abspath,
+                                                        scratch_pool));
+      }
+    else
+      SVN_ERR(err);
+
+    SVN_ERR(svn_wc__db_read_info(&dstdir_status, NULL, NULL, NULL,
+                                 &dst_repos_root_url, &dst_repos_uuid, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 db, dstdir_abspath, scratch_pool, scratch_pool));
+
+    if (!src_repos_root_url)
+      {
+        if (src_status == svn_wc__db_status_added)
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                           &src_repos_root_url,
+                                           &src_repos_uuid, NULL, NULL, NULL,
+                                           NULL,
+                                           db, src_abspath,
+                                           scratch_pool, scratch_pool));
+        else
+          /* If not added, the node must have a base or we can't copy */
+          SVN_ERR(svn_wc__db_scan_base_repos(NULL, &src_repos_root_url,
+                                             &src_repos_uuid,
+                                             db, src_abspath,
+                                             scratch_pool, scratch_pool));
+      }
+
+    if (!dst_repos_root_url)
+      {
+        if (dstdir_status == svn_wc__db_status_added)
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                           &dst_repos_root_url,
+                                           &dst_repos_uuid, NULL, NULL, NULL,
+                                           NULL,
+                                           db, dstdir_abspath,
+                                           scratch_pool, scratch_pool));
+        else
+          /* If not added, the node must have a base or we can't copy */
+          SVN_ERR(svn_wc__db_scan_base_repos(NULL, &dst_repos_root_url,
+                                             &dst_repos_uuid,
+                                             db, dstdir_abspath,
+                                             scratch_pool, scratch_pool));
+      }
+
+    if (strcmp(src_repos_root_url, dst_repos_root_url) != 0
+        || strcmp(src_repos_uuid, dst_repos_uuid) != 0)
+      return svn_error_createf(
+         SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+         _("Cannot copy to '%s', as it is not from repository '%s'; "
+           "it is from '%s'"),
+         svn_dirent_local_style(dst_abspath, scratch_pool),
+         src_repos_root_url, dst_repos_root_url);
+
+    if (dstdir_status == svn_wc__db_status_deleted)
+      return svn_error_createf(
+         SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+         _("Cannot copy to '%s' as it is scheduled for deletion"),
+         svn_dirent_local_style(dst_abspath, scratch_pool));
+  }
 
   /* TODO(#2843): Rework the error report. */
   /* Check if the copy target is missing or hidden and thus not exist on the
      disk, before actually doing the file copy. */
-  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, dst_abspath, TRUE,
-                               scratch_pool));
+  {
+    svn_wc__db_status_t dst_status;
+    svn_error_t *err;
 
-  if (kind != svn_wc__db_kind_unknown)
-    {
-      svn_wc__db_status_t status;
+    err = svn_wc__db_read_info(&dst_status, &dst_kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               db, dst_abspath, scratch_pool, scratch_pool);
 
-      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   wc_ctx->db, dst_abspath,
-                                   scratch_pool, scratch_pool));
+    if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+      return svn_error_return(err);
 
-      switch (status)
+    svn_error_clear(err);
+
+    if (!err)
+      switch (dst_status)
         {
           case svn_wc__db_status_excluded:
             return svn_error_createf(
@@ -658,18 +724,29 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                      _("'%s' is already under version control"),
                      svn_dirent_local_style(dst_abspath, scratch_pool));
 
-          /* Explicitly ignore other statii */
+          case svn_wc__db_status_deleted:
+          case svn_wc__db_status_obstructed_delete:
+          case svn_wc__db_status_not_present:
+            break; /* OK to add */
+
           default:
-            break;
+            return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                               _("There is already a versioned item '%s'"),
+                               svn_dirent_local_style(dst_abspath,
+                                                      scratch_pool));
         }
-    }
+  }
 
   SVN_ERR(svn_io_check_path(src_abspath, &src_kind, scratch_pool));
 
+#ifndef SINGLE_DB
   if (src_kind == svn_node_file ||
-      (src_entry->kind == svn_node_file && src_kind == svn_node_none))
+      (src_kind == svn_node_none
+        && (src_db_kind == svn_wc__db_kind_file
+            || src_db_kind == svn_wc__db_kind_symlink)))
+#endif
     {
-      svn_node_kind_t dst_kind, dst_db_kind;
+      svn_node_kind_t dst_kind;
 
       /* This is the error checking from copy_file_administratively
          but converted to wc-ng.  It's not in copy_file since this
@@ -681,30 +758,17 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                  _("'%s' already exists and is in the way"),
                                  svn_dirent_local_style(dst_abspath,
                                                         scratch_pool));
-      SVN_ERR(svn_wc_read_kind(&dst_db_kind, wc_ctx, dst_abspath, TRUE,
-                               scratch_pool));
-      if (dst_db_kind != svn_node_none)
-        {
-          svn_boolean_t is_deleted, is_present;
+    }
 
-          SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx,
-                                                 dst_abspath, scratch_pool));
-          SVN_ERR(svn_wc__node_is_status_present(&is_present, wc_ctx,
-                                                 dst_abspath, scratch_pool));
-          if (is_present && !is_deleted)
-            return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
-                               _("There is already a versioned item '%s'"),
-                               svn_dirent_local_style(dst_abspath,
-                                                      scratch_pool));
-
-        }
-
+  if (src_db_kind == svn_wc__db_kind_file
+      || src_db_kind == svn_wc__db_kind_symlink)
+    {
       SVN_ERR(copy_versioned_file(wc_ctx, src_abspath, dst_abspath,
                                   cancel_func, cancel_baton,
                                   notify_func, notify_baton,
                                   scratch_pool));
     }
-  else if (src_kind == svn_node_dir)
+  else
     {
       SVN_ERR(copy_versioned_dir(wc_ctx, src_abspath, dst_abspath,
                                  cancel_func, cancel_baton,
