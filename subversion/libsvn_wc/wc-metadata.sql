@@ -583,6 +583,13 @@ SET locked_levels = 0;
 
 PRAGMA user_version = 16;
 
+/* ------------------------------------------------------------------------- */
+
+/* Format 17 involves no schema changes, it moves the pristine files
+   from .svn/text-base to .svn/pristine */
+
+-- STMT_UPGRADE_TO_17
+PRAGMA user_version = 17;
 
 /* ------------------------------------------------------------------------- */
 

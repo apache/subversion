@@ -1134,7 +1134,7 @@ bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 #if 0
   /* ### no schema changes (yet)... */
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_18));
 #endif
 
   SVN_ERR(migrate_props(b18->wcroot_abspath, sdb, b18->original_format,
@@ -1229,6 +1229,7 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   const char *wcroot_abspath = baton;
 
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
   SVN_ERR(migrate_text_bases(wcroot_abspath, sdb, scratch_pool));
 
   return SVN_NO_ERROR;
