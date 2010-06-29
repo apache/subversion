@@ -37,63 +37,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
-   pay attention to.  ### These should track the changes made to the
-   SVN_WC__ENTRY_ATTR_* #defines! */
-/* ### gap */
-#define SVN_WC__ENTRY_MODIFY_KIND               0x00000004
-/* ### gap  */
-#define SVN_WC__ENTRY_MODIFY_SCHEDULE           0x00000020
-#define SVN_WC__ENTRY_MODIFY_COPIED             0x00000040
-#define SVN_WC__ENTRY_MODIFY_COPYFROM_URL       0x00000100
-#define SVN_WC__ENTRY_MODIFY_COPYFROM_REV       0x00000200
-/* ### gap  */
-
-/* ...ORed together with this to mean: just set the schedule to the new
-   value, instead of treating the new value as a change of state to be
-   merged with the current schedule. */
-#define SVN_WC__ENTRY_MODIFY_FORCE              0x00020000
-
-
-/* Modify the entry for LOCAL_ABSPATH in DB by folding in
-   ("merging") changes, and sync those changes to disk.  New values
-   for the entry are pulled from their respective fields in ENTRY, and
-   MODIFY_FLAGS is a bitmask to specify which of those fields to pay
-   attention to, formed from the values SVN_WC__ENTRY_MODIFY_....
-
-   ### Old doc: "ADM_ACCESS must hold a write lock."
-
-   If LOCAL_ABSPATH specifies a directory, its full entry will be modified.
-   To modify its "parent stub" entry, use svn_wc__entry_modify_stub().
-
-   "Folding in" a change means, in most cases, simply replacing the field
-   with the new value. However, for the "schedule" field, unless
-   MODIFY_FLAGS includes SVN_WC__ENTRY_MODIFY_FORCE (in which case just take
-   the new schedule from ENTRY), it means to determine the schedule that the
-   entry should end up with if the "schedule" value from ENTRY represents a
-   change/add/delete/replace being made to the
-     ### base / working / base and working version(s) ?
-   of the node.
-
-   Perform all allocations in SCRATCH_POOL.
-*/
-svn_error_t *
-svn_wc__entry_modify(svn_wc__db_t *db,
-                     const char *local_abspath,
-                     svn_node_kind_t kind,
-                     const svn_wc_entry_t *entry,
-                     int modify_flags,
-                     apr_pool_t *scratch_pool);
-
-
-/* Like svn_wc__entry_modify(), but modifies the "parent stub".  */
-svn_error_t *
-svn_wc__entry_modify_stub(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          const svn_wc_entry_t *entry,
-                          int modify_flags,
-                          apr_pool_t *scratch_pool);
-
 /** Get an ENTRY for the given LOCAL_ABSPATH.
  *
  * This API does not require an access baton, just a wc_db handle (DB).
