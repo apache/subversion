@@ -221,15 +221,17 @@ svn_wc__ultimate_base_text_path_to_read(const char **result_abspath,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool);
 
-/* Set *MD5_CHECKSUM to the MD-5 checksum of the BASE_NODE pristine text
- * of LOCAL_ABSPATH in DB, or to NULL if it has no BASE_NODE.
- * Allocate *MD5_CHECKSUM in RESULT_POOL. */
+/* Set *SHA1_CHECKSUM and *MD5_CHECKSUM to the SHA-1 and MD-5 checksums of
+ * the BASE_NODE pristine text of LOCAL_ABSPATH in DB, or to NULL if it has
+ * no BASE_NODE.  SHA1_CHECKSUM or MD5_CHECKSUM may be NULL if not required.
+ * Allocate the checksums in RESULT_POOL. */
 svn_error_t *
-svn_wc__get_ultimate_base_md5_checksum(const svn_checksum_t **md5_checksum,
-                                       svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *result_pool,
-                                       apr_pool_t *scratch_pool);
+svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
+                                    const svn_checksum_t **md5_checksum,
+                                    svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
 
 
 

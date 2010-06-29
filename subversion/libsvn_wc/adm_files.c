@@ -589,29 +589,50 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
 
 svn_error_t *
-svn_wc__get_ultimate_base_md5_checksum(const svn_checksum_t **md5_checksum,
-                                       svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *result_pool,
-                                       apr_pool_t *scratch_pool)
+svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
+                                    const svn_checksum_t **md5_checksum,
+                                    svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
+  const svn_checksum_t *checksum;
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, md5_checksum,
+                                 NULL, NULL, NULL, NULL, NULL, &checksum,
                                  NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      || checksum == NULL)
     {
       svn_error_clear(err);
-      *md5_checksum = NULL;
+      if (sha1_checksum)
+        *sha1_checksum = NULL;
+      if (md5_checksum)
+        *md5_checksum = NULL;
       return SVN_NO_ERROR;
     }
-  if (*md5_checksum && (*md5_checksum)->kind != svn_checksum_md5)
-    SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, db, local_abspath,
-                                        *md5_checksum,
-                                        scratch_pool, scratch_pool));
+
+  if (checksum->kind == svn_checksum_sha1)
+    {
+      if (sha1_checksum)
+        *sha1_checksum = checksum;
+      if (md5_checksum)
+        SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, db, local_abspath,
+                                            checksum,
+                                            scratch_pool, scratch_pool));
+    }
+  else
+    {
+      if (sha1_checksum)
+        SVN_ERR(svn_wc__db_pristine_get_sha1(sha1_checksum, db, local_abspath,
+                                             checksum,
+                                             scratch_pool, scratch_pool));
+      if (md5_checksum)
+        *md5_checksum = checksum;
+    }
   return SVN_NO_ERROR;
 }
 
