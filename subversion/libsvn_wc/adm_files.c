@@ -638,6 +638,45 @@ svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
 
 
 svn_error_t *
+svn_wc__get_working_checksums(const svn_checksum_t **sha1_checksum,
+                              const svn_checksum_t **md5_checksum,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  const svn_checksum_t *checksum;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &checksum,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               result_pool, scratch_pool));
+
+  if (checksum->kind == svn_checksum_sha1)
+    {
+      if (sha1_checksum)
+        *sha1_checksum = checksum;
+      if (md5_checksum)
+        SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, db, local_abspath,
+                                            checksum,
+                                            result_pool, scratch_pool));
+    }
+  else
+    {
+      if (sha1_checksum)
+        SVN_ERR(svn_wc__db_pristine_get_sha1(sha1_checksum, db, local_abspath,
+                                             checksum,
+                                             result_pool, scratch_pool));
+      if (md5_checksum)
+        *md5_checksum = checksum;
+    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
