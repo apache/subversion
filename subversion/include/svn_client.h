@@ -2524,6 +2524,10 @@ svn_client_blame(const char *path_or_url,
  * against their copyfrom source, and will appear in the diff output
  * in their entirety, as if they were newly added.
  *
+ * If @a use_git_diff_format is TRUE, then the git's extended diff format
+ * will be used.
+ * ### Do we need to say more about the format? A reference perhaps?
+ *
  * Generated headers are encoded using @a header_encoding.
  *
  * Diff output will not be generated for binary files, unless @a
@@ -2568,6 +2572,7 @@ svn_client_diff5(const apr_array_header_t *diff_options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
@@ -2577,7 +2582,7 @@ svn_client_diff5(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff5(), but with @a show_copies_as_adds set to
- * @c FALSE.
+ * @c FALSE and @a use_git_diff_format set to @c FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  *
@@ -2701,6 +2706,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      apr_file_t *outfile,
                      apr_file_t *errfile,
@@ -2710,7 +2716,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff_peg5(), but with @a show_copies_as_adds set to
- * @c FALSE.
+ * @c FALSE and @a use_git_diff_format set to @c FALSE.
  *
  * @since New in 1.5.
  */
