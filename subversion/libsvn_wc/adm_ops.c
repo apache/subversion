@@ -879,7 +879,18 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       if (!have_base)
         was_add = strcmp(op_root_abspath, local_abspath) == 0;
       else
-        was_replace = TRUE;
+        {
+          svn_wc__db_status_t base_status;
+          SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           db, local_abspath, pool, pool));
+
+          if (base_status != svn_wc__db_status_not_present)
+            was_replace = TRUE;
+          else
+            was_add = TRUE;
+        }
     }
 
   /* ### Maybe we should disallow deleting switched nodes here? */
@@ -1327,6 +1338,31 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 #ifndef SINGLE_DB
   else if (kind == svn_node_dir && !node_exists && !is_replace)
     {
+      svn_wc__db_status_t absent_status;
+      svn_wc__db_kind_t absent_kind;
+      const char *absent_repos_relpath, *absent_repos_root_url;
+      const char *absent_repos_uuid;
+      svn_revnum_t absent_revision;
+
+      /* Read the not present status from the parent working copy,
+         to reinsert it after hooking up the child working copy */
+
+      err = svn_wc__db_base_get_info(&absent_status,
+                                     &absent_kind,
+                                     &absent_revision,
+                                     &absent_repos_relpath,
+                                     &absent_repos_root_url,
+                                     &absent_repos_uuid,
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool);
+
+      if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+      else
+        svn_error_clear(err);
+
       /* Make sure this new directory has an admistrative subdirectory
          created inside of it.
 
@@ -1339,7 +1375,19 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                           repos_uuid, 0,
                                           depth, scratch_pool));
 
-      SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
+      if (!err && absent_status == svn_wc__db_status_not_present)
+        SVN_ERR(svn_wc__db_base_add_absent_node(db, local_abspath,
+                                                absent_repos_relpath,
+                                                absent_repos_root_url,
+                                                absent_repos_uuid,
+                                                absent_revision,
+                                                absent_kind,
+                                                absent_status,
+                                                NULL,
+                                                NULL,
+                                                scratch_pool));
+      else
+        SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
     }
 #endif
 

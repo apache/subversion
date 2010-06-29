@@ -1626,10 +1626,24 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
 
   flush_entries(pdh);
 
-  if (*local_abspath == '\0')
+  if (*local_relpath == '\0')
     {
-      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
-                                 scratch_pool));
+      svn_error_t *err;
+      err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                               scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+        {
+          /* Not registered in the parent; we have to add a stub */
+          svn_error_clear(err);
+
+          SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              svn_dirent_dirname(local_abspath, scratch_pool),
+                              svn_sqlite__mode_readwrite, scratch_pool,
+                              scratch_pool));
+        }
+      else
+        SVN_ERR(err);
       VERIFY_USABLE_PDH(pdh);
 
       SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
