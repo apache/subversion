@@ -585,6 +585,7 @@ file_diff(struct dir_baton *db,
   const char *empty_file;
   svn_boolean_t replaced;
   svn_wc__db_status_t status;
+  const char *original_repos_relpath;
   svn_revnum_t revision;
   svn_revnum_t revert_base_revnum;
   svn_boolean_t have_base;
@@ -622,8 +623,9 @@ file_diff(struct dir_baton *db,
   /* Now refine ADDED to one of: ADDED, COPIED, MOVED_HERE. Note that only
      the latter two have corresponding pristine info to diff against.  */
   if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, eb->db, local_abspath,
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
+                                     &original_repos_relpath, NULL, NULL,
+                                     NULL, eb->db, local_abspath,
                                      pool, pool));
 
   /* A wc-wc diff of replaced files actually shows a diff against the
@@ -721,9 +723,9 @@ file_diff(struct dir_baton *db,
                                         0, revision,
                                         NULL,
                                         working_mimetype,
-                                        NULL, SVN_INVALID_REVNUM,
-                                        propchanges, baseprops,
-                                        eb->callback_baton,
+                                        original_repos_relpath,
+                                        SVN_INVALID_REVNUM, propchanges,
+                                        baseprops, eb->callback_baton,
                                         pool));
     }
   else
