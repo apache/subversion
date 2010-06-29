@@ -434,6 +434,9 @@ class TestFactory:
       if second in ['update','up']:
         return self.cmd_svn_update(args[2:])
 
+      if second in ['switch','sw']:
+        return self.cmd_svn_switch(args[2:])
+
       if second in ['copy', 'cp',
                     'move', 'mv', 'rename', 'ren']:
         return self.cmd_svn_copy_move(args[1:])
@@ -596,7 +599,7 @@ class TestFactory:
 
 
   def cmd_svn_update(self, update_args):
-    "Runs svnn update, looks what happened and writes the script for it."
+    "Runs svn update, looks what happened and writes the script for it."
 
     pyargs, runargs, do_chdir, targets = self.args2svntest(
                                   update_args, True, self.keep_args_of, 0)
@@ -637,6 +640,72 @@ class TestFactory:
     return py
 
 
+  def cmd_svn_switch(self, switch_args):
+    "Runs svn switch, looks what happened and writes the script for it."
+
+    pyargs, runargs, do_chdir, targets = self.args2svntest(
+                                  switch_args, True, self.keep_args_of, 0)
+
+    # Sort out the targets. We need one URL and one wc node, in that order.
+    if len(targets) < 2:
+      raise Failure("Sorry, I'm currently enforcing two targets for svn " +
+                    "switch. If you want to supply less, remove this " +
+                    "check and implement whatever seems appropriate.")
+
+    wc_arg = targets[1]
+    del pyargs[wc_arg.argnr]
+    del runargs[wc_arg.argnr]
+    url_arg = targets[0]
+    del pyargs[url_arg.argnr]
+    del runargs[url_arg.argnr]
+
+    wc = wc_arg.wc
+
+    pychdir = self.chdir(do_chdir, wc)
+
+    #if '--force' in runargs:
+    #  self.really_safe_rmtree(wc_arg.runarg)
+
+    code, output, err = main.run_svn('Maybe', 'sw',
+                                     url_arg.runarg, wc_arg.runarg,
+                                     *runargs)
+
+    py = ""
+
+    if code == 0 and len(err) < 1:
+      # write a test that expects success
+
+      actual_out = tree.build_tree_from_checkout(output)
+      py = ("expected_output = " +
+            self.tree2py(actual_out, wc) + "\n\n")
+
+      pydisk = self.get_current_disk(wc)
+      py += pydisk
+
+      pystatus = self.get_current_status(wc)
+      py += pystatus
+
+      py += pychdir
+      py += ("actions.run_and_verify_switch(" + wc.py + ", " +
+             wc_arg.pyarg + ", " + url_arg.pyarg + ", " +
+             "expected_output, expected_disk, expected_status, " +
+             "None, None, None, None, None, False")
+    else:
+      # write a test that expects error
+      py = "expected_error = " + self.strlist2py(err) + "\n\n"
+      py += pychdir
+      py += ("actions.run_and_verify_switch(" + wc.py + ", " +
+             wc_arg.pyarg + ", " + url_arg.pyarg + ", " +
+             "None, None, None, expected_error, None, None, None, None, False")
+
+    if len(pyargs) > 0:
+      py += ', ' + ', '.join(pyargs)
+    py += ")"
+    py += self.chdir_back(do_chdir)
+
+    return py
+
+
   def cmd_svn_checkout(self, checkout_args):
     "Runs svn checkout, looks what happened and writes the script for it."
 
@@ -661,8 +730,8 @@ class TestFactory:
 
     pychdir = self.chdir(do_chdir, wc)
 
-    if '--force' in runargs:
-      self.really_safe_rmtree(wc_arg.runarg)
+    #if '--force' in runargs:
+    #  self.really_safe_rmtree(wc_arg.runarg)
 
     code, output, err = main.run_svn('Maybe', 'co',
                                      url_arg.runarg, wc_arg.runarg,
@@ -761,7 +830,7 @@ class TestFactory:
           if i != len(echo_args)-1:
             raise Failure("don't understand: echo " + " ".join(echo_args))
 
-        contents = " ".join(echo_args[:i])
+        contents = " ".join(echo_args[:i]) + '\n'
 
     if target_arg is None:
       raise Failure("echo needs a '>' pipe to a file name: echo " +
@@ -801,8 +870,12 @@ class TestFactory:
     for arg in rm_args:
       if not arg.startswith('-'):
         target = self.path2svntest(arg)
-        self.really_safe_rmtree(target.runarg)
-        out += "main.safe_rmtree(" + target.pyarg + ")\n"
+        if os.path.isfile(target.runarg):
+          os.remove(target.runarg)
+          out += "os.remove(" + target.pyarg + ")\n"
+        else:
+          self.really_safe_rmtree(target.runarg)
+          out += "main.safe_rmtree(" + target.pyarg + ")\n"
     return out
 
 
@@ -1030,16 +1103,18 @@ class TestFactory:
   def get_sorted_vars_by_pathlen(self):
     """Compose a listing of variable names to be expanded in script output.
     This is intended to be stored in self.sorted_vars_by_pathlen."""
-    list = []
+    lst = []
 
     for dict in [self.vars, self.other_wc_dirs]:
       for name in dict:
         runpath = dict[name][1]
+        if not runpath:
+          continue
         strlen = len(runpath)
         item = [strlen, name, runpath]
-        bisect.insort(list, item)
+        bisect.insort(lst, item)
 
-    return list
+    return lst
 
 
   def get_sorted_var_names(self):
@@ -1275,6 +1350,10 @@ class TestFactory:
         # Check if the actual tree had this anyway all the way through.
         name = mod[0]
         val = mod[1]
+
+        if name == 'contents' and val is None:
+          continue;
+
         def check_node(node):
           if (
               (name == 'contents' and node.contents == val)
@@ -1397,7 +1476,7 @@ class TestFactory:
     return py
 
 
-  def path2svntest(self, path, argnr=None):
+  def path2svntest(self, path, argnr=None, do_remove_on_new_wc_path=True):
     """Given an input argument, do one hell of a path expansion on it.
     ARGNR is simply inserted into the resulting Target.
     Returns a self.Target instance.
@@ -1494,12 +1573,18 @@ class TestFactory:
     if varname in self.other_wc_dirs:
       return self.other_wc_dirs[varname][1]
 
-    # else, we must still create one.
-    path = self.sbox.add_wc_path(suffix, do_remove)
-    py = "sbox.add_wc_path(" + str2py(suffix)
-    if not do_remove:
-      py += ", remove=False"
-    py += ')'
+    # see if there is a wc already in the sbox
+    path = self.sbox.wc_dir + '.' + suffix
+    if path in self.sbox.test_paths:
+      py = "sbox.wc_dir + '." + suffix + "'"
+    else:
+      # else, we must still create one.
+      path = self.sbox.add_wc_path(suffix, do_remove)
+      py = "sbox.add_wc_path(" + str2py(suffix)
+      if not do_remove:
+        py += ", remove=False"
+      py += ')'
+
     value = [py, path]
     self.other_wc_dirs[varname] = [py, path]
     self.sorted_vars_by_pathlen = self.get_sorted_vars_by_pathlen()
