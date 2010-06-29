@@ -2053,7 +2053,7 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
 
   SVN_ERR(get_pristine_fname(pristine_abspath, pdh, sha1_checksum,
                              FALSE /* create_subdir */,
-                             scratch_pool, scratch_pool));
+                             result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
