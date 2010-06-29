@@ -1120,7 +1120,7 @@ migrate_props(const char *wcroot_abspath,
 
 
 /* */
-struct bump_to_17_baton
+struct bump_to_18_baton
 {
   const char *wcroot_abspath;
   int original_format;
@@ -1128,16 +1128,16 @@ struct bump_to_17_baton
 
 
 static svn_error_t *
-bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  struct bump_to_17_baton *b17 = baton;
+  struct bump_to_18_baton *b18 = baton;
 
 #if 0
   /* ### no schema changes (yet)... */
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
 #endif
 
-  SVN_ERR(migrate_props(b17->wcroot_abspath, sdb, b17->original_format,
+  SVN_ERR(migrate_props(b18->wcroot_abspath, sdb, b18->original_format,
                         scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1167,6 +1167,7 @@ migrate_text_bases(const char *wcroot_abspath,
       svn_checksum_t *sha1_checksum;
       svn_sqlite__stmt_t *stmt;
       apr_finfo_t finfo;
+      const char *hex_digest;
 
       svn_pool_clear(iterpool);
       text_base_path = svn_dirent_join(text_base_dir, text_base_basename,
@@ -1198,16 +1199,21 @@ migrate_text_bases(const char *wcroot_abspath,
       SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
-      /* Compute the path of the pristine.
-         Note: in format 18, pristines are not yet sharded, so don't include
-         that in the path computation. */
+      /* ### Compute the path of the pristine. We should use some
+             standard function to do this, to handle sharding etc.
+             Will we need an svn_wc__db_t?
+
+         ### Should we be doing all this IO inside the transaction?
+             Why not use the workqueue? */
+      hex_digest = svn_checksum_to_cstring(sha1_checksum, iterpool);
       pristine_path = svn_dirent_join_many(iterpool,
                                            wcroot_abspath,
                                            svn_wc_get_adm_dir(iterpool),
                                            PRISTINE_STORAGE_RELPATH,
+                                           hex_digest,
                                            NULL);
 
-      /* Finally, copy the file over. */
+      /* Finally, copy the file over. ### Why not move? */
       SVN_ERR(svn_io_copy_file(text_base_path, pristine_path, TRUE,
                                iterpool));
     }
@@ -1219,7 +1225,7 @@ migrate_text_bases(const char *wcroot_abspath,
 
 
 static svn_error_t *
-bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   const char *wcroot_abspath = baton;
 
@@ -1317,33 +1323,35 @@ svn_wc__upgrade_sdb(int *result_format,
 #if (SVN_WC__VERSION > 16)
       case 16:
         {
-          struct bump_to_17_baton b17;
-
-          b17.wcroot_abspath = wcroot_abspath;
-          b17.original_format = start_format;
-
-          /* Move the properties into the database.  */
-          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17, &b17,
-                                               scratch_pool));
-        }
-
-        *result_format = 17;
-        /* FALLTHROUGH  */
-#endif
-
-#if 0
-      case 17:
-        {
           const char *pristine_dir;
 
           /* Create the '.svn/pristine' directory.  */
           pristine_dir = svn_wc__adm_child(wcroot_abspath,
                                            SVN_WC__ADM_PRISTINE,
                                            scratch_pool);
-          SVN_ERR(svn_io_dir_make(pristine_dir, APR_OS_DEFAULT, scratch_pool));
+          SVN_ERR(svn_wc__ensure_directory(pristine_dir, scratch_pool));
 
           /* Move text bases into the pristine directory, and update the db */
-          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_18, wcroot_abspath,
+          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17, wcroot_abspath,
+                                               scratch_pool));
+
+          /* ### Remove old text-base directory? */
+        }
+
+        *result_format = 17;
+        /* FALLTHROUGH  */
+#endif
+
+#if (SVN_WC__VERSION > 17)
+      case 17:
+        {
+          struct bump_to_18_baton b18;
+
+          b18.wcroot_abspath = wcroot_abspath;
+          b18.original_format = start_format;
+
+          /* Move the properties into the database.  */
+          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_18, &b18,
                                                scratch_pool));
         }
 

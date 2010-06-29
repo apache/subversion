@@ -157,7 +157,7 @@ extern "C" {
 #define SVN_WC__USES_DAV_CACHE 13
 
 /* A version < this does not store properties in wc.db.  */
-#define SVN_WC__PROPS_IN_DB 17
+#define SVN_WC__PROPS_IN_DB 18
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
