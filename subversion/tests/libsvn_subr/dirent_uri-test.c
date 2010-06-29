@@ -2741,7 +2741,7 @@ test_dirent_from_file_url_errors(apr_pool_t *pool)
       if (err == NULL)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_get_dirent_from_file_url(\"%s\") "
-                                 "returned \"%s\" expected \"%s\"",
+                                 "didn't return an error.",
                                  bad_file_urls[i]);
       svn_error_clear(err);
     }
