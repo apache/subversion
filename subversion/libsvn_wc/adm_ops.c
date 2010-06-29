@@ -996,116 +996,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
-/* Helper for mark_tree_copied(), handling the property juggling and
-   state changes for a single item LOCAL_ABSPATH (of kind LOCAL_KIND). */
-static svn_error_t *
-mark_item_copied(svn_wc__db_t *db,
-                 const char *local_abspath,
-                 svn_wc__db_kind_t local_kind,
-                 apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-  svn_wc_entry_t tmp_entry;
-  svn_node_kind_t kind = 
-    local_kind == svn_wc__db_kind_dir ? svn_node_dir : svn_node_unknown;
-
-  /* Squirrel away the pristine properties to install them on
-     working, because we might delete the base table */
-  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
-                                         scratch_pool, scratch_pool));
-  tmp_entry.copied = TRUE;
-  SVN_ERR(svn_wc__entry_modify(db, local_abspath, kind, &tmp_entry,
-                               SVN_WC__ENTRY_MODIFY_COPIED, scratch_pool));
-
-  /* Reinstall the pristine properties on WORKING */
-  /* ### this is all pretty crappy code anyways. not much of a problem
-     ### to pile on here.
-     ### thus... the node's original state may suggest there are no
-     ### pristine properties. in this case, we should say this (copied)
-     ### node has an empty set of properties.  */
-  if (props == NULL)
-    props = apr_hash_make(scratch_pool);
-  SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
-                                            scratch_pool));
-
-  /* Remove now obsolete dav cache values.  */
-  SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
-                                        scratch_pool));
-  
-  return SVN_NO_ERROR;
-}
-
-/* Recursively mark a tree DIR_ABSPATH (whose status is DIR_STATUS)
-   with a COPIED flag, skip items scheduled for deletion. */
-static svn_error_t *
-mark_tree_copied(svn_wc__db_t *db,
-                 const char *dir_abspath,
-                 svn_wc__db_status_t dir_status,
-                 apr_pool_t *pool)
-{
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  const apr_array_header_t *children;
-  int i;
-
-  /* Read the entries file for this directory. */
-  SVN_ERR(svn_wc__db_read_children(&children, db, dir_abspath,
-                                   pool, iterpool));
-
-  /* Mark each entry in the entries file. */
-  for (i = 0; i < children->nelts; i++)
-    {
-      const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
-      const char *child_abspath;
-      svn_wc__db_status_t child_status;
-      svn_wc__db_kind_t child_kind;
-
-      /* Clear our per-iteration pool. */
-      svn_pool_clear(iterpool);
-
-      /* Derive the new URL for the current (child) entry */
-      child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
-
-      SVN_ERR(svn_wc__db_read_info(&child_status, &child_kind, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   db, child_abspath, iterpool, iterpool));
-
-      /* ### "svn add" won't create excluded nodes, but "svn copy" will.
-         ### it copies all metadata, carrying over the excluded nodes.  */
-
-      /* Skip deleted items, or otherwise "not really here" nodes.  */
-      if (child_status == svn_wc__db_status_deleted
-          || child_status == svn_wc__db_status_obstructed_delete
-          || child_status == svn_wc__db_status_not_present
-          || child_status == svn_wc__db_status_absent
-          || child_status == svn_wc__db_status_excluded)
-        continue;
-
-      /* If this is a directory, recurse; otherwise, do real work. */
-      if (child_kind == svn_wc__db_kind_dir)
-        {
-          SVN_ERR(mark_tree_copied(db, child_abspath, child_status, iterpool));
-        }
-      else
-        {
-          SVN_ERR(mark_item_copied(db, child_abspath, child_kind, iterpool));
-        }
-    }
-
-  /* Here's where we handle directories. */
-  if (dir_status != svn_wc__db_status_deleted
-      && dir_status != svn_wc__db_status_obstructed_delete)
-    {
-      SVN_ERR(mark_item_copied(db, dir_abspath, svn_wc__db_kind_dir,
-                               iterpool));
-    }
-
-  /* Destroy our per-iteration pool. */
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_wc_add4(svn_wc_context_t *wc_ctx,
             const char *local_abspath,
@@ -1472,6 +1362,29 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       int modify_flags;
       apr_hash_t *props;
 
+      svn_wc__db_status_t absent_status;
+      svn_wc__db_kind_t absent_kind;
+      const char *absent_repos_relpath, *absent_repos_root_url;
+      const char *absent_repos_uuid;
+      svn_revnum_t absent_revision;
+
+      /* Read the not present status from the parent working copy,
+         to reinsert it after hooking up the child working copy */
+
+      err = svn_wc__db_base_get_info_from_parent(&absent_status,
+                                                 &absent_kind,
+                                                 &absent_revision,
+                                                 &absent_repos_relpath,
+                                                 &absent_repos_root_url,
+                                                 &absent_repos_uuid,
+                                                 db, local_abspath,
+                                                 scratch_pool, scratch_pool);
+
+      if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+      else
+        svn_error_clear(err);
+
       /* Store the pristine properties to install them on working, because
          we might delete the base table */
       SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
@@ -1509,23 +1422,29 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                    &tmp_entry, modify_flags, scratch_pool));
 
       /* It's not enough to schedule it for addition with copyfrom args.
-         We also need to rewrite all its BASE nodes to move them into WORKING.
+         We also need to rewrite all its BASE nodes to move them into WORKING. */
 
-         Currently we still handle this by setting copied on all
-         subnodes. */
+      SVN_ERR(svn_wc__db_temp_op_make_copy(db, local_abspath, TRUE,
+                                           scratch_pool));
 
-      SVN_ERR(mark_tree_copied(db, local_abspath,
-                               exists ? status : svn_wc__db_status_added,
-                               scratch_pool));
-
-      /* Clean out the now-obsolete dav cache values.  */
-      /* ### put this into above walk. clear all cached values.  */
-      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
-                                            scratch_pool));
 
       /* Set the WORKING_NODE properties from the values we saved earlier */
       SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
                                                scratch_pool));
+
+      if (!err && absent_status == svn_wc__db_status_not_present)
+        SVN_ERR(svn_wc__db_base_add_absent_node(db, local_abspath,
+                                                absent_repos_relpath,
+                                                absent_repos_root_url,
+                                                absent_repos_uuid,
+                                                absent_revision,
+                                                absent_kind,
+                                                absent_status,
+                                                NULL,
+                                                NULL,
+                                                scratch_pool));
+      else
+        SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
     }
 
   /* Report the addition to the caller. */
