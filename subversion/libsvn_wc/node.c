@@ -580,7 +580,7 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
               if (copyfrom_root_url)
                 *copyfrom_root_url = original_root_url;
               if (copyfrom_repos_relpath)
-                *copyfrom_repos_relpath = svn_dirent_join(
+                *copyfrom_repos_relpath = svn_relpath_join(
                                             original_repos_relpath,
                                             src_relpath, result_pool);
               if (copyfrom_url)
