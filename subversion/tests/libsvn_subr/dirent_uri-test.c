@@ -417,6 +417,8 @@ test_relpath_join(apr_pool_t *pool)
     { "a", "def", "a/def" },
     { "a", "d", "a/d" },
     { SVN_EMPTY_PATH, "abc", "abc" },
+    { "abc", SVN_EMPTY_PATH, "abc" },
+    { "", "", "" },
   };
 
   for (i = 0; i < COUNT_OF(joins); i++)
