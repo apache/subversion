@@ -2765,8 +2765,8 @@ test_file_url_from_dirent(apr_pool_t *pool)
     /*{ "//server/share",            "file://server/share" },
     { "//server/share/file",       "file://server/share/file" },*/
 #else
-    { "/a/b",                      "file:///a/b" }
-    { "/a",                        "file:///a" }
+    { "/a/b",                      "file:///a/b" },
+    { "/a",                        "file:///a" },
     { "/",                         "file:///" },
     { "/File#$",                   "file:///File%23$" },
 #endif
