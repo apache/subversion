@@ -581,7 +581,8 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NULL;
 
-          SVN_JNI_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url,
+          SVN_JNI_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
+                                                     &copyfrom_url,
                                                      &copyfrom_rev,
                                                      &is_copy_target,
                                                      wc_ctx, local_abspath,
