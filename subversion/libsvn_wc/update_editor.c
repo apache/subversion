@@ -3474,18 +3474,21 @@ copy_regular_props(apr_hash_t *props_in,
 
 /* Do the "with history" part of add_file().
 
-   Attempt to locate COPYFROM_PATH@COPYFROM_REV within the existing
-   working copy.  If found, copy it to PATH, and install it as a
-   normal versioned file.  (Local edits are copied as well.)  If not
-   found, then resort to fetching the file in a special RA request.
+   Attempt to locate COPYFROM_PATH@COPYFROM_REV within the existing working
+   copy.  If a node with such a base is found, copy the base *and working*
+   text and properties from there.  If not found, fetch the text and
+   properties from the repository by calling PB->edit_baton->fetch_func.
 
-   Store the resulting base and working text and properties in the file
-   baton TFB, so that any subsequent apply_textdelta() commands coming from
-   the server can further alter the file before it is installed.
+   Store the copied base and working text in new temporary files in the adm
+   tmp area of the parent directory, whose baton is PB.  Set
+   TFB->copied_text_base_* and TFB->copied_working_text to their paths and
+   checksums.  Set TFB->copied_*_props to the copied properties.
+
+   After this function returns, subsequent apply_textdelta() commands coming
+   from the server may further alter the file before it is installed.
 */
 static svn_error_t *
-add_file_with_history(const char *path,
-                      struct dir_baton *pb,
+add_file_with_history(struct dir_baton *pb,
                       const char *copyfrom_path,
                       svn_revnum_t copyfrom_rev,
                       struct file_baton *tfb,
@@ -3612,7 +3615,7 @@ add_file_with_history(const char *path,
 
       if (text_changed)
         {
-          /* Make a unique file name for the copied_working_text. */
+          /* Make a unique file name for the copied working text. */
           SVN_ERR(get_empty_tmp_file(&tfb->copied_working_text, eb->db,
                                      pb->local_abspath, pool, pool));
 
@@ -3889,7 +3892,7 @@ add_file(const char *path,
   /* Now, if this is an add with history, do the history part. */
   if (copyfrom_path)
     {
-      SVN_ERR(add_file_with_history(path, pb, copyfrom_path, copyfrom_rev,
+      SVN_ERR(add_file_with_history(pb, copyfrom_path, copyfrom_rev,
                                     fb, pool));
     }
 
