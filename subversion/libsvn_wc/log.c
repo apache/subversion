@@ -850,6 +850,12 @@ cleanup_internal(svn_wc__db_t *db,
         }
     }
 
+#ifndef SINGLE_DB
+  /* Purge the DAV props at and under ADM_ABSPATH. */
+  /* ### in single-db mode, we need do this purge at the top-level only. */
+  SVN_ERR(svn_wc__db_base_clear_dav_cache_recursive(db, adm_abspath, iterpool));
+#endif
+
   /* Cleanup the tmp area of the admin subdir, if running the log has not
      removed it!  The logs have been run, so anything left here has no hope
      of being useful. */
@@ -886,6 +892,12 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(cleanup_internal(db, local_abspath, cancel_func, cancel_baton,
                            scratch_pool));
+
+#ifdef SINGLE_DB
+  /* Purge the DAV props at and under LOCAL_ABSPATH. */
+  /* ### in single-db mode, we need do this purge at the top-level only. */
+  SVN_ERR(svn_wc__db_base_clear_dav_cache_recursive(db, adm_abspath, iterpool));
+#endif
 
   /* We're done with this DB, so proactively close it.  */
   SVN_ERR(svn_wc__db_close(db));
