@@ -233,6 +233,18 @@ svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
+/* Set *SHA1_CHECKSUM and *MD5_CHECKSUM to the SHA-1 and MD-5 checksums of
+ * the WORKING_NODE pristine text of LOCAL_ABSPATH in DB, or to NULL if it has
+ * no WORKING_NODE.  SHA1_CHECKSUM or MD5_CHECKSUM may be NULL if not required.
+ * Allocate the checksums in RESULT_POOL. */
+svn_error_t *
+svn_wc__get_working_checksums(const svn_checksum_t **sha1_checksum,
+                              const svn_checksum_t **md5_checksum,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
 
 
 /*** Opening all kinds of adm files ***/
