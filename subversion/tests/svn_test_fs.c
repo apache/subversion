@@ -231,33 +231,6 @@ svn_test__create_repos(svn_repos_t **repos_p,
   return SVN_NO_ERROR;
 }
 
-
-/* Helper function.  Set URL to a "file://" url for the current directory,
-   suffixed by the forward-slash-style relative path SUFFIX, performing all
-   allocation in POOL. */
-svn_error_t *
-svn_test__current_directory_url(const char **url,
-                                const char *suffix,
-                                apr_pool_t *pool)
-{
-  /* 8KB is a lot, but it almost guarantees that any path will fit. */
-  const char* curdir;
-  const char *unencoded_url;
-
-  SVN_ERR(svn_dirent_get_absolute(&curdir, "", pool));
-
-  unencoded_url = apr_psprintf(pool, "file://%s%s%s%s",
-                               (curdir[0] != '/') ? "/" : "",
-                               curdir,
-                               (suffix[0] && suffix[0] != '/') ? "/" : "",
-                               suffix);
-
-  *url = svn_path_uri_encode(unencoded_url, pool);
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_test__stream_to_string(svn_stringbuf_t **string,
                            svn_stream_t *stream,

@@ -73,14 +73,6 @@ svn_test__create_repos(svn_repos_t **repos_p,
                        const svn_test_opts_t *opts,
                        apr_pool_t *pool);
 
-/* Set URL to a "file://" url for the current directory, suffixed by the
-   forward-slash-style relative path SUFFIX, performing all allocation
-   in POOL. */
-svn_error_t *
-svn_test__current_directory_url(const char **url,
-                                const char *suffix,
-                                apr_pool_t *pool);
-
 /* Read all data from a generic read STREAM, and return it in STRING.
    Allocate the svn_stringbuf_t in POOL.  (All data in STRING will be
    dup'ed from STREAM using POOL too.) */

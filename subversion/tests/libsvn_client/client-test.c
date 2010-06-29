@@ -342,16 +342,8 @@ test_patch(const svn_test_opts_t *opts,
 
   /* Check out the HEAD revision */
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
-
-  if (cwd[0] == '/')
-    repos_url = apr_pstrcat(pool, "file://", cwd,
-                            "/test-patch-repos", NULL);
-  else
-    /* On Windows CWD is always in "X:/..." style */
-    repos_url = apr_pstrcat(pool, "file:///", cwd,
-                            "/test-patch-repos", NULL);
-
-  repos_url = svn_uri_canonicalize(repos_url, pool);
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-patch-repos",
+                                           pool));
 
   /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
      directly inside a 1.6 wc doesn't work reliably, an intervening

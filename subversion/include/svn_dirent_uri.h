@@ -779,7 +779,7 @@ svn_dirent_is_under_root(char **full_path,
                          const char *path,
                          apr_pool_t *pool);
 
-/* Set @a *dirent to the path corresponding to the file:// URL @a url, using
+/** Set @a *dirent to the path corresponding to the file:// URL @a url, using
  * the platform-specific file:// rules.
  *
  * @since New in 1.7.
@@ -787,6 +787,16 @@ svn_dirent_is_under_root(char **full_path,
 svn_error_t *
 svn_uri_get_dirent_from_file_url(const char **dirent,
                                  const char *url,
+                                 apr_pool_t *pool);
+
+/** Set @a *url to a file:// URL, corresponding to @a dirent using the
+ * platform specific dirent and file:// rules.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_uri_get_file_url_from_dirent(const char **url,
+                                 const char *dirent,
                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
