@@ -489,7 +489,7 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
                                NULL, &original_repos_relpath,
                                &original_root_url, NULL, &original_revision,
                                NULL, NULL, NULL, NULL, NULL, db,
-                               local_abspath, scratch_pool, scratch_pool));
+                               local_abspath, result_pool, scratch_pool));
   if (original_root_url && original_repos_relpath)
     {
       /* If this was the root of the copy then the URL is immediately
@@ -552,7 +552,8 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
     }
   else if ((status == svn_wc__db_status_added
             || status == svn_wc__db_status_obstructed_add)
-           && (copyfrom_rev || copyfrom_url))
+           && (copyfrom_rev || copyfrom_url || copyfrom_root_url
+               || copyfrom_repos_relpath))
     {
       /* ...But if this is merely the descendant of an explicitly
          copied/moved directory, we need to do a bit more work to
@@ -563,7 +564,7 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
                                        NULL, &original_repos_relpath,
                                        &original_root_url, NULL,
                                        &original_revision, db, local_abspath,
-                                       scratch_pool, scratch_pool));
+                                       result_pool, scratch_pool));
       if (status == svn_wc__db_status_copied ||
           status == svn_wc__db_status_moved_here)
         {
