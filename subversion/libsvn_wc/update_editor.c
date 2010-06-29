@@ -4037,10 +4037,10 @@ apply_textdelta(void *file_baton,
   {
     const svn_checksum_t *checksum;
 
-    SVN_ERR(svn_wc__get_ultimate_base_md5_checksum(&checksum,
-                                                   fb->edit_baton->db,
-                                                   fb->local_abspath,
-                                                   pool, pool));
+    SVN_ERR(svn_wc__get_ultimate_base_checksums(NULL, &checksum,
+                                                fb->edit_baton->db,
+                                                fb->local_abspath,
+                                                pool, pool));
     recorded_base_checksum
       = checksum ? svn_checksum_to_cstring(checksum, pool) : NULL;
     if (recorded_base_checksum && expected_base_checksum
