@@ -121,6 +121,7 @@ typedef enum {
   opt_ignore_whitespace,
   opt_show_diff,
   opt_internal_diff,
+  opt_use_git_diff_format,
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -367,6 +368,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("override diff-cmd specified in config file\n"
                        "                             "
                        "[alias: --idiff]")},
+  {"git-diff", opt_use_git_diff_format, 0,
+                       N_("use git's extended diff format\n")},
+                  
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -571,7 +575,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
      opt_internal_diff, 'x', opt_no_diff_deleted, opt_show_copies_as_adds,
-     opt_notice_ancestry, opt_summarize, opt_changelist, opt_force, opt_xml} },
+     opt_notice_ancestry, opt_summarize, opt_changelist, opt_force, opt_xml,
+     opt_use_git_diff_format} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -1764,6 +1769,8 @@ main(int argc, const char *argv[])
       case opt_internal_diff:
         opt_state.internal_diff = TRUE;
         break;
+      case opt_use_git_diff_format:
+        opt_state.use_git_diff_format = TRUE;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
