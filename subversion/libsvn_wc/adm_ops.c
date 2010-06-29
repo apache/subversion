@@ -1358,10 +1358,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                    scratch_pool));
   else
     {
-      svn_wc_entry_t tmp_entry;
-      int modify_flags;
-      apr_hash_t *props;
-
       svn_wc__db_status_t absent_status;
       svn_wc__db_kind_t absent_kind;
       const char *absent_repos_relpath, *absent_repos_root_url;
@@ -1385,52 +1381,17 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       else
         svn_error_clear(err);
 
-      /* Store the pristine properties to install them on working, because
-         we might delete the base table */
-      SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
-                                             scratch_pool, scratch_pool));
+      /* ### Temporary hack: Hook the inner working copy to the parent
+             working copy to work around that temp_op_make_copy() doesn't
+             add a working_node stub for its root if there is no base_node
+             stub. */
+      SVN_ERR(svn_wc__db_temp_set_parent_stub_to_normal(db, local_abspath,
+                                                        FALSE, scratch_pool));
 
-      /* Init the modify flags. */
-      tmp_entry.schedule = svn_wc_schedule_add;
-      tmp_entry.kind = svn_node_dir;
-      tmp_entry.copyfrom_url = copyfrom_url;
-      tmp_entry.copyfrom_rev = copyfrom_rev;
-      tmp_entry.copied = TRUE;
-
-      modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE
-                     | SVN_WC__ENTRY_MODIFY_KIND
-                     | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                     | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-                     | SVN_WC__ENTRY_MODIFY_COPIED;
-
-      SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
-                                        &tmp_entry, modify_flags,
-                                        scratch_pool));
-
-      /* We're making the same mods we made above, but this time we'll
-         force the scheduling.  Also make sure to undo the
-         'incomplete' flag which svn_wc__internal_ensure_adm() sets by
-         default.
-
-         This deletes the erroneous BASE_NODE for added directories and
-         adds a WORKING_NODE. */
-      modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
-      tmp_entry.schedule = (is_replace
-                            ? svn_wc_schedule_replace
-                            : svn_wc_schedule_add);
-      SVN_ERR(svn_wc__entry_modify(db, local_abspath, svn_node_dir,
-                                   &tmp_entry, modify_flags, scratch_pool));
-
-      /* It's not enough to schedule it for addition with copyfrom args.
-         We also need to rewrite all its BASE nodes to move them into WORKING. */
-
+      /* Transfer all nodes below LOCAL_ABSPATH from BASE_NODE to
+         WORKING_NODE */
       SVN_ERR(svn_wc__db_temp_op_make_copy(db, local_abspath, TRUE,
                                            scratch_pool));
-
-
-      /* Set the WORKING_NODE properties from the values we saved earlier */
-      SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
-                                               scratch_pool));
 
       if (!err && absent_status == svn_wc__db_status_not_present)
         SVN_ERR(svn_wc__db_base_add_absent_node(db, local_abspath,
