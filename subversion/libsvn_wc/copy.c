@@ -601,7 +601,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_node_kind_t src_kind;
-  svn_wc__db_kind_t src_db_kind, dst_kind;
+  svn_wc__db_kind_t src_db_kind;
   const char *dstdir_abspath;
   
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
@@ -698,7 +698,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
     svn_wc__db_status_t dst_status;
     svn_error_t *err;
 
-    err = svn_wc__db_read_info(&dst_status, &dst_kind, NULL, NULL, NULL, NULL,
+    err = svn_wc__db_read_info(&dst_status, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL,
