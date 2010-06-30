@@ -286,6 +286,7 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           const svn_checksum_t *new_checksum,
                           apr_hash_t *new_dav_cache,
                           svn_boolean_t keep_changelist,
+                          svn_boolean_t no_unlock,
                           apr_pool_t *scratch_pool);
 
 

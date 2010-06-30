@@ -229,15 +229,6 @@ process_committed_leaf(svn_wc__db_t *db,
         }
     }
 
-  if (!no_unlock)
-    {
-      svn_skel_t *work_item;
-
-      SVN_ERR(svn_wc__loggy_delete_lock(&work_item, db, adm_abspath,
-                                        local_abspath, scratch_pool));
-      SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
-    }
-
 #ifdef SVN_EXPERIMENTAL_PRISTINE
   /* Set TMP_TEXT_BASE_ABSPATH to NULL.  The new text base will be found in
      the pristine store by its checksum. */
@@ -262,7 +253,7 @@ process_committed_leaf(svn_wc__db_t *db,
   SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, tmp_text_base_abspath,
                                     new_revnum,
                                     new_date, rev_author, checksum,
-                                    new_dav_cache, keep_changelist,
+                                    new_dav_cache, keep_changelist, no_unlock,
                                     scratch_pool));
 
   return SVN_NO_ERROR;

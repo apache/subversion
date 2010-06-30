@@ -81,19 +81,6 @@ svn_wc__loggy_delete_entry(svn_skel_t **work_item,
                            svn_wc__db_kind_t kind,
                            apr_pool_t *result_pool);
 
-
-/* Set *WORK_ITEM to a work queue instruction to delete lock related
-   fields from the entry belonging to LOCAL_ABSPATH.
-
-   ADM_ABSPATH is described above.
-*/
-svn_error_t *
-svn_wc__loggy_delete_lock(svn_skel_t **work_item,
-                          svn_wc__db_t *db,
-                          const char *adm_abspath,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool);
-
 /* Set *WORK_ITEM to a work queue instruction to move the file SRC_ABSPATH
    to DST_ABSPATH.
 
