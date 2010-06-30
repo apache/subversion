@@ -710,10 +710,9 @@ diff_content_changed(const char *path,
                                               os, 
                                               diff_cmd_baton->header_encoding,
                                               path, subpool));
-                svn_pool_destroy(subpool);
-
-                /* We only display the git diff header for deletes. */
-                return SVN_NO_ERROR;
+                label1 = diff_label(apr_psprintf(subpool, "a/%s", path1), rev1,
+                                    subpool);
+                label2 = diff_label("/dev/null", rev2, subpool);
 
               }
             else if (operation == svn_diff_op_copied)
