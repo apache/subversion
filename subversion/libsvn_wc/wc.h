@@ -593,6 +593,14 @@ svn_wc__internal_is_file_external(svn_boolean_t *file_external,
                                   const char *local_abspath,
                                   apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
+                                   svn_boolean_t *copied,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *scratch_pool);
+
+
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.

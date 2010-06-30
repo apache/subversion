@@ -154,8 +154,11 @@ build_info_for_entry(svn_info_t **info,
   if (tmpinfo->depth == svn_depth_unknown)
     tmpinfo->depth = svn_depth_infinity;
 
+  SVN_ERR(svn_wc__node_get_schedule(&tmpinfo->schedule, NULL,
+                                    wc_ctx, local_abspath, pool));
+
   /* Some random stuffs we don't have wc-ng apis for yet */
-  SVN_ERR(svn_wc__node_get_info_bits(&tmpinfo->schedule, &tmpinfo->text_time,
+  SVN_ERR(svn_wc__node_get_info_bits(&tmpinfo->text_time,
                                      &tmpinfo->conflict_old,
                                      &tmpinfo->conflict_new,
                                      &tmpinfo->conflict_wrk,
