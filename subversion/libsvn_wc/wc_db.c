@@ -1630,9 +1630,8 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
 
   if (*local_relpath == '\0')
     {
-      svn_error_t *err;
-      err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite, FALSE,
-                               scratch_pool);
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                                 FALSE, scratch_pool));
 
       VERIFY_USABLE_PDH(pdh);
 
@@ -3045,10 +3044,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   /* Add a parent stub.  */
   if (*local_relpath == '\0')
     {
-      svn_error_t *err;
-
-      err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
-                               FALSE, scratch_pool);
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                                 FALSE, scratch_pool));
 
       VERIFY_USABLE_PDH(pdh);
 
@@ -3240,10 +3237,8 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
   /* Add a parent stub.  */
   if (*local_relpath == '\0')
     {
-      svn_error_t *err;
-
-      err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite, FALSE,
-                               scratch_pool);
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                                 FALSE, scratch_pool));
 
       VERIFY_USABLE_PDH(pdh);
 
