@@ -1103,6 +1103,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
+  svn_wc__db_t *db = fb->edit_baton->db;
   svn_error_t *err;
 
   /* Apply this window.  We may be done at that point.  */
@@ -1150,6 +1151,20 @@ window_handler(svn_txdelta_window_t *window, void *baton)
                                   svn_checksum_md5, fb->pool);
       fb->new_text_base_sha1_checksum =
         svn_checksum_dup(hb->new_text_base_sha1_checksum, fb->pool);
+
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+      /* Store the new pristine text in the pristine store now.  Later, in a
+         single transaction we will update the BASE_NODE to include a
+         reference to this pristine text's checksum. */
+      SVN_ERR(svn_wc__db_pristine_install(db, fb->new_text_base_tmp_abspath,
+                                          fb->new_text_base_sha1_checksum,
+                                          fb->new_text_base_md5_checksum,
+                                          hb->pool));
+      SVN_ERR(svn_wc__db_pristine_get_path(&fb->new_text_base_tmp_abspath,
+                                           db, fb->local_abspath,
+                                           fb->new_text_base_sha1_checksum,
+                                           fb->pool, hb->pool));
+#endif
     }
 
   svn_pool_destroy(hb->pool);
@@ -3486,6 +3501,9 @@ copy_regular_props(apr_hash_t *props_in,
 
    After this function returns, subsequent apply_textdelta() commands coming
    from the server may further alter the file before it is installed.
+
+   Ensure the resulting text base is in the pristine store, and set
+   TFB->copied_text_base_* to its readable abspath and checksums.
 */
 static svn_error_t *
 add_file_with_history(struct dir_baton *pb,
@@ -3595,6 +3613,21 @@ add_file_with_history(struct dir_baton *pb,
       SVN_ERR(svn_stream_close(copied_stream));
       working_props = base_props;
     }
+
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  /* The Pristine Store way: copied_text_base_abspath points to the
+   * installed pristine text. */
+  SVN_ERR(svn_wc__db_pristine_install(db, tfb->copied_text_base_abspath,
+                                      tfb->copied_text_base_sha1_checksum,
+                                      tfb->copied_text_base_md5_checksum,
+                                      subpool));
+  /* Update the reference to the path where we can read the file, now
+   * that it's moved into the pristine store. */
+  SVN_ERR(svn_wc__db_pristine_get_path(&tfb->copied_text_base_abspath,
+                                       db, tfb->local_abspath,
+                                       tfb->copied_text_base_sha1_checksum,
+                                       tfb->pool, subpool));
+#endif
 
   /* Loop over whatever props we have in memory, and add all
      regular props to hashes in the baton. Skip entry and wc
@@ -4683,28 +4716,6 @@ close_file(void *file_baton,
             expected_md5_digest,
             svn_checksum_to_cstring_display(new_text_base_md5_checksum, pool));
 
-#ifdef SVN_EXPERIMENTAL_PRISTINE
-  /* If we had a text change, drop the pristine into its proper place. */
-  /* ### Caution: there is as yet no code to ever remove these pristine
-     files when they are superseded. */
-  /* The WC-NG way is to install the new pristine text in two steps: move it
-     into the pristine store now, and then later in a single transaction
-     update the BASE_NODE to include a reference to this pristine text's
-     checksum.  In the old WC-1 way, installation of this file happens later
-     (in merge_file()) as a single move into place, being part of the loggy
-     action of updating the WC metadata. */
-  if (new_text_base_abspath)
-    {
-      SVN_ERR(svn_wc__db_pristine_install(eb->db, new_text_base_abspath,
-                                          new_text_base_sha1_checksum,
-                                          new_text_base_md5_checksum, pool));
-      SVN_ERR(svn_wc__db_pristine_get_path(&new_text_base_abspath, eb->db,
-                                           fb->local_abspath,
-                                           new_text_base_sha1_checksum,
-                                           pool, pool));
-    }
-#endif
-
   SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, fb->local_abspath, TRUE, pool));
   if (kind == svn_node_none && ! fb->adding_file)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -4899,12 +4910,21 @@ close_file(void *file_baton,
       all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
     }
 
+  /* Remove the copied text base file if we're no longer using it. */
   if (fb->copied_text_base_abspath)
     {
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+      /* ### TODO: Add a WQ item to remove this pristine if unreferenced:
+         svn_wc__wq_build_pristine_remove(&work_item,
+                                          eb->db, fb->local_abspath,
+                                          fb->copied_text_base_sha1_checksum,
+                                          pool); */
+#else
       SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
                                            fb->copied_text_base_abspath,
                                            pool, pool));
       all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+#endif
     }
 
   /* ### NOTE: from this point onwards, we make several changes to the
