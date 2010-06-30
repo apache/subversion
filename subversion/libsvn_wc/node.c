@@ -1283,10 +1283,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
                                              db, local_abspath,
                                              scratch_pool, scratch_pool));
 
-          if (status == svn_wc__db_status_added)
-            break;
-
-          if (copied)
+          if (copied && status != svn_wc__db_status_added)
             *copied = TRUE;
 
           if (!schedule)
@@ -1294,19 +1291,20 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
 
           if (has_base)
             {
-              SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL,
+              svn_wc__db_status_t base_status;
+              SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL, NULL,
                                                NULL,
                                                db, local_abspath,
                                                scratch_pool, scratch_pool));
 
-              if (status != svn_wc__db_status_not_present)
-                {
-                  *schedule = svn_wc_schedule_replace;
-                  break;
-                }
+              if (base_status != svn_wc__db_status_not_present)
+                *schedule = svn_wc_schedule_replace;
             }
+
+          if (status == svn_wc__db_status_added)
+            break; /* Local addition */
 
           /* Determine the parent status to check if we should show the
              schedule of a child of a copy as normal. */
@@ -1330,7 +1328,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
                                        scratch_pool, scratch_pool));
 
           if (status != svn_wc__db_status_added)
-            break; 
+            break; /* Parent was not added */
 
           if (!parent_copyfrom_relpath)
             {
@@ -1340,6 +1338,9 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
                                                NULL, NULL,
                                                db, parent_abspath,
                                                scratch_pool, scratch_pool));
+
+              if (!parent_copyfrom_relpath)
+                break; /* Parent is a local addition */
 
               parent_copyfrom_relpath = svn_relpath_join(
                                            parent_copyfrom_relpath,
@@ -1355,7 +1356,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
 
           if (!child_name
               || strcmp(child_name, svn_dirent_basename(local_abspath, NULL)))
-            break; 
+            break; /* Different operation */
 
           *schedule = svn_wc_schedule_normal;
           break;
