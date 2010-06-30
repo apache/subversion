@@ -289,7 +289,7 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
    Any other allocations are made in SCRATCH_POOL. */
 static svn_error_t *
 get_pristine_fname(const char **pristine_abspath,
-                   svn_wc__db_pdh_t *pdh,
+                   const char *wcroot_abspath,
                    const svn_checksum_t *sha1_checksum,
                    svn_boolean_t create_subdir,
                    apr_pool_t *result_pool,
@@ -303,7 +303,7 @@ get_pristine_fname(const char **pristine_abspath,
 
   /* ### code is in transition. make sure we have the proper data.  */
   SVN_ERR_ASSERT(pristine_abspath != NULL);
-  SVN_ERR_ASSERT(pdh->wcroot != NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wcroot_abspath));
   SVN_ERR_ASSERT(sha1_checksum != NULL);
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
@@ -311,7 +311,7 @@ get_pristine_fname(const char **pristine_abspath,
      ### to use join_many since we know "/" is the separator for
      ### internal canonical paths */
   base_dir_abspath = svn_dirent_join_many(scratch_pool,
-                                          pdh->wcroot->abspath,
+                                          wcroot_abspath,
                                           svn_wc_get_adm_dir(scratch_pool),
                                           PRISTINE_STORAGE_RELPATH,
                                           NULL);
@@ -2226,13 +2226,27 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
 
   /* ### should we look in the PRISTINE table for anything?  */
 
-  SVN_ERR(get_pristine_fname(pristine_abspath, pdh, sha1_checksum,
+  SVN_ERR(get_pristine_fname(pristine_abspath, pdh->wcroot->abspath,
+                             sha1_checksum,
                              FALSE /* create_subdir */,
                              result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
+                                    const char *wcroot_abspath,
+                                    svn_checksum_t *sha1_checksum,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  SVN_ERR(get_pristine_fname(pristine_abspath, wcroot_abspath,
+                             sha1_checksum,
+                             FALSE /* create_subdir */,
+                             result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_pristine_read(svn_stream_t **contents,
@@ -2264,7 +2278,8 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
 
   /* ### should we look in the PRISTINE table for anything?  */
 
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
+  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
+                             sha1_checksum,
                              FALSE /* create_subdir */,
                              scratch_pool, scratch_pool));
   return svn_error_return(svn_stream_open_readonly(
@@ -2333,7 +2348,8 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
+  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
+                             sha1_checksum,
                              TRUE /* create_subdir */,
                              scratch_pool, scratch_pool));
 
@@ -2492,7 +2508,8 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__update(NULL, stmt));
 
       /* Remove the file */
-      SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
+      SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
+                                 sha1_checksum,
                                  TRUE /* create_subdir */,
                                  scratch_pool, scratch_pool));
       SVN_ERR(svn_io_remove_file2(pristine_abspath, TRUE, scratch_pool));
@@ -2541,7 +2558,8 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Check that the pristine text file exists. */
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
+  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
+                             sha1_checksum,
                              FALSE /* create_subdir */,
                              scratch_pool, scratch_pool));
   SVN_ERR(svn_io_check_path(pristine_abspath, &kind_on_disk, scratch_pool));

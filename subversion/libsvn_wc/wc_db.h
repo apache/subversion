@@ -898,6 +898,17 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Set *PRISTINE_ABSPATH to the path under WCROOT_ABSPATH that will be
+   used by the pristine text identified by SHA1_CHECKSUM.  The file
+   need not exist.
+ */
+svn_error_t *
+svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
+                                    const char *wcroot_abspath,
+                                    svn_checksum_t *sha1_checksum,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
 
 /* Set *CONTENTS to a readable stream that will yield the pristine text
    identified by CHECKSUM (### which should/must be its SHA-1 checksum?).

@@ -1167,7 +1167,6 @@ migrate_text_bases(const char *wcroot_abspath,
       svn_checksum_t *sha1_checksum;
       svn_sqlite__stmt_t *stmt;
       apr_finfo_t finfo;
-      const char *hex_digest;
 
       svn_pool_clear(iterpool);
       text_base_path = svn_dirent_join(text_base_dir, text_base_basename,
@@ -1199,21 +1198,19 @@ migrate_text_bases(const char *wcroot_abspath,
       SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
-      /* ### Compute the path of the pristine. We should use some
-             standard function to do this, to handle sharding etc.
-             Will we need an svn_wc__db_t?
+      SVN_ERR(svn_wc__db_pristine_get_future_path(&pristine_path,
+                                                  wcroot_abspath,
+                                                  sha1_checksum,
+                                                  iterpool, iterpool));
 
-         ### Should we be doing all this IO inside the transaction?
-             Why not use the workqueue? */
-      hex_digest = svn_checksum_to_cstring(sha1_checksum, iterpool);
-      pristine_path = svn_dirent_join_many(iterpool,
-                                           wcroot_abspath,
-                                           svn_wc_get_adm_dir(iterpool),
-                                           PRISTINE_STORAGE_RELPATH,
-                                           hex_digest,
-                                           NULL);
+      /* Ensure any sharding directories exist. */
+      SVN_ERR(svn_wc__ensure_directory(svn_dirent_dirname(pristine_path,
+                                                          iterpool),
+                                       iterpool));
 
-      /* Finally, copy the file over. ### Why not move? */
+      /* Copy, rather than move, so that the upgrade can be restarted.
+         It could be moved if upgrades scanned for files in the
+         pristine directory as well as the text-base directory. */
       SVN_ERR(svn_io_copy_file(text_base_path, pristine_path, TRUE,
                                iterpool));
     }
