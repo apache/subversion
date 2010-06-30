@@ -86,6 +86,25 @@ static const char *git_unidiff =
   "new file mode 100644"                                                NL
   ""                                                                    NL;
 
+static const char *git_tree_and_text_unidiff =
+  "Index: iota.copied"                                                  NL
+  "===================================================================" NL
+  "git --diff a/iota b/iota.copied"                                     NL
+  "copy from iota"                                                      NL
+  "copy to iota.copied"                                                 NL
+  "@@ -1 +1,2 @@"                                                       NL
+  " This is the file 'iota'."                                           NL
+  "+some more bytes to 'iota'"                                          NL
+  "Index: A/mu.moved"                                                   NL
+  "===================================================================" NL
+  "git --diff a/A/mu b/A/mu.moved"                                      NL
+  "move from A/mu"                                                      NL
+  "move to A/mu.moved"                                                  NL
+  "@@ -1 +1,2 @@"                                                       NL
+  " This is the file 'mu'."                                             NL
+  "+some more bytes to 'mu'"                                            NL
+  ""                                                                    NL;
+
   static const char *property_unidiff =
   "Index: iota"                                                         NL
   "===================================================================" NL
@@ -365,6 +384,66 @@ test_parse_git_diff(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_parse_git_tree_and_text_diff(apr_pool_t *pool)
+{
+  /* ### Should we check for reversed diffs? */
+
+  apr_file_t *patch_file;
+  svn_patch_t *patch;
+  svn_hunk_t *hunk;
+  const char *fname = "test_parse_git_tree_and_text_diff.patch";
+
+  SVN_ERR(create_patch_file(&patch_file, fname, git_tree_and_text_unidiff,
+                            pool));
+
+  /* Parse a copied file with text modifications. */
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota.copied"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk->original_text,
+                        "This is the file 'iota'." NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk->modified_text,
+                        "This is the file 'iota'." NL
+                        "some more bytes to 'iota'" NL,
+                        pool));
+
+  /* Parse a moved file with text modifications. */
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/mu"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/mu.moved"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_moved);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk->original_text,
+                        "This is the file 'mu'." NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk->modified_text,
+                        "This is the file 'mu'." NL
+                        "some more bytes to 'mu'" NL,
+                        pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Tests to parse a diff with three property changes, one is added, one is
  * modified and one is deleted. */
 static svn_error_t *
@@ -489,6 +568,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test unidiff parsing"),
     SVN_TEST_XFAIL2(test_parse_git_diff,
                     "test git unidiff parsing"),
+    SVN_TEST_XFAIL2(test_parse_git_tree_and_text_diff,
+                    "test git unidiff parsing of tree and text changes"),
     SVN_TEST_PASS2(test_parse_property_diff,
                    "test property unidiff parsing"),
     SVN_TEST_PASS2(test_parse_property_and_text_diff,
