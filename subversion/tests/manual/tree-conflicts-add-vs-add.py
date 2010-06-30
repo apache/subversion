@@ -88,23 +88,24 @@ class TestContext:
   def __init__(self):
     self.base = tempdir()
     self.repos = j(self.base, 'repos')
-    self.WC = j(self.base, 'wc')
-    #self.WC2 = j(self.base, 'wc2')
     self.URL = 'file://' + self.repos
     shell('svnadmin create "' + self.repos + '"')
+    self.WC = j(self.base, 'wc')
     svn('checkout', self.URL, self.WC)
-    #svn('checkout', self.URL, self.WC2)
-    #svn('up', self.WC2)
+
+  def create_wc2(self):
+    self.WC2 = j(self.base, 'wc2')
+    svn('checkout', self.URL, self.WC2)
 
   def wc(self, *relpath):
     if not relpath:
       return self.WC
     return j(self.WC, *relpath)
 
-#  def wc2(self, *relpath):
-#    if not relpath:
-#      return self.WC2
-#    return j(self.WC2, *relpath)
+  def wc2(self, *relpath):
+    if not relpath:
+      return self.WC2
+    return j(self.WC2, *relpath)
 
   def url(self, relpath):
     if not relpath:
@@ -201,6 +202,38 @@ def prepare(ctx, action, kind):
     
 
 
+def co(name, local_action, local_kind, incoming_action, incoming_kind):
+  ctx = TestContext()
+
+  prepare(ctx, local_action, local_kind)
+  prepare(ctx, incoming_action, incoming_kind)
+
+  svn('commit', '-mm', ctx.WC)
+  svn('up', ctx.WC)
+
+  head = ctx.head()
+  print head
+
+  ctx.create_wc2()
+  target = ctx.wc2(name)
+  incoming_action(ctx, target, incoming_kind, 'incoming')
+  svn('commit', '-mm', ctx.WC2)
+
+  target = ctx.wc(name)
+  local_action(ctx, target, local_kind, 'local')
+  
+  # get conflicts
+  o1,e1 = shell('yes p | svn checkout "' + ctx.URL + '" ' +
+                '"' + ctx.WC + '"')
+  o2,e2 = svn('status', ctx.WC)
+  o3,e3 = run_cmd(['sqlite3', ctx.wc('.svn', 'wc.db'),
+                   'select local_relpath,properties from base_node; '
+                   +'select local_relpath,properties from working_node; '
+                   +'select local_relpath,properties from actual_node; '
+                   ])
+  return o1, e1, o2, e2, o3, e3
+  
+
 def up(name, local_action, local_kind, incoming_action, incoming_kind):
   ctx = TestContext()
 
@@ -267,13 +300,14 @@ def sw(name, local_action, local_kind, incoming_action, incoming_kind):
 # simple strings for f (file), l (symlink), d (directory).
 #
 #                cmd      local action and kind     incoming action and kind
-p = Permutations((up,sw), (add,cp1,unver), (f,l,d), (add,cp2,cp1), (f,l,d))
+p = Permutations((co,up,sw), (add,cp1,unver), (f,l,d), (add,cp2,cp1), (f,l,d))
 
 # Incoming cp1 is meant to match up only with local cp1. Also, cp1-cp1 is
 # supposed to perform identical copies in both incoming and local, so they
 # only make sense with matching kinds. Skip all rows that don't match this:
 p.skip = lambda row: (row[3] == cp1 and (row[4] != row[2] or row[1] != cp1)
                       #Select subsets if desired
+                      #or (row[0] != co)
                       #or (row[2] != l and row[4] != l)
                       #
                       #or row not in (
