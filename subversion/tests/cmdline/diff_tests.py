@@ -67,10 +67,12 @@ def make_git_diff_header(path, old_tag, new_tag, add=False, src_label=None,
   if copyfrom:
     copyfrom_as_shown = copyfrom.replace('\\', '/')
   if src_label:
+    src_label = src_label.replace('\\', '/')
     src_label = '\t(.../' + src_label + ')'
   else:
     src_label = ''
   if dst_label:
+    dst_label = dst_label.replace('\\', '/')
     dst_label = '\t(.../' + dst_label + ')'
   else:
     dst_label = ''
