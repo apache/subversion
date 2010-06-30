@@ -479,7 +479,8 @@ parse_next_hunk(svn_hunk_t **hunk,
               SVN_ERR(parse_prop_name(prop_name, line->data, "Modified: ",
                                       result_pool));
             }
-          else if (starts_with(line->data, minus))
+          else if (starts_with(line->data, minus)
+                   || starts_with(line->data, "git --diff "))
             /* This could be a header of another patch. Bail out. */
             break;
         }
@@ -578,6 +579,268 @@ close_hunk(const svn_hunk_t *hunk)
   return SVN_NO_ERROR;
 }
 
+enum parse_state
+{
+   state_start,
+   state_git_diff_seen,
+  /* if we have an add || del || cp src+dst || mv src+dst */
+   state_git_tree_seen, 
+   state_git_minus_seen,
+   state_git_plus_seen,
+   state_move_from_seen,
+   state_copy_from_seen,
+   state_minus_seen,
+   state_unidiff_found,
+   state_add_seen,
+   state_del_seen,
+   state_git_header_found
+};
+
+struct transition
+{
+  const char *line;
+  enum parse_state state;
+  svn_error_t *(*fn)(enum parse_state *state, const char *line, 
+                     svn_patch_t *patch, apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+};
+
+/* UTF-8 encode and canonicalize the content of LINE as FILE_NAME. */
+static svn_error_t *
+grab_filename(const char **file_name, const char *line, apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  const char *utf8_path;
+  const char *canon_path;
+
+  /* Grab the filename and encode it in UTF-8. */
+  /* TODO: Allow specifying the patch file's encoding.
+   *       For now, we assume its encoding is native. */
+  SVN_ERR(svn_utf_cstring_to_utf8(&utf8_path,
+                                  line,
+                                  scratch_pool));
+
+  /* Canonicalize the path name. */
+  canon_path = svn_dirent_canonicalize(utf8_path, scratch_pool);
+
+  *file_name = apr_pstrdup(result_pool, canon_path);
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse the '--- ' line of a regular unidiff. */
+static svn_error_t *
+diff_minus(enum parse_state *state, const char *line, svn_patch_t *patch,
+           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* If we can find a tab, it separates the filename from
+   * the rest of the line which we can discard. */
+  char *tab = strchr(line, '\t');
+  if (tab)
+    *tab = '\0';
+
+  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- "),
+                        result_pool, scratch_pool));
+
+  *state = state_minus_seen;
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse the '+++ ' line of a regular unidiff. */
+static svn_error_t *
+diff_plus(enum parse_state *state, const char *line, svn_patch_t *patch,
+           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* If we can find a tab, it separates the filename from
+   * the rest of the line which we can discard. */
+  char *tab = strchr(line, '\t');
+  if (tab)
+    *tab = '\0';
+
+  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ "),
+                        result_pool, scratch_pool));
+
+  *state = state_unidiff_found;
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse the first line of a git extended unidiff. */
+static svn_error_t *
+git_start(enum parse_state *state, const char *line, svn_patch_t *patch,
+          apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  const char *old_path;
+  const char *new_path;
+  char *end_old_path;
+  char *slash;
+
+  /* ### Add handling of escaped paths
+   * http://www.kernel.org/pub/software/scm/git/docs/git-diff.html: 
+   *
+   * TAB, LF, double quote and backslash characters in pathnames are
+   * represented as \t, \n, \" and \\, respectively. If there is need for
+   * such substitution then the whole pathname is put in double quotes.
+   */
+
+  /* Our line should look like this: 'git --diff a/path b/path'. 
+   * If we find any deviations from that format, we return with state reset
+   * to start.
+   *
+   * ### We can't handle paths with spaces!
+   */
+  slash = strchr(line, '/');
+
+  if (! slash)
+    {
+      *state = state_start;
+      return SVN_NO_ERROR;
+    }
+
+  old_path = slash + 1;
+
+  if (! *old_path)
+    {
+      *state = state_start;
+      return SVN_NO_ERROR;
+    }
+
+  end_old_path = strchr(old_path, ' ');
+
+  if (end_old_path)
+    *end_old_path = '\0';
+  else
+    {
+      *state = state_start;
+      return SVN_NO_ERROR;
+    }
+
+  /* The new path begins after the first slash after the old path. */
+  slash = strchr(end_old_path + 1, '/');
+
+  if (! slash)
+    {
+      *state = state_start;
+      return SVN_NO_ERROR;
+    }
+
+  /* The path starts after the slash */
+  new_path = slash + 1;
+
+  if (! *new_path)
+    {
+      *state = state_start;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(grab_filename(&patch->old_filename, old_path,
+                        result_pool, scratch_pool));
+
+  SVN_ERR(grab_filename(&patch->new_filename, new_path,
+                        result_pool, scratch_pool));
+
+  /* We assume that the path is only modified until we've found a 'tree'
+   * header */
+  patch->operation = svn_diff_op_modified;
+
+  *state = state_git_diff_seen;
+  return SVN_NO_ERROR;
+}
+
+/* Parse the '--- ' line of a git extended unidiff. */
+static svn_error_t *
+git_minus(enum parse_state *state, const char *line, svn_patch_t *patch,
+          apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* ### Check that the path is consistent with the 'git --diff ' line. */
+
+  *state = state_git_minus_seen;
+  return SVN_NO_ERROR;
+}
+
+/* Parse the '+++ ' line of a git extended unidiff. */
+static svn_error_t *
+git_plus(enum parse_state *state, const char *line, svn_patch_t *patch,
+          apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* ### Check that the path is consistent with the 'git --diff ' line. */
+
+  *state = state_git_header_found;
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'move from ' line of a git extended unidiff. */
+static svn_error_t *
+git_move_from(enum parse_state *state, const char *line, svn_patch_t *patch,
+              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* ### Check that the path is consistent with the 'git --diff ' line. */
+
+  *state = state_move_from_seen;
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'move to ' line fo a git extended unidiff. */
+static svn_error_t *
+git_move_to(enum parse_state *state, const char *line, svn_patch_t *patch,
+            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* ### Check that the path is consistent with the 'git --diff ' line. */
+
+  patch->operation = svn_diff_op_moved;
+
+  *state = state_git_tree_seen;
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'copy from ' line of a git extended unidiff. */
+static svn_error_t *
+git_copy_from(enum parse_state *state, const char *line, svn_patch_t *patch,
+              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* ### Check that the path is consistent with the 'git --diff ' line. */
+
+  *state = state_copy_from_seen; 
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'copy to ' line of a git extended unidiff. */
+static svn_error_t *
+git_copy_to(enum parse_state *state, const char *line, svn_patch_t *patch,
+            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* ### Check that the path is consistent with the 'git --diff ' line. */
+
+  patch->operation = svn_diff_op_copied;
+
+  *state = state_git_tree_seen;
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'new file ' line of a git extended unidiff. */
+static svn_error_t *
+git_new_file(enum parse_state *state, const char *line, svn_patch_t *patch,
+             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  patch->operation = svn_diff_op_added;
+
+  *state = state_git_header_found;
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'deleted file ' line of a git extended unidiff. */
+static svn_error_t *
+git_deleted_file(enum parse_state *state, const char *line, svn_patch_t *patch,
+                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  patch->operation = svn_diff_op_deleted;
+
+  *state = state_git_header_found;
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
                           apr_file_t *patch_file,
@@ -586,14 +849,38 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  static const char * const minus = "--- ";
-  static const char * const plus = "+++ ";
-  const char *indicator;
   const char *fname;
   svn_stream_t *stream;
-  svn_boolean_t eof, in_header;
+  apr_off_t pos, last_line;
+  svn_boolean_t eof;
+  svn_boolean_t line_after_tree_header_read = FALSE;
 
   apr_pool_t *iterpool;
+
+  enum parse_state state = state_start;
+
+  /* ### dannas: As I've understood the git diff format, the first line
+   * ### contains both paths and the paths in the headers that follow are only
+   * ### there to ensure that the path is valid. Not sure though, the
+   * ### research continues... */
+
+  /* Our table consisting of:
+   * Input             Required state           function to call */
+  struct transition transitions[] = 
+    {
+      {"--- ",          state_start,            diff_minus},
+      {"+++ ",          state_minus_seen,       diff_plus},
+      {"git --diff",    state_start,            git_start},
+      {"--- a/",        state_git_diff_seen,    git_minus},
+      {"--- a/",        state_git_tree_seen,    git_minus},
+      {"+++ b/",        state_git_minus_seen,   git_plus},
+      {"move from ",    state_git_diff_seen,    git_move_from},
+      {"move to ",      state_move_from_seen,   git_move_to},
+      {"copy from ",    state_git_diff_seen,    git_copy_from},
+      {"copy to ",      state_copy_from_seen,   git_copy_to},
+      {"new file ",     state_git_diff_seen,    git_new_file},
+      {"deleted file ", state_git_diff_seen,    git_deleted_file},
+    };
 
   if (apr_file_eof(patch_file) == APR_EOF)
     {
@@ -615,66 +902,74 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
    * make sure it is disowned. */
   stream = svn_stream_from_aprfile2(patch_file, TRUE, scratch_pool);
 
-  indicator = minus;
-  in_header = FALSE;
+  /* Get current seek position -- APR has no ftell() :( */
+  pos = 0;
+  SVN_ERR(svn_io_file_seek((*patch)->patch_file, APR_CUR, &pos, scratch_pool));
+
   iterpool = svn_pool_create(scratch_pool);
+
   do
     {
       svn_stringbuf_t *line;
+      int i;
 
       svn_pool_clear(iterpool);
 
-      /* Read a line from the stream. */
+      /* Remember the current line's offset, and read the line. */
+      last_line = pos;
       SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
                                              iterpool));
 
-      /* See if we have a diff header. */
-      if (line->len > strlen(indicator) && starts_with(line->data, indicator))
+      if (! eof)
         {
-          const char *utf8_path;
-          const char *canon_path;
-
-          /* If we can find a tab, it separates the filename from
-           * the rest of the line which we can discard. */
-          char *tab = strchr(line->data, '\t');
-          if (tab)
-            *tab = '\0';
-
-          /* Grab the filename and encode it in UTF-8. */
-          /* TODO: Allow specifying the patch file's encoding.
-           *       For now, we assume its encoding is native. */
-          SVN_ERR(svn_utf_cstring_to_utf8(&utf8_path,
-                                          line->data + strlen(indicator),
-                                          iterpool));
-
-          /* Canonicalize the path name. */
-          canon_path = svn_dirent_canonicalize(utf8_path, iterpool);
-
-          if ((! in_header) && strcmp(indicator, minus) == 0)
-            {
-              /* First line of header contains old filename. */
-              if (reverse)
-                (*patch)->new_filename = apr_pstrdup(result_pool, canon_path);
-              else
-                (*patch)->old_filename = apr_pstrdup(result_pool, canon_path);
-              indicator = plus;
-              in_header = TRUE;
-            }
-          else if (in_header && strcmp(indicator, plus) == 0)
-            {
-              /* Second line of header contains new filename. */
-              if (reverse)
-                (*patch)->old_filename = apr_pstrdup(result_pool, canon_path);
-              else
-                (*patch)->new_filename = apr_pstrdup(result_pool, canon_path);
-              in_header = FALSE;
-              break; /* All good! */
-            }
-          else
-            in_header = FALSE;
+          /* Update line offset for next iteration.
+           * APR has no ftell() :( */
+          pos = 0;
+          SVN_ERR(svn_io_file_seek((*patch)->patch_file, APR_CUR, &pos, iterpool));
         }
+
+      /* Run the state machine. */
+      for (i = 0; i < sizeof(transitions)/sizeof(transitions[0]); i++)
+        {
+          if (line->len > strlen(transitions[i].line) 
+              && starts_with(line->data, transitions[i].line)
+              && state == transitions[i].state)
+            {
+              SVN_ERR(transitions[i].fn(&state, line->data, *patch,
+                                        result_pool, iterpool));
+              break;
+            }
+        }
+
+      if (state == state_unidiff_found
+          || state == state_git_header_found)
+        {
+          /* We have a valid diff header, yay! */
+          break; 
+        }
+      else if (state == state_git_tree_seen 
+               && line_after_tree_header_read)
+        {
+          /* We have a valid diff header for a patch with only tree changes.
+           * Rewind to the start of the line just read, so subsequent calls
+           * to this function don't end up skipping the line -- it may
+           * contain a patch. */
+          SVN_ERR(svn_io_file_seek((*patch)->patch_file, APR_SET, &last_line,
+                                   scratch_pool));
+          break;
+        }
+      else if (state == state_git_tree_seen)
+          line_after_tree_header_read = TRUE;
+
+    } while (! eof);
+
+  if (reverse)
+    {
+      const char *temp;
+      temp = (*patch)->old_filename;
+      (*patch)->old_filename = (*patch)->new_filename;
+      (*patch)->new_filename = temp;
     }
-  while (! eof);
 
   if ((*patch)->old_filename == NULL || (*patch)->new_filename == NULL)
     {
