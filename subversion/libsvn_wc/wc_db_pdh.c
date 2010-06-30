@@ -299,15 +299,29 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
         format);
     }
 
+  /* Verify that no work items exists. If they do, then our integrity is
+     suspect and, thus, we cannot use this database.  */
+  if (format >= SVN_WC__HAS_WORK_QUEUE
+      && (enforce_empty_wq || (format < SVN_WC__VERSION && auto_upgrade)))
+    {
+      svn_error_t *err = verify_no_work(sdb);
+      if (err)
+        {
+          /* Special message for attempts to upgrade a 1.7-dev wc with
+             outstanding workqueue items. */
+          if (err->apr_err == SVN_ERR_WC_CLEANUP_REQUIRED
+              && format < SVN_WC__VERSION && auto_upgrade)
+            err = svn_error_quick_wrap(err, _("Cleanup with an older 1.7 "
+                                              "client before upgrading with "
+                                              "this client"));
+          return svn_error_return(err);
+        }
+    }
+
   /* Auto-upgrade the SDB if possible.  */
   if (format < SVN_WC__VERSION && auto_upgrade)
     SVN_ERR(svn_wc__upgrade_sdb(&format, wcroot_abspath, sdb, format,
                                 scratch_pool));
-
-  /* Verify that no work items exists. If they do, then our integrity is
-     suspect and, thus, we cannot use this database.  */
-  if (format >= SVN_WC__HAS_WORK_QUEUE && enforce_empty_wq)
-    SVN_ERR(verify_no_work(sdb));
 
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
 
