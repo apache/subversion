@@ -363,6 +363,10 @@ svn_wc__internal_node_get_url(const char **url,
         {
           const char *parent_abspath;
 
+          /* Set 'repos_root_url' to the *full URL* of the parent WC dir,
+           * and 'repos_relpath' to the *single path component* that is the
+           * basename of this WC directory, so that joining them will result
+           * in the correct full URL. */
           svn_dirent_split(&parent_abspath, &repos_relpath, local_abspath,
                            scratch_pool);
           SVN_ERR(svn_wc__internal_node_get_url(&repos_root_url, db,
