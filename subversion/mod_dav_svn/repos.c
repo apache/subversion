@@ -2293,7 +2293,6 @@ static const char *
 get_parent_path(const char *path, apr_pool_t *pool)
 {
   apr_size_t len;
-  const char *parentpath;
   char *tmp = apr_pstrdup(pool, path);
 
   len = strlen(tmp);
