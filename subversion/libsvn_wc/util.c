@@ -85,7 +85,7 @@ svn_wc__ensure_directory(const char *path,
           if (shorter[0] == '\0')
             {
               /* A weird and probably rare situation. */
-              return svn_error_create(0, NULL,
+              return svn_error_create(APR_EGENERAL, NULL,
                                       _("Unable to make any directories"));
             }
           else  /* We have a valid path, so recursively ensure it. */
