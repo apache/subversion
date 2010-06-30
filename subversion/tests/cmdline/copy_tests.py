@@ -4523,9 +4523,7 @@ test_list = [ None,
               repos_to_wc_1634,
               double_uri_escaping_1814,
               wc_to_wc_copy_between_different_repos,
-              ### should be XFail, but it core dumps with an assertion.
-              ### marking as Skip() to avoid core dump turds...
-              Skip(wc_to_wc_copy_deleted),
+              XFail(wc_to_wc_copy_deleted),
               url_to_non_existent_url_path,
               non_existent_url_to_url,
               old_dir_url_to_url,
