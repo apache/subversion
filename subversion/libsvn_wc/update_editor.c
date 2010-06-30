@@ -3566,9 +3566,14 @@ add_file_with_history(struct dir_baton *pb,
       SVN_ERR(svn_wc__get_entry(&src_entry, db, src_local_abspath, FALSE,
                             svn_node_file, FALSE, subpool, subpool));
 
-      SVN_ERR(svn_wc__get_ultimate_base_contents(&source_text_base,
-                                                 db, src_local_abspath,
-                                                 subpool, subpool));
+      if (src_entry->schedule == svn_wc_schedule_add)
+        SVN_ERR(svn_wc__get_pristine_contents(&source_text_base,
+                                              db, src_local_abspath,
+                                              subpool, subpool));
+      else
+        SVN_ERR(svn_wc__get_ultimate_base_contents(&source_text_base,
+                                                   db, src_local_abspath,
+                                                   subpool, subpool));
 
       /* If this has no base, should we use an empty stream?
        * This assert wants to verify that there are no such callers. */
