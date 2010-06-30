@@ -1647,21 +1647,7 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
       ibb.repos_id = repos_id;
       ibb.repos_relpath = repos_relpath;
       ibb.revision = revision;
-      
-      /* Depending upon KIND, any of these might get used. */
-      ibb.children = NULL;
-      ibb.depth = svn_depth_unknown;
-      ibb.checksum = NULL;
-      ibb.translated_size = SVN_INVALID_FILESIZE;
-      ibb.target = NULL;
-      
-      ibb.conflict = conflict;
-      ibb.work_items = work_items;
-      
-      /* ### hmm. if this used to be a directory, we should remove children.
-         ### or maybe let caller deal with that, if there is a possibility
-         ### of a node kind change (rather than eat an extra lookup here).  */
-      
+
       SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
                                            insert_base_node, &ibb,
                                            scratch_pool));
