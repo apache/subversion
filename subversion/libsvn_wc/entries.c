@@ -158,22 +158,6 @@ svn_wc__entry_is_hidden(svn_boolean_t *hidden, const svn_wc_entry_t *entry)
 }
 
 
-/* */
-static svn_error_t *
-fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *sdb)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WCROOT_NULL));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_create(SVN_ERR_WC_DB_ERROR, NULL, _("No WC table entry"));
-  *wc_id = svn_sqlite__column_int(stmt, 0);
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
-
 /* Hit the database to check the file external information for the given
    entry.  The entry will be modified in place. */
 static svn_error_t *
