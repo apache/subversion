@@ -1216,8 +1216,174 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
 }
 
 svn_error_t *
-svn_wc__node_get_info_bits(svn_wc_schedule_t *schedule,
-                           apr_time_t *text_time,
+svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
+                                   svn_boolean_t *copied,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_boolean_t has_base;
+  const char *copyfrom_relpath;
+
+  if (schedule)
+    *schedule = svn_wc_schedule_normal;
+  if (copied)
+    *copied = FALSE;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &copyfrom_relpath, NULL, NULL, NULL, NULL,
+                               &has_base, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+
+  switch (status)
+    {
+      case svn_wc__db_status_not_present:
+      case svn_wc__db_status_absent:
+      case svn_wc__db_status_excluded:
+        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                                 _("'%s' is not under version control"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+
+      case svn_wc__db_status_normal:
+      case svn_wc__db_status_incomplete:
+      case svn_wc__db_status_obstructed:
+        break;
+
+      case svn_wc__db_status_deleted:
+      case svn_wc__db_status_obstructed_delete:
+        if (schedule)
+          *schedule = svn_wc_schedule_delete;
+        break;
+
+      case svn_wc__db_status_added:
+      case svn_wc__db_status_obstructed_add:
+        {
+          const char *op_root_abspath;
+          const char *parent_abspath;
+          const char *parent_copyfrom_relpath;
+          const char *child_name;
+
+          if (schedule)
+            *schedule = svn_wc_schedule_add;
+
+          if (copyfrom_relpath != NULL)
+            {
+              status = svn_wc__db_status_copied; /* Or moved */
+              op_root_abspath = local_abspath;
+            }
+          else
+            SVN_ERR(svn_wc__db_scan_addition(&status,
+                                             &op_root_abspath,
+                                             NULL, NULL, NULL,
+                                             &copyfrom_relpath,
+                                             NULL, NULL, NULL,
+                                             db, local_abspath,
+                                             scratch_pool, scratch_pool));
+
+          if (status == svn_wc__db_status_added)
+            break;
+
+          if (copied)
+            *copied = TRUE;
+
+          if (!schedule)
+            break;
+
+          if (has_base)
+            {
+              SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL,
+                                               db, local_abspath,
+                                               scratch_pool, scratch_pool));
+
+              if (status != svn_wc__db_status_not_present)
+                {
+                  *schedule = svn_wc_schedule_replace;
+                  break;
+                }
+            }
+
+          /* Determine the parent status to check if we should show the
+             schedule of a child of a copy as normal. */
+          if (strcmp(op_root_abspath, local_abspath) != 0)
+            {
+              *schedule = svn_wc_schedule_normal;
+              break; /* Part of parent copy */
+            }
+
+          /* When we used entries we didn't see just a different revision
+             as a new operational root, so we have to check if the parent
+             is from the same copy origin */
+          parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+          SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       &parent_copyfrom_relpath, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       db, parent_abspath,
+                                       scratch_pool, scratch_pool));
+
+          if (status != svn_wc__db_status_added)
+            break; 
+
+          if (!parent_copyfrom_relpath)
+            {
+              SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL,
+                                               NULL, NULL,
+                                               &parent_copyfrom_relpath, NULL,
+                                               NULL, NULL,
+                                               db, parent_abspath,
+                                               scratch_pool, scratch_pool));
+
+              parent_copyfrom_relpath = svn_relpath_join(
+                                           parent_copyfrom_relpath,
+                                           svn_dirent_is_child(op_root_abspath,
+                                                               parent_abspath,
+                                                               NULL),
+                                           scratch_pool);
+            }
+
+
+          child_name = svn_relpath_is_child(parent_copyfrom_relpath,
+                                            copyfrom_relpath, NULL);
+
+          if (!child_name
+              || strcmp(child_name, svn_dirent_basename(local_abspath, NULL)))
+            break; 
+
+          *schedule = svn_wc_schedule_normal;
+          break;
+        }
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__node_get_schedule(svn_wc_schedule_t *schedule,
+                          svn_boolean_t *copied,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+           svn_wc__internal_node_get_schedule(schedule,
+                                              copied,
+                                              wc_ctx->db,
+                                              local_abspath,
+                                              scratch_pool));
+}
+
+svn_error_t *
+svn_wc__node_get_info_bits(apr_time_t *text_time,
                            const char **conflict_old,
                            const char **conflict_new,
                            const char **conflict_wrk,
@@ -1232,9 +1398,6 @@ svn_wc__node_get_info_bits(svn_wc_schedule_t *schedule,
   SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx->db, local_abspath,
                                       svn_node_unknown, TRUE, FALSE,
                                       result_pool, scratch_pool));
-
-  if (schedule)
-    *schedule = entry->schedule;
 
   if (text_time)
     *text_time = entry->text_time;

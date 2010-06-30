@@ -633,8 +633,7 @@ svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
  * @a local_abspath and @a wc_ctx are what you think they are.
  */
 svn_error_t *
-svn_wc__node_get_info_bits(svn_wc_schedule_t *schedule,
-                           apr_time_t *text_time,
+svn_wc__node_get_info_bits(apr_time_t *text_time,
                            const char **conflict_old,
                            const char **conflict_new,
                            const char **conflict_wrk,
@@ -735,6 +734,21 @@ svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
                                const svn_opt_revision_t *external_peg_rev,
                                const svn_opt_revision_t *external_rev,
                                apr_pool_t *scratch_pool);
+
+/**
+ * Calculates the schedule and copied status of a node as that would
+ * have been stored in an svn_wc_entry_t instance.
+ *
+ * If not @c NULL, @a schedule and @a copied are set to their calculated
+ * values.
+ */
+svn_error_t *
+svn_wc__node_get_schedule(svn_wc_schedule_t *schedule,
+                          svn_boolean_t *copied,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

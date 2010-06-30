@@ -535,28 +535,16 @@ assemble_status(svn_wc_status3_t **status,
             of medium precedence.  They also override any C or M that may
             be in the prop_status field at this point, although they do not
             override a C text status.*/
-
-      /* ### db_status, base_shadowed, and fetching base_status can
-         ### fully replace entry->schedule here.  */
-
       if (db_status == svn_wc__db_status_added)
         {
-          const svn_wc_entry_t *entry;
+          svn_wc_schedule_t schedule;
+          SVN_ERR(svn_wc__internal_node_get_schedule(&schedule, &copied,
+                                                     db, local_abspath,
+                                                     scratch_pool));
 
-          err = svn_wc__get_entry(&entry, db, local_abspath, FALSE,
-                                  svn_node_unknown, FALSE, result_pool,
-                                  scratch_pool);
-
-          if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-            svn_error_clear(err);
-          else
-            SVN_ERR(err);
-
-          copied = entry->copied;
-
-          if (entry->schedule == svn_wc_schedule_add)
+          if (schedule == svn_wc_schedule_add)
             node_status = svn_wc_status_added;
-          else if (entry->schedule == svn_wc_schedule_replace)
+          else if (schedule == svn_wc_schedule_replace)
             node_status = svn_wc_status_replaced;
         }
     }
