@@ -2206,6 +2206,7 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
+  svn_boolean_t present;
 
   SVN_ERR_ASSERT(pristine_abspath != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
@@ -2224,7 +2225,12 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  /* ### should we look in the PRISTINE table for anything?  */
+  SVN_ERR(svn_wc__db_pristine_check(&present, db, wri_abspath, sha1_checksum,
+                                    svn_wc__db_checkmode_usable,
+                                    scratch_pool));
+  if (! present)
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                             _("Pristine text not found"));
 
   SVN_ERR(get_pristine_fname(pristine_abspath, pdh->wcroot->abspath,
                              sha1_checksum,
