@@ -1103,7 +1103,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
-  svn_wc__db_t *db = fb->edit_baton->db;
   svn_error_t *err;
 
   /* Apply this window.  We may be done at that point.  */
