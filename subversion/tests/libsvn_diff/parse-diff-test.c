@@ -56,12 +56,6 @@ static const char *unidiff =
   "Name: svn:mergeinfo"                                                 NL
   ""                                                                    NL;
 
-/* ### We need to add plenty of more cases to this patch:
- * ### copy with modifications
- * ### rename
- * ### rename with modications 
- * ### add with modifications
- * ### delete with modifications*/
 static const char *git_unidiff =
   "Index: A/mu (deleted)"                                               NL
   "===================================================================" NL
