@@ -265,8 +265,6 @@ pristine_get_translated(const svn_test_opts_t *opts,
     const char *pristine_tmp_dir;
     const char *pristine_tmp_abspath;
     svn_stream_t *pristine_tmp_stream;
-    svn_string_t *data_string = svn_string_create(data, pool);
-    svn_stream_t *data_stream = svn_stream_from_string(data_string, pool);
 
     SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
                                             wc_abspath, pool, pool));
@@ -274,12 +272,15 @@ pristine_get_translated(const svn_test_opts_t *opts,
                                    pristine_tmp_dir, svn_io_file_del_none,
                                    pool, pool));
 
-    data_stream = svn_stream_checksummed2(data_stream, &data_sha1, NULL,
-                                          svn_checksum_sha1, TRUE, pool);
-    data_stream = svn_stream_checksummed2(data_stream, &data_md5, NULL,
-                                          svn_checksum_md5, TRUE, pool);
-    SVN_ERR(svn_stream_copy3(data_stream, pristine_tmp_stream, NULL, NULL,
-                             pool));
+    pristine_tmp_stream = svn_stream_checksummed2(
+                            pristine_tmp_stream, NULL, &data_sha1,
+                            svn_checksum_sha1, TRUE, pool);
+    pristine_tmp_stream = svn_stream_checksummed2(
+                            pristine_tmp_stream, NULL, &data_md5,
+                            svn_checksum_md5, TRUE, pool);
+
+    SVN_ERR(svn_stream_printf(pristine_tmp_stream, pool, "%s", data));
+    SVN_ERR(svn_stream_close(pristine_tmp_stream));
 
     SVN_ERR(svn_wc__db_pristine_install(db, pristine_tmp_abspath,
                                         data_sha1, data_md5, pool));
@@ -300,21 +301,17 @@ pristine_get_translated(const svn_test_opts_t *opts,
 
   /* Check that NEW_ABSPATH has been created with the translated text. */
   {
-    apr_file_t *file;
-    char buf[1000];
-    apr_size_t bytes_read;
-    svn_error_t *err;
+    svn_stream_t *expected_stream
+      = svn_stream_from_string(svn_string_create(expected_data, pool), pool);
+    svn_stream_t *file_stream;
+    svn_boolean_t same;
 
-    SVN_ERR(svn_io_file_open(&file, new_abspath,
-                             APR_FOPEN_READ, APR_FPROT_OS_DEFAULT, pool));
-    err = svn_io_file_read_full(file, buf, sizeof(buf), &bytes_read, pool);
-    if (err && APR_STATUS_IS_EOF(err->apr_err))
-      svn_error_clear(err);
-    else
-      SVN_ERR(err);
+    SVN_ERR(svn_stream_open_readonly(&file_stream, new_abspath,
+                                     pool, pool));
+    SVN_ERR(svn_stream_contents_same2(&same, expected_stream, file_stream,
+                                      pool));
 
-    SVN_TEST_ASSERT(bytes_read == strlen(expected_data));
-    SVN_TEST_ASSERT(strncmp(buf, expected_data, bytes_read) == 0);
+    SVN_TEST_ASSERT(same);
   }
 
   return SVN_NO_ERROR;
