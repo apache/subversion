@@ -467,6 +467,15 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                                       scratch_pool),
                     TRUE, scratch_pool));
 
+#if (SVN_WC__VERSION >= 17)
+  /* Remove the old text-base directory and the old text-base files. */
+  svn_error_clear(svn_io_remove_dir2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      TEXT_BASE_SUBDIR,
+                                      scratch_pool),
+                    FALSE, NULL, NULL, scratch_pool));
+#endif
+
 #if 0  /* ### NOT READY TO WIPE THESE FILES!!  */
   /* Remove the old properties files... whole directories at a time.  */
   svn_error_clear(svn_io_remove_dir2(
@@ -477,15 +486,6 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
   svn_error_clear(svn_io_remove_dir2(
                     svn_wc__adm_child(wcroot_abspath,
                                       PROP_BASE_SUBDIR,
-                                      scratch_pool),
-                    FALSE, NULL, NULL, scratch_pool));
-#endif
-
-#if 0  /* Conditional upon upgrading to format 18 */
-  /* Remove the old text-base directory. */
-  svn_error_clear(svn_io_remove_dir2(
-                    svn_wc__adm_child(wcroot_abspath,
-                                      TEXT_BASE_SUBDIR,
                                       scratch_pool),
                     FALSE, NULL, NULL, scratch_pool));
 #endif
