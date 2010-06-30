@@ -5267,6 +5267,7 @@ struct commit_baton {
   const apr_array_header_t *new_children;
   apr_hash_t *new_dav_cache;
   svn_boolean_t keep_changelist;
+  svn_boolean_t no_unlock;
 
   apr_int64_t repos_id;
   const char *repos_relpath;
@@ -5470,6 +5471,16 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
       /* ### process the children  */
     }
 
+  if (!cb->no_unlock)
+    {
+      svn_sqlite__stmt_t *lock_stmt;
+
+      SVN_ERR(svn_sqlite__get_statement(&lock_stmt, sdb, STMT_DELETE_LOCK));
+      SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", cb->repos_id,
+                                cb->repos_relpath));
+      SVN_ERR(svn_sqlite__step_done(lock_stmt));
+    }
+
   /* Install any work items into the queue, as part of this transaction.  */
   SVN_ERR(add_work_items(sdb, cb->work_items, scratch_pool));
 
@@ -5556,6 +5567,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
+                         svn_boolean_t no_unlock,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
@@ -5582,6 +5594,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.new_children = new_children;
   cb.new_dav_cache = new_dav_cache;
   cb.keep_changelist = keep_changelist;
+  cb.no_unlock = no_unlock;
   cb.work_items = work_items;
 
   /* If we are adding a directory (no BASE_NODE), then we need to get

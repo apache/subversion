@@ -69,9 +69,6 @@
 
 /** Log actions. **/
 
-/* Delete lock related fields from the entry SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_DELETE_LOCK         "delete-lock"
-
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
@@ -237,25 +234,6 @@ log_do_file_timestamp(struct log_runner *loggy,
       SVN_ERR(svn_io_set_file_affected_time(timestamp, local_abspath,
                                             loggy->pool));
     }
-
-  return SVN_NO_ERROR;
-}
-
-/* */
-static svn_error_t *
-log_do_delete_lock(struct log_runner *loggy,
-                   const char *name)
-{
-  const char *local_abspath;
-  svn_error_t *err;
-
-  local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
-  err = svn_wc__db_lock_remove(loggy->db, local_abspath, loggy->pool);
-  if (err)
-    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                             _("Error removing lock from entry for '%s'"),
-                             name);
 
   return SVN_NO_ERROR;
 }
@@ -435,10 +413,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
 #endif
 
   /* Dispatch. */
-  if (strcmp(eltname, SVN_WC__LOG_DELETE_LOCK) == 0) {
-    err = log_do_delete_lock(loggy, name);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
+  if (strcmp(eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
     const char *attr;
     svn_revnum_t revision;
     svn_node_kind_t kind;
@@ -635,30 +610,6 @@ svn_wc__loggy_delete_entry(svn_skel_t **work_item,
                                                  db, adm_abspath, log_accum,
                                                  result_pool));
 }
-
-svn_error_t *
-svn_wc__loggy_delete_lock(svn_skel_t **work_item,
-                          svn_wc__db_t *db,
-                          const char *adm_abspath,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool)
-{
-  const char *loggy_path1;
-  svn_stringbuf_t *log_accum = NULL;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, result_pool));
-  svn_xml_make_open_tag(&log_accum, result_pool, svn_xml_self_closing,
-                        SVN_WC__LOG_DELETE_LOCK,
-                        SVN_WC__LOG_ATTR_NAME, loggy_path1,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_build_loggy(work_item,
-                                                 db, adm_abspath, log_accum,
-                                                 result_pool));
-}
-
 
 svn_error_t *
 svn_wc__loggy_move(svn_skel_t **work_item,

@@ -1731,6 +1731,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
+                         svn_boolean_t no_unlock,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 

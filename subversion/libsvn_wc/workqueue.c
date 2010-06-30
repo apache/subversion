@@ -1197,6 +1197,7 @@ log_do_committed(svn_wc__db_t *db,
                  const svn_checksum_t *new_checksum,
                  apr_hash_t *new_dav_cache,
                  svn_boolean_t keep_changelist,
+                 svn_boolean_t no_unlock,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -1355,6 +1356,7 @@ log_do_committed(svn_wc__db_t *db,
                                        NULL /* new_children */,
                                        new_dav_cache,
                                        keep_changelist,
+                                       no_unlock,
                                        NULL /* work_items */,
                                        pool));
 
@@ -1438,6 +1440,7 @@ log_do_committed(svn_wc__db_t *db,
                                    NULL /* new_children */,
                                    new_dav_cache,
                                    keep_changelist,
+                                   no_unlock,
                                    NULL /* work_items */,
                                    pool));
 
@@ -1481,7 +1484,7 @@ run_postcommit(svn_wc__db_t *db,
   const char *new_author;
   const svn_checksum_t *new_checksum;
   apr_hash_t *new_dav_cache;
-  svn_boolean_t keep_changelist;
+  svn_boolean_t keep_changelist, no_unlock;
   const char *tmp_text_base_abspath;
   svn_error_t *err;
 
@@ -1521,10 +1524,16 @@ run_postcommit(svn_wc__db_t *db,
                                            arg5->next->next->next->data,
                                            arg5->next->next->next->len);
 
+  if (arg5->next->next->next->next)
+    no_unlock = svn_skel__parse_int(arg5->next->next->next->next,
+                                     scratch_pool) != 0;
+  else
+    no_unlock = TRUE;
+
   err = log_do_committed(db, local_abspath, tmp_text_base_abspath,
                          new_revision, new_date,
                          new_author, new_checksum, new_dav_cache,
-                         keep_changelist,
+                         keep_changelist, no_unlock,
                          cancel_func, cancel_baton,
                          scratch_pool);
   if (err)
@@ -1547,10 +1556,12 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           const svn_checksum_t *new_checksum,
                           apr_hash_t *new_dav_cache,
                           svn_boolean_t keep_changelist,
+                          svn_boolean_t no_unlock,
                           apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
 
+  svn_skel__prepend_int(no_unlock, work_item, scratch_pool);
   svn_skel__prepend_str(tmp_text_base_abspath ? tmp_text_base_abspath : "",
                         work_item, scratch_pool);
   svn_skel__prepend_int(keep_changelist, work_item, scratch_pool);
