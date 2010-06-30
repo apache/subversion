@@ -1334,10 +1334,9 @@ svn_wc__upgrade_sdb(int *result_format,
           SVN_ERR(svn_wc__ensure_directory(pristine_dir, scratch_pool));
 
           /* Move text bases into the pristine directory, and update the db */
-          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17, wcroot_abspath,
+          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17,
+                                               (void *)wcroot_abspath,
                                                scratch_pool));
-
-          /* ### Remove old text-base directory? */
         }
 
         *result_format = 17;
