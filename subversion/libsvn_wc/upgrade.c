@@ -834,12 +834,15 @@ migrate_locks(const char *wcroot_abspath,
   return SVN_NO_ERROR;
 }
 
+struct bump_baton {
+  const char *wcroot_abspath;
+};
 
 /* */
 static svn_error_t *
 bump_to_14(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  const char *wcroot_abspath = baton;
+  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
 
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_14));
 
@@ -1098,7 +1101,7 @@ migrate_text_bases(const char *wcroot_abspath,
 static svn_error_t *
 bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  const char *wcroot_abspath = baton;
+  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
 
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
   SVN_ERR(migrate_text_bases(wcroot_abspath, sdb, scratch_pool));
@@ -1113,7 +1116,7 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 static svn_error_t *
 bump_to_XXX(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  const char *wcroot_abspath = baton;
+  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
 
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_XXX));
 
@@ -1262,6 +1265,8 @@ svn_wc__upgrade_sdb(int *result_format,
                     int start_format,
                     apr_pool_t *scratch_pool)
 {
+  struct bump_baton bb = { wcroot_abspath };
+
   if (start_format < SVN_WC__WC_NG_VERSION /* 12 */)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
                              _("Working copy format of '%s' is too old (%d); "
@@ -1297,8 +1302,7 @@ svn_wc__upgrade_sdb(int *result_format,
 
       case 13:
         /* Build WCLOCKS and migrate any physical lock.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_14,
-                                             (void *)wcroot_abspath,
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_14, &bb,
                                              scratch_pool));
         /* If the transaction succeeded, then any lock has been migrated,
            and we can toss the physical file (below).  */
@@ -1308,16 +1312,14 @@ svn_wc__upgrade_sdb(int *result_format,
 
       case 14:
         /* Revamp the recording of 'excluded' nodes.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_15,
-                                             (void *)wcroot_abspath,
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_15, &bb,
                                              scratch_pool));
         *result_format = 15;
         /* FALLTHROUGH  */
 
       case 15:
         /* Perform some minor changes to the schema.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_16,
-                                             (void *)wcroot_abspath,
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_16, &bb,
                                              scratch_pool));
         *result_format = 16;
         /* FALLTHROUGH  */
@@ -1334,8 +1336,7 @@ svn_wc__upgrade_sdb(int *result_format,
           SVN_ERR(svn_wc__ensure_directory(pristine_dir, scratch_pool));
 
           /* Move text bases into the pristine directory, and update the db */
-          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17,
-                                               (void *)wcroot_abspath,
+          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17, &bb,
                                                scratch_pool));
         }
 
