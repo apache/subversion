@@ -6297,11 +6297,10 @@ typedef enum svn_wc_merge_outcome_t
  * @a left_abspath and @a right_abspath into @a target_abspath.
  * It may help to know that @a left_abspath, @a right_abspath and @a
  * target_abspath correspond to "OLDER", "YOURS", and "MINE",
- * respectively, in the diff3 documentation.)  Use @a scratch_pool for any
- * temporary allocation.
+ * respectively, in the diff3 documentation.
  *
  * @a wc_ctx should contain a write lock for the directory containing @a
- * merge_target.
+ * target_abspath.
  *
  * This function assumes that @a left_abspath and @a right_abspath are
  * in repository-normal form (linefeeds, with keywords contracted); if
@@ -6338,7 +6337,7 @@ typedef enum svn_wc_merge_outcome_t
  *
  *   * Copy @a left_abspath, @a right_abspath, and the original @a
  *     target_abspath to unique names in the same directory as @a
- *     merge_target, ending with the suffixes ".LEFT_LABEL", ".RIGHT_LABEL",
+ *     target_abspath, ending with the suffixes ".LEFT_LABEL", ".RIGHT_LABEL",
  *     and ".TARGET_LABEL" respectively.
  *
  *   * Mark @a target_abspath as "text-conflicted", and track the above
@@ -6359,6 +6358,8 @@ typedef enum svn_wc_merge_outcome_t
  *
  * If @a dry_run is @c TRUE no files are changed.  The outcome of the merge
  * is returned in @a *merge_outcome.
+ *
+ * Use @a scratch_pool for any temporary allocation.
  *
  * @since New in 1.7.
  */
