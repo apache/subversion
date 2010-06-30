@@ -3157,7 +3157,6 @@ def diff_preexisting_rev_against_local_add(sbox):
   verify_expected_output(diff_output, "-This is the file 'beta'.")
   verify_expected_output(diff_output, "+Re-created file beta.")
 
-# Passes with SVN_EXPERIMENTAL_PATCH defined
 def diff_git_format_wc_wc(sbox):
   "create a diff in git unidiff format for wc-wc"
   sbox.build()
@@ -3189,9 +3188,8 @@ def diff_git_format_wc_wc(sbox):
   ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
-                                     wc_dir)
+                                     '--git-diff', wc_dir)
 
-# Passes with SVN_EXPERIMENTAL_PATCH defined
 def diff_git_format_url_wc(sbox):
   "create a diff in git unidiff format for url-wc"
   sbox.build()
@@ -3229,10 +3227,10 @@ def diff_git_format_url_wc(sbox):
   ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+                                     '--git-diff',
                                      '--old', repo_url + '@1', '--new',
                                      wc_dir)
 
-# Passes with SVN_EXPERIMENTAL_PATCH defined
 def diff_git_format_url_url(sbox):
   "create a diff in git unidiff format for url-url"
   sbox.build()
@@ -3269,6 +3267,7 @@ def diff_git_format_url_url(sbox):
   ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+                                     '--git-diff', 
                                      '--old', repo_url + '@1', '--new',
                                      repo_url + '@2')
 
@@ -3328,9 +3327,9 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
-              XFail(diff_git_format_wc_wc),
-              XFail(diff_git_format_url_wc),
-              XFail(diff_git_format_url_url),
+              diff_git_format_wc_wc,
+              diff_git_format_url_wc,
+              diff_git_format_url_url,
               ]
 
 if __name__ == '__main__':
