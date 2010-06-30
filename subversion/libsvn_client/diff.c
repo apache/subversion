@@ -747,6 +747,17 @@ diff_content_changed(const char *path,
               label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), rev2,
                                   subpool);
             }
+          else if (operation == svn_diff_op_moved)
+            {
+              SVN_ERR(print_git_diff_header_moved(
+                                            os,
+                                            diff_cmd_baton->header_encoding,
+                                            copyfrom_path, path, subpool));
+              label1 = diff_label(apr_psprintf(subpool, "a/%s", path1), rev1,
+                                  subpool);
+              label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), rev2,
+                                  subpool);
+            }
 
             /* ### Print git headers for renames too. */
           }
