@@ -52,11 +52,15 @@ def get_current_format():
   return int(re.search("\n#define SVN_WC__VERSION (\d+)\n", format_file).group(1))
 
 
-def replace_sbox_with_tarfile(sbox, tar_filename):
+def replace_sbox_with_tarfile(sbox, tar_filename,
+                              dir=None):
   try:
     svntest.main.safe_rmtree(sbox.wc_dir)
   except OSError, e:
     pass
+
+  if not dir:
+    dir = tar_filename.split('.')[0]
 
   tarpath = os.path.join(os.path.dirname(sys.argv[0]), 'upgrade_tests_data',
                          tar_filename)
@@ -65,8 +69,7 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
   for member in t.getmembers():
     t.extract(member, extract_dir)
 
-  shutil.move(os.path.join(extract_dir, tar_filename.split('.')[0]),
-              sbox.wc_dir)
+  shutil.move(os.path.join(extract_dir, dir), sbox.wc_dir)
 
 
 def check_format(sbox, expected_format):
@@ -341,6 +344,88 @@ def basic_upgrade_1_0(sbox):
   svntest.actions.run_and_verify_info(expected_infos,
                                       os.path.join(sbox.wc_dir, 'DELETED'))
 
+# Helper function for the x3 tests.
+def do_x3_upgrade(sbox):
+  # Attempt to use the working copy, this should give an error
+  expected_stderr = wc_is_too_old_regex
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'info', sbox.wc_dir)
+
+
+  # Now upgrade the working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  # Actually check the format number of the upgraded working copy
+  check_format(sbox, get_current_format())
+
+  # Now check the contents of the working copy
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='2'),
+      'A'                 : Item(status='  ', wc_rev='2'),
+      'A/D'               : Item(status='  ', wc_rev='2'),
+      'A/D/H'             : Item(status='  ', wc_rev='2'),
+      'A/D/H/omega'       : Item(status='  ', wc_rev='2'),
+      'A/D/H/psi'         : Item(status='D ', wc_rev='2'),
+      'A/D/H/new'         : Item(status='A ', copied='+', wc_rev='-'),
+      'A/D/H/chi'         : Item(status='R ', copied='+', wc_rev='-'),
+      'A/D/gamma'         : Item(status='D ', wc_rev='2'),
+      'A/D/G'             : Item(status='  ', wc_rev='2'),
+      'A/B_new'           : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_new/B'         : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_new/B/E'       : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_new/B/E/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_new/B/E/beta'  : Item(status='R ', copied='+', wc_rev='-'),
+      'A/B_new/B/new'     : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_new/B/lambda'  : Item(status='R ', copied='+', wc_rev='-'),
+      'A/B_new/B/F'       : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_new/E'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_new/E/alpha'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_new/E/beta'    : Item(status='R ', copied='+', wc_rev='-'),
+      'A/B_new/lambda'    : Item(status='R ', copied='+', wc_rev='-'),
+      'A/B_new/new'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_new/F'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B'               : Item(status='  ', wc_rev='2'),
+      'A/B/E'             : Item(status='  ', wc_rev='2'),
+      'A/B/E/beta'        : Item(status='R ', copied='+', wc_rev='-'),
+      'A/B/E/alpha'       : Item(status='  ', wc_rev='2'),
+      'A/B/F'             : Item(status='  ', wc_rev='2'),
+      'A/B/lambda'        : Item(status='R ', copied='+', wc_rev='-'),
+      'A/B/new'           : Item(status='A ', copied='+', wc_rev='-'),
+      'A/G_new'           : Item(status='A ', copied='+', wc_rev='-'),
+      'A/G_new/rho'       : Item(status='R ', copied='+', wc_rev='-'),
+      'iota'              : Item(status='  ', wc_rev='2'),
+      'A_new'             : Item(status='A ', wc_rev='0'),
+      'A_new/alpha'       : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+def x3_1_4_0(sbox):
+  "3x same wc upgrade 1.4.0 test"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'wc-3x-1.4.0.tar.bz2', dir='wc-1.4.0')
+
+  do_x3_upgrade(sbox)
+
+def x3_1_4_6(sbox):
+  "3x same wc upgrade 1.4.6 test"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'wc-3x-1.4.6.tar.bz2', dir='wc-1.4.6')
+
+  do_x3_upgrade(sbox)
+
+def x3_1_6_12(sbox):
+  "3x same wc upgrade 1.6.12 test"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'wc-3x-1.6.12.tar.bz2', dir='wc-1.6.12')
+
+  do_x3_upgrade(sbox)
+
+
 ########################################################################
 # Run the tests
 
@@ -352,7 +437,10 @@ test_list = [ None,
               update_1_5,
               logs_left_1_5,
               upgrade_wcprops,
-              basic_upgrade_1_0
+              basic_upgrade_1_0,
+              x3_1_4_0,
+              x3_1_4_6,
+              x3_1_6_12,
              ]
 
 
