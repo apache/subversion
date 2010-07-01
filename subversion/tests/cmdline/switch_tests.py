@@ -1348,7 +1348,7 @@ def forced_switch_failures(sbox):
   # 1) A forced switch that tries to add a file when an unversioned
   #    directory of the same name already exists.  (Currently fails)
   # svn switch --force url/A/D A/C
-  expected_error = ('Failed to add directory.*' + A_C_H +
+  expected_error = ('Failed to add directory.*' + re.escape(A_C_H) +
                     '.*a non-directory object.*already exists')
 
   actions.run_and_verify_switch(wc_dir, A_C, url_A_D, None, None, None,
@@ -1434,7 +1434,7 @@ def forced_switch_failures(sbox):
   # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
   # from the repos, causing an error.
   # svn switch --force url/A/D/H A/D/G
-  expected_error = ('Failed to add directory.*' + A_D_G_I +
+  expected_error = ('Failed to add directory.*' + re.escape(A_D_G_I) +
                     '.*a separate working copy.*already exists')
 
   actions.run_and_verify_switch(wc_dir, A_D_G, url_A_D_H, None, None, None,
