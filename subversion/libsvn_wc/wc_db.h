@@ -2366,21 +2366,6 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
                                        svn_boolean_t incomplete,
                                        apr_pool_t *scratch_pool);
 
-svn_error_t *
-svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
-                                          const char *local_dir_abspath,
-                                          svn_boolean_t incomplete,
-                                          apr_pool_t *scratch_pool);
-
-
-/* Set the pristine text checksum of the WORKING_NODE of LOCAL_ABSPATH in DB
-   to CHECKSUM. */
-svn_error_t *
-svn_wc__db_temp_op_set_working_checksum(svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        const svn_checksum_t *checksum,
-                                        apr_pool_t *scratch_pool);
-
 /* Update the BASE_NODE of directory LOCAL_ABSPATH to be NEW_REPOS_RELPATH
    at revision NEW_REV with status incomplete. */
 svn_error_t *
@@ -2436,12 +2421,6 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                      const svn_opt_revision_t *peg_rev,
                                      const svn_opt_revision_t *rev,
                                      apr_pool_t *scratch_pool);
-
-/* Remove the WORKING_NODE information from LOCAL_ABSPATH's parent stub */
-svn_error_t *
-svn_wc__db_temp_op_remove_working_stub(svn_wc__db_t* db,
-                                       const char *local_abspath,
-                                       apr_pool_t *scratch_pool);
 
 /* Set the conflict marker information on LOCAL_ABSPATH to the specified
    values */
