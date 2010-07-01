@@ -107,6 +107,7 @@ def incoming_paths(root_dir, parent_dir):
     'F1' : os.path.join(root_dir,   "F1"),
     'F'  : os.path.join(parent_dir, "F"),
     'F2' : os.path.join(parent_dir, "F2-in"),
+    'F3' : os.path.join(root_dir,   "F3"),
     'D1' : os.path.join(root_dir,   "D1"),
     'D'  : os.path.join(parent_dir, "D"),
     'D2' : os.path.join(parent_dir, "D2-in"),
@@ -120,6 +121,7 @@ def localmod_paths(root_dir, parent_dir):
     'F1' : os.path.join(root_dir,   "F1"),
     'F'  : os.path.join(parent_dir, "F"),
     'F2' : os.path.join(parent_dir, "F2-local"),
+    'F3' : os.path.join(root_dir,   "F3"),
     'D1' : os.path.join(root_dir,   "D1"),
     'D'  : os.path.join(parent_dir, "D"),
     'D2' : os.path.join(parent_dir, "D2-local"),
@@ -127,8 +129,9 @@ def localmod_paths(root_dir, parent_dir):
 
 # Perform the action MODACTION on the WC items given by PATHS. The
 # available actions can be seen within this function.
-def modify(modaction, paths):
+def modify(modaction, paths, is_init=True):
   F1 = paths['F1']  # existing file to copy from
+  F3 = paths['F3']  # existing file to copy from
   F  = paths['F']   # target file
   F2 = paths['F2']  # non-existing file to copy/move to
   D1 = paths['D1']  # existing dir to copy from
@@ -161,7 +164,10 @@ def modify(modaction, paths):
     main.run_svn(None, 'add', D)
     main.run_svn(None, 'pset', 'dprop2', 'A prop of added dir D.', D)
   elif modaction == 'fC':  # file Copy (from F1)
-    main.run_svn(None, 'copy', F1, F)
+    if is_init:
+      main.run_svn(None, 'copy', F1, F)
+    else:
+      main.run_svn(None, 'copy', F3, F)
   elif modaction == 'dC':  # dir Copy (from D1)
     main.run_svn(None, 'copy', D1, D)
   elif modaction == 'fM':  # file Move (to F2)
@@ -199,6 +205,7 @@ def modify(modaction, paths):
 
 # File names:
 #   F1 = any existing file
+#   F3 = any existing file
 #   F  = the file-path being acted on
 #   F2 = any non-existent file-path
 #   D1 = any existing dir
@@ -316,8 +323,10 @@ def set_up_repos(wc_dir, br_dir, scenarios):
   # create the file F1 and dir D1 which the tests regard as pre-existing
   paths = incoming_paths(wc_dir, wc_dir)  # second arg is bogus but unimportant
   F1 = paths['F1']  # existing file to copy from
+  F3 = paths['F3']  # existing file to copy from
   main.file_write(F1, "This is initially file F1.\n")
-  main.run_svn(None, 'add', F1)
+  main.file_write(F3, "This is initially file F3.\n")
+  main.run_svn(None, 'add', F1, F3)
   D1 = paths['D1']  # existing dir to copy from
   main.run_svn(None, 'mkdir', D1)
 
@@ -411,7 +420,7 @@ def ensure_tree_conflict(sbox, operation,
 
       verbose_print("--- Making local mods")
       for modaction in loc_action:
-        modify(modaction, localmod_paths(".", target_path))
+        modify(modaction, localmod_paths(".", target_path), is_init=False)
       if commit_local_mods:
         run_and_verify_svn(None, AnyOutput, [],
                            'commit', target_path,

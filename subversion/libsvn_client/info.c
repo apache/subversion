@@ -335,7 +335,8 @@ info_found_node_callback(const char *local_abspath,
 
       err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
                                  pool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                  || err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
         {
           /* Check for a tree conflict, and if there is one, send a minimal
              info struct. */

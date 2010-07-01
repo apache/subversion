@@ -29,7 +29,7 @@ import sys, re, os, subprocess
 
 # Our testing module
 import svntest
-from svntest import wc
+from svntest import wc, actions, verify
 from merge_tests import expected_merge_output
 from merge_tests import set_up_branch
 
@@ -2147,13 +2147,32 @@ def forced_update_failures(sbox):
 
   # A forced update that tries to add a file when an unversioned directory
   # of the same name already exists should fail.
-  F_Path = os.path.join(wc_backup, 'A', 'B', 'F')
-  svntest.actions.run_and_verify_update(F_Path, None, None, None,
-                                        ".*Failed to add file.*" + \
-                                        "a non-file object of the " + \
-                                        "same name already exists",
-                                        None, None, None, None, 0, F_Path,
-                                        '--force')
+  #svntest.factory.make(sbox, """svn up --force $WC_DIR.backup/A/B/F""")
+  #exit(0)
+  backup_A_B_F = os.path.join(wc_backup, 'A', 'B', 'F')
+
+  # svn up --force $WC_DIR.backup/A/B/F
+  expected_output = svntest.wc.State(wc_backup, {
+    'A/B/F/nu'          : Item(status='  ', treeconflict='C'),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/F/nu'          : Item(),
+    'A/C/I'             :
+    Item(contents="This is the file 'I'...shouldn't I be a dir?\n"),
+  })
+
+  expected_status = actions.get_virginal_state(wc_backup, 1)
+  expected_status.add({
+    'A/B/F/nu'          : Item(status='? ', treeconflict='C'),
+  })
+  expected_status.tweak('A/B/F', wc_rev='2')
+
+  actions.run_and_verify_update(wc_backup, expected_output,
+    expected_disk, expected_status, None, None, None, None, None, False,
+    '--force', backup_A_B_F)
+
 
   # A forced update that tries to add a directory when an unversioned file
   # of the same name already exists should fail.
@@ -2803,44 +2822,17 @@ def update_with_obstructing_additions(sbox):
     })
 
   expected_status.tweak('', 'iota', status='  ', wc_rev=4)
-  expected_status.tweak('omicron', status='A ', copied='+', wc_rev='-',
+  expected_status.tweak('omicron', status='R ', copied='+', wc_rev='-',
                         treeconflict='C')
 
-  ### ugh. this update will leave the working copy in a BROKEN state.
-  ### the incoming add is flagged as a tree conflict against our local-copy.
-  ### the file will be "skipped" during the update, and the file will be
-  ### dropped on the floor. 'omicron' is then left in the same "local-copy"
-  ### scheduling state (schedule-add). however, this is incorrect because
-  ### the directory says it is r4 which *includes* an 'omicron', yet we
-  ### have discarded all knowledge of it. the update *should* place the
-  ### incoming 'omicron' into the "revert base" and mark our local copy as
-  ### a schedule-replace.
-  ###
-  ### see: http://svn.haxx.se/dev/archive-2009-04/0760.shtml
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
                                         None, None, None, None, None, False,
                                         wc_dir, '-N')
 
   # Resolve the tree conflict.
-  svntest.main.run_svn(None, 'resolve', '--accept', 'working', omicron_path)
+  svntest.main.run_svn(None, 'resolved', omicron_path)
 
-  ### in wc-1, I believe we see the local-copy as a different revision
-  ### than the parent directory (entry->revision is overloaded; normally,
-  ### it is supposed to represent the BASE revision; we drop a copyfrom
-  ### rev in there, making it appear different from the parent), so we
-  ### send the mixed-rev in the update report (UNVERIFIED; this is
-  ### speculation on cause; the effect is known, as follows). given the
-  ### mixed-rev report, the server will send down another add, reporting
-  ### another conflict.
-  ###
-  ### in wc-ng, a local-copy does not have a revision (it hasn't been
-  ### committed yet!). further, all BASE information has been lost, so
-  ### there is no knowledge of a BASE 'omicron', which is not-present or
-  ### at an old revision, or whatever. thus, wc-ng sees "r4" for the
-  ### directory and thinks there are no sub-items to report as different.
-  ### the server returns with "you're up to date" rather than sending
-  ### another add. thus, no conflict occurs on 'omicron'.
   expected_output = wc.State(wc_dir, { })
 
   expected_status.tweak('omicron', treeconflict=None)
@@ -4235,20 +4227,34 @@ def restarted_update_should_delete_dir_prop(sbox):
                                         expected_status, None, other_wc)
 
   # Back in the first working copy, create an obstructing path and
-  # update. The update will be interrupted, resulting in an incomplete
-  # dir which still has the property.
+  # update. The update will flag a tree conflict.
   svntest.main.file_write(zeta_path, 'Obstructing file\n')
-  error_re = 'Failed to add file.*file of the same name already exists'
 
-  svntest.actions.run_and_verify_update(wc_dir, None, None, None,
-                                        error_re)
+  #svntest.factory.make(sbox, 'svn up')
+  #exit(0)
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'                 : Item(status=' U'),
+    'A/zeta'            : Item(status='  ', treeconflict='C'),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/zeta'            : Item(contents="Obstructing file\n"),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/zeta'            : Item(status='? ', treeconflict='C'),
+  })
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
 
   # Now, delete the obstructing path and rerun the update.
-  # A's property should disappear.
   os.unlink(zeta_path)
 
   expected_output = svntest.wc.State(wc_dir, {
-    'A'      : Item(status=' U'),
     'A/zeta' : Item(status='A '),
     })
 
