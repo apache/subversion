@@ -157,6 +157,17 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r959760
+   Fix the FSFS lock deletion code to properly clean up lock information
+   instead of allowing stale lock data to remain indefinitely.
+   Justification:
+     Today, FSFS repositories that make use of user locks will consume
+     unnecessary disk space and incur unnecessary processing penalties
+     due to stale lock information (which is, thankfully, ignored as
+     irrelevant rather than escalated as an error condition).
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
