@@ -1258,10 +1258,33 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
 
       case svn_wc__db_status_deleted:
       case svn_wc__db_status_obstructed_delete:
-        if (schedule)
-          *schedule = svn_wc_schedule_delete;
-        break;
+        {
+          const char *work_del_abspath;
 
+          if (schedule)
+            *schedule = svn_wc_schedule_delete;
+
+          if (!copied)
+            break;
+
+          /* Find out details of our deletion.  */
+          SVN_ERR(svn_wc__db_scan_deletion(NULL,
+                                           NULL,
+                                           NULL,
+                                           &work_del_abspath,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
+
+          if (!work_del_abspath)
+            break; /* Base deletion */
+
+          /* We miss the 4th tree to properly find out if this is
+             the root of a working-delete. Only in that case
+             should copied be set to true. See entries.c for details. */
+
+          *copied = FALSE; /* Until we can fix this test */
+          break;
+        }
       case svn_wc__db_status_added:
       case svn_wc__db_status_obstructed_add:
         {
