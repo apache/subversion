@@ -508,7 +508,8 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
    used within the upgraded entries as they are written into the database.
 
    If one or both are not available, then it attempts to retrieve this
-   information from REPOS_INFO_FUNC, passing REPOS_INFO_BATON.
+   information from REPOS_CACHE. And if that fails from REPOS_INFO_FUNC,
+   passing REPOS_INFO_BATON.
    Returns a user understandable error using LOCAL_ABSPATH if the
    information cannot be obtained.  */
 static svn_error_t *
@@ -516,12 +517,35 @@ ensure_repos_info(svn_wc_entry_t *entry,
                   const char *local_abspath,
                   svn_wc_upgrade_get_repos_info_t repos_info_func,
                   void *repos_info_baton,
+                  apr_hash_t *repos_cache,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   /* Easy exit.  */
   if (entry->repos != NULL && entry->uuid != NULL)
     return SVN_NO_ERROR;
+
+  if ((entry->repos == NULL || entry->uuid == NULL)
+      && entry->url)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, repos_cache);
+           hi; hi = apr_hash_next(hi))
+        {
+          if (svn_uri_is_child(svn__apr_hash_index_key(hi),
+                               entry->url, NULL))
+            {
+              if (!entry->repos)
+                entry->repos = svn__apr_hash_index_key(hi);
+
+              if (!entry->uuid)
+                entry->uuid = svn__apr_hash_index_val(hi);
+
+              return SVN_NO_ERROR;
+            }
+        }
+    }
 
   if (entry->repos == NULL && repos_info_func == NULL)
     return svn_error_createf(
@@ -1130,6 +1154,11 @@ bump_to_XXX(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 /* Upgrade the working copy directory represented by DB/DIR_ABSPATH
    from OLD_FORMAT to the wc-ng format (SVN_WC__WC_NG_VERSION)'.
 
+   Pass REPOS_INFO_FUNC, REPOS_INFO_BATON and REPOS_CACHE to
+   ensure_repos_info. Add the found repository root and UUID to
+   REPOS_CACHE if it doesn't have a cached entry for this
+   repository.
+
    Uses SCRATCH_POOL for all temporary allocation.  */
 static svn_error_t *
 upgrade_to_wcng(svn_wc__db_t *db,
@@ -1137,6 +1166,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
                 int old_format,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
                 void *repos_info_baton,
+                apr_hash_t *repos_cache,
                 apr_pool_t *scratch_pool)
 {
   const char *logfile_path = svn_wc__adm_child(dir_abspath, ADM_LOG,
@@ -1187,7 +1217,19 @@ upgrade_to_wcng(svn_wc__db_t *db,
   this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
   SVN_ERR(ensure_repos_info(this_dir, dir_abspath,
                             repos_info_func, repos_info_baton,
+                            repos_cache,
                             scratch_pool, iterpool));
+
+  /* Cache repos UUID pairs for when a subdir doesn't have this information */
+  if (!apr_hash_get(repos_cache, this_dir->repos, APR_HASH_KEY_STRING))
+    {
+      apr_pool_t *hash_pool = apr_hash_pool_get(repos_cache);
+
+      apr_hash_set(repos_cache,
+                   apr_pstrdup(hash_pool, this_dir->repos),
+                   APR_HASH_KEY_STRING,
+                   apr_pstrdup(hash_pool, this_dir->uuid));
+    }
 
   /* Create an empty sqlite database for this directory. */
   SVN_ERR(svn_wc__db_upgrade_begin(&sdb, &repos_id, &wc_id, dir_abspath,
@@ -1385,6 +1427,7 @@ upgrade_working_copy(svn_wc__db_t *db,
                      const char *dir_abspath,
                      svn_wc_upgrade_get_repos_info_t repos_info_func,
                      void *repos_info_baton,
+                     apr_hash_t *repos_cache,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
@@ -1410,7 +1453,7 @@ upgrade_working_copy(svn_wc__db_t *db,
   if (old_format < SVN_WC__WC_NG_VERSION)
     SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format,
                             repos_info_func, repos_info_baton,
-                            iterpool));
+                            repos_cache, iterpool));
 
   if (notify_func)
     notify_func(notify_baton,
@@ -1427,6 +1470,7 @@ upgrade_working_copy(svn_wc__db_t *db,
 
       SVN_ERR(upgrade_working_copy(db, child_abspath,
                                    repos_info_func, repos_info_baton,
+                                   repos_cache,
                                    cancel_func, cancel_baton,
                                    notify_func, notify_baton,
                                    iterpool));
@@ -1473,6 +1517,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   /* Upgrade this directory and/or its subdirectories.  */
   SVN_ERR(upgrade_working_copy(db, local_abspath,
                                repos_info_func, repos_info_baton,
+                               apr_hash_make(scratch_pool),
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool));
