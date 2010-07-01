@@ -1349,7 +1349,7 @@ def forced_switch_failures(sbox):
   #    directory of the same name already exists.  (Currently fails)
   # svn switch --force url/A/D A/C
   expected_error = ('Failed to add directory.*' + A_C_H +
-                    '.*a non-directory object.*already exists\n')
+                    '.*a non-directory object.*already exists')
 
   actions.run_and_verify_switch(wc_dir, A_C, url_A_D, None, None, None,
     expected_error, None, None, None, None, False, '--force')
