@@ -545,11 +545,6 @@ where wc_id = ?1 and local_relpath = ?2;
 update base_node set file_external = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_UPDATE_WORKING_CHECKSUM
-update working_node set checksum = ?3
-where wc_id = ?1 and local_relpath = ?2;
-
-
 /* ------------------------------------------------------------------------- */
 
 /* these are used in upgrade.c  */
