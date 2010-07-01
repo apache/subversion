@@ -995,6 +995,13 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
 
+/* Remove all unreferenced pristines belonging to WRI_ABSPATH in DB. */
+svn_error_t *
+svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            apr_pool_t *scratch_pool);
+
+
 /* ### check for presence, according to the given mode (on how hard we
    ### should examine things)
 */
