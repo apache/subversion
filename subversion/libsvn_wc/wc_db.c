@@ -4093,9 +4093,24 @@ db_working_update_presence(svn_wc__db_status_t status,
 
   flush_entries(pdh);
 
-  /* ### Parent stub?  I don't know; I'll punt for now as it passes
-         the regression tests as is and the problem will evaporate
-         when the db is centralised. */
+#ifndef SINGLE_DB
+  if (*local_relpath == '\0')
+    {
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                                 TRUE, scratch_pool));
+
+      VERIFY_USABLE_PDH(pdh);
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_UPDATE_WORKING_PRESENCE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "ist", pdh->wcroot->wc_id,
+                                svn_dirent_basename(local_abspath, NULL),
+                                presence_map, status));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      flush_entries(pdh);
+    }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -4382,6 +4397,9 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
           new_working_status = svn_wc__db_status_base_deleted;
         }
     }
+    /* ### BH: base_none is not a safe check, because a node can
+       ### still be a child of an added node even though it replaces
+       ### a base node. */
   else if (working_status == svn_wc__db_status_added
            && (base_none || base_status == svn_wc__db_status_not_present))
     {
