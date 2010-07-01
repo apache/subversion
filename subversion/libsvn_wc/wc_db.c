@@ -1741,6 +1741,32 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
   flush_entries(pdh);
 
+#ifndef SINGLE_DB
+  if (*local_relpath == '\0')
+    {
+      svn_error_t *err;
+      err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                               TRUE, scratch_pool);
+
+      if (!err)
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                            STMT_DELETE_BASE_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                                    svn_dirent_basename(local_abspath,
+                                                        scratch_pool)));
+
+          SVN_ERR(svn_sqlite__step_done(stmt));
+
+          flush_entries(pdh);
+        }
+      else if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
+    }
+#endif
+
   return SVN_NO_ERROR;
 }
 

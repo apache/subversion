@@ -2090,7 +2090,7 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, local_abspath, pool));
   if (hidden)
     {
-      SVN_ERR(svn_wc__db_temp_op_remove_entry(eb->db, local_abspath, pool));
+      SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath, pool));
 
       if (strcmp(local_abspath, eb->target_abspath) == 0)
         eb->target_deleted = TRUE;
