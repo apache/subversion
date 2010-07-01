@@ -30,7 +30,7 @@ import sys, re, os, time, subprocess
 
 # Our testing module
 import svntest
-from svntest import wc
+from svntest import wc, actions
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -162,23 +162,49 @@ def checkout_with_obstructions(sbox):
 #----------------------------------------------------------------------
 
 def forced_checkout_of_file_with_dir_obstructions(sbox):
-  """forced co fails if a dir obstructs a file"""
+  """forced co flags conflict if a dir obstructs a file"""
+  # svntest.factory.make(sbox,
+  #                      """mkdir $WC_DIR.other/iota
+  #                         svn co --force url $WC_DIR.other """)
+  sbox.build()
+  url = sbox.repo_url
+  wc_dir_other = sbox.add_wc_path('other')
 
-  make_local_tree(sbox, False, False)
+  other_iota = os.path.join(wc_dir_other, 'iota')
 
-  # Make the "other" working copy
-  other_wc = sbox.add_wc_path('other')
-  os.mkdir(other_wc)
-  os.mkdir(os.path.join(other_wc, "iota"))
+  # mkdir $WC_DIR.other/iota
+  os.makedirs(other_iota)
 
-  # Checkout the standard greek repos into a directory that has a dir named
-  # "iota" obstructing the file "iota" in the repos.  This should fail.
-  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
-    "Expected error during co", None, svntest.verify.AnyOutput,
-    "co", "--force", sbox.repo_url, other_wc)
+  # svn co --force url $WC_DIR.other
+  expected_output = svntest.wc.State(wc_dir_other, {
+    'A'                 : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'iota'              : Item(status='  ', treeconflict='C'),
+  })
 
-  test_stderr(".*Failed to add file.*a non-file object of the same name " \
-              "already exists", serr)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=None)
+
+  actions.run_and_verify_checkout(url, wc_dir_other, expected_output,
+    expected_disk, None, None, None, None, '--force')
+
 
 #----------------------------------------------------------------------
 
@@ -817,7 +843,7 @@ def co_with_obstructing_local_adds(sbox):
                                           None, None, None, None,
                                           '--force')
 
-  expected_status.tweak('A/B/F/omicron', treeconflict='C')
+  expected_status.tweak('A/B/F/omicron', treeconflict='C', status='R ')
   expected_status.add({
     'A/B/F'         : Item(status='  ', wc_rev=4),
     })
