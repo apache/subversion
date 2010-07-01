@@ -146,13 +146,6 @@ split_url_syntax(apr_pool_t *pool)
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (scheme)");
 
-  /* Use only single slash after scheme */
-  apr_err = try_split_url("file:/path/to/repos", pool);
-  if (apr_err != SVN_ERR_RA_ILLEGAL_URL && apr_err != SVN_ERR_ASSERTION_FAIL)
-    return svn_error_create
-      (SVN_ERR_TEST_FAILED, NULL,
-       "svn_ra_local__split_URL failed to catch bad URL (slashes)");
-
   /* Use only a hostname, with no path */
   apr_err = try_split_url("file://hostname", pool);
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
