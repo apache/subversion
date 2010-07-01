@@ -366,18 +366,15 @@ copy_versioned_dir(svn_wc__db_t *db,
              copy is not yet connected to the parent so we don't need
              to use a workqueue.  This will be removed when we
              centralise. */
-          const char *dst_parent_abspath, *name, *parent_url, *url;
+          const char *dst_parent_abspath, *name;
           const char *repos_root_url, *repos_uuid;
           svn_revnum_t revision;
           svn_depth_t depth;
           svn_wc__db_status_t status;
+          svn_boolean_t have_base;
 
           svn_dirent_split(&dst_parent_abspath, &name, dst_abspath,
                            scratch_pool);
-          SVN_ERR(svn_wc__internal_node_get_url(&parent_url, db,
-                                                dst_parent_abspath,
-                                                scratch_pool, scratch_pool));
-          url = svn_uri_join(parent_url, name, scratch_pool);
 
           SVN_ERR(svn_wc__db_read_info(&status,
                                        NULL, /* kind */
@@ -398,39 +395,42 @@ copy_versioned_dir(svn_wc__db_t *db,
                                        NULL, /* original_root_url */
                                        NULL, /* original_uuid */
                                        NULL, /* original_revision */
-                                       NULL, /* text_mod */
                                        NULL, /* props_mod */
-                                       NULL, /* base_shadowed */
+                                       &have_base,
+                                       NULL, /* have_work */
                                        NULL, /* conflicted */
                                        NULL, /* lock */
                                        db, src_abspath,
                                        scratch_pool, scratch_pool));
-          
-          if (status == svn_wc__db_status_added)
-            SVN_ERR(svn_wc__db_scan_addition(NULL /* status */,
-                                             NULL /* op_root_abspath */,
-                                             NULL /* repos_relpath */,
-                                             &repos_root_url,
-                                             &repos_uuid,
-                                             NULL /* original_repos_relpath */,
-                                             NULL /* original_root_url */,
-                                             NULL /* original_uuid */,
-                                             NULL /* original_revision */,
-                                             db, src_abspath,
-                                             scratch_pool, scratch_pool));
 
+          if (!repos_root_url)
+            {
+              if (status == svn_wc__db_status_added || !have_base)
+                SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                                 &repos_root_url, &repos_uuid,
+                                                 NULL, NULL, NULL, NULL,
+                                                 db, src_abspath,
+                                                 scratch_pool, scratch_pool));
+              else
+                 SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url,
+                                                    &repos_uuid,
+                                                    db, src_abspath,
+                                                    scratch_pool, scratch_pool));
+            }
+
+          /* Use the repos_root as root node url, because we are going to
+             remove the node directly anyway. */
           SVN_ERR(svn_wc__internal_ensure_adm(db, tmp_dst_abspath,
-                                              url, repos_root_url, repos_uuid,
-                                              revision, depth, scratch_pool));
+                                              repos_root_url, repos_root_url,
+                                              repos_uuid, revision, depth,
+                                              scratch_pool));
 
           /* That creates a base node which we do not want so delete it. */
           SVN_ERR(svn_wc__db_base_remove(db, tmp_dst_abspath,
                                          scratch_pool));
 
           /* ### Need to close the database so that Windows can move
-             ### the directory.  Is this the right way to do it?  This
-             ### is not temporary code so the _temp_ name isn't
-             ### right. */
+             ### the directory. */
           SVN_ERR(svn_wc__db_temp_forget_directory(db, tmp_dst_abspath,
                                                    scratch_pool));
         }
