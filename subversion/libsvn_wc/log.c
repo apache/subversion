@@ -812,6 +812,9 @@ cleanup_internal(svn_wc__db_t *db,
      of being useful. */
   SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, adm_abspath, iterpool));
 
+  /* Remove unreferenced pristine texts */
+  SVN_ERR(svn_wc__db_pristine_cleanup(db, adm_abspath, iterpool));
+
   /* All done, toss the lock */
   SVN_ERR(svn_wc__db_wclock_remove(db, adm_abspath, iterpool));
 

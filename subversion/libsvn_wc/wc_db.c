@@ -2538,6 +2538,45 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
 
 
 svn_error_t *
+svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* Find the pristines in the DB */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_PRISTINE_ROWS));
+  while (1)
+    {
+      svn_boolean_t have_row;
+      const svn_checksum_t *checksum;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (! have_row)
+        break;
+
+      SVN_ERR(svn_sqlite__column_checksum(&checksum, stmt, 0,
+                                          scratch_pool));
+      SVN_ERR(svn_wc__db_pristine_remove(db, wri_abspath, checksum,
+                                         scratch_pool));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_wc__db_t *db,
                           const char *wri_abspath,
