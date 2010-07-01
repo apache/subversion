@@ -382,12 +382,24 @@ assemble_status(svn_wc_status3_t **status,
             node_status = svn_wc_status_obstructed;
         }
       else if (db_status == svn_wc__db_status_deleted)
-        node_status = svn_wc_status_deleted;
+        {
+          node_status = svn_wc_status_deleted;
+
+          SVN_ERR(svn_wc__internal_node_get_schedule(NULL, &copied,
+                                                     db, local_abspath,
+                                                     scratch_pool));
+        }
     }
   else
     {
       if (db_status == svn_wc__db_status_deleted)
-        node_status = svn_wc_status_deleted;
+        {
+          node_status = svn_wc_status_deleted;
+
+          SVN_ERR(svn_wc__internal_node_get_schedule(NULL, &copied,
+                                                     db, local_abspath,
+                                                     scratch_pool));
+        }
       else if (path_kind != svn_node_file)
         {
           /* A present or added file should be on disk, so it is
