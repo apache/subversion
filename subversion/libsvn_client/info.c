@@ -87,15 +87,25 @@ build_info_for_entry(svn_info_t **info,
                      const char *local_abspath,
                      apr_pool_t *pool)
 {
-  svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  svn_info_t *tmpinfo;
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;
   svn_boolean_t is_copy_target;
   const char *lock_token, *lock_owner, *lock_comment;
   apr_time_t lock_date;
   const svn_checksum_t *checksum;
+  svn_node_kind_t kind;
 
-  SVN_ERR(svn_wc_read_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE, pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, pool));
+
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath, pool));
+
+  tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  tmpinfo->kind = kind;
+
   SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
                                pool, pool));
 
@@ -335,15 +345,23 @@ info_found_node_callback(const char *local_abspath,
 
       err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
                                  pool);
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-                  || err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
         {
           /* Check for a tree conflict, and if there is one, send a minimal
              info struct. */
           const svn_wc_conflict_description2_t *tree_conflict;
 
-          SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
-                                            local_abspath, pool, pool));
+          {
+            svn_error_t *err2;
+            err2 = svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
+                                             local_abspath, pool, pool);
+
+            if (err2)
+              {
+                svn_error_clear(err2);
+                tree_conflict = NULL;
+              }
+          }
 
           if (tree_conflict)
             {
