@@ -14,9 +14,9 @@
 # presumably in either up() or sw().
 
 from subprocess import Popen, PIPE, call
-from types import FunctionType, ListType
+from types import FunctionType, ListType, TupleType
 import tempfile, os
-from permutations import Permutations
+from itertools import product
 
 
 def run_cmd(cmd, verbose=True, shell=False):
@@ -193,12 +193,37 @@ def prepare_cp(ctx, kind, suffix):
         'content_copy_source_' + kind + suffix,
         target)
 
+def postpare_cp(ctx, kind, suffix):
+  if kind == f:
+    target = ctx.wc('file' + suffix)
+    rewrite_file(target, 'local mod on copy source ' + suffix)
+    svn('ps', 'PROP_local_copy_src_mod_' + kind + suffix,
+        'content_local_copy_src_mod_' + kind + suffix,
+        target)
+  elif kind == l:
+    target = ctx.wc('symlink' + suffix)
+    svn('ps', 'PROP_local_copy_src_mod_' + kind + suffix,
+        'content_local_copy_src_mod_' + kind + suffix,
+        target)
+  else:
+    target = ctx.wc('dir' + suffix)
+    svn('ps', 'PROP_local_copy_src_mod_' + kind + suffix,
+        'content_local_copy_src_mod_' + kind + suffix,
+        target)
+
 
 def prepare(ctx, action, kind):
   if action == cp1:
     prepare_cp(ctx, kind, '1')
   elif action == cp2:
     prepare_cp(ctx, kind, '2')
+    
+
+def postpare(ctx, action, kind):
+  if action == cp1:
+    postpare_cp(ctx, kind, '1')
+  elif action == cp2:
+    postpare_cp(ctx, kind, '2')
     
 
 
@@ -221,6 +246,9 @@ def co(name, local_action, local_kind, incoming_action, incoming_kind):
 
   target = ctx.wc(name)
   local_action(ctx, target, local_kind, 'local')
+
+  postpare(ctx, local_action, local_kind)
+  postpare(ctx, incoming_action, incoming_kind)
   
   # get conflicts
   o1,e1 = shell('yes p | svn checkout "' + ctx.URL + '" ' +
@@ -254,6 +282,9 @@ def up(name, local_action, local_kind, incoming_action, incoming_kind):
   svn('update', '-r', str(head), ctx.WC)
 
   local_action(ctx, target, local_kind, 'local')
+
+  postpare(ctx, local_action, local_kind)
+  postpare(ctx, incoming_action, incoming_kind)
   
   # get conflicts
   o1,e1 = svn('update', '--accept=postpone', ctx.WC)
@@ -284,6 +315,9 @@ def sw(name, local_action, local_kind, incoming_action, incoming_kind):
 
   target = ctx.wc('trunk', name)
   local_action(ctx, target, local_kind, 'local')
+
+  postpare(ctx, local_action, local_kind)
+  postpare(ctx, incoming_action, incoming_kind)
   
   # get conflicts
   o1,e1 = svn('switch', '--accept=postpone', ctx.url('branch'), ctx.wc('trunk'))
@@ -299,26 +333,26 @@ def sw(name, local_action, local_kind, incoming_action, incoming_kind):
 # The elements are functions for up,sw and add,cp1,cp2,unver, and they are 
 # simple strings for f (file), l (symlink), d (directory).
 #
-#                cmd      local action and kind     incoming action and kind
-p = Permutations((co,up,sw), (add,cp1,unver), (f,l,d), (add,cp2,cp1), (f,l,d))
+#            cmd        local action and kind     incoming action and kind
+p = product((co,up,sw), (add,cp1,unver), (f,l,d), (add,cp2,cp1), (f,l,d))
 
 # Incoming cp1 is meant to match up only with local cp1. Also, cp1-cp1 is
 # supposed to perform identical copies in both incoming and local, so they
 # only make sense with matching kinds. Skip all rows that don't match this:
-p.skip = lambda row: (row[3] == cp1 and (row[4] != row[2] or row[1] != cp1)
-                      #Select subsets if desired
-                      #or (row[0] != co)
-                      #or (row[2] != l and row[4] != l)
-                      #
-                      #or row not in (
-                      ##[up, cp1, l, add, l],
-                      ##[up, cp1, f, cp2, l],
-                      #[up, cp1, f, cp2, f],
-                      ##[up, cp1, f, add, f],
-                      ##[up, cp1, f, add, l],
-                      ##[up, add, l, add, l],
-                      #)
-                      )
+skip = lambda row: (row[3] == cp1 and (row[4] != row[2] or row[1] != cp1)
+                    #Select subsets if desired
+                    #or (row[0] != up or row[3] not in [cp1, cp2])
+                    #or (row[2] != l and row[4] != l)
+                    #
+                    #or row not in (
+                    ##[up, cp1, l, add, l],
+                    ##[up, cp1, f, cp2, l],
+                    #[up, cp1, f, cp2, f],
+                    ##[up, cp1, f, add, f],
+                    ##[up, cp1, f, add, l],
+                    ##[up, add, l, add, l],
+                    #)
+                    )
 
 
 
@@ -326,7 +360,7 @@ p.skip = lambda row: (row[3] == cp1 and (row[4] != row[2] or row[1] != cp1)
 def nameof(thing):
   if isinstance(thing, FunctionType):
     return thing.__name__
-  if isinstance(thing, ListType):
+  if isinstance(thing, ListType) or isinstance(thing, TupleType):
     return '_'.join([ nameof(thang) for thang in thing])
   return str(thing)
 
@@ -345,11 +379,14 @@ def analyze(name, outs):
 results = []
 name = None
 try:
-  while p.next():
-    name = nameof(p.row)
+  # there is probably a better way than this:
+  for row in list(p):
+    if skip(row):
+      continue
+    name = nameof(row)
     print name
-    test_func = p.row[0]
-    results.append( (name, analyze( name, test_func( name, *p.row[1:] ) )) )
+    test_func = row[0]
+    results.append( (name, analyze( name, test_func( name, *row[1:] ) )) )
 except:
   if name:
     print 'Error during', name
