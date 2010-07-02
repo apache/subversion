@@ -167,7 +167,6 @@ copy_versioned_file(svn_wc__db_t *db,
                                               scratch_pool));
   }
 
-#ifdef SVN_EXPERIMENTAL_PRISTINE
   /* This goes away when we centralise, but until then we might need
      to do a cross-db pristine copy. */
   if (strcmp(svn_dirent_dirname(src_abspath, scratch_pool),
@@ -215,48 +214,6 @@ copy_versioned_file(svn_wc__db_t *db,
                                               scratch_pool));
         }
     }
-#else
-  {
-    /* This goes away when the pristine store is enabled, but until
-       then we may need to copy the text-base. */
-    svn_wc__db_status_t src_status; 
-
-    SVN_ERR(svn_wc__db_read_info(&src_status,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL,
-                                 db, src_abspath,
-                                 scratch_pool, scratch_pool));
-    if (src_status == svn_wc__db_status_absent
-        || src_status == svn_wc__db_status_excluded
-        || src_status == svn_wc__db_status_not_present)
-      src_pristine = NULL;
-    else
-      SVN_ERR(svn_wc__get_pristine_contents(&src_pristine, db,
-                                            src_abspath,
-                                            scratch_pool, scratch_pool));
-
-    if (src_pristine)
-      {
-        svn_skel_t *work_item;
-        svn_stream_t *tmp_pristine;
-        const char *tmp_pristine_abspath, *dst_pristine_abspath;
-
-        SVN_ERR(svn_stream_open_unique(&tmp_pristine, &tmp_pristine_abspath,
-                                       tmpdir_abspath, svn_io_file_del_none,
-                                       scratch_pool, scratch_pool));
-        SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
-                                 cancel_func, cancel_baton, scratch_pool));
-        SVN_ERR(svn_wc__text_base_path(&dst_pristine_abspath, db,
-                                       dst_abspath, scratch_pool));
-        SVN_ERR(svn_wc__loggy_move(&work_item, db, dir_abspath,
-                                   tmp_pristine_abspath, dst_pristine_abspath,
-                                   scratch_pool));
-        work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
-      }
-  }
-#endif
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   /* This goes away when we move to in-db-props. */

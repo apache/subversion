@@ -1300,12 +1300,10 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                                    result_pool);
   if (new_text_base_sha1_checksum)
     {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
       SVN_ERR(svn_wc__db_pristine_install(db, new_pristine_tmp_abspath,
                                           local_sha1_checksum,
                                           local_md5_checksum,
                                           scratch_pool));
-#endif
       *new_text_base_sha1_checksum = svn_checksum_dup(local_sha1_checksum,
                                                       result_pool);
     }
