@@ -78,7 +78,7 @@ typedef enum
 } svn_ra_serf__authn_types;
 
 /* A serf connection and optionally associated SSL context.  */
-typedef struct {
+typedef struct svn_ra_serf__connection_t {
   /* Our connection to a server. */
   serf_connection_t *conn;
 
@@ -254,7 +254,7 @@ struct svn_ra_serf__session_t {
 /*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
  */
-typedef struct {
+typedef struct svn_ra_serf__dav_props_t {
   /* Element namespace */
   const char *namespace;
   /* Element name */
@@ -466,7 +466,7 @@ typedef apr_status_t
  * Structure that can be passed to our default handler to guide the
  * execution of the request through its lifecycle.
  */
-typedef struct {
+typedef struct svn_ra_serf__handler_t {
   /* The HTTP method string of the request */
   const char *method;
 
@@ -652,7 +652,7 @@ struct svn_ra_serf__xml_parser_t {
 /*
  * Parses a server-side error message into a local Subversion error.
  */
-typedef struct {
+typedef struct svn_ra_serf__server_error_t {
   /* Our local representation of the error. */
   svn_error_t *error;
 
@@ -679,7 +679,7 @@ typedef struct {
 } svn_ra_serf__server_error_t;
 
 /* A simple request context that can be passed to handle_status_only. */
-typedef struct {
+typedef struct svn_ra_serf__simple_request_context_t {
   /* The HTTP status code of the response */
   int status;
 
