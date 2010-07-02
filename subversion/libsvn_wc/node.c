@@ -1424,7 +1424,7 @@ svn_wc__node_get_info_bits(apr_time_t *text_time,
   svn_boolean_t conflicted;
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, text_time, NULL, NULL,
+                               NULL, text_time, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                &conflicted, NULL,
                                wc_ctx->db, local_abspath,
