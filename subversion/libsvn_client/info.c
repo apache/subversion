@@ -335,58 +335,40 @@ info_found_node_callback(const char *local_abspath,
                          apr_pool_t *pool)
 {
   struct found_entry_baton *fe_baton = walk_baton;
+  svn_info_t *info = NULL;
+  const svn_wc_conflict_description2_t *tree_conflict = NULL;
+  svn_error_t *err;
 
-  if (svn_wc__changelist_match(fe_baton->wc_ctx, local_abspath,
-                               fe_baton->changelist_hash, pool))
+  if (! svn_wc__changelist_match(fe_baton->wc_ctx, local_abspath,
+                                 fe_baton->changelist_hash, pool))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
+                                    local_abspath, pool, pool));
+
+  err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
+                             pool);
+  if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      && tree_conflict)
     {
-      svn_info_t *info;
-      const svn_wc_conflict_description2_t *tmp_conflict;
-      svn_error_t *err;
+      svn_error_clear(err);
 
-      err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
-                                 pool);
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
-        {
-          /* Check for a tree conflict, and if there is one, send a minimal
-             info struct. */
-          const svn_wc_conflict_description2_t *tree_conflict;
-
-          {
-            svn_error_t *err2;
-            err2 = svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
-                                             local_abspath, pool, pool);
-
-            if (err2)
-              {
-                svn_error_clear(err2);
-                tree_conflict = NULL;
-              }
-          }
-
-          if (tree_conflict)
-            {
-              svn_error_clear(err);
-
-              SVN_ERR(build_info_for_unversioned(&info, pool));
-              SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
-                                                  NULL,
-                                                  fe_baton->wc_ctx,
-                                                  local_abspath, FALSE, FALSE,
-                                                  pool, pool));
-            }
-          else
-            return svn_error_return(err);
-        }
-      else if (err)
-        return svn_error_return(err);
-
-      SVN_ERR(svn_wc__get_tree_conflict(&tmp_conflict, fe_baton->wc_ctx,
-                                        local_abspath, pool, pool));
-      if (tmp_conflict)
-        info->tree_conflict = svn_wc__cd2_to_cd(tmp_conflict, pool);
-      SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, local_abspath,
-                                 info, pool));
+      SVN_ERR(build_info_for_unversioned(&info, pool));
+      SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
+                                          NULL,
+                                          fe_baton->wc_ctx,
+                                          local_abspath, FALSE, FALSE,
+                                          pool, pool));
     }
+  else if (err)
+    return svn_error_return(err);
+
+  SVN_ERR_ASSERT(info != NULL);
+
+  if (tree_conflict)
+    info->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
+  SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, local_abspath,
+                             info, pool));
   return SVN_NO_ERROR;
 }
 
