@@ -1530,6 +1530,7 @@ revert_entry(svn_depth_t *depth,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_boolean_t replaced;
+  svn_boolean_t have_base;
 
   /* Initialize this even though revert_admin_things() is guaranteed
      to set it, because we don't know that revert_admin_things() will
@@ -1539,8 +1540,8 @@ revert_entry(svn_depth_t *depth,
   SVN_ERR(svn_wc__db_read_info(&status, &kind,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL,
+                               NULL, NULL, NULL, NULL, &have_base, NULL,
+                               NULL, NULL,
                                db, local_abspath, pool, pool));
 
   SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath, pool));
@@ -1555,14 +1556,39 @@ revert_entry(svn_depth_t *depth,
       const char *repos_root_url;
       const char *repos_uuid;
       /* Before removing item from revision control, notice if the
-         entry is in a 'deleted' state; this is critical for
-         directories, where this state only exists in its parent's
-         entry. */
-      svn_boolean_t was_deleted = FALSE;
+         BASE_NODE is in a 'not-present' state. */
+      svn_boolean_t was_not_present = FALSE;
 
-      /* NOTE: if WAS_DELETED gets set, then we have BASE nodes. The code
-         below will then figure out the repository information, so that
-         we can later insert a node for the same repository.  */
+      /* NOTE: if WAS_NOT_PRESENT gets set, then we have BASE nodes.
+         The code below will then figure out the repository information, so
+         that we can later insert a node for the same repository. */
+
+      if (have_base)
+        {
+            svn_wc__db_status_t base_status;
+            SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
+                                             &base_revision, &repos_relpath,
+                                             &repos_root_url, &repos_uuid,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL,
+                                             db, local_abspath,
+                                             pool, pool));
+
+            if (base_status == svn_wc__db_status_not_present)
+            {
+                /* Remember the BASE revision.  */
+                /* Remember the repository this node is associated with.  */
+
+                was_not_present = TRUE;
+
+                if (!repos_root_url)
+                  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                                     &repos_root_url,
+                                                     &repos_uuid,
+                                                     db, local_abspath,
+                                                     pool, pool));
+            }
+        }
 
       /* ### much of this is probably bullshit. we should be able to just
          ### remove the WORKING and ACTUAL rows, and be done. but we're
@@ -1572,25 +1598,6 @@ revert_entry(svn_depth_t *depth,
 
       if (kind == svn_wc__db_kind_file)
         {
-          was_deleted = (status == svn_wc__db_status_not_present);
-          if (was_deleted)
-            {
-              /* Remember the BASE revision.  */
-              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &base_revision,
-                                               NULL, NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               db, local_abspath,
-                                               pool, pool));
-
-              /* Remember the repository this node is associated with.  */
-              SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                                 &repos_root_url,
-                                                 &repos_uuid,
-                                                 db, local_abspath,
-                                                 pool, pool));
-            }
-
           SVN_ERR(svn_wc__internal_remove_from_revision_control(db,
                                                                 local_abspath,
                                                                 FALSE, FALSE,
@@ -1600,29 +1607,6 @@ revert_entry(svn_depth_t *depth,
         }
       else if (kind == svn_wc__db_kind_dir)
         {
-          /* We don't need to check for excluded item, since we won't fall
-             into this code path in that case. */
-
-          SVN_ERR(svn_wc__node_is_deleted(&was_deleted, db, local_abspath,
-                                          pool));
-          if (was_deleted)
-            {
-              /* Remember the BASE revision.  */
-              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &base_revision,
-                                               NULL, NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               db, local_abspath,
-                                               pool, pool));
-
-              /* Remember the repository this node is associated with.  */
-              SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                                 &repos_root_url,
-                                                 &repos_uuid,
-                                                 db, local_abspath,
-                                                 pool, pool));
-            }
-
           if (disk_kind == svn_node_none
               || svn_wc__adm_missing(db, local_abspath, pool))
             {
@@ -1660,10 +1644,9 @@ revert_entry(svn_depth_t *depth,
       *depth = svn_depth_empty;
       reverted = TRUE;
 
-      /* If the removed item was *also* in a 'deleted' state, make
-         sure we leave just a plain old 'deleted' entry behind in the
-         parent. */
-      if (was_deleted)
+      /* If the removed item was *also* in a 'not-present' state, make
+         sure we leave a not-present node behind */
+      if (was_not_present)
         {
           SVN_ERR(svn_wc__db_base_add_absent_node(
                     db, local_abspath,
