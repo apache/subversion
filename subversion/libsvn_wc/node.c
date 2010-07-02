@@ -419,7 +419,7 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, &have_base, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
+                               result_pool, scratch_pool));
   if (*repos_relpath == NULL)
     {
       if (status == svn_wc__db_status_added)
@@ -428,30 +428,32 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                                            NULL, NULL, NULL, NULL,
                                            NULL, NULL,
                                            wc_ctx->db, local_abspath,
-                                           scratch_pool, scratch_pool));
+                                           result_pool, scratch_pool));
         }
       else if (have_base)
         {
           SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath, NULL,
                                              NULL,
                                              wc_ctx->db, local_abspath,
-                                             scratch_pool, scratch_pool));
+                                             result_pool, scratch_pool));
         }
-      else if (status == svn_wc__db_status_absent
-               || status == svn_wc__db_status_excluded
-               || status == svn_wc__db_status_not_present
+      else if (status == svn_wc__db_status_excluded
                || (!have_base
                    && (status == svn_wc__db_status_deleted
                        || status == svn_wc__db_status_obstructed_delete)))
         {
-          const char *parent_abspath;
+          const char *parent_abspath, *basename, *parent_relpath;
 
-          svn_dirent_split(&parent_abspath, repos_relpath, local_abspath,
+          svn_dirent_split(&parent_abspath, &basename, local_abspath,
                            scratch_pool);
-          SVN_ERR(svn_wc__node_get_repos_relpath(repos_relpath, wc_ctx,
+          SVN_ERR(svn_wc__node_get_repos_relpath(&parent_relpath, wc_ctx,
                                                  parent_abspath,
                                                  scratch_pool,
                                                  scratch_pool));
+
+          if (parent_relpath)
+            *repos_relpath = svn_relpath_join(parent_relpath, basename,
+                                              result_pool);
         }
       else
         {
