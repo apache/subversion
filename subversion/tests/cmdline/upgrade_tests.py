@@ -401,6 +401,30 @@ def do_x3_upgrade(sbox):
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+  svntest.actions.run_and_verify_svn(None, 'Reverted.*', [],
+                                     'revert', '-R', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='2'),
+      'A'                 : Item(status='  ', wc_rev='2'),
+      'A/D'               : Item(status='  ', wc_rev='2'),
+      'A/D/H'             : Item(status='  ', wc_rev='2'),
+      'A/D/H/omega'       : Item(status='  ', wc_rev='2'),
+      'A/D/H/psi'         : Item(status='  ', wc_rev='2'),
+      'A/D/H/chi'         : Item(status='  ', wc_rev='2'),
+      'A/D/gamma'         : Item(status='  ', wc_rev='2'),
+      'A/D/G'             : Item(status='  ', wc_rev='2'),
+      'A/B'               : Item(status='  ', wc_rev='2'),
+      'A/B/F'             : Item(status='  ', wc_rev='2'),
+      'A/B/E'             : Item(status='  ', wc_rev='2'),
+      'A/B/E/beta'        : Item(status='  ', wc_rev='2'),
+      'A/B/E/alpha'       : Item(status='  ', wc_rev='2'),
+      'A/B/lambda'        : Item(status='  ', wc_rev='2'),
+      'iota'              : Item(status='  ', wc_rev='2'),
+    })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
 def x3_1_4_0(sbox):
   "3x same wc upgrade 1.4.0 test"
 
