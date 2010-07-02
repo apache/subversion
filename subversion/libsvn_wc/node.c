@@ -442,9 +442,9 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                    && (status == svn_wc__db_status_deleted
                        || status == svn_wc__db_status_obstructed_delete)))
         {
-          const char *parent_abspath, *basename, *parent_relpath;
+          const char *parent_abspath, *name, *parent_relpath;
 
-          svn_dirent_split(&parent_abspath, &basename, local_abspath,
+          svn_dirent_split(&parent_abspath, &name, local_abspath,
                            scratch_pool);
           SVN_ERR(svn_wc__node_get_repos_relpath(&parent_relpath, wc_ctx,
                                                  parent_abspath,
@@ -452,7 +452,7 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                                                  scratch_pool));
 
           if (parent_relpath)
-            *repos_relpath = svn_relpath_join(parent_relpath, basename,
+            *repos_relpath = svn_relpath_join(parent_relpath, name,
                                               result_pool);
         }
       else
