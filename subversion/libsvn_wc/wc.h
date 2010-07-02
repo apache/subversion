@@ -115,8 +115,9 @@ extern "C" {
  * any existing locks to a level of 0. The 'md5_checksum' column was
  * added to PRISTINE for future use.
  *
- * The change from 16 to 17 added a '.svn/pristine' dir and ...
- * ### IN PROGRESS
+ * The change from 16 to 17 added a '.svn/pristine' dir and moved the text
+ * bases into the Pristine Store (the PRISTINE table and '.svn/pristine'
+ * dir), and removed the '/.svn/text-base' dir.
  *
  * == 1.7.x shipped with format ???
  *
