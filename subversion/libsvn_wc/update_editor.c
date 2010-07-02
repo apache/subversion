@@ -5165,7 +5165,9 @@ close_file(void *file_baton,
       apr_hash_t *copied_base_props;
       apr_hash_t *no_new_actual_props = NULL;
       apr_hash_t *no_working_props = apr_hash_make(pool);
+#ifndef SVN_EXPERIMENTAL_PRISTINE
       const char *text_revert_base_abspath;
+#endif
 
       copied_base_props = fb->copied_base_props;
       if (! copied_base_props)
@@ -5202,6 +5204,10 @@ close_file(void *file_baton,
       prop_state = svn_wc_notify_state_unchanged;
       new_actual_props = local_actual_props;
 
+      /* Install the new text base. */
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+      /* We just need to put the checksum into the DB, which we do later. */
+#else
       SVN_ERR(svn_wc__text_revert_path(&text_revert_base_abspath, eb->db,
                                        fb->local_abspath, pool));
       SVN_ERR(svn_wc__loggy_move(&work_item, eb->db,
@@ -5210,6 +5216,7 @@ close_file(void *file_baton,
                                  text_revert_base_abspath,
                                  pool));
       all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+#endif
     }
 
   /* Now that all the state has settled, should we update the readonly
