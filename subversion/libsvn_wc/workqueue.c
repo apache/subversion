@@ -283,26 +283,16 @@ run_revert(svn_wc__db_t *db,
          using the original base.  */
       reinstall_working = magic_changed || replaced;
 
+      /* ### This "if (replaced)" looks very likely to be an artifact of the
+         old WC-1 "revert-base and normal-base" system, and if so then it
+         should go away. */
       if (replaced)
         {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
-          /* With the Pristine Store, the checksum of this base stays in the
-             BASE_NODE table so we don't need to rename or move anything. */
-#else
-          /* For WC-1: If there is a "revert base" file (because the file
-           * is replaced), then move that revert base over to the normal
-           * base. WC-NG keeps the checksum which we used to recalculate
-           * in the past. */
-          const char *revert_base_path;
-          const char *text_base_path;
+          /* With the Pristine Store, there is no longer a "revert-base"
+             text that needs to be moved to a "normal text-base" location.
 
-          SVN_ERR(svn_wc__text_revert_path(&revert_base_path, db,
-                                           local_abspath, scratch_pool));
-          SVN_ERR(svn_wc__text_base_path(&text_base_path, db, local_abspath,
-                                         scratch_pool));
-          SVN_ERR(move_if_present(revert_base_path, text_base_path,
-                                  scratch_pool));
-#endif
+             ### JAF: I wonder why the "revert-base" properties weren't being
+             handled the same way in this same code path.  An oversight? */
         }
       else if (!reinstall_working)
         {
@@ -429,7 +419,6 @@ verify_pristine_present(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool)
 {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
   const svn_checksum_t *base_checksum;
 
   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
@@ -448,25 +437,6 @@ verify_pristine_present(svn_wc__db_t *db,
                                scratch_pool, scratch_pool));
   if (base_checksum != NULL)
     return SVN_NO_ERROR;
-#else
-  const char *base_abspath;
-  svn_error_t *err;
-
-  /* Verify that one of the two text bases are present.  */
-  err = svn_wc__text_base_path_to_read(&base_abspath, db, local_abspath,
-                                       scratch_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    svn_error_clear(err);
-  else
-    return svn_error_return(err);
-
-  err = svn_wc__text_revert_path_to_read(&base_abspath, db, local_abspath,
-                                         scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    svn_error_clear(err);
-  else
-    return svn_error_return(err);
-#endif
 
   /* A real file must have either a regular or a revert text-base.
      If it has neither, we could be looking at the situation described
@@ -602,7 +572,9 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 
 /* Process the OP_PREPARE_REVERT_FILES work item WORK_ITEM.
  * See svn_wc__wq_prepare_revert_files() which generates this work item.
- * Implements (struct work_item_dispatch).func. */
+ * Implements (struct work_item_dispatch).func.
+ * With the Pristine Store, the "revert-base" concept no longer applies
+ * to texts, so this only deals with properties. */
 static svn_error_t *
 run_prepare_revert_files(svn_wc__db_t *db,
                          const svn_skel_t *work_item,
@@ -622,23 +594,6 @@ run_prepare_revert_files(svn_wc__db_t *db,
 
   /* Rename the original text base over to the revert text base.  */
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
-#ifdef SVN_EXPERIMENTAL_PRISTINE
-  /* With the Pristine Store, the checksum of this base stays in the
-   * BASE_NODE table so we don't need to rename or move anything. */
-#else
-  if (kind == svn_wc__db_kind_file)
-    {
-      const char *text_base;
-      const char *text_revert;
-
-      SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath,
-                                     scratch_pool));
-      SVN_ERR(svn_wc__text_revert_path(&text_revert, db, local_abspath,
-                                       scratch_pool));
-
-      SVN_ERR(move_if_present(text_base, text_revert, scratch_pool));
-    }
-#endif
 
   /* Set up the revert props.  */
 
@@ -1013,10 +968,10 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
 /* OP_POSTCOMMIT  */
 
 
-/* If TMP_TEXT_BASE_ABSPATH is not NULL, then replace the text base for
- * newly-committed file FILE_ABSPATH with the new post-commit text base,
- * TMP_TEXT_BASE_ABSPATH which is in repository-normal form (aka
- * "detranslated" form).
+/* If TMP_TEXT_BASE_ABSPATH is not NULL, then assume that it is a copy of
+ * the new text base of the newly-committed versioned file FILE_ABSPATH,
+ * and adjust the working file accordingly.  TMP_TEXT_BASE_ABSPATH is in
+ * repository-normal form (aka "detranslated" form).
  *
  * If eol and/or keyword translation would cause the working file to
  * change, then overwrite the working file with a translated copy of
@@ -1162,17 +1117,6 @@ install_committed_file(svn_boolean_t *overwrote_working,
            its timestamp, which is the point of returning this flag. :-) */
         *overwrote_working = TRUE;
     }
-
-  /* Install the new text base if one is waiting. */
-#ifdef SVN_EXPERIMENTAL_PRISTINE
-  /* The Pristine Store equivalent is putting the text in the pristine store
-     and putting its checksum in the database, both of which happened before
-     this function was called. */
-#else
-  if (tmp_text_base_abspath != NULL)
-    SVN_ERR(svn_wc__sync_text_base(db, file_abspath, tmp_text_base_abspath,
-                                   scratch_pool));
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -1744,19 +1688,6 @@ run_delete(svn_wc__db_t *db,
       SVN_ERR(svn_wc__prop_path(&props_revert, local_abspath, kind,
                                 svn_wc__props_revert, scratch_pool));
       SVN_ERR(move_if_present(props_revert, props_base, scratch_pool));
-#endif
-
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-      if (kind != svn_wc__db_kind_dir)
-        {
-          const char *text_base, *text_revert;
-
-          SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath,
-                                         scratch_pool));
-          SVN_ERR(svn_wc__text_revert_path(&text_revert, db,
-                                           local_abspath, scratch_pool));
-          SVN_ERR(move_if_present(text_revert, text_base, scratch_pool));
-        }
 #endif
     }
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
