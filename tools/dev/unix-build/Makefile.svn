@@ -332,6 +332,7 @@ $(DISTDIR)/$(GNU_ICONV_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(GNU_ICONV_URL)
 
 $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
+	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
 	echo "--- lib/encodings.def.orig	Wed Oct 24 23:41:41 2007" > $@
 	echo "+++ lib/encodings.def	Wed Oct 24 23:43:47 2007" >> $@
 	echo "@@ -37,6 +37,7 @@" >> $@
@@ -344,6 +345,7 @@ $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
 	echo "               \"ISO_646.IRV:1991\",       /* IANA */" >> $@
 
 $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
+	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
 	echo "--- lib/aliases.gperf.orig	Wed Oct 24 23:41:32 2007" > $@
 	echo "+++ lib/aliases.gperf	Wed Oct 24 23:47:38 2007" >> $@
 	echo "@@ -10,6 +10,7 @@ struct alias { int name; unsigned int encoding_index; " >> $@
@@ -360,7 +362,6 @@ $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
 $(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST) \
 		$(GNU_ICONV_OBJDIR)/lib_encodings.def.diff \
 		$(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
-	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GNU_ICONV_DIST)
 	cd $(SRCDIR)/libiconv-$(GNU_ICONV_VER) && \
 		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff && \
