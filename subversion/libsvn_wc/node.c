@@ -1421,26 +1421,60 @@ svn_wc__node_get_info_bits(apr_time_t *text_time,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
+  svn_boolean_t conflicted;
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx->db, local_abspath,
-                                      svn_node_unknown, TRUE, FALSE,
-                                      result_pool, scratch_pool));
-
-  if (text_time)
-    *text_time = entry->text_time;
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, text_time, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &conflicted, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
 
   if (conflict_old)
-    *conflict_old = entry->conflict_old;
-
+    *conflict_old = NULL;
   if (conflict_new)
-    *conflict_new = entry->conflict_new;
-
+    *conflict_new = NULL;
   if (conflict_wrk)
-    *conflict_wrk = entry->conflict_wrk;
-
+    *conflict_wrk = NULL;
   if (prejfile)
-    *prejfile = entry->prejfile;
+    *prejfile = NULL;
+
+  if (conflicted
+      && (conflict_old || conflict_new || conflict_wrk || prejfile))
+    {
+      const apr_array_header_t *conflicts;
+      int j;
+      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, wc_ctx->db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+      for (j = 0; j < conflicts->nelts; j++)
+        {
+          const svn_wc_conflict_description2_t *cd;
+          cd = APR_ARRAY_IDX(conflicts, j,
+                             const svn_wc_conflict_description2_t *);
+
+          switch (cd->kind)
+            {
+            case svn_wc_conflict_kind_text:
+              if (conflict_old)
+                *conflict_old = apr_pstrdup(result_pool, cd->base_file);
+
+              if (conflict_new)
+                *conflict_new = apr_pstrdup(result_pool, cd->their_file);
+
+              if (conflict_wrk)
+                *conflict_wrk = apr_pstrdup(result_pool, cd->my_file);
+              break;
+
+            case svn_wc_conflict_kind_property:
+              if (prejfile)
+                *prejfile = apr_pstrdup(result_pool, cd->their_file);
+              break;
+            case svn_wc_conflict_kind_tree:
+              break;
+            }
+        }
+    }
 
   return SVN_NO_ERROR;
 }
