@@ -36,7 +36,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.11
   * make 'svnadmin hotcopy' copy the fsfs config file (r905303)
   * mergeinfo improvements with non-inheritable mergeinfo (issue #3573)
   * make mergeinfo queries not require access to the repo root (issue #3242)
-  * update URLs to refer the the new apache.org repository (r904301, -94)
+  * update URLs to refer the new apache.org repository (r904301, -94)
   * update relative externals during a switch (issue #3390)
   * fix 'merge --reintegrate' with self-referential mergeinfo (r892050, -85)
   * improve wc-ng working copy detection (r929382)
