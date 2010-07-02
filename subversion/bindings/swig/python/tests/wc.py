@@ -212,9 +212,11 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
   def test_get_pristine_copy_path(self):
       path_to_file = '%s/trunk/README.txt' % self.path
-      path_to_text_base = '%s/trunk/%s/text-base/README.txt.svn-base' % (self.path,
-        wc.get_adm_dir())
-      self.assertEqual(path_to_text_base, wc.get_pristine_copy_path(path_to_file))
+      path_to_text_base = wc.get_pristine_copy_path(path_to_file)
+      text_base = open(path_to_text_base).read()
+      # TODO: This test should modify the working file first, to ensure the
+      # path isn't just the path to the working file.
+      self.assertEqual(text_base, 'A test.\n')
 
   def test_entries_read(self):
       entries = wc.entries_read(self.wc, True)
