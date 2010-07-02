@@ -469,12 +469,6 @@ typedef struct svn_client_commit_item3_t
    * same lifetime as this data structure.
    */
   apr_array_header_t *outgoing_prop_changes;
-
-  /** adm_access of this item
-   *
-   * @since New in 1.7.
-   * ### This will be obsoleted by WC-NG. */
-  svn_wc_adm_access_t *adm_access;
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.
