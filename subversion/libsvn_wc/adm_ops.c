@@ -185,23 +185,6 @@ process_committed_leaf(svn_wc__db_t *db,
   /* ### this picks up file and symlink  */
   if (kind != svn_wc__db_kind_dir)
     {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
-      /* The old pristine text will be dereferenced and (possibly) removed
-         from the pristine store when the new one replaces it. */
-#else
-      /* Queue a removal any "revert" text base now.  */
-      {
-        const char *revert_abspath;
-        svn_skel_t *work_item;
-
-        SVN_ERR(svn_wc__text_revert_path(&revert_abspath, db, local_abspath,
-                                         scratch_pool));
-        SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, revert_abspath,
-                                             scratch_pool, scratch_pool));
-        SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
-      }
-#endif
-
       /* If we sent a delta (meaning: post-copy modification),
          then this file will appear in the queue and so we should have
          its checksum already. */
@@ -229,26 +212,10 @@ process_committed_leaf(svn_wc__db_t *db,
         }
     }
 
-#ifdef SVN_EXPERIMENTAL_PRISTINE
   /* Set TMP_TEXT_BASE_ABSPATH to NULL.  The new text base will be found in
      the pristine store by its checksum. */
+  /* ### TODO: Remove this parameter. */
   tmp_text_base_abspath = NULL;
-#else
-  /* Set TMP_TEXT_BASE_ABSPATH to the new text base to be installed, if any.
-     In effect, retrieve the temporary file that was laid down by
-     svn_wc__internal_transmit_text_deltas(). */
-  {
-    svn_node_kind_t new_base_kind;
-
-    SVN_ERR(svn_wc__text_base_deterministic_tmp_path(&tmp_text_base_abspath,
-                                                     db, local_abspath,
-                                                     scratch_pool));
-    SVN_ERR(svn_io_check_path(tmp_text_base_abspath, &new_base_kind,
-                              scratch_pool));
-    if (new_base_kind != svn_node_file)
-      tmp_text_base_abspath = NULL;
-  }
-#endif
 
   SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, tmp_text_base_abspath,
                                     new_revnum,
@@ -1287,7 +1254,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                  scratch_pool));
 #endif
 
-#if !defined(SVN_EXPERIMENTAL_PRISTINE) || (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
+#if SVN_WC__VERSION < SVN_WC__PROPS_IN_DB
     if (is_replace)
       {
         /* We don't want the old base text (if any) and base props to be
@@ -2018,11 +1985,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       svn_node_kind_t on_disk;
       svn_boolean_t wc_special, local_special;
       svn_boolean_t text_modified_p;
-#ifdef SVN_EXPERIMENTAL_PRISTINE
       const svn_checksum_t *base_sha1_checksum, *working_sha1_checksum;
-#else
-      const char *text_base_file;
-#endif
 
       /* Only check if the file was modified when it wasn't overwritten with a
          special file */
@@ -2042,7 +2005,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                    svn_dirent_local_style(local_abspath, scratch_pool));
         }
 
-#ifdef SVN_EXPERIMENTAL_PRISTINE
       /* Find the checksum(s) of the node's one or two pristine texts.  Note
          that read_info() may give us the one from BASE_NODE again. */
       err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2072,10 +2034,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
         }
       else
         SVN_ERR(err);
-#else
-      SVN_ERR(svn_wc__text_base_path(&text_base_file, db, local_abspath,
-                                     scratch_pool));
-#endif
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
       /* Remove prop/NAME, prop-base/NAME.svn-base. */
@@ -2089,8 +2047,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
                                               scratch_pool));
 
-      /* Remove text-base/NAME.svn-base */
-#ifdef SVN_EXPERIMENTAL_PRISTINE
       /* Having removed the checksums that reference the pristine texts,
          remove the pristine texts (if now totally unreferenced) from the
          pristine store.  Don't try to remove the same pristine text twice.
@@ -2107,9 +2063,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
         SVN_ERR(svn_wc__db_pristine_remove(db, local_abspath,
                                            working_sha1_checksum,
                                            scratch_pool));
-#else
-      SVN_ERR(svn_io_remove_file2(text_base_file, TRUE, scratch_pool));
-#endif
 
       /* If we were asked to destroy the working file, do so unless
          it has local mods. */
