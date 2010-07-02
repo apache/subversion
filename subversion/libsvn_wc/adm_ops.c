@@ -250,7 +250,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  no_unlock, keep_changelist,
-                                 md5_checksum, /* ### not yet: sha1_checksum, */
+                                 sha1_checksum,
                                  scratch_pool));
 
   if (recurse && kind == svn_wc__db_kind_dir)
