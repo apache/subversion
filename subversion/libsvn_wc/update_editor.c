@@ -1123,7 +1123,9 @@ make_file_baton(struct file_baton **f_p,
 }
 
 
-/* */
+/* Handle the next delta window of the file described by BATON.  If it is
+ * the end (WINDOW == NULL), then check the checksum, store the text in the
+ * pristine store and write its details into BATON->fb->new_text_base_*. */
 static svn_error_t *
 window_handler(svn_txdelta_window_t *window, void *baton)
 {
@@ -1167,11 +1169,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     }
   else
     {
-      /* Tell the file baton about the new text base. */
-      fb->new_text_base_tmp_abspath = apr_pstrdup(fb->pool,
-                                              hb->new_text_base_tmp_abspath);
-
-      /* ... and its checksums. */
+      /* Tell the file baton about the new text base's checksums ... */
       fb->new_text_base_md5_checksum =
         svn_checksum__from_digest(hb->new_text_base_md5_digest,
                                   svn_checksum_md5, fb->pool);
@@ -1181,10 +1179,14 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       /* Store the new pristine text in the pristine store now.  Later, in a
          single transaction we will update the BASE_NODE to include a
          reference to this pristine text's checksum. */
-      SVN_ERR(svn_wc__db_pristine_install(db, fb->new_text_base_tmp_abspath,
+      SVN_ERR(svn_wc__db_pristine_install(db, hb->new_text_base_tmp_abspath,
                                           fb->new_text_base_sha1_checksum,
                                           fb->new_text_base_md5_checksum,
                                           hb->pool));
+
+      /* ... and the path in the pristine store. */
+      /* ### TODO: We shouldn't get and store the path at this point - the
+       *  checksum is sufficient and path can be retrieved when needed. */
       SVN_ERR(svn_wc__db_pristine_get_path(&fb->new_text_base_tmp_abspath,
                                            db, fb->local_abspath,
                                            fb->new_text_base_sha1_checksum,
@@ -5208,7 +5210,9 @@ close_file(void *file_baton,
          svn_wc__wq_build_pristine_remove(&work_item,
                                           eb->db, fb->local_abspath,
                                           fb->copied_text_base_sha1_checksum,
-                                          pool); */
+                                          pool);
+         all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+      */
     }
 
   /* ### NOTE: from this point onwards, we make several changes to the
@@ -5236,9 +5240,6 @@ close_file(void *file_baton,
                                          &new_checksum, NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
                                          pool, pool));
-        /* SVN_EXPERIMENTAL_PRISTINE:
-           new_checksum is originally MD-5 but will later be SHA-1.  That's
-           OK here because we just read it and write it back. */
       }
 
     if (kind != svn_node_none)
@@ -6589,8 +6590,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      text base.  */
   if (copyfrom_url != NULL)
     {
-      /* Write out log commands to set up the new text base and its checksum.
-         (Install it as the normal text base, not the 'revert base'.) */
       SVN_ERR(svn_wc__db_pristine_install(db, tmp_text_base_abspath,
                                           new_text_base_sha1_checksum,
                                           new_text_base_md5_checksum, pool));
@@ -6670,8 +6669,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                   original_root_url,
                                   original_uuid,
                                   copyfrom_rev,
-                                  /* SVN_EXPERIMENTAL_PRISTINE: use SHA-1 */
-                                  new_text_base_md5_checksum,
+                                  new_text_base_sha1_checksum,
                                   NULL /* conflict */,
                                   NULL /* work_items */,
                                   pool));
