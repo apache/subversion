@@ -125,7 +125,6 @@ extern "C" {
  */
 
 #define SVN_WC__VERSION 17
-#define SVN_EXPERIMENTAL_PRISTINE
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */
