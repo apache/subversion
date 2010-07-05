@@ -1491,11 +1491,15 @@ svn_io_get_dirents(apr_hash_t **dirents,
 /** Create a svn_io_dirent2_t instance for path. Specialized variant of
  * svn_io_stat() that directly translates node_kind and special.
  *
+ * If @a ignore_enoent is set to @c TRUE, set *dirent_p->kind to
+ * svn_node_none instead of returning an error.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
+                   svn_boolean_t ignore_enoent,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
