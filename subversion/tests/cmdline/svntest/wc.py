@@ -822,11 +822,6 @@ def text_base_path(file_path):
   dot_svn = svntest.main.get_admin_name()
   parent_path, file_name = os.path.split(file_path)
 
-  ### Temporary until the wc format changes.
-  text_base_path = os.path.join(parent_path, dot_svn, 'text-base')
-  if os.path.exists(text_base_path):
-    return os.path.join(text_base_path, file_name + '.svn-base')
-
   db_path = os.path.join(parent_path, dot_svn, 'wc.db')
   db = svntest.sqlite3.connect(db_path)
   c = db.cursor()
