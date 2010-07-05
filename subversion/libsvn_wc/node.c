@@ -146,7 +146,7 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                                 NULL, repos_root_url, repos_uuid,
                                 NULL, NULL, NULL, NULL,
                                 wc_ctx->db, local_abspath,
-                                scratch_pool, scratch_pool));
+                                result_pool, scratch_pool));
     }
 
   /* If we didn't get repository information, and the status means we are
