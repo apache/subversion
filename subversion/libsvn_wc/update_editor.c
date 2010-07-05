@@ -4490,12 +4490,18 @@ merge_file(svn_skel_t **work_items,
     }
   else if (new_text_base_sha1_checksum)
     {
+      svn_stream_t *pristine_stream;
+
       /* We have a new pristine to install. Is the file modified relative
          to this new pristine?  */
+      SVN_ERR(svn_wc__db_pristine_read(&pristine_stream,
+                                       eb->db, fb->local_abspath,
+                                       new_text_base_sha1_checksum,
+                                       pool, pool));
       SVN_ERR(svn_wc__internal_versioned_file_modcheck(&is_locally_modified,
                                                        eb->db,
                                                        fb->local_abspath,
-                                                       new_text_base_tmp_abspath,
+                                                       pristine_stream,
                                                        FALSE, pool));
     }
   else

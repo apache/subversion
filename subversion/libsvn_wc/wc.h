@@ -495,8 +495,8 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
  *
  * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
- * and compare the result with BASE_FILE_ABSPATH.  If COMPARE_TEXTBASES is
- * false, translate BASE_FILE_ABSPATH's EOL style and keywords to working-copy
+ * and compare the result with PRISTINE_STREAM.  If COMPARE_TEXTBASES is
+ * false, translate PRISTINE_STREAM's EOL style and keywords to working-copy
  * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
  * result with VERSIONED_FILE_ABSPATH.
  */
@@ -504,7 +504,7 @@ svn_error_t *
 svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                          svn_wc__db_t *db,
                                          const char *versioned_file_abspath,
-                                         const char *base_file_abspath,
+                                         svn_stream_t *pristine_stream,
                                          svn_boolean_t compare_textbases,
                                          apr_pool_t *scratch_pool);
 

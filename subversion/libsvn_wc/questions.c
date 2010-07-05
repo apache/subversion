@@ -233,16 +233,10 @@ svn_error_t *
 svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                          svn_wc__db_t *db,
                                          const char *versioned_file_abspath,
-                                         const char *base_file_abspath,
+                                         svn_stream_t *pristine_stream,
                                          svn_boolean_t compare_textbases,
                                          apr_pool_t *scratch_pool)
 {
-  svn_stream_t *pristine_stream;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(base_file_abspath));
-  SVN_ERR(svn_stream_open_readonly(&pristine_stream, base_file_abspath,
-                                   scratch_pool, scratch_pool));
-
   return svn_error_return(compare_and_verify(modified_p, db,
                                              versioned_file_abspath,
                                              pristine_stream,
@@ -258,9 +252,15 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
                                 const char *base_file_abspath,
                                 apr_pool_t *scratch_pool)
 {
+  svn_stream_t *pristine_stream;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(base_file_abspath));
+  SVN_ERR(svn_stream_open_readonly(&pristine_stream, base_file_abspath,
+                                   scratch_pool, scratch_pool));
+
   return svn_error_return(svn_wc__internal_versioned_file_modcheck(
                             modified_p, wc_ctx->db, versioned_file_abspath,
-                            base_file_abspath,
+                            pristine_stream,
                             TRUE /* compare_textbases */,
                             scratch_pool));
 }
