@@ -2101,7 +2101,7 @@ svn_io_get_dirents3(apr_hash_t **dirents,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
+svn_error_t *
 svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
                    apr_pool_t *result_pool,
