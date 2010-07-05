@@ -2113,7 +2113,7 @@ svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
   svn_error_t *err;
 
   err = svn_io_stat(&finfo, path,
-                    APR_FINFO_TYPE | APR_FINFO_NAME | APR_FINFO_LINK
+                    APR_FINFO_TYPE | APR_FINFO_LINK
                     | APR_FINFO_SIZE | APR_FINFO_MTIME,
                     scratch_pool);
 
