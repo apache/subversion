@@ -866,13 +866,14 @@ typedef struct
 svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
-                                 const char *dir_abspath,
+                                 const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
                                  svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 
 /* Recursively crawl each absolute working copy path SRC in COPY_PAIRS,
@@ -888,7 +889,8 @@ svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
                                   const apr_array_header_t *copy_pairs,
                                   svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
 /* A qsort()-compatible sort routine for sorting an array of
