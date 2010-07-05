@@ -598,9 +598,9 @@ enum parse_state
 
 struct transition
 {
-  const char *line;
-  enum parse_state state;
-  svn_error_t *(*fn)(enum parse_state *state, const char *line, 
+  const char *expected_input;
+  enum parse_state required_state;
+  svn_error_t *(*fn)(enum parse_state *new_state, const char *input, 
                      svn_patch_t *patch, apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 };
@@ -630,7 +630,7 @@ grab_filename(const char **file_name, const char *line, apr_pool_t *result_pool,
 
 /* Parse the '--- ' line of a regular unidiff. */
 static svn_error_t *
-diff_minus(enum parse_state *state, const char *line, svn_patch_t *patch,
+diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -642,14 +642,14 @@ diff_minus(enum parse_state *state, const char *line, svn_patch_t *patch,
   SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- "),
                         result_pool, scratch_pool));
 
-  *state = state_minus_seen;
+  *new_state = state_minus_seen;
 
   return SVN_NO_ERROR;
 }
 
 /* Parse the '+++ ' line of a regular unidiff. */
 static svn_error_t *
-diff_plus(enum parse_state *state, const char *line, svn_patch_t *patch,
+diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* If we can find a tab, it separates the filename from
@@ -661,14 +661,14 @@ diff_plus(enum parse_state *state, const char *line, svn_patch_t *patch,
   SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ "),
                         result_pool, scratch_pool));
 
-  *state = state_unidiff_found;
+  *new_state = state_unidiff_found;
 
   return SVN_NO_ERROR;
 }
 
 /* Parse the first line of a git extended unidiff. */
 static svn_error_t *
-git_start(enum parse_state *state, const char *line, svn_patch_t *patch,
+git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   const char *old_path;
@@ -694,7 +694,7 @@ git_start(enum parse_state *state, const char *line, svn_patch_t *patch,
 
   if (! slash)
     {
-      *state = state_start;
+      *new_state = state_start;
       return SVN_NO_ERROR;
     }
 
@@ -702,7 +702,7 @@ git_start(enum parse_state *state, const char *line, svn_patch_t *patch,
 
   if (! *old_path)
     {
-      *state = state_start;
+      *new_state = state_start;
       return SVN_NO_ERROR;
     }
 
@@ -712,7 +712,7 @@ git_start(enum parse_state *state, const char *line, svn_patch_t *patch,
     *end_old_path = '\0';
   else
     {
-      *state = state_start;
+      *new_state = state_start;
       return SVN_NO_ERROR;
     }
 
@@ -721,7 +721,7 @@ git_start(enum parse_state *state, const char *line, svn_patch_t *patch,
 
   if (! slash)
     {
-      *state = state_start;
+      *new_state = state_start;
       return SVN_NO_ERROR;
     }
 
@@ -730,7 +730,7 @@ git_start(enum parse_state *state, const char *line, svn_patch_t *patch,
 
   if (! *new_path)
     {
-      *state = state_start;
+      *new_state = state_start;
       return SVN_NO_ERROR;
     }
 
@@ -744,99 +744,99 @@ git_start(enum parse_state *state, const char *line, svn_patch_t *patch,
    * header */
   patch->operation = svn_diff_op_modified;
 
-  *state = state_git_diff_seen;
+  *new_state = state_git_diff_seen;
   return SVN_NO_ERROR;
 }
 
 /* Parse the '--- ' line of a git extended unidiff. */
 static svn_error_t *
-git_minus(enum parse_state *state, const char *line, svn_patch_t *patch,
+git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
 
-  *state = state_git_minus_seen;
+  *new_state = state_git_minus_seen;
   return SVN_NO_ERROR;
 }
 
 /* Parse the '+++ ' line of a git extended unidiff. */
 static svn_error_t *
-git_plus(enum parse_state *state, const char *line, svn_patch_t *patch,
+git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
 
-  *state = state_git_header_found;
+  *new_state = state_git_header_found;
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'move from ' line of a git extended unidiff. */
 static svn_error_t *
-git_move_from(enum parse_state *state, const char *line, svn_patch_t *patch,
+git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
 
-  *state = state_move_from_seen;
+  *new_state = state_move_from_seen;
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'move to ' line fo a git extended unidiff. */
 static svn_error_t *
-git_move_to(enum parse_state *state, const char *line, svn_patch_t *patch,
+git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
 
   patch->operation = svn_diff_op_moved;
 
-  *state = state_git_tree_seen;
+  *new_state = state_git_tree_seen;
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'copy from ' line of a git extended unidiff. */
 static svn_error_t *
-git_copy_from(enum parse_state *state, const char *line, svn_patch_t *patch,
+git_copy_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
 
-  *state = state_copy_from_seen; 
+  *new_state = state_copy_from_seen; 
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'copy to ' line of a git extended unidiff. */
 static svn_error_t *
-git_copy_to(enum parse_state *state, const char *line, svn_patch_t *patch,
+git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
 
   patch->operation = svn_diff_op_copied;
 
-  *state = state_git_tree_seen;
+  *new_state = state_git_tree_seen;
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'new file ' line of a git extended unidiff. */
 static svn_error_t *
-git_new_file(enum parse_state *state, const char *line, svn_patch_t *patch,
+git_new_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch->operation = svn_diff_op_added;
 
-  *state = state_git_header_found;
+  *new_state = state_git_header_found;
   return SVN_NO_ERROR;
 }
 
 /* Parse the 'deleted file ' line of a git extended unidiff. */
 static svn_error_t *
-git_deleted_file(enum parse_state *state, const char *line, svn_patch_t *patch,
+git_deleted_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch->operation = svn_diff_op_deleted;
 
-  *state = state_git_header_found;
+  *new_state = state_git_header_found;
   return SVN_NO_ERROR;
 }
 
@@ -865,7 +865,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
    * ### research continues... */
 
   /* Our table consisting of:
-   * Input             Required state           function to call */
+   * Expected Input     Required state          Function to call */
   struct transition transitions[] = 
     {
       {"--- ",          state_start,            diff_minus},
@@ -929,11 +929,11 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
         }
 
       /* Run the state machine. */
-      for (i = 0; i < sizeof(transitions)/sizeof(transitions[0]); i++)
+      for (i = 0; i < (sizeof(transitions) / sizeof(transitions[0])); i++)
         {
-          if (line->len > strlen(transitions[i].line) 
-              && starts_with(line->data, transitions[i].line)
-              && state == transitions[i].state)
+          if (line->len > strlen(transitions[i].expected_input) 
+              && starts_with(line->data, transitions[i].expected_input)
+              && state == transitions[i].required_state)
             {
               SVN_ERR(transitions[i].fn(&state, line->data, *patch,
                                         result_pool, iterpool));
