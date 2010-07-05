@@ -249,7 +249,9 @@ internal_status(svn_wc_status3_t **status,
    LOCAL_ABSPATH doesn't have a versioned parent directory.
 
    PATH_KIND is the node kind of LOCAL_ABSPATH as determined by the caller.
-   PATH_SPECIAL indicates whether the entry is a special file.
+   DIRENT contains more details about the in-wc node of LOCAL_ABSPATH,
+   including whether it is a symlink. If DIRENT is NULL, don't handle
+   LOCAL_ABSPATH as a symlink and assume no cached data.
 
    If GET_ALL is zero, and ENTRY is not locally modified, then *STATUS
    will be set to NULL.  If GET_ALL is non-zero, then *STATUS will be
@@ -263,7 +265,7 @@ assemble_status(svn_wc_status3_t **status,
                 const char *parent_repos_root_url,
                 const char *parent_repos_relpath,
                 svn_node_kind_t path_kind,
-                svn_boolean_t path_special,
+                const svn_io_dirent2_t *dirent,
                 svn_boolean_t get_all,
                 const svn_lock_t *repos_lock,
                 apr_pool_t *result_pool,
@@ -285,6 +287,8 @@ assemble_status(svn_wc_status3_t **status,
   svn_boolean_t have_base;
   svn_boolean_t conflicted;
   svn_boolean_t copied = FALSE;
+  svn_filesize_t translated_size;
+  apr_time_t last_mod_time;
   svn_depth_t depth;
   svn_error_t *err;
 
@@ -296,9 +300,9 @@ assemble_status(svn_wc_status3_t **status,
   SVN_ERR(svn_wc__db_read_info(&db_status, &db_kind, &revision,
                                &repos_relpath, &repos_root_url, NULL,
                                &changed_rev, &changed_date,
-                               &changed_author, NULL, &depth, NULL, NULL,
-                               NULL, &changelist, NULL, NULL, NULL, NULL,
-                               &prop_modified_p, &have_base, NULL,
+                               &changed_author, &last_mod_time, &depth, NULL,
+                               &translated_size, NULL, &changelist, NULL, NULL,
+                               NULL, NULL, &prop_modified_p, &have_base, NULL,
                                &conflicted, &lock, db, local_abspath,
                                result_pool, scratch_pool));
 
@@ -484,29 +488,44 @@ assemble_status(svn_wc_status3_t **status,
       if ((db_kind == svn_wc__db_kind_file
            || db_kind == svn_wc__db_kind_symlink)
 #ifdef HAVE_SYMLINK
-          && (wc_special == path_special)
+          && (wc_special == (dirent && dirent->special))
 #endif /* HAVE_SYMLINK */
           )
         {
-          err = svn_wc__internal_text_modified_p(&text_modified_p,
-                                                 db, local_abspath,
-                                                 FALSE, TRUE,
-                                                 scratch_pool);
-
-          if (err)
+          /* If the on-disk dirent exactly matches the expected state
+             skip all operations in svn_wc__internal_text_modified_p()
+             to avoid an extra filestat for every file, which can be
+             expensive on network drives as a filestat usually can't
+             be cached there */
+          if (dirent
+              && dirent->filesize != SVN_INVALID_FILESIZE
+              && dirent->mtime != 0
+              && translated_size == dirent->filesize
+              && last_mod_time == dirent->mtime)
+            text_modified_p = FALSE;
+          else
             {
-              if (!APR_STATUS_IS_EACCES(err->apr_err))
-                return svn_error_return(err);
+              err = svn_wc__internal_text_modified_p(&text_modified_p,
+                                                     db, local_abspath,
+                                                     FALSE, TRUE,
+                                                     scratch_pool);
 
-              /* An access denied is very common on Windows when another
-                 application has the file open.  Previously we ignored
-                 this error in svn_wc__text_modified_internal_p, where it
-                 should have really errored. */
-              svn_error_clear(err);
+              if (err)
+                {
+                  if (!APR_STATUS_IS_EACCES(err->apr_err))
+                    return svn_error_return(err);
+
+                  /* An access denied is very common on Windows when another
+                     application has the file open.  Previously we ignored
+                     this error in svn_wc__text_modified_internal_p, where it
+                     should have really errored. */
+                  svn_error_clear(err);
+                  text_modified_p = TRUE;
+                }
             }
         }
 #ifdef HAVE_SYMLINK
-      else if ( wc_special != path_special)
+      else if (wc_special != (dirent && dirent->special))
         node_status = svn_wc_status_obstructed;
 #endif /* HAVE_SYMLINK */
 
@@ -730,7 +749,7 @@ send_status_structure(const struct walk_status_baton *wb,
                       const char *parent_repos_root_url,
                       const char *parent_repos_relpath,
                       svn_node_kind_t path_kind,
-                      svn_boolean_t path_special,
+                      const svn_io_dirent2_t *dirent,
                       svn_boolean_t get_all,
                       svn_wc_status_func4_t status_func,
                       void *status_baton,
@@ -779,7 +798,7 @@ send_status_structure(const struct walk_status_baton *wb,
 
   SVN_ERR(assemble_status(&statstruct, wb->db, local_abspath,
                           parent_repos_root_url, parent_repos_relpath,
-                          path_kind, path_special, get_all,
+                          path_kind, dirent, get_all,
                           repos_lock, scratch_pool, scratch_pool));
 
   if (statstruct && status_func)
@@ -962,7 +981,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
                  const char *dir_repos_root_url,
                  const char *dir_repos_relpath,
                  svn_node_kind_t path_kind,
-                 svn_boolean_t path_special,
+                 svn_io_dirent2_t *dirent,
                  const apr_array_header_t *ignores,
                  svn_depth_t depth,
                  svn_boolean_t get_all,
@@ -1002,7 +1021,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
           SVN_ERR(send_status_structure(wb, local_abspath,
                                         dir_repos_root_url,
                                         dir_repos_relpath, svn_node_dir,
-                                        FALSE /* path_special */, get_all,
+                                        dirent, get_all,
                                         status_func, status_baton, pool));
         }
     }
@@ -1012,7 +1031,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
       SVN_ERR(send_status_structure(wb, local_abspath,
                                     dir_repos_root_url,
                                     dir_repos_relpath, path_kind,
-                                    path_special, get_all,
+                                    dirent, get_all,
                                     status_func, status_baton, pool));
     }
 
@@ -1129,7 +1148,7 @@ get_dir_status(const struct walk_status_baton *wb,
     SVN_ERR(svn_hash_from_cstring_keys(&nodes, child_nodes, subpool));
   }
 
-  SVN_ERR(svn_io_get_dirents2(&dirents, local_abspath, subpool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, local_abspath, FALSE, subpool, subpool));
 
   SVN_ERR(svn_wc__db_read_info(&dir_status, NULL, NULL, &dir_repos_relpath,
                                &dir_repos_root_url, NULL, NULL, NULL, NULL,
@@ -1227,7 +1246,7 @@ get_dir_status(const struct walk_status_baton *wb,
       const void *key;
       apr_ssize_t klen;
       const char *node_abspath;
-      svn_io_dirent_t *dirent_p;
+      svn_io_dirent2_t *dirent_p;
 
       svn_pool_clear(iterpool);
 
@@ -1273,7 +1292,7 @@ get_dir_status(const struct walk_status_baton *wb,
                                        dir_repos_relpath,
                                        dirent_p ? dirent_p->kind
                                                 : svn_node_none,
-                                       dirent_p ? dirent_p->special : FALSE,
+                                       dirent_p,
                                        ignore_patterns,
                                        depth == svn_depth_infinity
                                                            ? depth
@@ -2510,9 +2529,8 @@ internal_status(svn_wc_status3_t **status,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t path_kind;
+  const svn_io_dirent2_t *dirent;
   svn_wc__db_kind_t node_kind;
-  svn_boolean_t path_special;
   const char *parent_repos_relpath;
   const char *parent_repos_root_url;
   svn_wc__db_status_t node_status;
@@ -2520,8 +2538,8 @@ internal_status(svn_wc_status3_t **status,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_io_check_special_path(local_abspath, &path_kind, &path_special,
-                                    scratch_pool));
+  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
+                             scratch_pool, scratch_pool));
 
   err = svn_wc__db_read_info(&node_status, &node_kind, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2556,7 +2574,7 @@ internal_status(svn_wc_status3_t **status,
   if (node_kind == svn_wc__db_kind_unknown)
     return svn_error_return(assemble_unversioned(status,
                                                  db, local_abspath,
-                                                 path_kind,
+                                                 dirent->kind,
                                                  FALSE /* is_ignored */,
                                                  result_pool, scratch_pool));
 
@@ -2601,8 +2619,9 @@ internal_status(svn_wc_status3_t **status,
 
   return svn_error_return(assemble_status(status, db, local_abspath,
                                           parent_repos_root_url,
-                                          parent_repos_relpath, path_kind,
-                                          path_special,
+                                          parent_repos_relpath,
+                                          dirent->kind,
+                                          dirent,
                                           TRUE /* get_all */,
                                           NULL /* repos_lock */,
                                           result_pool, scratch_pool));

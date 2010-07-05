@@ -2104,16 +2104,38 @@ svn_io_get_dirents3(apr_hash_t **dirents,
 svn_error_t *
 svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
+                   svn_boolean_t ignore_enoent,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
   apr_finfo_t finfo;
   svn_io_dirent2_t *dirent;
+  svn_error_t *err;
 
-  SVN_ERR(svn_io_stat(&finfo, path,
-                      APR_FINFO_TYPE | APR_FINFO_NAME | APR_FINFO_LINK
-                      | APR_FINFO_SIZE | APR_FINFO_MTIME,
-                      scratch_pool));
+  err = svn_io_stat(&finfo, path,
+                    APR_FINFO_TYPE | APR_FINFO_NAME | APR_FINFO_LINK
+                    | APR_FINFO_SIZE | APR_FINFO_MTIME,
+                    scratch_pool));
+
+  if (err && ignore_enoent && 
+      (APR_STATUS_IS_ENOENT(err->apr_err)
+       || APR_STATUS_IS_ENOTDIR(err->apr_err)
+#ifdef WIN32
+           /* On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
+            * invalid-pathname error but not this one, so we include it. */
+           /* ### This fix should go into APR. */
+           || (APR_TO_OS_ERROR(err->apr_err) == ERROR_INVALID_NAME)
+#endif
+      ))
+    {
+      svn_error_clear(err);
+      dirent = svn_io_dirent2_create(result_pool);
+      SVN_ERR_ASSERT(dirent->kind == svn_node_none);
+
+      *dirent_p = dirent;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
 
   dirent = svn_io_dirent2_create(result_pool);
   map_apr_finfo_to_node_kind(&(dirent->kind), &(dirent->special), &finfo);
