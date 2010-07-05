@@ -1160,6 +1160,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                                   ! keep_locks,
                                                   changelists,
                                                   ctx,
+                                                  pool,
                                                   pool)))
     goto cleanup;
 
