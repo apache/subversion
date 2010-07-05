@@ -1918,7 +1918,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
   svn_error_t *err;
   apr_pool_t *subpool;
   apr_hash_t *dirents;
-  apr_hash_index_t *ent;
+  apr_hash_index_t *hi;
 
   /* Check for pending cancellation request.
      If we need to bail out, do so early. */
@@ -1928,7 +1928,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
 
   subpool = svn_pool_create(pool);
 
-  err = svn_io_get_dirents2(&dirents, path, subpool);
+  err = svn_io_get_dirents3(&dirents, path, TRUE, subpool, subpool);
   if (err)
     {
       /* if the directory doesn't exist, our mission is accomplished */
@@ -1940,15 +1940,14 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
       return svn_error_return(err);
     }
 
-  for (ent = apr_hash_first(subpool, dirents); ent; ent = apr_hash_next(ent))
+  for (hi = apr_hash_first(subpool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      char *fullpath;
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      const char *fullpath;
 
-      apr_hash_this(ent, &key, NULL, &val);
-      fullpath = svn_dirent_join(path, key, subpool);
-      if (((svn_io_dirent_t *)val)->kind == svn_node_dir)
+      fullpath = svn_dirent_join(path, name, subpool);
+      if (dirent->kind == svn_node_dir)
         {
           /* Don't check for cancellation, the callee will immediately do so */
           SVN_ERR(svn_io_remove_dir2(fullpath, FALSE, cancel_func,
@@ -2017,19 +2016,46 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
   return SVN_NO_ERROR;
 }
 
+svn_io_dirent2_t *
+svn_io_dirent2_create(apr_pool_t *result_pool)
+{
+  svn_io_dirent2_t *dirent = apr_pcalloc(result_pool, sizeof(*dirent));
+
+  /*dirent->kind = svn_node_none;
+  dirent->special = FALSE;*/
+  dirent->filesize = SVN_INVALID_FILESIZE;
+  /*dirent->mtime = 0;*/
+
+  return dirent;
+}
+
+svn_io_dirent2_t *
+svn_io_dirent2_dup(const svn_io_dirent2_t *item,
+                   apr_pool_t *result_pool)
+{
+  return apr_pmemdup(result_pool,
+                     item,
+                     sizeof(*item));
+}
+
 svn_error_t *
-svn_io_get_dirents2(apr_hash_t **dirents,
+svn_io_get_dirents3(apr_hash_t **dirents,
                     const char *path,
-                    apr_pool_t *pool)
+                    svn_boolean_t only_check_type,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   apr_status_t status;
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
-  *dirents = apr_hash_make(pool);
+  if (!only_check_type)
+    flags |= APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-  SVN_ERR(svn_io_dir_open(&this_dir, path, pool));
+  *dirents = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_io_dir_open(&this_dir, path, scratch_pool));
 
   for (status = apr_dir_read(&this_entry, flags, this_dir);
        status == APR_SUCCESS;
@@ -2045,13 +2071,19 @@ svn_io_get_dirents2(apr_hash_t **dirents,
       else
         {
           const char *name;
-          svn_io_dirent_t *dirent = apr_palloc(pool, sizeof(*dirent));
+          svn_io_dirent2_t *dirent = svn_io_dirent2_create(result_pool);
 
-          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
+          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, result_pool));
 
           map_apr_finfo_to_node_kind(&(dirent->kind),
                                      &(dirent->special),
                                      &this_entry);
+
+          if (!only_check_type)
+            {
+              dirent->filesize = this_entry.size;
+              dirent->mtime = this_entry.mtime;
+            }
 
           apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
         }
@@ -2059,25 +2091,39 @@ svn_io_get_dirents2(apr_hash_t **dirents,
 
   if (! (APR_STATUS_IS_ENOENT(status)))
     return svn_error_wrap_apr(status, _("Can't read directory '%s'"),
-                              svn_dirent_local_style(path, pool));
+                              svn_dirent_local_style(path, scratch_pool));
 
   status = apr_dir_close(this_dir);
   if (status)
     return svn_error_wrap_apr(status, _("Error closing directory '%s'"),
-                              svn_dirent_local_style(path, pool));
+                              svn_dirent_local_style(path, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_io_get_dirents(apr_hash_t **dirents,
+static svn_error_t *
+svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
-  /* Note that in C, padding is not allowed at the beginning of structs,
-     so this is actually portable, since the kind field of svn_io_dirent_t
-     is first in that struct. */
-  return svn_io_get_dirents2(dirents, path, pool);
+  apr_finfo_t finfo;
+  svn_io_dirent2_t *dirent;
+
+  SVN_ERR(svn_io_stat(&finfo, path,
+                      APR_FINFO_TYPE | APR_FINFO_NAME | APR_FINFO_LINK
+                      | APR_FINFO_SIZE | APR_FINFO_MTIME,
+                      scratch_pool));
+
+  dirent = svn_io_dirent2_create(result_pool);
+  map_apr_finfo_to_node_kind(&(dirent->kind), &(dirent->special), &finfo);
+
+  dirent->filesize = finfo.size;
+  dirent->mtime = finfo.mtime;
+
+  *dirent_p = dirent;
+
+  return SVN_NO_ERROR;
 }
 
 /* Pool userdata key for the error file passed to svn_io_start_cmd(). */
