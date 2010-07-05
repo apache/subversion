@@ -188,47 +188,6 @@ make_adm_subdir(const char *path,
 /*** Syncing files in the adm area. ***/
 
 
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-svn_error_t *
-svn_wc__sync_text_base(svn_wc__db_t *db,
-                       const char *local_abspath,
-                       const char *tmp_text_base_abspath,
-                       apr_pool_t *scratch_pool)
-{
-  const char *base_path;
-
-  SVN_ERR(svn_wc__text_base_path(&base_path, db, local_abspath, scratch_pool));
-
-  SVN_ERR(svn_io_file_rename(tmp_text_base_abspath, base_path, scratch_pool));
-  SVN_ERR(svn_io_set_file_read_only(base_path, FALSE, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-#endif
-
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-svn_error_t *
-svn_wc__text_base_path(const char **result_abspath,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       apr_pool_t *pool)
-{
-  const char *newpath, *base_name;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  svn_dirent_split(&newpath, &base_name, local_abspath, pool);
-  *result_abspath = simple_extend(newpath,
-                                  FALSE,
-                                  SVN_WC__ADM_TEXT_BASE,
-                                  base_name,
-                                  SVN_WC__BASE_EXT,
-                                  pool);
-
-  return SVN_NO_ERROR;
-}
-#endif
-
 svn_error_t *
 svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
                                          svn_wc__db_t *db,
@@ -246,29 +205,6 @@ svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
   return SVN_NO_ERROR;
 }
 
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-svn_error_t *
-svn_wc__text_revert_path(const char **result_abspath,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *pool)
-{
-  const char *newpath, *base_name;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  svn_dirent_split(&newpath, &base_name, local_abspath, pool);
-  *result_abspath = simple_extend(newpath,
-                                  FALSE,
-                                  SVN_WC__ADM_TEXT_BASE,
-                                  base_name,
-                                  SVN_WC__REVERT_EXT,
-                                  pool);
-
-  return SVN_NO_ERROR;
-}
-#endif
-
 
 svn_error_t *
 svn_wc__text_base_path_to_read(const char **result_abspath,
@@ -277,7 +213,6 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
@@ -294,50 +229,8 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
   SVN_ERR(svn_wc__db_pristine_get_path(result_abspath, db, local_abspath,
                                        checksum,
                                        result_pool, scratch_pool));
-#else
-  SVN_ERR(svn_wc__text_base_path(result_abspath, db, local_abspath,
-                                 result_pool));
-  /* Return an error if the file does not exist */
-  {
-    svn_node_kind_t kind;
-
-    SVN_ERR(svn_io_check_path(*result_abspath, &kind, result_pool));
-    if (kind != svn_node_file)
-      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                               _("File '%s' has no text base"),
-                               svn_dirent_local_style(local_abspath,
-                                                      result_pool));
-  }
-#endif
-
   return SVN_NO_ERROR;
 }
-
-
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-svn_error_t *
-svn_wc__text_revert_path_to_read(const char **result_abspath,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *result_pool)
-{
-  SVN_ERR(svn_wc__text_revert_path(result_abspath, db, local_abspath,
-                                   result_pool));
-  /* Return an error if the file does not exist */
-  {
-    svn_node_kind_t kind;
-
-    SVN_ERR(svn_io_check_path(*result_abspath, &kind, result_pool));
-    if (kind != svn_node_file)
-      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                               _("File '%s' has no text base"),
-                               svn_dirent_local_style(local_abspath,
-                                                      result_pool));
-  }
-
-  return SVN_NO_ERROR;
-}
-#endif
 
 
 svn_error_t *
@@ -347,7 +240,6 @@ svn_wc__ultimate_base_text_path(const char **result_abspath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
@@ -363,28 +255,6 @@ svn_wc__ultimate_base_text_path(const char **result_abspath,
   SVN_ERR(svn_wc__db_pristine_get_path(result_abspath, db, local_abspath,
                                        checksum,
                                        result_pool, scratch_pool));
-#else
-  svn_error_t *err;
-  svn_boolean_t replaced;
-
-  err = svn_wc__internal_is_replaced(&replaced, db, local_abspath,
-                                     scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      replaced = FALSE;
-    }
-  else
-    SVN_ERR(err);
-
-  if (replaced)
-    SVN_ERR(svn_wc__text_revert_path(result_abspath, db, local_abspath,
-                                     result_pool));
-  else
-    SVN_ERR(svn_wc__text_base_path(result_abspath, db, local_abspath,
-                                   result_pool));
-#endif
-
   return SVN_NO_ERROR;
 }
 
@@ -420,7 +290,6 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
   const svn_checksum_t *checksum;
@@ -444,34 +313,6 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
   SVN_ERR_ASSERT(checksum != NULL);
   SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
                                    checksum, result_pool, scratch_pool));
-#else
-  const char *revert_base;
-  svn_error_t *err;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  /* If there's a WC-1 "revert base", open that. */
-  err = svn_wc__text_revert_path_to_read(&revert_base, db, local_abspath,
-                                         scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    {
-      svn_error_clear(err);
-
-      /* There's no "revert base", so open the "normal base". */
-      err = svn_wc__text_base_path_to_read(&revert_base, db, local_abspath,
-                                           scratch_pool, scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-        {
-          svn_error_clear(err);
-          *contents = NULL;
-          return SVN_NO_ERROR;
-        }
-    }
-  SVN_ERR(err);
-  SVN_ERR(svn_stream_open_readonly(contents, revert_base,
-                                   result_pool, scratch_pool));
-#endif
-
   return SVN_NO_ERROR;
 }
 
@@ -542,47 +383,12 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                    && status != svn_wc__db_status_obstructed_delete
                    && status != svn_wc__db_status_base_deleted);
 
-#ifdef SVN_EXPERIMENTAL_PRISTINE
   if (sha1_checksum)
     SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
                                      sha1_checksum,
                                      result_pool, scratch_pool));
   else
     *contents = NULL;
-#else
-  {
-    const char *text_base;
-    svn_error_t *err, *err2;
-
-    err = svn_wc__text_base_path_to_read(&text_base, db, local_abspath,
-                                         scratch_pool, scratch_pool);
-    /* ### now for some ugly hackiness. right now, file externals will
-       ### sometimes put their pristine contents into the revert base,
-       ### because they think they're *replaced* nodes, rather than
-       ### simple BASE nodes. watch out for this scenario, and
-       ### compensate appropriately.  */
-    if (err)
-      {
-        svn_boolean_t file_external;
-
-        if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-          return svn_error_return(err);
-
-        err2 = svn_wc__internal_is_file_external(&file_external,
-                                                 db, local_abspath,
-                                                 scratch_pool);
-        if (err2 || !file_external)
-          return svn_error_return(svn_error_compose_create(err, err2));
-
-        svn_error_clear(err);
-
-        SVN_ERR(svn_wc__text_revert_path_to_read(&text_base, db, local_abspath,
-                                                 scratch_pool));
-      }
-    SVN_ERR(svn_stream_open_readonly(contents, text_base,
-                                     result_pool, scratch_pool));
-  }
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -830,15 +636,6 @@ init_adm(svn_wc__db_t *db,
                                  APR_OS_DEFAULT, pool));
 
   /** Make subdirectories. ***/
-
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-  /* ### The absence of this directory is used to indicate to the
-     ### regression tests that SHA1 pristines are enabled.  This is a
-     ### temporary hack, to avoid bumping the wc format. */
-
-  /* SVN_WC__ADM_TEXT_BASE */
-  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_TEXT_BASE, FALSE, pool));
-#endif
 
   /* SVN_WC__ADM_PROP_BASE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROP_BASE, FALSE, pool));

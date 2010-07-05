@@ -52,33 +52,6 @@ svn_boolean_t svn_wc__adm_area_exists(const char *adm_abspath,
                                       apr_pool_t *pool);
 
 
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-/* Atomically rename a temporary text-base file TMP_TEXT_BASE_ABSPATH to its
-   canonical location.  LOCAL_ABSPATH in DB is the working file whose
-   text-base is to be moved.  The tmp file should be closed already. */
-svn_error_t *
-svn_wc__sync_text_base(svn_wc__db_t *db,
-                       const char *local_abspath,
-                       const char *tmp_text_base_path,
-                       apr_pool_t *scratch_pool);
-#endif
-
-
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-/* Set *RESULT_ABSPATH to the absolute path to where LOCAL_ABSPATH's
-   "normal text-base" file is or should be created.  The file does not
-   necessarily exist.
-
-   "Normal text-base" means the base of the copied file, if copied or moved,
-   else nothing if it's a simple add (even if replacing an existing node),
-   else the ultimate base. */
-svn_error_t *
-svn_wc__text_base_path(const char **result_abspath,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       apr_pool_t *pool);
-#endif
-
 /* Set *RESULT_ABSPATH to the deterministic absolute path to where
    LOCAL_ABSPATH's temporary text-base file is or should be created. */
 svn_error_t *
@@ -124,15 +97,6 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
-
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-/* Set *RESULT_ABSPATH to the absolute path to LOCAL_ABSPATH's revert file. */
-svn_error_t *
-svn_wc__text_revert_path(const char **result_abspath,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *pool);
-#endif
 
 /* Set *PROP_PATH to PATH's PROPS_KIND properties file.
    PATH can be a directory or file, and even have changed w.r.t. the
@@ -182,19 +146,6 @@ svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
                                  const char *local_abspath,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
-
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-/* Set *RESULT_ABSPATH to the path of the WC-1 "revert-base" text of the
-   versioned file LOCAL_ABSPATH in DB.
-
-   If the node LOCAL_ABSPATH has no such pristine text, return an error of
-   type SVN_ERR_WC_PATH_UNEXPECTED_STATUS.  */
-svn_error_t *
-svn_wc__text_revert_path_to_read(const char **result_abspath,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *result_pool);
-#endif
 
 /* Set *RESULT_ABSPATH to the path of the ultimate base text of the
    versioned file LOCAL_ABSPATH in DB.  In WC-1 terms this means the
