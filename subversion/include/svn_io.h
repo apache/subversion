@@ -65,9 +65,58 @@ typedef enum svn_io_file_del_t
   svn_io_file_del_on_pool_cleanup
 } svn_io_file_del_t;
 
+/** A set of directory entry data elements as returned by svn_io_get_dirents
+ *
+ * Note that the first two fields are exactly identical to svn_io_dirent_t
+ * to allow returning a svn_io_dirent2_t as a svn_io_dirent_t.
+ *
+ * Use svn_io_dirent2_create() to create new svn_dirent2_t instances or
+ * svn_io_dirent2_dup() to duplicate an existing instance.
+ *
+ * @since New in 1.7.
+ */
+typedef struct svn_io_dirent2_t {
+  /* New fields must be added at the end to preserve binary compatibility */
 
-
+  /** The kind of this entry. */
+  svn_node_kind_t kind;
+
+  /** If @c kind is #svn_node_file, whether this entry is a special file;
+   * else FALSE.
+   *
+   * @see svn_io_check_special_path().
+   */
+  svn_boolean_t special;
+
+  /** The filesize of this entry or undefined for a directory */
+  svn_filesize_t filesize;
+
+  /** The time the file was last modified */
+  apr_time_t mtime;
+
+  /* Don't forget to update svn_io_dirent2_dup() when adding new fields */
+} svn_io_dirent2_t;
+
+
+/** Creates a new @a svn_io_dirent2_t structure
+ *
+ * @since New in 1.7.
+ */
+svn_io_dirent2_t *
+svn_io_dirent2_create(apr_pool_t *result_pool);
+
+/** Duplicates a @c svn_io_dirent2_t structure into @a result_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_io_dirent2_t *
+svn_io_dirent2_dup(const svn_io_dirent2_t *item,
+                   apr_pool_t *result_pool);
+
 /** Represents the kind and special status of a directory entry.
+ *
+ * Note that the first two fields are exactly identical to svn_io_dirent2_t
+ * to allow returning a svn_io_dirent2_t as a svn_io_dirent_t.
  *
  * @since New in 1.3.
  */
@@ -1396,16 +1445,33 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
  * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
- * #svn_io_dirent_t structures, allocated in @a pool.
+ * #svn_io_dirent2_t structures, allocated in @a pool.
+ *
+ * If @a only_check_type is set to @c TRUE, only the kind and special
+ * fields of the svn_io_dirent2_t are filled.
  *
  * @note The `.' and `..' directories normally returned by
  * apr_dir_read() are NOT returned in the hash.
  *
  * @note The kind field in the @a dirents is set according to the mapping
- *       as documented for svn_io_check_path()
+ *       as documented for svn_io_check_path().
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_io_get_dirents3(apr_hash_t **dirents,
+                    const char *path,
+                    svn_boolean_t only_check_type,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_io_get_dirents3, but returns a mapping to svn_io_dirent_t
+ * structures instead of svn_io_dirent2_t and with only a single pool.
  *
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_get_dirents2(apr_hash_t **dirents,
                     const char *path,
@@ -1421,6 +1487,17 @@ svn_error_t *
 svn_io_get_dirents(apr_hash_t **dirents,
                    const char *path,
                    apr_pool_t *pool);
+
+/** Create a svn_io_dirent2_t instance for path. Specialized variant of
+ * svn_io_stat() that directly translates node_kind and special.
+ *
+ * @since New in 1.7.
+ */
+static svn_error_t *
+svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
+                   const char *path,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
 
 /** Callback function type for svn_io_dir_walk() */

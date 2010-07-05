@@ -729,6 +729,28 @@ svn_error_t *svn_io_file_lock(const char *lock_file,
   return svn_io_file_lock2(lock_file, exclusive, FALSE, pool);
 }
 
+svn_error_t *
+svn_io_get_dirents2(apr_hash_t **dirents,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  /* Note that the first part of svn_io_dirent2_t is identical
+     to svn_io_dirent_t to allow this construct */
+  return svn_error_return(
+            svn_io_get_dirents3(dirents, path, FALSE, pool, pool));
+}
+
+svn_error_t *
+svn_io_get_dirents(apr_hash_t **dirents,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  /* Note that in C, padding is not allowed at the beginning of structs,
+     so this is actually portable, since the kind field of svn_io_dirent_t
+     is first in that struct. */
+  return svn_io_get_dirents2(dirents, path, pool);
+}
+
 
 /*** From constructors.c ***/
 svn_log_changed_path_t *
