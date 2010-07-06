@@ -2204,7 +2204,7 @@ def patch_with_properties(sbox):
   iota_prop_contents = "This is the property 'prop'.\n"
 
   expected_output = [
-    "property 'prop' set on '%s\n'" % os.path.join(wc_dir, 'iota'),
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
