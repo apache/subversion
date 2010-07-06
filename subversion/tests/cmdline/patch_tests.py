@@ -2162,6 +2162,67 @@ def patch_no_eol_at_eof(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+### We need to add deletes and adds of properties to this test.
+def patch_with_properties(sbox):
+  "patch with properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  iota_prop_contents = "This is the property 'iota_prop'.\n"
+
+  # Set iota contents
+  svntest.main.run_svn(None, 'propset', 'prop', iota_prop_contents,
+                       iota_path)
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota'    : Item(verb='Sending'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "Property changes on: iota\n",
+    "-------------------------------------------------------------------\n",
+    "Modified: prop\n",
+    "## -1 +1 ""\n",
+    "-This is the property 'iota_prop'.\n",
+    "+This is the property 'prop'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  iota_prop_contents = "This is the property 'prop'.\n"
+
+  expected_output = [
+    "property 'prop' set on '%s\n'" % os.path.join(wc_dir, 'iota'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', props={'prop' : iota_prop_contents})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status=' M')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -2185,6 +2246,7 @@ test_list = [ None,
               patch_with_ignore_whitespace,
               patch_replace_locally_deleted_file,
               patch_no_eol_at_eof,
+              XFail(patch_with_properties),
             ]
 
 if __name__ == '__main__':
