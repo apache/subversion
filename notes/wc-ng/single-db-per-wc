@@ -1,0 +1,94 @@
+"Single DB" in this context means one SQLite DB in the root of each working
+copy.
+
+
+Build and Test
+==============
+
+To build with experimental single-DB support:
+  define SINGLE_DB ("CFLAGS=-DSINGLE_DB configure ...")
+  define SVN_WC__VERSION to 18 in wc.h
+
+Current test results (r960984):
+  most/all C tests pass
+  half of the Python tests fail; common errors are
+    Wrong results but no error message.
+    Error: columns wc_id, local_dir_relpath are not unique
+    Error: No write-lock in '...'
+    Crash.
+
+
+Upgrade: Migration of DB tables from subdir DBs to root DB
+==========================================================
+
+"Move into root's table" means move each row into the same table in the WC
+root's DB, and we expect no duplicates.
+
+"Merge into root's table" means we move the row into the root's table,
+unless a row that's identical apart from its id is already present, in which
+case we use the existing row's id.
+
+REPOSITORY
+
+  Merge into root's table, which may result in assigning new id's.
+  Change all repos id's accordingly in the other tables being migrated:
+    BASE_NODE.repos_id
+    WORKING_NODE.copyfrom_repos_id
+    LOCK.repos_id
+    # and in tree conflict info?
+
+  Note: I already have two repos id's in some parts of some of my svn
+  working copies, so this is not purely theoretical.
+
+WCROOT
+
+  Merge into root's table;
+    theoretically we should assign new id's and change them where they
+    appear in other tables, but in practice the id is always 1 so we can
+    just assert that.
+
+BASE_NODE
+
+  Move into root's table;
+    omit if .kind == subdir
+    change .local_relpath
+    set .parent_relpath
+
+WORKING_NODE
+
+  Move into root's table;
+    omit if .kind == subdir (?)
+    change .local_relpath
+    set .parent_relpath
+
+ACTUAL_NODE
+
+  Move into root's table;
+    change .local_relpath
+    set .parent_relpath
+
+LOCK
+
+  Move into root's table.
+
+PRISTINE
+
+  Move into root's table.
+  Move the corresponding pristine text files into root's 'pristine' dir.
+  Change root's pristine directory to sharded (or this could be a
+    separate upgrade).
+
+WC_LOCK
+
+  Move into root's table;
+    change .local_dir_relpath
+
+WORK_QUEUE
+
+  Ensure WORK_QUEUE is empty.
+
+
+Code Changes Required
+=====================
+
+
