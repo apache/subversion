@@ -217,7 +217,9 @@ strip_path(const char **result, const char *path, int strip_count,
 }
 
 /* Obtain eol and keywords information for LOCAL_ABSPATH, from WC_CTX and
-   store the obtained information in *TARGET. */
+ * store the obtained information in *TARGET.
+ * Use RESULT_POOL for allocations of fields in TARGET.
+ * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
@@ -234,7 +236,7 @@ resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
   keywords_val = apr_hash_get(props, SVN_PROP_KEYWORDS,
                               APR_HASH_KEY_STRING);
   if (keywords_val)
-  {
+    {
       svn_revnum_t changed_rev;
       apr_time_t changed_date;
       const char *rev_str;
@@ -242,30 +244,31 @@ resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
       const char *url;
 
       SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
-                                          &changed_date,
-                                          &author, wc_ctx,
-                                          local_abspath,
-                                          scratch_pool,
-                                          scratch_pool));
+                                            &changed_date,
+                                            &author, wc_ctx,
+                                            local_abspath,
+                                            scratch_pool,
+                                            scratch_pool));
       rev_str = apr_psprintf(scratch_pool, "%"SVN_REVNUM_T_FMT,
-                              changed_rev);
+                             changed_rev);
       SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
-                                  target->local_abspath,
-                                  scratch_pool, scratch_pool));
+                                   target->local_abspath,
+                                   scratch_pool, scratch_pool));
       SVN_ERR(svn_subst_build_keywords2(&target->keywords,
-                                      keywords_val->data,
-                                      rev_str, url, changed_date,
-                                      author, result_pool));
-  }
+                                        keywords_val->data,
+                                        rev_str, url, changed_date,
+                                        author, result_pool));
+    }
 
   eol_style_val = apr_hash_get(props, SVN_PROP_EOL_STYLE,
-                              APR_HASH_KEY_STRING);
+                               APR_HASH_KEY_STRING);
   if (eol_style_val)
-  {
+    {
       svn_subst_eol_style_from_value(&target->eol_style,
-                                      &target->eol_str,
-                                      eol_style_val->data);
-  }
+                                     &target->eol_str,
+                                     eol_style_val->data);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -281,7 +284,8 @@ resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
  * which should be stripped from target paths in the patch.
  * If the path is not skipped also obtain eol-style and keywords
  * information by calling resolve_target_wc_info() on TARGET.
- * Use RESULT_POOL for allocations of fields in TARGET. */
+ * Use RESULT_POOL for allocations of fields in TARGET.
+ * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 resolve_target_path(patch_target_t *target,
                     const char *path_from_patchfile,
