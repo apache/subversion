@@ -379,13 +379,19 @@ resolve_target_path(patch_target_t *target,
   SVN_ERR(svn_wc_read_kind(&target->db_kind, wc_ctx, target->local_abspath,
                            FALSE, scratch_pool));
   if (target->db_kind == svn_node_dir)
-    target->skipped = TRUE;
-  /* ### We cannot yet replace a locally deleted dir with a file,
-   * ### but some day we might want to allow it. */
+    {
+      /* ### We cannot yet replace a locally deleted dir with a file,
+       * ### but some day we might want to allow it. */
+      target->skipped = TRUE;
+      return SVN_NO_ERROR;
+    }
 
   /* ### Shouldn't libsvn_wc flag an obstruction in this case? */
   if (target->locally_deleted && target->kind_on_disk != svn_node_none)
-    target->skipped = TRUE;
+    {
+      target->skipped = TRUE;
+      return SVN_NO_ERROR;
+    }
 
   if (target->kind_on_disk == svn_node_file)
     SVN_ERR(resolve_target_wc_file_info(wc_ctx, target->local_abspath,
