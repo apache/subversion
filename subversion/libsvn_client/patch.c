@@ -282,7 +282,7 @@ resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * If the path is not skipped also obtain eol-style and keywords
- * information by calling resolve_target_wc_info() on TARGET.
+ * information and store this in *TARGET.
  * Use RESULT_POOL for allocations of fields in TARGET.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
