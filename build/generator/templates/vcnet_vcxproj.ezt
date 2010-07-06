@@ -67,6 +67,7 @@
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
+      <EnableUAC>true</EnableUAC>
 [is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
 [else]      <OptimizeReferences>true</OptimizeReferences>
 [end]    </Link>
