@@ -99,6 +99,34 @@ static const char *git_tree_and_text_unidiff =
   "+some more bytes to 'mu'"                                            NL
   ""                                                                    NL;
 
+  /* Only the last git diff header is valid. The other ones either misses a
+   * path element or has noise between lines that must be continous. */
+static const char *bad_git_diff_header =
+  "Index: iota.copied"                                                  NL
+  "===================================================================" NL
+  "git --diff a/foo1 b/"                                                NL
+  "git --diff a/foo2 b"                                                 NL
+  "git --diff a/foo3 "                                                  NL
+  "git --diff a/foo3 "                                                  NL
+  "git --diff foo4 b/foo4"                                              NL
+  "git --diff a/foo5 b/foo5"                                            NL
+  "random noise"                                                        NL
+  "copy from foo5"                                                      NL
+  "copy to foo5"                                                        NL
+  "git --diff a/foo6 b/foo6"                                            NL
+  "copy from foo6"                                                      NL
+  "random noise"                                                        NL
+  "copy to foo6"                                                        NL
+  "git --diff a/foo6 b/foo6"                                            NL
+  "copy from foo6"                                                      NL
+  "git --diff a/iota b/iota.copied"                                     NL
+  "copy from iota"                                                      NL
+  "copy to iota.copied"                                                 NL
+  "@@ -1 +1,2 @@"                                                       NL
+  " This is the file 'iota'."                                           NL
+  "+some more bytes to 'iota'"                                          NL
+  ""                                                                    NL;
+
   static const char *property_unidiff =
   "Index: iota"                                                         NL
   "===================================================================" NL
@@ -438,6 +466,42 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Tests to parse non-valid git diffs. */
+static svn_error_t *
+test_bad_git_diff_headers(apr_pool_t *pool)
+{
+  apr_file_t *patch_file;
+  svn_patch_t *patch;
+  svn_hunk_t *hunk;
+  const char *fname = "test_bad_git_diff_header.patch";
+
+  SVN_ERR(create_patch_file(&patch_file, fname, bad_git_diff_header,
+                            pool));
+
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota.copied"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk->original_text,
+                        "This is the file 'iota'." NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk->modified_text,
+                        "This is the file 'iota'." NL
+                        "some more bytes to 'iota'" NL,
+                        pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Tests to parse a diff with three property changes, one is added, one is
  * modified and one is deleted. */
 static svn_error_t *
@@ -553,6 +617,7 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -564,6 +629,8 @@ struct svn_test_descriptor_t test_funcs[] =
                     "test git unidiff parsing"),
     SVN_TEST_PASS2(test_parse_git_tree_and_text_diff,
                     "test git unidiff parsing of tree and text changes"),
+    SVN_TEST_XFAIL2(test_bad_git_diff_headers,
+                    "test badly formatted git diff headers"),
     SVN_TEST_PASS2(test_parse_property_diff,
                    "test property unidiff parsing"),
     SVN_TEST_PASS2(test_parse_property_and_text_diff,
