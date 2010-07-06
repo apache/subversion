@@ -216,6 +216,59 @@ strip_path(const char **result, const char *path, int strip_count,
   return SVN_NO_ERROR;
 }
 
+/* Obtain eol and keywords information for LOCAL_ABSPATH, from WC_CTX and
+   store the obtained information in *TARGET. */
+static svn_error_t *
+resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            patch_target_t *target,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+  svn_string_t *keywords_val, *eol_style_val;
+
+  /* Handle svn:keyword and svn:eol-style properties. */
+  SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath,
+                            scratch_pool, scratch_pool));
+  keywords_val = apr_hash_get(props, SVN_PROP_KEYWORDS,
+                              APR_HASH_KEY_STRING);
+  if (keywords_val)
+  {
+      svn_revnum_t changed_rev;
+      apr_time_t changed_date;
+      const char *rev_str;
+      const char *author;
+      const char *url;
+
+      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
+                                          &changed_date,
+                                          &author, wc_ctx,
+                                          local_abspath,
+                                          scratch_pool,
+                                          scratch_pool));
+      rev_str = apr_psprintf(scratch_pool, "%"SVN_REVNUM_T_FMT,
+                              changed_rev);
+      SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
+                                  target->local_abspath,
+                                  scratch_pool, scratch_pool));
+      SVN_ERR(svn_subst_build_keywords2(&target->keywords,
+                                      keywords_val->data,
+                                      rev_str, url, changed_date,
+                                      author, result_pool));
+  }
+
+  eol_style_val = apr_hash_get(props, SVN_PROP_EOL_STYLE,
+                              APR_HASH_KEY_STRING);
+  if (eol_style_val)
+  {
+      svn_subst_eol_style_from_value(&target->eol_style,
+                                      &target->eol_str,
+                                      eol_style_val->data);
+  }
+  return SVN_NO_ERROR;
+}
+
 /* Resolve the exact path for a patch TARGET at path PATH_FROM_PATCHFILE,
  * which is the path of the target as it appeared in the patch file.
  * Put a canonicalized version of PATH_FROM_PATCHFILE into
@@ -227,7 +280,7 @@ strip_path(const char **result, const char *path, int strip_count,
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * If the path is not skipped also obtain eol-style and keywords
- * information and store this in *TARGET.
+ * information by calling resolve_target_wc_info() on TARGET.
  * Use RESULT_POOL for allocations of fields in TARGET. */
 static svn_error_t *
 resolve_target_path(patch_target_t *target,
@@ -334,49 +387,9 @@ resolve_target_path(patch_target_t *target,
   if (target->locally_deleted && target->kind_on_disk != svn_node_none)
     target->skipped = TRUE;
 
-  {
-    apr_hash_t *props;
-    svn_string_t *keywords_val, *eol_style_val;
-
-    /* Handle svn:keyword and svn:eol-style properties. */
-    SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, target->local_abspath,
-                              scratch_pool, scratch_pool));
-    keywords_val = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                                APR_HASH_KEY_STRING);
-    if (keywords_val)
-    {
-        svn_revnum_t changed_rev;
-        apr_time_t changed_date;
-        const char *rev_str;
-        const char *author;
-        const char *url;
-
-        SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
-                                            &changed_date,
-                                            &author, wc_ctx,
-                                            target->local_abspath,
-                                            scratch_pool,
-                                            scratch_pool));
-        rev_str = apr_psprintf(scratch_pool, "%"SVN_REVNUM_T_FMT,
-                                changed_rev);
-        SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
-                                    target->local_abspath,
-                                    scratch_pool, scratch_pool));
-        SVN_ERR(svn_subst_build_keywords2(&target->keywords,
-                                        keywords_val->data,
-                                        rev_str, url, changed_date,
-                                        author, result_pool));
-    }
-
-    eol_style_val = apr_hash_get(props, SVN_PROP_EOL_STYLE,
-                                APR_HASH_KEY_STRING);
-    if (eol_style_val)
-    {
-        svn_subst_eol_style_from_value(&target->eol_style,
-                                        &target->eol_str,
-                                        eol_style_val->data);
-    }
-  }
+  if (target->kind_on_disk == svn_node_file)
+    SVN_ERR(resolve_target_wc_file_info(wc_ctx, target->local_abspath,
+                                        target, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
