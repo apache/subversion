@@ -331,17 +331,6 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* Retrieve the oldest revision of the node at REL_PATH at REV since
-   it was last copied (if applicable), and store it in OLDEST_REV.  If
-   REL_PATH does not exist in that REV, set *OLDEST_REV to
-   SVN_INVALID_REVNUM.  Use POOL for temporary allocations. */
-svn_error_t *
-svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
-                               svn_ra_session_t *ra_session,
-                               const char *rel_path,
-                               svn_revnum_t rev,
-                               apr_pool_t *pool);
-
 /* A default error handler for use with svn_wc_walk_entries3().  Returns
    ERR in all cases. */
 svn_error_t *
