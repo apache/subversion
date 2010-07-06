@@ -249,8 +249,7 @@ resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
                                             local_abspath,
                                             scratch_pool,
                                             scratch_pool));
-      rev_str = apr_psprintf(scratch_pool, "%"SVN_REVNUM_T_FMT,
-                             changed_rev);
+      rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
       SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
                                    target->local_abspath,
                                    scratch_pool, scratch_pool));
