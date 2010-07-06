@@ -2046,7 +2046,7 @@ svn_wc_mark_missing_deleted(const char *path,
   return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                            _("Unexpectedly found '%s': "
                              "path is marked 'missing'"),
-                           svn_dirent_local_style(path, scratch_pool));
+                           svn_dirent_local_style(path, pool));
 #else
   const char *local_abspath;
   svn_wc_context_t *wc_ctx;
