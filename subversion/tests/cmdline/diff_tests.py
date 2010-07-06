@@ -3133,11 +3133,11 @@ def diff_url_against_local_mods(sbox):
 
 
 #----------------------------------------------------------------------
-# Diff rev against working copy of a removed and locally re-added file.
-# This is issue #1675 ("svn diff -rN added-file" has odd behavior).
+# Diff against old revision of the parent directory of a removed and
+# locally re-added file.
 
 def diff_preexisting_rev_against_local_add(sbox):
-  "diff -r1 of removed file to its local addition"
+  "diff -r1 of dir with removed-then-readded file"
   sbox.build()
   os.chdir(sbox.wc_dir)
 
