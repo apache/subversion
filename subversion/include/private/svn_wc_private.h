@@ -73,25 +73,6 @@ svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
                          apr_hash_t *clhash,
                          apr_pool_t *scratch_pool);
 
-
-/* Set *MODIFIED_P to true if VERSIONED_FILE_ABSPATH is modified with respect
- * to BASE_FILE_ABSPATH, or false if it is not.  The comparison compensates
- * for VERSIONED_FILE_ABSPATH's eol and keyword properties, but leaves
- * BASE_FILE_ABSPATH alone (as though BASE_FILE_ABSPATH were a text-base file,
- * which it usually is, only sometimes we're calling this on incoming
- * temporary text-bases).
- *
- * If an error is returned, the effect on *MODIFIED_P is undefined.
- *
- * Use SCRATCH_POOL for temporary allocation; WC_CTX is the normal thing.
- */
-svn_error_t *
-svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
-                                svn_wc_context_t *wc_ctx,
-                                const char *versioned_file_abspath,
-                                const char *base_file_abspath,
-                                apr_pool_t *scratch_pool);
-
 /**
  * Return a boolean answer to the question "Is @a status something that
  * should be reported?".  @a no_ignore and @a get_all are the same as

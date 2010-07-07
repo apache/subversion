@@ -1850,12 +1850,24 @@ files_same_p(svn_boolean_t *same,
                             scratch_pool));
   if (*same)
     {
-      svn_boolean_t modified;
+      svn_stream_t *mine_stream;
+      svn_stream_t *older_stream;
+      svn_opt_revision_t working_rev;
+
+      working_rev.kind = svn_opt_revision_working;
 
       /* Compare the file content, translating 'mine' to 'normal' form. */
-      SVN_ERR(svn_wc__versioned_file_modcheck(&modified, wc_ctx, mine_abspath,
-                                              older_abspath, scratch_pool));
-      *same = !modified;
+      SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
+                                                mine_abspath, &working_rev,
+                                                FALSE, NULL, NULL,
+                                                scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_stream_open_readonly(&older_stream, older_abspath,
+                                       scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_stream_contents_same2(same, mine_stream, older_stream,
+                                        scratch_pool));
+
     }
 
   return SVN_NO_ERROR;
