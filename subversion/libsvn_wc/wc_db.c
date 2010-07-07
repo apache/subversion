@@ -119,9 +119,6 @@
    ### need to undo the SKIP. */
 #define SVN__SKIP_SUBDIR
 
-WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
-
-
 /* This is a character used to escape itself and the globbing character in
    globbing sql expressions below.  See escape_sqlite_like().
 
