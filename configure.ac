@@ -942,16 +942,16 @@ AS_HELP_STRING([--with-editor=PATH],
 
 SVN_LIB_Z
 
-MOD_ACTIVATION="-a"
+MOD_ACTIVATION=""
 AC_ARG_ENABLE(mod-activation,
-AS_HELP_STRING([--disable-mod-activation],
-               [Do not enable mod_dav_svn in httpd.conf]),
+AS_HELP_STRING([--enable-mod-activation],
+               [Enable mod_dav_svn in httpd.conf]),
 [
-    if test "$enableval" = "no" ; then
-      MOD_ACTIVATION=""
-      AC_MSG_NOTICE([Disabling apache module activation])
-    else
+    if test "$enableval" = "yes" ; then
+      MOD_ACTIVATION="-a"
       AC_MSG_NOTICE([Enabling apache module activation])
+    else
+      AC_MSG_NOTICE([Disabling apache module activation])
     fi
 ])
 AC_SUBST(MOD_ACTIVATION)
