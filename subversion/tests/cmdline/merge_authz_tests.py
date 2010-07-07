@@ -641,7 +641,7 @@ def reintegrate_fails_if_no_root_access(sbox):
     'mu'           : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })

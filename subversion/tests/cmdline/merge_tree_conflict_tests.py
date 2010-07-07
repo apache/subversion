@@ -1703,7 +1703,6 @@ def merge_replace_causes_tree_conflict(sbox):
     "--- Recording mergeinfo for merge between repository URLs into '" \
     + A + "':\n",
     ' U   ' + A + '\n',
-    ' G   ' + A + '\n',
     'Summary of conflicts:\n',
     '  Tree conflicts: 4\n',
   ])
