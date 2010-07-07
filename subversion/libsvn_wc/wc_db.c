@@ -2343,6 +2343,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
   const char *pristine_abspath;
   apr_finfo_t finfo;
   svn_sqlite__stmt_t *stmt;
+  svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(tempfile_abspath));
   SVN_ERR_ASSERT(sha1_checksum != NULL);
@@ -2368,9 +2369,20 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                              TRUE /* create_subdir */,
                              scratch_pool, scratch_pool));
 
+
+  SVN_ERR(svn_io_check_path(pristine_abspath, &kind, scratch_pool));
+
+  if (kind == svn_node_file)
+    {
+      /* Remove the tempfile, it's already there */
+      return svn_error_return(
+                  svn_io_remove_file2(tempfile_abspath,
+                                      FALSE, scratch_pool));
+    }
+
   /* Put the file into its target location.  */
-  SVN_ERR(svn_io_file_rename(tempfile_abspath, pristine_abspath,
-                             scratch_pool));
+    SVN_ERR(svn_io_file_rename(tempfile_abspath, pristine_abspath,
+                               scratch_pool));
 
   SVN_ERR(svn_io_stat(&finfo, pristine_abspath, APR_FINFO_SIZE,
                       scratch_pool));
