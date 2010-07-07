@@ -209,6 +209,21 @@ svn_error_t *
 svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
                     apr_pool_t *pool);
 
+/** Combine one mergeinfo catalog, @a changes_catalog, into another mergeinfo
+ * catalog @a mergeinfo_catalog.  If both catalogs have mergeinfo for the same
+ * key, use svn_mergeinfo_merge() to combine the mergeinfos.
+ *
+ * Additions to @a mergeinfo_catalog are deep copies allocated in
+ * @a result_pool.  Temporary allocations are made in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_mergeinfo_catalog_merge(svn_mergeinfo_catalog_t mergeinfo_catalog,
+                            svn_mergeinfo_catalog_t changes_catalog,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 /** Like svn_mergeinfo_remove2, but always considers inheritance.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
