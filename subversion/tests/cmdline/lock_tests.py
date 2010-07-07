@@ -1472,6 +1472,7 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
                                       0, 'lock', lambda_path)
 
+#----------------------------------------------------------------------
 def verify_path_escaping(sbox):
   "verify escaping of lock paths"
 
@@ -1507,6 +1508,33 @@ def verify_path_escaping(sbox):
 
   # Make sure the file locking is reported correctly
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+#----------------------------------------------------------------------
+# Issue #3674: Replace + propset of locked file fails over DAV
+def replace_and_propset_locked_path(sbox):
+  "test replace + propset of locked file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Lock mu.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'lock', mu_path, '-m', 'Locked here')
+
+  # Now replace and propset on mu.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '--keep-local', mu_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', mu_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'bar', mu_path)
+
+  # Finally, commit mu.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'Replace mu', mu_path)
 
 
 ########################################################################
@@ -1553,6 +1581,8 @@ test_list = [ None,
               lock_twice_in_one_wc,
               lock_path_not_in_head,
               verify_path_escaping,
+              XFail(replace_and_propset_locked_path,
+                    svntest.main.is_ra_type_dav),
             ]
 
 if __name__ == '__main__':
