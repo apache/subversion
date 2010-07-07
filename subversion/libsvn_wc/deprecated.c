@@ -34,6 +34,7 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 
 #include "private/svn_wc_private.h"
 
