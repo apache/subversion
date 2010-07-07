@@ -4494,6 +4494,52 @@ def copy_broken_symlink(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def move_dir_containing_move(sbox):
+  """move a directory containing moved node"""
+
+  sbox.build()
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B/E/alpha'),
+                                     sbox.ospath('A/B/E/alpha_moved'))
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E_moved'))
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+      'A/B/E_moved'             : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B/E_moved/alpha'       : Item(status='D ', wc_rev='?'),
+      'A/B/E_moved/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B/E_moved/beta'        : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+  # ### run_and_verify_status seems to expect alpha to be both
+  # ### wc_rev='?' and wc_rev='1' so it's disabled for now
+
+  #svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E'                  : Item(verb='Deleting'),
+    'A/B/E_moved'            : Item(verb='Adding'),
+    'A/B/E_moved/alpha'      : Item(verb='Deleting'),
+    'A/B/E_moved/alpha_moved': Item(verb='Adding'),
+    })
+
+  expected_status.tweak('A/B/E_moved',
+                        'A/B/E_moved/alpha_moved',
+                        'A/B/E_moved/beta',
+                        status='  ', copied=None, wc_rev='2')
+  expected_status.remove('A/B/E',
+                         'A/B/E/alpha',
+                         'A/B/E/beta',
+                         'A/B/E_moved/alpha')
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, sbox.wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -4583,6 +4629,7 @@ test_list = [ None,
               XFail(nonrecursive_commit_of_copy),
               copy_added_dir_with_copy,
               SkipUnless(copy_broken_symlink, svntest.main.is_posix_os),
+              move_dir_containing_move,
              ]
 
 if __name__ == '__main__':
