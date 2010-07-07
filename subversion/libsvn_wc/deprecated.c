@@ -2850,6 +2850,13 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
   const char *local_abspath;
   svn_error_t *err;
 
+  /* Subversion <= 1.6 said that '.' or a drive root is a WC root. */
+  if (svn_path_is_empty(path) || svn_dirent_is_root(path, strlen(path)))
+    {
+      *wc_root = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access),
@@ -2861,9 +2868,9 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
       && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
           || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
     {
-      /* Subversion <= 1.6 just said that a not versioned path is not a root */
+      /* Subversion <= 1.6 said that an unversioned path is a WC root. */
       svn_error_clear(err);
-      *wc_root = FALSE;
+      *wc_root = TRUE;
     }
   else
     SVN_ERR(err);
