@@ -5235,19 +5235,16 @@ svn_wc_crawl_revisions(const char *path,
 
 /* Updates. */
 
-/** Set @a *wc_root to @c TRUE if @a path represents a "working copy root",
- * @c FALSE otherwise. Here, @a path is a "working copy root" if its parent
- * directory is not a WC or if its parent directory's repository URL is not
- * the parent of its own repository URL. Thus, a switched subtree is
+/** Set @a *wc_root to @c TRUE if @a local_abspath represents a "working copy
+ * root", @c FALSE otherwise. Here, @a local_abspath is a "working copy root"
+ * if its parent directory is not a WC or if its parent directory's repository
+ * URL is not the parent of its own repository URL. Thus, a switched subtree is
  * considered to be a working copy root. Also, a deleted tree-conflict
  * victim is considered a "working copy root" because it has no URL.
  *
- * If @a path is not found, return the error #SVN_ERR_ENTRY_NOT_FOUND.
+ * If @a local_abspath is not found, return the error #SVN_ERR_ENTRY_NOT_FOUND.
  *
- * Use @a pool for any intermediate allocations.
- *
- * @note Due to the way in which "WC-root-ness" is calculated, passing
- * a @a path of `.' to this function will always return @c TRUE.
+ * Use @a scratch_pool for any temporary allocations.
  *
  * @since New in 1.7.
  */
@@ -5260,6 +5257,8 @@ svn_wc_is_wc_root2(svn_boolean_t *wc_root,
 /**
  * Similar to svn_wc_is_wc_root2(), but with an access baton and relative
  * path.
+ *
+ * @note If @a path is '', this function will always return @c TRUE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
