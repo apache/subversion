@@ -1055,6 +1055,20 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/* Return a potentially translated version of local file LOCAL_ABSPATH
+   in NORMAL_STREAM.  REVISION must be one of the following: BASE, COMMITTED,
+   WORKING.  Uses SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_client__get_normalized_stream(svn_stream_t **normal_stream,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  const svn_opt_revision_t *revision,
+                                  svn_boolean_t expand_keywords,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 
 /* Return true if KIND is a revision kind that is dependent on the working
  * copy. Otherwise, return false. */

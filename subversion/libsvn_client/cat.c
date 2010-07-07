@@ -44,18 +44,16 @@
 
 /*** Code. ***/
 
-/* Helper function to handle copying a potentially translated version of
-   local file LOCAL_ABSPATH to OUTPUT.  REVISION must be one of the following:
-   BASE, COMMITTED, WORKING.  Uses SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-cat_local_file(svn_stream_t **normal_stream,
-               svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
-               const svn_opt_revision_t *revision,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__get_normalized_stream(svn_stream_t **normal_stream,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  const svn_opt_revision_t *revision,
+                                  svn_boolean_t expand_keywords,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
@@ -165,7 +163,7 @@ cat_local_file(svn_stream_t **normal_stream,
 
   /* Wrap the output stream if translation is needed. */
   if (eol != NULL || kw != NULL)
-    input = svn_subst_stream_translated(input, eol, FALSE, kw, TRUE,
+    input = svn_subst_stream_translated(input, eol, FALSE, kw, expand_keywords,
                                         result_pool);
 
   *normal_stream = input;
@@ -212,9 +210,10 @@ svn_client_cat2(svn_stream_t *out,
       svn_stream_t *normal_stream;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
-      SVN_ERR(cat_local_file(&normal_stream, ctx->wc_ctx, local_abspath,
-                             revision, ctx->cancel_func, ctx->cancel_baton,
-                             pool, pool));
+      SVN_ERR(svn_client__get_normalized_stream(&normal_stream, ctx->wc_ctx,
+                                            local_abspath, revision, TRUE,
+                                            ctx->cancel_func, ctx->cancel_baton,
+                                            pool, pool));
 
       /* We don't promise to close output, so disown it to ensure we don't. */
       output = svn_stream_disown(output, pool);
