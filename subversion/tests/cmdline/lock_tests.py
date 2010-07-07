@@ -1519,10 +1519,13 @@ def replace_and_propset_locked_path(sbox):
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  rho_path = os.path.join(G_path, 'rho')
 
-  # Lock mu.
+  # Lock mu and A/D/G/rho.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'lock', mu_path, '-m', 'Locked here')
+                                     'lock', mu_path, rho_path,
+                                     '-m', 'Locked')
 
   # Now replace and propset on mu.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1532,9 +1535,23 @@ def replace_and_propset_locked_path(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'bar', mu_path)
 
-  # Finally, commit mu.
+  # Commit mu.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'commit', '-m', 'Replace mu', mu_path)
+                                     'commit', '-m', '', mu_path)
+
+  # Let's try this again where directories are involved, shall we?
+  # Replace A/D/G and A/D/G/rho, propset on A/D/G/rho.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', G_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', G_path)
+  svntest.main.file_append(rho_path, "This is the new file 'rho'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'bar', rho_path)
+
+  # And commit G.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', '', G_path)
 
 
 ########################################################################
