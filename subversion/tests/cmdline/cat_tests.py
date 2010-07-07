@@ -173,6 +173,30 @@ def cat_unversioned_file(sbox):
   svntest.actions.run_and_verify_svn2(None, [], expected_error, 0,
                                       'cat', iota_path)
 
+
+def cat_keywords(sbox):
+  "cat a file with the svn:keywords property"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["This is the file 'iota'.\n"],
+                                     [], 'cat', iota_path)
+
+  svntest.main.file_append(iota_path, "$Revision$\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:keywords', 'Revision',
+                                     iota_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'r2', wc_dir)
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["This is the file 'iota'.\n", "$Revision: 2 $\n"],
+                                     [], 'cat', iota_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -185,6 +209,7 @@ test_list = [ None,
               cat_nonexistent_file,
               cat_skip_uncattable,
               cat_unversioned_file,
+              cat_keywords,
              ]
 
 if __name__ == '__main__':
