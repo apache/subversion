@@ -220,6 +220,6 @@ def _cleanup_test_path(path, retrying=False):
   try:
     svntest.main.safe_rmtree(path)
   except:
-    if svntest.main.verbose_mode:
+    if svntest.main.options.verbose:
       print("WARNING: cleanup failed, will try again later")
     _deferred_test_paths.append(path)
