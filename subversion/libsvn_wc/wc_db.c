@@ -126,7 +126,7 @@
 #define LIKE_ESCAPE_CHAR     "#"
 
 
-typedef struct {
+typedef struct insert_base_baton_t {
   /* common to all insertions into BASE */
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
@@ -141,6 +141,7 @@ typedef struct {
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
+  apr_hash_t *dav_cache;
 
   /* for inserting directories */
   const apr_array_header_t *children;
@@ -672,6 +673,10 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
       if (pibb->target)
         SVN_ERR(svn_sqlite__bind_text(stmt, 16, pibb->target));
     }
+
+  if (pibb->dav_cache)
+    SVN_ERR(svn_sqlite__bind_properties(stmt, 17, pibb->dav_cache,
+                                        scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
@@ -1353,6 +1358,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const char *changed_author,
                               const apr_array_header_t *children,
                               svn_depth_t depth,
+                              apr_hash_t *dav_cache,
                               const svn_skel_t *conflict,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool)
@@ -1399,6 +1405,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   ibb.children = children;
   ibb.depth = depth;
 
+  ibb.dav_cache = dav_cache;
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
@@ -1429,6 +1436,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
                          svn_filesize_t translated_size,
+                         apr_hash_t *dav_cache,
                          const svn_skel_t *conflict,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
@@ -1473,6 +1481,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.checksum = checksum;
   ibb.translated_size = translated_size;
 
+  ibb.dav_cache = dav_cache;
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
@@ -1501,6 +1510,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             apr_time_t changed_date,
                             const char *changed_author,
                             const char *target,
+                            apr_hash_t *dav_cache,
                             const svn_skel_t *conflict,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
@@ -1544,6 +1554,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
   ibb.target = target;
 
+  ibb.dav_cache = dav_cache;
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 

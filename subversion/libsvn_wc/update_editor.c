@@ -2963,7 +2963,7 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-  apr_array_header_t *entry_props, *wc_props, *regular_props;
+  apr_array_header_t *entry_props, *dav_props, *regular_props;
   apr_hash_t *base_props;
   apr_hash_t *actual_props;
   apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
@@ -2986,7 +2986,7 @@ close_directory(void *dir_baton,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
+  SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &dav_props,
                                &regular_props, pool));
 
   /* Fetch the existing properties.  */
@@ -3041,7 +3041,7 @@ close_directory(void *dir_baton,
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
-  if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
+  if (regular_props->nelts || entry_props->nelts || dav_props->nelts)
     {
       if (regular_props->nelts)
         {
@@ -3184,6 +3184,9 @@ close_directory(void *dir_baton,
                 changed_rev, changed_date, changed_author,
                 NULL /* children */,
                 depth,
+                (dav_props && dav_props->nelts > 0)
+                    ? prop_hash_from_array(dav_props, pool)
+                    : NULL,
                 NULL /* conflict */,
                 work_items,
                 pool));
@@ -3216,15 +3219,6 @@ close_directory(void *dir_baton,
                                           NULL /* conflict */,
                                           work_items,
                                           pool));
-        }
-
-      /* Handle the wcprops. */
-      if (wc_props && wc_props->nelts > 0)
-        {
-          SVN_ERR(svn_wc__db_base_set_dav_cache(eb->db, db->local_abspath,
-                                                prop_hash_from_array(wc_props,
-                                                                     pool),
-                                                pool));
         }
     }
 
@@ -4956,7 +4950,7 @@ close_file(void *file_baton,
   apr_hash_t *new_base_props = NULL;
   apr_hash_t *new_actual_props = NULL;
   apr_array_header_t *entry_props;
-  apr_array_header_t *wc_props;
+  apr_array_header_t *dav_props;
   apr_array_header_t *regular_props;
   svn_boolean_t install_pristine;
   const char *install_from = NULL;
@@ -5026,7 +5020,7 @@ close_file(void *file_baton,
                              svn_dirent_local_style(fb->local_abspath, pool));
 
   /* Gather the changes for each kind of property.  */
-  SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, &wc_props,
+  SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, &dav_props,
                                &regular_props, pool));
 
   /* Extract the changed_* and lock state information.  */
@@ -5389,15 +5383,12 @@ close_file(void *file_baton,
                                      new_changed_author,
                                      new_checksum,
                                      SVN_INVALID_FILESIZE,
+                                     (dav_props && dav_props->nelts > 0)
+                                        ? prop_hash_from_array(dav_props, pool)
+                                        : NULL,
                                      NULL /* conflict */,
                                      all_work_items,
                                      pool));
-
-    /* This writes a whole bunch of log commands to install wcprops.  */
-    /* ### no it doesn't. this immediately modifies them. */
-    SVN_ERR(svn_wc__db_base_set_dav_cache(eb->db, fb->local_abspath,
-                                          prop_hash_from_array(wc_props, pool),
-                                          pool));
 
     /* ### ugh. deal with preserving the file external value in the database.
        ### there is no official API, so we do it this way. maybe we should
