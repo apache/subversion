@@ -190,6 +190,93 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
 }
 
+/* Adjust NEW_PATH1 and NEW_PATH2 to properly describe what paths has been
+ * compared taking RELATIVE_TO_DIR into account. All allocations are done in
+ * POOL. */
+static svn_error_t *
+adjust_paths_for_diff_labels(const char **path1,
+                             const char **path2,
+                             const char *path,
+                             const char *relative_to_dir,
+                             apr_pool_t *pool)
+{
+  apr_size_t len;
+  const char *new_path1 = *path1;
+  const char *new_path2 = *path2;
+
+  /* ### Holy cow.  Due to anchor/target weirdness, we can't
+     simply join diff_cmd_baton->orig_path_1 with path, ditto for
+     orig_path_2.  That will work when they're directory URLs, but
+     not for file URLs.  Nor can we just use anchor1 and anchor2
+     from do_diff(), at least not without some more logic here.
+     What a nightmare.
+
+     For now, to distinguish the two paths, we'll just put the
+     unique portions of the original targets in parentheses after
+     the received path, with ellipses for handwaving.  This makes
+     the labels a bit clumsy, but at least distinctive.  Better
+     solutions are possible, they'll just take more thought. */
+
+  len = strlen(svn_dirent_get_longest_ancestor(new_path1, new_path2, pool));
+  new_path1 = new_path1 + len;
+  new_path2 = new_path2 + len;
+
+  /* ### Should diff labels print paths in local style?  Is there
+     already a standard for this?  In any case, this code depends on
+     a particular style, so not calling svn_dirent_local_style() on the
+     paths below.*/
+  if (new_path1[0] == '\0')
+    new_path1 = apr_psprintf(pool, "%s", path);
+  else if (new_path1[0] == '/')
+    new_path1 = apr_psprintf(pool, "%s\t(...%s)", path, new_path1);
+  else
+    new_path1 = apr_psprintf(pool, "%s\t(.../%s)", path, new_path1);
+
+  if (new_path2[0] == '\0')
+    new_path2 = apr_psprintf(pool, "%s", path);
+  else if (new_path2[0] == '/')
+    new_path2 = apr_psprintf(pool, "%s\t(...%s)", path, new_path2);
+  else
+    new_path2 = apr_psprintf(pool, "%s\t(.../%s)", path, new_path2);
+
+  if (relative_to_dir)
+    {
+      /* Possibly adjust the paths shown in the output (see issue #2723). */
+      const char *child_path = svn_dirent_is_child(relative_to_dir, path,
+                                                   pool);
+
+      if (child_path)
+        path = child_path;
+      else if (!svn_path_compare_paths(relative_to_dir, path))
+        path = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir);
+
+      child_path = svn_dirent_is_child(relative_to_dir, new_path1, pool);
+
+      if (child_path)
+        new_path1 = child_path;
+      else if (!svn_path_compare_paths(relative_to_dir, new_path1))
+        new_path1 = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(new_path1, relative_to_dir);
+
+      child_path = svn_dirent_is_child(relative_to_dir, new_path2, pool);
+
+      if (child_path)
+        new_path2 = child_path;
+      else if (!svn_path_compare_paths(relative_to_dir, new_path2))
+        new_path2 = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(new_path2, relative_to_dir);
+    }
+  *path1 = new_path1;
+  *path2 = new_path2;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
    passed to svn_client_diff5, which is probably stdout. */
@@ -532,80 +619,17 @@ diff_content_changed(const char *path,
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
   const char *path1, *path2;
-  apr_size_t len;
 
   /* Get a stream from our output file. */
   os = svn_stream_from_aprfile2(diff_cmd_baton->outfile, TRUE, subpool);
 
   /* Generate the diff headers. */
 
-  /* ### Holy cow.  Due to anchor/target weirdness, we can't
-     simply join diff_cmd_baton->orig_path_1 with path, ditto for
-     orig_path_2.  That will work when they're directory URLs, but
-     not for file URLs.  Nor can we just use anchor1 and anchor2
-     from do_diff(), at least not without some more logic here.
-     What a nightmare.
-
-     For now, to distinguish the two paths, we'll just put the
-     unique portions of the original targets in parentheses after
-     the received path, with ellipses for handwaving.  This makes
-     the labels a bit clumsy, but at least distinctive.  Better
-     solutions are possible, they'll just take more thought. */
-
   path1 = diff_cmd_baton->orig_path_1;
   path2 = diff_cmd_baton->orig_path_2;
-  len = strlen(svn_dirent_get_longest_ancestor(path1, path2, subpool));
-  path1 = path1 + len;
-  path2 = path2 + len;
 
-  /* ### Should diff labels print paths in local style?  Is there
-     already a standard for this?  In any case, this code depends on
-     a particular style, so not calling svn_dirent_local_style() on the
-     paths below.*/
-  if (path1[0] == '\0')
-    path1 = apr_psprintf(subpool, "%s", path);
-  else if (path1[0] == '/')
-    path1 = apr_psprintf(subpool, "%s\t(...%s)", path, path1);
-  else
-    path1 = apr_psprintf(subpool, "%s\t(.../%s)", path, path1);
-
-  if (path2[0] == '\0')
-    path2 = apr_psprintf(subpool, "%s", path);
-  else if (path2[0] == '/')
-    path2 = apr_psprintf(subpool, "%s\t(...%s)", path, path2);
-  else
-    path2 = apr_psprintf(subpool, "%s\t(.../%s)", path, path2);
-
-  if (diff_cmd_baton->relative_to_dir)
-    {
-      /* Possibly adjust the paths shown in the output (see issue #2723). */
-      const char *child_path = svn_dirent_is_child(rel_to_dir, path, subpool);
-
-      if (child_path)
-        path = child_path;
-      else if (!svn_path_compare_paths(rel_to_dir, path))
-        path = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path, rel_to_dir);
-
-      child_path = svn_dirent_is_child(rel_to_dir, path1, subpool);
-
-      if (child_path)
-        path1 = child_path;
-      else if (!svn_path_compare_paths(rel_to_dir, path1))
-        path1 = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path1, rel_to_dir);
-
-      child_path = svn_dirent_is_child(rel_to_dir, path2, subpool);
-
-      if (child_path)
-        path2 = child_path;
-      else if (!svn_path_compare_paths(rel_to_dir, path2))
-        path2 = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path2, rel_to_dir);
-    }
+  SVN_ERR(adjust_paths_for_diff_labels(&path1, &path2, path,
+                                       rel_to_dir, subpool));
 
   label1 = diff_label(path1, rev1, subpool);
   label2 = diff_label(path2, rev2, subpool);
