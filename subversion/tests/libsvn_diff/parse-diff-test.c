@@ -195,15 +195,18 @@ create_patch_file(apr_file_t **patch_file, const char *fname,
   return SVN_NO_ERROR;
 }
 
-/* Check that CONTENT equals what's inside EXPECTED. */
+/* Check that reading a line from HUNK equals what's inside EXPECTED.
+ * If ORIGINAL is TRUE, read the original hunk text; else, read the
+ * modified hunk text. */
 static svn_error_t *
-check_content(svn_stream_t *content, const char *expected, apr_pool_t *pool)
+check_content(svn_hunk_t *hunk, svn_boolean_t original,
+              const char *expected, apr_pool_t *pool)
 {
   svn_stream_t *exp;
   svn_stringbuf_t *exp_buf;
-  svn_stringbuf_t *content_buf;
+  svn_stringbuf_t *hunk_buf;
   svn_boolean_t exp_eof;
-  svn_boolean_t content_eof;
+  svn_boolean_t hunk_eof;
 
   exp = svn_stream_from_string(svn_string_create(expected, pool), 
                                pool);
@@ -211,18 +214,23 @@ check_content(svn_stream_t *content, const char *expected, apr_pool_t *pool)
   while (TRUE)
   {
     SVN_ERR(svn_stream_readline(exp, &exp_buf, NL, &exp_eof, pool));
-    SVN_ERR(svn_stream_readline(content, &content_buf, NL, &content_eof,
-                                pool));
-    SVN_TEST_ASSERT(exp_eof == content_eof);
+    if (original)
+      SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_buf, NULL,
+                                                   &hunk_eof, pool, pool));
+    else
+      SVN_ERR(svn_diff_hunk_readline_modified_text(hunk, &hunk_buf, NULL,
+                                                   &hunk_eof, pool, pool));
+       
+    SVN_TEST_ASSERT(exp_eof == hunk_eof);
     if (exp_eof)
       break;
-    if (strcmp(exp_buf->data, content_buf->data))
+    if (strcmp(exp_buf->data, hunk_buf->data))
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "Expected '%s' but was '%s'", exp_buf->data,
-                               content_buf->data);
+                               hunk_buf->data);
   }
 
-  SVN_TEST_ASSERT(content_buf->len == 0);
+  SVN_TEST_ASSERT(hunk_buf->len == 0);
 
   return SVN_NO_ERROR;
 }
@@ -247,8 +255,6 @@ test_parse_unidiff(apr_pool_t *pool)
       svn_patch_t *patch;
       svn_hunk_t *hunk;
       apr_off_t pos;
-      svn_stream_t *original_text;
-      svn_stream_t *modified_text;
 
       svn_pool_clear(iterpool);
 
@@ -267,24 +273,11 @@ test_parse_unidiff(apr_pool_t *pool)
       SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
       hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
-      if (reverse)
-        {
-          /* Hunk texts come out of the parser inverted,
-           * so this inverts them a second time. */
-          original_text = hunk->modified_text;
-          modified_text = hunk->original_text;
-        }
-      else
-        {
-          original_text = hunk->original_text;
-          modified_text = hunk->modified_text;
-        }
-
-      SVN_ERR(check_content(original_text,
+      SVN_ERR(check_content(hunk, ! reverse,
                             "This is the file 'gamma'." NL,
                             pool));
 
-      SVN_ERR(check_content(modified_text,
+      SVN_ERR(check_content(hunk, reverse,
                             "This is the file 'gamma'." NL
                             "some more bytes to 'gamma'" NL,
                             pool));
@@ -306,25 +299,12 @@ test_parse_unidiff(apr_pool_t *pool)
       SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
       hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
-      if (reverse)
-        {
-          /* Hunk texts come out of the parser inverted,
-           * so this inverts them a second time. */
-          original_text = hunk->modified_text;
-          modified_text = hunk->original_text;
-        }
-      else
-        {
-          original_text = hunk->original_text;
-          modified_text = hunk->modified_text;
-        }
-
-      SVN_ERR(check_content(original_text,
+      SVN_ERR(check_content(hunk, ! reverse,
                             "This is the file 'gamma'." NL
                             "some less bytes to 'gamma'" NL,
                             pool));
 
-      SVN_ERR(check_content(modified_text,
+      SVN_ERR(check_content(hunk, reverse,
                             "This is the file 'gamma'." NL,
                             pool));
 
@@ -370,11 +350,11 @@ test_parse_git_diff(apr_pool_t *pool)
   
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
 
-  SVN_ERR(check_content(hunk->original_text,
+  SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'gamma'." NL,
                         pool));
 
-  SVN_ERR(check_content(hunk->modified_text,
+  SVN_ERR(check_content(hunk, FALSE,
                         "This is the file 'gamma'." NL
                         "some more bytes to 'gamma'" NL,
                         pool));
@@ -432,11 +412,11 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
 
-  SVN_ERR(check_content(hunk->original_text,
+  SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'iota'." NL,
                         pool));
 
-  SVN_ERR(check_content(hunk->modified_text,
+  SVN_ERR(check_content(hunk, FALSE,
                         "This is the file 'iota'." NL
                         "some more bytes to 'iota'" NL,
                         pool));
@@ -454,11 +434,11 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
 
-  SVN_ERR(check_content(hunk->original_text,
+  SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'mu'." NL,
                         pool));
 
-  SVN_ERR(check_content(hunk->modified_text,
+  SVN_ERR(check_content(hunk, FALSE,
                         "This is the file 'mu'." NL
                         "some more bytes to 'mu'" NL,
                         pool));
@@ -490,11 +470,11 @@ test_bad_git_diff_headers(apr_pool_t *pool)
   
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
 
-  SVN_ERR(check_content(hunk->original_text,
+  SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'iota'." NL,
                         pool));
 
-  SVN_ERR(check_content(hunk->modified_text,
+  SVN_ERR(check_content(hunk, FALSE,
                         "This is the file 'iota'." NL
                         "some more bytes to 'iota'" NL,
                         pool));
@@ -530,11 +510,11 @@ test_parse_property_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
 
-  SVN_ERR(check_content(hunk->original_text,
+  SVN_ERR(check_content(hunk, TRUE,
                         "",
                         pool));
 
-  SVN_ERR(check_content(hunk->modified_text,
+  SVN_ERR(check_content(hunk, FALSE,
                         "value" NL,
                         pool));
 
@@ -543,11 +523,11 @@ test_parse_property_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
 
-  SVN_ERR(check_content(hunk->original_text,
+  SVN_ERR(check_content(hunk, TRUE,
                         "value" NL,
                         pool));
 
-  SVN_ERR(check_content(hunk->modified_text,
+  SVN_ERR(check_content(hunk, FALSE,
                         "",
                         pool));
 
@@ -556,11 +536,11 @@ test_parse_property_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
 
-  SVN_ERR(check_content(hunk->original_text,
+  SVN_ERR(check_content(hunk, TRUE,
                         "value" NL,
                         pool));
 
-  SVN_ERR(check_content(hunk->modified_text,
+  SVN_ERR(check_content(hunk, FALSE,
                         "new value" NL,
                         pool));
 
@@ -592,11 +572,11 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
   /* Check contents of text hunk */
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
 
-  SVN_ERR(check_content(hunk->original_text,
+  SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'iota'." NL,
                         pool));
 
-  SVN_ERR(check_content(hunk->modified_text,
+  SVN_ERR(check_content(hunk, FALSE,
                         "This is the file 'iota'." NL
                         "some more bytes to 'iota'" NL,
                         pool));
@@ -606,11 +586,11 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
 
-  SVN_ERR(check_content(hunk->original_text,
+  SVN_ERR(check_content(hunk, TRUE,
                         "",
                         pool));
 
-  SVN_ERR(check_content(hunk->modified_text,
+  SVN_ERR(check_content(hunk, FALSE,
                         "value" NL,
                         pool));
 

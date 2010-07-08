@@ -790,9 +790,20 @@ typedef enum svn_diff_operation_kind_e
  *
  * @since New in 1.7. */
 typedef struct svn_hunk_t {
-  /** The hunk's unidiff text as it appeared in the patch file,
-   *  without range information. */
+  /**
+   * The hunk's unidiff text as it appeared in the patch file,
+   * without range information.
+   * This stream should not be read from directly, because it will
+   * return the wrong result for reversed hunks.
+   * @see svn_diff_hunk_readline_diff_text()
+   * However, the stream supports resetting and it is safe to reset it.
+   */
   svn_stream_t *diff_text;
+
+  /**
+   * Whether the hunk is being interpreted in reverse.
+   */
+  svn_boolean_t reverse;
 
   /**
    * The original and modified texts in the hunk range.
@@ -821,11 +832,14 @@ typedef struct svn_hunk_t {
    *           printf("I like Subversion!\n");
    *   }
    *
-   * Because these streams make use of line filtering and transformation,
-   * they should only be read line-by-line with svn_stream_readline().
-   * Reading them with svn_stream_read() will not yield the expected result,
-   * because it will return the unidiff text from the patch file unmodified.
-   * The streams support resetting.
+   * These streams should not be read from directly.
+   * Reading them with svn_stream_read() or svn_stream_readline() will
+   * not yield the expected result, because that will return the unidiff
+   * text from the patch file unmodified.
+   * @see svn_diff_hunk_readline_original_text()
+   * @see svn_diff_hunk_readline_modified_text()
+   *
+   * However, the streams support resetting and it is safe to reset them.
    */
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
@@ -895,6 +909,64 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
                           svn_boolean_t ignore_whitespace,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
+
+/**
+ * Allocate @a *stringbuf in @a result_pool, and read into it one line
+ * of the original text of @a hunk.
+ * The line-terminator is detected automatically and stored in @a *eol
+ * if @a eol is not NULL.
+ * If EOF is reached and the stream does not end with a newline character,
+ * and @a eol is not NULL, @a *eol is set to NULL.
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @see svn_hunk_t
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_diff_hunk_readline_original_text(const svn_hunk_t *hunk,
+                                     svn_stringbuf_t **stringbuf,
+                                     const char **eol,
+                                     svn_boolean_t *eof,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_diff_hunk_readline_original_text(), but it returns lines from
+ * the modified text of the hunk.
+ *
+ * @see svn_hunk_t
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_diff_hunk_readline_modified_text(const svn_hunk_t *hunk,
+                                     svn_stringbuf_t **stringbuf,
+                                     const char **eol,
+                                     svn_boolean_t *eof,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+/**
+ * Allocate @a *stringbuf in @a result_pool, and read into it one line
+ * of the diff text of @a hunk. The first line returned is the hunk header.
+ * Any subsequent lines are unidiff data (starting with '+', '-', or ' ').
+ * If the @a hunk is being interpreted in reverse (i.e. the reverse
+ * parameter of svn_diff_parse_next_patch() was @c TRUE), the diff
+ * text will be returned in reversed form.
+ * The line-terminator is detected automatically and stored in @a *eol
+ * if @a eol is not NULL.
+ * If EOF is reached and the stream does not end with a newline character,
+ * and @a eol is not NULL, @a *eol is set to NULL.
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_diff_hunk_readline_diff_text(const svn_hunk_t *hunk,
+                                 svn_stringbuf_t **stringbuf,
+                                 const char **eol,
+                                 svn_boolean_t *eof,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /**
  * Dispose of @a patch, closing any streams used by it.
