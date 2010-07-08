@@ -1727,10 +1727,14 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
    the commit. It will become the BASE node's 'revnum' and 'changed_rev'
    values in the BASE_NODE table.
 
-   NEW_DATE is the (server-side) date of the new revision. It may be 0 if
+   CHANGED_REVISION is the the new 'last changed' revision. If the node is
+   modified its value is equivalent to NEW_REVISION, but in case of a
+   decendant of a copy/move it can be an older revision.
+
+   CHANGED_DATE is the (server-side) date of CHANGED_REVISION. It may be 0 if
    the revprop is missing on the revision.
 
-   NEW_AUTHOR is the (server-side) author of the new revision. It may be
+   CHANGED_AUTHOR is the (server-side) author of CHANGED_REVISION. It may be
    NULL if the revprop is missing on the revision.
 
    One or both of NEW_CHECKSUM and NEW_CHILDREN should be NULL. For new:
@@ -1744,8 +1748,9 @@ svn_error_t *
 svn_wc__db_global_commit(svn_wc__db_t *db,
                          const char *local_abspath,
                          svn_revnum_t new_revision,
-                         apr_time_t new_date,
-                         const char *new_author,
+                         svn_revnum_t changed_revision,
+                         apr_time_t changed_date,
+                         const char *changed_author,
                          const svn_checksum_t *new_checksum,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,

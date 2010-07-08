@@ -5353,9 +5353,10 @@ struct commit_baton {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
 
-  svn_revnum_t new_revision;
-  apr_time_t new_date;
-  const char *new_author;
+  apr_int64_t new_revision;
+  apr_int64_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
   const svn_checksum_t *new_checksum;
   const apr_array_header_t *new_children;
   apr_hash_t *new_dav_cache;
@@ -5485,29 +5486,30 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
                                     STMT_APPLY_CHANGES_TO_BASE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "issttisb",
+  SVN_ERR(svn_sqlite__bindf(stmt, "issttiisb",
                             cb->pdh->wcroot->wc_id, cb->local_relpath,
                             parent_relpath,
                             presence_map, new_presence,
                             kind_map, new_kind,
-                            (apr_int64_t)cb->new_revision,
-                            cb->new_author,
+                            cb->new_revision,
+                            cb->changed_rev,
+                            cb->changed_author,
                             prop_blob.data, prop_blob.len));
 
   /* ### for now, always set the repos_id/relpath. we should make these
      ### null whenever possible. but that also means we'd have to check
      ### on whether this node is switched, so the values would need to
      ### remain unchanged.  */
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 9, cb->repos_id));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 10, cb->repos_relpath));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 10, cb->repos_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 11, cb->repos_relpath));
 
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 11, cb->new_checksum,
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 12, cb->new_checksum,
                                     scratch_pool));
-  if (cb->new_date > 0)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 12, cb->new_date));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 13, new_depth_str));
-  /* ### 14. target.  */
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 15, cb->new_dav_cache,
+  if (cb->changed_date > 0)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 13, cb->changed_date));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 14, new_depth_str));
+  /* ### 15. target.  */
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 16, cb->new_dav_cache,
                                       scratch_pool));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
@@ -5654,8 +5656,9 @@ svn_error_t *
 svn_wc__db_global_commit(svn_wc__db_t *db,
                          const char *local_abspath,
                          svn_revnum_t new_revision,
-                         apr_time_t new_date,
-                         const char *new_author,
+                         svn_revnum_t changed_revision,
+                         apr_time_t changed_date,
+                         const char *changed_author,
                          const svn_checksum_t *new_checksum,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
@@ -5681,8 +5684,10 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.local_relpath = local_relpath;
 
   cb.new_revision = new_revision;
-  cb.new_date = new_date;
-  cb.new_author = new_author;
+
+  cb.changed_rev = new_revision; 
+  cb.changed_date = changed_date;
+  cb.changed_author = changed_author;
   cb.new_checksum = new_checksum;
   cb.new_children = new_children;
   cb.new_dav_cache = new_dav_cache;
