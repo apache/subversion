@@ -190,9 +190,11 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
 }
 
-/* Adjust NEW_PATH1 and NEW_PATH2 to properly describe what paths has been
- * compared taking RELATIVE_TO_DIR into account. All allocations are done in
- * POOL. */
+/* Adjust PATH1 and PATH2, representing the original targets passed to the
+ * the diff command, to handle the case when we're dealing with different
+ * anchors. PATH represents the file that has changed. RELATIVE_TO_DIR is
+ * the directory the diff target should be considered relative to. All
+ * allocations are done in POOL. */
 static svn_error_t *
 adjust_paths_for_diff_labels(const char **path1,
                              const char **path2,
