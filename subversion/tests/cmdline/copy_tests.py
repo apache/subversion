@@ -4510,15 +4510,13 @@ def move_dir_containing_move(sbox):
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
   expected_status.add({
       'A/B/E_moved'             : Item(status='A ', copied='+', wc_rev='-'),
-      'A/B/E_moved/alpha'       : Item(status='D ', wc_rev='?'),
+      # alpha has a revision that isn't reported by status.
+      'A/B/E_moved/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
       'A/B/E_moved/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
       'A/B/E_moved/beta'        : Item(status='  ', copied='+', wc_rev='-'),
     })
 
-  # ### run_and_verify_status seems to expect alpha to be both
-  # ### wc_rev='?' and wc_rev='1' so it's disabled for now
-
-  #svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'A/B/E'                  : Item(verb='Deleting'),
@@ -4539,6 +4537,96 @@ def move_dir_containing_move(sbox):
                                         expected_output,
                                         expected_status,
                                         None, sbox.wc_dir)
+
+def copy_dir_with_space(sbox):
+  """copy a directory with whitespace to one without"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'A', 'B', 'E'),
+                                     os.path.join(wc_dir, 'E with spaces'))
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'A', 'B', 'E', 'alpha'),
+                                     os.path.join(wc_dir, 'E with spaces', 'al pha'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_output = svntest.wc.State(wc_dir, {
+    'E with spaces'        : Item(verb='Adding'),
+    'E with spaces/al pha' : Item(verb='Adding'),
+    })
+  expected_status.add({
+    'E with spaces'        : Item(status='  ', wc_rev='2'),
+    'E with spaces/alpha'  : Item(status='  ', wc_rev='2'),
+    'E with spaces/beta'   : Item(status='  ', wc_rev='2'),
+    'E with spaces/al pha' : Item(status='  ', wc_rev='2'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'E with spaces'),
+                                     os.path.join(wc_dir, 'E also spaces')
+                                     )
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'E with spaces/al pha'),
+                                     os.path.join(wc_dir, 'E also spaces/al b')
+                                     )
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'E also spaces'     : Item(verb='Adding'),
+      'E also spaces/al b': Item(verb='Adding'),
+    })
+  expected_status.add({
+      'E also spaces'     : Item(status='  ', wc_rev='3'),
+      'E also spaces/beta': Item(status='  ', wc_rev='3'),
+      'E also spaces/al b': Item(status='  ', wc_rev='3'),
+      'E also spaces/alpha': Item(status='  ', wc_rev='3'),
+      'E also spaces/al pha': Item(status='  ', wc_rev='3'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     os.path.join(wc_dir, 'E with spaces'),
+                                     os.path.join(wc_dir, 'E new spaces')
+                                     )
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     os.path.join(wc_dir, 'E new spaces/al pha'),
+                                     os.path.join(wc_dir, 'E also spaces/al c')
+                                     )
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'E with spaces'     : Item(verb='Deleting'),
+      'E also spaces/al c': Item(verb='Adding'),
+      'E new spaces'      : Item(verb='Adding'),
+      'E new spaces/al pha': Item(verb='Deleting'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'E also spaces'     : Item(status='  ', wc_rev='3'),
+      'E also spaces/beta': Item(status='  ', wc_rev='3'),
+      'E also spaces/al b': Item(status='  ', wc_rev='3'),
+      'E also spaces/al c': Item(status='  ', wc_rev='4'),
+      'E also spaces/alpha': Item(status='  ', wc_rev='3'),
+      'E also spaces/al pha': Item(status='  ', wc_rev='3'),
+      'E new spaces'      : Item(status='  ', wc_rev='4'),
+      'E new spaces/alpha': Item(status='  ', wc_rev='4'),
+      'E new spaces/beta' : Item(status='  ', wc_rev='4'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
 
 ########################################################################
 # Run the tests
@@ -4630,6 +4718,7 @@ test_list = [ None,
               copy_added_dir_with_copy,
               SkipUnless(copy_broken_symlink, svntest.main.is_posix_os),
               move_dir_containing_move,
+              copy_dir_with_space,
              ]
 
 if __name__ == '__main__':
