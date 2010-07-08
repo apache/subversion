@@ -117,9 +117,10 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue)
 static svn_error_t *
 process_committed_leaf(svn_wc__db_t *db,
                        const char *local_abspath,
+                       svn_boolean_t via_recurse,
                        svn_revnum_t new_revnum,
-                       apr_time_t new_date,
-                       const char *rev_author,
+                       apr_time_t new_changed_date,
+                       const char *new_changed_author,
                        apr_hash_t *new_dav_cache,
                        svn_boolean_t no_unlock,
                        svn_boolean_t keep_changelist,
@@ -131,6 +132,7 @@ process_committed_leaf(svn_wc__db_t *db,
   const svn_checksum_t *copied_checksum;
   const char *adm_abspath;
   const char *tmp_text_base_abspath;
+  svn_revnum_t new_changed_rev = new_revnum;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -190,26 +192,50 @@ process_committed_leaf(svn_wc__db_t *db,
          its checksum already. */
       if (checksum == NULL)
         {
-          /* It was copied and not modified. We should have a text
-             base for it. And the entry should have a checksum. */
-          if (copied_checksum != NULL)
-            {
-              checksum = copied_checksum;
-            }
-#ifdef SVN_DEBUG
-          else
-            {
-              /* If we copy a deleted file, then it will become scheduled
-                 for deletion, but there is no base text for it. So we
-                 cannot get/compute a checksum for this file. */
-              SVN_ERR_ASSERT(
-                status == svn_wc__db_status_deleted
-                || status == svn_wc__db_status_obstructed_delete);
+          /* It was copied and not modified. We must have a text
+             base for it. And the node should have a checksum. */
+          SVN_ERR_ASSERT(copied_checksum != NULL);
 
-              /* checksum will remain NULL in this one case. */
+          checksum = copied_checksum;
+
+          if (via_recurse)
+            {
+              /* If a copied node itself is not modified, but the op_root of
+                the copy is committed we have to make sure that changed_rev,
+                changed_date and changed_author don't change or the working
+                copy used for committing will show different last modified
+                information then a clean checkout of exactly the same
+                revisions. (Issue #3676) */
+
+                svn_boolean_t props_modified;
+                svn_revnum_t changed_rev;
+                const char *changed_author;
+                apr_time_t changed_date;
+
+                SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL,
+                                             NULL, &changed_rev, &changed_date,
+                                             &changed_author, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             NULL, NULL, &props_modified, NULL,
+                                             NULL, NULL, NULL,
+                                             db, local_abspath,
+                                             scratch_pool, scratch_pool));
+
+                if (!props_modified)
+                  {
+                    /* Unmodified child of copy: We keep changed_rev */
+                    new_changed_rev = changed_rev;
+                    new_changed_date = changed_date;
+                    new_changed_author = changed_author;
+                  }
             }
-#endif
         }
+    }
+  else
+    {
+      /* ### If we can determine that nothing below this node was changed
+         ### via this commit, we should keep new_changed_rev at its old
+         ### value, like how we handle files. */
     }
 
   /* Set TMP_TEXT_BASE_ABSPATH to NULL.  The new text base will be found in
@@ -219,7 +245,8 @@ process_committed_leaf(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, tmp_text_base_abspath,
                                     new_revnum,
-                                    new_date, rev_author, checksum,
+                                    new_changed_rev, new_changed_date,
+                                    new_changed_author, checksum,
                                     new_dav_cache, keep_changelist, no_unlock,
                                     scratch_pool));
 
@@ -231,6 +258,7 @@ svn_error_t *
 svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    const char *local_abspath,
                                    svn_boolean_t recurse,
+                                   svn_boolean_t top_of_recurse,
                                    svn_revnum_t new_revnum,
                                    apr_time_t new_date,
                                    const char *rev_author,
@@ -246,7 +274,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
 
-  SVN_ERR(process_committed_leaf(db, local_abspath,
+  SVN_ERR(process_committed_leaf(db, local_abspath, !top_of_recurse,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  no_unlock, keep_changelist,
@@ -337,6 +365,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
              this one committed item. */
           SVN_ERR(svn_wc__process_committed_internal(db, this_abspath,
                                                      TRUE /* recurse */,
+                                                     FALSE,
                                                      new_revnum, new_date,
                                                      rev_author,
                                                      NULL,
@@ -496,7 +525,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
         continue;
 
       SVN_ERR(svn_wc__process_committed_internal(wc_ctx->db, cqi->local_abspath,
-                                                 cqi->recurse, new_revnum,
+                                                 cqi->recurse, TRUE, new_revnum,
                                                  new_date, rev_author,
                                                  cqi->new_dav_cache,
                                                  cqi->no_unlock,
