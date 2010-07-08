@@ -257,7 +257,7 @@ class SVNTreeNode:
       path = path[1:]
 
     line = prepend
-    line += "%-20s: Item(" % ("'%s'" % path)
+    line += "%-20s: Item(" % ("'%s'" % path.replace(os.sep, '/'))
     comma = False
 
     mime_type = self.props.get("svn:mime-type")
