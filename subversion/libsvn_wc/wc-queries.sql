@@ -73,9 +73,9 @@ insert into repository (root, uuid) values (?1, ?2);
 insert or replace into base_node (
   wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
   kind, revnum, properties, changed_rev, changed_date, changed_author,
-  depth, checksum, translated_size, symlink_target)
+  depth, checksum, translated_size, symlink_target, dav_cache)
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
-        ?15, ?16);
+        ?15, ?16, ?17);
 
 -- STMT_INSERT_BASE_NODE_INCOMPLETE
 insert or ignore into base_node (

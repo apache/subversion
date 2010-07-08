@@ -455,6 +455,9 @@ svn_wc__db_from_relpath(const char **local_abspath,
    This subsystem does not use DEPTH, but it can be recorded here in
    the BASE tree for higher-level code to use.
 
+   If DAV_CACHE is not NULL, sets LOCAL_ABSPATH's dav cache to the specified
+   data.
+
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
 
@@ -476,6 +479,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const char *changed_author,
                               const apr_array_header_t *children,
                               svn_depth_t depth,
+                              apr_hash_t *dav_cache,
                               const svn_skel_t *conflict,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
@@ -500,6 +504,9 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
    by its properties) is known, then pass it as TRANSLATED_SIZE. Otherwise,
    pass SVN_INVALID_FILESIZE.
 
+   If DAV_CACHE is not NULL, sets LOCAL_ABSPATH's dav cache to the specified
+   data.
+
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
 
@@ -521,6 +528,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
                          svn_filesize_t translated_size,
+                         apr_hash_t *dav_cache,
                          const svn_skel_t *conflict,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
@@ -539,6 +547,9 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
    CHANGED_AUTHOR>.
 
    The target of the symlink is specified by TARGET.
+
+   If DAV_CACHE is not NULL, sets LOCAL_ABSPATH's dav cache to the specified
+   data.
 
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
@@ -588,6 +599,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             apr_time_t changed_date,
                             const char *changed_author,
                             const char *target,
+                            apr_hash_t *dav_cache,
                             const svn_skel_t *conflict,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
