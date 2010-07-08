@@ -2669,6 +2669,45 @@ def update_excluded_path_sticky_depths(sbox):
   }
   svntest.actions.run_and_verify_info([expected_info], B_path)
 
+
+def update_depth_empty_root_of_infinite_children(sbox):
+  """update depth=empty root of depth=infinite children"""
+
+  wc_dir, ign_a, ign_b, wc_other = set_up_depthy_working_copies(sbox,
+                                                                empty=True,
+                                                                infinity=True)
+  A_path = os.path.join(wc_dir, 'A')
+
+  # Update A to depth 'infinity'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'infinity', A_path)
+
+  # Tweak some files in the full working copy and commit.
+  svntest.main.file_append(os.path.join(wc_other, 'A', 'B', 'E', 'alpha'),
+                           "Modified alpha.\n")
+  svntest.main.file_append(os.path.join(wc_other, 'A', 'D', 'G', 'rho'),
+                           "Modified rho.\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', '', wc_other)
+
+  # Now update the original working copy and make sure we get those changes.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha'      : Item(status='U '),
+    'A/D/G/rho'        : Item(status='U '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('iota')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_disk.tweak('A/B/E/alpha', contents="This is the file 'alpha'.\nModified alpha.\n")
+  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\nModified rho.\n")
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None, wc_dir)
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2713,7 +2752,8 @@ test_list = [ None,
               tree_conflicts_resolved_depth_immediates,
               tree_conflicts_resolved_depth_infinity,
               update_excluded_path_sticky_depths,
-            ]
+              XFail(update_depth_empty_root_of_infinite_children),
+              ]
 
 if __name__ == "__main__":
   svntest.main.run_tests(test_list)
