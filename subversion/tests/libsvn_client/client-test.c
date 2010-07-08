@@ -433,6 +433,10 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
                                            pool));
 
   SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
+
+  /* Remove old test data from the previous run */
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
   SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
   svn_test_add_dir_cleanup(wc_path);
 
