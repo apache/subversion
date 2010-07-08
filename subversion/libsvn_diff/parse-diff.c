@@ -39,6 +39,81 @@
 #define starts_with(str, start)  \
   (strncmp((str), (start), strlen(start)) == 0)
 
+struct svn_hunk_t {
+  /* Hunk texts (see include/svn_diff.h). */
+  svn_stream_t *diff_text;
+  svn_stream_t *original_text;
+  svn_stream_t *modified_text;
+
+  /* Whether the hunk is being interpreted in reverse. */
+  svn_boolean_t reverse;
+
+  /* Hunk ranges as they appeared in the patch file.
+   * All numbers are lines, not bytes. */
+  svn_linenum_t original_start;
+  svn_linenum_t original_length;
+  svn_linenum_t modified_start;
+  svn_linenum_t modified_length;
+
+  /* Number of lines of leading and trailing hunk context. */
+  svn_linenum_t leading_context;
+  svn_linenum_t trailing_context;
+};
+
+svn_error_t *
+svn_diff_hunk_reset_diff_text(const svn_hunk_t *hunk)
+{
+  return svn_error_return(svn_stream_reset(hunk->diff_text));
+}
+
+svn_error_t *
+svn_diff_hunk_reset_original_text(const svn_hunk_t *hunk)
+{
+  return svn_error_return(svn_stream_reset(hunk->original_text));
+}
+
+svn_error_t *
+svn_diff_hunk_reset_modified_text(const svn_hunk_t *hunk)
+{
+  return svn_error_return(svn_stream_reset(hunk->modified_text));
+}
+
+svn_linenum_t
+svn_diff_hunk_get_original_start(const svn_hunk_t *hunk)
+{
+  return hunk->original_start;
+}
+
+svn_linenum_t
+svn_diff_hunk_get_original_length(const svn_hunk_t *hunk)
+{
+  return hunk->original_length;
+}
+
+svn_linenum_t
+svn_diff_hunk_get_modified_start(const svn_hunk_t *hunk)
+{
+  return hunk->modified_start;
+}
+
+svn_linenum_t
+svn_diff_hunk_get_modified_length(const svn_hunk_t *hunk)
+{
+  return hunk->modified_length;
+}
+
+svn_linenum_t
+svn_diff_hunk_get_leading_context(const svn_hunk_t *hunk)
+{
+  return hunk->leading_context;
+}
+
+svn_linenum_t
+svn_diff_hunk_get_trailing_context(const svn_hunk_t *hunk)
+{
+  return hunk->trailing_context;
+}
+
 /* Try to parse a positive number from a decimal number encoded
  * in the string NUMBER. Return parsed number in OFFSET, and return
  * TRUE if parsing was successful. */

@@ -613,6 +613,9 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   svn_boolean_t hunk_eof;
   svn_boolean_t lines_matched;
   apr_pool_t *iterpool;
+  svn_linenum_t original_length;
+  svn_linenum_t leading_context;
+  svn_linenum_t trailing_context;
 
   *matched = FALSE;
 
@@ -622,7 +625,10 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   saved_line = target->current_line;
   lines_read = 0;
   lines_matched = FALSE;
-  SVN_ERR(svn_stream_reset(hunk->original_text));
+  original_length = svn_diff_hunk_get_original_length(hunk);
+  leading_context = svn_diff_hunk_get_leading_context(hunk);
+  trailing_context = svn_diff_hunk_get_trailing_context(hunk);
+  SVN_ERR(svn_diff_hunk_reset_original_text(hunk));
   iterpool = svn_pool_create(pool);
   do
     {
@@ -644,10 +650,10 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
       SVN_ERR(read_line(target, &target_line, iterpool, iterpool));
       if (! hunk_eof)
         {
-          if (lines_read <= fuzz && hunk->leading_context > fuzz)
+          if (lines_read <= fuzz && leading_context > fuzz)
             lines_matched = TRUE;
-          else if (lines_read > hunk->original_length - fuzz &&
-                   hunk->trailing_context > fuzz)
+          else if (lines_read > original_length - fuzz &&
+                   trailing_context > fuzz)
             lines_matched = TRUE;
           else
             {
@@ -740,8 +746,8 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
               hi = APR_ARRAY_IDX(target->hunks, i, const hunk_info_t *);
               taken = (! hi->rejected &&
                        target->current_line >= hi->matched_line &&
-                       target->current_line < hi->matched_line +
-                                              hi->hunk->original_length);
+                       target->current_line < (hi->matched_line +
+                         svn_diff_hunk_get_original_length(hi->hunk)));
               if (taken)
                 break;
             }
@@ -779,38 +785,41 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   svn_linenum_t matched_line;
+  svn_linenum_t original_start;
+
+  original_start = svn_diff_hunk_get_original_start(hunk);
 
   /* An original offset of zero means that this hunk wants to create
    * a new file. Don't bother matching hunks in that case, since
    * the hunk applies at line 1. If the file already exists, the hunk
    * is rejected. */
-  if (hunk->original_start == 0)
+  if (original_start == 0)
     {
       if (target->kind_on_disk == svn_node_file)
         matched_line = 0;
       else
         matched_line = 1;
     }
-  else if (hunk->original_start > 0 && target->kind_on_disk == svn_node_file)
+  else if (original_start > 0 && target->kind_on_disk == svn_node_file)
     {
       svn_linenum_t saved_line = target->current_line;
 
       /* Scan for a match at the line where the hunk thinks it
        * should be going. */
-      SVN_ERR(seek_to_line(target, hunk->original_start, scratch_pool));
-      if (target->current_line != hunk->original_start)
+      SVN_ERR(seek_to_line(target, original_start, scratch_pool));
+      if (target->current_line != original_start)
         {
           /* Seek failed. */
           matched_line = 0;
         }
       else
         SVN_ERR(scan_for_match(&matched_line, target, hunk, TRUE,
-                               hunk->original_start + 1, fuzz,
+                               original_start + 1, fuzz,
                                ignore_whitespace,
                                cancel_func, cancel_baton,
                                scratch_pool));
 
-      if (matched_line != hunk->original_start)
+      if (matched_line != original_start)
         {
           /* Scan the whole file again from the start. */
           SVN_ERR(seek_to_line(target, 1, scratch_pool));
@@ -818,7 +827,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
           /* Scan forward towards the hunk's line and look for a line
            * where the hunk matches. */
           SVN_ERR(scan_for_match(&matched_line, target, hunk, FALSE,
-                                 hunk->original_start, fuzz,
+                                 original_start, fuzz,
                                  ignore_whitespace,
                                  cancel_func, cancel_baton,
                                  scratch_pool));
@@ -913,10 +922,10 @@ reject_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
   apr_pool_t *iterpool;
 
   hunk_header = apr_psprintf(pool, "@@ -%lu,%lu +%lu,%lu @@%s",
-                             hi->hunk->original_start,
-                             hi->hunk->original_length,
-                             hi->hunk->modified_start,
-                             hi->hunk->modified_length,
+                             svn_diff_hunk_get_original_start(hi->hunk),
+                             svn_diff_hunk_get_original_length(hi->hunk),
+                             svn_diff_hunk_get_modified_start(hi->hunk),
+                             svn_diff_hunk_get_modified_length(hi->hunk),
                              APR_EOL_STR);
   len = strlen(hunk_header);
   SVN_ERR(svn_stream_write(target->reject, hunk_header, &len));
@@ -972,7 +981,8 @@ apply_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
 
       /* Skip the target's version of the hunk.
        * Don't skip trailing lines which matched with fuzz. */
-      line = target->current_line + hi->hunk->original_length - (2 * hi->fuzz);
+      line = target->current_line +
+             svn_diff_hunk_get_original_length(hi->hunk) - (2 * hi->fuzz);
       SVN_ERR(seek_to_line(target, line, pool));
       if (target->current_line != line && ! target->eof)
         {
@@ -999,7 +1009,7 @@ apply_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
                                                    iterpool, iterpool));
       lines_read++;
       if (! eof && lines_read > hi->fuzz &&
-          lines_read <= hi->hunk->modified_length - hi->fuzz)
+          lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - hi->fuzz)
         {
           if (hunk_line->len >= 1)
             SVN_ERR(try_stream_write(target->patched, target->patched_path,
@@ -1095,10 +1105,14 @@ send_patch_notification(const patch_target_t *target,
                                             ? target->local_abspath
                                             : target->local_relpath,
                                         action, pool);
-          notify->hunk_original_start = hi->hunk->original_start;
-          notify->hunk_original_length = hi->hunk->original_length;
-          notify->hunk_modified_start = hi->hunk->modified_start;
-          notify->hunk_modified_length = hi->hunk->modified_length;
+          notify->hunk_original_start =
+            svn_diff_hunk_get_original_start(hi->hunk);
+          notify->hunk_original_length =
+            svn_diff_hunk_get_original_length(hi->hunk);
+          notify->hunk_modified_start =
+            svn_diff_hunk_get_modified_start(hi->hunk);
+          notify->hunk_modified_length =
+            svn_diff_hunk_get_modified_length(hi->hunk);
           notify->hunk_matched_line = hi->matched_line;
           notify->hunk_fuzz = hi->fuzz;
 
