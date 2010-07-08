@@ -171,9 +171,6 @@ make_dir_baton(struct dir_baton **d_p,
       else
         SVN_ERR(err);
 
-      if (exists)
-        SVN_ERR(svn_wc__db_node_hidden(&exists, eb->db, abspath, pool));
-
       if (pb->ambient_depth == svn_depth_empty
           || pb->ambient_depth == svn_depth_files)
         {

@@ -2752,7 +2752,7 @@ test_list = [ None,
               tree_conflicts_resolved_depth_immediates,
               tree_conflicts_resolved_depth_infinity,
               update_excluded_path_sticky_depths,
-              XFail(update_depth_empty_root_of_infinite_children),
+              update_depth_empty_root_of_infinite_children,
               ]
 
 if __name__ == "__main__":
