@@ -4627,6 +4627,34 @@ def copy_dir_with_space(sbox):
                                         expected_status,
                                         None, wc_dir)
 
+# Regression test for issue #3676
+def changed_data_should_match_checkout(sbox):
+  """changed data after commit should match checkout"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_B = os.path.join(wc_dir, 'A', 'B')
+  B_new = os.path.join(wc_dir, 'B_new')
+
+  verify_dir = sbox.add_wc_path('verify')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_B, B_new)
+
+  sbox.simple_commit(wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'co', sbox.repo_url, verify_dir)
+
+  was_cwd = os.getcwd()
+  os.chdir(verify_dir)
+
+  rv, verify_out, err = main.run_svn(None, 'status', '-v')
+
+  os.chdir(was_cwd)
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, verify_out, [], 'status', '-v')
+  os.chdir(was_cwd)
 
 ########################################################################
 # Run the tests
@@ -4719,6 +4747,7 @@ test_list = [ None,
               SkipUnless(copy_broken_symlink, svntest.main.is_posix_os),
               move_dir_containing_move,
               copy_dir_with_space,
+              XFail(changed_data_should_match_checkout),
              ]
 
 if __name__ == '__main__':
