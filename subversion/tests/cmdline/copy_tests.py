@@ -4633,6 +4633,35 @@ def changed_data_should_match_checkout(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  A_B_E = os.path.join(wc_dir, 'A', 'B', 'E')
+  E_new = os.path.join(wc_dir, 'E_new')
+
+  verify_dir = sbox.add_wc_path('verify')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_B_E, E_new)
+
+  sbox.simple_commit(wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'co', sbox.repo_url, verify_dir)
+
+  was_cwd = os.getcwd()
+  os.chdir(verify_dir)
+
+  rv, verify_out, err = main.run_svn(None, 'status', '-v')
+
+  os.chdir(was_cwd)
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, verify_out, [], 'status', '-v')
+  os.chdir(was_cwd)
+
+# Regression test for issue #3676 for copies including directories
+def changed_dir_data_should_match_checkout(sbox):
+  """changed dir after commit should match checkout"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
   A_B = os.path.join(wc_dir, 'A', 'B')
   B_new = os.path.join(wc_dir, 'B_new')
 
@@ -4747,7 +4776,8 @@ test_list = [ None,
               SkipUnless(copy_broken_symlink, svntest.main.is_posix_os),
               move_dir_containing_move,
               copy_dir_with_space,
-              XFail(changed_data_should_match_checkout),
+              changed_data_should_match_checkout,
+              XFail(changed_dir_data_should_match_checkout),
              ]
 
 if __name__ == '__main__':

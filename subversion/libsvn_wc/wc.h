@@ -242,11 +242,15 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
  * If @a sha1_checksum is non-NULL, use it instead of @a md5_checksum to
  * identify the node's pristine text.
  * ### NOT YET IMPLEMENTED.
+ *
+ * Set TOP_OF_RECURSE to TRUE to show that this the top of a possibly
+ * recursive commit operation.
  */
 svn_error_t *
 svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    const char *local_abspath,
                                    svn_boolean_t recurse,
+                                   svn_boolean_t top_of_recurse,
                                    svn_revnum_t new_revnum,
                                    apr_time_t new_date,
                                    const char *rev_author,

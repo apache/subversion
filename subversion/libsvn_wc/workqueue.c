@@ -1136,8 +1136,9 @@ log_do_committed(svn_wc__db_t *db,
                  const char *local_abspath,
                  const char *tmp_text_base_abspath,
                  svn_revnum_t new_revision,
-                 apr_time_t new_date,
-                 const char *new_author,
+                 svn_revnum_t changed_rev,
+                 apr_time_t changed_date,
+                 const char *changed_author,
                  const svn_checksum_t *new_checksum,
                  apr_hash_t *new_dav_cache,
                  svn_boolean_t keep_changelist,
@@ -1295,8 +1296,8 @@ log_do_committed(svn_wc__db_t *db,
       apr_time_t last_mod_time;
 
       SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
-                                       new_revision,
-                                       new_revision, new_date, new_author,
+                                       new_revision, changed_rev,
+                                       changed_date, changed_author,
                                        new_checksum,
                                        NULL /* new_children */,
                                        new_dav_cache,
@@ -1380,8 +1381,8 @@ log_do_committed(svn_wc__db_t *db,
   /* It's not a file, so it's a directory. */
 
   SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
-                                   new_revision,
-                                   new_revision, new_date, new_author,
+                                   new_revision, changed_rev,
+                                   changed_date, changed_author,
                                    NULL /* new_checksum */,
                                    NULL /* new_children */,
                                    new_dav_cache,
@@ -1425,9 +1426,9 @@ run_postcommit(svn_wc__db_t *db,
   const svn_skel_t *arg1 = work_item->children->next;
   const svn_skel_t *arg5 = work_item->children->next->next->next->next->next;
   const char *local_abspath;
-  svn_revnum_t new_revision;
-  apr_time_t new_date;
-  const char *new_author;
+  svn_revnum_t new_revision, changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
   const svn_checksum_t *new_checksum;
   apr_hash_t *new_dav_cache;
   svn_boolean_t keep_changelist, no_unlock;
@@ -1436,13 +1437,13 @@ run_postcommit(svn_wc__db_t *db,
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   new_revision = (svn_revnum_t)svn_skel__parse_int(arg1->next, scratch_pool);
-  new_date = svn_skel__parse_int(arg1->next->next, scratch_pool);
+  changed_date = svn_skel__parse_int(arg1->next->next, scratch_pool);
   if (arg1->next->next->next->len == 0)
-    new_author = NULL;
+    changed_author = NULL;
   else
-    new_author = apr_pstrmemdup(scratch_pool,
-                                arg1->next->next->next->data,
-                                arg1->next->next->next->len);
+    changed_author = apr_pstrmemdup(scratch_pool,
+                                    arg1->next->next->next->data,
+                                    arg1->next->next->next->len);
   if (arg5->len == 0)
     {
       new_checksum = NULL;
@@ -1476,9 +1477,15 @@ run_postcommit(svn_wc__db_t *db,
   else
     no_unlock = TRUE;
 
+  if (arg5->next->next->next->next->next)
+    changed_rev = svn_skel__parse_int(arg5->next->next->next->next->next,
+                                      scratch_pool);
+  else
+    changed_rev = new_revision; /* Behavior before fixing issue #3676 */
+
   err = log_do_committed(db, local_abspath, tmp_text_base_abspath,
-                         new_revision, new_date,
-                         new_author, new_checksum, new_dav_cache,
+                         new_revision, changed_rev, changed_date,
+                         changed_author, new_checksum, new_dav_cache,
                          keep_changelist, no_unlock,
                          cancel_func, cancel_baton,
                          scratch_pool);
@@ -1497,8 +1504,9 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           const char *local_abspath,
                           const char *tmp_text_base_abspath,
                           svn_revnum_t new_revision,
-                          apr_time_t new_date,
-                          const char *new_author,
+                          svn_revnum_t changed_rev,
+                          apr_time_t changed_date,
+                          const char *changed_author,
                           const svn_checksum_t *new_checksum,
                           apr_hash_t *new_dav_cache,
                           svn_boolean_t keep_changelist,
@@ -1507,6 +1515,7 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 {
   svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
 
+  svn_skel__prepend_int(changed_rev, work_item, scratch_pool);
   svn_skel__prepend_int(no_unlock, work_item, scratch_pool);
   svn_skel__prepend_str(tmp_text_base_abspath ? tmp_text_base_abspath : "",
                         work_item, scratch_pool);
@@ -1528,8 +1537,8 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                                                    scratch_pool, scratch_pool)
                           : "",
                         work_item, scratch_pool);
-  svn_skel__prepend_str(new_author ? new_author : "", work_item, scratch_pool);
-  svn_skel__prepend_int(new_date, work_item, scratch_pool);
+  svn_skel__prepend_str(changed_author ? changed_author : "", work_item, scratch_pool);
+  svn_skel__prepend_int(changed_date, work_item, scratch_pool);
   svn_skel__prepend_int(new_revision, work_item, scratch_pool);
   svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
   svn_skel__prepend_str(OP_POSTCOMMIT, work_item, scratch_pool);

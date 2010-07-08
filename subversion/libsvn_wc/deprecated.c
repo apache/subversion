@@ -655,7 +655,7 @@ svn_wc_process_committed4(const char *path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   wcprop_changes_hash = svn_wc__prop_array_to_hash(wcprop_changes, pool);
-  SVN_ERR(svn_wc__process_committed_internal(db, local_abspath, recurse,
+  SVN_ERR(svn_wc__process_committed_internal(db, local_abspath, recurse, TRUE,
                                              new_revnum, new_date, rev_author,
                                              wcprop_changes_hash,
                                              !remove_lock, !remove_changelist,
