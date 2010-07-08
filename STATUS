@@ -168,6 +168,14 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r961970
+   Clarify an error message.
+   Justification:
+     Makes it far easier to diagnose a faulty [auto-props] configuration.
+     One-liner.
+   Votes:
+     +1: danielsh, stsp
+
 Veto-blocked changes:
 =====================
 
