@@ -5685,7 +5685,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 
   cb.new_revision = new_revision;
 
-  cb.changed_rev = new_revision; 
+  cb.changed_rev = changed_revision; 
   cb.changed_date = changed_date;
   cb.changed_author = changed_author;
   cb.new_checksum = new_checksum;
