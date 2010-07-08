@@ -33,6 +33,8 @@
 #include "svn_dirent_uri.h"
 #include "svn_diff.h"
 
+#include "private/svn_eol_private.h"
+
 /* Helper macro for readability */
 #define starts_with(str, start)  \
   (strncmp((str), (start), strlen(start)) == 0)
@@ -184,85 +186,229 @@ parse_hunk_header(const char *header, svn_hunk_t *hunk,
   return TRUE;
 }
 
-/* A stream line-filter which allows only original text from a hunk,
- * and filters special lines (which start with a backslash). */
+/* Set *EOL to the first end-of-line string found in the stream
+ * accessed through READ_FN, MARK_FN and SEEK_FN, whose stream baton
+ * is BATON.  Leave the stream read position unchanged.
+ * Allocate *EOL statically; POOL is a scratch pool. */
 static svn_error_t *
-original_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
-                     apr_pool_t *scratch_pool)
+scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
 {
-  *filtered = (line[0] == '+' || line[0] == '\\');
+  const char *eol_str;
+  svn_stream_mark_t *mark;
+
+  SVN_ERR(svn_stream_mark(stream, &mark, pool));
+
+  eol_str = NULL;
+  while (! eol_str)
+    {
+      char buf[512];
+      apr_size_t len;
+
+      len = sizeof(buf);
+      SVN_ERR(svn_stream_read(stream, buf, &len));
+      if (len == 0)
+        break; /* EOF */
+      eol_str = svn_eol__detect_eol(buf, buf + len);
+    }
+
+  SVN_ERR(svn_stream_seek(stream, mark));
+
+  *eol = eol_str;
+
   return SVN_NO_ERROR;
 }
 
-/* A stream line-filter which allows only modified text from a hunk,
- * and filters special lines (which start with a backslash). */
+/* A helper function similar to svn_stream_readline(), suitable for reading
+ * lines from a STREAM which has been mapped onto a hunk region within a
+ * unidiff patch file.
+ *
+ * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from STREAM.
+ *
+ * The line-terminator is detected automatically and stored in *EOL
+ * if EOL is not NULL. If EOF is reached and the stream does not end
+ * with a newline character, and EOL is not NULL, *EOL is set to NULL.
+ *
+ * STREAM is expected to contain unidiff text.
+ * If PLAIN_DIFF is TRUE, return unidiff text read from STREAM unmodified.
+ * If PLAIN_DIFF is FALSE, shave off leading unidiff symbols ('+', '-', 
+ * and ' ') from the line, and discard any lines commencing with the
+ * VERBOTEN character. VERBOTEN should be '+' or '-', and is ignored if
+ * PLAIN_DIFF is TRUE.
+ *
+ * SCRATCH_POOL is used for temporary allocations.
+ */
 static svn_error_t *
-modified_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
-                     apr_pool_t *scratch_pool)
+readline(svn_stream_t *stream,
+         svn_stringbuf_t **stringbuf,
+         const char **eol,
+         svn_boolean_t *eof,
+         char verboten,
+         svn_boolean_t plain_diff,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool)
 {
-  *filtered = (line[0] == '-' || line[0] == '\\');
-  return SVN_NO_ERROR;
-}
+  svn_stringbuf_t *str;
+  apr_pool_t *iterpool;
+  svn_boolean_t filtered;
+  const char *eol_str;
 
-/** line-transformer callback to shave leading diff symbols. */
-static svn_error_t *
-remove_leading_char_transformer(svn_stringbuf_t **buf,
-                                const char *line,
-                                void *baton,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
-{
-  if (line[0] == '+' || line[0] == '-' || line[0] == ' ')
-    *buf = svn_stringbuf_create(line + 1, result_pool);
+  *eof = FALSE;
+
+  iterpool = svn_pool_create(scratch_pool);
+  do
+    {
+      apr_size_t numbytes;
+      const char *match;
+      char c;
+
+      svn_pool_clear(iterpool);
+
+      /* Since we're reading one character at a time, let's at least
+         optimize for the 90% case.  90% of the time, we can avoid the
+         stringbuf ever having to realloc() itself if we start it out at
+         80 chars.  */
+      str = svn_stringbuf_create_ensure(80, iterpool);
+
+      SVN_ERR(scan_eol(&eol_str, stream, iterpool));
+      if (eol)
+        *eol = eol_str;
+      if (eol_str == NULL)
+        {
+          /* No newline until EOF, EOL_STR can be anything. */
+          eol_str = APR_EOL_STR;
+        }
+
+      /* Read into STR up to and including the next EOL sequence. */
+      match = eol_str;
+      numbytes = 1;
+      while (*match)
+        {
+          SVN_ERR(svn_stream_read(stream, &c, &numbytes));
+          if (numbytes != 1)
+            {
+              /* a 'short' read means the stream has run out. */
+              *eof = TRUE;
+              /* We know we don't have a whole EOL sequence, but ensure we
+               * don't chop off any partial EOL sequence that we may have. */
+              match = eol_str;
+              /* Process this short (or empty) line just like any other
+               * except with *EOF set. */
+              break;
+            }
+
+          if (c == *match)
+            match++;
+          else
+            match = eol_str;
+
+          svn_stringbuf_appendbytes(str, &c, 1);
+        }
+
+      svn_stringbuf_chop(str, match - eol_str);
+      filtered = (plain_diff == FALSE &&
+                  (str->data[0] == verboten || str->data[0] == '\\'));
+    }
+  while (filtered && ! *eof);
+  /* Not destroying the iterpool just yet since we still need STR
+   * which is allocated in it. */
+
+  if (filtered)
+    {
+      /* EOF, return an empty string. */
+      *stringbuf = svn_stringbuf_create_ensure(0, result_pool);
+    }
+  else if (! plain_diff &&
+           (str->data[0] == '+' || str->data[0] == '-' || str->data[0] == ' '))
+    {
+      /* Shave off leading unidiff symbols. */
+      *stringbuf = svn_stringbuf_create(str->data + 1, result_pool);
+    }
   else
-    *buf = svn_stringbuf_create(line, result_pool);
+    {
+      /* Return the line as-is. */
+      *stringbuf = svn_stringbuf_dup(str, result_pool);
+    }
+
+  /* Done. RIP iterpool. */
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
 
-/** line-transformer callback to reverse a diff text. */
-static svn_error_t *
-reverse_diff_transformer(svn_stringbuf_t **buf,
-                         const char *line,
-                         void *baton,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+svn_error_t *
+svn_diff_hunk_readline_original_text(const svn_hunk_t *hunk,
+                                     svn_stringbuf_t **stringbuf,
+                                     const char **eol,
+                                     svn_boolean_t *eof,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
 {
-  svn_hunk_t hunk;
+  return svn_error_return(readline(hunk->original_text, stringbuf, eol, eof,
+                                   hunk->reverse ? '-' : '+',
+                                   FALSE, result_pool, scratch_pool));
+}
 
-  /* ### Pass the already parsed hunk via the baton?
-   * ### Maybe we should really make svn_stream_readline() a proper stream
-   * ### method and override it instead of adding special callbacks? */
-  if (parse_hunk_header(line, &hunk, "@@", FALSE, scratch_pool))
+svn_error_t *
+svn_diff_hunk_readline_modified_text(const svn_hunk_t *hunk,
+                                     svn_stringbuf_t **stringbuf,
+                                     const char **eol,
+                                     svn_boolean_t *eof,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  return svn_error_return(readline(hunk->modified_text, stringbuf, eol, eof,
+                                   hunk->reverse ? '+' : '-',
+                                   FALSE, result_pool, scratch_pool));
+}
+
+svn_error_t *
+svn_diff_hunk_readline_diff_text(const svn_hunk_t *hunk,
+                                 svn_stringbuf_t **stringbuf,
+                                 const char **eol,
+                                 svn_boolean_t *eof,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_hunk_t dummy;
+  svn_stringbuf_t *line;
+
+  SVN_ERR(readline(hunk->diff_text, &line, eol, eof, '\0', TRUE,
+                   result_pool, scratch_pool));
+  
+  if (hunk->reverse)
     {
-      *buf = svn_stringbuf_createf(result_pool,
-                                   "@@ -%lu,%lu +%lu,%lu @@",
-                                   hunk.modified_start,
-                                   hunk.modified_length,
-                                   hunk.original_start,
-                                   hunk.original_length);
-    }
-  else if (parse_hunk_header(line, &hunk, "##", FALSE, scratch_pool))
-    {
-      *buf = svn_stringbuf_createf(result_pool,
-                                   "## -%lu,%lu +%lu,%lu ##",
-                                   hunk.modified_start,
-                                   hunk.modified_length,
-                                   hunk.original_start,
-                                   hunk.original_length);
-    }
-  else if (line[0] == '+')
-    {
-      *buf = svn_stringbuf_create(line, result_pool);
-      (*buf)->data[0] = '-';
-    }
-  else if (line[0] == '-')
-    {
-      *buf = svn_stringbuf_create(line, result_pool);
-      (*buf)->data[0] = '+';
+      if (parse_hunk_header(line->data, &dummy, "@@", FALSE, scratch_pool))
+        {
+          /* Line is a hunk header, reverse it. */
+          *stringbuf = svn_stringbuf_createf(result_pool,
+                                             "@@ -%lu,%lu +%lu,%lu @@",
+                                             hunk->modified_start,
+                                             hunk->modified_length,
+                                             hunk->original_start,
+                                             hunk->original_length);
+        }
+      else if (parse_hunk_header(line->data, &dummy, "##", FALSE, scratch_pool))
+        {
+          /* Line is a hunk header, reverse it. */
+          *stringbuf = svn_stringbuf_createf(result_pool,
+                                             "## -%lu,%lu +%lu,%lu ##",
+                                             hunk->modified_start,
+                                             hunk->modified_length,
+                                             hunk->original_start,
+                                             hunk->original_length);
+        }
+      else
+        {
+          if (line->data[0] == '+')
+            line->data[0] = '-';
+          else if (line->data[0] == '-')
+            line->data[0] = '+';
+
+          *stringbuf = line;
+        }
     }
   else
-    *buf = svn_stringbuf_create(line, result_pool);
+    *stringbuf = line;
 
   return SVN_NO_ERROR;
 }
@@ -515,9 +661,6 @@ parse_next_hunk(svn_hunk_t **hunk,
       original_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
                                                              start, end,
                                                              result_pool);
-      svn_stream_set_line_filter_callback(original_text, original_line_filter);
-      svn_stream_set_line_transformer_callback(original_text,
-                                               remove_leading_char_transformer);
 
       /* Create a stream which returns the modified hunk text. */
       SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
@@ -525,15 +668,11 @@ parse_next_hunk(svn_hunk_t **hunk,
       modified_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
                                                              start, end,
                                                              result_pool);
-      svn_stream_set_line_filter_callback(modified_text, modified_line_filter);
-      svn_stream_set_line_transformer_callback(modified_text,
-                                               remove_leading_char_transformer);
-      /* Set the hunk's texts. */
+
       (*hunk)->diff_text = diff_text;
+      (*hunk)->reverse = reverse;
       if (reverse)
         {
-          svn_stream_set_line_transformer_callback(diff_text,
-                                                   reverse_diff_transformer);
           (*hunk)->original_text = modified_text;
           (*hunk)->modified_text = original_text;
         }

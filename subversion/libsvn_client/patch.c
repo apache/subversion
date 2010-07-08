@@ -630,9 +630,10 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline_detect_eol(hunk->original_text,
-                                             &hunk_line, NULL,
-                                             &hunk_eof, iterpool));
+      SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_line,
+                                                   NULL, &hunk_eof,
+                                                   iterpool, iterpool));
+
       /* Contract keywords, if any, before matching. */
       SVN_ERR(svn_subst_translate_cstring2(hunk_line->data,
                                            &hunk_line_translated,
@@ -675,8 +676,9 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
     {
       /* If the target has no newline at end-of-file, we get an EOF
        * indication for the target earlier than we do get it for the hunk. */
-      SVN_ERR(svn_stream_readline_detect_eol(hunk->original_text, &hunk_line,
-                                             NULL, &hunk_eof, iterpool));
+      SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_line,
+                                                   NULL, &hunk_eof,
+                                                   iterpool, iterpool));
       if (hunk_line->len == 0 && hunk_eof)
         *matched = lines_matched;
       else
@@ -927,8 +929,8 @@ reject_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline_detect_eol(hi->hunk->diff_text, &hunk_line,
-                                             &eol_str, &eof, iterpool));
+      SVN_ERR(svn_diff_hunk_readline_diff_text(hi->hunk, &hunk_line, &eol_str,
+                                               &eof, iterpool, iterpool));
       if (! eof)
         {
           if (hunk_line->len >= 1)
@@ -992,9 +994,9 @@ apply_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline_detect_eol(hi->hunk->modified_text,
-                                             &hunk_line, &eol_str,
-                                             &eof, iterpool));
+      SVN_ERR(svn_diff_hunk_readline_modified_text(hi->hunk, &hunk_line,
+                                                   &eol_str, &eof,
+                                                   iterpool, iterpool));
       lines_read++;
       if (! eof && lines_read > hi->fuzz &&
           lines_read <= hi->hunk->modified_length - hi->fuzz)
