@@ -400,7 +400,7 @@ INSERT OR REPLACE INTO BASE_NODE (
   changed_author, properties, repos_id, repos_relpath, checksum, changed_date,
   depth, symlink_target, dav_cache)
 /* NOTE: ?6 is duplicated because we insert the same value in two columns.  */
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15);
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16);
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_NODE
 INSERT INTO WORKING_NODE (

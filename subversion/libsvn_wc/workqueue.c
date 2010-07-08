@@ -1295,6 +1295,7 @@ log_do_committed(svn_wc__db_t *db,
       apr_time_t last_mod_time;
 
       SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
+                                       new_revision,
                                        new_revision, new_date, new_author,
                                        new_checksum,
                                        NULL /* new_children */,
@@ -1379,6 +1380,7 @@ log_do_committed(svn_wc__db_t *db,
   /* It's not a file, so it's a directory. */
 
   SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
+                                   new_revision,
                                    new_revision, new_date, new_author,
                                    NULL /* new_checksum */,
                                    NULL /* new_children */,
