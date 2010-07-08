@@ -60,6 +60,9 @@ svn_eol__find_eol_start(char *buf, apr_size_t len);
  *
  * The returned string is statically allocated.
  *
+ * ### [JAF] Does it make sense for this to use "[buf, end)" while
+ *     svn_eol__find_eol_start() uses "buf, len"?
+ *
  * @since New in 1.7
  */
 const char *
@@ -77,6 +80,14 @@ svn_eol__detect_eol(char *buf, char *endp);
  *
  * The string @a *eol is statically allocated.
  * Do temporary allocations in @a pool.
+ *
+ * ### [JAF] Apparent bug: implementation suffers from the "one byte of a
+ *     two-byte sequence" issue noted for svn_eol__detect_eol().
+ *
+ * ### [JAF] Apparent bug: if file pointer is at EOF, returns "success"
+ *     without initializing @a *eol.
+ *
+ * ### [JAF] Wouldn't it make more sense to accept a stream than a file?
  *
  * @since New in 1.7 */
 svn_error_t *
