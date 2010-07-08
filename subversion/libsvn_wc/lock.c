@@ -314,10 +314,17 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
       /* If the db already owns a lock, we can't add an extra lock record */
       SVN_ERR(svn_wc__db_temp_own_lock(&owns_lock, db, path, scratch_pool));
 
-      if (!owns_lock)
-        SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, 0, scratch_pool));
+      /* If DB owns the lock, but when there is no access baton open for this
+         directory, old access baton based code is trying to access data that
+         was previously locked by new code. Just hand them the lock, or
+         important code paths like svn_wc_add3() will start failing */
+      if (!owns_lock
+          || svn_wc__adm_retrieve_internal2(db, lock->abspath, scratch_pool))
+        {
+          SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, 0, scratch_pool));
 
-      SVN_ERR(svn_wc__db_temp_mark_locked(db, lock->abspath, scratch_pool));
+          SVN_ERR(svn_wc__db_temp_mark_locked(db, lock->abspath, scratch_pool));
+        }
     }
 
   err = add_to_shared(lock, scratch_pool);
