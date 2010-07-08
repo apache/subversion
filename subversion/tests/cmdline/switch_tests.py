@@ -1274,7 +1274,8 @@ def forced_switch(sbox):
                                         '--force')
 
 #----------------------------------------------------------------------
-
+# This test currently XFails for serf as the different order of
+# operations is not handled here.
 def forced_switch_failures(sbox):
   "forced switch detects tree conflicts"
   #  svntest.factory.make(sbox,
@@ -3030,7 +3031,8 @@ test_list = [ None,
               switch_change_repos_root,
               relocate_and_propset,
               forced_switch,
-              forced_switch_failures,
+              XFail(forced_switch_failures,
+                    svntest.main.is_ra_type_dav_serf),
               switch_scheduled_add,
               SkipUnless(mergeinfo_switch_elision, server_has_mergeinfo),
               switch_with_obstructing_local_adds,
