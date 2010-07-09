@@ -742,16 +742,8 @@ parse_next_hunk(svn_hunk_t **hunk,
 
       (*hunk)->diff_text = diff_text;
       (*hunk)->reverse = reverse;
-      if (reverse)
-        {
-          (*hunk)->original_text = modified_text;
-          (*hunk)->modified_text = original_text;
-        }
-      else
-        {
-          (*hunk)->original_text = original_text;
-          (*hunk)->modified_text = modified_text;
-        }
+      (*hunk)->original_text = original_text;
+      (*hunk)->modified_text = modified_text;
       (*hunk)->leading_context = leading_context;
       (*hunk)->trailing_context = trailing_context;
     }
