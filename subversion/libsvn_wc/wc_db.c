@@ -2867,19 +2867,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
         *copyfrom_relpath = svn_relpath_join(*copyfrom_relpath, base_name,
                                              result_pool);
     }
-  else if (*status != svn_wc__db_status_added)
-    {
-      *copyfrom_relpath = repos_relpath;
-      *copyfrom_rev = revision;
-      if (!repos_root_url || !repos_uuid)
-        SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url, &repos_uuid,
-                                           db, local_abspath,
-                                           scratch_pool, scratch_pool));
-      SVN_ERR(create_repos_id(copyfrom_id,
-                              repos_root_url, repos_uuid,
-                              pdh->wcroot->sdb, scratch_pool));
-    }
-  else
+  else if (*status == svn_wc__db_status_added)
     {
       const char *op_root_abspath;
       const char *original_repos_relpath, *original_root_url, *original_uuid;
@@ -2914,6 +2902,65 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
           *copyfrom_rev = SVN_INVALID_REVNUM;
           *copyfrom_id = 0;
         }
+    }
+  else if (*status == svn_wc__db_status_deleted)
+    {
+      const char *work_del_abspath;
+      const char *base_del_abspath;
+
+      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
+                                       NULL, &work_del_abspath,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+      if (work_del_abspath)
+        {
+          const char *op_root_abspath;
+          const char *original_repos_relpath, *original_root_url;
+          const char *original_uuid;
+          svn_revnum_t original_revision;
+          const char *parent_del_abspath = svn_dirent_dirname(work_del_abspath,
+                                                              scratch_pool);
+
+          /* Similar to, but not the same as, the _scan_addition and
+             _join above.  Can we use get_copyfrom here? */
+          SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath,
+                                           NULL /* repos_relpath */,
+                                           NULL /* repos_root_url */,
+                                           NULL /* repos_uuid */,
+                                           &original_repos_relpath,
+                                           &original_root_url, &original_uuid,
+                                           &original_revision,
+                                           db, parent_del_abspath,
+                                           scratch_pool, scratch_pool));
+          *copyfrom_relpath
+            = svn_relpath_join(original_repos_relpath,
+                               svn_dirent_skip_ancestor(op_root_abspath,
+                                                        local_abspath),
+                               scratch_pool);
+          *copyfrom_rev = original_revision;
+          SVN_ERR(create_repos_id(copyfrom_id,
+                                  original_root_url, original_uuid,
+                                  pdh->wcroot->sdb, scratch_pool));
+        }
+      else
+        {
+          if (!repos_root_url || !repos_uuid)
+            SVN_ERR(svn_wc__db_scan_base_repos(NULL,
+                                               &repos_root_url, &repos_uuid,
+                                               db, local_abspath,
+                                               scratch_pool, scratch_pool));
+          SVN_ERR(create_repos_id(copyfrom_id,
+                                  repos_root_url, repos_uuid,
+                                  pdh->wcroot->sdb, scratch_pool));
+        }
+    }
+  else
+    {
+      *copyfrom_relpath = repos_relpath;
+      *copyfrom_rev = revision;
+      SVN_ERR(create_repos_id(copyfrom_id,
+                              repos_root_url, repos_uuid,
+                              pdh->wcroot->sdb, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -8148,6 +8195,67 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Return the copyfrom info for LOCAL_ABSPATH resolving inheritance. */
+static svn_error_t *
+get_copyfrom(apr_int64_t *copyfrom_repos_id,
+             const char **copyfrom_relpath,
+             svn_revnum_t *copyfrom_revnum,
+             svn_wc__db_t *db,
+             const char *local_abspath,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath,
+                                             db, local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    {
+      *copyfrom_repos_id = 0;  /* What's a good value to return? */
+      *copyfrom_relpath = NULL;
+      *copyfrom_revnum = SVN_INVALID_REVNUM;
+      SVN_ERR(svn_sqlite__reset(stmt));
+      return SVN_NO_ERROR;
+    }
+
+  if (svn_sqlite__column_is_null(stmt, 9 /* copyfrom_repos_id */))
+    {
+      /* Resolve inherited copyfrom */
+      const char *parent_abspath, *name, *parent_copyfrom_relpath;
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+      svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
+      SVN_ERR(get_copyfrom(copyfrom_repos_id, &parent_copyfrom_relpath,
+                           copyfrom_revnum,
+                           db, parent_abspath, scratch_pool, scratch_pool));
+      if (parent_copyfrom_relpath)
+        *copyfrom_relpath = svn_relpath_join(parent_copyfrom_relpath, name,
+                                             scratch_pool);
+      else
+        *copyfrom_relpath = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  *copyfrom_repos_id = svn_sqlite__column_int64(stmt, 9);
+  *copyfrom_relpath = svn_sqlite__column_text(stmt, 10, scratch_pool);
+  *copyfrom_revnum = svn_sqlite__column_revnum(stmt, 11);
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
@@ -8163,13 +8271,10 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
   svn_revnum_t original_revision;
   const char *parent_abspath;
   const char *name;
-  svn_error_t *err;
-  const char *op_root_abspath;
+  apr_int64_t parent_repos_id;
   const char *parent_repos_relpath;
-  const char *parent_uuid;
   svn_revnum_t parent_revision;
   const char *implied_relpath;
-  const char *original_uuid;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -8197,27 +8302,13 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  /* If this node is copied/moved, then there MUST be a parent. The above
-     copyfrom values cannot be set on a wcroot.  */
   svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
-  err = svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL, NULL,
-                                 &parent_repos_relpath,
-                                 NULL,
-                                 &parent_uuid,
-                                 &parent_revision,
-                                 db, parent_abspath,
-                                 scratch_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
-      svn_error_clear(err);
 
-      /* ### hunh? sometimes the parent is missing? stupid semi-stable
-         ### state crap, probably. don't bother trying to reset the
-         ### copyfrom data for this case.  */
-      return SVN_NO_ERROR;
-    }
+  SVN_ERR(get_copyfrom(&parent_repos_id, &parent_repos_relpath,
+                       &parent_revision,
+                       db, parent_abspath, scratch_pool, scratch_pool));
+  if (parent_revision == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   /* Now we need to determine if the child's values are derivable from
      the parent values.  */
@@ -8238,19 +8329,11 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
   /* Given the relpath from OP_ROOT_ABSPATH down to LOCAL_ABSPATH, compute
      an implied REPOS_RELPATH. If that does not match the RELPATH we found,
      then we can exit (the child is a new copy root).  */
-  implied_relpath = svn_relpath_join(parent_repos_relpath,
-                                     svn_dirent_skip_ancestor(op_root_abspath,
-                                                              local_abspath),
-                                     scratch_pool);
+  implied_relpath = svn_relpath_join(parent_repos_relpath, name, scratch_pool);
   if (strcmp(implied_relpath, original_repos_relpath) != 0)
     return SVN_NO_ERROR;
 
-  /* Everything matches up. Grab the details for ORIGINAL_REPOS_ID and
-     compare to the parent.  */
-  SVN_ERR(fetch_repos_info(NULL, &original_uuid,
-                           pdh->wcroot->sdb, original_repos_id,
-                           scratch_pool));
-  if (strcmp(original_uuid, parent_uuid) != 0)
+  if (original_repos_id != parent_repos_id)
     return SVN_NO_ERROR;
 
   /* The child's copyfrom information is derivable from the parent.

@@ -4504,10 +4504,27 @@ def move_dir_containing_move(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      sbox.ospath('A/B/E'),
-                                     sbox.ospath('A/B/E_moved'))
+                                     sbox.ospath('A/B/E_tmp'))
 
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+      'A/B/E_tmp'             : Item(status='A ', copied='+', wc_rev='-'),
+      # alpha has a revision that isn't reported by status.
+      'A/B/E_tmp/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
+      'A/B/E_tmp/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B/E_tmp/beta'        : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B/E_tmp'),
+                                     sbox.ospath('A/B/E_moved'))
+  expected_status.remove('A/B/E_tmp',
+                         'A/B/E_tmp/alpha',
+                         'A/B/E_tmp/alpha_moved',
+                         'A/B/E_tmp/beta')
   expected_status.add({
       'A/B/E_moved'             : Item(status='A ', copied='+', wc_rev='-'),
       # alpha has a revision that isn't reported by status.
