@@ -1325,6 +1325,10 @@ def merge_in_new_file_and_diff(sbox):
 
   # Finally, run diff.
   expected_output = [
+    "Index: " + url_branch_path + "\n",
+    "===================================================================\n",
+    "--- "+ url_branch_path + "\t(revision 2)\n",
+    "+++ "+ url_branch_path + "\t(working copy)\n",
     "\n",
     "Property changes on: " + branch_path + "\n",
     "___________________________________________________________________\n",
