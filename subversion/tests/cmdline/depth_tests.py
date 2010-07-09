@@ -1045,6 +1045,10 @@ def diff_in_depthy_wc(sbox):
     "@@ -1 +1 @@\n",
     "-new text\n",
     "+This is the file 'mu'.\n",
+    "Index: A\n",
+    "===================================================================\n",
+    "--- A\t(revision 2)\n",
+    "+++ A\t(working copy)\n",
     "\n",
     "Property changes on: A\n",
     "___________________________________________________________________\n",
@@ -1058,6 +1062,10 @@ def diff_in_depthy_wc(sbox):
     "@@ -1 +1 @@\n",
     "-new text\n",
     "+This is the file 'iota'.\n",
+    "Index: .\n",
+    "===================================================================\n",
+    "--- .\t(revision 2)\n",
+    "+++ .\t(working copy)\n",
     "\n",
     "Property changes on: .\n",
     "___________________________________________________________________\n",
@@ -1067,7 +1075,7 @@ def diff_in_depthy_wc(sbox):
 
   os.chdir(wc_empty)
 
-  expected_output = svntest.verify.UnorderedOutput(diff[20:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[24:])
   # The diff should contain only the propchange on '.'
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
@@ -1077,11 +1085,11 @@ def diff_in_depthy_wc(sbox):
                                      '--set-depth', 'files', '-r1')
   # The diff should contain only the propchange on '.' and the
   # contents change on iota.
-  expected_output = svntest.verify.UnorderedOutput(diff[13:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[17:])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth empty.
-  expected_output = svntest.verify.UnorderedOutput(diff[20:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[24:])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'empty', '-rHEAD')
 
@@ -1090,11 +1098,11 @@ def diff_in_depthy_wc(sbox):
                                      '--set-depth', 'immediates', '-r1')
   # The diff should contain the propchanges on '.' and 'A' and the
   # contents change on iota.
-  expected_output = svntest.verify.UnorderedOutput(diff[7:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[7:])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '-rHEAD')
   # Do a diff at --depth files.
-  expected_output = svntest.verify.UnorderedOutput(diff[13:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[17:])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'files', '-rHEAD')
 
