@@ -293,34 +293,32 @@ scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* A helper function similar to svn_stream_readline(), suitable for reading
- * lines from a STREAM which has been mapped onto a hunk region within a
- * unidiff patch file.
+/* A helper function similar to svn_stream_readline_detect_eol(),
+ * suitable for reading original or modified hunk text from a STREAM
+ * which has been mapped onto a hunk region within a unidiff patch file.
  *
  * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from STREAM.
+ *
+ * STREAM is expected to contain unidiff text.
+ * Leading unidiff symbols ('+', '-', and ' ') are removed from the line,
+ * Any lines commencing with the VERBOTEN character are discarded.
+ * VERBOTEN should be '+' or '-', depending on which form of hunk text
+ * is being read.
  *
  * The line-terminator is detected automatically and stored in *EOL
  * if EOL is not NULL. If EOF is reached and the stream does not end
  * with a newline character, and EOL is not NULL, *EOL is set to NULL.
  *
- * STREAM is expected to contain unidiff text.
- * If PLAIN_DIFF is TRUE, return unidiff text read from STREAM unmodified.
- * If PLAIN_DIFF is FALSE, shave off leading unidiff symbols ('+', '-', 
- * and ' ') from the line, and discard any lines commencing with the
- * VERBOTEN character. VERBOTEN should be '+' or '-', and is ignored if
- * PLAIN_DIFF is TRUE.
- *
  * SCRATCH_POOL is used for temporary allocations.
  */
 static svn_error_t *
-readline(svn_stream_t *stream,
-         svn_stringbuf_t **stringbuf,
-         const char **eol,
-         svn_boolean_t *eof,
-         char verboten,
-         svn_boolean_t plain_diff,
-         apr_pool_t *result_pool,
-         apr_pool_t *scratch_pool)
+hunk_readline(svn_stream_t *stream,
+              svn_stringbuf_t **stringbuf,
+              const char **eol,
+              svn_boolean_t *eof,
+              char verboten,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *str;
   apr_pool_t *iterpool;
@@ -380,8 +378,7 @@ readline(svn_stream_t *stream,
         }
 
       svn_stringbuf_chop(str, match - eol_str);
-      filtered = (plain_diff == FALSE &&
-                  (str->data[0] == verboten || str->data[0] == '\\'));
+      filtered = (str->data[0] == verboten || str->data[0] == '\\');
     }
   while (filtered && ! *eof);
   /* Not destroying the iterpool just yet since we still need STR
@@ -392,8 +389,7 @@ readline(svn_stream_t *stream,
       /* EOF, return an empty string. */
       *stringbuf = svn_stringbuf_create_ensure(0, result_pool);
     }
-  else if (! plain_diff &&
-           (str->data[0] == '+' || str->data[0] == '-' || str->data[0] == ' '))
+  else if (str->data[0] == '+' || str->data[0] == '-' || str->data[0] == ' ')
     {
       /* Shave off leading unidiff symbols. */
       *stringbuf = svn_stringbuf_create(str->data + 1, result_pool);
@@ -418,9 +414,9 @@ svn_diff_hunk_readline_original_text(const svn_hunk_t *hunk,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(readline(hunk->original_text, stringbuf, eol, eof,
-                                   hunk->reverse ? '-' : '+',
-                                   FALSE, result_pool, scratch_pool));
+  return svn_error_return(hunk_readline(hunk->original_text, stringbuf,
+                                        eol, eof, hunk->reverse ? '-' : '+',
+                                        result_pool, scratch_pool));
 }
 
 svn_error_t *
@@ -431,9 +427,9 @@ svn_diff_hunk_readline_modified_text(const svn_hunk_t *hunk,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(readline(hunk->modified_text, stringbuf, eol, eof,
-                                   hunk->reverse ? '+' : '-',
-                                   FALSE, result_pool, scratch_pool));
+  return svn_error_return(hunk_readline(hunk->modified_text, stringbuf,
+                                        eol, eof, hunk->reverse ? '+' : '-',
+                                        result_pool, scratch_pool));
 }
 
 svn_error_t *
@@ -447,8 +443,8 @@ svn_diff_hunk_readline_diff_text(const svn_hunk_t *hunk,
   svn_hunk_t dummy;
   svn_stringbuf_t *line;
 
-  SVN_ERR(readline(hunk->diff_text, &line, eol, eof, '\0', TRUE,
-                   result_pool, scratch_pool));
+  SVN_ERR(svn_stream_readline_detect_eol(hunk->diff_text, &line, eol, eof,
+                                         result_pool));
   
   if (hunk->reverse)
     {
