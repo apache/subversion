@@ -973,13 +973,13 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
 
   if (status == svn_wc__db_status_deleted)
     {
-      const char *work_del_abspath = NULL;
-      const char *base_del_abspath = NULL;
+      const char *work_del_abspath;
+      const char *base_del_abspath;
 
       SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
                                        NULL, &work_del_abspath, wc_ctx->db,
                                        local_abspath, scratch_pool,
-                                       result_pool));
+                                       scratch_pool));
       if (work_del_abspath)
         {
           SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, NULL, NULL,
