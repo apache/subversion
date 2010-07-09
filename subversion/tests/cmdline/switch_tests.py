@@ -38,6 +38,7 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
+from externals_tests import change_external
 
 
 ### Bummer.  It would be really nice to have easy access to the URL
@@ -3005,6 +3006,33 @@ def copy_with_switched_subdir(sbox):
   # should either be the tree of E, or nothing at all.
   svntest.actions.run_and_verify_status(wc_dir, state)
 
+### regression test for issue #3597
+def relocate_with_relative_externals(sbox):
+  "relocate a directory containing relative externals"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a relative external.
+  change_external(os.path.join(wc_dir, 'A', 'B'), "^/A/D/G G-ext", commit=True)
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+  
+  # Move our repository to another location.
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 2, 0)
+  svntest.main.safe_rmtree(repo_dir, 1)
+
+  # Now relocate our working copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+
+  # Check the URL of the external -- was it updated to point to the
+  # .other repository URL?
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/G$' }],
+                                      os.path.join(wc_dir, 'A', 'B', 'G-ext'))
+
 
 ########################################################################
 # Run the tests
@@ -3050,7 +3078,8 @@ test_list = [ None,
               single_file_relocate,
               relocate_with_switched_children,
               XFail(copy_with_switched_subdir),
-             ]
+              XFail(relocate_with_relative_externals),
+              ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)
