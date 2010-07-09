@@ -860,6 +860,9 @@ migrate_locks(const char *wcroot_abspath,
 
 struct bump_baton {
   const char *wcroot_abspath;
+#ifdef SINGLE_DB
+  const char *single_db_wcroot_abspath;
+#endif
 };
 
 /* */
@@ -1134,6 +1137,74 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 }
 
 
+#ifdef SINGLE_DB
+/* Migrate one directory to a Single DB (per WC): if this is a subdirectory,
+ * move all of its DB rows and pristine texts to the real WC-root.
+ *
+ * ### JAF: This is experimental code for others to use or ignore until I
+ *          get back to it.  It may need to be re-written in a completely
+ *          different way.  Especially, it probably wants to be moved from
+ *          the auto-upgrade code path to the manual-upgrade code path.
+ *          How to make the caller provide the BATON->wcroot_abspath and
+ */
+static svn_error_t *
+bump_to_19(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  struct bump_baton *bb = baton;
+  const char *this_wc_dir_abspath = bb->wcroot_abspath;
+  const char *single_db_wcroot_abspath = bb->single_db_wcroot_abspath;
+  const char *this_wc_dir_relpath
+    = svn_relpath_is_child(single_db_wcroot_abspath, this_wc_dir_abspath,
+                           scratch_pool);
+  const char *parent_wc_dir_relpath
+    = svn_relpath_dirname(this_wc_dir_relpath, scratch_pool);
+  const char *single_db_sdb_abspath;
+  svn_sqlite__stmt_t *stmt;
+
+  /* If this is the single-DB WC root directory, there is nothing to do for
+   * this particular directory. */
+  if (strcmp(this_wc_dir_abspath, single_db_wcroot_abspath) == 0)
+    return SVN_NO_ERROR;
+
+  /* Get the path to the WC-root SDB as a native style path, UTF-8-encoded. */
+  single_db_sdb_abspath = svn_wc__adm_child(single_db_wcroot_abspath, "wc.db",
+                                            scratch_pool);
+  /* ### TODO: convert path to native style */
+
+  /* Attach the single-db so we can write into it. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_ATTACH_WCROOT_DB));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", single_db_sdb_abspath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* ### TODO: the REPOSITORY table */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_COPY_BASE_NODE_TABLE_TO_WCROOT_DB));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", this_wc_dir_relpath, parent_wc_dir_relpath));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_COPY_WORKING_NODE_TABLE_TO_WCROOT_DB));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", this_wc_dir_relpath, parent_wc_dir_relpath));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_COPY_ACTUAL_NODE_TABLE_TO_WCROOT_DB));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", this_wc_dir_relpath, parent_wc_dir_relpath));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_COPY_LOCK_TABLE_TO_WCROOT_DB));
+
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_COPY_PRISTINE_TABLE_TO_WCROOT_DB));
+
+  /* ### TODO: move the pristine text files from this_wc_dir_abspath to
+   * single_db_wcroot_abspath. */
+
+  return SVN_NO_ERROR;
+}
+#endif  /* SINGLE_DB */
+
+
 #if 0 /* ### no tree conflict migration yet */
 
 /* */
@@ -1399,6 +1470,16 @@ svn_wc__upgrade_sdb(int *result_format,
         }
 
         *result_format = 18;
+        /* FALLTHROUGH  */
+#endif
+
+#if (SVN_WC__VERSION > 18)
+      case 18:
+        /* Merge all subdirectory DBs and pristines into the WC-root. */
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_19, &bb,
+                                             scratch_pool));
+
+        *result_format = 19;
         /* FALLTHROUGH  */
 #endif
 
