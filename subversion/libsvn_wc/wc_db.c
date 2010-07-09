@@ -2944,6 +2944,8 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
         }
       else
         {
+          *copyfrom_relpath = repos_relpath;
+          *copyfrom_rev = revision;
           if (!repos_root_url || !repos_uuid)
             SVN_ERR(svn_wc__db_scan_base_repos(NULL,
                                                &repos_root_url, &repos_uuid,
