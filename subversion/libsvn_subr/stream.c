@@ -295,7 +295,7 @@ stream_readline(svn_stringbuf_t **stringbuf,
         {
           /* a 'short' read means the stream has run out. */
           *eof = TRUE;
-          if (eol)
+          if (detect_eol && eol)
             *eol = NULL;
           *stringbuf = str;
           return SVN_NO_ERROR;
