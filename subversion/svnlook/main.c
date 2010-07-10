@@ -902,6 +902,7 @@ print_diff_tree(svn_fs_root_t *root,
   svn_boolean_t orig_empty = FALSE;
   svn_boolean_t is_copy = FALSE;
   svn_boolean_t binary = FALSE;
+  svn_boolean_t diff_header_printed = FALSE;
   apr_pool_t *subpool;
   svn_stringbuf_t *header;
 
@@ -1074,6 +1075,7 @@ print_diff_tree(svn_fs_root_t *root,
                        svn_cmdline_output_encoding(pool), NULL, FALSE, pool));
               SVN_ERR(svn_stream_close(ostream));
               SVN_ERR(svn_cmdline_printf(pool, "\n"));
+              diff_header_printed = TRUE;
             }
           else if (! node->prop_mod &&
                   ((! c->no_diff_added && node->action == 'A') ||
@@ -1114,7 +1116,24 @@ print_diff_tree(svn_fs_root_t *root,
                              base_proptable, pool));
       SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, pool));
       if (props->nelts > 0)
-        SVN_ERR(display_prop_diffs(props, base_proptable, path, pool));
+        {
+          /* We print a diff header for the case when we only have property
+           * mods. */
+          if (! diff_header_printed)
+            {
+              const char *orig_label, *new_label;
+
+              SVN_ERR(generate_label(&orig_label, base_root, base_path,
+                                     pool));
+              SVN_ERR(generate_label(&new_label, root, path, pool));
+
+              SVN_ERR(svn_cmdline_printf(pool, "Index: %s\n", path));
+              SVN_ERR(svn_cmdline_printf(pool, "%s\n", equal_string));
+              SVN_ERR(svn_cmdline_printf(pool, "--- %s\n", orig_label));
+              SVN_ERR(svn_cmdline_printf(pool, "+++ %s\n", new_label));
+            }
+          SVN_ERR(display_prop_diffs(props, base_proptable, path, pool));
+        }
     }
 
   /* Return here if the node has no children. */

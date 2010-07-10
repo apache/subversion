@@ -271,7 +271,15 @@ def test_print_property_diffs(sbox):
   for i in range(len(expected_output)):
     expected_output[i] = expected_output[i].replace(iota_path, 'iota')
 
-  svntest.verify.compare_and_display_lines('', '', expected_output, output)
+  # Check that the header filenames match.
+  if expected_output[2].split()[1] != output[2].split()[1]:
+    raise svntest.Failure
+  if expected_output[3].split()[1] != output[3].split()[1]:
+    raise svntest.Failure
+
+  svntest.verify.compare_and_display_lines('', '', 
+                                           expected_output[4:],
+                                           output[4:])
 
 #----------------------------------------------------------------------
 # Check that svnlook info repairs allows inconsistent line endings in logs.
@@ -524,7 +532,15 @@ def diff_ignore_eolstyle(sbox):
     for i in range(len(expected_output)):
       expected_output[i] = expected_output[i].replace(mu_path, 'A/mu')
 
-    svntest.verify.compare_and_display_lines('', '', expected_output, output)
+    # Check that the header filenames match.
+    if expected_output[2].split()[1] != output[2].split()[1]:
+      raise svntest.Failure
+    if expected_output[3].split()[1] != output[3].split()[1]:
+      raise svntest.Failure
+
+    svntest.verify.compare_and_display_lines('', '', 
+                                             expected_output[4:],
+                                             output[4:])
 
 
 #----------------------------------------------------------------------
@@ -675,13 +691,13 @@ fp.close()"""
 test_list = [ None,
               test_misc,
               delete_file_in_moved_dir,
-              XFail(test_print_property_diffs),
+              test_print_property_diffs,
               info_bad_newlines,
               changed_copy_info,
               tree_non_recursive,
               limit_history,
               diff_ignore_whitespace,
-              XFail(diff_ignore_eolstyle),
+              diff_ignore_eolstyle,
               diff_binary,
               test_filesize,
               test_txn_flag,
