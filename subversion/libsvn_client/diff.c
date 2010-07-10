@@ -369,7 +369,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   SVN_ERR(file_printf_from_utf8(file, encoding,
                                 _("%sProperty changes on: %s%s"),
                                 APR_EOL_STR,
-                                svn_dirent_local_style(path, pool),
+                                path,
                                 APR_EOL_STR));
 
   SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
