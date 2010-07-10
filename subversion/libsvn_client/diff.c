@@ -863,6 +863,11 @@ diff_content_changed(const char *path,
                    diff_cmd_baton->header_encoding, rel_to_dir,
                    diff_cmd_baton->options.for_internal->show_c_function,
                    subpool));
+
+          /* We have a printed a diff for this path, mark it as visited. */
+          apr_hash_set(diff_cmd_baton->visited_paths, path,
+                       APR_HASH_KEY_STRING, path);
+
         }
     }
 
@@ -872,8 +877,6 @@ diff_content_changed(const char *path,
 
   /* Destroy the subpool. */
   svn_pool_destroy(subpool);
-
-  apr_hash_set(diff_cmd_baton->visited_paths, path, APR_HASH_KEY_STRING, path);
 
   return SVN_NO_ERROR;
 }
