@@ -1081,6 +1081,11 @@ typedef enum svn_wc_notify_action_t
   /** A hunk from a patch was rejected.
    * @since New in 1.7. */
   svn_wc_notify_patch_rejected_hunk,
+
+  /** A hunk from a patch was found to already be applied.
+   * @since New in 1.7. */
+  svn_wc_notify_patch_hunk_already_applied,
+
 } svn_wc_notify_action_t;
 
 
