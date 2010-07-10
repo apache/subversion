@@ -535,7 +535,8 @@ def diff_ignore_eolstyle(sbox):
 
     # replace wcdir/A/mu with A/mu in expected_output
     for i in range(len(expected_output)):
-      expected_output[i] = expected_output[i].replace(mu_path, 'A/mu')
+      expected_output[i] = expected_output[i].replace(canonical_mu_path, 
+                                                      'A/mu')
 
     # Check that the header filenames match.
     if expected_output[2].split()[1] != output[2].split()[1]:
