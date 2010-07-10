@@ -635,10 +635,9 @@ diff_props_changed(const char *local_dir_abspath,
 
   if (props->nelts > 0)
     {
-      /* ### We're using the revnums from the diff_cmd_baton since there's
-       * ### no revision argument to diff_props_changed(). But those revnums
-       * ### don't always match the ones given by the diff callbacks. See
-       * ### diff_test 32 for an example. */
+      /* We're using the revnums from the diff_cmd_baton since there's
+       * no revision argument to the svn_wc_diff_callback_t
+       * dir_props_changed(). */
       SVN_ERR(display_prop_diffs(props, original_props, path,
                                  diff_cmd_baton->orig_path_1,
                                  diff_cmd_baton->orig_path_2,

@@ -2336,9 +2336,9 @@ def diff_repos_wc_add_with_props(sbox):
     "+propvalue\n",
     ]
 
-  diff_X_r1_base = make_diff_header("X", "revision 0",
-                                         "revision 3") + diff_X
-  diff_X_base_r3 = make_diff_header("X", "revision 0",
+  diff_X_r1_base = make_diff_header("X", "revision 1",
+                                         "working copy") + diff_X
+  diff_X_base_r3 = make_diff_header("X", "working copy",
                                          "revision 3") + diff_X
   diff_foo_r1_base = make_diff_header("foo", "revision 0",
                                              "revision 3") + diff_foo
@@ -3404,7 +3404,7 @@ test_list = [ None,
               diff_property_changes_to_base,
               diff_mime_type_changes,
               diff_prop_change_local_propmod,
-              XFail(diff_repos_wc_add_with_props),
+              diff_repos_wc_add_with_props,
               diff_nonrecursive_checkout_deleted_dir,
               diff_repos_working_added_dir,
               diff_base_repos_moved,
