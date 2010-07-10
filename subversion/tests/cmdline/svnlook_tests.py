@@ -267,9 +267,12 @@ def test_print_property_diffs(sbox):
   if len(output) != len(expected_output):
     raise svntest.Failure
 
+  canonical_iota_path = iota_path.replace(os.path.sep, '/')
+
   # replace wcdir/iota with iota in expected_output
   for i in range(len(expected_output)):
-    expected_output[i] = expected_output[i].replace(iota_path, 'iota')
+    expected_output[i] = expected_output[i].replace(canonical_iota_path, 
+                                                    'iota')
 
   # Check that the header filenames match.
   if expected_output[2].split()[1] != output[2].split()[1]:
@@ -527,6 +530,8 @@ def diff_ignore_eolstyle(sbox):
     output = run_svnlook('diff', '-r', str(rev + 1), '-x',
                          '--ignore-eol-style', repo_dir, '/A/mu')
     rev += 1
+
+    canonical_mu_path = mu_path.replace(os.path.sep, '/')
 
     # replace wcdir/A/mu with A/mu in expected_output
     for i in range(len(expected_output)):
