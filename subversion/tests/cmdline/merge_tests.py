@@ -1330,7 +1330,7 @@ def merge_in_new_file_and_diff(sbox):
     "--- "+ url_branch_path + "\t(revision 2)\n",
     "+++ "+ url_branch_path + "\t(working copy)\n",
     "\n",
-    "Property changes on: " + branch_path + "\n",
+    "Property changes on: " + url_branch_path + "\n",
     "___________________________________________________________________\n",
     "Added: " + SVN_PROP_MERGEINFO + "\n",
     "   Merged /A/B/E:r2-3\n",
