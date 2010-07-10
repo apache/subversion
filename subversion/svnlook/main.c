@@ -833,11 +833,11 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         orig_value = NULL;
 
       if (! orig_value)
-        header_fmt = _("Added: %s\n");
+        header_fmt = "Added: %s\n";
       else if (! pc->value)
-        header_fmt = _("Deleted: %s\n");
+        header_fmt = "Deleted: %s\n";
       else
-        header_fmt = _("Modified: %s\n");
+        header_fmt = "Modified: %s\n"; _
       SVN_ERR(svn_cmdline_printf(pool, header_fmt, pc->name));
 
       /* Flush stdout before we open a stream to it below. */
