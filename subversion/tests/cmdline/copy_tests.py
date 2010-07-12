@@ -4733,6 +4733,44 @@ def changed_dir_data_should_match_checkout(sbox):
   svntest.actions.run_and_verify_svn(None, verify_out, [], 'status', '-v')
   os.chdir(was_cwd)
 
+def move_added_nodes(sbox):
+  """move added nodes"""
+
+  sbox.build()
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                     sbox.ospath('X'),
+                                     sbox.ospath('X/Y'))
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+      'X'   : Item(status='A ', wc_rev='0'),
+      'X/Y' : Item(status='A ', wc_rev='0'),
+      })
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('X/Y'),
+                                     sbox.ospath('X/Z'))
+  expected_status.remove('X/Y')
+  expected_status.add({'X/Z' : Item(status='A ', wc_rev='0')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('X/Z'),
+                                     sbox.ospath('Z'))
+  expected_status.remove('X/Z')
+  expected_status.add({'Z' : Item(status='A ', wc_rev='0')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('Z'),
+                                     sbox.ospath('X/Z'))
+  expected_status.remove('Z')
+  expected_status.add({'X/Z' : Item(status='A ', wc_rev='0')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -4826,6 +4864,7 @@ test_list = [ None,
               copy_dir_with_space,
               changed_data_should_match_checkout,
               XFail(changed_dir_data_should_match_checkout),
+              XFail(move_added_nodes),
              ]
 
 if __name__ == '__main__':
