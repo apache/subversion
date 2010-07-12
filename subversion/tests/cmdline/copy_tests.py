@@ -4503,53 +4503,84 @@ def move_dir_containing_move(sbox):
                                      sbox.ospath('A/B/E/alpha_moved'))
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     sbox.ospath('A/B/E'),
-                                     sbox.ospath('A/B/E_tmp'))
+                                     sbox.ospath('A/B/F'),
+                                     sbox.ospath('A/B/F_moved'))
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/B_tmp'))
 
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.tweak('A/B',
+                        'A/B/E',
+                        'A/B/E/alpha',
+                        'A/B/E/beta',
+                        'A/B/F',
+                        'A/B/lambda',
+                        status='D ')
   expected_status.add({
-      'A/B/E_tmp'             : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp'               : Item(status='A ', copied='+', wc_rev='-'),
       # alpha has a revision that isn't reported by status.
-      'A/B/E_tmp/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
-      'A/B/E_tmp/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
-      'A/B/E_tmp/beta'        : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_tmp/E'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_tmp/E/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
+      'A/B_tmp/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_tmp/F'             : Item(status='D ', wc_rev='?'),
+      'A/B_tmp/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
 
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     sbox.ospath('A/B/E_tmp'),
-                                     sbox.ospath('A/B/E_moved'))
-  expected_status.remove('A/B/E_tmp',
-                         'A/B/E_tmp/alpha',
-                         'A/B/E_tmp/alpha_moved',
-                         'A/B/E_tmp/beta')
+                                     sbox.ospath('A/B_tmp'),
+                                     sbox.ospath('A/B_moved'))
+  expected_status.remove('A/B_tmp',
+                         'A/B_tmp/E',
+                         'A/B_tmp/E/alpha',
+                         'A/B_tmp/E/alpha_moved',
+                         'A/B_tmp/E/beta',
+                         'A/B_tmp/F',
+                         'A/B_tmp/F_moved',
+                         'A/B_tmp/lambda')
   expected_status.add({
-      'A/B/E_moved'             : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved'               : Item(status='A ', copied='+', wc_rev='-'),
       # alpha has a revision that isn't reported by status.
-      'A/B/E_moved/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
-      'A/B/E_moved/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
-      'A/B/E_moved/beta'        : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_moved/E'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_moved/E/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
+      'A/B_moved/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_moved/F'             : Item(status='D ', wc_rev='?'),
+      'A/B_moved/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
 
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
-    'A/B/E'                  : Item(verb='Deleting'),
-    'A/B/E_moved'            : Item(verb='Adding'),
-    'A/B/E_moved/alpha'      : Item(verb='Deleting'),
-    'A/B/E_moved/alpha_moved': Item(verb='Adding'),
+    'A/B'                    : Item(verb='Deleting'),
+    'A/B_moved'              : Item(verb='Adding'),
+    'A/B_moved/E/alpha'      : Item(verb='Deleting'),
+    'A/B_moved/E/alpha_moved': Item(verb='Adding'),
+    'A/B_moved/F'            : Item(verb='Deleting'),
+    'A/B_moved/F_moved'      : Item(verb='Adding'),
     })
 
-  expected_status.tweak('A/B/E_moved',
-                        'A/B/E_moved/alpha_moved',
-                        'A/B/E_moved/beta',
+  expected_status.tweak('A/B_moved',
+                        'A/B_moved/E',
+                        'A/B_moved/E/alpha_moved',
+                        'A/B_moved/E/beta',
+                        'A/B_moved/F_moved',
+                        'A/B_moved/lambda',
                         status='  ', copied=None, wc_rev='2')
-  expected_status.remove('A/B/E',
+  expected_status.remove('A/B',
+                         'A/B/E',
                          'A/B/E/alpha',
                          'A/B/E/beta',
-                         'A/B/E_moved/alpha')
+                         'A/B/F',
+                         'A/B/lambda',
+                         'A/B_moved/E/alpha',
+                         'A/B_moved/F')
   svntest.actions.run_and_verify_commit(sbox.wc_dir,
                                         expected_output,
                                         expected_status,
