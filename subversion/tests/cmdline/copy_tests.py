@@ -4249,8 +4249,6 @@ def copy_below_copy(sbox):
 def move_below_move(sbox):
   "move a dir below a moved dir"
   sbox.build()
-  "copy a dir below a copied dir"
-  sbox.build()
 
   A = os.path.join(sbox.wc_dir, 'A')
   new_A = os.path.join(sbox.wc_dir, 'new_A')
@@ -4260,16 +4258,17 @@ def move_below_move(sbox):
   new_A_new_mu = os.path.join(new_A, 'new_mu')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', A, new_A)
+                                     'mv', A, new_A)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mv', new_A_D, new_A_new_D)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mv', new_A_mu, new_A_new_mu)
 
-  # ### It could be that we miss a Deleting here.
   expected_output = svntest.wc.State(sbox.wc_dir, {
       'A'                 : Item(verb='Deleting'),
+      'new_A/D'           : Item(verb='Deleting'),
+      'new_A/mu'          : Item(verb='Deleting'),
       'new_A'             : Item(verb='Adding'),
       'new_A/new_D'       : Item(verb='Adding'),
       'new_A/new_mu'      : Item(verb='Adding'),
@@ -4298,8 +4297,6 @@ def move_below_move(sbox):
       'new_A/C'           : Item(status='  ', wc_rev='2'),
     })
 
-  # ### This remove block is untested, because the commit fails with an
-  # ### assertion on trunk (BH: 2009-11-01
   expected_status.remove('A', 'A/D', 'A/D/gamma', 'A/D/G', 'A/D/G/pi',
                          'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 'A/D/H/chi',
                          'A/D/H/omega', 'A/D/H/psi', 'A/B', 'A/B/E',
@@ -4855,7 +4852,7 @@ test_list = [ None,
               path_copy_in_repo_2475,
               commit_copy_depth_empty,
               copy_below_copy,
-              XFail(move_below_move),
+              move_below_move,
               reverse_merge_move,
               XFail(nonrecursive_commit_of_copy),
               copy_added_dir_with_copy,
