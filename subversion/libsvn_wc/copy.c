@@ -362,7 +362,35 @@ copy_versioned_dir(svn_wc__db_t *db,
 
           if (!repos_root_url)
             {
-              if (status == svn_wc__db_status_added || !have_base)
+              if (status == svn_wc__db_status_deleted)
+                {
+                  const char *work_del_abspath;
+
+                  SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL,
+                                                   &work_del_abspath,
+                                                   db, src_abspath,
+                                                   scratch_pool, scratch_pool));
+                  if (work_del_abspath)
+                    {
+                      const char *parent_del_abspath
+                        = svn_dirent_dirname(work_del_abspath, scratch_pool);
+
+                      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                                       &repos_root_url,
+                                                       &repos_uuid,
+                                                       NULL, NULL, NULL, NULL,
+                                                       db, parent_del_abspath,
+                                                       scratch_pool,
+                                                       scratch_pool));
+                    }
+                  else
+                    SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url,
+                                                       &repos_uuid,
+                                                       db, src_abspath,
+                                                       scratch_pool,
+                                                       scratch_pool));
+                }
+              else if (status == svn_wc__db_status_added || !have_base)
                 SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                                  &repos_root_url, &repos_uuid,
                                                  NULL, NULL, NULL, NULL,
