@@ -34,6 +34,7 @@ import fnmatch
 import re
 import subprocess
 import glob
+import string
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
@@ -833,6 +834,11 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
 
+    # Expect rb_errinfo() to be avilable in Ruby 1.9+,
+    # rather than ruby_errinfo.
+    if (self.ruby_major_version > 1 or self.ruby_minor_version > 8):
+      fakedefines.extend(["HAVE_RB_ERRINFO"])
+
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
     elif cfg == 'Release':
@@ -1207,19 +1213,31 @@ class WinGeneratorBase(GeneratorBase):
     "Find the right Ruby library name to link swig bindings with"
     self.ruby_includes = []
     self.ruby_libdir = None
+    self.ruby_version = None
+    self.ruby_major_version = None
+    self.ruby_minor_version = None
     proc = os.popen('ruby -rrbconfig -e ' + escape_shell_arg(
+                    "puts Config::CONFIG['ruby_version'];"
                     "puts Config::CONFIG['LIBRUBY'];"
                     "puts Config::CONFIG['archdir'];"
                     "puts Config::CONFIG['libdir'];"), 'r')
     try:
-      libruby = proc.readline()[:-1]
-      if libruby:
-        msg = 'Found installed ruby.'
-        self.ruby_lib = libruby
-        self.ruby_includes.append(proc.readline()[:-1])
-        self.ruby_libdir = proc.readline()[:-1]
+      rubyver = proc.readline()[:-1]
+      if rubyver:
+        self.ruby_version = rubyver
+        self.ruby_major_version = string.atoi(self.ruby_version[0])
+        self.ruby_minor_version = string.atoi(self.ruby_version[2])
+        libruby = proc.readline()[:-1]
+        if libruby:
+          msg = 'Found installed ruby %s' % rubyver
+          self.ruby_lib = libruby
+          self.ruby_includes.append(proc.readline()[:-1])
+          self.ruby_libdir = proc.readline()[:-1]
       else:
-        msg = 'Could not detect Ruby version.'
+        msg = 'Could not detect Ruby version, assuming 1.8.'
+        self.ruby_version = "1.8"
+        self.ruby_major_version = 1
+        self.ruby_minor_version = 8
         self.ruby_lib = 'msvcrt-ruby18.lib'
       print('%s\n  Ruby bindings will be linked with %s\n'
              % (msg, self.ruby_lib))
