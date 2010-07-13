@@ -168,13 +168,12 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r961970
-   Clarify an error message.
+ * r957507
+   Make the ruby bindings compatible with Ruby 1.9.
    Justification:
-     Makes it far easier to diagnose a faulty [auto-props] configuration.
-     One-liner.
+     Keeping up with the Jones's is a always desirable.
    Votes:
-     +1: danielsh, stsp
+     +1: hwright
 
 Veto-blocked changes:
 =====================
@@ -251,3 +250,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r961970
+   Clarify an error message.
+   Justification:
+     Makes it far easier to diagnose a faulty [auto-props] configuration.
+     One-liner.
+   Votes:
+     +1: danielsh, stsp, hwright
