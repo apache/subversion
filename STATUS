@@ -250,11 +250,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r961970
-   Clarify an error message.
-   Justification:
-     Makes it far easier to diagnose a faulty [auto-props] configuration.
-     One-liner.
-   Votes:
-     +1: danielsh, stsp, hwright

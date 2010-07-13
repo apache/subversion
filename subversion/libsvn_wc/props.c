@@ -2561,7 +2561,8 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
       svn_subst_eol_style_from_value(&eol_style, &ignored_eol, new_value->data);
       if (eol_style == svn_subst_eol_style_unknown)
         return svn_error_createf(SVN_ERR_IO_UNKNOWN_EOL, NULL,
-                                 _("Unrecognized line ending style for '%s'"),
+                                 _("Unrecognized line ending style '%s' for '%s'"),
+                                 new_value->data,
                                  svn_path_local_style(path, pool));
       SVN_ERR(validate_eol_prop_against_file(path, getter, getter_baton,
                                              pool));
