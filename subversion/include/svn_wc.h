@@ -7018,6 +7018,7 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  *
  * @since New in 1.4
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_translated_file2(const char **xlated_path,
                         const char *src,
@@ -7057,6 +7058,7 @@ svn_wc_translated_file(const char **xlated_p,
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_translated_stream(svn_stream_t **stream,
                          const char *path,
