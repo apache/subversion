@@ -1976,44 +1976,8 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
                          const char *path,
                          apr_pool_t *pool)
 {
-  apr_status_t status;
-  apr_dir_t *this_dir;
-  apr_finfo_t this_entry;
-  apr_int32_t flags = APR_FINFO_NAME;
-
-  *dirents = apr_hash_make(pool);
-
-  SVN_ERR(svn_io_dir_open(&this_dir, path, pool));
-
-  for (status = apr_dir_read(&this_entry, flags, this_dir);
-       status == APR_SUCCESS;
-       status = apr_dir_read(&this_entry, flags, this_dir))
-    {
-      if ((this_entry.name[0] == '.')
-          && ((this_entry.name[1] == '\0')
-              || ((this_entry.name[1] == '.')
-                  && (this_entry.name[2] == '\0'))))
-        {
-          continue;
-        }
-      else
-        {
-          const char *name;
-          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
-          apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, name);
-        }
-    }
-
-  if (! (APR_STATUS_IS_ENOENT(status)))
-    return svn_error_wrap_apr(status, _("Can't read directory '%s'"),
-                              svn_dirent_local_style(path, pool));
-
-  status = apr_dir_close(this_dir);
-  if (status)
-    return svn_error_wrap_apr(status, _("Error closing directory '%s'"),
-                              svn_dirent_local_style(path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_io_get_dirents3(dirents, path, TRUE,
+                                              pool, pool));
 }
 
 svn_io_dirent2_t *

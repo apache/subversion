@@ -1371,7 +1371,9 @@ svn_io_remove_dir(const char *path,
  * apr_dir_read() are NOT returned in the hash.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_get_dir_filenames(apr_hash_t **dirents,
                          const char *path,
