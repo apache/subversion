@@ -3163,7 +3163,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           const char *fs_parent_path =
             dav_svn__get_fs_parent_path(resource->info->r);
 
-          serr = svn_io_get_dirents2(&dirents, fs_parent_path, resource->pool);
+          serr = svn_io_get_dirents3(&dirents, fs_parent_path, TRUE,
+                                     resource->pool, resource->pool);
           if (serr != NULL)
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                         "couldn't fetch dirents of SVNParentPath",

@@ -173,7 +173,8 @@ read_many_wcprops(apr_hash_t **all_wcprops,
                                         scratch_pool);
 
   /* Now walk the wcprops directory. */
-  SVN_ERR(svn_io_get_dirents2(&dirents, props_dir_abspath, scratch_pool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, props_dir_abspath, TRUE,
+                              scratch_pool, scratch_pool));
 
   for (hi = apr_hash_first(scratch_pool, dirents);
        hi;
@@ -1060,7 +1061,8 @@ migrate_text_bases(const char *wcroot_abspath,
                                                 TEXT_BASE_SUBDIR,
                                                 scratch_pool);
 
-  SVN_ERR(svn_io_get_dir_filenames(&dirents, text_base_dir, scratch_pool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, text_base_dir, TRUE,
+                              scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, dirents); hi;
             hi = apr_hash_next(hi))
     {

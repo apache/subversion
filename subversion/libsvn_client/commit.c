@@ -309,7 +309,7 @@ import_dir(const svn_delta_editor_t *editor,
   if (!no_ignore)
     SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
 
-  SVN_ERR(svn_io_get_dirents2(&dirents, path, pool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, path, TRUE, pool, pool));
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {

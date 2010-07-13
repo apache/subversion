@@ -241,7 +241,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
   dir_abspath = svn_dirent_join(anchor_abspath, dir_path, scratch_pool);
   SVN_ERR(svn_wc__db_base_get_children(&base_children, db, dir_abspath,
                                        scratch_pool, iterpool));
-  SVN_ERR(svn_io_get_dir_filenames(&dirents, dir_abspath, scratch_pool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
+                              scratch_pool, scratch_pool));
 
   /*** Do the real reporting and recursing. ***/
 
