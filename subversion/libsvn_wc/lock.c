@@ -204,7 +204,7 @@ pool_cleanup_locked(void *p)
             {
               /* There is no remaining work, so we're good to remove any
                  potential "physical" lock.  */
-              err = svn_wc__db_wclock_remove(db, lock->abspath, scratch_pool);
+              err = svn_wc__db_wclock_release(db, lock->abspath, scratch_pool);
             }
         }
       svn_error_clear(err);
@@ -312,7 +312,8 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
       svn_boolean_t owns_lock;
 
       /* If the db already owns a lock, we can't add an extra lock record */
-      SVN_ERR(svn_wc__db_temp_own_lock(&owns_lock, db, path, scratch_pool));
+      SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, path, FALSE,
+                                          scratch_pool));
 
       /* If DB owns the lock, but when there is no access baton open for this
          directory, old access baton based code is trying to access data that
@@ -321,9 +322,8 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
       if (!owns_lock
           || svn_wc__adm_retrieve_internal2(db, lock->abspath, scratch_pool))
         {
-          SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, 0, scratch_pool));
-
-          SVN_ERR(svn_wc__db_temp_mark_locked(db, lock->abspath, scratch_pool));
+          SVN_ERR(svn_wc__db_wclock_obtain(db, lock->abspath, 0, FALSE,
+                                           scratch_pool));
         }
     }
 
@@ -332,7 +332,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
   if (err)
     return svn_error_compose_create(
                 err,
-                svn_wc__db_wclock_remove(db, lock->abspath, scratch_pool));
+                svn_wc__db_wclock_release(db, lock->abspath, scratch_pool));
 
   /* ### does this utf8 thing really/still apply??  */
   /* It's important that the cleanup handler is registered *after* at least
@@ -516,8 +516,9 @@ close_single(svn_wc_adm_access_t *adm_access,
     return SVN_NO_ERROR;
 
   /* Physically unlock if required */
-  SVN_ERR(svn_wc__db_temp_own_lock(&locked, adm_access->db,
-                                   adm_access->abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_wclock_owns_lock(&locked, adm_access->db,
+                                      adm_access->abspath, TRUE,
+                                      scratch_pool));
   if (locked)
     {
       if (!preserve_lock)
@@ -528,9 +529,9 @@ close_single(svn_wc_adm_access_t *adm_access,
              from the working copy.  It is an error for the lock to
              have disappeared if the administrative area still exists. */
 
-          svn_error_t *err = svn_wc__db_wclock_remove(adm_access->db,
-                                                      adm_access->abspath,
-                                                      scratch_pool);
+          svn_error_t *err = svn_wc__db_wclock_release(adm_access->db,
+                                                       adm_access->abspath,
+                                                       scratch_pool);
           if (err)
             {
               if (svn_wc__adm_area_exists(adm_access->abspath, scratch_pool))
@@ -1419,9 +1420,9 @@ svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access)
 {
   svn_boolean_t locked;
   apr_pool_t *subpool = svn_pool_create(adm_access->pool);
-  svn_error_t *err = svn_wc__db_temp_own_lock(&locked, adm_access->db,
-                                              adm_access->abspath,
-                                              subpool);
+  svn_error_t *err = svn_wc__db_wclock_owns_lock(&locked, adm_access->db,
+                                                 adm_access->abspath, TRUE,
+                                                 subpool);
   svn_pool_destroy(subpool);
 
   if (err)
@@ -1441,7 +1442,8 @@ svn_wc__write_check(svn_wc__db_t *db,
 {
   svn_boolean_t locked;
 
-  SVN_ERR(svn_wc__db_temp_own_lock(&locked, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_wclock_owns_lock(&locked, db, local_abspath, FALSE,
+                                      scratch_pool));
   if (!locked)
     return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                              _("No write-lock in '%s'"),
@@ -1461,8 +1463,8 @@ svn_wc_locked2(svn_boolean_t *locked_here,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (locked_here != NULL)
-    SVN_ERR(svn_wc__db_temp_own_lock(locked_here, wc_ctx->db, local_abspath,
-                                     scratch_pool));
+    SVN_ERR(svn_wc__db_wclock_owns_lock(locked_here, wc_ctx->db, local_abspath,
+                                        FALSE, scratch_pool));
   if (locked != NULL)
     SVN_ERR(svn_wc__db_wclocked(locked, wc_ctx->db, local_abspath,
                                 scratch_pool));
@@ -1652,11 +1654,12 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
 
   /* We don't want to try and lock an unversioned directory that
      obstructs a versioned directory. */
-  err = svn_wc__internal_check_wc(&format, wc_ctx->db, local_abspath, iterpool);
+  err = svn_wc__internal_check_wc(&format, wc_ctx->db, local_abspath,
+                                  iterpool);
   if (!err && format)
     {
-      SVN_ERR(svn_wc__db_wclock_set(wc_ctx->db, local_abspath, 0, iterpool));
-      SVN_ERR(svn_wc__db_temp_mark_locked(wc_ctx->db, local_abspath, iterpool));
+      SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, 0, FALSE,
+                                       iterpool));
     }
   svn_error_clear(err);
 
@@ -1677,6 +1680,7 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
   apr_uint64_t id;
   svn_skel_t *work_item;
   svn_boolean_t locked_here;
+  svn_error_t *err;
   int i;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
@@ -1713,10 +1717,20 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
         SVN_ERR(svn_wc__release_write_lock(wc_ctx, child_abspath, iterpool));
     }
 
-  SVN_ERR(svn_wc__db_temp_own_lock(&locked_here, wc_ctx->db, local_abspath,
-                                   iterpool));
+  err = svn_wc__db_wclock_owns_lock(&locked_here, wc_ctx->db, local_abspath,
+                                    TRUE, iterpool);
+#ifndef SVN_WC__SINGLE_DB
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+    {
+      svn_error_clear(err);
+      locked_here = FALSE;
+    }
+  else
+#endif
+    SVN_ERR(err);
+
   if (locked_here)
-    SVN_ERR(svn_wc__db_wclock_remove(wc_ctx->db, local_abspath, iterpool));
+    SVN_ERR(svn_wc__db_wclock_release(wc_ctx->db, local_abspath, iterpool));
 
   svn_pool_destroy(iterpool);
 

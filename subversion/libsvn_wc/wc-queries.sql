@@ -391,6 +391,10 @@ WHERE wc_id = ?1 AND local_dir_relpath = ?2;
 DELETE FROM WC_LOCK
 WHERE wc_id = ?1 AND local_dir_relpath = ?2;
 
+-- STMT_FIND_WC_LOCK
+SELECT local_dir_relpath FROM WC_LOCK
+WHERE wc_id = ?1 AND local_dir_relpath LIKE ?2 ESCAPE '#';
+
 -- STMT_APPLY_CHANGES_TO_BASE
 /* translated_size and last_mod_time are not mentioned here because they will
    be tweaked after the working-file is installed.

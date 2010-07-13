@@ -1316,7 +1316,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
      function bumps a working copy all the way to current.  */
   SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
                                        iterpool));
-  SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, 0, iterpool));
+  SVN_ERR(svn_wc__db_wclock_obtain(db, dir_abspath, 0, FALSE, iterpool));
   SVN_ERR(svn_wc__write_upgraded_entries(db, sdb, repos_id, wc_id,
                                          dir_abspath, entries,
                                          iterpool));
@@ -1360,7 +1360,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
      has run.  */
   /* ### well, actually.... we don't recursively delete subdir locks here,
      ### we rely upon their own upgrade processes to do it. */
-  SVN_ERR(svn_wc__db_wclock_remove(db, dir_abspath, iterpool));
+  SVN_ERR(svn_wc__db_wclock_release(db, dir_abspath, iterpool));
 
   /* Zap all the obsolete files. This removes the old-style lock file.  */
   wipe_obsolete_files(dir_abspath, iterpool);

@@ -2185,23 +2185,39 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
    that they still function correctly, even in the new world.  'levels to
    lock' should not be exposed through the wc-ng APIs at all: users either
    get to lock the entire tree (rooted at some subdir, of course), or none.
+
+   An infinite depth lock is obtained with LEVELS_TO_LOCK set to -1, but until
+   we move to a single DB only depth 0 is supported.
 */
 svn_error_t *
-svn_wc__db_wclock_set(svn_wc__db_t *db,
-                      const char *local_abspath,
-                      int levels_to_lock,
-                      apr_pool_t *scratch_pool);
+svn_wc__db_wclock_obtain(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         int levels_to_lock,
+                         svn_boolean_t steal_lock,
+                         apr_pool_t *scratch_pool);
 
+/* Check if somebody has a wclock on LOCAL_ABSPATH */
 svn_error_t *
 svn_wc__db_wclocked(svn_boolean_t *locked,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     apr_pool_t *scratch_pool);
 
+/* Release the previously obtained lock on LOCAL_ABSPATH */
 svn_error_t *
-svn_wc__db_wclock_remove(svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *scratch_pool);
+svn_wc__db_wclock_release(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
+
+/* Checks whether DB currently owns a lock to operate on LOCAL_ABSPATH.
+   If EXACT is TRUE only lock roots are checked. */
+svn_error_t *
+svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_boolean_t exact,
+                            apr_pool_t *scratch_pool);
+
 
 
 /* @defgroup svn_wc__db_temp Various temporary functions during transition
@@ -2370,19 +2386,6 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
                                const char *wri_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_wc__db_temp_mark_locked(svn_wc__db_t *db,
-                            const char *local_dir_abspath,
-                            apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_wc__db_temp_own_lock(svn_boolean_t *own_lock,
-                         svn_wc__db_t *db,
-                         const char *local_dir_abspath,
-                         apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,

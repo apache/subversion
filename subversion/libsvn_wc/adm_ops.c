@@ -1272,8 +1272,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   if (kind == svn_node_dir && !exists)
     {
       /* Lock on parent needs to be propogated into the child db. */
-      SVN_ERR(svn_wc__db_wclock_set(db, local_abspath, 0, scratch_pool));
-      SVN_ERR(svn_wc__db_temp_mark_locked(db, local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                       scratch_pool));
     }
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)

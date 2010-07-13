@@ -125,6 +125,22 @@
    NOTE: this should match the character used within wc-metadata.sql  */
 #define LIKE_ESCAPE_CHAR     "#"
 
+/* Calculates the depth of the relpath below "" */
+APR_INLINE static int relpath_op_depth(const char *relpath)
+{
+  int n = 1;
+  if (*relpath == '\0')
+    return 0;
+
+  do
+  {
+    if (*relpath == '/')
+      n++;
+  }
+  while (*(++relpath));
+
+  return n;
+}
 
 typedef struct insert_base_baton_t {
   /* common to all insertions into BASE */
@@ -6969,6 +6985,7 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
       apr_ssize_t klen;
       void *val;
       svn_wc__db_pdh_t *pdh;
+      svn_error_t *err;
 
       apr_hash_this(hi, &key, &klen, &val);
       pdh = val;
@@ -6976,7 +6993,22 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
       if (!svn_dirent_is_ancestor(local_dir_abspath, pdh->local_abspath))
         continue;
 
-      SVN_ERR(svn_wc__db_wclock_remove(db, pdh->local_abspath, scratch_pool));
+      if (pdh->locked)
+        {
+          err = svn_wc__db_wclock_release(db, pdh->local_abspath,
+                                          scratch_pool);
+          if (err
+              && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
+                  || err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+            {
+              svn_error_clear(err);
+            }
+          else
+            SVN_ERR(err);
+        }
+
+      SVN_ERR_ASSERT(!pdh->locked);
+
       apr_hash_set(db->dir_data, key, klen, NULL);
 
       if (pdh->wcroot && pdh->wcroot->sdb &&
@@ -7573,43 +7605,260 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__db_wclock_set(svn_wc__db_t *db,
-                      const char *local_abspath,
-                      int levels_to_lock,
-                      apr_pool_t *scratch_pool)
+/* Baton for wclock_obtain_cb() */
+struct wclock_obtain_baton
 {
+  svn_wc__db_t *db;
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
+  const char *local_abspath;
+  int levels_to_lock;
+  svn_boolean_t steal_lock;
+};
+
+/* Helper for wclock_obtain_cb() to steal an existing lock */
+static svn_error_t *
+wclock_steal(svn_wc__db_wcroot_t *wcroot,
+             const char *local_relpath,
+             apr_pool_t *scratch_pool)
+{
   svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_DELETE_WC_LOCK));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_sqlite__transaction_callback_t for svn_wc__db_wclock_obtain() */
+static svn_error_t *
+wclock_obtain_cb(void *baton,
+                 svn_sqlite__db_t* sdb,
+                 apr_pool_t *scratch_pool)
+{
+  struct wclock_obtain_baton *bt = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_wc__db_wcroot_t *wcroot = bt->pdh->wcroot;
   svn_error_t *err;
+  const char *lock_relpath;
+  int max_depth;
+  int lock_depth;
+  svn_boolean_t got_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
+#ifdef SVN_WC__SINGLE_DB
+  svn_wc__db_wclock_t lock;
+#else
   /* ### Can only lock this directory in the per-dir layout.  This is
      ### a temporary restriction until metadata gets centralised.
      ### Perhaps this should be a runtime error, rather than an
      ### assert?  Perhaps check the path is versioned? */
-  SVN_ERR_ASSERT(*local_relpath == '\0');
+  SVN_ERR_ASSERT(*bt->local_relpath == '\0');
+#endif
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+  /* Check if there are nodes locked below the new lock root */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                            apr_pstrcat(scratch_pool,
+                                        escape_sqlite_like(bt->local_relpath,
+                                                           scratch_pool),
+                                        "/%", NULL)));
+
+  lock_depth = relpath_op_depth(bt->local_relpath);
+  max_depth = lock_depth + bt->levels_to_lock;
+
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+  while (got_row)
+    {
+      const char *lock_abspath;
+      svn_boolean_t own_lock;
+
+      lock_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+
+      /* If we are not locking with depth infinity, check if this lock
+         voids our lock request */
+      if (bt->levels_to_lock >= 0
+          && relpath_op_depth(lock_relpath) > max_depth)
+        {
+          SVN_ERR(svn_sqlite__step(&got_row, stmt));
+          continue;
+        }
+
+      lock_abspath = svn_dirent_join(wcroot->abspath,
+                                     lock_relpath, scratch_pool);
+
+      /* Check if we are the lock owner, because we should be able to
+         extend our lock. */
+      err = svn_wc__db_wclock_owns_lock(&own_lock, bt->db, lock_abspath,
+                                        TRUE, scratch_pool);
+
+      if (err)
+        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+
+      if (!own_lock && !bt->steal_lock)
+        {
+          err = svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
+                                   _("'%s' is already locked."),
+                                   svn_dirent_local_style(lock_abspath,
+                                                          scratch_pool));
+          return svn_error_createf(SVN_ERR_WC_LOCKED, err,
+                                   _("Working copy '%s' locked."),
+                                   svn_dirent_local_style(bt->local_abspath,
+                                                          scratch_pool));
+        }
+      else if (!own_lock)
+        {
+          err = wclock_steal(wcroot, lock_relpath, scratch_pool);
+
+          if (err)
+            SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+        }
+
+      SVN_ERR(svn_sqlite__step(&got_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (bt->steal_lock)
+    SVN_ERR(wclock_steal(wcroot, bt->local_relpath, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_WC_LOCK));
+  lock_relpath = bt->local_relpath;
+
+  while (TRUE)
+    {
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, lock_relpath));
+
+      SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+      if (got_row)
+        {
+          int levels = svn_sqlite__column_int(stmt, 0);
+          if (levels >= 0)
+            levels += relpath_op_depth(lock_relpath);
+
+          if (levels == -1 || levels >= lock_depth)
+            {
+              SVN_ERR(svn_sqlite__reset(stmt));
+
+              err = svn_error_createf(
+                              SVN_ERR_WC_LOCKED, NULL,
+                              _("'%s' is already locked."),
+                              svn_dirent_local_style(
+                                       svn_dirent_join(wcroot->abspath,
+                                                       lock_relpath,
+                                                       scratch_pool),
+                              scratch_pool));
+              return svn_error_createf(
+                              SVN_ERR_WC_LOCKED, err,
+                              _("Working copy '%s' locked."),
+                              svn_dirent_local_style(bt->local_abspath,
+                                                     scratch_pool));
+            }
+
+          break; /* There can't be interesting locks on higher nodes */
+        }
+
+      if (!*lock_relpath)
+        break;
+
+      lock_relpath = svn_relpath_dirname(lock_relpath, scratch_pool);
+    }
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_INSERT_WC_LOCK));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id, local_relpath,
-                            (apr_int64_t) levels_to_lock));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
+                            bt->local_relpath,
+                            (apr_int64_t) bt->levels_to_lock));
   err = svn_sqlite__insert(NULL, stmt);
   if (err)
     return svn_error_createf(SVN_ERR_WC_LOCKED, err,
                              _("Working copy '%s' locked"),
-                             svn_dirent_local_style(local_abspath,
+                             svn_dirent_local_style(bt->local_abspath,
                                                     scratch_pool));
 
+  /* And finally store that we obtained the lock */
+#ifdef SVN_WC__SINGLE_DB
+  lock.relpath = apr_pstrdup(wcroot->owned_locks->pool, bt->local_relpath);
+  lock.levels = bt->levels_to_lock;
+  APR_ARRAY_PUSH(wcroot->owned_locks, svn_wc__db_wclock_t) = lock;
+#else
+  bt->pdh->locked = TRUE;
+#endif
+
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_wclock_obtain(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         int levels_to_lock,
+                         svn_boolean_t steal_lock,
+                         apr_pool_t *scratch_pool)
+{
+  struct wclock_obtain_baton baton;
+
+  SVN_ERR_ASSERT(levels_to_lock >= -1);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&baton.pdh, &baton.local_relpath,
+                                             db, local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(baton.pdh);
+
+  if (!steal_lock)
+#ifndef SVN_WC__SINGLE_DB
+    {
+      if (baton.pdh->locked)
+        return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
+                                 _("'%s' is already locked."),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+    }
+#else
+    {
+      int i;
+      svn_wc__db_wcroot_t *wcroot = baton.pdh->wcroot;
+      int depth = relpath_op_depth(baton.local_relpath);
+
+      for (i = 0; i < wcroot->owned_locks->nelts; i++)
+        {
+          svn_wc__db_wclock_t lock = APR_ARRAY_IDX(wcroot->owned_locks,
+                                                   i, svn_wc__db_wclock_t);
+
+          if ((*lock.relpath == '\0'
+               || svn_relpath_is_ancestor(lock.relpath, baton.local_relpath)
+              && (lock.levels == -1
+                  || (lock.levels + relpath_op_depth(lock.relpath)) >= depth)))
+            {
+              const char *lock_abspath
+                  = svn_dirent_join(baton.pdh->wcroot->abspath, lock.relpath,
+                                    scratch_pool);
+
+              return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
+                                       _("'%s' is already locked via '%s'."),
+                                       svn_dirent_local_style(local_abspath,
+                                                              scratch_pool),
+                                       svn_dirent_local_style(lock_abspath,
+                                                              scratch_pool));
+            }
+        }
+    }
+#endif
+
+  baton.db = db;
+  baton.local_abspath = local_abspath;
+  baton.steal_lock = steal_lock;
+  baton.levels_to_lock = levels_to_lock;
+
+  return svn_error_return(
+            svn_sqlite__with_transaction(baton.pdh->wcroot->sdb,
+                                         wclock_obtain_cb,
+                                         &baton,
+                                         scratch_pool));
 }
 
 
@@ -7674,60 +7923,135 @@ svn_wc__db_wclocked(svn_boolean_t *locked,
 
 
 svn_error_t *
-svn_wc__db_wclock_remove(svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *scratch_pool)
+svn_wc__db_wclock_release(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+#ifdef SVN_WC__SINGLE_DB
+  int i;
+  apr_array_header_t *owned_locks;
+#endif
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_DELETE_WC_LOCK, scratch_pool));
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  VERIFY_USABLE_PDH(pdh);
+
+  /* First check and remove the owns-lock information as failure in
+     removing the db record implies that we have to steal the lock later. */
+#ifndef SVN_WC__SINGLE_DB
+  SVN_ERR_ASSERT(*local_relpath == '\0');
+  if (!pdh->locked)
+    return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
+                             _("Working copy not locked at '%s'."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  pdh->locked = FALSE;
+#else
+  owned_locks = pdh->wcroot->owned_locks;
+  for (i = 0; i < owned_locks->nelts; i++)
+    {
+      const char *lock_abspath = APR_ARRAY_IDX(owned_locks, i, const char*);
+
+      if (strcmp(lock_abspath, local_abspath) == 0)
+        break;
+    }
+
+  if (i >= owned_locks->nelts)
+    return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
+                             _("Working copy not locked at '%s'."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  if (i < owned_locks->nelts)
+    {
+      owned_locks->nelts--;
+
+      /* Move the last item in the array to the to be deleted place */
+      if (owned_locks->nelts > 0)
+        APR_ARRAY_IDX(owned_locks, i, const char*) =
+                APR_ARRAY_IDX(owned_locks, owned_locks->nelts, const char*);
+    }
+#endif
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_WC_LOCK));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
   SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* If we've just removed the "physical" lock, we also need to ensure we
-     don't continue to think we own the lock. */
-  pdh = svn_wc__db_pdh_get_or_create(db, local_abspath, FALSE, scratch_pool);
-  if (pdh)
-    pdh->locked = FALSE;
 
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
-svn_wc__db_temp_mark_locked(svn_wc__db_t *db,
-                            const char *local_dir_abspath,
+svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_boolean_t exact,
                             apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+#ifdef SVN_WC__SINGLE_DB
+  apr_array_header_t *owned_locks;
+  int lock_level, i;
+#endif
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
 
-  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, TRUE,
-                                     scratch_pool);
-  pdh->locked = TRUE;
+  if (!pdh->wcroot)
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  VERIFY_USABLE_PDH(pdh);
+  *own_lock = FALSE;
+#ifndef SVN_WC__SINGLE_DB
+  /* In !SINGLE_DB mode we only allow locking the directories */
+  if (*local_relpath == '\0')
+    *own_lock = (pdh != NULL && pdh->locked);
+#else
+  owned_locks = pdh->wcroot->owned_locks;
+  lock_level = relpath_op_depth(local_relpath);
+
+  if (exact)
+    for (i = 0; i < owned_locks->nelts; i++)
+      {
+        svn_wc__db_wclock_t lock = APR_ARRAY_IDX(owned_locks, i,
+                                                 svn_wc__db_wclock_t);
+
+        if (strcmp(lock.relpath, local_relpath) == 0)
+          {
+            *own_lock = TRUE;
+            return SVN_NO_ERROR;
+          }
+      }
+  else
+    for (i = 0; i < owned_locks->nelts; i++)
+      {
+        svn_wc__db_wclock_t lock = APR_ARRAY_IDX(owned_locks, i,
+                                                 svn_wc__db_wclock_t);
+
+        if ((*lock.relpath == '\0'
+             || svn_relpath_is_ancestor(lock.relpath, local_relpath))
+            && (lock.levels == -1
+                || relpath_op_depth(lock.relpath) + lock.levels >= lock_level))
+          {
+            *own_lock = TRUE;
+            return SVN_NO_ERROR;
+          }
+      }
+#endif
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_temp_own_lock(svn_boolean_t *own_lock,
-                         svn_wc__db_t *db,
-                         const char *local_dir_abspath,
-                         apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
-
-  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
-                                     scratch_pool);
-  *own_lock = (pdh != NULL && pdh->locked);
-
-  return SVN_NO_ERROR;
-
 }
 
 svn_error_t *
