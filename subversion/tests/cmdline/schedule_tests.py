@@ -646,6 +646,42 @@ def delete_non_existent(sbox):
   svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'rm', '--force', 'non-existent')
 
+
+#----------------------------------------------------------------------
+# Problem encountered by cmpilato when he inadvertantly upset an
+# 'svn rm --keep-local' and had to retry it.
+def delete_redelete_fudgery(sbox):
+  "retry of manually upset --keep-local deletion"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  B_path = os.path.join(wc_dir, 'A', 'B')
+
+  # Delete 'A/B' using --keep-local, then remove at the OS level.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '--keep-local', B_path)
+  svntest.main.safe_rmtree(B_path)
+
+  # Update the tree.
+  #
+  ### When WC-NG is running in single-DB mode (one .svn directory and
+  ### database for the whole working copy), I suspect that this update
+  ### will change.  Today it re-adds the directory which we just
+  ### scheduled for deletion because the only record of that
+  ### scheduling is stored -- you guessed it -- the directory's .svn/
+  ### area... which we just deleted from disk.
+  ###
+  ### In single-DB-WC-NG-land, though, deleting the directory from
+  ### disk should have no bearing whatsoever on the scheduling
+  ### information stored now in the working copy root's one DB.  That
+  ### could change the whole flow of this test, possible leading us to
+  ### remove it as altogether irrelevant.  --cmpilato
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Now try to run
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '--keep-local', B_path)
+
 ########################################################################
 # Run the tests
 
@@ -665,6 +701,7 @@ test_list = [ None,
               add_recursive_already_versioned,
               fail_add_directory,
               delete_non_existent,
+              XFail(delete_redelete_fudgery),
              ]
 
 if __name__ == '__main__':
