@@ -42,6 +42,7 @@
 #include "entries.h"
 #include "lock.h"
 #include "props.h"
+#include "translate.h"
 #include "workqueue.h"
 
 #include "svn_private_config.h"
@@ -3293,19 +3294,14 @@ svn_wc_translated_stream(svn_stream_t **stream,
 {
   const char *local_abspath;
   const char *versioned_abspath;
-  svn_wc_context_t *wc_ctx;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
 
-  SVN_ERR(svn_wc_translated_stream2(stream, wc_ctx, local_abspath,
-                                    versioned_abspath, flags,
-                                    pool, pool));
-
-  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  return svn_error_return(
+    svn_wc__internal_translated_stream(stream, svn_wc__adm_get_db(adm_access),
+                                       local_abspath, versioned_abspath, flags,
+                                       pool, pool));
 }
 
 svn_error_t *
@@ -3319,15 +3315,13 @@ svn_wc_translated_file2(const char **xlated_path,
   const char *versioned_abspath;
   const char *root;
   const char *tmp_root;
-  svn_wc_context_t *wc_ctx;
 
   SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
 
-  SVN_ERR(svn_wc_translated_file3(xlated_path, src, wc_ctx, versioned_abspath,
-                                  flags, NULL, NULL, pool, pool));
+  SVN_ERR(svn_wc__internal_translated_file(xlated_path, src,
+                                           svn_wc__adm_get_db(adm_access),
+                                           versioned_abspath,
+                                           flags, NULL, NULL, pool, pool));
   if (! svn_dirent_is_absolute(versioned_file))
     {
       SVN_ERR(svn_io_temp_dir(&tmp_root, pool));
@@ -3338,7 +3332,7 @@ svn_wc_translated_file2(const char **xlated_path,
         }
     }
 
-  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  return SVN_NO_ERROR;
 }
 
 /*** From relocate.c ***/
