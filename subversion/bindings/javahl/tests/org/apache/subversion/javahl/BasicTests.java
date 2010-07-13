@@ -3244,6 +3244,11 @@ public class BasicTests extends SVNTests
      * @throws IOException
      * @throws SubversionException
      */
+    /*
+      This is currently commented out, because we don't have an XFail method
+      for JavaHL.  The resolution is pending the result of issue #3680:
+      http://subversion.tigris.org/issues/show_bug.cgi?id=3680
+
     public void testObstructionTolerance()
             throws SubversionException, IOException
     {
@@ -3400,7 +3405,7 @@ public class BasicTests extends SVNTests
                                    backupTest.getWc().getItemContent("A/D/H/omega"));
 
         backupTest.checkStatus();
-    }
+    }*/
 
     /**
      * Test basic blame functionality.  This test marginally tests blame
