@@ -482,8 +482,11 @@ copy_versioned_dir(svn_wc__db_t *db,
     }
 
   if (kind == svn_node_dir)
-    /* All children, versioned and unversioned */
-    SVN_ERR(svn_io_get_dirents2(&children, src_abspath, scratch_pool));
+    /* All children, versioned and unversioned.  We're only interested in the
+       names of the children, so we can pass TRUE as the only_check_type
+       param. */
+    SVN_ERR(svn_io_get_dirents3(&children, src_abspath, TRUE,
+                                scratch_pool, scratch_pool));
 
   /* Copy all the versioned children */
   SVN_ERR(svn_wc__db_read_children(&versioned_children, db, src_abspath,
