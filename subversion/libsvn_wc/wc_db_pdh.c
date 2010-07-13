@@ -85,7 +85,7 @@ get_old_version(int *version,
   return SVN_NO_ERROR;
 }
 
-
+#ifndef SVN_WC__SINGLE_DB
 /* The filesystem has a directory at LOCAL_RELPATH. Examine the metadata
    to determine if a *file* was supposed to be there.
 
@@ -129,6 +129,7 @@ determine_obstructed_file(svn_boolean_t *obstructed_file,
 
   return svn_sqlite__reset(stmt);
 }
+#endif
 
 
 /* */
@@ -325,6 +326,12 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   (*wcroot)->sdb = sdb;
   (*wcroot)->wc_id = wc_id;
   (*wcroot)->format = format;
+#ifdef SVN_WC__SINGLE_DB
+  /* 8 concurrent locks is probably more than a typical wc_ng based svn client
+     uses. */
+  (*wcroot)->owned_locks = apr_array_make(result_pool, 8,
+                                          sizeof(svn_wc__db_wclock_t));
+#endif
 
   /* SDB will be NULL for pre-NG working copies. We only need to run a
      cleanup when the SDB is present.  */
@@ -689,6 +696,7 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
             }
         }
 
+#ifndef SVN_WC__SINGLE_DB
       if (parent_pdh)
         {
           const char *lookfor_relpath = svn_dirent_basename(local_abspath,
@@ -710,6 +718,7 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
               return SVN_NO_ERROR;
             }
         }
+#endif
     }
 
   /* The PDH is complete. Stash it into DB.  */

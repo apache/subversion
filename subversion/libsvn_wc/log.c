@@ -749,7 +749,6 @@ cleanup_internal(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   int wc_format;
-  svn_error_t *err;
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -762,12 +761,7 @@ cleanup_internal(svn_wc__db_t *db,
   SVN_ERR(can_be_cleaned(&wc_format, db, adm_abspath, iterpool));
 
   /* Lock this working copy directory, or steal an existing lock */
-  err = svn_wc__db_wclock_set(db, adm_abspath, 0, iterpool);
-  if (err && err->apr_err == SVN_ERR_WC_LOCKED)
-    svn_error_clear(err);
-  else if (err)
-    return svn_error_return(err);
-  SVN_ERR(svn_wc__db_temp_mark_locked(db, adm_abspath, iterpool));
+  SVN_ERR(svn_wc__db_wclock_obtain(db, adm_abspath, 0, TRUE, iterpool));
 
   /* Run our changes before the subdirectories. We may not have to recurse
      if we blow away a subdir.  */
@@ -816,7 +810,7 @@ cleanup_internal(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_pristine_cleanup(db, adm_abspath, iterpool));
 
   /* All done, toss the lock */
-  SVN_ERR(svn_wc__db_wclock_remove(db, adm_abspath, iterpool));
+  SVN_ERR(svn_wc__db_wclock_release(db, adm_abspath, iterpool));
 
   svn_pool_destroy(iterpool);
 
