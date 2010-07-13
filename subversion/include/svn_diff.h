@@ -933,6 +933,22 @@ svn_linenum_t
 svn_diff_hunk_get_trailing_context(const svn_hunk_t *hunk);
 
 /**
+ * Data type to manage parsing of properties in patches.
+ * 
+ * @since New in 1.7. */
+typedef struct svn_prop_patch_t {
+  const char *name;
+
+  /** Represents the operation performed on the property */
+  svn_diff_operation_kind_t operation;
+
+  /**
+   * An array containing an svn_hunk_t object for each hunk parsed from the
+   * patch associated with our property name */
+  apr_array_header_t *hunks;
+} svn_prop_patch_t;
+
+/**
  * Data type to manage parsing of patches.
  *
  * @since New in 1.7. */
@@ -956,9 +972,9 @@ typedef struct svn_patch_t {
   apr_array_header_t *hunks;
 
   /**
-   * A hash table containing an array of svn_hunk_t object for each property
-   * parsed from the patch. The property names act as keys.  */
-  apr_hash_t *property_hunks;
+   * An array containing svn_patch_property_t object for each property
+   * parsed from the patch. */
+  apr_array_header_t *prop_patches;
 
   /**
    * Represents the operation performed on the file. */
