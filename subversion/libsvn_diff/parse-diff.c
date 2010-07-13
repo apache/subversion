@@ -501,14 +501,15 @@ parse_prop_name(const char **prop_name, const char *header,
 
 /* Return the next *HUNK from a PATCH, using STREAM to read data
  * from the patch file. If no hunk can be found, set *HUNK to NULL. If we
- * have a property hunk, PROP_NAME will be set. If we have a text hunk,
- * PROP_NAME will be NULL. If REVERSE is TRUE, invert the hunk while
- * parsing it. If IGNORE_WHiTESPACES is TRUE, let lines without leading
- * spaces be recognized as context lines.  Allocate results in RESULT_POOL.
- * Use SCRATCH_POOL for all other allocations. */
+ * have a property hunk, PROP_NAME and PROP_OPERATION will be set. If we
+ * have a text hunk, PROP_NAME will be NULL. If REVERSE is TRUE, invert the
+ * hunk while parsing it. If IGNORE_WHiTESPACES is TRUE, let lines without
+ * leading spaces be recognized as context lines.  Allocate results in
+ * RESULT_POOL.  Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 parse_next_hunk(svn_hunk_t **hunk,
                 const char **prop_name,
+                svn_diff_operation_kind_t *prop_operation,
                 svn_patch_t *patch,
                 svn_stream_t *stream,
                 svn_boolean_t reverse,
@@ -685,16 +686,19 @@ parse_next_hunk(svn_hunk_t **hunk,
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Added: ",
                                       result_pool));
+              *prop_operation = svn_diff_op_added;
             }
           else if (starts_with(line->data, "Deleted: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Deleted: ",
                                       result_pool));
+              *prop_operation = svn_diff_op_deleted;
             }
           else if (starts_with(line->data, "Modified: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Modified: ",
                                       result_pool));
+              *prop_operation = svn_diff_op_modified;
             }
           else if (starts_with(line->data, minus)
                    || starts_with(line->data, "git --diff "))
@@ -1042,6 +1046,47 @@ git_deleted_file(enum parse_state *new_state, const char *line, svn_patch_t *pat
   return SVN_NO_ERROR;
 }
 
+/* Add a HUNK associated with the property PROP_NAME to PATCH. */
+static svn_error_t *
+add_property_hunk(svn_patch_t *patch, const char *prop_name, 
+                  svn_hunk_t *hunk, svn_diff_operation_kind_t operation,
+                  apr_pool_t *result_pool)
+{
+  int i;
+  svn_boolean_t prop_name_seen = FALSE;
+
+  /* Find the right property name and insert the hunk.. */
+  for (i = 0; i < patch->prop_patches->nelts; i++)
+    {
+      svn_prop_patch_t *prop_patch = APR_ARRAY_IDX(patch->prop_patches,
+                                                   i,
+                                                   svn_prop_patch_t *);
+      if (! strcmp(prop_name, prop_patch->name))
+        {
+          APR_ARRAY_PUSH(prop_patch->hunks, svn_hunk_t *) = hunk;
+          prop_name_seen = TRUE;
+          break;
+        }
+    }
+
+  /* .. No property found named prop_name so we create it. */
+  if (! prop_name_seen)
+    {
+      svn_prop_patch_t *prop_patch;
+        
+      prop_patch = apr_palloc(result_pool,
+                              sizeof(svn_prop_patch_t *));
+      prop_patch->name = prop_name;
+      prop_patch->operation = operation;
+      prop_patch->hunks = apr_array_make(result_pool, 1,
+                                         sizeof(svn_hunk_t *));
+      APR_ARRAY_PUSH(prop_patch->hunks, svn_hunk_t *) = hunk;
+      APR_ARRAY_PUSH(patch->prop_patches, 
+                     svn_prop_patch_t *) = prop_patch;
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
@@ -1182,33 +1227,28 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
     {
       svn_hunk_t *hunk;
       const char *prop_name;
+      svn_diff_operation_kind_t prop_operation;
 
       /* Parse hunks. */
       (*patch)->hunks = apr_array_make(result_pool, 10, sizeof(svn_hunk_t *));
-      (*patch)->property_hunks = apr_hash_make(result_pool);
+      (*patch)->prop_patches = apr_array_make(result_pool, 1, sizeof(svn_hunk_t *));
       do
         {
           svn_pool_clear(iterpool);
 
-          SVN_ERR(parse_next_hunk(&hunk, &prop_name, *patch, stream,
-                                  reverse, ignore_whitespace,
+          SVN_ERR(parse_next_hunk(&hunk, &prop_name, &prop_operation,
+                                  *patch, stream, reverse,
+                                  ignore_whitespace,
                                   result_pool, iterpool));
+
+          /* We have a property hunk. */
           if (hunk && prop_name)
             {
-              apr_array_header_t *hunks;
-
-              hunks = apr_hash_get((*patch)->property_hunks, prop_name,
-                                    APR_HASH_KEY_STRING);
-              if (! hunks)
-                {
-                  hunks = apr_array_make(result_pool, 1, 
-                                          sizeof(svn_hunk_t *));
-                  apr_hash_set((*patch)->property_hunks, prop_name,
-                                       APR_HASH_KEY_STRING, hunks);
-                }
-
-              APR_ARRAY_PUSH(hunks, svn_hunk_t *) = hunk;
+              SVN_ERR(add_property_hunk(*patch, prop_name, hunk, prop_operation,
+                                        result_pool));
             }
+
+          /* We have a regular text hunk. */
           else if (hunk)
             APR_ARRAY_PUSH((*patch)->hunks, svn_hunk_t *) = hunk;
 
