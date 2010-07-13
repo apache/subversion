@@ -755,7 +755,8 @@ erase_from_wc(svn_wc__db_t *db,
         }
 
       /* Now handle any remaining unversioned items */
-      err = svn_io_get_dirents2(&unversioned, local_abspath, scratch_pool);
+      err = svn_io_get_dirents3(&unversioned, local_abspath, TRUE,
+                                scratch_pool, scratch_pool);
       if (err)
         {
           svn_pool_destroy(iterpool);
