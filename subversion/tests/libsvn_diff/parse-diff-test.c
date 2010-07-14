@@ -148,9 +148,19 @@ static const char *bad_git_diff_header =
   "Property changes on: iota"                                           NL
   "___________________________________________________________________" NL
   "Modified: prop_mod"                                                  NL
-  "## -1 +1 ##"                                                         NL
+  "## -1,4 +1,4 ##"                                                     NL
   "-value"                                                              NL
-  "+new value"                                                          NL;
+  "+new value"                                                          NL
+  " context"                                                            NL
+  " context"                                                            NL
+  " context"                                                            NL
+  "## -10,4 +10,4 ##"                                                   NL
+  " context"                                                            NL
+  " context"                                                            NL
+  " context"                                                            NL
+  "-value"                                                              NL
+  "+new value"                                                          NL
+  ""                                                                    NL;
 
   /* ### Add edge cases like context lines stripped from leading whitespaces
    * ### that starts with 'Added: ', 'Deleted: ' or 'Modified: '. */
@@ -550,14 +560,36 @@ test_parse_property_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_modified);
   hunks = prop_patch->hunks;
 
-  SVN_TEST_ASSERT(hunks->nelts == 1);
+  SVN_TEST_ASSERT(hunks->nelts == 2);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
+                        "value" NL
+                        "context" NL
+                        "context" NL
+                        "context" NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk, FALSE,
+                        "new value" NL
+                        "context" NL
+                        "context" NL
+                        "context" NL,
+                        pool));
+
+  hunk = APR_ARRAY_IDX(hunks, 1 , svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk, TRUE,
+                        "context" NL
+                        "context" NL
+                        "context" NL
                         "value" NL,
                         pool));
 
   SVN_ERR(check_content(hunk, FALSE,
+                        "context" NL
+                        "context" NL
+                        "context" NL
                         "new value" NL,
                         pool));
 

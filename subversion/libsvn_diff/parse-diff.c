@@ -500,14 +500,17 @@ parse_prop_name(const char **prop_name, const char *header,
 }
 
 /* Return the next *HUNK from a PATCH, using STREAM to read data
- * from the patch file. If no hunk can be found, set *HUNK to NULL. If we
- * have a property hunk, PROP_NAME and PROP_OPERATION will be set. If we
- * have a text hunk, PROP_NAME will be NULL. If REVERSE is TRUE, invert the
- * hunk while parsing it. If IGNORE_WHiTESPACES is TRUE, let lines without
- * leading spaces be recognized as context lines.  Allocate results in
+ * from the patch file. If no hunk can be found, set *HUNK to NULL. Set
+ * IS_PROPERTY to TRUE if we have a property hunk. If the returned HUNK is
+ * the first belonging to a certain property, then PROP_NAME and
+ * PROP_OPERATION will be set too. If we have a text hunk, PROP_NAME will be
+ * NULL. If REVERSE is TRUE, invert the hunk while parsing it. If
+ * IGNORE_WHiTESPACES is TRUE, let lines without leading spaces be
+ * recognized as context lines.  Allocate results in
  * RESULT_POOL.  Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 parse_next_hunk(svn_hunk_t **hunk,
+                svn_boolean_t *is_property,
                 const char **prop_name,
                 svn_diff_operation_kind_t *prop_operation,
                 svn_patch_t *patch,
@@ -536,11 +539,9 @@ parse_next_hunk(svn_hunk_t **hunk,
 
   *prop_operation = svn_diff_op_unchanged;
 
-  /* We only set this if we have a property hunk. 
-   * ### prop_name acts as both a state flag inside this function and a
-   * ### qualifier to discriminate between props and text hunks. Is that
-   * ### kind of overloading ok? */
+  /* We only set this if we have a property hunk header. */
   *prop_name = NULL;
+  *is_property = FALSE;
 
   if (apr_file_eof(patch->patch_file) == APR_EOF)
     {
@@ -669,10 +670,10 @@ parse_next_hunk(svn_hunk_t **hunk,
                 {
                   original_lines = (*hunk)->original_length;
                   modified_lines = (*hunk)->modified_length;
-                  *prop_name = NULL;
+                  *is_property = FALSE;
                 }
               }
-          else if (starts_with(line->data, prop_atat) && *prop_name)
+          else if (starts_with(line->data, prop_atat))
             {
               /* Looks like we have a property hunk header, try to rip it
                * apart. */
@@ -682,6 +683,7 @@ parse_next_hunk(svn_hunk_t **hunk,
                 {
                   original_lines = (*hunk)->original_length;
                   modified_lines = (*hunk)->modified_length;
+                  *is_property = TRUE;
                 }
             }
           else if (starts_with(line->data, "Added: "))
@@ -1213,6 +1215,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
   else
     {
       svn_hunk_t *hunk;
+      svn_boolean_t is_property;
+      const char *last_prop_name;
       const char *prop_name;
       svn_diff_operation_kind_t prop_operation;
 
@@ -1223,21 +1227,25 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
         {
           svn_pool_clear(iterpool);
 
-          SVN_ERR(parse_next_hunk(&hunk, &prop_name, &prop_operation,
-                                  *patch, stream, reverse,
+          SVN_ERR(parse_next_hunk(&hunk, &is_property, &prop_name,
+                                  &prop_operation, *patch, stream, reverse,
                                   ignore_whitespace,
                                   result_pool, iterpool));
 
-          /* We have a property hunk. */
-          if (hunk && prop_name)
+          if (hunk && is_property)
             {
+              if (! prop_name)
+                prop_name = last_prop_name;
+              else
+                last_prop_name = prop_name;
               SVN_ERR(add_property_hunk(*patch, prop_name, hunk, prop_operation,
                                         result_pool));
             }
-
-          /* We have a regular text hunk. */
           else if (hunk)
-            APR_ARRAY_PUSH((*patch)->hunks, svn_hunk_t *) = hunk;
+            {
+              APR_ARRAY_PUSH((*patch)->hunks, svn_hunk_t *) = hunk;
+              last_prop_name = NULL;
+            }
 
         }
       while (hunk);
