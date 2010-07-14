@@ -682,6 +682,18 @@ def delete_redelete_fudgery(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', '--keep-local', B_path)
 
+def propset_on_deleted_should_fail(sbox):
+  "calling svn propset on a deleted node should fail"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota = os.path.join(wc_dir, 'iota')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota)
+
+  svntest.actions.run_and_verify_svn(None, None, "svn: Can't set propert.*",
+                                     'ps', 'prop', 'val', iota)
+
+
 ########################################################################
 # Run the tests
 
@@ -702,6 +714,7 @@ test_list = [ None,
               fail_add_directory,
               delete_non_existent,
               XFail(delete_redelete_fudgery),
+              propset_on_deleted_should_fail,
              ]
 
 if __name__ == '__main__':

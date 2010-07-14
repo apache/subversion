@@ -2403,8 +2403,34 @@ svn_wc__internal_propset(svn_wc__db_t *db,
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
   svn_wc_notify_action_t notify_action;
   svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status;
+  const char *dir_abspath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* Get the node kind for this path. */
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (status != svn_wc__db_status_normal
+      && status != svn_wc__db_status_added
+      && status != svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+                             _("Can't set properties on '%s':"
+                               " invalid status for updating properties."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  if (kind == svn_wc__db_kind_dir)
+    dir_abspath = local_abspath;
+  else
+    dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
   if (prop_kind == svn_prop_wc_kind)
     return svn_error_return(wcprop_set(db, local_abspath, name, value,
@@ -2417,13 +2443,6 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
   /* Else, handle a regular property: */
 
-  /* Get the node kind for this path. */
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
 
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
