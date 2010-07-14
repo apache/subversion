@@ -1025,6 +1025,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                  svn_dirent_local_style(local_abspath, scratch_pool));
 #endif
 
+  SVN_ERR(svn_wc__write_check(db, parent_abspath, scratch_pool));
+
   {
     svn_wc__db_status_t parent_status;
     svn_wc__db_kind_t parent_kind;
