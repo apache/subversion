@@ -1058,37 +1058,13 @@ child_is_disjoint(svn_boolean_t *disjoint,
   svn_boolean_t found_in_parent = FALSE;
   int i;
 
-  svn_dirent_split(&parent_abspath, &base, local_abspath, scratch_pool);
-
   /* Check if the parent directory knows about this node */
-  err = svn_wc__db_read_children(&children, db, parent_abspath, scratch_pool,
-                                 scratch_pool);
+  SVN_ERR(svn_wc__db_is_wcroot(disjoint, db, local_abspath, scratch_pool));
 
-  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
-    {
-      svn_error_clear(err);
-      *disjoint = TRUE;
-      return SVN_NO_ERROR;
-    }
-  else
-    SVN_ERR(err);
+  if (*disjoint)
+    return SVN_NO_ERROR;
 
-  for (i = 0; i < children->nelts; i++)
-    {
-      const char *name = APR_ARRAY_IDX(children, i, const char *);
-
-      if (strcmp(name, base) == 0)
-        {
-          found_in_parent = TRUE;
-          break;
-        }
-    }
-
-  if (!found_in_parent)
-    {
-      *disjoint = TRUE;
-      return SVN_NO_ERROR;
-    }
+  svn_dirent_split(&parent_abspath, &base, local_abspath, scratch_pool);
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &node_repos_relpath,
                                &node_repos_root, &node_repos_uuid, NULL, NULL,
@@ -1097,8 +1073,8 @@ child_is_disjoint(svn_boolean_t *disjoint,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  /* If the node does not have its own relpath, its value is inherited
-     which tells us that it is not disjoint. */
+  /* If the node does not have its own repos_relpath, its value is inherited
+     from a parent node, which implies that the node is not disjoint. */
   if (node_repos_relpath == NULL)
     {
       *disjoint = FALSE;
