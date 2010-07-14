@@ -1054,38 +1054,23 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
                   svn_hunk_t *hunk, svn_diff_operation_kind_t operation,
                   apr_pool_t *result_pool)
 {
-  int i;
-  svn_boolean_t prop_name_seen = FALSE;
+  svn_prop_patch_t *prop_patch;
 
-  /* Find the right property name and insert the hunk.. */
-  for (i = 0; i < patch->prop_patches->nelts; i++)
-    {
-      svn_prop_patch_t *prop_patch = APR_ARRAY_IDX(patch->prop_patches,
-                                                   i,
-                                                   svn_prop_patch_t *);
-      if (! strcmp(prop_name, prop_patch->name))
-        {
-          APR_ARRAY_PUSH(prop_patch->hunks, svn_hunk_t *) = hunk;
-          prop_name_seen = TRUE;
-          break;
-        }
-    }
+  prop_patch = apr_hash_get(patch->prop_patches, prop_name,
+                            APR_HASH_KEY_STRING);
 
-  /* .. No property found named prop_name so we create it. */
-  if (! prop_name_seen)
+  if (! prop_patch)
     {
-      svn_prop_patch_t *prop_patch;
-        
-      prop_patch = apr_palloc(result_pool,
-                              sizeof(svn_prop_patch_t));
+      prop_patch = apr_palloc(result_pool, sizeof(svn_prop_patch_t));
       prop_patch->name = prop_name;
       prop_patch->operation = operation;
-      prop_patch->hunks = apr_array_make(result_pool, 1,
-                                         sizeof(svn_hunk_t *));
-      APR_ARRAY_PUSH(prop_patch->hunks, svn_hunk_t *) = hunk;
-      APR_ARRAY_PUSH(patch->prop_patches, 
-                     svn_prop_patch_t *) = prop_patch;
+      prop_patch->hunks = apr_array_make(result_pool, 1, sizeof(svn_hunk_t *));
+
+      apr_hash_set(patch->prop_patches, prop_name, APR_HASH_KEY_STRING,
+                   prop_patch);
     }
+
+  APR_ARRAY_PUSH(prop_patch->hunks, svn_hunk_t *) = hunk;
 
   return SVN_NO_ERROR;
 }
@@ -1233,7 +1218,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
 
       /* Parse hunks. */
       (*patch)->hunks = apr_array_make(result_pool, 10, sizeof(svn_hunk_t *));
-      (*patch)->prop_patches = apr_array_make(result_pool, 1, sizeof(svn_hunk_t *));
+      (*patch)->prop_patches = apr_hash_make(result_pool);
       do
         {
           svn_pool_clear(iterpool);
