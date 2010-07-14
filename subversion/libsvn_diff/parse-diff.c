@@ -534,6 +534,8 @@ parse_next_hunk(svn_hunk_t **hunk,
   svn_boolean_t changed_line_seen;
   apr_pool_t *iterpool;
 
+  *prop_operation = svn_diff_op_unchanged;
+
   /* We only set this if we have a property hunk. 
    * ### prop_name acts as both a state flag inside this function and a
    * ### qualifier to discriminate between props and text hunks. Is that

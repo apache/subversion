@@ -777,6 +777,7 @@ svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
  */
 typedef enum svn_diff_operation_kind_e
 {
+  svn_diff_op_unchanged,
   svn_diff_op_added,
   svn_diff_op_deleted,
   svn_diff_op_copied,
