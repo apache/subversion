@@ -1077,7 +1077,7 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
       svn_prop_patch_t *prop_patch;
         
       prop_patch = apr_palloc(result_pool,
-                              sizeof(svn_prop_patch_t *));
+                              sizeof(svn_prop_patch_t));
       prop_patch->name = prop_name;
       prop_patch->operation = operation;
       prop_patch->hunks = apr_array_make(result_pool, 1,
