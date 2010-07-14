@@ -973,9 +973,9 @@ typedef struct svn_patch_t {
   apr_array_header_t *hunks;
 
   /**
-   * An array containing svn_patch_property_t object for each property
-   * parsed from the patch. */
-  apr_array_header_t *prop_patches;
+   * A hash table keyed by property names containing svn_patch_property_t
+   * object for each property parsed from the patch. */
+  apr_hash_t *prop_patches;
 
   /**
    * Represents the operation performed on the file. */
