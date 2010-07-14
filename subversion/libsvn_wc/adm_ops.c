@@ -1269,6 +1269,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       const char *absent_repos_relpath, *absent_repos_root_url;
       const char *absent_repos_uuid;
       svn_revnum_t absent_revision;
+      svn_boolean_t owns_lock;
 
       /* Read the not present status from the parent working copy,
          to reinsert it after hooking up the child working copy */
@@ -1312,6 +1313,15 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                 scratch_pool));
       else
         SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
+
+      /* The subdir is now part of our parent working copy. Our caller assumes
+         that we return the new node locked, so obtain a lock if we didn't
+         receive the lock via our depth infinity lock */
+      SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath, FALSE,
+                                          scratch_pool));
+      if (!owns_lock)
+        SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                         scratch_pool));
     }
 
   /* Report the addition to the caller. */
