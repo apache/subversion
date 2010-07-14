@@ -290,6 +290,53 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   return editor->close_edit(edit_baton, pool);
 }
 
+/* Baton for set_props_cb */
+struct set_props_baton
+{
+  svn_client_ctx_t *ctx;
+  const char *local_abspath;
+  svn_depth_t depth;
+  svn_node_kind_t kind;
+  const char *propname;
+  const svn_string_t *propval;
+  svn_boolean_t skip_checks;
+  apr_hash_t *changelist_hash;
+};
+
+/* Working copy lock callback for svn_client_propset3 */
+static svn_error_t *
+set_props_cb(void *baton,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  struct set_props_baton *bt = baton;
+
+  if (bt->depth >= svn_depth_files && bt->kind == svn_node_dir)
+    {
+      struct propset_walk_baton wb;
+
+      wb.wc_ctx = bt->ctx->wc_ctx;
+      wb.propname = bt->propname;
+      wb.propval = bt->propval;
+      wb.force = bt->skip_checks;
+      wb.changelist_hash = bt->changelist_hash;
+      wb.notify_func = bt->ctx->notify_func2;
+      wb.notify_baton = bt->ctx->notify_baton2;
+      SVN_ERR(svn_wc__node_walk_children(bt->ctx->wc_ctx, bt->local_abspath,
+                                         FALSE, propset_walk_cb, &wb,
+                                         bt->depth, bt->ctx->cancel_func,
+                                         bt->ctx->cancel_baton, scratch_pool));
+    }
+  else if (svn_wc__changelist_match(bt->ctx->wc_ctx, bt->local_abspath,
+                                    bt->changelist_hash, scratch_pool))
+    {
+      SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath,
+                               bt->propname, bt->propval, bt->skip_checks,
+                               bt->ctx->notify_func2, bt->ctx->notify_baton2,
+                               scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client_propset3(svn_commit_info_t **commit_info_p,
@@ -361,6 +408,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       apr_hash_t *changelist_hash = NULL;
       const char *target_abspath;
       svn_error_t *err;
+      struct set_props_baton baton;
 
       SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
@@ -383,29 +431,18 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       else
         SVN_ERR(err);
 
-      if (depth >= svn_depth_files && kind == svn_node_dir)
-        {
-          struct propset_walk_baton wb;
+      baton.ctx = ctx;
+      baton.local_abspath = target_abspath;
+      baton.depth = depth;
+      baton.kind = kind;
+      baton.propname = propname;
+      baton.propval = propval;
+      baton.skip_checks = skip_checks;
+      baton.changelist_hash = changelist_hash;
 
-          wb.wc_ctx = ctx->wc_ctx;
-          wb.propname = propname;
-          wb.propval = propval;
-          wb.force = skip_checks;
-          wb.changelist_hash = changelist_hash;
-          wb.notify_func = ctx->notify_func2;
-          wb.notify_baton = ctx->notify_baton2;
-          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, target_abspath,
-                                             FALSE, propset_walk_cb, &wb,
-                                             depth, ctx->cancel_func,
-                                             ctx->cancel_baton, pool));
-        }
-      else if (svn_wc__changelist_match(ctx->wc_ctx, target_abspath,
-                                        changelist_hash, pool))
-        {
-          SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target_abspath, propname,
-                                   propval, skip_checks, ctx->notify_func2,
-                                   ctx->notify_baton2, pool));
-        }
+      SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
+                                           ctx->wc_ctx, target_abspath,
+                                           pool, pool));
 
       return SVN_NO_ERROR;
     }
