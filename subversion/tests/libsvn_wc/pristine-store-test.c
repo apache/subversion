@@ -249,15 +249,21 @@ pristine_get_translated(const svn_test_opts_t *opts,
      translation. Set some properties on it. */
   {
     svn_wc_context_t *wc_ctx;
+    const char *dirname = svn_dirent_dirname(versioned_abspath, pool);
 
     SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
     SVN_ERR(svn_io_file_create(versioned_abspath, data, pool));
+
+    SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, dirname, 0, FALSE, pool));
+
     SVN_ERR(svn_wc_add4(wc_ctx, versioned_abspath, svn_depth_empty,
                         NULL, SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL,
                         pool));
     SVN_ERR(svn_wc_prop_set4(wc_ctx, versioned_abspath,
                              "svn:keywords", svn_string_create("Rev", pool),
                              FALSE, NULL, NULL, pool));
+
+    SVN_ERR(svn_wc__db_wclock_release(wc_ctx->db, dirname, pool));
   }
 
   /* Store a pristine text, and set DATA_SHA1 and DATA_MD5. */
