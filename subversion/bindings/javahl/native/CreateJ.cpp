@@ -367,7 +367,8 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
     {
       midCP = env->GetMethodID(clazzCP,
                                "<init>",
-                               "(Ljava/lang/String;JLjava/lang/String;C"
+                               "(Ljava/lang/String;JLjava/lang/String;"
+                               "L"JAVA_PACKAGE"/ChangePath$Action;"
                                "L"JAVA_PACKAGE"/NodeKind;"
                                "L"JAVA_PACKAGE"/Tristate;"
                                "L"JAVA_PACKAGE"/Tristate;)V");
@@ -383,12 +384,15 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
+  jobject jaction = EnumMapper::mapChangePathAction(log_item->action);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   jobject jnodeKind = EnumMapper::mapNodeKind(log_item->node_kind);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
   jlong jcopyFromRev = log_item->copyfrom_rev;
-  jchar jaction = log_item->action;
 
   jobject jcp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
                       jcopyFromPath, jaction, jnodeKind,
