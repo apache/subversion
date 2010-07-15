@@ -1321,8 +1321,8 @@ SVN_ERROR_START
 /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
              SVN_ERR_MISC_CATEGORY_START + 34,
-             "SQLite busy at rollback; "
-             "resetting all busy SQLite statements to rollback")
+             "SQLite busy at transaction rollback; "
+             "resetting all busy SQLite statements to allow rollback")
 
   /* command-line client errors */
 
