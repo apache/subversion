@@ -81,10 +81,12 @@ struct svn_sqlite__stmt_t
 };
 
 
-/* Convert SQLite error codes to SVN */
-#define SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY    \
-                              ? SVN_ERR_SQLITE_READONLY \
-                              : SVN_ERR_SQLITE_ERROR )
+/* Convert SQLite error codes to SVN. Evaluates X multiple times */
+#define SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY       \
+                              ? SVN_ERR_SQLITE_READONLY    \
+                              : ((x) == SQLITE_BUSY        \
+                                 ? SVN_ERR_SQLITE_BUSY     \
+                                 : SVN_ERR_SQLITE_ERROR) )
 
 
 /* SQLITE->SVN quick error wrap, much like SVN_ERR. */
@@ -965,8 +967,50 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
   /* Commit or rollback the sqlite transaction. */
   if (err)
     {
+      svn_error_t *err2 = exec_sql(db, "ROLLBACK TRANSACTION;");
+
+      if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
+        {
+          int i;
+          /* ### Houston, we have a problem!
+
+             We are trying to rollback but we can't because some
+             statements are still busy. This leaves the database
+             unusable for future transactions as the current transaction
+             is still open.
+
+             As we are returning the actual error as the most relevant
+             error in the chain, our caller might assume that it can
+             retry/compensate on this error (e.g. SVN_WC_LOCKED), while
+             in fact the SQLite database is unusable until the statements
+             started within this transaction are reset and the transaction
+             aborted.
+
+             We try to compensate by resetting al prepared but unreset
+             statements; but we leave the busy error in the chain anyway to
+             help diagnosing the original error and help in finding where
+             a reset statement is missing. */
+
+          /* ### Should we reorder the errors in this specific case
+             ### to avoid returning the normal error as top level error? */
+
+          err2 = svn_error_compose_create(err2,
+                   svn_error_create(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
+                                    NULL, NULL));
+
+          for (i = 0; i < db->nbr_statements; i++)
+            if (db->prepared_stmts[i] && db->prepared_stmts[i]->needs_reset)
+              err2 = svn_error_compose_create(
+                         err2,
+                         svn_sqlite__reset(db->prepared_stmts[i]));
+
+          err2 = svn_error_compose_create(
+                      exec_sql(db, "ROLLBACK TRANSACTION;"),
+                      err2);
+        }
+
       return svn_error_compose_create(err,
-                                      exec_sql(db, "ROLLBACK TRANSACTION;"));
+                                      err2);
     }
 
   return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));

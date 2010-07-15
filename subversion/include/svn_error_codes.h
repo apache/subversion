@@ -1313,6 +1313,17 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 32,
              "Unsupported schema found in SQLite db")
 
+/** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_BUSY,
+             SVN_ERR_MISC_CATEGORY_START + 33,
+             "The SQLite db is busy")
+
+/** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
+             SVN_ERR_MISC_CATEGORY_START + 34,
+             "SQLite busy at rollback; "
+             "resetting all busy SQLite statements to rollback")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
