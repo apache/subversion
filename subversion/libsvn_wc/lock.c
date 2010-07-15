@@ -1052,11 +1052,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
   const char *node_repos_root, *node_repos_relpath, *node_repos_uuid;
   const char *parent_repos_root, *parent_repos_relpath, *parent_repos_uuid;
   svn_wc__db_status_t parent_status;
-  const apr_array_header_t *children;
   const char *parent_abspath, *base;
-  svn_error_t *err;
-  svn_boolean_t found_in_parent = FALSE;
-  int i;
 
   /* Check if the parent directory knows about this node */
   SVN_ERR(svn_wc__db_is_wcroot(disjoint, db, local_abspath, scratch_pool));
