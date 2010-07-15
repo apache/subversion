@@ -168,10 +168,11 @@ svn_ra_serf__encode_auth_header(const char *protocol, const char **header,
                                 const char *data, apr_size_t data_len,
                                 apr_pool_t *pool)
 {
-  apr_size_t encoded_len, proto_len;
+  int encoded_len;
+  size_t proto_len;
   char *ptr;
 
-  encoded_len = apr_base64_encode_len(data_len);
+  encoded_len = apr_base64_encode_len((int) data_len);
   proto_len = strlen(protocol);
 
   ptr = apr_palloc(pool, encoded_len + proto_len + 1);
@@ -181,7 +182,7 @@ svn_ra_serf__encode_auth_header(const char *protocol, const char **header,
   ptr += proto_len;
   *ptr++ = ' ';
 
-  apr_base64_encode(ptr, data, data_len);
+  apr_base64_encode(ptr, data, (int) data_len);
 }
 
 /**
