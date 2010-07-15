@@ -30,7 +30,7 @@ import java.io.File;
 
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
 
-public interface ISVNAdmin {
+public interface ISVNRepos {
 
 	/**
 	 * interface to receive the messages

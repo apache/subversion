@@ -20,11 +20,11 @@
  * ====================================================================
  * @endcopyright
  *
- * @file SVNAdmin.cpp
- * @brief Implementation of the class SVNAdmin
+ * @file SVNRepos.cpp
+ * @brief Implementation of the class SVNRepos
  */
 
-#include "SVNAdmin.h"
+#include "SVNRepos.h"
 #include "CreateJ.h"
 #include "ReposNotifyCallback.h"
 #include "JNIUtil.h"
@@ -37,29 +37,29 @@
 #include "svn_utf.h"
 #include "svn_private_config.h"
 
-SVNAdmin::SVNAdmin()
+SVNRepos::SVNRepos()
 {
 }
 
-SVNAdmin::~SVNAdmin()
+SVNRepos::~SVNRepos()
 {
 }
 
-SVNAdmin *SVNAdmin::getCppObject(jobject jthis)
+SVNRepos *SVNRepos::getCppObject(jobject jthis)
 {
   static jfieldID fid = 0;
   jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-                                                 JAVA_PACKAGE"/SVNAdmin");
-  return (cppAddr == 0 ? NULL : reinterpret_cast<SVNAdmin *>(cppAddr));
+                                                 JAVA_PACKAGE"/SVNRepos");
+  return (cppAddr == 0 ? NULL : reinterpret_cast<SVNRepos *>(cppAddr));
 }
 
-void SVNAdmin::dispose(jobject jthis)
+void SVNRepos::dispose(jobject jthis)
 {
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNAdmin");
+  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNRepos");
 }
 
-void SVNAdmin::create(File &path, bool disableFsyncCommits,
+void SVNRepos::create(File &path, bool disableFsyncCommits,
                       bool keepLogs, File &configPath,
                       const char *fstype)
 {
@@ -92,7 +92,7 @@ void SVNAdmin::create(File &path, bool disableFsyncCommits,
                                requestPool.pool()), );
 }
 
-void SVNAdmin::deltify(File &path, Revision &revStart, Revision &revEnd)
+void SVNRepos::deltify(File &path, Revision &revStart, Revision &revEnd)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -159,7 +159,7 @@ void SVNAdmin::deltify(File &path, Revision &revStart, Revision &revEnd)
   return;
 }
 
-void SVNAdmin::dump(File &path, OutputStream &dataOut,
+void SVNRepos::dump(File &path, OutputStream &dataOut,
                     Revision &revsionStart, Revision &revisionEnd,
                     bool incremental, bool useDeltas,
                     ReposNotifyCallback *notifyCallback)
@@ -230,7 +230,7 @@ void SVNAdmin::dump(File &path, OutputStream &dataOut,
                                  NULL, NULL, requestPool.pool()), );
 }
 
-void SVNAdmin::hotcopy(File &path, File &targetPath,
+void SVNRepos::hotcopy(File &path, File &targetPath,
                        bool cleanLogs)
 {
   SVN::Pool requestPool;
@@ -282,18 +282,18 @@ list_dblogs (File &path, MessageReceiver &receiver, bool only_unused)
     }
 }
 
-void SVNAdmin::listDBLogs(File &path, MessageReceiver &messageReceiver)
+void SVNRepos::listDBLogs(File &path, MessageReceiver &messageReceiver)
 {
   list_dblogs(path, messageReceiver, false);
 }
 
-void SVNAdmin::listUnusedDBLogs(File &path,
+void SVNRepos::listUnusedDBLogs(File &path,
                                 MessageReceiver &messageReceiver)
 {
   list_dblogs(path, messageReceiver, true);
 }
 
-void SVNAdmin::load(File &path,
+void SVNRepos::load(File &path,
                     InputStream &dataIn,
                     bool ignoreUUID,
                     bool forceUUID,
@@ -329,7 +329,7 @@ void SVNAdmin::load(File &path,
                                  NULL, NULL, requestPool.pool()), );
 }
 
-void SVNAdmin::lstxns(File &path, MessageReceiver &messageReceiver)
+void SVNRepos::lstxns(File &path, MessageReceiver &messageReceiver)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -356,7 +356,7 @@ void SVNAdmin::lstxns(File &path, MessageReceiver &messageReceiver)
 
 }
 
-jlong SVNAdmin::recover(File &path, ReposNotifyCallback *notifyCallback)
+jlong SVNRepos::recover(File &path, ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
   svn_revnum_t youngest_rev;
@@ -387,7 +387,7 @@ jlong SVNAdmin::recover(File &path, ReposNotifyCallback *notifyCallback)
   return youngest_rev;
 }
 
-void SVNAdmin::rmtxns(File &path, StringArray &transactions)
+void SVNRepos::rmtxns(File &path, StringArray &transactions)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -438,7 +438,7 @@ void SVNAdmin::rmtxns(File &path, StringArray &transactions)
 
 }
 
-void SVNAdmin::setRevProp(File &path, Revision &revision,
+void SVNRepos::setRevProp(File &path, Revision &revision,
                           const char *propName, const char *propValue,
                           bool usePreRevPropChangeHook,
                           bool usePostRevPropChangeHook)
@@ -491,7 +491,7 @@ void SVNAdmin::setRevProp(File &path, Revision &revision,
    SVN_INVALID_REVNUM if that has the type 'unspecified'),
    possibly making use of the YOUNGEST revision number in REPOS. */
 svn_error_t *
-SVNAdmin::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
+SVNRepos::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
                     svn_revnum_t youngest, svn_repos_t *repos,
                     apr_pool_t *pool)
 {
@@ -518,7 +518,7 @@ SVNAdmin::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
 }
 
 void
-SVNAdmin::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
+SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
                  ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
@@ -570,7 +570,7 @@ SVNAdmin::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
                                    requestPool.pool()), );
 }
 
-void SVNAdmin::pack(File &path, ReposNotifyCallback *notifyCallback)
+void SVNRepos::pack(File &path, ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -594,7 +594,7 @@ void SVNAdmin::pack(File &path, ReposNotifyCallback *notifyCallback)
               );
 }
 
-void SVNAdmin::upgrade(File &path, ReposNotifyCallback *notifyCallback)
+void SVNRepos::upgrade(File &path, ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
 
@@ -613,7 +613,7 @@ void SVNAdmin::upgrade(File &path, ReposNotifyCallback *notifyCallback)
               );
 }
 
-jobject SVNAdmin::lslocks(File &path)
+jobject SVNRepos::lslocks(File &path)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -659,7 +659,7 @@ jobject SVNAdmin::lslocks(File &path)
   return CreateJ::Set(jlocks);
 }
 
-void SVNAdmin::rmlocks(File &path, StringArray &locks)
+void SVNRepos::rmlocks(File &path, StringArray &locks)
 {
   SVN::Pool requestPool;
   apr_pool_t *pool = requestPool.pool();
