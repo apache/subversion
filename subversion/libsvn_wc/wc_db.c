@@ -7818,17 +7818,17 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
 
       for (i = 0; i < wcroot->owned_locks->nelts; i++)
         {
-          svn_wc__db_wclock_t lock = APR_ARRAY_IDX(wcroot->owned_locks,
-                                                   i, svn_wc__db_wclock_t);
+          svn_wc__db_wclock_t* lock = &APR_ARRAY_IDX(wcroot->owned_locks,
+                                                     i, svn_wc__db_wclock_t);
 
-          if (svn_relpath_is_ancestor(lock.local_relpath, baton.local_relpath)
-              && (lock.levels == -1
-                  || (lock.levels + relpath_op_depth(lock.local_relpath)) 
+          if (svn_relpath_is_ancestor(lock->local_relpath, baton.local_relpath)
+              && (lock->levels == -1
+                  || (lock->levels + relpath_op_depth(lock->local_relpath)) 
                             >= depth))
             {
               const char *lock_abspath
                   = svn_dirent_join(baton.pdh->wcroot->abspath,
-                                    lock.local_relpath,
+                                    lock->local_relpath,
                                     scratch_pool);
 
               return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
@@ -7948,10 +7948,10 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
   owned_locks = pdh->wcroot->owned_locks;
   for (i = 0; i < owned_locks->nelts; i++)
     {
-      svn_wc__db_wclock_t lock = APR_ARRAY_IDX(owned_locks, i,
-                                               svn_wc__db_wclock_t);
+      svn_wc__db_wclock_t *lock = &APR_ARRAY_IDX(owned_locks, i,
+                                                 svn_wc__db_wclock_t);
 
-      if (strcmp(lock.local_relpath, local_relpath) == 0)
+      if (strcmp(lock->local_relpath, local_relpath) == 0)
         break;
     }
 
@@ -7965,10 +7965,10 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
     {
       owned_locks->nelts--;
 
-      /* Move the last item in the array to the to be deleted place */
+      /* Move the last item in the array to the deleted place */
       if (owned_locks->nelts > 0)
-        APR_ARRAY_IDX(owned_locks, i, const char*) =
-                APR_ARRAY_IDX(owned_locks, owned_locks->nelts, const char*);
+        APR_ARRAY_IDX(owned_locks, i, svn_wc__db_wclock_t) =
+           APR_ARRAY_IDX(owned_locks, owned_locks->nelts, svn_wc__db_wclock_t);
     }
 #endif
 
@@ -8019,10 +8019,10 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
   if (exact)
     for (i = 0; i < owned_locks->nelts; i++)
       {
-        svn_wc__db_wclock_t lock = APR_ARRAY_IDX(owned_locks, i,
-                                                 svn_wc__db_wclock_t);
+        svn_wc__db_wclock_t *lock = &APR_ARRAY_IDX(owned_locks, i,
+                                                   svn_wc__db_wclock_t);
 
-        if (strcmp(lock.local_relpath, local_relpath) == 0)
+        if (strcmp(lock->local_relpath, local_relpath) == 0)
           {
             *own_lock = TRUE;
             return SVN_NO_ERROR;
@@ -8031,12 +8031,12 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
   else
     for (i = 0; i < owned_locks->nelts; i++)
       {
-        svn_wc__db_wclock_t lock = APR_ARRAY_IDX(owned_locks, i,
-                                                 svn_wc__db_wclock_t);
+        svn_wc__db_wclock_t* lock = &APR_ARRAY_IDX(owned_locks, i,
+                                                   svn_wc__db_wclock_t);
 
-        if (svn_relpath_is_ancestor(lock.local_relpath, local_relpath)
-            && (lock.levels == -1
-                || ((relpath_op_depth(lock.local_relpath) + lock.levels) 
+        if (svn_relpath_is_ancestor(lock->local_relpath, local_relpath)
+            && (lock->levels == -1
+                || ((relpath_op_depth(lock->local_relpath) + lock->levels)
                             >= lock_level)))
           {
             *own_lock = TRUE;
