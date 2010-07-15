@@ -965,8 +965,8 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
   /* Commit or rollback the sqlite transaction. */
   if (err)
     {
-      svn_error_clear(exec_sql(db, "ROLLBACK TRANSACTION;"));
-      return svn_error_return(err);
+      return svn_error_compose_create(err,
+                                      exec_sql(db, "ROLLBACK TRANSACTION;"));
     }
 
   return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));
