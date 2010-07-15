@@ -6976,6 +6976,7 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
       if (!svn_dirent_is_ancestor(local_dir_abspath, pdh->local_abspath))
         continue;
 
+#ifndef SVN_WC__SINGLE_DB
       if (pdh->locked)
         {
           err = svn_wc__db_wclock_release(db, pdh->local_abspath,
@@ -6991,6 +6992,7 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
         }
 
       SVN_ERR_ASSERT(!pdh->locked);
+#endif
 
       apr_hash_set(db->dir_data, key, klen, NULL);
 
@@ -7938,9 +7940,10 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
   owned_locks = pdh->wcroot->owned_locks;
   for (i = 0; i < owned_locks->nelts; i++)
     {
-      const char *lock_abspath = APR_ARRAY_IDX(owned_locks, i, const char*);
+      svn_wc__db_wclock_t lock = APR_ARRAY_IDX(owned_locks, i,
+                                               svn_wc__db_wclock_t);
 
-      if (strcmp(lock_abspath, local_abspath) == 0)
+      if (strcmp(lock.relpath, local_relpath) == 0)
         break;
     }
 
