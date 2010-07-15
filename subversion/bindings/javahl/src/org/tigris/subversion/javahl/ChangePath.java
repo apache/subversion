@@ -58,7 +58,12 @@ public class ChangePath implements java.io.Serializable, Comparable
     public ChangePath(org.apache.subversion.javahl.ChangePath aChangePath)
     {
         this(aChangePath.getPath(), aChangePath.getCopySrcRevision(),
-             aChangePath.getCopySrcPath(), aChangePath.getAction(),
+             aChangePath.getCopySrcPath(),
+              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.add) ? 'A' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.delete) ? 'D' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.replace) ? 'R' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.modify) ? 'M' :
+                ' ')))),
              NodeKind.fromApache(aChangePath.getNodeKind()));
     }
 
