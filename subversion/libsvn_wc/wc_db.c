@@ -106,13 +106,6 @@
 #define FORMAT_FROM_SDB (-1)
 
 
-/* Assert that the given PDH is usable.
-   NOTE: the expression is multiply-evaluated!!  */
-#define VERIFY_USABLE_PDH(pdh) SVN_ERR_ASSERT(  \
-    (pdh)->wcroot != NULL                       \
-    && (pdh)->wcroot->format == SVN_WC__VERSION)
-
-
 /* ### since we're putting the pristine files per-dir, then we don't need
    ### to create subdirectories in order to keep the directory size down.
    ### when we can aggregate pristine files across dirs/wcs, then we will
@@ -539,24 +532,17 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
                    svn_boolean_t verify_parent_stub,
                    apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
 
-  if ((*parent_pdh = child_pdh->parent) != NULL
-      && (*parent_pdh)->wcroot != NULL)
+  SVN_ERR(svn_wc__db_pdh_navigate_to_parent(parent_pdh,
+                                            db,
+                                            child_pdh,
+                                            smode,
+                                            scratch_pool));
+
+  if (!verify_parent_stub)
     return SVN_NO_ERROR;
-
-  /* Make sure we don't see the root as its own parent */
-  SVN_ERR_ASSERT(!svn_dirent_is_root(child_pdh->local_abspath,
-                                     strlen(child_pdh->local_abspath)));
-
-  parent_abspath = svn_dirent_dirname(child_pdh->local_abspath, scratch_pool);
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(parent_pdh, &local_relpath, db,
-                              parent_abspath, smode,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(*parent_pdh);
 
   /* Check that the parent has an entry for the child */
   SVN_ERR(svn_sqlite__get_statement(&stmt, (*parent_pdh)->wcroot->sdb,
@@ -567,14 +553,11 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
   SVN_ERR(svn_sqlite__step(&got_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  if (!got_row && verify_parent_stub)
+  if (!got_row)
     return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                               _("'%s' does not have a parent."),
                               svn_dirent_local_style(child_pdh->local_abspath,
                                                      scratch_pool));
-
-  if (got_row)
-    child_pdh->parent = *parent_pdh;
 
   return SVN_NO_ERROR;
 }
@@ -6254,7 +6237,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
         {
           /* The current node is a directory, so move to the parent dir.  */
           SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readonly,
-                                     TRUE, scratch_pool));
+                                     FALSE, scratch_pool));
         }
       current_abspath = pdh->local_abspath;
       current_relpath = svn_wc__db_pdh_compute_relpath(pdh, NULL);
@@ -6486,7 +6469,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
         {
           /* The current node is a directory, so move to the parent dir.  */
           SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readonly,
-                                     TRUE, scratch_pool));
+                                     FALSE, scratch_pool));
         }
       current_abspath = pdh->local_abspath;
       current_relpath = svn_wc__db_pdh_compute_relpath(pdh, NULL);
