@@ -1199,6 +1199,7 @@ prep_directory(struct dir_baton *db,
   /* Make sure the directory exists. */
   SVN_ERR(svn_wc__ensure_directory(dir_abspath, pool));
 
+#ifndef SINGLE_DB
   /* Use the repository root of the anchor, but only if it actually is an
      ancestor of the URL of this directory. */
   if (svn_uri_is_ancestor(db->edit_baton->repos_root, ancestor_url))
@@ -1220,6 +1221,7 @@ prep_directory(struct dir_baton *db,
     /* Recursive lock release on parent will release this lock. */
     SVN_ERR(svn_wc__acquire_write_lock(NULL, db->edit_baton->wc_ctx,
                                        dir_abspath, pool, pool));
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -2632,6 +2634,16 @@ add_directory(const char *path,
         }
     }
 
+#ifdef SINGLE_DB
+  SVN_ERR(svn_wc__db_temp_op_set_new_dir_to_incomplete(eb->db,
+                                                       db->local_abspath,
+                                                       db->new_relpath,
+                                                       eb->repos_root,
+                                                       eb->repos_uuid,
+                                                       *eb->target_revision,
+                                                       pool));
+
+#else
     {
       /* Immediately create an entry for the new directory in the parent.
          Note that the parent must already be either added or opened, and
@@ -2669,6 +2681,7 @@ add_directory(const char *path,
                                                             TRUE, pool));
         }
     }
+#endif
 
   SVN_ERR(prep_directory(db,
                          svn_path_url_add_component2(eb->repos_root,
