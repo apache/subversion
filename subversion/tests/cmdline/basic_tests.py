@@ -1962,6 +1962,7 @@ def basic_rm_urls_one_repo(sbox):
                                         expected_disk,
                                         expected_status)
 
+# Test for issue #1199
 def basic_rm_urls_multi_repos(sbox):
   "remotely remove directories from two repositories"
 
