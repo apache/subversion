@@ -244,7 +244,7 @@ public class SVNAdmin
      * interface to receive the messages
      */
     public static interface MessageReceiver
-        extends org.apache.subversion.javahl.SVNAdmin.MessageReceiver
+        extends org.apache.subversion.javahl.ISVNAdmin.MessageReceiver
     {
     }
 

@@ -28,10 +28,21 @@ import java.io.OutputStream;
 import java.io.InputStream;
 import java.io.File;
 
-import org.apache.subversion.javahl.SVNAdmin.MessageReceiver;
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
 
 public interface ISVNAdmin {
+
+	/**
+	 * interface to receive the messages
+	 */
+	public static interface MessageReceiver
+	{
+	    /**
+	     * receive one message line
+	     * @param message   one line of message
+	     */
+	    public void receiveMessageLine(String message);
+	}
 
 	/**
 	 * release the native peer (should not depend on finalize)
