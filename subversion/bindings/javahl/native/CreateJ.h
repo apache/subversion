@@ -52,6 +52,9 @@ class CreateJ
   Lock(const svn_lock_t *lock);
 
   static jobject
+  ChangedPath(const char *path, svn_log_changed_path2_t *log_item);
+
+  static jobject
   Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
          const svn_client_status_t *status, apr_pool_t *pool);
 

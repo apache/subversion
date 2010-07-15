@@ -91,23 +91,6 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
 
-  jclass clazzCP = env->FindClass(JAVA_PACKAGE"/ChangePath");
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
-
-  static jmethodID midCP = 0;
-  if (midCP == 0)
-    {
-      midCP = env->GetMethodID(clazzCP,
-                               "<init>",
-                               "(Ljava/lang/String;JLjava/lang/String;C"
-                               "L"JAVA_PACKAGE"/NodeKind;"
-                               "L"JAVA_PACKAGE"/Tristate;"
-                               "L"JAVA_PACKAGE"/Tristate;)V");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN(SVN_NO_ERROR);
-    }
-
   jobject jChangedPaths = NULL;
   if (log_entry->changed_paths)
     {
@@ -122,33 +105,9 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
           svn_log_changed_path2_t *log_item =
                     (svn_log_changed_path2_t *) svn__apr_hash_index_val(hi);
 
-          jstring jpath = JNIUtil::makeJString(path);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN(SVN_NO_ERROR);
-
-          jstring jcopyFromPath = JNIUtil::makeJString(log_item->copyfrom_path);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN(SVN_NO_ERROR);
-
-          jobject jnodeKind = EnumMapper::mapNodeKind(log_item->node_kind);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN(SVN_NO_ERROR);
-
-          jlong jcopyFromRev = log_item->copyfrom_rev;
-          jchar jaction = log_item->action;
-
-          jobject cp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
-                              jcopyFromPath, jaction, jnodeKind,
-                              EnumMapper::mapTristate(log_item->text_modified),
-                              EnumMapper::mapTristate(log_item->props_modified));
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN(SVN_NO_ERROR);
+          jobject cp = CreateJ::ChangedPath(path, log_item);
 
           jcps.push_back(cp);
-
-          env->DeleteLocalRef(jnodeKind);
-          env->DeleteLocalRef(jpath);
-          env->DeleteLocalRef(jcopyFromPath);
         }
 
       jChangedPaths = CreateJ::Set(jcps);

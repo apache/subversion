@@ -349,6 +349,58 @@ CreateJ::Lock(const svn_lock_t *lock)
 }
 
 jobject
+CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass clazzCP = env->FindClass(JAVA_PACKAGE"/ChangePath");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN(SVN_NO_ERROR);
+
+  static jmethodID midCP = 0;
+  if (midCP == 0)
+    {
+      midCP = env->GetMethodID(clazzCP,
+                               "<init>",
+                               "(Ljava/lang/String;JLjava/lang/String;C"
+                               "L"JAVA_PACKAGE"/NodeKind;"
+                               "L"JAVA_PACKAGE"/Tristate;"
+                               "L"JAVA_PACKAGE"/Tristate;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN(SVN_NO_ERROR);
+    }
+
+  jstring jpath = JNIUtil::makeJString(path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jcopyFromPath = JNIUtil::makeJString(log_item->copyfrom_path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobject jnodeKind = EnumMapper::mapNodeKind(log_item->node_kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jlong jcopyFromRev = log_item->copyfrom_rev;
+  jchar jaction = log_item->action;
+
+  jobject jcp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
+                      jcopyFromPath, jaction, jnodeKind,
+                      EnumMapper::mapTristate(log_item->text_modified),
+                      EnumMapper::mapTristate(log_item->props_modified));
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  return env->PopLocalFrame(jcp);
+}
+
+jobject
 CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                 const svn_client_status_t *status, apr_pool_t *pool)
 {
