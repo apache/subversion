@@ -332,6 +332,21 @@ else
     AC_SUBST(TRANG)
 fi
 
+dnl Check for doxygen
+doxygen=yes
+AC_ARG_WITH(doxygen,
+AC_HELP_STRING([--with-doxygen=PATH],
+               [Specify the command to run doxygen]),
+[
+    doxygen="$withval"
+])
+if test "$doxygen" = "yes"; then
+    AC_PATH_PROG(DOXYGEN, doxygen, none)
+else
+    DOXYGEN="$doxygen"
+    AC_SUBST(DOXYGEN)
+fi
+
 
 dnl Check for libraries --------------------
 
