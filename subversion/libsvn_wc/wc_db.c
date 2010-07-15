@@ -7772,7 +7772,8 @@ wclock_obtain_cb(void *baton,
 
   /* And finally store that we obtained the lock */
 #ifdef SVN_WC__SINGLE_DB
-  lock.relpath = apr_pstrdup(wcroot->owned_locks->pool, bt->local_relpath);
+  lock.local_relpath = apr_pstrdup(wcroot->owned_locks->pool,
+                                   bt->local_relpath);
   lock.levels = bt->levels_to_lock;
   APR_ARRAY_PUSH(wcroot->owned_locks, svn_wc__db_wclock_t) = lock;
 #else
@@ -7820,12 +7821,14 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
           svn_wc__db_wclock_t lock = APR_ARRAY_IDX(wcroot->owned_locks,
                                                    i, svn_wc__db_wclock_t);
 
-          if (svn_relpath_is_ancestor(lock.relpath, baton.local_relpath)
+          if (svn_relpath_is_ancestor(lock.local_relpath, baton.local_relpath)
               && (lock.levels == -1
-                  || (lock.levels + relpath_op_depth(lock.relpath)) >= depth))
+                  || (lock.levels + relpath_op_depth(lock.local_relpath)) 
+                            >= depth))
             {
               const char *lock_abspath
-                  = svn_dirent_join(baton.pdh->wcroot->abspath, lock.relpath,
+                  = svn_dirent_join(baton.pdh->wcroot->abspath,
+                                    lock.local_relpath,
                                     scratch_pool);
 
               return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
@@ -7948,7 +7951,7 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
       svn_wc__db_wclock_t lock = APR_ARRAY_IDX(owned_locks, i,
                                                svn_wc__db_wclock_t);
 
-      if (strcmp(lock.relpath, local_relpath) == 0)
+      if (strcmp(lock.local_relpath, local_relpath) == 0)
         break;
     }
 
@@ -8019,7 +8022,7 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
         svn_wc__db_wclock_t lock = APR_ARRAY_IDX(owned_locks, i,
                                                  svn_wc__db_wclock_t);
 
-        if (strcmp(lock.relpath, local_relpath) == 0)
+        if (strcmp(lock.local_relpath, local_relpath) == 0)
           {
             *own_lock = TRUE;
             return SVN_NO_ERROR;
@@ -8031,10 +8034,10 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
         svn_wc__db_wclock_t lock = APR_ARRAY_IDX(owned_locks, i,
                                                  svn_wc__db_wclock_t);
 
-        if ((*lock.relpath == '\0'
-             || svn_relpath_is_ancestor(lock.relpath, local_relpath))
+        if (svn_relpath_is_ancestor(lock.local_relpath, local_relpath)
             && (lock.levels == -1
-                || relpath_op_depth(lock.relpath) + lock.levels >= lock_level))
+                || ((relpath_op_depth(lock.local_relpath) + lock.levels) 
+                            >= lock_level)))
           {
             *own_lock = TRUE;
             return SVN_NO_ERROR;
