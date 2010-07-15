@@ -2079,7 +2079,8 @@ public class BasicTests extends SVNTests
         assertEquals("wrong copy source rev", -1,
                       changedApath.getCopySrcRevision());
         assertNull("wrong copy source path", changedApath.getCopySrcPath());
-        assertEquals("wrong action", 'A', changedApath.getAction());
+        assertEquals("wrong action", ChangePath.Action.add,
+                     changedApath.getAction());
         assertEquals("wrong time with getTimeMicros()",
                      lm[0].getTimeMicros()/1000,
                      lm[0].getDate().getTime());

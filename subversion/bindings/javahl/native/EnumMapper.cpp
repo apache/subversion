@@ -58,6 +58,23 @@ jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
   return jstateFlags;
 }
 
+jobject EnumMapper::mapChangePathAction(const char action)
+{
+  switch (action)
+    {
+      case 'A':
+        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 0);
+      case 'D':
+        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 1);
+      case 'R':
+        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 2);
+      case 'M':
+        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 3);
+      default:
+        return NULL;
+    }
+}
+
 /**
  * Map a C notify state constant to the Java constant.
  */
