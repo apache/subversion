@@ -7631,6 +7631,7 @@ wclock_obtain_cb(void *baton,
   int max_depth;
   int lock_depth;
   svn_boolean_t got_row;
+  const char *filter;
 
 #ifdef SVN_WC__SINGLE_DB
   svn_wc__db_wclock_t lock;
@@ -7642,13 +7643,17 @@ wclock_obtain_cb(void *baton,
   SVN_ERR_ASSERT(*bt->local_relpath == '\0');
 #endif
 
+  if (*bt->local_relpath == '\0')
+    filter = "%";
+  else
+    filter = apr_pstrcat(scratch_pool,
+                         escape_sqlite_like(bt->local_relpath, scratch_pool),
+                         "/%",
+                         NULL);
+
   /* Check if there are nodes locked below the new lock root */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                            apr_pstrcat(scratch_pool,
-                                        escape_sqlite_like(bt->local_relpath,
-                                                           scratch_pool),
-                                        "/%", NULL)));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, filter));
 
   lock_depth = relpath_op_depth(bt->local_relpath);
   max_depth = lock_depth + bt->levels_to_lock;
@@ -7684,6 +7689,7 @@ wclock_obtain_cb(void *baton,
 
       if (!own_lock && !bt->steal_lock)
         {
+          SVN_ERR(svn_sqlite__reset(stmt));
           err = svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                                    _("'%s' is already locked."),
                                    svn_dirent_local_style(lock_abspath,
