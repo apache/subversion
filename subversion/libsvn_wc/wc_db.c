@@ -5400,8 +5400,8 @@ struct commit_baton {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
 
-  apr_int64_t new_revision;
-  apr_int64_t changed_rev;
+  svn_revnum_t new_revision;
+  svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
   const svn_checksum_t *new_checksum;
@@ -5538,8 +5538,8 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             parent_relpath,
                             presence_map, new_presence,
                             kind_map, new_kind,
-                            cb->new_revision,
-                            cb->changed_rev,
+                            (apr_int64_t)cb->new_revision,
+                            (apr_int64_t)cb->changed_rev,
                             cb->changed_author,
                             prop_blob.data, prop_blob.len));
 
