@@ -74,6 +74,9 @@ setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
                                const char *uri,
                                serf_bucket_t *hdrs_bkt);
 
+#endif
+
+#if ! SERF_VERSION_AT_LEAST(0, 4, 0) || defined(SVN_RA_SERF_SSPI_ENABLED)
 static svn_error_t *
 default_auth_response_handler(svn_ra_serf__handler_t *ctx,
                               serf_request_t *request,
