@@ -16600,7 +16600,180 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1, 1, "--reintegrate")
+
+#----------------------------------------------------------------------
+# Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo
+# for merge target'.
+def two_URL_merge_removes_valid_mergefino_from_target(sbox):
+  "2-URL merge removes valid mergefino from target"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  lambda_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "lambda")
+  mu_path          = os.path.join(wc_dir, "A", "mu")
+  A_COPY_path      = os.path.join(wc_dir, "A_COPY")
+  A_COPY_2_path    = os.path.join(wc_dir, "A_COPY_2")
   
+  # Branch A@1 to A_COPY r2
+  # Branch A@1 to A_COPY_2 in r3.
+  # Make some changes under 'A' in r4-7.
+  wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=2)
+
+  # r8 - A simple text edit on the A_COPY branch.
+  svntest.main.file_write(lambda_COPY_path, "Edit on 'branch 1'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', "Work on 'branch 1'.",
+                                     wc_dir)
+
+  # r9 - Sync the A_COPY branch with A up the HEAD (r8).  Now A_COPY
+  # differs from A only by the change made in r8 and by the mergeinfo
+  # '/A:2-8' on A_COPY which was set to describe the merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Sync A to A_COPY.',
+                                     wc_dir)
+
+  # r10 - A simple text edit on our "trunk" A.
+  svntest.main.file_write(mu_path, "Edit on 'trunk'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', "Work on 'trunk'",
+                                     wc_dir)
+
+  # r11 - Sync the A_COPY_2 branch with A up to HEAD (r10).
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', sbox.repo_url + '/A',
+                                     A_COPY_2_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Sync A to A_COPY_2.',
+                                     wc_dir)
+
+  # Confirm that the mergeinfo on each branch is what we expect.
+  svntest.actions.run_and_verify_svn(None,
+                                     [A_COPY_path + ' - /A:2-8\n'],
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     '-R', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [A_COPY_2_path + ' - /A:3-10\n'],
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     '-R', A_COPY_2_path)
+
+  # Now say we want to apply the changes made on the first branch (A_COPY)
+  # to the second branch (A_COPY_2).  One way to do this is a 2-URL merge
+  # between A at the revision last synced to A_COPY and A_COPY_2 at HEAD (r11),
+  # i.e.:
+  #
+  #   svn merge ^/A@8 ^/A_COPY@11 A_COPY_2_WC
+  #
+  # Recall from the note on r9 that this diff is simply the one text change
+  # made on branch 1 and some mergeinfo:
+  # 
+  #   >svn diff ^/A@8 ^/A_COPY@11
+  #   Index: B/lambda
+  #   ===================================================================
+  #   --- B/lambda    (.../A) (revision 8)
+  #   +++ B/lambda    (.../A_COPY)    (revision 11)
+  #   @@ -1 +1 @@
+  #   -This is the file 'lambda'.
+  #   +Edit on 'branch 1'.
+  #
+  #   Property changes on: .
+  #   ___________________________________________________________________
+  #   Added: svn:mergeinfo
+  #      Merged /A:r2-8
+  #
+  # The mergeinfo diff is already represented in A_COPY_2's mergeinfo, so the
+  # result of the merge should be the text change to lambda and the addition
+  # of mergeinfo showing that the history of A_COPY is now part of A_COPY_2,
+  # i.e. '/A_COPY:2-11'
+  #
+  # This test is currently marked as XFail because this is not what happens.
+  # Well, actually, all the above *does* happen, but as discussed in
+  # http://svn.haxx.se/dev/archive-2010-05/0292.shtml, the merge removes some
+  # of the valid mergeinfo on A_COPY_2 that describes the sync merge made in
+  # r9:
+  #
+  #   >svn pl -vR A_COPY_2
+  #   Properties on 'A_COPY_2':
+  #     svn:mergeinfo
+  #       /A:9-10
+  #       /A_COPY:2-11
+  #
+  #   >svn diff --depth empty A_COPY_2
+  #
+  #   Property changes on: A_COPY_2
+  #   ___________________________________________________________________
+  #   Modified: svn:mergeinfo
+  #      Reverse-merged /A:r3-8
+  #      Merged /A_COPY:r2-11
+  #
+  # '/A:r3-8' represents valid, operative changes merged from A to A_COPY_2!
+  # If this merge was committed, subsequent merges would try to reapply the
+  # diff, possibly leading to spurious conflicts.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_COPY_2_path, {
+    ''         : Item(status=' G'),
+    'B/lambda' : Item(status='U '),
+    })
+  expected_status = wc.State(A_COPY_2_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='M '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=11)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO :
+                              '/A:3-10\n/A_COPY:2-11'}),
+    'B'         : Item(),
+    'mu'        : Item("Edit on 'trunk'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("Edit on 'branch 1'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, {})
+  svntest.actions.run_and_verify_merge2(A_COPY_2_path, 8, 11,
+                                        sbox.repo_url + '/A',
+                                        sbox.repo_url + '/A_COPY',
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        expected_skip,
+                                        None, None, None, None,
+                                        None, 1, 1)
+
 ########################################################################
 # Run the tests
 
@@ -16825,6 +16998,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               reintegrate_with_self_referential_mergeinfo,
               added_subtrees_with_mergeinfo_break_reintegrate,
+              two_URL_merge_removes_valid_mergefino_from_target,
              ]
 
 if __name__ == '__main__':

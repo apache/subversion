@@ -1292,6 +1292,69 @@ svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
 }
 
 svn_error_t *
+svn_mergeinfo__catalog_merge(svn_mergeinfo_catalog_t mergeinfo_cat,
+                             svn_mergeinfo_catalog_t changes_cat,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  int i = 0;
+  int j = 0;
+  apr_array_header_t *sorted_cat =
+    svn_sort__hash(mergeinfo_cat, svn_sort_compare_items_as_paths,
+                   scratch_pool);
+  apr_array_header_t *sorted_changes =
+    svn_sort__hash(changes_cat, svn_sort_compare_items_as_paths,
+                   scratch_pool);
+
+  while (i < sorted_cat->nelts && j < sorted_changes->nelts)
+    {
+      svn_sort__item_t cat_elt, change_elt;
+      int res;
+
+      cat_elt = APR_ARRAY_IDX(sorted_cat, i, svn_sort__item_t);
+      change_elt = APR_ARRAY_IDX(sorted_changes, j, svn_sort__item_t);
+      res = svn_sort_compare_items_as_paths(&cat_elt, &change_elt);
+
+      if (res == 0) /* Both catalogs have mergeinfo for a give path. */
+        {
+          svn_mergeinfo_t mergeinfo = cat_elt.value;
+          svn_mergeinfo_t changes_mergeinfo = change_elt.value;
+
+          SVN_ERR(svn_mergeinfo_merge(mergeinfo, changes_mergeinfo,
+                                      result_pool));
+          apr_hash_set(mergeinfo_cat, cat_elt.key, cat_elt.klen, mergeinfo);
+          i++;
+          j++;
+        }
+      else if (res < 0) /* Only MERGEINFO_CAT has mergeinfo for this path. */
+        {
+          i++;
+        }
+      else /* Only CHANGES_CAT has mergeinfo for this path. */
+        {
+          apr_hash_set(mergeinfo_cat,
+                       apr_pstrdup(result_pool, change_elt.key),
+                       change_elt.klen,
+                       svn_mergeinfo_dup(change_elt.value, result_pool));
+          j++;
+        }
+    }
+
+  /* Copy back any remaining elements from the CHANGES_CAT catalog. */
+  for (; j < sorted_changes->nelts; j++)
+    {
+      svn_sort__item_t elt = APR_ARRAY_IDX(sorted_changes, j,
+                                           svn_sort__item_t);
+      apr_hash_set(mergeinfo_cat,
+                   apr_pstrdup(result_pool, elt.key),
+                   elt.klen,
+                   svn_mergeinfo_dup(elt.value, result_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
                         svn_mergeinfo_t mergeinfo1,
                         svn_mergeinfo_t mergeinfo2,
