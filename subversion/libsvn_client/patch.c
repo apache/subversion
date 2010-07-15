@@ -98,9 +98,6 @@ typedef struct patch_target_t {
    * so EOL transformation and keyword contraction is done transparently. */
   svn_stream_t *patched;
 
-  /* The patched stream, without EOL transformation and keyword expansion. */
-  svn_stream_t *patched_raw;
-
   /* Path to the temporary file underlying the result stream. */
   const char *patched_path;
 
@@ -446,6 +443,7 @@ init_patch_target(patch_target_t **patch_target,
       const char *diff_header;
       svn_boolean_t repair_eol;
       apr_size_t len;
+      svn_stream_t *patched_raw;
 
       if (target->kind_on_disk == svn_node_file)
         {
@@ -468,7 +466,7 @@ init_patch_target(patch_target_t **patch_target,
         }
 
       /* Create a temporary file to write the patched result to. */
-      SVN_ERR(svn_stream_open_unique(&target->patched_raw,
+      SVN_ERR(svn_stream_open_unique(&patched_raw,
                                      &target->patched_path, NULL,
                                      remove_tempfiles ?
                                        svn_io_file_del_on_pool_cleanup :
@@ -480,7 +478,7 @@ init_patch_target(patch_target_t **patch_target,
       repair_eol = (target->eol_style == svn_subst_eol_style_fixed ||
                     target->eol_style == svn_subst_eol_style_native);
       target->patched = svn_subst_stream_translated(
-                              target->patched_raw, target->eol_str, repair_eol,
+                              patched_raw, target->eol_str, repair_eol,
                               target->keywords, TRUE, result_pool);
 
       /* We'll also need a stream to write rejected hunks to.
