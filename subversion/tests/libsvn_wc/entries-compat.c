@@ -531,7 +531,7 @@ static svn_error_t *
 test_access_baton_like_locking(apr_pool_t *pool)
 {
   svn_wc__db_t *db;
-  svn_wc_context_t *wc_ctx;
+  svn_wc_context_t *wc_ctx, *wc_ctx2;
   const char *local_abspath;
   const char *D, *D1, *D2, *D3, *D4;
   svn_boolean_t locked_here, locked;
@@ -593,14 +593,14 @@ test_access_baton_like_locking(apr_pool_t *pool)
   /* Try reobtaining lock on D3; should succeed */
   SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, D3, 0, FALSE, pool));
   SVN_ERR(svn_wc__db_wclock_release(wc_ctx->db, D4, pool));
-  SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
 
   /* D3 should still be locked; try stealing in a different context */
-  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
-  SVN_ERR(svn_wc_locked2(&locked_here, &locked, wc_ctx, D3, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx2, NULL, pool, pool));
+  SVN_ERR(svn_wc_locked2(&locked_here, &locked, wc_ctx2, D3, pool));
   SVN_TEST_ASSERT(!locked_here && locked);
 
-  err = svn_wc__db_wclock_obtain(wc_ctx->db, D3, 0, FALSE, pool);
+  err = svn_wc__db_wclock_obtain(wc_ctx2->db, D3, 0, FALSE, pool);
 
   if (err && err->apr_err != SVN_ERR_WC_LOCKED)
     return svn_error_return(err);
@@ -608,7 +608,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
 
   SVN_TEST_ASSERT(err != NULL); /* Can't lock, as it is still locked */
 
-  err = svn_wc__db_wclock_release(wc_ctx->db, D4, pool);
+  err = svn_wc__db_wclock_release(wc_ctx2->db, D4, pool);
   if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
     return svn_error_return(err);
   svn_error_clear(err);
@@ -616,18 +616,53 @@ test_access_baton_like_locking(apr_pool_t *pool)
   SVN_TEST_ASSERT(err != NULL); /* Can't unlock, as it is not ours */
 
   /* Now steal the lock */
-  SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, D3, 0, TRUE, pool));
+  SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx2->db, D3, 0, TRUE, pool));
 
   /* We should own the lock now */
-  SVN_ERR(svn_wc_locked2(&locked_here, &locked, wc_ctx, D3, pool));
+  SVN_ERR(svn_wc_locked2(&locked_here, &locked, wc_ctx2, D3, pool));
   SVN_TEST_ASSERT(locked_here && locked);
 
-  err = svn_wc__db_wclock_release(wc_ctx->db, D4, pool);
+  err = svn_wc__db_wclock_release(wc_ctx2->db, D4, pool);
   if (err && err->apr_err != SVN_ERR_WC_NOT_LOCKED)
     return svn_error_return(err);
   svn_error_clear(err);
 
   SVN_TEST_ASSERT(err != NULL); /* Can't unlock a not locked path */
+
+  /* Now create a separate working copy from the same repository directly
+     below this WC and test if our code really sees it as a separate wc,
+     for locking and normal operation */
+  {
+    const char *url, *repos_root_url, *repos_uuid;
+    const char *subdir = svn_dirent_join(local_abspath, "sub-wc", pool);
+
+    svn_boolean_t is_root;
+    SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, pool, pool));
+    SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
+                                        wc_ctx, local_abspath, FALSE, FALSE,
+                                        pool, pool));
+
+    SVN_ERR(svn_io_make_dir_recursively(subdir, pool));
+    SVN_ERR(svn_wc_ensure_adm3(subdir, repos_uuid,
+                               svn_uri_join(url, "sub-wc", pool),
+                               repos_root_url, 0, svn_depth_infinity,
+                               pool));
+
+    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL, wc_ctx->db, subdir,
+                                  pool));
+
+    SVN_TEST_ASSERT(is_root);
+
+    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL, wc_ctx2->db, subdir,
+                                  pool));
+
+    /* This test was added to show a regression where the next check failed,
+       but the check above this succeeded */
+    SVN_TEST_ASSERT(is_root);
+
+    SVN_ERR(svn_wc_locked2(&locked_here, &locked, wc_ctx2, subdir, pool));
+    SVN_TEST_ASSERT(!locked_here && !locked);
+  }
 
   return SVN_NO_ERROR;
 }
