@@ -7814,10 +7814,9 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
           svn_wc__db_wclock_t lock = APR_ARRAY_IDX(wcroot->owned_locks,
                                                    i, svn_wc__db_wclock_t);
 
-          if ((*lock.relpath == '\0'
-               || svn_relpath_is_ancestor(lock.relpath, baton.local_relpath)
+          if (svn_relpath_is_ancestor(lock.relpath, baton.local_relpath)
               && (lock.levels == -1
-                  || (lock.levels + relpath_op_depth(lock.relpath)) >= depth)))
+                  || (lock.levels + relpath_op_depth(lock.relpath)) >= depth))
             {
               const char *lock_abspath
                   = svn_dirent_join(baton.pdh->wcroot->abspath, lock.relpath,
