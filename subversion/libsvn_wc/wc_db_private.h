@@ -60,7 +60,7 @@ struct svn_wc__db_t {
 typedef struct svn_wc__db_wclock_t
 {
   /* Relative path of the lock root */
-  const char *relpath;
+  const char *local_relpath;
   /* Number of levels locked (0 for infinity) */
   int levels;
 } svn_wc__db_wclock_t;
