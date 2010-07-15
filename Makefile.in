@@ -536,7 +536,7 @@ check-clean:
 	       subversion/tests/libsvn_wc/fake-wc              \
 	       subversion/tests/libsvn_client/test-patch*      \
 	       subversion/tests/svnserveautocheck.pid          \
-	       tests.log
+	       tests.log fails.log
 
 mkdir-init:
 	@list='$(BUILD_DIRS) $(SCHEMA_DIR) doc';         \
