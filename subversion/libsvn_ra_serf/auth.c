@@ -54,6 +54,7 @@ setup_request_basic_auth(svn_ra_serf__connection_t *conn,
                          serf_bucket_t *hdrs_bkt);
 #endif
 
+#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
 static svn_error_t *
 handle_proxy_basic_auth(svn_ra_serf__handler_t *ctx,
                         serf_request_t *request,
@@ -81,6 +82,7 @@ default_auth_response_handler(svn_ra_serf__handler_t *ctx,
 {
   return SVN_NO_ERROR;
 }
+#endif
 
 /*** Global variables. ***/
 static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
@@ -506,6 +508,7 @@ setup_request_basic_auth(svn_ra_serf__connection_t *conn,
 }
 #endif
 
+#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
 static svn_error_t *
 handle_proxy_basic_auth(svn_ra_serf__handler_t *ctx,
                         serf_request_t *request,
@@ -574,3 +577,4 @@ setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
 
   return SVN_NO_ERROR;
 }
+#endif
