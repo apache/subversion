@@ -87,11 +87,15 @@ print_info_xml(void *baton,
 {
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
   const char *rev_str;
+  const char *path_prefix = baton;
 
   if (SVN_IS_VALID_REVNUM(info->rev))
     rev_str = apr_psprintf(pool, "%ld", info->rev);
   else
     rev_str = apr_pstrdup(pool, _("Resource is not under version control."));
+
+  if (path_prefix)
+    target = svn_dirent_skip_ancestor(path_prefix, target);
 
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
@@ -238,6 +242,11 @@ print_info(void *baton,
            const svn_info_t *info,
            apr_pool_t *pool)
 {
+  const char *path_prefix = baton;
+
+  if (path_prefix)
+    target = svn_dirent_skip_ancestor(path_prefix, target);
+
   SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
                              svn_dirent_local_style(target, pool)));
 
@@ -484,6 +493,7 @@ svn_cl__info(apr_getopt_t *os,
   svn_boolean_t saw_a_problem = FALSE;
   svn_opt_revision_t peg_revision;
   svn_info_receiver_t receiver;
+  const char *path_prefix;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -515,6 +525,8 @@ svn_cl__info(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 
+  SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", pool));
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *truepath;
@@ -527,13 +539,17 @@ svn_cl__info(apr_getopt_t *os,
       SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target, subpool));
 
       /* If no peg-rev was attached to a URL target, then assume HEAD. */
-      if ((svn_path_is_url(target))
-          && (peg_revision.kind == svn_opt_revision_unspecified))
-        peg_revision.kind = svn_opt_revision_head;
+      if (svn_path_is_url(target))
+        {
+          if (peg_revision.kind == svn_opt_revision_unspecified)
+            peg_revision.kind = svn_opt_revision_head;
+        }
+      else
+        SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
 
-      err = svn_client_info2(truepath,
+      err = svn_client_info3(truepath,
                              &peg_revision, &(opt_state->start_revision),
-                             receiver, NULL, opt_state->depth,
+                             receiver, (void *) path_prefix, opt_state->depth,
                              opt_state->changelists, ctx, subpool);
 
       if (err)
