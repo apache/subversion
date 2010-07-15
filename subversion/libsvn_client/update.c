@@ -282,8 +282,6 @@ update_internal(svn_revnum_t *result_rev,
   if (sleep_here)
     svn_io_sleep_for_timestamps(local_abspath, pool);
 
-  SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool));
-
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
     {
