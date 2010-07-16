@@ -2157,8 +2157,7 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   if (affected_rows != 1)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
-                             svn_sqlite__reset(stmt),
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("The node '%s' was not found."),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
@@ -7744,9 +7743,10 @@ wclock_obtain_cb(void *baton,
           if (levels >= 0)
             levels += relpath_op_depth(lock_relpath);
 
+          SVN_ERR(svn_sqlite__reset(stmt));
+
           if (levels == -1 || levels >= lock_depth)
             {
-              SVN_ERR(svn_sqlite__reset(stmt));
 
               err = svn_error_createf(
                               SVN_ERR_WC_LOCKED, NULL,
@@ -7765,16 +7765,16 @@ wclock_obtain_cb(void *baton,
 
           break; /* There can't be interesting locks on higher nodes */
         }
+      else
+        SVN_ERR(svn_sqlite__reset(stmt));
 
       if (!*lock_relpath)
         break;
 
       lock_relpath = svn_relpath_dirname(lock_relpath, scratch_pool);
 
-      SVN_ERR(svn_sqlite__reset(stmt));
     }
 
-  SVN_ERR(svn_sqlite__reset(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_INSERT_WC_LOCK));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
