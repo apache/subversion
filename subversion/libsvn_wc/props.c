@@ -2416,15 +2416,6 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  if (status != svn_wc__db_status_normal
-      && status != svn_wc__db_status_added
-      && status != svn_wc__db_status_incomplete)
-    return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
-                             _("Can't set properties on '%s':"
-                               " invalid status for updating properties."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
   if (kind == svn_wc__db_kind_dir)
     dir_abspath = local_abspath;
   else
@@ -2435,6 +2426,15 @@ svn_wc__internal_propset(svn_wc__db_t *db,
   if (prop_kind == svn_prop_wc_kind)
     return svn_error_return(wcprop_set(db, local_abspath, name, value,
                                        scratch_pool));
+
+  if (status != svn_wc__db_status_normal
+      && status != svn_wc__db_status_added
+      && status != svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+                             _("Can't set properties on '%s':"
+                               " invalid status for updating properties."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* we don't do entry properties here */
   if (prop_kind == svn_prop_entry_kind)

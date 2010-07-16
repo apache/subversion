@@ -2148,14 +2148,21 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
                               apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  int affected_rows;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_UPDATE_BASE_DAV_CACHE, scratch_pool));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
 
-  /* ### we should assert that 1 row was affected.  */
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  if (affected_rows != 1)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
