@@ -1614,11 +1614,18 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
                   child_relpath = APR_ARRAY_IDX(children, i, const char *);
                   child_abspath = svn_dirent_join(local_abspath, child_relpath,
                                                   iterpool);
-                   err2 = svn_wc__release_write_lock(wc_ctx, child_abspath,
-                                                     iterpool);
-                   if (err2)
-                     svn_error_compose(err, err2);
-                   --i;
+
+                  /* Don't release locks on non-directories as that will
+                     try to release the lock on the parent directory! */
+                  err2 = svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath,
+                                              FALSE, iterpool);
+
+                  if (!err2 && kind == svn_wc__db_kind_dir)
+                    err2 = svn_wc__release_write_lock(wc_ctx, child_abspath,
+                                                      iterpool);
+
+                  err = svn_error_compose_create(err, err2);
+                  --i;
                 }
               return svn_error_return(err);
             }
