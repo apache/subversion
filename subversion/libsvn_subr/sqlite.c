@@ -176,10 +176,11 @@ step_with_expectation(svn_sqlite__stmt_t* stmt,
   if ((got_row && !expecting_row)
       ||
       (!got_row && expecting_row))
-    return svn_error_create(SVN_ERR_SQLITE_ERROR, NULL,
+    return svn_error_create(SVN_ERR_SQLITE_ERROR,
+                            svn_sqlite__reset(stmt),
                             expecting_row
-                            ? _("Expected database row missing")
-                            : _("Extra database row found"));
+                              ? _("Expected database row missing")
+                              : _("Extra database row found"));
 
   return SVN_NO_ERROR;
 }
