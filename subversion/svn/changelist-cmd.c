@@ -72,7 +72,7 @@ svn_cl__changelist(apr_getopt_t *os,
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
+                                 FALSE, pool));
   else
     /* FIXME: This is required because svn_client_create_context()
        always initializes ctx->notify_func2 to a wrapper function

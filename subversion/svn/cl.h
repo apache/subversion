@@ -539,24 +539,26 @@ svn_cl__merge_file_externally(const char *base_path,
 /* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for all
  * operations, allocated in POOL.
  *
- * If this is a checkout, set IS_CHECKOUT to true, so that the
- * notifier will print the appropriate summary line at the end of the
- * output.
- *
- * If this is an export, set IS_EXPORT to true, so that the
- * notifier will print the appropriate summary line at the end of the
- * output.
- *
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
-                     svn_boolean_t is_checkout,
-                     svn_boolean_t is_export,
                      svn_boolean_t suppress_final_line,
                      apr_pool_t *pool);
+
+/* Make the notifier for use with BATON print the appropriate summary
+ * line at the end of the output.
+ */
+svn_error_t *
+svn_cl__notifier_mark_checkout(void *baton);
+
+/* Make the notifier for use with BATON print the appropriate summary
+ * line at the end of the output.
+ */
+svn_error_t *
+svn_cl__notifier_mark_export(void *baton);
 
 /* Print conflict stats accumulated in NOTIFY_BATON.
  * Return any error encountered during printing.

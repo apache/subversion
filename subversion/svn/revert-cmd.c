@@ -58,7 +58,7 @@ svn_cl__revert(apr_getopt_t *os,
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
+                                 FALSE, scratch_pool));
 
   /* Revert is especially conservative, by default it is as
      nonrecursive as possible. */

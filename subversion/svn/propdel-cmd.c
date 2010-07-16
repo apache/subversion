@@ -92,7 +92,7 @@ svn_cl__propdel(apr_getopt_t *os,
   if (! opt_state->quiet)
     {
       SVN_ERR(svn_cl__get_notifier(&nwb.real_func, &nwb.real_baton, FALSE,
-                                   FALSE, FALSE, pool));
+                                   pool));
       ctx->notify_func2 = notify_wrapper;
       ctx->notify_baton2 = &nwb;
     }

@@ -265,7 +265,7 @@ svn_cl__status(apr_getopt_t *os,
   /* The notification callback, leave the notifier as NULL in XML mode */
   if (! opt_state->xml)
     SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
+                                 FALSE, scratch_pool));
 
   sb.had_print_error = FALSE;
 

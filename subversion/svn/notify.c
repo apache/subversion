@@ -817,8 +817,6 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
-                     svn_boolean_t is_checkout,
-                     svn_boolean_t is_export,
                      svn_boolean_t suppress_final_line,
                      apr_pool_t *pool)
 {
@@ -826,8 +824,8 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
 
   nb->received_some_change = FALSE;
   nb->sent_first_txdelta = FALSE;
-  nb->is_checkout = is_checkout;
-  nb->is_export = is_export;
+  nb->is_checkout = FALSE;
+  nb->is_export = FALSE;
   nb->suppress_final_line = suppress_final_line;
   nb->in_external = FALSE;
   nb->had_print_error = FALSE;
@@ -839,5 +837,23 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
 
   *notify_func_p = notify;
   *notify_baton_p = nb;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__notifier_mark_checkout(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  nb->is_checkout = TRUE;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__notifier_mark_export(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  nb->is_export = TRUE;
   return SVN_NO_ERROR;
 }

@@ -59,7 +59,7 @@ svn_cl__upgrade(apr_getopt_t *os,
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
+                                 FALSE, scratch_pool));
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 

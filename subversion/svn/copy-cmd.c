@@ -92,7 +92,7 @@ svn_cl__copy(apr_getopt_t *os,
       /* WC->WC */
       if (! opt_state->quiet)
         SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                     FALSE, FALSE, FALSE, pool));
+                                     FALSE, pool));
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
@@ -119,8 +119,11 @@ svn_cl__copy(apr_getopt_t *os,
     {
       /* URL->WC : Use checkout-style notification. */
       if (! opt_state->quiet)
-        SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                     TRUE, FALSE, FALSE, pool));
+        {
+          SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                       FALSE, pool));
+          SVN_ERR(svn_cl__notifier_mark_checkout(ctx->notify_baton2));
+        }
     }
   /* else URL -> URL, meaning that no notification is needed. */
 
