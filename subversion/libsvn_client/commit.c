@@ -598,7 +598,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               void **edit_baton,
               svn_client_ctx_t *ctx,
               const char *base_url,
-              const char *base_dir,
+              const char *base_dir_abspath,
               const char *log_msg,
               const apr_array_header_t *commit_items,
               const apr_hash_t *revprop_table,
@@ -610,9 +610,6 @@ get_ra_editor(svn_ra_session_t **ra_session,
 {
   void *commit_baton;
   apr_hash_t *commit_revprops;
-  const char *base_dir_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
 
   /* Open an RA session to URL. */
   SVN_ERR(svn_client__open_ra_session_internal(ra_session, base_url,
@@ -667,12 +664,16 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session;
   apr_hash_t *excludes = apr_hash_make(pool);
   svn_node_kind_t kind;
-  const char *base_dir = path;
+  const char *local_abspath;
+  const char *base_dir_abspath;
   apr_array_header_t *new_entries = apr_array_make(pool, 4,
                                                    sizeof(const char *));
   const char *temp;
   const char *dir;
   apr_pool_t *subpool;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  base_dir_abspath = local_abspath;
 
   /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -702,9 +703,9 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
         }
     }
 
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
   if (kind == svn_node_file)
-    base_dir = svn_dirent_dirname(path, pool);
+    base_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
@@ -735,7 +736,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
         }
     }
   while ((err = get_ra_editor(&ra_session,
-                              &editor, &edit_baton, ctx, url, base_dir,
+                              &editor, &edit_baton, ctx, url, base_dir_abspath,
                               log_msg, NULL, revprop_table,
                               commit_info_p, FALSE, NULL, TRUE, subpool)));
 
