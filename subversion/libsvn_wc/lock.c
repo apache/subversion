@@ -1545,41 +1545,23 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
 
   if (anchor_abspath)
     {
-      const char *parent_abspath;
-      svn_wc__db_kind_t parent_kind;
+      svn_boolean_t is_root;
 
-      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-      err = svn_wc__db_read_kind(&parent_kind, wc_ctx->db, parent_abspath, TRUE,
-                                 scratch_pool);
-      if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
-        {
-          svn_error_clear(err);
-          parent_kind = svn_wc__db_kind_unknown;
-        }
+      if (kind == svn_wc__db_kind_unknown)
+        is_root = FALSE;
       else
-        SVN_ERR(err);
+        SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL, wc_ctx->db, local_abspath,
+                                      scratch_pool));
 
-      if (kind == svn_wc__db_kind_dir && parent_kind == svn_wc__db_kind_dir)
-        {
-          svn_boolean_t disjoint;
-          SVN_ERR(child_is_disjoint(&disjoint, wc_ctx->db, local_abspath,
-                                    scratch_pool));
-          if (!disjoint)
-            local_abspath = parent_abspath;
-        }
-      else if (parent_kind == svn_wc__db_kind_dir)
-        local_abspath = parent_abspath;
-      else if (kind != svn_wc__db_kind_dir)
-        return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                 _("'%s' is not a working copy"),
-                                 svn_dirent_local_style(local_abspath,
-                                                        scratch_pool));
+      if (!is_root)
+        local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
       *anchor_abspath = apr_pstrdup(result_pool, local_abspath);
     }
   else if (kind != svn_wc__db_kind_dir)
     local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
+#ifndef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
                                    scratch_pool, scratch_pool));
 
@@ -1634,8 +1616,11 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
                                        iterpool));
     }
   svn_error_clear(err);
-
   svn_pool_destroy(iterpool);
+#else
+  SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, -1, FALSE,
+                                   scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -1668,6 +1653,7 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
       return SVN_NO_ERROR;
     }
 
+#ifndef SVN_WC__SINGLE_DB
   /* We need to recursively remove locks (see comment in
      svn_wc__acquire_write_lock(). */
 
@@ -1691,20 +1677,23 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
 
   err = svn_wc__db_wclock_owns_lock(&locked_here, wc_ctx->db, local_abspath,
                                     TRUE, iterpool);
-#ifndef SVN_WC__SINGLE_DB
+
   if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
     {
       svn_error_clear(err);
       locked_here = FALSE;
     }
   else
-#endif
     SVN_ERR(err);
 
   if (locked_here)
     SVN_ERR(svn_wc__db_wclock_release(wc_ctx->db, local_abspath, iterpool));
 
   svn_pool_destroy(iterpool);
+
+#else
+  SVN_ERR(svn_wc__db_wclock_release(wc_ctx->db, local_abspath, scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }
