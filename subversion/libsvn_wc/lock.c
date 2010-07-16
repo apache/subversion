@@ -1545,16 +1545,35 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
 
   if (anchor_abspath)
     {
-      svn_boolean_t is_root;
+      const char *parent_abspath;
+      svn_wc__db_kind_t parent_kind;
 
-      if (kind == svn_wc__db_kind_unknown)
-        is_root = FALSE;
+      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      err = svn_wc__db_read_kind(&parent_kind, wc_ctx->db, parent_abspath, TRUE,
+                                 scratch_pool);
+      if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
+        {
+          svn_error_clear(err);
+          parent_kind = svn_wc__db_kind_unknown;
+        }
       else
-        SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL, wc_ctx->db, local_abspath,
-                                      scratch_pool));
+        SVN_ERR(err);
 
-      if (!is_root)
-        local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      if (kind == svn_wc__db_kind_dir && parent_kind == svn_wc__db_kind_dir)
+        {
+          svn_boolean_t disjoint;
+          SVN_ERR(child_is_disjoint(&disjoint, wc_ctx->db, local_abspath,
+                                    scratch_pool));
+          if (!disjoint)
+            local_abspath = parent_abspath;
+        }
+      else if (parent_kind == svn_wc__db_kind_dir)
+        local_abspath = parent_abspath;
+      else if (kind != svn_wc__db_kind_dir)
+        return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                                 _("'%s' is not a working copy"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
 
       *anchor_abspath = apr_pstrdup(result_pool, local_abspath);
     }
