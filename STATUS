@@ -263,5 +263,12 @@ Veto-blocked changes:
    Votes:
      -1: cmpilato (pending results of aforemented discussion)
 
+ * r876615
+   Make ra_neon provide a better error message upon 403 Forbidden.
+   Justification:
+     User complained: http://svn.haxx.se/users/archive-2010-07/0211.shtml
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
