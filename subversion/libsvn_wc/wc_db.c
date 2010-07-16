@@ -6892,7 +6892,11 @@ svn_wc__db_temp_get_format(int *format,
       /* ### for per-dir layouts, the wcroot should be this directory,
          ### so bail if the PDH is a parent (and, thus, local_relpath is
          ### something besides "").  */
-      if (err || *local_relpath != '\0')
+      if (err
+#ifndef SVN_WC__SINGLE_DB
+          || *local_relpath != '\0'
+#endif
+          )
         {
           if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
             return svn_error_return(err);
@@ -7154,10 +7158,12 @@ svn_wc__db_temp_borrow_sdb(svn_sqlite__db_t **sdb,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+#ifndef SVN_WC__SINGLE_DB
   /* We better be looking at the proper wcroot for this directory.
      If we ended up with a stub, then the subdirectory (and its SDB!)
      are missing.  */
   SVN_ERR_ASSERT(*local_relpath == '\0');
+#endif
 
   *sdb = pdh->wcroot->sdb;
 
