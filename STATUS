@@ -190,6 +190,14 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r964767
+   Fix for issue #3683 "Escape unsafe charaters in a URL during export".
+   Justification:
+     This makes svn export more user friendly, by not forcing the user
+     to manually encode the URLs before doing an export.
+   Votes:
+     +1: stylesen
+
 Veto-blocked changes:
 =====================
 
