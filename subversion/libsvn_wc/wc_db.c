@@ -2158,6 +2158,7 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
 
   if (affected_rows != 1)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                             svn_sqlite__reset(stmt),
                              _("The node '%s' was not found."),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
