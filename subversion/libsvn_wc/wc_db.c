@@ -7764,8 +7764,11 @@ wclock_obtain_cb(void *baton,
         break;
 
       lock_relpath = svn_relpath_dirname(lock_relpath, scratch_pool);
+
+      SVN_ERR(svn_sqlite__reset(stmt));
     }
 
+  SVN_ERR(svn_sqlite__reset(stmt));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_INSERT_WC_LOCK));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
