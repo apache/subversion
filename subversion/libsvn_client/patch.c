@@ -702,7 +702,11 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
         SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_line,
                                                      NULL, &hunk_eof,
                                                      iterpool, iterpool));
-      if (hunk_line->len == 0 && hunk_eof)
+
+      /* When comparing modified text we require that all lines match, else
+       * a hunk that adds a newline at the end will be treated as already
+       * applied even if it isn't. */
+      if (! match_modified && hunk_line->len == 0 && hunk_eof)
         *matched = lines_matched;
       else
         *matched = FALSE;
