@@ -555,13 +555,13 @@ class State:
       if dot_svn in dirs:
         # don't visit the .svn subdir
         dirs.remove(dot_svn)
-      else:
+
+      entries = svntest.main.run_entriesdump(dirpath)
+      if entries is None:
         # this is not a versioned directory. remove all subdirectories since
         # we don't want to visit them. then skip this directory.
         dirs[:] = []
         continue
-
-      entries = svntest.main.run_entriesdump(dirpath)
 
       if dirpath == '.':
         parent = ''
