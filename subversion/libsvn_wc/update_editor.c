@@ -196,11 +196,6 @@ struct edit_baton
   /* Allow unversioned obstructions when adding a path. */
   svn_boolean_t allow_unver_obstructions;
 
-  /* The close_edit method destroys the edit pool and so runs the
-     cleanup_dir_baton cleanup handlers.  This flag is set to indicate
-     that the edit was completed successfully. */
-  svn_boolean_t close_edit_complete;
-
   /* If this is a 'switch' operation, the new relpath of target_abspath,
      else NULL. */
   const char *switch_relpath;
@@ -505,17 +500,6 @@ cleanup_dir_baton(void *dir_baton)
   err = svn_wc__wq_run(eb->db, db->local_abspath,
                        eb->cancel_func, eb->cancel_baton,
                        pool);
-
-  /* If the editor aborts for some sort of error, the command line
-     client relies on pool cleanup to run outstanding work queues and
-     remove locks.  This avoids leaving the working copy locked in
-     many cases, but plays havoc with operations that do multiple
-     updates (think externals). So we flag updates that complete
-     successfully and avoid removing locks.  In 1.6 locks were
-     associated with a pool distinct from the edit pool and so were
-     removed separately. */
-  if (!err && !eb->close_edit_complete)
-    err = svn_wc__release_write_lock(eb->wc_ctx, db->local_abspath, pool);
 
   if (err)
     {
@@ -5958,7 +5942,6 @@ close_edit(void *edit_baton,
      should also make eb->pool not be a subpool (see make_editor),
      and change callers of svn_client_{checkout,update,switch} to do
      better pool management. ### */
-  eb->close_edit_complete = TRUE;
   svn_pool_destroy(eb->pool);
 
   return SVN_NO_ERROR;
@@ -6066,7 +6049,6 @@ make_editor(svn_revnum_t *target_revision,
   eb->fetch_func               = fetch_func;
   eb->fetch_baton              = fetch_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
-  eb->close_edit_complete      = FALSE;
   eb->skipped_trees            = apr_hash_make(edit_pool);
   eb->ext_patterns             = preserved_exts;
 
