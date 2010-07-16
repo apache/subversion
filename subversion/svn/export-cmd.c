@@ -84,8 +84,11 @@ svn_cl__export(apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, TRUE, FALSE, pool));
+    {
+      SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                   FALSE, pool));
+      SVN_ERR(svn_cl__notifier_mark_export(ctx->notify_baton2));
+    }
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
