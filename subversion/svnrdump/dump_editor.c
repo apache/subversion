@@ -19,6 +19,7 @@
  * ====================================================================
  */
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_path.h"
@@ -396,12 +397,13 @@ open_file(const char *path,
   struct dir_baton *pb = parent_baton;
   const char *copyfrom_path = NULL;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
+  apr_array_header_t *compose_path;
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
 
-  apr_array_header_t *compose_path = apr_array_make(pool, 2,
-                                                    sizeof(const char *));
+  compose_path = apr_array_make(pool, 2, sizeof(const char *));
+
   /* If the parent directory has explicit copyfrom path and rev,
      record the same for this one. */
   if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev)) {
@@ -606,8 +608,8 @@ close_file(void *file_baton,
 
     /* Cleanup */
     eb->dump_props = eb->dump_props_pending = FALSE;
-    apr_hash_clear(eb->properties);
-    apr_hash_clear(eb->del_properties);
+    svn_hash__clear(eb->properties, pool);
+    svn_hash__clear(eb->del_properties, pool);
   }
 
   /* Dump the text */
@@ -647,10 +649,12 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 void **edit_baton,
                 apr_pool_t *pool)
 {
-  struct dump_edit_baton *eb = apr_pcalloc(pool,
-                                           sizeof(struct dump_edit_baton));
+  struct dump_edit_baton *eb;
+  svn_delta_editor_t *de;
+
+  eb = apr_pcalloc(pool, sizeof(struct dump_edit_baton));
   SVN_ERR(svn_stream_for_stdout(&(eb->stream), pool));
-  svn_delta_editor_t *de = svn_delta_default_editor(pool);
+  de = svn_delta_default_editor(pool);
 
   de->open_root = open_root;
   de->delete_entry = delete_entry;
