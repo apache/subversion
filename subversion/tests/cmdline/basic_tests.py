@@ -33,6 +33,7 @@ from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Wimp = svntest.testcase.Wimp
 Item = wc.StateItem
@@ -2509,6 +2510,13 @@ def delete_from_url_with_spaces(sbox):
                                       'rm', sbox.repo_url + '/Dir%20With/Spaces',
                                       '-m', 'Deleted')
 
+def meta_correct_library_being_used(sbox):
+  "verify that neon/serf are compiled if tested"
+  expected_re = (r'^\* ra_%s :' % svntest.main.options.http_library)
+  expected_output = svntest.verify.RegexOutput(expected_re, match_all=False)
+  svntest.actions.run_and_verify_svn("is $http_library available",
+                                     expected_output, [], '--version')
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -2566,6 +2574,8 @@ test_list = [ None,
               basic_add_svn_format_file,
               basic_mkdir_mix_targets,
               delete_from_url_with_spaces,
+              SkipUnless(meta_correct_library_being_used,
+                         svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':
