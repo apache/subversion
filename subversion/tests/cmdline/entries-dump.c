@@ -1,5 +1,5 @@
 /*
- * db-test.c :  test the wc_db subsystem
+ * entries-dump.c :  dump pre-1.6 svn_wc_* output for python
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
