@@ -1,0 +1,43 @@
+Branch to implement atomic revprop modifications in libsvn_ra.  By "atomic", we
+mean: the old value (if any) of the revprop as seen by the client modifying it
+is the same as the old value the FS layer sees at the time it enacts the change.
+This feature may be used to fully resolve issue #3546 (race condition in svnsync
+locking) and to implement 'svn propedit --revprop pname pval2 --old-value=pval'.
+
+
+Planned work
+============
+
+* FS layer support
+  - [DONE] r955136, r955303, r955306 on trunk.
+
+* repos layer support
+  - extend svn_repos_fs_change_rev_prop3() to wrap svn_fs_change_rev_prop2()
+
+* RA layer support
+  - capability:
+      Need a new libsvn_ra-level capability.  (because atomicity can't be
+      achieved with older servers, and because of planned protocol extensions)
+  - ra_local
+      Trivial.
+  - ra_svn
+      Add a 'change-rev-prop2' verb.
+  - ra_dav
+      Extend PROPPATCH syntax to provide the old value: add a <S:oldvalue/>
+      tag inside the <${propname}> tag.
+        TODO: where to document this protocol extension?
+  - unit test
+      (details?)
+
+* svnsync:
+  - use the new RA API to resolve the race condition in locking.
+
+
+Potential work
+==============
+
+* repos layer hooks interface
+  - pass the old value to pre-revprop-change
+
+* svn propedit --revprop --old-value
+  (Not planned currently.)
