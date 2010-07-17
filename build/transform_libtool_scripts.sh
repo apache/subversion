@@ -57,16 +57,19 @@ svnserve="$delta $fs $ra_svn $repos $subr"
 svnsync="$auth_gnome_keyring $auth_kwallet $delta $ra $subr"
 svnversion="$subr $wc"
 entries_dump="$subr $wc"
+atomic_ra_revprop_change="$subr $ra"
 
 # Variable 'executables' containing names of variables corresponding to executables
-executables="svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion entries_dump"
+executables="svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion entries_dump atomic_ra_revprop_change"
 
 for executable in $executables; do
   # Set variables containing paths of executables
-  if [ "$executable" != entries_dump ]; then
-    eval "${executable}_path=subversion/$executable/$executable"
-  else
+  eval "${executable}_path=subversion/$executable/$executable"
+  if [ "$executable" = entries_dump ]; then
     eval "${executable}_path=subversion/tests/cmdline/entries-dump"
+  fi
+  if [ "$executable" = atomic_ra_revprop_change ]; then
+    eval "${executable}_path=subversion/tests/cmdline/atomic-ra-revprop-change"
   fi
   # Delete duplicates in dependencies of executables
   executable_dependencies="$(echo -n $(for x in $(eval echo "\$$executable"); do echo $x; done | sort -u))"
