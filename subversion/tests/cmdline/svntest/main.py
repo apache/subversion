@@ -157,6 +157,8 @@ svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
+atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
+                                                  _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -604,6 +606,18 @@ def run_entriesdump(path):
   entries = { }
   exec(''.join([line for line in stdout_lines if not line.startswith("DBG:")]))
   return entries
+
+
+def run_atomic_ra_revprop_change(url, revision, propname, propval, old_propval):
+  """Run the atomic-ra-revprop-change helper, returning its exit code, stdout, 
+  and stderr."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  #exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+  #                                                      0, 0, None, path)
+
+  return run_command(atomic_ra_revprop_change_binary, True, False, 
+                     url, revision, propname, propval, old_propval)
 
 
 # Chmod recursively on a whole subtree

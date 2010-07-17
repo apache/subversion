@@ -141,6 +141,22 @@ def guarantee_greek_repository(path):
   main.chmod_tree(path, 0666, 0666)
 
 
+def run_and_verify_atomic_ra_revprop_change(message,
+                                            expected_stdout,
+                                            expected_stderr,
+                                            expected_exit, 
+                                            url, revision, propname,
+                                            propval, old_propval):
+  """Run atomic-ra-revprop-change helper and check its output and exit code."""
+
+  exit_code, out, err = main.run_atomic_ra_revprop_change(url, revision, propname,
+                                                          propval, old_propval)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code(message, exit_code, expected_exit)
+  return exit_code, out, err
+
+
 def run_and_verify_svnlook(message, expected_stdout,
                            expected_stderr, *varargs):
   """Like run_and_verify_svnlook2, but the expected exit code is

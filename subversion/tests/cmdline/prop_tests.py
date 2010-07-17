@@ -1961,6 +1961,28 @@ def obstructed_subdirs(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def atomic_over_ra(sbox):
+  "test revprop atomicity guarantees of libsvn_ra"
+
+  sbox.build(create_wc=False)
+  repo_url = sbox.repo_url
+
+  # Set some property.
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', '--revprop', '-r', '0',
+                                     'state', 'old', repo_url)
+
+  # Attempt to change it, unsuccessfully.
+  expected_stderr = ".*revprop 'state' has unexpected value.*"
+  svntest.actions.run_and_verify_atomic_ra_revprop_change(
+     None, None, expected_stderr, 1, repo_url, 0, 'state', 'new', 'not old')
+
+  # Attempt to change it, successfully.
+  svntest.actions.run_and_verify_atomic_ra_revprop_change(
+     None, None, [], 0, repo_url, 0, 'state', 'new', 'old')
+
+
 ########################################################################
 # Run the tests
 
@@ -2004,6 +2026,7 @@ test_list = [ None,
               rm_of_replaced_file,
               prop_reject_grind,
               obstructed_subdirs,
+              XFail(atomic_over_ra),
              ]
 
 if __name__ == '__main__':
