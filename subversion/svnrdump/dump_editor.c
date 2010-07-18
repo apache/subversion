@@ -381,7 +381,6 @@ add_file(const char *path,
     apr_hash_set(pb->deleted_entries, path, APR_HASH_KEY_STRING, NULL);
 
   /* Build a nice file baton to pass to change_file_prop and apply_textdelta */
-  pb->eb->changed_path = path;
   *file_baton = pb->eb;
 
   return SVN_NO_ERROR;
@@ -419,7 +418,6 @@ open_file(const char *path,
                     copyfrom_path, copyfrom_rev, pool));
 
   /* Build a nice file baton to pass to change_file_prop and apply_textdelta */
-  pb->eb->changed_path = path;
   *file_baton = pb->eb;
 
   return SVN_NO_ERROR;

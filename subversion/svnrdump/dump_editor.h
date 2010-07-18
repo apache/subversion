@@ -39,9 +39,6 @@ struct dump_edit_baton {
   /* Was a copy command issued? */
   svn_boolean_t is_copy;
 
-  /* Path of changed file */
-  const char *changed_path;
-
   /* Temporary file to write delta to along with its checksum */
   char *delta_abspath;
 
