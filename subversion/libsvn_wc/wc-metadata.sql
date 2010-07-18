@@ -479,6 +479,105 @@ PRAGMA user_version =
 -- define: SVN_WC__VERSION
 ;
 
+/* ------------------------------------------------------------------------- */
+
+/* The NODE_DATA table describes the way WORKING nodes are layered on top of
+   BASE nodes and on top of other WORKING nodes, due to nested nested tree
+   structure changes. The layers are modelled using the "oproot" column.
+
+   Each row in BASE_NODE has an associated row NODE_DATA. Additionally, each
+   row in WORKING_NODE has one or more associated rows in NODE_DATA.
+
+   This table contains only those data elements which apply to all WORKING
+   layers; fields applicable only to the currently visible WORKING node or
+   BASE node are located in the WORKING_NODE and BASE_NODE tables.
+
+   ### This table is to be integrated into the SCHEMA statement as soon
+       the experimental status of NODE_DATA is lifted.
+ */
+-- STMT_CREATE_NODE_DATA
+CREATE TABLE NODE_DATA (
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
+  local_relpath  TEXT NOT NULL,
+  op_depth INTEGER NOT NULL,
+
+  /* parent's local_relpath for aggregating children of a given parent.
+     this will be "" if the parent is the wcroot.  Since a wcroot will
+     never have a WORKING node the parent_relpath will never be null. */
+  /* ### would be nice to make this column NOT NULL.  */
+  parent_relpath  TEXT,
+
+  /* Is this node "present" or has it been excluded for some reason?
+     Only allowed values: normal, not-present, incomplete, base-deleted.
+     (the others do not make sense for the WORKING tree)
+
+     normal: this node has been added/copied/moved-here. There may be an
+       underlying BASE node at this location, implying this is a replace.
+       Scan upwards from here looking for copyfrom or moved_here values
+       to detect the type of operation constructing this node.
+
+     not-present: the node (or parent) was originally copied or moved-here.
+       A subtree of that source has since been deleted. There may be
+       underlying BASE node to replace. For a move-here or copy-here, the
+       records are simply removed rather than switched to not-present.
+       Note this reflects a deletion only. It is not possible move-away
+       nodes from the WORKING tree. The purported destination would receive
+       a copy from the original source of a copy-here/move-here, or if the
+       nodes were plain adds, those nodes would be shifted to that target
+       for addition.
+
+     incomplete: nodes are being added into the WORKING tree, and the full
+       information about this node is not (yet) present.
+
+     base-deleted: the underlying BASE node has been marked for deletion due
+       to a delete or a move-away (see the moved_to column to determine
+       which), and has not been replaced.  */
+  presence  TEXT NOT NULL,
+
+  /* the kind of the new node. may be "unknown" if the node is not present. */
+  kind  TEXT NOT NULL,
+
+  /* If this node was moved here or copied here, then the following fields may
+     have information about their source node. See BASE_NODE.changed_* for
+     more information.
+
+     For an added or not-present node, these are null.  */
+  changed_revision  INTEGER,
+  changed_date      INTEGER,  /* an APR date/time (usec since 1970) */
+  changed_author    TEXT,
+
+  /* NULL depth means "default" (typically svn_depth_infinity) */
+  /* ### depth on WORKING? seems this is a BASE-only concept. how do
+     ### you do "files" on an added-directory? can't really ignore
+     ### the subdirs! */
+  /* ### maybe a WC-to-WC copy can retain a depth?  */
+  depth  TEXT,
+
+  /* The SHA-1 checksum of the pristine text, if this node is a file and was
+     moved here or copied here, else NULL. */
+  checksum  TEXT,
+
+  /* for kind==symlink, this specifies the target. */
+  symlink_target  TEXT,
+
+  /* Where this node was copied/moved from. All copyfrom_* fields are set
+     only on the root of the operation, and are NULL for all children. */
+  original_repos_id  INTEGER REFERENCES REPOSITORY (id),
+  original_repos_path  TEXT,
+  original_revision  INTEGER,
+
+  /* serialized skel of this node's properties. NULL if we
+     have no information about the properties (a non-present node). */
+  properties  BLOB,
+
+  PRIMARY KEY (wc_id, local_relpath, op_depth)
+
+  );
+
+CREATE INDEX I_NODE_PARENT ON NODE_DATA (wc_id, parent_relpath);
+CREATE INDEX I_NODE_PATH ON NODE_DATA (wc_id, local_relpath);
+
+
 
 /* ------------------------------------------------------------------------- */
 
