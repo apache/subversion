@@ -1218,6 +1218,11 @@ create_db(svn_sqlite__db_t **sdb,
   /* Create the database's schema.  */
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_SCHEMA));
 
+#ifdef SVN_WC__NODE_DATA
+  /* Create the NODE_DATA table for the experimental schema */
+  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODE_DATA));
+#endif  
+
   /* Insert the repository. */
   SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid, *sdb,
                           scratch_pool));
