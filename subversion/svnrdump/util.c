@@ -20,6 +20,7 @@
  */
 
 #include "svn_repos.h"
+#include "svn_hash.h"
 
 #include "svnrdump.h"
 
@@ -118,8 +119,8 @@ dump_props(struct dump_edit_baton *eb,
            &(eb->propstring->len)));
 
     /* Cleanup so that data is never dumped twice */
-    apr_hash_clear(eb->properties);
-    apr_hash_clear(eb->del_properties);
+    svn_hash__clear(eb->properties, pool);
+    svn_hash__clear(eb->del_properties, pool);
     if (trigger_var)
       *trigger_var = FALSE;
   }
