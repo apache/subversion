@@ -25,6 +25,7 @@
 #include "svn_ra.h"
 #include "svn_repos.h"
 #include "svn_path.h"
+#include "svn_private_config.h"
 
 #include "svnrdump.h"
 #include "dump_editor.h"
@@ -141,11 +142,11 @@ static svn_error_t *
 usage(FILE *out_stream)
 {
   fprintf(out_stream,
-    "usage: svnrdump URL [-r LOWER[:UPPER]]\n\n"
+    _("usage: svnrdump URL [-r LOWER[:UPPER]]\n\n"
     "Dump the contents of repository at remote URL to stdout in a 'dumpfile'\n"
     "portable format.  Dump revisions LOWER rev through UPPER rev.\n"
     "LOWER defaults to 1 and UPPER defaults to the highest possible revision\n"
-    "if omitted.\n");
+    "if omitted.\n"));
   return SVN_NO_ERROR;
 }
 
