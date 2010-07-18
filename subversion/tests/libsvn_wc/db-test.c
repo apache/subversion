@@ -321,9 +321,13 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
   svn_sqlite__db_t *sdb;
   const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
+#ifdef SVN_WC__NODE_DATA
+    statements[STMT_CREATE_NODE_DATA],
+#endif
     TESTING_DATA,
     NULL
   };
+  int i;
 
   SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
   svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
@@ -332,11 +336,8 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
                            0, NULL,
                            scratch_pool, scratch_pool));
 
-  /* Create the database's schema.  */
-  SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ 0));
-
-  /* Throw our extra data into the database.  */
-  SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ 1));
+  for (i = 0; my_statements[i] != NULL; i++)
+    SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
 
   return SVN_NO_ERROR;
 }
