@@ -30,11 +30,6 @@
 #include "svnrdump.h"
 #include "dump_editor.h"
 
-static int verbose = 0;
-static apr_pool_t *pool = NULL;
-static svn_client_ctx_t *ctx = NULL;
-static svn_ra_session_t *session = NULL;
-
 static svn_error_t *
 replay_revstart(svn_revnum_t revision,
                 void *replay_baton,
@@ -94,14 +89,16 @@ replay_revend(svn_revnum_t revision,
   /* Editor has finished for this revision and close_edit has
      been called; do nothing: just continue to the next
      revision */
-  if (verbose)
+  struct replay_baton *rb = replay_baton;
+  if (rb->verbose)
     svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu\n", revision);
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-open_connection(const char *url)
+open_connection(svn_ra_session_t *session, const char *url, apr_pool_t *pool)
 {
+  svn_client_ctx_t *ctx = NULL;
   SVN_ERR(svn_config_ensure (NULL, pool));
   SVN_ERR(svn_client_create_context (&ctx, pool));
   SVN_ERR(svn_ra_initialize(pool));
@@ -118,7 +115,9 @@ open_connection(const char *url)
 }
 
 static svn_error_t *
-replay_range(svn_revnum_t start_revision, svn_revnum_t end_revision)
+replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
+	     svn_revnum_t end_revision, apr_pool_t *pool,
+	     svn_boolean_t verbose)
 {
   const svn_delta_editor_t *dump_editor;
   void *dump_baton;
@@ -130,6 +129,7 @@ replay_range(svn_revnum_t start_revision, svn_revnum_t end_revision)
 						 sizeof(struct replay_baton));
   replay_baton->editor = dump_editor;
   replay_baton->edit_baton = dump_baton;
+  replay_baton->verbose = verbose;
   SVN_ERR(svn_cmdline_printf(pool, SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n",
            SVN_REPOS_DUMPFILE_FORMAT_VERSION));
   SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
@@ -158,6 +158,9 @@ main(int argc, const char **argv)
   char *revision_cut = NULL;
   svn_revnum_t start_revision = svn_opt_revision_unspecified;
   svn_revnum_t end_revision = svn_opt_revision_unspecified;
+  svn_boolean_t verbose = FALSE;
+  apr_pool_t *pool = NULL;
+  svn_ra_session_t *session = NULL;
 
   if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
@@ -174,7 +177,7 @@ main(int argc, const char **argv)
       else
         start_revision = (svn_revnum_t) strtoul(argv[i] + 2, NULL, 10);
     } else if (!strcmp("-v", argv[i]) || !strcmp("--verbose", argv[i])) {
-      verbose = 1;
+      verbose = TRUE;
     } else if (!strcmp("help", argv[i]) || !strcmp("--help", argv[i])) {
       SVN_INT_ERR(usage(stdout));
       return EXIT_SUCCESS;
@@ -189,7 +192,7 @@ main(int argc, const char **argv)
     usage(stderr);
     return EXIT_FAILURE;
   }
-  SVN_INT_ERR(open_connection(url));
+  SVN_INT_ERR(open_connection(session, url, pool));
 
   /* Have sane start_revision and end_revision defaults if unspecified */
   if (start_revision == svn_opt_revision_unspecified)
@@ -197,7 +200,7 @@ main(int argc, const char **argv)
   if (end_revision == svn_opt_revision_unspecified)
     SVN_INT_ERR(svn_ra_get_latest_revnum(session, &end_revision, pool));
 
-  SVN_INT_ERR(replay_range(start_revision, end_revision));
+  SVN_INT_ERR(replay_range(session, start_revision, end_revision, pool, verbose));
 
   svn_pool_destroy(pool);
 
