@@ -1,0 +1,106 @@
+#! /bin/sh
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+# buildcheck.sh: Inspects the build setup to make detection and
+# correction of problems an easier process.
+
+# Initialize parameters
+VERSION_CHECK="$1"
+
+if test "$VERSION_CHECK" != "--release"; then
+  echo "buildcheck: checking installation..."
+else
+  echo "buildcheck: checking installation for a source release..."
+fi
+
+#--------------------------------------------------------------------------
+# autoconf 2.59 or newer
+#
+ac_version=`${AUTOCONF:-autoconf} --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[a-z]* *$//' -e 1q`
+if test -z "$ac_version"; then
+  echo "buildcheck: autoconf not found."
+  echo "            You need autoconf version 2.59 or newer installed."
+  exit 1
+fi
+IFS=.; set $ac_version; IFS=' '
+if test "$1" = "2" -a "$2" -lt "59" || test "$1" -lt "2"; then
+  echo "buildcheck: autoconf version $ac_version found."
+  echo "            You need autoconf version 2.59 or newer installed."
+  echo "            If you have a sufficient autoconf installed, but it"
+  echo "            is not named 'autoconf', then try setting the"
+  echo "            AUTOCONF environment variable.  (See the INSTALL file"
+  echo "            for details.)"
+  exit 1
+fi
+
+echo "buildcheck: autoconf version $ac_version (ok)"
+
+#--------------------------------------------------------------------------
+# autoheader 2.59 or newer
+#
+ah_version=`${AUTOHEADER:-autoheader} --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[a-z]* *$//' -e 1q`
+if test -z "$ah_version"; then
+  echo "buildcheck: autoheader not found."
+  echo "            You need autoheader version 2.59 or newer installed."
+  exit 1
+fi
+IFS=.; set $ah_version; IFS=' '
+if test "$1" = "2" -a "$2" -lt "59" || test "$1" -lt "2"; then
+  echo "buildcheck: autoheader version $ah_version found."
+  echo "            You need autoheader version 2.59 or newer installed."
+  echo "            If you have a sufficient autoheader installed, but it"
+  echo "            is not named 'autoheader', then try setting the"
+  echo "            AUTOHEADER environment variable.  (See the INSTALL file"
+  echo "            for details.)"
+  exit 1
+fi
+
+echo "buildcheck: autoheader version $ah_version (ok)"
+
+#--------------------------------------------------------------------------
+# check that our local copies of files match up with those in APR(UTIL)
+#
+if test -d ./apr; then
+  if cmp -s ./build/ac-macros/find_apr.m4 ./apr/build/find_apr.m4; then
+    :
+  else
+    echo "buildcheck: local copy of find_apr.m4 does not match APR's copy."
+    echo "            An updated copy of find_apr.m4 may need to be checked in."
+  fi
+  if cmp -s ./build/PrintPath ./apr/build/PrintPath; then
+    :
+  else
+    echo "buildcheck: local copy of PrintPath does not match APR's copy."
+    echo "            An updated copy of PrintPath may need to be checked in."
+  fi
+fi
+
+if test -d ./apr-util; then
+  if cmp -s ./build/ac-macros/find_apu.m4 ./apr-util/build/find_apu.m4; then
+    :
+  else
+    echo "buildcheck: local copy of find_apu.m4 does not match APRUTIL's copy."
+    echo "            An updated copy of find_apu.m4 may need to be checked in."
+  fi
+fi
+
+#--------------------------------------------------------------------------
+exit 0

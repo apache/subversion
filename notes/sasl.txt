@@ -1,0 +1,225 @@
+              Using Cyrus SASL Authentication with Subversion
+              ===============================================
+
+
+Contents
+========
+
+  1. Obtaining and Building the Cyrus SASL Library
+  2. Building Subversion with Cyrus SASL Support
+  3. Theory
+  4. Configuration
+  5. Compatibility
+  6. Encryption
+  7. Known Issues
+  8. GSSAPI
+
+
+1. Obtaining and Building the Cyrus SASL Library
+================================================
+
+  Subversion 1.5 introduces support for the Cyrus SASL (Simple Authentication
+  and Security Layer) library for the svn:// protocol and svnserve server.
+  
+  Only version 2.1.x is supported.  You can get the latest version of the
+  library from:
+  
+    ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/
+  
+  To build Cyrus SASL on Unix-like systems, follow the usual ./configure
+  && make && make install process.  Cyrus SASL has many ./configure options
+  to control which authentication mechanisms and password-checking methods
+  should be built.  On Windows, follow the instructions in the
+  doc/windows.html file in the Cyrus SASL sources.
+
+
+2. Building Subversion with Cyrus SASL Support
+==============================================
+
+  On Unix, if you have Cyrus SASL installed in one of the standard locations
+  (/usr or /usr/local), the configure script should automatically detect it.
+  If the library is installed elsewhere you can use the --with-sasl=PATH
+  switch to the configure script.
+  
+  On Windows, once you have built the library, pass --with-sasl=PATH to the
+  gen-make.py script, where PATH is the directory where Cyrus SASL was built.
+
+
+3. Theory
+=========
+
+  From Wikipedia: "SASL is a framework for authentication and data security in
+  Internet protocols.  It decouples authentication mechanisms from application
+  protocols, in theory allowing any authentication mechanism supported by SASL
+  to be used in any application protocol that uses SASL."
+  
+  In practice, the server sends a list of authentication mechanisms that it
+  supports.  The client then selects one of these mechanisms based on what the
+  client supports, and informs the server of its decision.  After that, a
+  number of messages are exchanged until either authentication succeeds or an
+  error occurs.  In the latter case, the client is allowed to restart
+  authentication.
+  
+  The svn:// protocol has always supported this type of negotiation.  However,
+  only the CRAM-MD5 and ANONYMOUS mechanisms were implemented.  Cyrus SASL
+  supports all these, and, in addition, provides a host of other mechanisms
+  such as DIGEST-MD5, OTP (One-Time Passwords), GSSAPI (used for Kerberos
+  authentication), NTLM (NT LAN Manager), SRP (Secure Remote Password), and
+  others.  The exact list of available mechanisms depends on how SASL was
+  compiled, as many of them either have external dependencies, or are not
+  built by default.  Also, because each mechanism is actually a shared library
+  that is dynamically loaded at runtime, many distributions package these
+  mechanisms separately from the core library.
+
+
+4. Configuration
+================
+
+  On the client side, you don't have to do anything special to enable Cyrus
+  SASL, it will always be used if you built Subversion with SASL support.  On
+  the server side, Cyrus SASL will not be used by default because some extra
+  configuration steps are required.
+  
+  First, you need to configure how the Cyrus SASL library should authenticate
+  a client's username and password.  These options are not stored in
+  svnserve.conf, but in a special configuration file read by Cyrus SASL.  This
+  file must be named svn.conf, and must be readable by the svnserve process.
+  Cyrus SASL will look for this file in a known location, usually the same
+  directory where its plugins are located, i.e. /usr/lib/sasl2.  Some SASL
+  distributions will look for the file in a different directory, e.g.
+  /etc/sasl2.
+  
+  The list of possible options can be found in the doc/options.html file in the
+  Cyrus SASL sources.  A simple svn.conf might look like this:
+  
+    pwcheck_method: auxprop
+    auxprop_plugin: sasldb
+    mech_list: ANONYMOUS DIGEST-MD5
+  
+  This tells SASL to use its own password database (usually stored in
+  /etc/sasldb2) to check user passwords, and restricts the list of
+  authentication mechanisms to just ANONYMOUS and DIGEST-MD5.
+  
+  To add usernames and passwords to Cyrus SASL's database, use the saslpasswd2
+  command, like this:
+  
+    saslpasswd2 -c -u realm username
+    
+  For this to work, you need to be root (or a member of the "sasl" group).
+  Check that you have created the user correctly with sasldblistusers2.
+  
+  IMPORTANT: The "realm" argument to the saslpasswd2 command must be the same
+  realm that you specify in the svnserve.conf file.  svnserve will tell SASL
+  to use that realm when authenticating, and if they do not match,
+  authentication will fail.  You should avoid realms with spaces in them,
+  because SASL doesn't like them.
+  
+  IMPORTANT: If you are using sasldb, svnserve must have read access to the
+  /etc/sasldb2 file.  If you are going to use the OTP mechanism, you also need
+  write access.
+
+  There are many other ways to configure SASL.  Instead of storing passwords
+  in a local database, you can use Kerberos, LDAP, you can store passwords in
+  a SQL database, etc.  Read the SASL documentation for details.
+  
+  After creating the svn.conf file, you need to tell svnserve to start
+  using Cyrus SASL for authentication.  To do this, just set "use-sasl" to
+  "true" in the [sasl] section of the svnserve.conf file.  You should now be
+  able to authenticate.
+  
+  On Windows, some additional steps are required.  To tell SASL where to find
+  its plugins and configuration files, you need to create the following
+  registry key (using a registry editing tool such as regedit):
+  
+    [HKEY_LOCAL_MACHINE\SOFTWARE\Carnegie Mellon\Project Cyrus\SASL Library]
+  
+  and add two keys to it:
+  
+    "SearchPath": set this to the path where SASL's plugins (the *.dll files)
+                  are located
+    "ConfFile":   set this to the path where Cyrus SASL should look for the
+                  svn.conf file
+
+5. Compatibility
+================
+
+  All 1.x clients, with or without Cyrus SASL support, will be able to
+  authenticate against all 1.x servers that do not have Cyrus SASL enabled.
+  Note that the CRAM-MD5 and ANONYMOUS mechanisms are actually built into
+  Subversion, so you'll be able to use them even if the corresponding Cyrus
+  SASL plugins are missing.
+  
+  1.x clients without Cyrus SASL support will be able to authenticate against
+  1.5+ servers with SASL enabled, provided the server allows the CRAM-MD5
+  and/or ANONYMOUS mechanisms.
+  
+  1.5+ clients with Cyrus SASL support will be able to authenticate against
+  1.5+ servers with SASL enabled, provided at least one of the mechanisms
+  supported by the server is also supported by the client.
+
+  
+6. Encryption
+=============
+
+  In addition to providing authentication, the Cyrus SASL library can also
+  provide data confidentiality (a.k.a. encryption).  Not all SASL mechanisms
+  support encryption (e.g. DIGEST-MD5 does, CRAM-MD5 doesn't).  To control the
+  level of encryption, you can use two additional svnserve.conf options,
+  min-encryption and max-encryption.  A value of 0 for either of these means
+  "no encryption", 1 means "protect data integrity, but not confidentiality",
+  and values greater than 1 correspond to the desired encryption key length,
+  in bits.
+  
+  For example:
+  
+    min-encryption    max-encryption                   result
+    --------------    --------------      ---------------------------------
+          0                 0             encryption is disabled
+
+          1                 1             data will be protected against
+                                          tampering, but will not be encrypted
+
+          0                256            allow encryption for those clients
+                                          that support it, but don't require
+                                          it
+
+         128               256            require at least 128-bit encryption
+
+
+7. Known Issues
+===============
+
+  Cyrus SASL has two authentication mechanisms, PLAIN and LOGIN, that send the
+  password over the network in plain text. The svn:// protocol doesn't support
+  TLS yet, so both these mechanisms expose passwords to the network in clear
+  text.
+  
+  As a consequence, users should take great care to secure the network link
+  by other means, such as by deploying a secure VPN or by using stunnel for
+  SSL encryption (http://stunnel.mirt.net/)
+
+  In particular, this problem affects users using the saslauthd daemon
+  to authenticate users, because that method only works with plain text
+  passwords.
+
+8. GSSAPI
+=========
+
+  The realm in svnserve.conf is your Kerberos authentation realm,
+  e.g. "EXAMPLE.COM".  Cyrus's GSSAPI implementation does not support
+  encryption, except for very basic 56-bit DES.  If you leave the encrypt
+  settings out of your svnserve.conf entirely, you're fine; just don't set
+  max-encryption higher than 56.
+
+  You need a Kerberos principal for each svn server, in the form
+  "svn/${SERVER_FQDN}@${REALM}", e.g. "svn/svn1.example.com@EXAMPLE.COM".
+  If you don't store it in /etc/krb5.keytab, you'll need to set the
+  KRB5_KTNAME environment variable when starting svnserve, e.g.
+
+    KRB5_KTNAME=/etc/svn.keytab sudo -u svn svnserve -d -r /svn
+
+  This keytab file must also be readable by the svnserve process.
+
+  All you need in the svn.conf file is:
+
+    mech_list: gssapi

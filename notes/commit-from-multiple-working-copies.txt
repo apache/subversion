@@ -1,0 +1,121 @@
+Commit from Multiple Working Copies
+ 
+1) Expected behavior 
+
+When committing files, listing their paths, no matter whether they belong to
+the same work copy or not, if they all live in the same repository, they 
+should be committed successfully.
+ 
+2) Actual behavior
+
+Currently, the code "condenses" all target paths, which means it
+tries to find a common root for them, and then it tries to lock that
+common root. If the common root is not a working copy, locking the
+common root fails and the commit is simply aborted ("svn: <common root>
+is not a working copy"). Multiple commit targets will only be committed
+successfully if all they all belong to the same working copy.
+
+3) Suggested behaviour
+
+There are three possible solutions, listed in order of difficulty.
+
+A  Make svn_client_commit4() do multiple commits, one for each
+   target working copy. Essentially:
+     svn commit wc1; svn commit wc2; ...; svn commit wcN;
+   This solution has many drawbacks, but is the easiest one to implement.
+   Most people won't like it and it will probably never end up
+   in a Subversion release. The solution will be discarded
+   anyway later when commit functionality is rebased on WC-NG.
+
+B  Try to change the current commit code into passing around a
+   list of access batons, and make it create truly atomic commits
+   from multiple working copies as people would expect. This solution
+   is much more involved than A.
+   People might like it, and it could even end up in a release if
+   WC-NG continues to progress at the current slow speed.
+   The solution will be discarded or amended later when commit
+   functionality is rebased on WC-NG.
+
+C  Start working on WC-NG instead of doing this in wc-1. A lot of
+   things are still left to do before svn commit will even start using
+   WC-NG code. So the goal will change from "allow commit from multiple
+   working copies" to "help get WC-NG ready so that, one day, we can have
+   truly atomic commits from multiple working copies". 
+ 
+Since this problem is being worked on as part of Summer of Code,
+and the student has no prior experience with the Subversion code
+base, it is reasonable to solve the problem in multiple steps,
+implementing solution A first, and then extend that to solution B,
+or jump straight to solution C.
+
+Below, we describe how solution A will be implemented.
+
+Because solution A will make more than one commit, we'll have to make
+svn_client_commit4() return an array of svn_commit_info_t
+objects, one for each commit made, instead of just a single
+svn_commit_info_t object. Because this changes the public API,
+we need to bump the function's revision to 5: svn_client_commit5().
+This API change will be reverted in case solution B or solution C
+gets implemented, or in case solution A gets discarded before release.
+
+1. We receive a list of targets to commit.
+
+  In subversion\svn\commit-cmd.c the function 
+    svn_error_t *
+    svn_cl__commit(apr_getopt_t *os,
+                   void *baton,
+                   apr_pool_t *pool)
+  receives the targest list first.
+
+  Then, in E:\subversion\subversion\libsvn_client\commit.c the function
+    svn_error_t *
+    svn_client_commit4(svn_commit_info_t **commit_info_p,
+                       const apr_array_header_t *targets,
+                       svn_depth_t depth,
+                       svn_boolean_t keep_locks,
+                       svn_boolean_t keep_changelists,
+                       const apr_array_header_t *changelists,
+                       const apr_hash_t *revprop_table,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+  uses the targest list to do a commit.
+ 
+2. If targets are not from the same working copy, we do the following 
+   instead of aborting the commit:
+
+   If locking the common root failed:
+    For each target path we got:
+      For each working copy root we already know (initially we don't
+        know any working copy roots):
+          Check if the current target path is below the working copy root.
+          If it is, put it into this root's group ("commit packet")
+          and continue with the next target path.
+
+      If we end up here, no suitable working copy root was found
+      for the current target path.
+      Walk the current target path downwards, starting from the common
+      root (the root which we could not lock, in the code this is often
+      called the "base_dir").
+      Try to lock the current directory at each step.
+      If locking succeeds, we have found a new WC root!
+      Store its access baton in the set of known working copy roots.
+      Put the current target path into the group of the root we just found.
+      
+      Here we use a struct to store each "commit packet":
+        typedef struct
+        {
+            /* Working copy root of a wc */
+            const char *base_dir;
+
+            /* Targets under base_dir */
+            apr_array_header_t *targets;
+
+            svn_wc_adm_access_t *base_dir_access;
+
+        } commit_packet_t; 
+      It would be a local variable of the function svn_client_commit5(), 
+      because it is used only in the function. And it is allocated from pool.
+
+  Now run a commit for each working copy root we found.
+  This is done just like before when the code only knew about
+  a single root, but it's done for each root in turn.

@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Authorization Design for Svn Obliterate</title>
+</head>
+
+<body>
+
+<div class="h1">
+<h1 style="text-align: center">Authorization Design for Svn Obliterate</h1>
+</div>
+
+<div class="h1">
+<h2>Table of Contents</h2>
+<ol id="toc">
+  <li><a href="#pre-obliterate">Pre-obliterate hook</a>
+  </li>
+</ol>
+</div>
+
+<!--
+  ================================================================
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+  ====================================================================
+
+  This software consists of voluntary contributions made by many
+  individuals on behalf of CollabNet.
+-->
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<div class="h2" id="introduction" title="#introduction">
+  <h2>Introduction</h2>
+
+  <p>Authorization is by a pre-obliterate hook which can base its decision on
+    the user name and the details of the attempted obliteration.</p>
+
+  <p>A post-obliterate hook will be available for reporting or other purposes,
+    analogous to the post-commit hook. This is not involved in authorization.
+    </p>
+
+  <p>Before a normal commit, two hooks are invoked: start-commit and
+    pre-commit, with only the list of files available to the first one and
+    the entire content of the change available to the second one. As
+    obliteration does not involve transmitting file contents, there is no
+    reason to have separate start-obliterate and pre-obliterate hooks.</p>
+
+</div>
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<div class="h2" id="pre-obliterate" title="#pre-obliterate">
+  <h2>Pre-obliterate hook</h2>
+
+  <p>Obliteration is authorized by a pre-obliterate hook. A pre-obliterate
+    hook script must be installed in order to allow any obliteration at all.
+    This hook is not installed by default.</p>
+
+  <p>See the <a href="hooks/pre-obliterate.tmpl">template for a Unix pre-obliterate script</a>.</p>
+
+  <p>The pre-obliterate hook is named 'pre-obliterate'.</p>
+
+  <p>The pre-obliterate hook is passed the following parameters:</p>
+  <ol>
+    <li>REPOS-PATH - the path to this repository</li>
+    <li>USER - the username of the user attempting the obliteration</li>
+  </ol>
+
+  <p>The pre-obliterate hook is passed the OBLITERATION SET on its standard
+    input as one or more PATH@REV1:REV2 lines, where PATH is the path within
+    the repository, starting with '/', and REV1 is the first and REV2 the
+    last revision number in the range to be obliterated. (For a single
+    revision, REV1 == REV2 and both are present.)</p>
+
+  <p>If the hook returns a zero exit code, the obliteration is performed.
+    If the hook returns a non-zero exit code, the obliteration is denied
+    and the client should display an error message and any output that the
+    hook sent to stderr.</p>
+
+</div>
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+</body>
+</html>

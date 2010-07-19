@@ -1,0 +1,208 @@
+
+             CLIENT-SIDE TRACKING OF RENAMES
+             ===============================
+
+
+CONTENTS
+
+    1. Introduction
+
+    2. Behaviour of Local Renames
+
+    3. Behaviour of Incoming Renames
+
+    4. Copies
+
+
+1. Introduction
+
+    See issue #3631, "Client-side tracking of renames", and issue #3630,
+    "Rename tracking".
+
+    This document specifies the desired client-side behaviour for tracking
+    a rename.
+
+    A local, scheduled rename can result from a Subversion "rename" command
+    or from an incoming rename during an update, switch or merge.  The
+    behaviour of local renames is specified in section 2.
+
+    The other necessary part of client-side behaviour is handling an
+    incoming rename during an update, switch or merge.  That behaviour is
+    specified in section 3.
+
+    A. What is a Rename?
+
+        A "rename" operation moves a node from one path to another, in a
+        single operation.  The original node is then in a different
+        directory and/or has a new name within its directory.
+
+        No distinction is made between the words "rename" and "move": either
+        word refers to the operation that moves a node to a different
+        directory and/or changes its base name.
+
+        No distinction is made between renaming a file, a directory or a
+        symlink, unless otherwise noted.
+
+        A rename cannot change the node kind.
+
+        A node can be renamed and edited in the same change.
+
+    B. What is New?
+
+        The rename operation can be viewed as having two halves - removal
+        from the source path, and adding or copying to the target path - but
+        unlike in previous versions of Subversion, these two actions are:
+
+          - atomic (indivisible), and
+
+          - not quite the same as the separate "svn delete" and "svn copy"
+            operations.
+
+        The rename is remembered and propagated as a rename.  One result is
+        that when a node 'foo' is renamed to 'bar' in branch B1 and that
+        change is then merged to branch B2, the corresponding node 'foo' in
+        branch B2 is renamed to 'bar'.  In previous version of Subversion,
+        that did not happen; instead, node 'foo' in B2 was deleted and then
+        a new node 'bar' was created in B2 by copying the original 'foo'
+        from B1.
+
+
+2. Behaviour of Local Renames
+
+    A local rename is a scheduled change in the working copy.
+
+    A. Atomicity
+
+        - commit either path: fail, or commit both halves (TBD)
+
+        - resolve either path: fail, or resolve both halves (TBD)
+
+        - revert either path: fail, or revert both halves (TBD)
+
+        - merge from either path: fail, or include both halves (TBD)
+
+        - update/switch: fail, or include both halves (TBD)
+
+        - changelist: ?
+
+        - export: ?
+
+        - lock/unlock: ?
+
+        - ...
+
+    B. Incoming edits (from update/switch/merge)
+
+       Here, "edit" means any modification including a property change or,
+       for a directory, an add or delete or edit of a child.
+
+        - Incoming edit to the source path of any rename (even if a
+          replacement node exists at that path): apply to the target path.
+          ### Or tree conflict if a replacement node exists?
+
+        - Incoming edit to the target path: tree conflict (?) (not possible
+          with up/sw)
+
+        - Incoming add at the source path: tree conflict.
+
+        - Incoming add at the target path: tree conflict.
+
+        - Incoming delete of the source path: tree conflict.
+
+        - Incoming delete of the target path: tree conflict.
+
+        - For incoming renames, and cases where there is both an incoming
+          rename and a local rename, see section 3.
+
+    C. Commit
+
+        - Transmit the rename information to the server.
+
+        - See issue #3632, "Subversion's RA subsystem should carry rename
+          information".
+
+    D. Renaming and Copying
+
+        - copy from source path: fail (can't reference a gone-away node)
+
+        - copy from target path: record as copy of that target path? (can we
+          guarantee ordering such that that will be propagated correctly?)
+
+        - copy/move a dir with a whole rename inside it: DTRT (ordering?)
+
+        - rename from source path: fail (can't reference a gone-away node)
+          (unless the source has since been replaced by a new node, in which
+          case that new node is referenced)
+
+        - rename from target path: adapt the original rename
+
+        ### Peter Samuelson says:
+            I think this operation,    {mv A B; cp B C},
+            should behave exactly like {cp A C; mv A B}.
+
+    E. Other WC commands
+
+        - delete target path: convert the rename into a delete.
+
+        - 'svn info': on source node, display the target path; on target
+          path, indicate it is a tracked rename.
+
+        - 'svn status': indicate source and target paths are parts of a
+          rename.
+
+        - 'svn log --stop-on-copy' does not stop at a rename.
+
+        - 'svn diff' and 'svnlook diff' do not show either a whole-file add
+          or a whole-file delete, but just show an indication that the file
+          was renamed and show any content change that was made at the same
+          time.
+
+        - ...
+
+
+3. Behaviour of Incoming Renames
+
+    An incoming rename is a rename described to the client by the server
+    during an update, switch or merge operation.
+
+    A. Automatically merge the incoming rename with the local working copy,
+       if possible.  If not possible, raise a tree conflict.
+
+        - Incoming rename, identical to a local rename: merge the two
+          identical changes and unschedule the local rename
+
+        - Incoming rename, where source is source of a local rename:
+          adjust the local rename accordingly
+
+        - Incoming rename, where target is target of a local rename:
+          tree conflict
+
+        - Incoming rename, where source is target of a local rename:
+          tree conflict (not possible for up/sw)
+
+        - Incoming rename, where target is source of a local rename:
+          tree conflict (not possible for up/sw)
+
+        - Incoming rename, local edit: rename the local node, keeping the
+          local edits (including any unversioned nodes in it, if it's a dir)
+
+        - Incoming rename, local delete: tree conflict
+
+    B. Source of Information on Incoming Renames
+
+        - The intended source is from an updated RA interface.  See issue
+          #3632, "Subversion's RA subsystem should carry rename information"
+
+        - A possible backward compatibility measure, when talking to servers
+          that do not support rename tracking, could be to infer renames
+          from heuristics on incoming deletes and copies.
+
+
+4. Copies
+
+    ### TO DO
+
+    Copies should exhibit behaviour in line with renames.  During a merge,
+    an incoming copy should result in a local copy from a local source,
+    rather than a local copy from a source in the source branch.  ...
+

@@ -1,0 +1,130 @@
+Note from user visits by Hyrum - Jan., Feb. 2010
+
+Introduction
+============
+I've recently had an opportunity to visit with a number of corporate users
+of Subversion.  My basic question was "what should you think the future of
+Subversion should be?"  While not everybody spoke to that question, all the
+responses were illuminating, so I'm recording them here for posterity.
+
+(These aren't all of the people I've talked to, just the ones which had the
+most feedback.)
+
+
+User 1
+======
+
+Background
+----------
+A large corporate installation of Subversion.  The development manager I
+spoke with supervises several thousand developers.  They use Subversion, but
+there is some grassroots movement from his developers to switch to a DVCS.
+
+Concerns
+--------
+Branching & merging too slow
+Overall speed
+"Branching & merging fixed by the end of the year, or you are dead."
+Refactoring support
+"If you are going to fail, I'll leave as soon as possible."
+Great interest in obliterate support
+
+Places Subversion stands out
+----------------------------
+Multi-platform support
+(others)
+
+Take-aways
+----------
+Overall, the meeting was a bit negative, but that's what I expected (and asked
+for, even).  Hearing folks' concerns is how we improve.  In the end, I came
+to the realization that we wouldn't be having the conversation if folk like
+him didn't see hope, and didn't want to see improvement.  As a development
+manager, the idea of moving to a DVCS is not very appealing at all, and he
+wants to see Subversion succeed.
+
+
+User 2
+======
+
+Background
+----------
+Another large corporate installation, recently moved from CVS to Subversion.
+~3000 developers.
+
+Concerns
+--------
+Obliterate support
+Tags are useless (would essentially like revnum aliases of some kind)
+No zero-change commit support.
+Long option names
+Atomic import (a delete and import in one rev)
+Merge ancestry issues are painful
+Want 'svn diff@WORKING'
+Various scalability concerns
+Long-running merge operations
+
+Places Subversion stands out
+----------------------------
+Much better than CVS in every practical way
+
+Take-aways
+----------
+A lot of the Concerns are actually somewhat-valid feature requests.  We should
+attempt to vet them, and if found justifiable, implement them.
+
+
+User 3
+======
+
+Background
+----------
+Large multinational corporate, many regions each with relatively few developers
+(10-20 per region say), couple of hundred in HQ. Beginning to work with
+outsourced development centres. Moved from VSS to SVN 18 months ago (but
+planning longer).
+
+
+Concerns
+--------
+* Performance. Base product is 20,000 files in a few hundred Mb Data, plus
+  smaller modules. Initial checkin of the base often fails and has to be
+  performed piecemeal. Some log commands take a while, TortoiseSVN's revision
+  graph is unusable.
+* Server-based configuration. It's not nice when a user forgets to set his
+  global-excludes for example.
+* Obliterate support would be nice to clean up the repo.
+* Archiving support also - ie to delete revisions over 2 years old, for
+  example, whilst keeping newer revisions.
+* Better admin tools in general, our repo is 12Gb now, so svnadmin
+  dump/filter/load is almost impractical.
+* Tags are useless (almost), we'd want revnum aliases too. Especially would
+  like to create a single tag, but then use that to hold all releases - eg,
+  1 tag branch where each revision is a release. Merging makes this slightly
+  difficult and not suitable as we just want to 'merge' onto the tag by copying
+  the current file over, not by merging revisions, not by doing a checkout and
+  commit.
+* Search - there's no good ability that can index a repo for searching, nor to
+  search log comments.
+
+Places Subversions stands out
+-----------------------------
+* Simple and easy to use.
+* Good repository view - the directory structure is easy to understand and has
+  good visibility.
+* Excellent integration with other tools. "right thing done right" when
+  combined with other best-of-breed tools can be beautiful (eg bugtracker,
+  requirements/project management, document repositories), plus other utilities
+  such as TortoiseSVN and Apache views.
+* Svnsync.
+
+
+Other Users
+===========
+I talked to one user who had actually written a custom client, which allowed
+them to implement overlay checkouts, which was important for their work flow.
+I was duly impressed, in a sort of "what-in-the-world?" way.
+
+A chip design firm is interested in using Subversion to version their
+artifacts, and was interested to know what kinds of integration exist for
+the various chip design tools.

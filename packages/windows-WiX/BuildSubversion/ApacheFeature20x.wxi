@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+				<ComponentRef Id="LibaprDll"/>
+				<ComponentRef Id="LibapriconvDll"/>
+				<ComponentRef Id="LibaprutilDll"/>
+
+				<ComponentRef Id="Libsvnclient"/>
+				<ComponentRef Id="Libsvndelta"/>
+				<ComponentRef Id="Libsvndiff"/>
+				<ComponentRef Id="libsvnfs"/>
+				<ComponentRef Id="libsvnra"/>
+				<ComponentRef Id="libsvnrepos"/>
+				<ComponentRef Id="libsvnsubr"/>
+				<ComponentRef Id="libsvnwc"/>
+	
+				<ComponentRef Id="Mod_authz_svnSo"/>
+				<ComponentRef Id="Mod_dav_svnSo"/>
+				<ComponentRef Id="SvnExe"/>
+				<ComponentRef Id="SvnadminExe"/>
+				<ComponentRef Id="SvndumpfilterExe"/>
+				<ComponentRef Id="SvnlookExe"/>
+				<ComponentRef Id="SvnserveExe"/>
+				<ComponentRef Id="SvnsyncExe"/>
+				<ComponentRef Id="SvnversionExe"/>
+				<ComponentRef Id="Svnmucc"/>
+				<ComponentRef Id="Svnpop"/>
+				<ComponentRef Id="Svnpush"/>
+				<ComponentRef Id="Svnauthval"/>
+				<ComponentRef Id="READMETxtap20x"/>
+</Include>

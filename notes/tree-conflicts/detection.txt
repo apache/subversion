@@ -1,0 +1,386 @@
+
+                               -*- text -*-
+
+                          TREE CONFLICT DETECTION
+
+This file describes how we plan to detect the tree conflicts described
+in use-cases.txt, for both files and directories.
+
+Issue reference:
+
+  http://subversion.tigris.org/issues/show_bug.cgi?id=2282
+
+==========
+USE CASE 1
+==========
+
+If 'svn update' opens an item (file or directory) that is scheduled
+for deletion in the working copy, then the item is a tree conflict victim.
+The update of the item (including items within it, if it is a directory)
+will be skipped.
+
+==========
+USE CASE 2
+==========
+
+If 'svn update' is about to delete a locally-modified item, then the
+item is a tree conflict victim.  The deletion of the item will be
+skipped.
+
+Note
+----
+
+A directory is considered to be locally modified if the directory's
+own properties have been modified, or if any item in the directory has
+been modified, added or deleted within the directory.  The check for
+modifications continues to the "ambient" depth.
+
+==========
+USE CASE 3
+==========
+
+If 'svn update' is about to delete an item that is scheduled for
+deletion in the working copy, then the item is a tree conflict victim.
+The deletion of the item will be skipped.
+
+==========
+USE CASE 4
+==========
+
+If 'svn merge' tries to modify an item that does not exist in the
+target working copy, then the nonexistent item is a tree conflict
+victim.
+
+Note
+----
+
+Often, the target item has been renamed in the history of the working
+copy's branch. It would be handy if the user could run 'svn merge'
+again, specifying where to apply an incoming text diff. This is
+the "ELSEWHERE" scenario discussed in
+notes/tree-conflicts/resolution.txt.
+
+A similar situation occurs if the source diff doesn't cover as many
+revisions of a file as it should. Either the range of the source diff
+should be extended to include the revision that created the file, or
+the range should be reduced to avoid including any revisions that
+modify the file.
+
+However, the current plan is to disallow merges into tree-conflicted
+directories. This means that users will first have to mark the
+tree-conflict around the missing victim as resolved before attempting
+to merge the file again. This work flow may be awkward, but has the
+benefit of ensuring that no missing files are overlooked while
+merging.
+
+==========
+USE CASE 5
+==========
+
+If 'svn merge' is about to delete an existing item, and the existing
+item does not match the corresponding item at the merge's
+start-revision, then the item is a tree conflict victim.  The merge
+will skip the item (including its content, if it is a directory).
+
+Notes
+-----
+
+We don't want to flag every file deletion as a tree conflict.  We
+want to warn the user if the file to be deleted locally is different
+from the file deleted in the merge source.  The user then has a chance
+to merge these unique changes.
+
+When comparing items, local modifications take precedence over the
+pristine content.
+
+For a directory, the comparison will descend to the depth specified in
+the merge command.  The merge depth is usually infinite, but in a
+sparse working copy, the default merge depth is the "ambient" depth of
+the given directory.
+
+==========
+USE CASE 6
+==========
+
+If 'svn merge' tries to delete an item that does not exist in the
+target working copy, then the nonexistent item is a tree conflict
+victim.
+
+Notes
+-----
+
+This is similar to use case 4.
+
+Semantically, a tree conflict occurs if 'svn merge' either tries to
+apply the "delete" half of a "move" onto a file that was simply
+deleted in the target branch's history, or tries to apply a simple
+"delete" onto a file that has been moved in the target branch, or
+tries to move a file that has already been moved to a different name
+in the target branch.
+
+Some users may want to skip the tree conflict and have the result
+automatically resolved if two rename operations have the same
+destination, or if a file is simply deleted on both branches. But we
+have to mark these as tree conflicts due to the current lack of "true
+rename" support. It does not appear to be feasible to detect more than
+the double-delete aspect of the move operation.
+
+===========
+PERSISTENCE
+===========
+
+Persistent conflict data will be stored in the metadata of the
+directory containing the tree conflict victim.
+
+===================
+PER-VICTIM HANDLING
+===================
+
+Our initial design, in which tree conflicts were displayed and
+resolved at the parent-directory level, will be discarded.  The status
+of each tree conflict victim will be displayed separately, and each
+tree conflict victim will be resolved separately.
+
+The status command will gain a column in the sixth position, after the
+lock-status column.  This new tree-conflict column will contain 'C'
+for a tree conflict victim, and is otherwise blank.  Corresponding
+columns will be added to the output of the update, merge, switch and
+checkout commands.  The info command will include tree conflict
+descriptions for victims only.  The resolved and revert commands will
+be called per victim (by default), not on the parent directory.
+
+As a minor benefit, this will allow commits of non-tree-conflicted
+items in a directory containing tree conflict victims.
+
+==================
+SKIPPING DETECTION
+================== 
+
+During an update or switch, we skip tree conflict detection if the
+user has provided the '--force' option.  This allows an interrupted
+update to continue (see the use case 1 example below).  This is in
+addition to the already-existing behavior: with '--force', update or
+switch will tolerate an obstruction of the same type as the item added
+at that path by the operation.
+
+During a merge, we skip tree conflict detection if the record_only
+field of the merge-command baton is TRUE. A record-only merge
+operation updates mergeinfo without touching files.
+
+=========================
+OBSTRUCTIONS DURING MERGE
+=========================
+
+If 'svn merge' fails to apply an operation to an item because the
+item is obstructed (i.e. an unversioned item of the same name is
+in the file's place), the obstructed file is a tree conflict victim.
+
+We want to make sure that a merge either completes successfully
+or any problems found during a merge are flagged as conflicts.
+Skipping obstructed items during merge is no longer acceptable
+behaviour, since users might not be aware of obstructions that were
+skipped when they commit the result of a merge.
+
+====================
+NOTES ON DIRECTORIES
+====================
+
+=======================
+Equality of directories
+=======================
+
+How do we define equality between directories?
+
+Two directories with no subdirectories are equal if they contain the
+same files with the same content, and the same properties with the
+same content.
+
+Two directories with subdirectories are equal if they contain the same
+files with the same content, and the same properties with the same
+content, and all their subdirectories are equal.
+
+How can this be implemented?
+
+For each directory, it could retrieve the corresponding dir entry from
+the repository as it existed in the merge-start source of the merge,
+and compare the two for equality, i.e. check whether all fields in the
+svn_dirent_t returned by the repo match their corresponding attributes
+of the directory as found in the working copy.
+
+The merge-start revision shall be a new additional parameter to
+merge_dir_deleted(). The ra session needed to contact the repository
+via the get_dir() method is already contained in the merge baton which
+is passed to merge_dir_deleted().
+
+The last two paragraphs were taken from:
+http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=136794
+
+=======================================
+Deep tree conflict example (use case 1)
+=======================================
+
+In a working copy, a directory named B is scheduled for deletion.
+Running 'svn status' lists the entire tree rooted at B.
+
+  D       A/B/E/alpha
+  D       A/B/E/beta
+  D       A/B/E
+  D       A/B/F
+  D       A/B
+
+Running 'svn status -uq' warns that the repository contains changes to
+the locally-deleted directory.
+
+  D       *        1   A/B
+  Status against revision:      2
+
+In the HEAD revision on the repository, another user has modified a
+file, deleted a file and a directory, and added a file and a
+directory.
+
+  M       A/B/E/alpha
+  D       A/B/E/beta
+  A       A/B/E/gamma
+  D       A/B/F
+  A       A/B/G
+
+Here is the output of 'svn update'.  The 'C' in the fourth column marks
+the tree-conflicted item.  The update of A/B has been skipped.
+
+     C A/B
+  Update incomplete due to conflicts.
+  Tree conflicts:   1
+
+The tree conflict revealed by the update is recorded in the metadata
+of directory A.  It is described by 'svn info A/B'.
+
+  The update wants to modify files or directories inside 'A/B'.
+  You have deleted or renamed 'A/B' locally.
+
+Note: The exact wording of the update and info warnings is not yet
+settled.
+
+To view the incoming changes that were delayed by the tree conflict,
+the user can run 'svn status -u'.
+
+  D      *       2   A/B/E/alpha
+  D      *       2   A/B/E/beta
+         *           A/B/E/gamma
+  D      *       2   A/B/E/
+  D      *       2   A/B/F
+         *           A/B/G
+  D      *       2   A/B
+  Status against revision:      2
+
+To see more detail, the user can run 'svn log -v' and 'svn diff -r2'.
+
+Any commit of A (including any commit in a parent directory of A) and
+any commit within A (including any commit in a subdirectory of A) will
+be blocked by the tree conflict.  The user can revert the deletion of
+A/B and update it, or keep the deletion and force the update via 'svn
+update --force A/B'.
+
+=========================================
+TREE CONFLICT DETECTION WITH TRUE RENAMES
+=========================================
+
+To properly detect the situations described in the "diagram of current
+behaviour" for use case 2 and 3, we need to have access to a list of
+all files the update will add with history.
+
+For use cases 1 and 3, we need a list of all files added locally with
+history.
+
+We need access to this list during the whole update editor drive.
+Then we could do something like this in the editor callbacks:
+
+      edit_file(file):
+
+        if file is locally deleted:
+          for each added_file in files_locally_added_with_history:
+            if file has common ancestor with added_file:
+              /* user ran "svn move file added_file" */
+              use case 1 has happened!
+
+      delete_file(file):
+
+        if file is locally modified:
+          for each added_file in files_added_with_history_by_update:
+            if file has common ancestor with added_file:
+              use case 2 has happened!
+
+        else if file is locally deleted:
+          for each added_file in files_added_with_history_by_update:
+            if file has common ancestor with added_file:
+              use case 3 has happened!
+
+Since the update editor drive crawls through the working copy and the
+callbacks consider only a single file, we need to generate the list
+before checking for tree conflicts.  Two ideas for this are:
+
+        1) Wrap the update editor with another editor that passes
+           all calls through but takes note of which files the
+           update adds with history. Once the wrapped editor is
+           done run a second pass over the working copy to populate
+           it with tree conflict info.
+
+        2) Wrap the update editor with another editor that does
+           not actually execute any edits but remembers them all.
+           It only applies the edits once the wrapped editor has
+           been fully driven. Tree conflicts could now be detected
+           precisely because the list of files we need would be
+           present before the actual edit is carried out.
+
+Approach 1 has the problem that there is no reliable way of storing
+the file list in face of an abort.
+
+Approach 2 is obviously insane. ;-)
+
+Keeping the list in RAM is dangerous, because the list would be lost
+if the user aborts, leaving behind an inconsistent working copy that
+potentially lacks tree conflict info for some conflicts.
+
+The usual place to store persistent information inside the working
+copy is the entries file in the administrative area. Loggy writes to
+this file ensure consistency even if the update is aborted.  But
+keeping the list in entries files also has problems: Which entries
+file do we keep it in? Scattering the list across lots of entries
+files isn't an option because the list needs to be global.  Crawling
+the whole working copy at the start of an update to gather lost file
+lists would be too much of a performance penalty.
+
+Storing it in the entries file of the anchor of the update operation
+(i.e. the current working directory of the "svn update" process) is a
+bad idea as well because when the interrupted update is continued the
+anchor might have changed. The user may change the working directory
+before running "svn update" again.
+
+Either way, interrupted updates would leave scattered partial lists of
+files in entries throughout the working copy. And interrupted updates
+may not correctly mark all tree conflicts.
+
+So how can, for example, use case 3 be detected properly?
+
+The answer could be "true renames". All the above is due to the fact
+that we have to try to catch use case 3 from a "delete this file"
+callback. We are in fact trying to reconstruct whether a deletion
+of a file was due to the file being moved with "svn move" or not.
+
+But if we had a callback in the update editor like:
+
+        move_file(source, dest);
+
+detecting use case 3 would be extremely simple. Simply check whether
+the source of the move is locally deleted. If it is, use case 3 has
+happened, and the source of the move is a tree conflict victim.
+
+Use case 2 could be caught by checking whether the source of the move
+has local modifications.
+
+Use case 1 could be detected by checking whether the target for a file
+modification by update matches the source of a rename operation in the
+working copy. This would require storing rename information inside the
+administrative areas of both the source and target directories of file
+move operations to avoid having to maintain a global list of rename
+operations in the working copy for reference by the update editor.
+

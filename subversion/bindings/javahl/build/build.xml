@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+
+-->
+
+<project name="svnjavahl" default="build" basedir="..">
+    <target name="generate-header-files"
+            description="Generate C header files for the bindings">
+        <javah classpath="classes" verbose="yes" destdir="include">
+            <class name="org.tigris.subversion.javahl.CommitItemStateFlags"/>
+            <class name="org.tigris.subversion.javahl.NodeKind"/>
+            <class name="org.tigris.subversion.javahl.NotifyAction"/>
+            <class name="org.tigris.subversion.javahl.NotifyStatus"/>
+            <class name="org.tigris.subversion.javahl.Path"/>
+            <class name="org.tigris.subversion.javahl.PromptUserPassword2"/>
+            <class name="org.tigris.subversion.javahl.Revision"/>
+            <class name="org.tigris.subversion.javahl.RevisionKind"/>
+            <class name="org.tigris.subversion.javahl.ScheduleKind"/> 
+            <class name="org.tigris.subversion.javahl.StatusKind"/>
+            <class name="org.tigris.subversion.javahl.SVNAdmin"/>
+            <class name="org.tigris.subversion.javahl.SVNClient"/>
+            <class name="org.tigris.subversion.javahl.SVNClientLogLevel"/>
+        </javah>
+    </target>
+
+    <target name="compile" unless="junit.path"
+            description="Compile the Java binding source files">
+        <javac compiler="modern" destdir="classes">
+            <src path="src"/>
+            <exclude name="org/tigris/subversion/javahl/tests/**"/>
+        </javac>
+    </target>
+
+    <target name="compile-tests" if="junit.path"
+            description="Compile the Java test source files">
+        <javac compiler="modern" destdir="classes">
+            <src path="src"/>
+            <classpath path="${junit.path}"/>
+        </javac>
+    </target>
+
+    <target name="build"
+            depends="compile, compile-tests, generate-header-files"
+            description="Compile bindings and tests, and generate headers" />
+
+    <target name="javadoc" description="Generate JavaDoc">
+        <javadoc sourcepath="src" destdir="javadoc"
+                 windowtitle="Subversion Java bindings">
+            <classpath path="${junit.path}"/>
+            <fileset dir="src"/>
+        </javadoc>
+    </target>
+</project>

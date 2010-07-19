@@ -1,0 +1,264 @@
+Status and overview of tree-conflicts work.
+
+Tree conflict handling spans the following areas:
+
+  [DETECT]    - detect tree conflicts during update/switch/merge
+  [RECORD]    - record them in the WC
+  [DISPLAY]   - display them (e.g. in "svn status")
+  [COMMIT]    - disallow commits while conflicts exist
+  [RESOLVING] - help the user to resolve the conflict
+  [RESOLVED]  - enable the user to un-mark the conflict when resolved
+
+
+[DETECT]
+========
+
+Purpose:
+
+  Determine whether each incoming change conflicts with the state of the WC
+  receiving the change. If so, record the fact and ensure that sufficient
+  information is preserved to enable the user to resolve the conflict. Allow
+  the operation to continue on to process other items that are not affected by
+  this conflict.
+
+Status: incomplete
+
+  As far as is currently tested by tree_conflict_tests.py, the status is:
+
+  Detection of file conflicts: complete
+  Detection of directory conflicts: 2 cases incomplete:
+    - test 8: update add onto add (this is not a primary use case)
+    - test 14: merge del onto changed (this is a primary use case)
+
+Primary APIs:
+
+  For update/switch:
+    svn_delta_editor_t
+
+  For merge:
+    svn_wc_diff_callbacks3_t
+
+Implemented in:
+
+  For update/switch:
+    subversion/libsvn_wc/update_editor.c
+    (caution: the same code is also used for checkout)
+
+  For merge:
+    subversion/libsvn_client/merge.c
+
+To do:
+
+  * Fix test 14: merge deletes a changed dir. Needs to compare the dir
+    currently in the target with the dir that was deleted from the merge-left
+    source. If identical, allow the deletion. If not, conflict.
+
+  * When raising a tree conflict on a dir victim, skip processing everything
+    inside that dir. Check that files don't need similar "skip" handling, or
+    are already getting it.
+
+  * Check that a dir conflict on the root of an update/switch/merge is handled
+    OK. It need not be handled the same as other dir conflicts, because there
+    is no parent dir available. It just needs to fail in some reasonable way.
+
+  * Pre-existing obstructions (status "~") or missing items ("!") should be
+    detected first, before attempting to apply the change, and abort the
+    operation.
+
+  * Unversioned obstructions encountered while applying the change should be
+    handled as a kind of tree conflict. (Given the pre-screening of
+    obstructions to versioned items, this can only occur during add.)
+
+Behaviour no longer wanted:
+
+  Merge: "skipped missing target '...'". As a general principle, I'm wondering
+  if it is no longer acceptable for a merge to skip anything without leaving a
+  persistent record of what it did and why.  If the target to be modified by
+  the merge is missing from the target WC in the sense of no longer being
+  under version control, we should instead raise a tree conflict. (If it's
+  missing due to a known and already recorded reason, such as a shallow WC,
+  that might be a bit different.)
+
+
+[RECORD]
+========
+
+Purpose:
+
+  A mechanism for recording, in the WC, what tree conflicts presently exist,
+  and enough information to describe them to the user.
+
+  Note: This is not the same as recording enough information in the WC to
+  be able to resolve the conflict in any desired way without contacting the
+  repository or source of the merge. For example, for a victim that is a
+  directory, we might need to store or have access to both versions of the
+  whole victim sub-tree. This problem comes under the [RESOLVING] section.
+
+Status: complete enough to use.
+
+Primary APIs:
+
+  svn_wc_conflict_description_t
+
+  /**
+   * Read tree conflict descriptions from @a dir_entry.
+   * Append pointers to newly allocated svn_wc_conflict_description_t
+   * objects to the array pointed to by @a conflicts.
+   * Do all allocations in @a pool.
+   *
+   * @since New in 1.6.
+   */
+  svn_error_t *
+  svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
+                                        const svn_wc_entry_t *dir_entry,
+                                        apr_pool_t *pool);
+
+  /**
+   * Add a tree conflict to the directory entry belonging to @a adm_access.
+   * Pass a description of the new tree conflict in @a conflict.
+   * Do all allocations in @a pool.
+   *
+   * @since New in 1.6.
+   */
+  svn_error_t *
+  svn_wc_add_tree_conflict_data(svn_wc_conflict_description_t *conflict,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool);
+
+To do:
+
+  Record enough information to be able to reconstruct the "old", "mine" and
+  "theirs" versions of the item, and possibly also a complete local copy of
+  them.
+
+Notes:
+
+  Special case: The root of the WC is the victim of a tree conflict. (This can
+  only happen with a merge, as there can be no tree change scheduled locally
+  for an update to conflict with.)
+  Problem: There is no parent directory in which to store the conflict info.
+  Solution: Abort with an error, and don't change the WC.
+
+
+[DISPLAY]
+=========
+
+Status: complete enough to use, but wants improvement.
+
+  "svn info"
+    mechanism complete but ugly
+
+  "svn status"
+    mechanism complete
+
+  "svn up/sw/merge" (progress notifications)
+    mechanism complete
+
+Primary APIs:
+
+  "svn info"
+
+  "svn status"
+
+  "svn up/sw/merge" (progress notifications)
+
+To do:
+
+  * Design: conceptually, do we want to see conflicts on the parent directory
+    or on the victims? Due to what falls out of the early implementation, we
+    were heading for a concept of resolving the parent directory... but I
+    don't feel that's right. See also [RESOLVED].
+
+  * Clean up the "svn info" text: make it much less verbose.
+
+  * Consider whether "svn st ITEM" should show conflict on victim ITEM.
+
+Notes:
+
+  * Making the information available to be displayed is part of [DETECT].
+
+
+[COMMIT]
+========
+
+Status: incomplete
+
+  When parent and victim are included: complete?
+  When only the parent is included: complete?
+  When only the victim is included: incomplete
+
+Purpose:
+
+  Disallow commits while conflicts exist in the items proposed for commit.
+
+  When directory D has a tree conflict on one or more children, what does
+  that mean for
+    (a) a child that is a victim?
+    (b) a child that is not a victim?
+    (c) the directory D, when treated as non-recursively (depth 0)?
+  Answer:
+    (a) Each victim is in conflict and cannot be committed, even if the
+        "conflict" status information is stored in the parent D.
+    (b) Each non-victim child is fine and can be committed independently
+        of its parent.
+    (c) NOT SURE... Could work either way.
+
+To do:
+
+  * Make commits fail when tree conflicts exist, even when the victim's parent
+    is not part of the requested commit.
+
+
+[RESOLVING]
+===========
+
+Purpose:
+
+  1. Provide metadata about what happened.
+     - See [DISPLAY].
+
+  2. Provide access to all data involved in the conflict.
+     - Incomplete.
+
+  3. Enable the user to resolve the conflict by creating a desired working
+     version (including the desired scheduling).
+     - Is possible. No assistance is provided. Needs evaluation.
+     - Not sure what's needed here.
+
+  4. Enable the user to mark the conflict as resolved.
+     - Incomplete.
+
+Design:
+
+  * Keep all of the merge-left + merge-right + working data locally. (Ideally,
+    by analogy with text conflicts. May not be necessary for a first pass.)
+  * Ensure user has suitable and obvious commands for resolving.
+    - may include merge, delete, copy, etc.
+    - may require hints or documentation on what commands should be used.
+  * Interactive resolution should recognise tree conflicts and provide
+    basic and common resolutions.
+  * Ability to use "svn resolved" to say "the conflict on victim V is
+    resolved".
+  * Ability to use "svn resolve --accept=..." to say "resolve the conflict on
+    victim V by choosing ...".
+
+Status: incomplete
+
+  * Mark as resolved, by command: the basic "svn resolved PARENT" works to some
+    extent, but needs attention.
+    Issue #3145 <http://subversion.tigris.org/issues/show_bug.cgi?id=3145>
+
+  * Mark as resolved, interactively: not started.
+    Issue #3144 <http://subversion.tigris.org/issues/show_bug.cgi?id=3144>
+
+To do:
+
+  * Design: conceptually, do we want to "resolve" the parent directory or
+    the victims? Due to what falls out of the early implementation, we were
+    heading for a concept of resolving the parent directory... but I don't
+    feel that's right. See also [DISPLAY].
+
+  * Ensure the basic "resolved"/"resolve --accept=" works on a whole directory.
+
+  * Allow individual victims to be marked as "resolved".
+

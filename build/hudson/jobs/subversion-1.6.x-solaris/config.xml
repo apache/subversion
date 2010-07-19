@@ -1,0 +1,114 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+   
+      http://www.apache.org/licenses/LICENSE-2.0
+   
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+--> 
+<project>
+  <actions /> 
+  <description>Build Subversion from 1.6.x branch on Solaris10 system</description> 
+  <logRotator>
+    <daysToKeep>-1</daysToKeep> 
+    <numToKeep>40</numToKeep> 
+    <artifactDaysToKeep>-1</artifactDaysToKeep> 
+    <artifactNumToKeep>-1</artifactNumToKeep> 
+  </logRotator>
+  <keepDependencies>false</keepDependencies> 
+  <properties>
+    <hudson.plugins.descriptionsetter.JobByDescription /> 
+    <hudson.plugins.disk__usage.DiskUsageProperty /> 
+    <hudson.plugins.jira.JiraProjectProperty>
+      <siteName>https://issues.apache.org/jira/</siteName> 
+    </hudson.plugins.jira.JiraProjectProperty>
+  </properties>
+  <scm class="hudson.scm.SubversionSCM">
+    <locations>
+      <hudson.scm.SubversionSCM_-ModuleLocation>
+        <remote>https://svn.apache.org/repos/asf/subversion/branches/1.6.x</remote> 
+        <local>subversion-1.6.x</local> 
+      </hudson.scm.SubversionSCM_-ModuleLocation>
+    </locations>
+    <useUpdate>false</useUpdate> 
+    <doRevert>false</doRevert> 
+    <browser class="hudson.scm.browsers.ViewSVN">
+      <url>http://svn.apache.org/viewcvs.cgi/?root=Apache-SVN</url> 
+    </browser>
+    <excludedRegions /> 
+    <includedRegions /> 
+    <excludedUsers /> 
+    <excludedRevprop /> 
+    <excludedCommitMessages /> 
+  </scm>
+  <assignedNode>hudson-solaris (Solaris)</assignedNode> 
+  <canRoam>false</canRoam> 
+  <disabled>false</disabled> 
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding> 
+  <jdk>(Default)</jdk> 
+  <triggers class="vector">
+    <hudson.triggers.SCMTrigger>
+      <spec>0 * * * *</spec> 
+    </hudson.triggers.SCMTrigger>
+  </triggers>
+  <concurrentBuild>false</concurrentBuild> 
+  <builders>
+    <hudson.tasks.Shell>
+      <command>
+        cd subversion-1.6.x 
+	PATH="/export/home/hudson/bin:/export/home/hudson/tools/java/latest/bin:/export/home/hudson/tools/ant/latest/bin:/export/home/hudson/tools/tomcat/latest/bin:/opt/subversion-current/bin:/usr/ucb:/usr/local/bin:/usr/bin:/usr/sfw/bin:/usr/sfw/sbin:/opt/sfw/bin:/opt/sfw/sbin:/opt/SUNWspro/bin:/usr/X/bin:/usr/ucb:/usr/sbin:/usr/ccs/bin:$PATH"; 
+	export PATH 
+	./autogen.sh 
+	./configure 
+	  --enable-maintainer-mode 
+	  --disable-shared 
+	  --with-custom-libtool=/opt/sfw/bin/libtool 
+	  --with-apr=/opt/subversion-current/apr 
+	  --with-apr-util=/opt/subversion-current/apr-util-1.3.9 
+	  --with-sqlite=/opt/subversion-current/sqlite-3.6.23.1/sqlite3.c 
+
+	/usr/ccs/bin/make
+      </command> 
+    </hudson.tasks.Shell>
+    <hudson.tasks.Shell>
+      <command>
+        #!/bin/bash 
+	cd subversion-1.6.x 
+	PATH="/export/home/hudson/bin:/export/home/hudson/tools/java/latest/bin:/export/home/hudson/tools/ant/latest/bin:/export/home/hudson/tools/tomcat/latest/bin:/opt/subversion-current/bin:/usr/ucb:/usr/local/bin:/usr/bin:/usr/sfw/bin:/usr/sfw/sbin:/opt/sfw/bin:/opt/sfw/sbin:/opt/SUNWspro/bin:/usr/X/bin:/usr/ucb:/usr/sbin:/usr/ccs/bin"; 
+	export PATH 
+        /usr/ccs/bin/make check 
+	ret=$? 
+	echo "Generating junit files ..." 
+	python ../../subversion-trunk-solaris/subversion-trunk/tools/dev/gen_junit_report.py 
+	  --log-file=./tests.log 
+	  --output-dir=build/junit-reports 
+	exit 
+	$ret
+      </command> 
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers>
+    <hudson.tasks.junit.JUnitResultArchiver>
+      <testResults>subversion-1.6.x/build/junit-reports/*</testResults> 
+      <testDataPublishers /> 
+    </hudson.tasks.junit.JUnitResultArchiver>
+    <hudson.tasks.Mailer>
+      <recipients>notifications@subversion.apache.org</recipients> 
+      <dontNotifyEveryUnstableBuild>false</dontNotifyEveryUnstableBuild> 
+      <sendToIndividuals>false</sendToIndividuals> 
+    </hudson.tasks.Mailer>
+  </publishers>
+  <buildWrappers /> 
+</project>
+

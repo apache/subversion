@@ -1,0 +1,144 @@
+Of Anchors and Targets
+======================
+
+Definitions (contextually bound, of course):
+
+   anchor - The name given to the directory at which an editor is
+            rooted.  That is to say, the directory baton returned by
+            editor->replace_root() is meant to describe the anchor
+            directory.
+
+   editor - A function vtable containing methods used to describe
+            changes to a directory tree.  [see include/svn_delta.h]
+
+   target - The file(s) or directory(s), relative to the anchor,
+            designated as the actual intended subject of a given
+            operation (update, commit, etc.).  This, in practice, can
+            be NULL if the anchor itself is the intended subject.
+
+
+A Little Background
+
+   The concept of anchors and targets trickled out of the brains of
+   C. Michael Pilato and Ben Collins-Sussman during the course of
+   debugging the `svn up' command.  Updates are not atomic, so each
+   item-to-be-updated ("update target") passed to this command gets
+   its own update procedure.  The update procedure involves describing
+   the update target in the working copy to the repository using a
+   "reporter".  The repository then, using an editor, modifies the
+   update target in the working copy to look exactly as it does in
+   the repository (usually in the youngest revision, but optionally,
+   at any revision snapshot of the tree).
+
+   At that time, if the update target was a directory, the editor
+   handed to the repository was rooted at that directory.  If the
+   update target was a file, the editor was rooted at the parent
+   directory containing that file.
+
+   It became apparent rather quickly that the orderly design of the
+   editor apparatus required more precise usage in order to get the
+   desired results.  Some of the problems in the original usage are as
+   follows:
+
+     * For directory updates, it was impossible for the driver of the
+       editor to request that the update target be deleted.  The
+       editor's delete_entry() receives as parameters a directory
+       baton, and the name of an entry in that directory to be
+       deleted.  If an editor is rooted at the update target, it is
+       impossible for there to exist a directory baton describing its
+       parent, and therefore no way to delete it as a named entry in
+       its parent.  Clearly, this limitation to the update command was
+       unacceptable.
+
+    * For file updates, having an editor rooted at the parent
+      directory without supplying addition information to the editor's
+      driver meant that if siblings of the update target were also
+      "out of date" with respect to the update request, they too would
+      be affected by the editor drive.  Clearly it was unacceptable to
+      have items in the working copy modified that should have been
+      considered outside the scope of the requested update operation.
+     
+   And so the notion of anchors and targets was born. 
+
+
+The Implementation
+
+   Anchors had been present all along as the root of the editor drive,
+   but were not going to be chosen in a way that expanded the scope of
+   the knowledge that the editor has about the tree.  Targets became
+   the "additional information" passed to the editor driver to
+   restrict the scope of the editor's legitimate activity to only the
+   file or directory intended as the focus of the update.
+
+   A new function, svn_wc_get_actual_target() was created and given
+   the responsibility of deciding, given an update target path (and
+   access to the working copy administrative directory), what the
+   actual anchor and target of the editor drive would be.  The rules
+   are fairly straightforward:
+
+     * For directory updates, if the parent directory of the update
+       target is a valid place to root an editor, that parent
+       directory becomes the anchor, and the update target itself
+       becomes the target.  If the parent directory is not a valid
+       place to root an editor, the update target becomes both the
+       anchor and the target (the target is passed as NULL).  Validity
+       of the parent directory in the working copy is determined by
+       whether or not it is also the update target's parent directory
+       in the repository.
+ 
+     * For file updates, the update target file's parent directory is
+       the anchor, and the file itself is the target.
+
+   Shortly after this was implemented for updates, it became apparent
+   that commits needed the same sort of ideology in place.  That was
+   implented as well.
+
+
+The Status Quo
+
+   There currently exist a few kinks in the system, not (in my
+   opinion) in the theoretical design of the anchor/target scheme, but
+   in their handling as those items get passed around through the
+   working copy, RA layer, and filesystem modules.  Some complaints
+   have been raised about the theoretical design of the anchor/target
+   scheme, however, such as the need to examine the a directory
+   target's parent, and perhaps a handful of unspecified
+   "spidey-sense" warnings.  PLEASE, if you have valid technical
+   complaints, (re-)voice them in reponse to this mail so they can be
+   evaluated more closely, offering better solutions if you can.
+
+   For example, the editor could be changed so that some flavor of
+   delete_entry() could delete the item represented by the baton given
+   it (perhaps, delete_this()).  I believe this to be inelegant.
+
+     * The only way to get that baton would be to add or replace the
+       file or directory, operations which are obviously tied to
+       entirely different notions.  
+
+     * The only *required* place for this would be in attempting to
+       delete a directory whose parent in the working copy was not
+       also its parent in the repository, which would (in either the
+       update or the commit case), result in the completely destroyed
+       working copy.  In the commit case, I suppose this is alright,
+       but it would certainly be strange for a user who had checked
+       out a repository subdirectory which has recently been deleted
+       to run `svn up' and find their working copy missing.
+
+     * It requires special handling for the directory that maps
+       to the root of the repository, which simply cannot be deleted
+       (theoretical wrongness all over the place).  Currently, the
+       solution has no "special cases".
+
+
+In Conclusion
+
+   There are likely better ideas out there that never crossed my mind.
+   Please submit them for review and discussion!  Currently, I suspect
+   that the most of the bugs in the present system exist because the
+   distinction of the anchor and target notions is lost when at some
+   point in the code path they are concatenated back together on the
+   "server" side (or, some place that doesn't have access to the
+   working copy module, since I think there are issues in both ra_dav
+   and ra_local) into a single path.
+
+

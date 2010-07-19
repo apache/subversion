@@ -1,0 +1,32 @@
+The following references and ideas may be of use to people interested
+in writing an SQL back end for Subversion.
+
+* Glenn Thompson's pluggable FS document
+
+A new filesystem implementation has to plug into Subversion alongside
+the BDB one.  Currently, we have a framework allowing complete
+reimplementations of the FS API to plug into Subversion alongside each
+other, but it may (or may not) be more prudent to abstract the BDB
+implementation at the table level so that the same code can use
+multiple database implementations.
+
+Glenn Thompson wrote a document about FS abstraction, located at
+<http://www.cdrguys.com/subversion/>.  This document predates the FSFS
+implementation, so it is a bit dated, but it is still highly relevant
+to the hypothetical table-level abstraction described above.
+
+The document posits two abstraction layers, the FSAP (filesystem
+abstract provider) layer which abstracts at the API level, and the FSP
+(filesystem provider) layer which abstracts at the table level.  The
+FSP layer would only apply to libsvn_fs_base, which implements the BDB
+back end.  The document's FSAP abstraction proposal was used as a
+basis (though not as gospel) for the API-level abstraction we
+currently have.
+
+* Edmund Horner's prototype MySQL implementation
+
+http://homepages.paradise.net.nz/~ejrh/subversion/mysql/ describes a
+prototype implementation of a MySQL back end, also made before the
+FSFS implementation.  There is a little more about this back end in
+the mail thread at
+http://www.contactor.se/~dast/svn/archive-2004-02/0470.shtml.

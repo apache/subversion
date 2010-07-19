@@ -1,0 +1,160 @@
+Skip-Deltas in Subversion
+=========================
+
+To keep repositories at a manageable size, essentially all version
+control systems use some kind of relative compression technique such
+that two similar versions of the same file don't take up much more
+space than just one version of that file.  The two most common
+techniques are the SCCS "weave", which represents all revisions of a
+file as a single data stream with the moral equivalent of #ifdefs, and
+the technique of storing deltas (differences) between related
+revisions of files (see
+http://web.mit.edu/ghudson/thoughts/file-versioning for details).
+Subversion uses deltas.
+
+Subversion uses a technique called "skip-deltas" to ensure that only a
+reasonable number of deltas need to be composed in order to retrieve
+any revisions of a file.  The concept of skip-deltas is inspired by
+the concept of skip-lists, but they aren't all that similar.
+
+For the purposes of this document, we will pretend that revisions of a
+file are numbered starting from 0.  In reality, this number
+corresponds to the "change count" field of a node-revision in each
+filesystem back end.
+
+Skip-Deltas in the FSFS Back End
+================================
+
+In the FSFS back end, each revision of a file is represented as a
+delta against an older revision of the file.  The first revision is
+represented as a delta against the empty stream (i.e. it is
+self-compressed).  To reconstruct a revision of a file, the filesystem
+code determines the chain of deltas leading back to revision 0,
+composes them all together using the delta combiner, and applies the
+resulting super-delta to the empty stream in order to reconstruct the
+file contents.
+
+The most obvious strategy would be to choose revision N-1 as the delta
+base for revision N.  But even with the delta combiner, it would
+become very slow to retrieve revision 1000 of a file if we had to
+piece together 1000 deltas.  So, to choose the delta base for revision
+N, we write out N in binary and flip the rightmost bit whose value is
+1.  For instance, if we are storing 54, we write it out in binary as
+110110, flip the last '1' bit to get 110100, and thus pick revision 52
+of the file as the delta base.  A file with ten versions (numbered
+0-9) would have those versions represented as follows:
+
+  0 <- 1    2 <- 3    4 <- 5    6 <- 7
+  0 <------ 2         4 <------ 6
+  0 <---------------- 4
+  0 <------------------------------------ 8 <- 9
+
+where "0 <- 1" means that the delta base for revision 1 is revision 0.
+
+Because we flip the rightmost '1' bit each time we pick a delta base,
+at most lg(N) deltas are necessary to reconstruct revision N of a
+file.
+
+Skip-deltas in the BDB Back End
+===============================
+
+In the BDB back end, each revision of a file is represented as a delta
+against a newer revision of the file--the opposite of FSFS.  The
+newest version of a file is stored in plain text.  Whereas in FSFS, we
+add a new version of a file simply by picking a delta base and writing
+out a delta, in BDB the process is more complicated: we write out the
+new version of the file in plain text; then, after the commit is
+confirmed, we go back and "redeltify" one or more older versions of
+the file against the new one.
+
+The goal of the redeltification process is to produce the reverse of
+the FSFS diagram:
+
+  0 ------------------------------------> 8 -> 9
+                      4 ----------------> 8
+            2 ------> 4         6 ------> 8
+       1 -> 2    3 -> 4    5 -> 6    7 -> 8
+
+To accomplish this, we write out the number in binary, count the
+number of trailing zeros, and redeltify that number of ancestor
+revisions plus 1.  For instance, when we see revision 8, we write it
+out as "1000", note that there are three trailing 0s, and resolve to
+redeltify four ancestor revisions: the revisions one back, two back,
+four back, and eight back.
+
+As it turns out, the above diagram is a fiction.  To reduce overhead,
+the BDB back end makes three compromises to the skip-delta scheme:
+
+  * When storing file revisions 0-31, only the immediate predecessor
+    is redeltified.
+
+  * We don't redeltify the ancestor revision which is two back from
+    the one we are storing.
+
+  * We never redeltify revision 0 of a file.
+
+Despite these compromises, the asymptotic behavior of the BDB
+skip-delta scheme is the same as the simpler FSFS one: O(lg(N)) deltas
+are necessary to reconstruct any revision of a file which has had N
+revisions.
+
+Skip-Deltas and Branches
+========================
+
+If a file's history diverges because it is copied and the modified on
+both branches, the behavior is as follows:
+
+  * In FSFS, we choose delta bases just as we would if each branch
+    were an isolated linear path leading back to revision 0.  For
+    instance, if a file has six revisions (0-5), then branches into
+    revisions 6-7 and revisions 6'-8', they would look like:
+
+    0 <- 1    2 <- 3    4 <- 5    6 <- 7
+    0 <------ 2         4 <------ 6
+                                  6' <- 7'
+    0 <-------------------------------------- 8'
+
+  * In BDB, we redeltify ancestor revisions just as we would if each
+    branch were an isolated linear path leading back to revision 0.
+    The result depends on the order of commits.  If a file has four
+    revisions (0-3), then branches into revisions 4 and 4', then if 4
+    was committed first and 4' was committed second, the result would
+    look like:
+
+                            4
+    0 --------------------> 4'
+                2 --------> 4'
+          1 --> 2     3 --> 4'
+
+    but if instead, 4 was committed second, the result would look
+    like:
+
+                            4'
+    0 --------------------> 4
+                2 --------> 4
+          1 --> 2     3 --> 4
+
+    Although this order dependency may be confusing to think about,
+    it causes no complexity in the code, and the O(lg(N)) asymptotic
+    behavior is clearly preserved.
+
+Note that in the BDB back end, a branched file has a separate
+plain-text representation for each branch head, while in the FSFS back
+end, that is not the case.
+
+Costs of Skip-Deltas
+====================
+
+In most workloads, the delta for a file revision becomes larger if the
+delta base is farther away--in terms of the diagrams, longer arrows
+take up more space.  In the worst case, where all changes to the file
+are orthogonal to each other, a delta across N file revisions may be N
+times as expensive as a delta across one revision.
+
+In either back end, the average number of revisions crossed by a delta
+arrow is O(lg(N)), if the file has had N revisions.  So we may assume
+that in the worst case, skip-deltas incur an O(lg(N)) space penalty
+while providing an O(N/lg(N)) time benefit.  The practical space
+penalty appears to be substantially less than O(lg(N)), because many
+files have short histories and many changes are not orthogonal to each
+other.

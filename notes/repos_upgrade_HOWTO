@@ -1,0 +1,126 @@
+
+HOW-TO:  svn repository upgrade procedure
+=========================================
+ $LastChangedDate$
+
+
+WHO IS AFFECTED:
+---------------
+
+Anyone upgrading between versions of subversion that have different
+repository schemas.  Schema versions are as follows:
+
+    SUBVERSION VERSION NUMBER           SCHEMA VERSION
+    -------------------------           --------------
+    Up to and including 0.27            1
+    0.28 - 0.33.1                       2
+    0.34 - 1.3                          3
+    (no released version used this)     4
+    1.4 -                               5
+
+If necessary you can see which schema version your repository is
+currently using by looking at the format file in the repository.
+
+It should be noted that these changes are extremely rare.  Now that
+subversion has reached 1.0.0 our compatibility guarantees require
+forward and backward compatible repository formats for all patch
+releases and backward compatible for minor releases.  So until
+2.0.0 comes out there will be no change that should require a 
+dump for upgrading to newer versions.
+
+While Subversion does create version 5 repositories by default as of
+version 1.4, it still supports reading and writing version 3
+repositories for backwards compatibility.  Additionally, a pre-1.3
+client can communicate with a 1.4+ server accessing a version 5
+repository.
+
+
+PROBLEM:
+-------
+
+At times during the development of subversion it has and will be
+necessary to change the underlying database schema for subversion
+repositories (libsvn_fs).  Thus, if a 'new' libsvn_fs library tries
+to access an 'old' repository, you'll see an error like:
+
+   Expected version '2' of repository; found version '1'
+
+   or
+
+   svn: No repository found in '...URL...'
+
+Or if you use an 'old' libsvn_fs library to access a 'new' repository,
+you might see an error like:
+  
+   Expected version '1' of repository; found version '2'
+
+   or
+
+   svn: Malformed skeleton data
+   svn: Malformed node-revision skeleton
+
+So if you're seeing an error like these you will need to upgrade or
+downgrade your repository version.
+
+
+HOW TO UPGRADE/DOWNGRADE YOUR REPOSITORY:
+----------------------------------------
+
+  1. Use an 'svnadmin' binary from a release with the same schema version
+     as your repository to create a dumpfile of your repository:
+
+        $ mv myrepos old-repos
+        $ svnadmin dump old-repos > dumpfile
+
+  2. Use an 'svnadmin' binary from a release with the same schema version
+     as you want your repository to have to load the dumpfile into a new
+     repository:
+
+        $ svnadmin create myrepos
+        $ svnadmin load myrepos < dumpfile
+
+     OR, if you're feeling saucy, you can do it all at once with a pipe:
+
+        $ svnadmin-new create myrepos
+        $ svnadmin-old dump old-repos | svnadmin-new load myrepos
+
+     (If you are running at least version 1.4 and would like to make a
+     format 3 repository, pass the --pre-1.4-compatible flag to
+     "svnadmin create".)
+
+  3. [OPTIONAL] Loading a dumpfile is both time- and disk-consuming,
+     as it replays every commit.  If your new repository is a BDB
+     respository, then after the load is complete, you may want to
+     free up some disk space by removing unused BerkeleyDB logfiles:
+
+        $ svnadmin list-unused-dblogs newrepos | xargs rm
+
+     Note: If you're using BerkeleyDB 4.2 or newer this will be done
+     automatically for you, unless you've configured the repository
+     not to behave this way.
+
+  4. Don't forget to copy over any hook scripts (and DB_CONFIG for BDB
+     repositories, if you changed it) from the old to the new
+     repository:
+
+        $ cp old-repos/hooks/* repos/hooks/
+        $ cp old-repos/db/DB_CONFIG repos/db/
+
+
+WHY DID YOU CHANGE THE SCHEMA?
+-----------------------------
+
+Subversion was still pre-1.0 when the changes that required schema
+versions 2 and 3 were made, and thus constantly improving.  These
+changes were planned, and took a long time to complete.  They fix both
+efficiency and correctness problems in the database code.
+
+The change made in schema version 5 is just that the "db" part of the
+repository now has its own independent schema version file; this was
+used in Subversion 1.4 to support a new version of FSFS which
+compresses some of its data for better space usage.  However, we will
+continue to support schema version 3 throughout all of Subversion 1.x.
+
+In the future it may be necessary to make changes to support new 
+features.  But we will do so in a manner that is consistent with our
+compatibility guarantees.
