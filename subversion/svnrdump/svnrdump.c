@@ -1,4 +1,7 @@
 /*
+ *  svnrdump.c: Produce a dumpfile of a local or remote repository
+ *  without touching the filesystem, but for temporary files.
+ *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
