@@ -27,6 +27,7 @@
 struct replay_baton {
   const svn_delta_editor_t *editor;
   void *edit_baton;
+  svn_boolean_t verbose;
 };
 
 /* Write the properties in the hashtable PROPERTIES to STRBUF
