@@ -2207,9 +2207,6 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
  *
- * If @a start->kind or @a end->kind is #svn_opt_revision_unspecified,
- * return the error #SVN_ERR_CLIENT_BAD_REVISION.
- *
  * Use @a pool for any temporary allocation.
  *
  * @par Important:
