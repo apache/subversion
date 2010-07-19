@@ -3761,6 +3761,11 @@ svn_wc__db_temp_base_set_props(svn_wc__db_t *db,
                                const apr_hash_t *props,
                                apr_pool_t *scratch_pool)
 {
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(set_properties(db, local_abspath, props,
+			 STMT_UPDATE_NODE_DATA_BASE_PROPS, "base node",
+			 scratch_pool));
+#endif
   return svn_error_return(set_properties(db, local_abspath, props,
                                          STMT_UPDATE_BASE_PROPS,
                                          "base_node",
@@ -3774,6 +3779,11 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
                                   const apr_hash_t *props,
                                   apr_pool_t *scratch_pool)
 {
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(set_properties(db, local_abspath, props,
+			 STMT_UPDATE_NODE_DATA_WORKING_PROPS, "working node",
+			 scratch_pool));
+#endif
   return svn_error_return(set_properties(db, local_abspath, props,
                                          STMT_UPDATE_WORKING_PROPS,
                                          "working_node",
