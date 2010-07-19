@@ -102,6 +102,11 @@ INSERT OR IGNORE INTO WORKING_NODE (
   wc_id, local_relpath, parent_relpath, presence, kind)
 VALUES (?1, ?2, ?3, 'incomplete', 'unknown');
 
+-- STMT_INSERT_NODE_DATA_INCOMPLETE
+INSERT OR IGNORE INTO NODE_DATA (
+  wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
+VALUES (?1, ?2, ?3, ?4, 'incomplete', 'unknown');
+
 -- STMT_COUNT_BASE_NODE_CHILDREN
 SELECT COUNT(*) FROM BASE_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
