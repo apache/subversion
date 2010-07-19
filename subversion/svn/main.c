@@ -2218,6 +2218,16 @@ main(int argc, const char *argv[])
      subcommands will populate the ctx->log_msg_baton3. */
   ctx->log_msg_func3 = svn_cl__get_log_message;
 
+  /* Set up the notifier. */
+  if (((subcommand->cmd_func != svn_cl__status) && !opt_state.quiet)
+        || ((subcommand->cmd_func == svn_cl__status) && !opt_state.xml))
+    {
+      err = svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, pool);
+      if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;
   apr_signal(SIGINT, signal_handler);

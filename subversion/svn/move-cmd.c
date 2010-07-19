@@ -66,10 +66,6 @@ svn_cl__move(apr_getopt_t *os,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, pool));
-
   dst_path = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
   apr_array_pop(targets);
 
