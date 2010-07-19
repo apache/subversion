@@ -38,6 +38,7 @@ replay_revstart(svn_revnum_t revision,
                 apr_hash_t *rev_props,
                 apr_pool_t *pool)
 {
+  struct replay_baton *rb = replay_baton;
   /* Editing this revision has just started; dump the revprops
      before invoking the editor callbacks */
   svn_stringbuf_t *propstring = svn_stringbuf_create("", pool);
@@ -71,7 +72,6 @@ replay_revstart(svn_revnum_t revision,
 
   /* Extract editor and editor_baton from the replay_baton and
      set them so that the editor callbacks can use them */
-  struct replay_baton *rb = replay_baton;
   *editor = rb->editor;
   *edit_baton = rb->edit_baton;
 
@@ -120,13 +120,13 @@ replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
 	     svn_boolean_t verbose)
 {
   const svn_delta_editor_t *dump_editor;
+  struct replay_baton *replay_baton;
   void *dump_baton;
 
   SVN_ERR(get_dump_editor(&dump_editor,
                           &dump_baton, pool));
 
-  struct replay_baton *replay_baton = apr_palloc(pool,
-						 sizeof(struct replay_baton));
+  replay_baton = apr_pcalloc(pool, sizeof(*replay_baton));
   replay_baton->editor = dump_editor;
   replay_baton->edit_baton = dump_baton;
   replay_baton->verbose = verbose;
