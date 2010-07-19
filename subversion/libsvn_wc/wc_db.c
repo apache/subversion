@@ -4349,6 +4349,17 @@ update_depth_values(svn_wc__db_pdh_t *pdh,
     SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    excluded
+                                      ? STMT_UPDATE_NODE_BASE_EXCLUDED
+                                      : STMT_UPDATE_NODE_BASE_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  if (!excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     excluded
                                       ? STMT_UPDATE_WORKING_EXCLUDED
@@ -4357,6 +4368,17 @@ update_depth_values(svn_wc__db_pdh_t *pdh,
   if (!excluded)
     SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    excluded
+                                      ? STMT_UPDATE_NODE_WORKING_EXCLUDED
+                                      : STMT_UPDATE_NODE_WORKING_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  if (!excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -5425,6 +5447,16 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->wc_id, rb->local_relpath,
                             like_arg, new_repos_id));
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                               STMT_UPDATE_NODE_DATA_RECURSIVE_ORIGINAL_REPO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issii",
+			    rb->wc_id, rb->local_relpath,
+                            like_arg, rb->old_repos_id,
+			    new_repos_id));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
   /* Do a bunch of stuff which is conditional on us actually having a
      base_node in the first place. */

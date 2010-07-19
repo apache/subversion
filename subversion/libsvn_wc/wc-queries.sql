@@ -221,6 +221,12 @@ where copyfrom_repos_id is not null and wc_id = ?1 and
   (local_relpath = ?2 or
    local_relpath like ?3 escape '#');
 
+-- STMT_UPDATE_NODE_DATA_RECURSIVE_ORIGINAL_REPO
+update node_data set original_repos_id = ?5
+where wc_id = ?1 and original_repos_id = ?4 and
+  (local_relpath = ?2 or
+   local_relpath like ?3 escape '#');
+
 -- STMT_UPDATE_LOCK_REPOS_ID
 update lock set repos_id = ?4
 where repos_id = ?1 and
@@ -312,17 +318,37 @@ where wc_id = ?1 and local_relpath = ?2;
 UPDATE BASE_NODE SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_BASE_DEPTH
+UPDATE NODE_DATA SET depth = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
+
 -- STMT_UPDATE_WORKING_DEPTH
 UPDATE WORKING_NODE SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_NODE_WORKING_DEPTH
+UPDATE NODE_DATA SET depth = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2 AND
+      op_depth IN (SELECT MAX(op_depth) FROM NODE_DATA
+                   WHERE wc_id = ?1 AND local_relpath = ?2);
 
 -- STMT_UPDATE_BASE_EXCLUDED
 UPDATE BASE_NODE SET presence = 'excluded', depth = 'infinity'
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_BASE_EXCLUDED
+UPDATE NODE_DATA SET presence = 'excluded', depth = 'infinity'
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
+
 -- STMT_UPDATE_WORKING_EXCLUDED
 UPDATE WORKING_NODE SET presence = 'excluded', depth = 'infinity'
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_NODE_WORKING_EXCLUDED
+UPDATE NODE_DATA SET presence = 'excluded', depth = 'infinity'
+WHERE wc_id = ?1 AND local_relpath = ?2 AND
+      op_depth IN (SELECT MAX(op_depth) FROM NODE_DATA
+                   WHERE wc_id = ?1 AND local_relpath = ?2);
 
 -- STMT_UPDATE_BASE_PRESENCE
 update base_node set presence= ?3
