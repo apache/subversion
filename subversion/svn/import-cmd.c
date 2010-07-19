@@ -106,10 +106,6 @@ svn_cl__import(apr_getopt_t *os,
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("Invalid URL '%s'"), url);
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, pool));
-
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
 
