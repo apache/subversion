@@ -15958,8 +15958,7 @@ test_list = [ None,
               record_only_merge_creates_self_referential_mergeinfo,
               XFail(copy_causes_phantom_eol_conflict,
                     svntest.main.is_os_windows and
-                    (svntest.main.is_ra_type_dav_serf or
-                     svntest.main.is_ra_type_dav_neon)),
+                    svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':
