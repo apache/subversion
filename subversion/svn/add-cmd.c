@@ -29,11 +29,13 @@
 #define APR_WANT_STDIO
 #include <apr_want.h>
 
+#include "svn_path.h"
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -48,7 +50,7 @@ svn_cl__add(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   int i;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -66,24 +68,37 @@ svn_cl__add(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-  subpool = svn_pool_create(pool);
+  /* Don't even attempt to modify the working copy if any of the
+   * targets look like URLs. URLs are invalid input. */
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
-      svn_pool_clear(subpool);
+      if (svn_path_is_url(target))
+        return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET,
+                                                  NULL,
+                                                  _("'%s' is not a local path"),
+                                                  target));
+    }
+
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       SVN_ERR(svn_cl__try
-              (svn_client_add4(target,
+              (svn_client_add4(svn_dirent_canonicalize(target, iterpool),
                                opt_state->depth,
                                opt_state->force, opt_state->no_ignore,
-                               opt_state->parents, ctx, subpool),
+                               opt_state->parents, ctx, iterpool),
                NULL, opt_state->quiet,
                SVN_ERR_ENTRY_EXISTS,
                SVN_ERR_WC_PATH_NOT_FOUND,
                SVN_NO_ERROR));
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
