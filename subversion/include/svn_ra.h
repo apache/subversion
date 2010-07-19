@@ -580,8 +580,9 @@ svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
 typedef struct svn_ra_session_t svn_ra_session_t;
 
 /**
- * Open a repository session to @a repos_URL.  Return an opaque object
- * representing this session in @a *session_p, allocated in @a pool.
+ * Open a repository session via @a repos_URL.  Set @a *session_p to
+ * an opaque object representing this session, and set @a *session_url
+ * to the final session URL used by the session, both allocated in @a pool.
  *
  * Return @c SVN_ERR_RA_UUID_MISMATCH if @a uuid is non-NULL and not equal
  * to the UUID of the repository at @c repos_URL.
@@ -598,8 +599,25 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @see svn_client_open_ra_session().
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_ra_open4(svn_ra_session_t **session_p,
+             const char **session_url,
+             const char *repos_URL,
+             const char *uuid,
+             const svn_ra_callbacks2_t *callbacks,
+             void *callback_baton,
+             apr_hash_t *config,
+             apr_pool_t *pool);
+
+/** Similar to svn_ra_open4(), but return #SVN_ERR_RA_SESSION_URL_MISMATCH
+ * if the session's negotiated URL doesn't match @a repos_URL.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_open3(svn_ra_session_t **session_p,
              const char *repos_URL,
@@ -1568,8 +1586,9 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * empty file.  In the following calls, the delta will be against the
  * fulltext contents for the previous call.
  *
- * If @a include_merged_revisions is TRUE, revisions which a included as a
- * result of a merge between @a start and @a end will be included.
+ * If @a include_merged_revisions is TRUE, revisions which are
+ * included as a result of a merge between @a start and @a end will be
+ * included.
  *
  * @note This functionality is not available in pre-1.1 servers.  If the
  * server doesn't implement it, an alternative (but much slower)

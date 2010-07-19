@@ -842,6 +842,11 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 10,
              "Repository root URL does not match expected root URL")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_RA_SESSION_URL_MISMATCH,
+             SVN_ERR_RA_CATEGORY_START + 11,
+             "Session URL does not match expected session URL")
+
   /* ra_dav errors */
 
   SVN_ERRDEF(SVN_ERR_RA_DAV_SOCK_INIT,

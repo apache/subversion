@@ -3369,9 +3369,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
         }
       else
         {
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url,
                                                        NULL, NULL,
-                                                       FALSE, TRUE,
+                                                       FALSE, TRUE, FALSE,
                                                        ctx, scratch_pool));
         }
 
@@ -8173,9 +8173,10 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
   if (! *ra_session || (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL))
     {
       svn_error_clear(err);
-      err = svn_client__open_ra_session_internal(ra_session, url,
+      err = svn_client__open_ra_session_internal(ra_session, NULL, url,
                                                  NULL, NULL,
-                                                 FALSE, TRUE, ctx, pool);
+                                                 FALSE, TRUE, FALSE,
+                                                 ctx, pool);
     }
   SVN_ERR(err);
 
@@ -8709,12 +8710,14 @@ merge_locked(const char *source1,
 
   /* Open some RA sessions to our merge source sides. */
   sesspool = svn_pool_create(scratch_pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session1,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session1, NULL,
                                                URL1, NULL, NULL,
-                                               FALSE, TRUE, ctx, sesspool));
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2,
+                                               FALSE, TRUE, FALSE,
+                                               ctx, sesspool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, NULL,
                                                URL2, NULL, NULL,
-                                               FALSE, TRUE, ctx, sesspool));
+                                               FALSE, TRUE, FALSE,
+                                               ctx, sesspool));
 
   /* Resolve revisions to real numbers. */
   SVN_ERR(svn_client__get_revision_number(&rev1, &youngest_rev, ctx->wc_ctx,
@@ -10000,13 +10003,13 @@ merge_reintegrate_locked(const char *source,
   /* Open two RA sessions, one to our source and one to our target. */
   SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, target_abspath,
                                scratch_pool, scratch_pool));
-  SVN_ERR(svn_client__open_ra_session_internal(&target_ra_session, target_url,
-                                               NULL, NULL, FALSE, FALSE, ctx,
-                                               scratch_pool));
-  SVN_ERR(svn_client__open_ra_session_internal(&source_ra_session, url2,
-                                               NULL, NULL,
-                                               FALSE, FALSE, ctx,
-                                               scratch_pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&target_ra_session, NULL,
+                                               target_url,
+                                               NULL, NULL, FALSE, FALSE,
+                                               FALSE, ctx, scratch_pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&source_ra_session, NULL,
+                                               url2, NULL, NULL, FALSE, FALSE,
+                                               FALSE, ctx, scratch_pool));
 
   SVN_ERR(svn_client__get_revision_number(&rev2, NULL, ctx->wc_ctx,
                                           "",
@@ -10209,8 +10212,9 @@ merge_peg_locked(const char *source,
 
   /* Open an RA session to our source URL, and determine its root URL. */
   sesspool = svn_pool_create(scratch_pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL, NULL,
-                                               FALSE, TRUE, ctx, sesspool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
+                                               NULL, FALSE, TRUE, FALSE,
+                                               ctx, sesspool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, scratch_pool));
 
   /* Normalize our merge sources. */

@@ -349,7 +349,8 @@ svn_client__default_walker_error_handler(const char *path,
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
-/* Open an RA session, returning it in *RA_SESSION.
+/* Open an RA session, returning it in *RA_SESSION and its final
+   session URL in *SESSION_URL.
 
    The root of the session is specified by BASE_URL and BASE_DIR.
 
@@ -365,6 +366,10 @@ svn_client__default_walker_error_handler(const char *path,
       - READ_ONLY_WC indicates that the RA layer should not attempt to
         modify the WC props directly.
 
+      - ALLOW_REDIRECT indicates whether it's okay for the final
+        session URL to not match the input BASE_URL.  If it's FALSE
+        and those URLs don't match, return SVN_ERR_RA_SESSION_URL_MISMATCH.
+ 
    BASE_DIR_ABSPATH may be NULL if the RA operation does not correspond to a
    working copy (in which case, USE_ADMIN should be FALSE).
 
@@ -375,11 +380,13 @@ svn_client__default_walker_error_handler(const char *path,
    avoid confusion with the public API svn_client_open_ra_session(). */
 svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
+                                     const char **session_url,
                                      const char *base_url,
                                      const char *base_dir_abspath,
                                      const apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
+                                     svn_boolean_t allow_redirect,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 

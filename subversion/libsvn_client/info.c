@@ -570,9 +570,9 @@ svn_client_info3(const char *abspath_or_url,
                                  url, rev);
 
       /* Open a new RA session to the item's parent. */
-      SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session,
+      SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session, NULL,
                                                    parent_url, NULL,
-                                                   NULL, FALSE, TRUE,
+                                                   NULL, FALSE, TRUE, FALSE,
                                                    ctx, pool));
 
       /* Get all parent's entries, and find the item's dirent in the hash. */

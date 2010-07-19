@@ -5218,16 +5218,34 @@ svn_client_uuid_from_path(const char **uuid,
 
 /* Opening RA sessions. */
 
-/** Open an RA session rooted at @a url, and return it in @a *session.
+/** Open an RA session via @a url, and return it in @a *session and
+ * its final session URL in @a *session_url.  (The returned URL and
+ * the input URL may differ due to server-side redirection, URL
+ * normalization, or other reasons.)
  *
  * Use the authentication baton stored in @a ctx for authentication.
  * @a *session is allocated in @a pool.
  *
- * @since New in 1.3.
+ * @since New in 1.7.
  *
  * @note This function is similar to svn_ra_open3(), but the caller avoids
  * having to providing its own callback functions.
  */
+svn_error_t *
+svn_client_open_ra_session2(svn_ra_session_t **session,
+                            const char **session_url,
+                            const char *url,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool);
+
+/** Similar to svn_client_open_ra_session2(), but return
+ * #SVN_ERR_RA_SESSION_URL_MISMATCH if the RA session doesn't actually
+ * open with @a url as its session URL.
+ *
+ * @since New in 1.3.
+ * @deprecated Provided for backward compatilibity with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_open_ra_session(svn_ra_session_t **session,
                            const char *url,

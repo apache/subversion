@@ -178,9 +178,10 @@ svn_client_list2(const char *path_or_url,
               base_name = svn_path_uri_decode(base_name, pool);
 
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
-                                                           parent_url, NULL,
-                                                           NULL, FALSE,
-                                                           TRUE, ctx, pool));
+                                                           NULL, parent_url,
+                                                           NULL, NULL, FALSE,
+                                                           TRUE, FALSE,
+                                                           ctx, pool));
 
               /* Get all parent's entries, no props. */
               SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,

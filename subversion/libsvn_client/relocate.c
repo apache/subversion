@@ -88,8 +88,8 @@ validator_func(void *baton,
     {
       apr_pool_t *sesspool = svn_pool_create(pool);
       svn_ra_session_t *ra_session;
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url, NULL,
-                                                   NULL, FALSE, TRUE,
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url, NULL,
+                                                   NULL, FALSE, TRUE, FALSE,
                                                    b->ctx, sesspool));
       url_uuid = &APR_ARRAY_PUSH(uuids, struct url_uuid_t);
       SVN_ERR(svn_ra_get_uuid2(ra_session, &(url_uuid->uuid), pool));

@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_compat.h"
 #include "svn_props.h"
+#include "svn_pools.h"
 
 #include "ra_loader.h"
 
@@ -147,6 +148,30 @@ static svn_ra_reporter2_t reporter_3in2_wrapper = {
   finish_report,
   abort_report
 };
+
+svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
+                          const char *repos_URL,
+                          const char *uuid,
+                          const svn_ra_callbacks2_t *callbacks,
+                          void *callback_baton,
+                          apr_hash_t *config,
+                          apr_pool_t *pool)
+{
+  apr_pool_t *sesspool = svn_pool_create(pool);
+  const char *session_url;
+
+  SVN_ERR(svn_ra_open4(session_p, &session_url, repos_URL, NULL,
+                       callbacks, callback_baton, config, sesspool));
+  if (strcmp(repos_URL, session_url) != 0)
+    {
+      svn_pool_destroy(sesspool);
+      return svn_error_createf(SVN_ERR_RA_SESSION_URL_MISMATCH, NULL,
+                               _("Session URL '%s' does not match requested "
+                                 " URL '%s', and redirection was disallowed."),
+                               session_url, repos_URL);
+    }
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
                           const char *repos_URL,

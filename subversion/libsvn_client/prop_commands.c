@@ -215,9 +215,9 @@ propset_on_url(svn_commit_info_t **commit_info_p,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, target,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, target,
                                                NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+                                               FALSE, ctx, pool));
 
   SVN_ERR(svn_ra_check_path(ra_session, "", base_revision_for_url,
                             &node_kind, pool));
@@ -475,8 +475,9 @@ svn_client_revprop_set2(const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
+                                               NULL, FALSE, TRUE, FALSE,
+                                               ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -967,8 +968,9 @@ svn_client_revprop_get(const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
+                                               NULL, FALSE, TRUE, FALSE,
+                                               ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -1311,8 +1313,9 @@ svn_client_revprop_list(apr_hash_t **props,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
+                                               NULL, FALSE, TRUE, FALSE,
+                                               ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
