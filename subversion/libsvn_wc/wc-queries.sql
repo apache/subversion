@@ -77,6 +77,15 @@ insert or replace into base_node (
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
         ?15, ?16, ?17);
 
+-- STMT_INSERT_NODE_DATA
+insert or replace into node_data (
+   wc_id, local_relpath, op_depth, parent_relpath, presence, kind,
+   changed_revision, changed_date, changed_author, depth, checksum,
+   symlink_target, original_repos_id, original_repos_path,
+   original_revision, properties)
+values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
+        ?13, ?14, ?15, ?16);
+
 -- STMT_INSERT_BASE_NODE_INCOMPLETE
 insert or ignore into base_node (
   wc_id, local_relpath, parent_relpath, presence, kind, revnum)

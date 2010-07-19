@@ -622,29 +622,27 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   const insert_base_baton_t *pibb = baton;
   svn_sqlite__stmt_t *stmt;
+#ifdef SVN_WC__NODE_DATA
+  svn_sqlite__stmt_t *stmt_node;
+#endif
+  /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
+     bind the appropriate parent_relpath. */
+  const char *parent_relpath =
+    (*pibb->local_relpath == '\0') ? NULL
+    : svn_relpath_dirname(pibb->local_relpath, scratch_pool);
 
   /* ### we can't handle this right now  */
   SVN_ERR_ASSERT(pibb->conflict == NULL);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pibb->wc_id, pibb->local_relpath));
-
-  if (TRUE /* maybe_bind_repos() */)
-    {
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 3, pibb->repos_id));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 4, pibb->repos_relpath));
-    }
-
-  /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
-     bind the appropriate parent_relpath. */
-  if (*pibb->local_relpath != '\0')
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5,
-                                  svn_relpath_dirname(pibb->local_relpath,
-                                                      scratch_pool)));
-
-  SVN_ERR(svn_sqlite__bind_token(stmt, 6, presence_map, pibb->status));
-  SVN_ERR(svn_sqlite__bind_token(stmt, 7, kind_map, pibb->kind));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 8, pibb->revision));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isisstti",
+                            pibb->wc_id, pibb->local_relpath,
+                            pibb->repos_id,
+                            pibb->repos_relpath,
+                            parent_relpath,
+                            presence_map, pibb->status,
+                            kind_map, pibb->kind,
+                            pibb->revision));
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 9, pibb->props, scratch_pool));
 
@@ -678,6 +676,47 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                         scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE_DATA));
+  SVN_ERR(svn_sqlite__bindf(stmt_node, "isistt",
+                            pibb->wc_id, pibb->local_relpath,
+                            (apr_int64_t)0, /* op_depth is 0 for base */
+                            parent_relpath,
+                            presence_map, pibb->status,
+                            kind_map, pibb->kind));
+
+  if (SVN_IS_VALID_REVNUM(pibb->changed_rev))
+    SVN_ERR(svn_sqlite__bind_int64(stmt_node, 7, pibb->changed_rev));
+  if (pibb->changed_date)
+    SVN_ERR(svn_sqlite__bind_int64(stmt_node, 8, pibb->changed_date));
+  if (pibb->changed_author)
+    SVN_ERR(svn_sqlite__bind_text(stmt_node, 9, pibb->changed_author));
+
+  if (pibb->kind == svn_wc__db_kind_dir)
+    {
+      SVN_ERR(svn_sqlite__bind_text(stmt_node, 10,
+                                    svn_depth_to_word(pibb->depth)));
+    }
+  else if (pibb->kind == svn_wc__db_kind_file)
+    {
+      SVN_ERR(svn_sqlite__bind_checksum(stmt_node, 11, pibb->checksum,
+                                        scratch_pool));
+    }
+  else if (pibb->kind == svn_wc__db_kind_symlink)
+    {
+      /* Note: incomplete nodes may have a NULL target.  */
+      if (pibb->target)
+        SVN_ERR(svn_sqlite__bind_text(stmt_node, 12, pibb->target));
+    }
+
+  /* Don't bind original_repos_id, original_repos_path and original_revision */
+
+  SVN_ERR(svn_sqlite__bind_properties(stmt_node, 16, pibb->props,
+                                      scratch_pool));
+
+  SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
+#endif
 
   if (pibb->kind == svn_wc__db_kind_dir && pibb->children)
     {
@@ -755,6 +794,10 @@ insert_working_node(void *baton,
   const insert_working_baton_t *piwb = baton;
   const char *parent_relpath;
   svn_sqlite__stmt_t *stmt;
+#ifdef SVN_WC__NODE_DATA
+  svn_sqlite__stmt_t *stmt_node;
+  apr_int64_t op_depth;
+#endif
 
   /* We cannot insert a WORKING_NODE row at the wcroot.  */
   /* ### actually, with per-dir DB, we can... */
@@ -770,8 +813,8 @@ insert_working_node(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "isstt",
                             piwb->wc_id, piwb->local_relpath,
                             parent_relpath,
-                            presence_map, piwb->presence,
-                            kind_map, piwb->kind));
+			    presence_map, piwb->presence,
+			    kind_map, piwb->kind));
 
   if (piwb->original_repos_relpath != NULL)
     {
@@ -820,6 +863,68 @@ insert_working_node(void *baton,
   /* 'symlink_target' (20) is bound above.  */
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+
+#ifdef SVN_WC__NODE_DATA
+  op_depth = (parent_relpath == NULL) ? 1   /* THIS_DIR */
+                                      : 2;  /* immediate children */
+  SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE_DATA));
+  SVN_ERR(svn_sqlite__bindf(stmt_node, "isistt",
+			    piwb->wc_id, piwb->local_relpath,
+			    (apr_int64_t)1, /* op_depth, 1 or 2 for working */
+			    parent_relpath,
+			    presence_map, piwb->presence,
+			    kind_map, piwb->kind));
+
+  if (SVN_IS_VALID_REVNUM(piwb->changed_rev))
+    SVN_ERR(svn_sqlite__bind_int64(stmt_node, 7, piwb->changed_rev));
+  if (piwb->changed_date)
+    SVN_ERR(svn_sqlite__bind_int64(stmt_node, 8, piwb->changed_date));
+  if (piwb->changed_author)
+    SVN_ERR(svn_sqlite__bind_text(stmt_node, 9, piwb->changed_author));
+
+  if (piwb->kind == svn_wc__db_kind_dir)
+    {
+      SVN_ERR(svn_sqlite__bind_text(stmt_node, 10,
+				    svn_depth_to_word(piwb->depth)));
+    }
+  else if (piwb->kind == svn_wc__db_kind_file)
+    {
+      SVN_ERR(svn_sqlite__bind_checksum(stmt_node, 11, piwb->checksum,
+                                        scratch_pool));
+    }
+  else if (piwb->kind == svn_wc__db_kind_symlink)
+    {
+      /* Note: incomplete nodes may have a NULL target.  */
+      if (piwb->target)
+        SVN_ERR(svn_sqlite__bind_text(stmt_node, 12, piwb->target));
+    }
+
+  if (piwb->original_repos_relpath != NULL)
+    {
+      SVN_ERR(svn_sqlite__bind_int64(stmt_node, 13, piwb->original_repos_id));
+      SVN_ERR(svn_sqlite__bind_text(stmt_node, 14,
+				    piwb->original_repos_relpath));
+      SVN_ERR(svn_sqlite__bind_int64(stmt_node, 15, piwb->original_revnum));
+    }
+
+
+  /* Don't bind original_repos_id, original_repos_path and original_revision */
+
+
+  SVN_ERR(svn_sqlite__bind_properties(stmt_node, 16, piwb->props,
+				      scratch_pool));
+
+  SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
+
+  /* ### Not inserting the children in NODE_DATA goes against the documentation
+     that for every row in WORKING_NODE, there should be a row in NODE_DATA.
+
+     However, NODE_DATA wants to contain complete data, but the insertion
+     below is not... */
+
+#endif
+
 
   if (piwb->kind == svn_wc__db_kind_dir && piwb->children)
     SVN_ERR(insert_incomplete_working_children(sdb, piwb->wc_id,
@@ -1221,7 +1326,7 @@ create_db(svn_sqlite__db_t **sdb,
 #ifdef SVN_WC__NODE_DATA
   /* Create the NODE_DATA table for the experimental schema */
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODE_DATA));
-#endif  
+#endif
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid, *sdb,
