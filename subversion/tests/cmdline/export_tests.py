@@ -506,7 +506,7 @@ def export_with_url_unsafe_characters(sbox):
 
   # Export the file and verify it.
   svntest.actions.run_and_verify_svn(None, None, [], 'export',
-                                     url_unsafe_path_url, export_target)
+                                     url_unsafe_path_url, export_target + '@')
 
   if not os.path.exists(export_target):
     raise svntest.Failure("export did not fetch file with URL unsafe path")
