@@ -4159,6 +4159,7 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifndef SINGLE_DB
   /* Check if we should also remove it from the parent db */
   if (*local_relpath == '\0')
     {
@@ -4186,6 +4187,7 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
 
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -4214,6 +4216,7 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifndef SINGLE_DB
   /* Check if we should remove it from the parent db as well. */
   if (*local_relpath == '\0')
     {
@@ -4230,6 +4233,7 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -4294,6 +4298,7 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
 
   SVN_ERR(update_depth_values(pdh, local_relpath, depth));
 
+#ifndef SINGLE_DB
   /* If we're in the subdir, then navigate to the parent to set its
      depth value.  */
   if (*local_relpath == '\0')
@@ -4316,6 +4321,7 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
       local_relpath = svn_dirent_basename(local_abspath, scratch_pool);
       SVN_ERR(update_depth_values(pdh, local_relpath, depth));
     }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -4397,6 +4403,7 @@ db_working_actual_remove(svn_wc__db_t *db,
 
   flush_entries(pdh);
 
+#ifndef SINGLE_DB
   if (*local_relpath == '\0')
     {
       /* ### Delete parent stub. Remove when db is centralised. */
@@ -4413,6 +4420,7 @@ db_working_actual_remove(svn_wc__db_t *db,
 
       flush_entries(pdh);
     }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -4443,6 +4451,7 @@ db_working_insert(svn_wc__db_status_t status,
 
   flush_entries(pdh);
 
+#ifndef SINGLE_DB
   if (*local_relpath == '\0')
     {
       /* ### Insert parent stub. Remove when db is centralised. */
@@ -4462,6 +4471,7 @@ db_working_insert(svn_wc__db_status_t status,
 
       flush_entries(pdh);
     }
+#endif
 
   return SVN_NO_ERROR;
 }
