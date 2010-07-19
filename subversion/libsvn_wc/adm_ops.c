@@ -1189,12 +1189,14 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     }
 #endif
 
+#ifndef SVN_WC__SINGLE_DB
   if (kind == svn_node_dir && !exists)
     {
       /* Lock on parent needs to be propogated into the child db. */
       SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
                                        scratch_pool));
     }
+#endif
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   /* ### this is totally bogus. we clear these cuz turds might have been
