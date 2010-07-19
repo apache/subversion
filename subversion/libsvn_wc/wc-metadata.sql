@@ -240,14 +240,7 @@ CREATE TABLE WORKING_NODE (
   /* ### would be nice to make this column NOT NULL.  */
   parent_relpath  TEXT,
 
-  /* In case 'op_depth' is equal to 0, this is part of the BASE tree; in
-     that case, all presence values except 'base-deleted' are allowed.
-
-
-     In case 'op_depth' is greater than 0, this is part of a layer of
-     working nodes; in that case, the following presence values apply:
-
-     Is this node "present" or has it been excluded for some reason?
+  /* Is this node "present" or has it been excluded for some reason?
      Only allowed values: normal, not-present, incomplete, base-deleted.
      (the others do not make sense for the WORKING tree)
 
@@ -514,7 +507,14 @@ CREATE TABLE NODE_DATA (
   /* ### would be nice to make this column NOT NULL.  */
   parent_relpath  TEXT,
 
-  /* Is this node "present" or has it been excluded for some reason?
+  /* In case 'op_depth' is equal to 0, this is part of the BASE tree; in
+     that case, all presence values except 'base-deleted' are allowed.
+
+
+     In case 'op_depth' is greater than 0, this is part of a layer of
+     working nodes; in that case, the following presence values apply:
+
+     Is this node "present" or has it been excluded for some reason?
      Only allowed values: normal, not-present, incomplete, base-deleted.
      (the others do not make sense for the WORKING tree)
 
