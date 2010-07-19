@@ -15621,6 +15621,155 @@ def record_only_merge_creates_self_referential_mergeinfo(sbox):
                                        None, None, None, None, None, 1, 1,
                                        '--record-only')
 
+#----------------------------------------------------------------------
+# Test for issue #3657 'phantom svn:eol-style changes cause spurious merge
+# text conflicts'.
+def copy_causes_phantom_eol_conflict(sbox):
+  "copy causes phantom eol conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  mu_path                = os.path.join(wc_dir, "A", "mu")
+  A_path                 = os.path.join(wc_dir, "A")
+  A_branch_path          = os.path.join(wc_dir, "A-branch")
+  A_branch_backport_path = os.path.join(wc_dir, "A-branch-backport")
+  mu_path                = os.path.join(wc_dir, "A", "mu")
+  mu2_path               = os.path.join(wc_dir, "A", "mu2")
+  mu_backport_path       = os.path.join(wc_dir, "A-branch-backport", "mu")
+  
+  # r2 - Set the 'native' svn:eol-style on A/mu:
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'svn:eol-style', 'native',
+                                     mu_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'Set native eol-style',
+                                     wc_dir)
+    
+  # r3 - Branch 'A' to 'A-branch':
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', A_path, A_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'Create a branch of A',
+                                     wc_dir)
+
+  # r4 - Copy 'A/mu' to 'A/mu2':
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', mu_path, mu2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'Copy a file',
+                                     wc_dir)
+
+  # r5 - Make a text mod to 'A/mu2':
+  svntest.main.file_write(mu2_path, "The new mu!\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'Edit a copied file',
+                                     wc_dir)
+  
+  # r6 - Create a backport branch 'A-branch-backport for r5:
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     A_branch_path, A_branch_backport_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Create a backport branch of A-branch',
+                                     wc_dir)
+
+  # r7 - Do a file merge of r5 from 'A/mu2' to 'A-branch-backport/mu2':
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c5',
+                                     sbox.repo_url + '/A/mu2',
+                                     mu_backport_path)
+  svntest.actions.run_and_verify_svn(
+      None, None, [], 'ci',
+      '-m', 'Merge r5 from ^/A/mu2 to A-branch-backport/mu', wc_dir)
+  
+  # Now merge r7 from 'A-branch-backport' to 'A-branch'.
+  #
+  # This fails over ra_neon and ra_serf on Windows:
+  #
+  #   svn merge -r6:7 ^/A-branch-backport merge_tests-110\A-branch"
+  #   --- Merging r7 into 'merge_tests-110\A-branch':
+  #   CU   merge_tests-110\A-branch\mu
+  #   --- Recording mergeinfo for merge of r7 into 'merge_tests-110\A-branch':
+  #    U   merge_tests-110\A-branch
+  #   --- Recording mergeinfo for merge of r7 into 'merge_tests-110\A-branch\mu':
+  #    G   merge_tests-110\A-branch\mu
+  #   Summary of conflicts:
+  #     Text conflicts: 1
+  #
+  # The conflict is on the whole file as it appears there is an eol-style
+  # change to native, when in fact no such change is present in r7.
+  #
+  # Marking this test as XFail for [Windows] x [ra_serf | ra_neon] until
+  # this issue is fixed.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_branch_path, {
+    'mu' : Item(status='UU'),
+    })
+  expected_mergeinfo_output = wc.State(A_branch_path, {
+    ''   : Item(status=' U'),
+    'mu' : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(A_branch_path, {})
+  expected_status = wc.State(A_branch_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='MM'),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=7)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO :
+                              '/A-branch-backport:7'}),
+    'B'         : Item(),
+    'mu'        : Item("The new mu!\n",
+                       props={SVN_PROP_MERGEINFO :
+                              '/A/mu2:5\n'
+                              '/A-branch-backport/mu:7',
+                              'svn:eol-style' : 'native'}),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State(A_branch_path, {})
+  svntest.actions.run_and_verify_merge(A_branch_path, 6, 7,
+                                       sbox.repo_url + '/A-branch-backport',
+                                       None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1, 1)
+  
 ########################################################################
 # Run the tests
 
@@ -15807,6 +15956,10 @@ test_list = [ None,
               foreign_repos_del_and_props,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
               record_only_merge_creates_self_referential_mergeinfo,
+              XFail(copy_causes_phantom_eol_conflict,
+                    svntest.main.is_os_windows and
+                    (svntest.main.is_ra_type_dav_serf or
+                     svntest.main.is_ra_type_dav_neon)),
              ]
 
 if __name__ == '__main__':
