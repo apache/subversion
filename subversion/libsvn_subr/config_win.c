@@ -177,7 +177,7 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
     {
       return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                "Unrecognised registry path '%s'",
-                               svn_path_local_style(file, pool));
+                               svn_dirent_local_style(file, pool));
     }
 
   err = RegOpenKeyEx(base_hkey, file, 0,
@@ -189,11 +189,11 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
       if (!is_enoent)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  "Can't open registry key '%s'",
-                                 svn_path_local_style(file, pool));
+                                 svn_dirent_local_style(file, pool));
       else if (must_exist && is_enoent)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  "Can't find registry key '%s'",
-                                 svn_path_local_style(file, pool));
+                                 svn_dirent_local_style(file, pool));
       else
         return SVN_NO_ERROR;
     }
