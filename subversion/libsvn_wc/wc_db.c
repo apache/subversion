@@ -866,12 +866,14 @@ insert_working_node(void *baton,
 
 
 #ifdef SVN_WC__NODE_DATA
+#ifndef SINGLE_DB
   op_depth = (parent_relpath == NULL) ? 1   /* THIS_DIR */
                                       : 2;  /* immediate children */
+#endif
   SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE_DATA));
   SVN_ERR(svn_sqlite__bindf(stmt_node, "isistt",
 			    piwb->wc_id, piwb->local_relpath,
-			    (apr_int64_t)1, /* op_depth, 1 or 2 for working */
+			    op_depth,
 			    parent_relpath,
 			    presence_map, piwb->presence,
 			    kind_map, piwb->kind));
