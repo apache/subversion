@@ -724,6 +724,10 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_INSERT_BASE_NODE_INCOMPLETE));
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb,
+                                        STMT_INSERT_NODE_DATA_INCOMPLETE));
+#endif
 
       for (i = pibb->children->nelts; i--; )
         {
@@ -737,6 +741,17 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                     pibb->local_relpath,
                                     (apr_int64_t)pibb->revision));
           SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+#ifdef SVN_WC__NODE_DATA
+          SVN_ERR(svn_sqlite__bindf(stmt_node, "isis",
+                                    pibb->wc_id,
+                                    svn_relpath_join(pibb->local_relpath,
+                                                     name,
+                                                     scratch_pool),
+                                    (apr_int64_t)0 /* BASE */,
+                                    pibb->local_relpath));
+          SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
+#endif
         }
     }
 
@@ -765,10 +780,18 @@ insert_incomplete_working_children(svn_sqlite__db_t *sdb,
                                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+#ifdef SVN_WC__NODE_DATA
+  svn_sqlite__stmt_t *stmt_node;
+#endif
   int i;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_INSERT_WORKING_NODE_INCOMPLETE));
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb,
+                                    STMT_INSERT_NODE_DATA_INCOMPLETE));
+#endif
+
 
   for (i = children->nelts; i--; )
     {
@@ -780,6 +803,18 @@ insert_incomplete_working_children(svn_sqlite__db_t *sdb,
                                                  scratch_pool),
                                 local_relpath));
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__bindf(stmt_node, "isis",
+                                wc_id,
+                                svn_relpath_join(local_relpath, name,
+                                                 scratch_pool),
+#ifndef SINGLE_DB
+				(apr_int64_t) 2, /* non-THIS_DIR working */
+#endif
+                                local_relpath));
+      SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
+#endif
     }
 
   return SVN_NO_ERROR;
@@ -918,13 +953,6 @@ insert_working_node(void *baton,
 				      scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
-
-  /* ### Not inserting the children in NODE_DATA goes against the documentation
-     that for every row in WORKING_NODE, there should be a row in NODE_DATA.
-
-     However, NODE_DATA wants to contain complete data, but the insertion
-     below is not... */
-
 #endif
 
 
