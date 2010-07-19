@@ -1,4 +1,5 @@
-/*
+/**
+ * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -17,11 +18,18 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file dump_editor.h
+ * @brief The svn_delta_editor_t editor used by svnrdump
  */
 
 #ifndef DUMP_EDITOR_H_
 #define DUMP_EDITOR_H_
 
+/**
+ * The baton used by the dump editor.
+ */
 struct dump_edit_baton {
   /* The output stream we write the dumpfile to */
   svn_stream_t *stream;
@@ -48,6 +56,10 @@ struct dump_edit_baton {
   svn_boolean_t dump_props_pending;
 };
 
+/**
+ * A directory baton used by all directory-related callback functions
+ * in the dump editor.
+ */
 struct dir_baton {
   struct dump_edit_baton *eb;
   struct dir_baton *parent_dir_baton;
@@ -75,10 +87,16 @@ struct dir_baton {
   apr_pool_t *pool;
 };
 
+/**
+ * A handler baton to be used in window_handler().
+ */
 struct handler_baton
 {
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
+
+  /* Pool used for temporary allocations during delta application in
+     window_handler() */
   apr_pool_t *pool;
 
   /* Information about the path of the temporary file used */
@@ -90,8 +108,10 @@ struct handler_baton
   struct dump_edit_baton *eb;
 };
 
-/* Set EDITOR and EDIT_BATON to an editor/ edit baton allocated in
-   pool */
+/**
+ * Get a dump editor @a editor along with a @a edit_baton allocated in
+ * @a pool.
+ */
 svn_error_t *
 get_dump_editor(const svn_delta_editor_t **editor,
                 void **edit_baton,

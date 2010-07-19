@@ -1,4 +1,5 @@
-/*
+/**
+ * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -17,6 +18,10 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svnrdump.h
+ * @brief Some toplevel helper functions for svnrdump
  */
 
 #ifndef SVNRDUMP_H_
@@ -30,19 +35,27 @@ struct replay_baton {
   svn_boolean_t verbose;
 };
 
-/* Write the properties in the hashtable PROPERTIES to STRBUF
-   allocated in pool. DELETED is used to indicate deleted
-   properties */
+/**
+ * Write a hashtable to a string buffer.
+ *
+ * Write the properties in the hashtable @a properties to @a strbuf
+ * allocated in @a pool. @a deleted is used to indicate deleted
+ * properties.
+ */
 void
 write_hash_to_stringbuf(apr_hash_t *properties,
                         svn_boolean_t deleted,
                         svn_stringbuf_t **strbuf,
                         apr_pool_t *pool);
 
-/* Extract and dump the properties and del_properties stored in the
-   edit baton EB using pool for any temporary allocations. If
-   TRIGGER_VAR is passed, it is unset. DUMP_DATA_TOO triggers dumping
-   data along with the properties */
+/**
+ * Dump revision properties, and (optionally) full text.
+ *
+ * Extract and dump the properties and del_properties stored in the
+ * edit baton @a eb using @a pool for any temporary allocations. If
+ * @a trigger_var is passed, it is unset. @a dump_data_too triggers
+ * dumping data along with the properties.
+ */
 svn_error_t *
 dump_props(struct dump_edit_baton *eb,
            svn_boolean_t *trigger_var,
