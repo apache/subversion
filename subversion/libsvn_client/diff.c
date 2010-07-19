@@ -190,22 +190,22 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
 }
 
-/* Adjust PATH, PATH1 and PATH2, representing the changed file and the two
- * original targets passed to the diff command, to handle the case when
- * we're dealing with different anchors. RELATIVE_TO_DIR is the directory
- * the diff target should be considered relative to. All allocations are done
- * in POOL. */
+/* Adjust PATH, ORIG_PATH_1 and ORIG_PATH_2, representing the changed file
+ * and the two original targets passed to the diff command, to handle the
+ * case when we're dealing with different anchors. RELATIVE_TO_DIR is the
+ * directory the diff target should be considered relative to. All
+ * allocations are done in POOL. */
 static svn_error_t *
 adjust_paths_for_diff_labels(const char **path,
-                             const char **path1,
-                             const char **path2,
+                             const char **orig_path_1,
+                             const char **orig_path_2,
                              const char *relative_to_dir,
                              apr_pool_t *pool)
 {
   apr_size_t len;
   const char *new_path = *path;
-  const char *new_path1 = *path1;
-  const char *new_path2 = *path2;
+  const char *new_path1 = *orig_path_1;
+  const char *new_path2 = *orig_path_2;
 
   /* ### Holy cow.  Due to anchor/target weirdness, we can't
      simply join diff_cmd_baton->orig_path_1 with path, ditto for
@@ -274,8 +274,8 @@ adjust_paths_for_diff_labels(const char **path,
         return MAKE_ERR_BAD_RELATIVE_PATH(new_path2, relative_to_dir);
     }
   *path = new_path;
-  *path1 = new_path1;
-  *path2 = new_path2;
+  *orig_path_1 = new_path1;
+  *orig_path_2 = new_path2;
 
   return SVN_NO_ERROR;
 }
