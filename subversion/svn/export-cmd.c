@@ -34,6 +34,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_opt_private.h"
 
 
 /*** Code. ***/
@@ -81,6 +82,9 @@ svn_cl__export(apr_getopt_t *os,
       /* If given the cwd, pretend we weren't given anything. */
       if (strcmp("", to) == 0)
         to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+      else
+        /* svn_cl__eat_peg_revisions() but only on one target */
+        SVN_ERR(svn_opt__split_arg_at_peg_revision(&to, NULL, to, pool));
     }
 
   if (! opt_state->quiet)
