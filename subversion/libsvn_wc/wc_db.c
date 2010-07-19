@@ -1856,6 +1856,14 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_NODE_DATA_BASE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
   flush_entries(pdh);
 
 #ifndef SINGLE_DB
@@ -1874,6 +1882,16 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
                                                         scratch_pool)));
 
           SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                            STMT_DELETE_NODE_DATA_BASE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                                    svn_dirent_basename(local_abspath,
+                                                        scratch_pool)));
+
+          SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
           flush_entries(pdh);
         }
@@ -4154,6 +4172,12 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_NODE_DATA_LAYERS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wc_id, local_relpath, (apr_int64_t)0));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
 
@@ -4181,6 +4205,14 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_WORKING_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+					STMT_DELETE_NODE_DATA_LAYERS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+				wc_id, local_relpath, (apr_int64_t)0));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
@@ -4216,6 +4248,13 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_NODE_DATA_WORKING));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
 #ifndef SINGLE_DB
   /* Check if we should remove it from the parent db as well. */
   if (*local_relpath == '\0')
@@ -4232,6 +4271,13 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
                                         STMT_DELETE_WORKING_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_DELETE_NODE_DATA_WORKING));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
     }
 #endif
 
@@ -4396,6 +4442,14 @@ db_working_actual_remove(svn_wc__db_t *db,
                                     STMT_DELETE_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_NODE_DATA_WORKING));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_DELETE_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
@@ -4417,6 +4471,14 @@ db_working_actual_remove(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                 pdh->wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_DELETE_NODE_DATA_WORKING));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
       flush_entries(pdh);
     }
@@ -5696,6 +5758,14 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                 cb->pdh->wcroot->wc_id, cb->local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
+                                        STMT_DELETE_NODE_DATA_WORKING));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                cb->pdh->wcroot->wc_id, cb->local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
     }
 
   if (have_act)
@@ -8438,12 +8508,19 @@ make_copy_txn(void *baton,
       /* Remove current WORKING_NODE record */
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_DELETE_WORKING_NODE));
-
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath));
-
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC_NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_DELETE_NODE_DATA_WORKING));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                mcb->pdh->wcroot->wc_id,
+                                mcb->local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
     }
 
   if (add_working_normal)
@@ -8523,6 +8600,14 @@ make_copy_txn(void *baton,
           SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                     pdh->wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                            STMT_DELETE_NODE_DATA_WORKING));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    pdh->wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
         }
 
       if (add_working_normal)
@@ -8543,6 +8628,14 @@ make_copy_txn(void *baton,
           SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                     pdh->wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                            STMT_DELETE_NODE_DATA_WORKING));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    pdh->wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
           /* And insert the right data */
           SVN_ERR(svn_sqlite__get_statement(
@@ -8571,6 +8664,14 @@ make_copy_txn(void *baton,
                                     pdh->wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifdef SVN_WC__NODE_DATA
+          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                            STMT_DELETE_NODE_DATA_WORKING));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    pdh->wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
           /* And insert the right data */
           SVN_ERR(svn_sqlite__get_statement(
                         &stmt, pdh->wcroot->sdb,
@@ -8590,12 +8691,19 @@ make_copy_txn(void *baton,
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_DELETE_BASE_NODE));
-
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath));
-
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_DELETE_NODE_DATA_BASE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                mcb->pdh->wcroot->wc_id,
+                                mcb->local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
 #ifndef SINGLE_DB
       /* Remove BASE_NODE_STUB */
@@ -8612,6 +8720,14 @@ make_copy_txn(void *baton,
           SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                     pdh->wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                            STMT_DELETE_NODE_DATA_BASE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    pdh->wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
         }
 #endif
     }
@@ -8869,6 +8985,13 @@ svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, name));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_NODE_DATA_BASE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, name));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
   return SVN_NO_ERROR;
 }
 
@@ -9103,8 +9226,14 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                        STMT_DELETE_WORKING_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, base));
-
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                       STMT_DELETE_NODE_DATA_WORKING));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, base));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -9275,20 +9404,26 @@ set_new_dir_to_incomplete_baton_txn(void *baton,
   /* Delete the working node */
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_DELETE_WORKING_NODE));
-
   SVN_ERR(svn_sqlite__bindf(stmt, "is", dtb->pdh->wcroot->wc_id,
                                         dtb->local_relpath));
-
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Delete the base node if there is a not present one */
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_DELETE_BASE_NODE));
-
   SVN_ERR(svn_sqlite__bindf(stmt, "is", dtb->pdh->wcroot->wc_id,
                                         dtb->local_relpath));
-
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+  /* Delete the base and working node data */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
+                                    STMT_DELETE_NODE_DATA_LAYERS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", dtb->pdh->wcroot->wc_id,
+			    dtb->local_relpath,
+			    (apr_int64_t)0));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
 
   /* Insert the incomplete base node */

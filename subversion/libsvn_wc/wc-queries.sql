@@ -268,9 +268,25 @@ VALUES (?1, ?2, ?3, ?4);
 delete from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+/* ### Basically, this query can't exist:
+   we can't be deleting BASE nodes while they still have
+   associated WORKING nodes;
+   at minimum, the op_depth restriction should be removed */
+-- STMT_DELETE_NODE_DATA_BASE
+delete from node_data
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_DELETE_WORKING_NODE
 delete from working_node
 where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_DELETE_NODE_DATA_WORKING
+delete from node_data
+where wc_id = ?1 and local_relpath = ?2 and op_depth > 0;
+
+-- STMT_DELETE_NODE_DATA_LAYERS
+delete from node_data
+where wc_id = ?1 and local_relpath = ?2 and op_depth >= ?3;
 
 -- STMT_DELETE_ACTUAL_NODE
 delete from actual_node
