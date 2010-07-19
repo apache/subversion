@@ -637,7 +637,7 @@ svn_cl__log(apr_getopt_t *os,
         }
     }
 
-  /* Strip peg revision if targets contains an URI. */
+  /* Strip peg revision. */
   SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, target, pool));
   APR_ARRAY_IDX(targets, 0, const char *) = true_path;
 
