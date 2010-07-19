@@ -80,7 +80,6 @@ make_dir_baton(const char *path,
   new_db->added = added;
   new_db->written_out = FALSE;
   new_db->deleted_entries = apr_hash_make(pool);
-  new_db->pool = pool;
 
   return new_db;
 }
@@ -240,7 +239,7 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  const char *mypath = apr_pstrdup(pb->pool, path);
+  const char *mypath = apr_pstrdup(pool, path);
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));

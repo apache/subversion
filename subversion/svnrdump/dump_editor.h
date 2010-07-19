@@ -82,9 +82,6 @@ struct dir_baton {
      they're full paths, because that's what the editor driver gives
      us, although they're all really within this directory. */
   apr_hash_t *deleted_entries;
-
-  /* pool to be used for deleting the hash items */
-  apr_pool_t *pool;
 };
 
 /**
