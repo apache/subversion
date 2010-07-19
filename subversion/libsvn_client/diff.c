@@ -321,20 +321,6 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 {
   int i;
 
-  if (relative_to_dir)
-    {
-      /* Possibly adjust the path shown in the output (see issue #2723). */
-      const char *child_path = svn_dirent_is_child(relative_to_dir, path,
-                                                   pool);
-
-      if (child_path)
-        path = child_path;
-      else if (!svn_path_compare_paths(relative_to_dir, path))
-        path = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir);
-    }
-
   /* If we're creating a diff on the wc root, path would be empty. */
   if (path[0] == '\0')
     path = apr_psprintf(pool, ".");
