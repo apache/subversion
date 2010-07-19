@@ -333,19 +333,19 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND
                    WHERE wc_id = ?1 AND local_relpath = ?2);
 
 -- STMT_UPDATE_BASE_EXCLUDED
-UPDATE BASE_NODE SET presence = 'excluded', depth = 'infinity'
+UPDATE BASE_NODE SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_BASE_EXCLUDED
-UPDATE NODE_DATA SET presence = 'excluded', depth = 'infinity'
+UPDATE NODE_DATA SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_UPDATE_WORKING_EXCLUDED
-UPDATE WORKING_NODE SET presence = 'excluded', depth = 'infinity'
+UPDATE WORKING_NODE SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_WORKING_EXCLUDED
-UPDATE NODE_DATA SET presence = 'excluded', depth = 'infinity'
+UPDATE NODE_DATA SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2 AND
       op_depth IN (SELECT MAX(op_depth) FROM NODE_DATA
                    WHERE wc_id = ?1 AND local_relpath = ?2);
