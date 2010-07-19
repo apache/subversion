@@ -147,9 +147,20 @@ where wc_id = ?1 and local_relpath = ?2;
 update base_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_DATA_BASE_PROPS
+update node_data set properties = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_WORKING_PROPS
 update working_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_NODE_DATA_WORKING_PROPS
+update node_data set properties = ?3
+where wc_id = ?1 and local_relpath = ?2
+  and op_depth in
+   (select max(op_depth) from node_data
+    where wc_id = ?1 and local_relpath = ?2);
 
 -- STMT_UPDATE_ACTUAL_PROPS
 update actual_node set properties = ?3
