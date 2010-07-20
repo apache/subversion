@@ -36,6 +36,7 @@
 
 #include "client.h"
 #include "private/svn_wc_private.h"
+#include "svn_private_config.h"
 
 
 /* Entry-walker callback for svn_client_add_to_changelist() and
@@ -102,6 +103,16 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
   apr_hash_t *changelist_hash = NULL;
   int i;
 
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      if (svn_path_is_url(path))
+        return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET,
+                                                  NULL,
+                                                  _("'%s' is not a local path"),
+                                                  path));
+    }
+
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
@@ -143,6 +154,16 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_t *changelist_hash = NULL;
   int i;
+
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      if (svn_path_is_url(path))
+        return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET,
+                                                  NULL,
+                                                  _("'%s' is not a local path"),
+                                                  path));
+    }
 
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
