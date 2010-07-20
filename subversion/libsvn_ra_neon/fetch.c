@@ -420,6 +420,7 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
   err = svn_ra_neon__request_dispatch(NULL, request, NULL, NULL,
                                       200 /* OK */,
                                       226 /* IM Used */,
+                                      0,
                                       pool);
   svn_ra_neon__request_destroy(request);
 
@@ -1097,7 +1098,8 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
      PROPFINDs. */
   if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
     {
-      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, latest_revnum, pool));
+      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, 
+                                                 latest_revnum, pool));
       if (! SVN_IS_VALID_REVNUM(*latest_revnum))
         return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                 _("The OPTIONS response did not include "
