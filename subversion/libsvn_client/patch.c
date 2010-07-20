@@ -178,6 +178,13 @@ typedef struct patch_target_t {
   /* All the information that is specifict to the content of the target. */
   target_content_info_t *content_info;
 
+  /* A hash table of target_content_info_t keyed property names. */
+  apr_hash_t *prop_content_info;
+
+  /* A hash table of paths to temporary files underlying the result streams
+   * for the properties. The property names act as keys. */
+  apr_hash_t *prop_patched_paths;
+
   /* The pool the target is allocated in. */
   apr_pool_t *pool;
 } patch_target_t;
@@ -225,16 +232,17 @@ strip_path(const char **result, const char *path, int strip_count,
   return SVN_NO_ERROR;
 }
 
-/* Obtain eol and keywords information for LOCAL_ABSPATH, from WC_CTX and
- * store the obtained information in *TARGET.
+/* Obtain KEYWORDS, EOL_STYLE and EOL_STR for LOCAL_ABSPATH, from WC_CTX.
  * Use RESULT_POOL for allocations of fields in TARGET.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
-resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            patch_target_t *target,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
+                                 svn_subst_eol_style_t *eol_style,
+                                 const char **eol_str,
+                                 svn_wc_context_t *wc_ctx,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   apr_hash_t *props;
   svn_string_t *keywords_val, *eol_style_val;
@@ -260,9 +268,9 @@ resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
                                             scratch_pool));
       rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
       SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
-                                   target->local_abspath,
+                                   local_abspath,
                                    scratch_pool, scratch_pool));
-      SVN_ERR(svn_subst_build_keywords2(&target->content_info->keywords,
+      SVN_ERR(svn_subst_build_keywords2(keywords,
                                         keywords_val->data,
                                         rev_str, url, changed_date,
                                         author, result_pool));
@@ -272,8 +280,8 @@ resolve_target_wc_file_info(svn_wc_context_t *wc_ctx,
                                APR_HASH_KEY_STRING);
   if (eol_style_val)
     {
-      svn_subst_eol_style_from_value(&target->content_info->eol_style,
-                                     &target->content_info->eol_str,
+      svn_subst_eol_style_from_value(eol_style,
+                                     eol_str,
                                      eol_style_val->data);
     }
 
@@ -405,9 +413,56 @@ resolve_target_path(patch_target_t *target,
       return SVN_NO_ERROR;
     }
 
-  if (target->kind_on_disk == svn_node_file)
-    SVN_ERR(resolve_target_wc_file_info(wc_ctx, target->local_abspath,
-                                        target, result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Initialize a PROP_CONTENT_INFO structure for PROP_NAME. Use working copy
+ * context WC_CTX. Use the REJECT stream that is shared with all content
+ * info structures.
+ * REMOVE_TEMPFILES as in svn_client_patch().
+ */
+static svn_error_t *
+init_prop_content_info(target_content_info_t **prop_content_info,
+                       const char **patched_path,
+                       const char *prop_name,
+                       svn_stream_t *reject,
+                       svn_boolean_t remove_tempfiles,
+                       svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  target_content_info_t *content_info; 
+  const svn_string_t *value;
+
+  content_info = apr_pcalloc(result_pool, sizeof(*content_info));
+
+  /* All other fields in are FALSE or NULL due to apr_pcalloc().*/
+  content_info->current_line = 1;
+  content_info->eol_style = svn_subst_eol_style_none;
+  content_info->lines = apr_array_make(result_pool, 0,
+                                 sizeof(svn_stream_mark_t *));
+  content_info->hunks = apr_array_make(result_pool, 0, sizeof(hunk_info_t *));
+  content_info->keywords = apr_hash_make(result_pool);
+  content_info->reject = reject;
+  content_info->pool = result_pool;
+
+  SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name, 
+                           result_pool, scratch_pool));
+
+  /* We assume that a property is small enough to be kept in memory during
+   * the patch process. */
+  content_info->stream = svn_stream_from_string(value, result_pool);
+
+  /* Create a temporary file to write the patched result to. For properties,
+   * we don't have to worrry about different eol-style. */
+  SVN_ERR(svn_stream_open_unique(&content_info->patched,
+                                 patched_path, NULL,
+                                 remove_tempfiles ?
+                                   svn_io_file_del_on_pool_cleanup :
+                                   svn_io_file_del_none,
+                                 result_pool, scratch_pool));
+
+  *prop_content_info = content_info;
 
   return SVN_NO_ERROR;
 }
@@ -431,9 +486,9 @@ init_patch_target(patch_target_t **patch_target,
   patch_target_t *target;
   target_content_info_t *content_info; 
 
-  target = apr_pcalloc(result_pool, sizeof(*target));
   content_info = apr_pcalloc(result_pool, sizeof(*content_info));
 
+  /* All other fields in content_info are FALSE or NULL due to apr_pcalloc().*/
   content_info->current_line = 1;
   content_info->eol_style = svn_subst_eol_style_none;
   content_info->lines = apr_array_make(result_pool, 0,
@@ -442,12 +497,15 @@ init_patch_target(patch_target_t **patch_target,
   content_info->keywords = apr_hash_make(result_pool);
   content_info->pool = result_pool;
 
-  target->content_info = content_info;
+  target = apr_pcalloc(result_pool, sizeof(*target));
 
-  /* All other fields are FALSE or NULL due to apr_pcalloc(). */
+  /* All other fields in target are FALSE or NULL due to apr_pcalloc(). */
   target->patch = patch;
   target->db_kind = svn_node_none;
   target->kind_on_disk = svn_node_none;
+  target->content_info = content_info;
+  target->prop_content_info = apr_hash_make(result_pool);
+  target->prop_patched_paths = apr_hash_make(result_pool);
   target->pool = result_pool;
 
   SVN_ERR(resolve_target_path(target, patch->new_filename,
@@ -478,6 +536,14 @@ init_patch_target(patch_target_t **patch_target,
           SVN_ERR(svn_io_is_file_executable(&target->executable,
                                             target->local_abspath,
                                             scratch_pool));
+
+          SVN_ERR(obtain_eol_and_keywords_for_file(&content_info->keywords,
+                                                   &content_info->eol_style,
+                                                   &content_info->eol_str,
+                                                   wc_ctx,
+                                                   target->local_abspath,
+                                                   result_pool,
+                                                   scratch_pool));
         }
 
       /* Create a temporary file to write the patched result to. */
@@ -514,6 +580,43 @@ init_patch_target(patch_target_t **patch_target,
                                  APR_EOL_STR);
       len = strlen(diff_header);
       SVN_ERR(svn_stream_write(content_info->reject, diff_header, &len));
+
+      /* Time for the properties */
+      if (! target->skipped)
+        {
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first(result_pool, patch->prop_patches);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              const char *prop_name = svn__apr_hash_index_key(hi);
+              target_content_info_t *prop_content_info;
+              const char *patched_path;
+
+              /* Obtain info about this property */
+              SVN_ERR(init_prop_content_info(&prop_content_info, 
+                                             &patched_path,
+                                             prop_name,
+                                             content_info->reject,
+                                             remove_tempfiles,
+                                             wc_ctx, target->local_abspath,
+                                             result_pool, scratch_pool));
+
+              /* Store information about the content of prop_name */
+              apr_hash_set(target->prop_content_info, prop_name, 
+                           APR_HASH_KEY_STRING, prop_content_info);
+
+              /* Record the path to the temporary file underlying the
+               * patched version of prop_name.
+               *
+               * ### Two hash tables keyed by prop_name? We're doing it this
+               * ### way since the path is not part of the content, but it
+               * ### would be nice if we could just use one table. */
+              apr_hash_set(target->prop_patched_paths, prop_name,
+                           APR_HASH_KEY_STRING, patched_path);
+            }
+        }
     }
 
   *patch_target = target;
@@ -1410,12 +1513,30 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         }
     }
 
-  /* Close the streams of the target so that their content is flushed
-   * to disk. This will also close underlying streams and files. */
-  if (target->kind_on_disk == svn_node_file)
-    SVN_ERR(svn_stream_close(target->content_info->stream));
-  SVN_ERR(svn_stream_close(target->content_info->patched));
-  SVN_ERR(svn_stream_close(target->content_info->reject));
+    {
+      apr_hash_index_t *hi;
+      target_content_info_t *prop_content_info;
+
+      /* Close the streams of the target so that their content is flushed
+       * to disk. This will also close underlying streams and files. 
+       * First the streams belonging to properties .. */
+          for (hi = apr_hash_first(result_pool, target->prop_content_info);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              prop_content_info = svn__apr_hash_index_val(hi);
+              svn_stream_close(prop_content_info->stream);
+              svn_stream_close(prop_content_info->patched);
+            }
+
+
+       /* .. And then streams associted with the file. The reject stream is
+        * shared between all target_content_info structures. */
+      if (target->kind_on_disk == svn_node_file)
+        SVN_ERR(svn_stream_close(target->content_info->stream));
+      SVN_ERR(svn_stream_close(target->content_info->patched));
+      SVN_ERR(svn_stream_close(target->content_info->reject));
+    }
 
   if (! target->skipped)
     {

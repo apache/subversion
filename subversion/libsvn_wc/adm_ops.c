@@ -1189,14 +1189,17 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     }
 #endif
 
-#ifndef SVN_WC__SINGLE_DB
   if (kind == svn_node_dir && !exists)
     {
-      /* Lock on parent needs to be propogated into the child db. */
-      SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
-                                       scratch_pool));
-    }
+#ifdef SVN_WC__SINGLE_DB
+      svn_boolean_t locked;
+      SVN_ERR(svn_wc__db_wclocked(&locked, db, local_abspath, scratch_pool));
+      if (!locked)
 #endif
+        /* Lock on parent needs to be propogated into the child db. */
+        SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                         scratch_pool));
+    }
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   /* ### this is totally bogus. we clear these cuz turds might have been
@@ -2342,7 +2345,12 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
   if (url)
     {
       external_repos_relpath = svn_uri_is_child(repos_root_url, url, NULL);
-      SVN_ERR_ASSERT(external_repos_relpath != NULL);
+
+      if (external_repos_relpath == NULL)
+          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                   _("Can't add a file external to '%s' as it"
+                                     " is not a file in repository '%s'."),
+                                   url, repos_root_url);
 
       external_repos_relpath = svn_path_uri_decode(external_repos_relpath,
                                                    scratch_pool);

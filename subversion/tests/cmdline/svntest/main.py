@@ -1009,6 +1009,9 @@ def is_fs_type_fsfs():
 def is_os_windows():
   return os.name == 'nt'
 
+def is_windows_type_dav():
+  return is_os_windows() and is_ra_type_dav()
+
 def is_posix_os():
   return os.name == 'posix'
 
