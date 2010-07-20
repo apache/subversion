@@ -38,6 +38,7 @@
 #include "svn_config.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -66,9 +67,10 @@ svn_cl__commit(apr_getopt_t *os,
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       if (svn_path_is_url(target))
-        return svn_error_create(SVN_ERR_WC_BAD_PATH, NULL,
-                                "Must give local path (not URL) as the "
-                                "target of a commit");
+        return svn_error_return(
+                 svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("'%s' is a URL, but URLs cannot be "
+                                     "commit targets"), target));
     }
 
   /* Add "." if user passed 0 arguments. */
