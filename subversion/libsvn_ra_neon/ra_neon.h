@@ -942,12 +942,10 @@ svn_ra_neon__maybe_store_auth_info_after_result(svn_error_t *err,
    NULL, as this will cause Neon to generate a "Content-Length: 0"
    header (which is important to some proxies).
 
-   OKAY_1 and OKAY_2 are the "acceptable" result codes. Anything other
-   than one of these will generate an error. OKAY_1 should always be
-   specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
-   not allowed.
-
- */
+   OKAY_1, OKAY_2, and OKAY_3 are the "acceptable" result codes.
+   Anything other than one of these will generate an error. OKAY_1
+   should always be specified (e.g. as 200); use 0 for OKAY_2 and/or
+   OKAY_3 if additional result codes aren't allowed.  */
 svn_error_t *
 svn_ra_neon__request_dispatch(int *code_p,
                               svn_ra_neon__request_t *request,
@@ -955,6 +953,7 @@ svn_ra_neon__request_dispatch(int *code_p,
                               const char *body,
                               int okay_1,
                               int okay_2,
+                              int okay_3,
                               apr_pool_t *pool);
 
 /* A layer over SVN_RA_NEON__REQUEST_DISPATCH() adding a
@@ -1106,14 +1105,22 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
    RAS->capabilities with the server's capabilities as read from the
    response headers.  Use POOL only for temporary allocation.
 
+   If the RELOCATION_LOCATION is non-NULL, allow the OPTIONS response
+   to report a server-dictated redirect or relocation (HTTP 301 or 302
+   error codes), setting *RELOCATION_LOCATION to the value of the
+   corrected repository URL.  Otherwise, such responses from the
+   server will generate an error.  (In either case, no capabilities are
+   exchanged if there is, in fact, such a response from the server.)
+
    If the server is kind enough to tell us the current youngest
    revision of the target repository, set *YOUNGEST_REV to that value;
    set it to SVN_INVALID_REVNUM otherwise.
 
-  NOTE:  This function also expects the server to announce the
+   NOTE:  This function also expects the server to announce the
    activity collection.  */
 svn_error_t *
 svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
+                                   const char **relocation_location,
                                    svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool);
 

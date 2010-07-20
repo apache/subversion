@@ -157,19 +157,15 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                           apr_hash_t *config,
                           apr_pool_t *pool)
 {
-  apr_pool_t *sesspool = svn_pool_create(pool);
-  const char *session_url;
+  const char *corrected_url;
 
-  SVN_ERR(svn_ra_open4(session_p, &session_url, repos_URL, NULL,
-                       callbacks, callback_baton, config, sesspool));
-  if (strcmp(repos_URL, session_url) != 0)
-    {
-      svn_pool_destroy(sesspool);
-      return svn_error_createf(SVN_ERR_RA_SESSION_URL_MISMATCH, NULL,
-                               _("Session URL '%s' does not match requested "
-                                 " URL '%s', and redirection was disallowed."),
-                               session_url, repos_URL);
-    }
+  SVN_ERR(svn_ra_open4(session_p, &corrected_url, repos_URL, NULL,
+                       callbacks, callback_baton, config, pool));
+  if (corrected_url)
+    return svn_error_createf(SVN_ERR_RA_SESSION_URL_MISMATCH, NULL,
+                             _("The repository has been moved to '%s'; "
+                               "consider relocating."), corrected_url);
+
   return SVN_NO_ERROR;
 }
 

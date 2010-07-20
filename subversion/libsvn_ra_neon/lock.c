@@ -296,7 +296,7 @@ do_lock(svn_lock_t **lock,
                             apr_psprintf(req->pool, "%ld", current_rev));
 
   err = svn_ra_neon__request_dispatch(&code, req, extra_headers, body->data,
-                                      200, 0, pool);
+                                      200, 0, 0, pool);
   if (err)
     goto cleanup;
 
@@ -545,7 +545,7 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
                           "text/xml; charset=\"utf-8\"");
 
   err = svn_ra_neon__request_dispatch(NULL, req, extra_headers, body,
-                                      200, 207, pool);
+                                      200, 207, 0, pool);
   if (err)
     {
       err = svn_error_quick_wrap(err, _("Failed to fetch lock information"));
