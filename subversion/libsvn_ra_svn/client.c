@@ -700,7 +700,8 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
   svn_config_t *cfg, *cfg_client;
 
   /* We don't support server-prescribed redirections in ra-svn. */
-  *corrected_url = NULL;
+  if (corrected_url)
+    *corrected_url = NULL;
 
   SVN_ERR(parse_url(url, &uri, sess_pool));
 

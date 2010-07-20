@@ -295,7 +295,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   svn_ra_callbacks2_t *cbtable = apr_pcalloc(pool, sizeof(*cbtable));
   callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
-  apr_pool_t *sesspool = svn_pool_create(pool);
   const char *final_url;
 
   if (session_url)
@@ -345,14 +344,14 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   if (allow_redirect)
     {
       SVN_ERR(svn_ra_open4(ra_session, &final_url, base_url, uuid,
-                           cbtable, cb, ctx->config, sesspool));
+                           cbtable, cb, ctx->config, pool));
       if (session_url)
         *session_url = final_url;
     }
   else
     {
-      SVN_ERR(svn_ra_open3(ra_session, base_url, uuid, cbtable, cb,
-                           ctx->config, sesspool));
+      SVN_ERR(svn_ra_open4(ra_session, NULL, base_url, uuid,
+                           cbtable, cb, ctx->config, pool));
       if (session_url)
         SVN_ERR(svn_ra_get_session_url(*ra_session, session_url, pool));
     }

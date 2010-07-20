@@ -269,7 +269,7 @@ svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
 }
 
 svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
-                          const char **corrected_url,
+                          const char **corrected_url_p,
                           const char *repos_URL,
                           const char *uuid,
                           const svn_ra_callbacks2_t *callbacks,
@@ -296,7 +296,8 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
   const char *store_pp_plaintext
     = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
-  
+  const char *corrected_url;
+
   /* Initialize the return variable. */
   *session_p = NULL;
 
@@ -488,7 +489,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   session->pool = sesspool;
 
   /* Ask the library to open the session. */
-  SVN_ERR_W(vtable->open_session(session, corrected_url, repos_URL,
+  SVN_ERR_W(vtable->open_session(session, &corrected_url, repos_URL,
                                  callbacks, callback_baton, config, sesspool),
             apr_psprintf(pool, "Unable to connect to a repository at URL '%s'",
                          repos_URL));
@@ -497,9 +498,9 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
      correction (a 301 or 302 redirect response during the initial
      OPTIONS request), then kill the session so the caller can decide
      what to do. */
-  if (*corrected_url)
+  if (corrected_url_p && corrected_url)
     {
-      *corrected_url = apr_pstrdup(pool, *corrected_url);
+      *corrected_url_p = apr_pstrdup(pool, corrected_url);
       svn_pool_destroy(sesspool);
       return SVN_NO_ERROR;
     }

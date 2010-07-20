@@ -580,13 +580,19 @@ svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
 typedef struct svn_ra_session_t svn_ra_session_t;
 
 /**
- * Set @a *session_p to an opaque object representing a
- * repository session for the repository at @a repos_URL and @a
- * *session_url to @c NULL; otherwise, set @a *session_p to @c NULL
- * and @a *session_url to a corrected URL (perhaps as prescribed by
- * the server) which the caller might wish to use when re-attempting
- * the use of this interface.  In either case, allocated the returned
- * item in @a pool.
+ * Open a repository access session to the repository at @a repos_URL,
+ * or inform the caller regarding a correct URL by which to access
+ * that repository.
+ *
+ * If @a repos_URL can be used successfully to access the repository,
+ * set @a *session_p to an opaque object representing a repository
+ * session for the repository and (if @a corrected_url is non-NULL)
+ * set @a *corrected_url to NULL.  If there's a better URL that the
+ * caller should try and @a corrected_url is non-NULL, set
+ * @a *session_p to NULL and @a *corrected_url to the corrected URL.  If
+ * there's a better URL that the caller should try, and @a
+ * corrected_url is NULL, return an #SVN_ERR_RA_SESSION_URL_MISMATCH
+ * error.  Allocate all returned items in @a pool.
  *
  * Return @c SVN_ERR_RA_UUID_MISMATCH if @a uuid is non-NULL and not equal
  * to the UUID of the repository at @c repos_URL.
@@ -615,8 +621,8 @@ svn_ra_open4(svn_ra_session_t **session_p,
              apr_hash_t *config,
              apr_pool_t *pool);
 
-/** Similar to svn_ra_open4(), but return #SVN_ERR_RA_SESSION_URL_MISMATCH
- * rather than the @a corrected_url.
+/** Similar to svn_ra_open4(), but with @a corrected_url always passed
+ * as @c NULL.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
