@@ -4,6 +4,8 @@ UUID: 728f5e1e-a57c-4dd4-8b4f-ca752f5178f3
 
 Revision-number: 0
 Prop-content-length: 56
+Prop-content-md5: (svn:date) 1b69f2412c6c742c9c7244a61fa18e09
+Prop-content-sha1: (svn:date) 566264fef4d43d78fac5966221a636c01cfb8dd8
 Content-length: 56
 
 K 8
@@ -14,6 +16,12 @@ PROPS-END
 
 Revision-number: 1
 Prop-content-length: 97
+Prop-content-md5: (svn:log) d41d8cd98f00b204e9800998ecf8427e
+Prop-content-sha1: (svn:log) da39a3ee5e6b4b0d3255bfef95601890afd80709
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) 65ac64d8cca57d54f7b09789e9e78726
+Prop-content-sha1: (svn:date) e55b50fb4607950d7b8e78092d5771a53bcbdd02
 Content-length: 97
 
 K 7
@@ -41,6 +49,12 @@ PROPS-END
 
 Revision-number: 2
 Prop-content-length: 124
+Prop-content-md5: (svn:log) c5f0e220fb8ccf25d10ad241dcfd746d
+Prop-content-sha1: (svn:log) ee00102303d31cafd567cb15853e50132446a55c
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) f3d8837082ca5c8c0a62763b33d0837c
+Prop-content-sha1: (svn:date) 3d7b7e4383358001a010e8d217cc71099a73ac6e
 Content-length: 124
 
 K 7
@@ -274,6 +288,12 @@ This is the file 'A/mu'.
 
 Revision-number: 3
 Prop-content-length: 127
+Prop-content-md5: (svn:log) 5c72cafb682cb5732941ad3b4c35ae59
+Prop-content-sha1: (svn:log) 844692fcd525ed0689e8ee0763a0e4561690b43d
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) 0d8a658946f806a5b815299da6efdfce
+Prop-content-sha1: (svn:date) 788b71e9b4b5c67b0b2135673e76dfa57079ef68
 Content-length: 127
 
 K 7
@@ -304,6 +324,12 @@ Added extra line.
 
 Revision-number: 4
 Prop-content-length: 128
+Prop-content-md5: (svn:log) bbb947527249743ceab8254b3dacd4cc
+Prop-content-sha1: (svn:log) 70ddf3a94578a1164e79b6f1d274d0db8acde01e
+Prop-content-md5: (svn:author) 5176e28ac739be42420688254587a92a
+Prop-content-sha1: (svn:author) 2a55f6a4d5f5d2ac3b08bf7eb6bc2bde2b1f9ce6
+Prop-content-md5: (svn:date) 9fe701bb0e59475780bfe00022627f98
+Prop-content-sha1: (svn:date) 589370c75026addcdd5c11772aa206bb9a6d389e
 Content-length: 128
 
 K 7
@@ -324,6 +350,8 @@ Node-path: trunk/A
 Node-kind: dir
 Node-action: change
 Prop-content-length: 26
+Prop-content-md5: (foo) 37b51d194a7513e45b56f6524f2d51f2
+Prop-content-sha1: (foo) 62cdb7020ff920e5aa642c3d4066950dd1f01f4d
 Content-length: 26
 
 K 3
@@ -335,6 +363,12 @@ PROPS-END
 
 Revision-number: 5
 Prop-content-length: 116
+Prop-content-md5: (svn:log) 10311450610213e83fa9b7b6dd9148b8
+Prop-content-sha1: (svn:log) e06b304aa4c8ffe33ea44ec10023a900fc90a836
+Prop-content-md5: (svn:author) 5176e28ac739be42420688254587a92a
+Prop-content-sha1: (svn:author) 2a55f6a4d5f5d2ac3b08bf7eb6bc2bde2b1f9ce6
+Prop-content-md5: (svn:date) ea204d8057e4c132b701417012b29589
+Prop-content-sha1: (svn:date) 3b183cd08efe14a34541311ff10d8df09a448522
 Content-length: 116
 
 K 7
@@ -357,6 +391,12 @@ Node-action: delete
 
 Revision-number: 6
 Prop-content-length: 116
+Prop-content-md5: (svn:log) 0d914d8d200063955513f49127bf1159
+Prop-content-sha1: (svn:log) 61301c02fe66da8307a029c0830ecdca617fe449
+Prop-content-md5: (svn:author) 5176e28ac739be42420688254587a92a
+Prop-content-sha1: (svn:author) 2a55f6a4d5f5d2ac3b08bf7eb6bc2bde2b1f9ce6
+Prop-content-md5: (svn:date) 008dd7b8ca0b8761f784c677d1a8c3e3
+Prop-content-sha1: (svn:date) d7ab15a75694a73885b1707b7d1652bb831ec5e8
 Content-length: 116
 
 K 7
@@ -494,6 +534,12 @@ This is the file 'A/D/gamma'.
 
 Revision-number: 7
 Prop-content-length: 125
+Prop-content-md5: (svn:log) f6d9f682d5011607580ee4462eff7156
+Prop-content-sha1: (svn:log) ce37d93f790eb3b1670b69e4be410c510ef3de84
+Prop-content-md5: (svn:author) 5176e28ac739be42420688254587a92a
+Prop-content-sha1: (svn:author) 2a55f6a4d5f5d2ac3b08bf7eb6bc2bde2b1f9ce6
+Prop-content-md5: (svn:date) e83ec98db8ea6e40028fa35ecbfccb12
+Prop-content-sha1: (svn:date) 474deb2c396cec8418307577caa3a7339f17ea2e
 Content-length: 125
 
 K 7
@@ -514,6 +560,8 @@ Node-path: trunk
 Node-kind: dir
 Node-action: change
 Prop-content-length: 31
+Prop-content-md5: (propon) 8d0411b338c83cd8cd8ad9d9db127101
+Prop-content-sha1: (propon) 488784591515bd4cdaa016be4ec9b172dc4e7caf
 Content-length: 31
 
 K 6
