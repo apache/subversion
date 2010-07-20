@@ -57,10 +57,6 @@ svn_cl__upgrade(apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, scratch_pool));
-
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);

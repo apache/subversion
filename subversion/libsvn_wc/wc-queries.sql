@@ -102,6 +102,11 @@ INSERT OR IGNORE INTO WORKING_NODE (
   wc_id, local_relpath, parent_relpath, presence, kind)
 VALUES (?1, ?2, ?3, 'incomplete', 'unknown');
 
+-- STMT_INSERT_NODE_DATA_INCOMPLETE
+INSERT OR IGNORE INTO NODE_DATA (
+  wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
+VALUES (?1, ?2, ?3, ?4, 'incomplete', 'unknown');
+
 -- STMT_COUNT_BASE_NODE_CHILDREN
 SELECT COUNT(*) FROM BASE_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
@@ -142,9 +147,20 @@ where wc_id = ?1 and local_relpath = ?2;
 update base_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_DATA_BASE_PROPS
+update node_data set properties = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_WORKING_PROPS
 update working_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_NODE_DATA_WORKING_PROPS
+update node_data set properties = ?3
+where wc_id = ?1 and local_relpath = ?2
+  and op_depth in
+   (select max(op_depth) from node_data
+    where wc_id = ?1 and local_relpath = ?2);
 
 -- STMT_UPDATE_ACTUAL_PROPS
 update actual_node set properties = ?3
@@ -202,6 +218,12 @@ where repos_id is not null and wc_id = ?1 and
 -- STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO
 update working_node set copyfrom_repos_id = ?4
 where copyfrom_repos_id is not null and wc_id = ?1 and
+  (local_relpath = ?2 or
+   local_relpath like ?3 escape '#');
+
+-- STMT_UPDATE_NODE_DATA_RECURSIVE_ORIGINAL_REPO
+update node_data set original_repos_id = ?5
+where wc_id = ?1 and original_repos_id = ?4 and
   (local_relpath = ?2 or
    local_relpath like ?3 escape '#');
 
@@ -296,17 +318,37 @@ where wc_id = ?1 and local_relpath = ?2;
 UPDATE BASE_NODE SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_BASE_DEPTH
+UPDATE NODE_DATA SET depth = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
+
 -- STMT_UPDATE_WORKING_DEPTH
 UPDATE WORKING_NODE SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_WORKING_DEPTH
+UPDATE NODE_DATA SET depth = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2 AND
+      op_depth IN (SELECT MAX(op_depth) FROM NODE_DATA
+                   WHERE wc_id = ?1 AND local_relpath = ?2);
+
 -- STMT_UPDATE_BASE_EXCLUDED
-UPDATE BASE_NODE SET presence = 'excluded', depth = 'infinity'
+UPDATE BASE_NODE SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_BASE_EXCLUDED
+UPDATE NODE_DATA SET presence = 'excluded', depth = NULL
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
+
 -- STMT_UPDATE_WORKING_EXCLUDED
-UPDATE WORKING_NODE SET presence = 'excluded', depth = 'infinity'
+UPDATE WORKING_NODE SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_NODE_WORKING_EXCLUDED
+UPDATE NODE_DATA SET presence = 'excluded', depth = NULL
+WHERE wc_id = ?1 AND local_relpath = ?2 AND
+      op_depth IN (SELECT MAX(op_depth) FROM NODE_DATA
+                   WHERE wc_id = ?1 AND local_relpath = ?2);
 
 -- STMT_UPDATE_BASE_PRESENCE
 update base_node set presence= ?3
@@ -369,6 +411,14 @@ SELECT 1 FROM actual_node
   WHERE older_checksum = ?1 OR older_checksum = ?2
     OR  left_checksum  = ?1 OR left_checksum  = ?2
     OR  right_checksum = ?1 OR right_checksum = ?2
+LIMIT 1
+
+-- STMT_SELECT_BASE_WORKING_NODE
+SELECT 1 FROM base_node
+  WHERE wc_id = ?1 AND local_relpath = ?2;
+UNION ALL
+SELECT 1 FROM working_node
+  WHERE wc_id = ?1 AND local_relpath = ?2;
 LIMIT 1
 
 -- STMT_DELETE_PRISTINE

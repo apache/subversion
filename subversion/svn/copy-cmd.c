@@ -90,9 +90,6 @@ svn_cl__copy(apr_getopt_t *os,
   if ((! srcs_are_urls) && (! dst_is_url))
     {
       /* WC->WC */
-      if (! opt_state->quiet)
-        SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                     FALSE, pool));
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
@@ -114,18 +111,18 @@ svn_cl__copy(apr_getopt_t *os,
             display like: "Adding   dir1/foo-copy.c", which could be a
             bogus path.
       */
+      ctx->notify_func2 = NULL;
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
       /* URL->WC : Use checkout-style notification. */
-      if (! opt_state->quiet)
-        {
-          SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                       FALSE, pool));
-          SVN_ERR(svn_cl__notifier_mark_checkout(ctx->notify_baton2));
-        }
+      SVN_ERR(svn_cl__notifier_mark_checkout(ctx->notify_baton2));
     }
-  /* else URL -> URL, meaning that no notification is needed. */
+  else
+    {
+      /* URL -> URL, meaning that no notification is needed. */
+      ctx->notify_func2 = NULL;
+    }
 
   if (! dst_is_url)
     {

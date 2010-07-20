@@ -70,10 +70,7 @@ svn_cl__changelist(apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, pool));
-  else
+  if (opt_state->quiet)
     /* FIXME: This is required because svn_client_create_context()
        always initializes ctx->notify_func2 to a wrapper function
        which calls ctx->notify_func() if it isn't NULL.  In other

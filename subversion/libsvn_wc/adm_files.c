@@ -757,7 +757,9 @@ svn_wc__adm_destroy(svn_wc__db_t *db,
                     const char *dir_abspath,
                     apr_pool_t *scratch_pool)
 {
+#ifndef SINGLE_DB
   const char *adm_abspath;
+#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
@@ -767,8 +769,10 @@ svn_wc__adm_destroy(svn_wc__db_t *db,
      directory, which also removes the lock */
   SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, scratch_pool));
 
+#ifndef SINGLE_DB
   adm_abspath = svn_wc__adm_child(dir_abspath, NULL, scratch_pool);
   SVN_ERR(svn_io_remove_dir2(adm_abspath, FALSE, NULL, NULL, scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }

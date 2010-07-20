@@ -540,6 +540,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
   const char *D, *D1, *D2, *D3, *D4;
   svn_boolean_t locked_here, locked;
   svn_error_t *err;
+  svn_wc_adm_access_t *adm_access, *subdir_access;
 
 #undef WC_NAME
 #define WC_NAME "test_access_batons"
@@ -553,6 +554,28 @@ test_access_baton_like_locking(apr_pool_t *pool)
   D4 = svn_dirent_join(D3, "DD", pool);
 
   SVN_ERR(svn_io_make_dir_recursively(D4, pool));
+
+  /* Use the legacy interface */
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, local_abspath, TRUE, 0,
+                           NULL, NULL, pool));
+  SVN_ERR(svn_wc_add3(D, adm_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, D, pool));
+  SVN_ERR(svn_wc_add3(D1, subdir_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, D1, pool));
+  SVN_ERR(svn_wc_add3(D2, subdir_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, D2, pool));
+  SVN_ERR(svn_wc_add3(D3, subdir_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_locked(&locked, D3, pool));
+  SVN_TEST_ASSERT(locked);
+  SVN_ERR(svn_wc_revert3(D, adm_access, -1, FALSE,
+                         NULL, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_locked(&locked, D3, pool));
+  SVN_TEST_ASSERT(!locked);
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
 
