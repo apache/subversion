@@ -615,7 +615,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
   SVN_ERR(svn_client__open_ra_session_internal(ra_session, NULL, base_url,
                                                base_dir_abspath, commit_items,
                                                is_commit, !is_commit,
-                                               FALSE, ctx, pool));
+                                               ctx, pool));
 
   /* If this is an import (aka, not a commit), we need to verify that
      our repository URL exists. */

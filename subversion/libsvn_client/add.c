@@ -691,8 +691,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
 
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
                                                    first_url, NULL, NULL,
-                                                   FALSE, TRUE, FALSE,
-                                                   ctx, pool));
+                                                   FALSE, TRUE, ctx, pool));
 
       for (i = 0; i < urls->nelts; i++)
         {
@@ -794,7 +793,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   if (!ra_session)
     SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, common,
                                                  NULL, NULL, FALSE, TRUE,
-                                                 FALSE, ctx, pool));
+                                                 ctx, pool));
 
   /* URI-decode each target. */
   for (i = 0; i < targets->nelts; i++)

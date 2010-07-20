@@ -417,7 +417,7 @@ svn_client_lock(const apr_array_header_t *targets,
     SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
                                                common_parent_url, base_dir,
-                                               NULL, FALSE, FALSE, FALSE,
+                                               NULL, FALSE, FALSE,
                                                ctx, pool));
 
   cb.base_path = base_dir;
@@ -458,7 +458,7 @@ svn_client_unlock(const apr_array_header_t *targets,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
                                                common_parent_url,
                                                base_dir_abspath, NULL, FALSE,
-                                               FALSE, FALSE, ctx, pool));
+                                               FALSE, ctx, pool));
 
   /* If break_lock is not set, lock tokens are required by the server.
      If the targets were all URLs, ensure that we provide lock tokens,

@@ -80,7 +80,7 @@ file_fetcher(void *baton,
   else
     SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session), NULL,
                                                  session_url, NULL, NULL,
-                                                 FALSE, TRUE, FALSE,
+                                                 FALSE, TRUE,
                                                  ffb->ctx, ffb->pool));
 
   return svn_ra_get_file(ffb->session, base_name, revision, stream,
@@ -194,7 +194,7 @@ update_internal(svn_revnum_t *result_rev,
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, anchor_url,
                                                anchor_abspath, NULL, TRUE,
-                                               TRUE, FALSE, ctx, pool));
+                                               TRUE, ctx, pool));
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */

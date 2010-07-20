@@ -753,7 +753,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
      of a cheap(ish) sanity check.  */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
                                                first_pair->src_abspath_or_url,
-                                               NULL, NULL, FALSE, TRUE, FALSE,
+                                               NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
@@ -1218,7 +1218,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   SVN_ERR(svn_dirent_get_absolute(&top_src_abspath, top_src_path, pool));
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
                                                top_src_abspath, NULL, TRUE,
-                                               TRUE, FALSE, ctx, pool));
+                                               TRUE, ctx, pool));
 
   /* If requested, determine the nearest existing parent of the destination,
      and reparent the ra session there. */
@@ -1389,8 +1389,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* Open an RA session to DST_URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
                                                NULL, commit_items,
-                                               FALSE, FALSE, FALSE,
-                                               ctx, pool));
+                                               FALSE, FALSE, ctx, pool));
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
@@ -1777,7 +1776,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
      (yet) have a working copy, so we don't have a corresponding path and
      tempfiles cannot go into the admin area. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_src_url,
-                                               NULL, NULL, FALSE, TRUE, FALSE,
+                                               NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
   /* Pass null for the path, to ensure error if trying to get a
