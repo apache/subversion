@@ -1513,12 +1513,30 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         }
     }
 
-  /* Close the streams of the target so that their content is flushed
-   * to disk. This will also close underlying streams and files. */
-  if (target->kind_on_disk == svn_node_file)
-    SVN_ERR(svn_stream_close(target->content_info->stream));
-  SVN_ERR(svn_stream_close(target->content_info->patched));
-  SVN_ERR(svn_stream_close(target->content_info->reject));
+    {
+      apr_hash_index_t *hi;
+      target_content_info_t *prop_content_info;
+
+      /* Close the streams of the target so that their content is flushed
+       * to disk. This will also close underlying streams and files. 
+       * First the streams belonging to properties .. */
+          for (hi = apr_hash_first(result_pool, target->prop_content_info);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              prop_content_info = svn__apr_hash_index_val(hi);
+              svn_stream_close(prop_content_info->stream);
+              svn_stream_close(prop_content_info->patched);
+            }
+
+
+       /* .. And then streams associted with the file. The reject stream is
+        * shared between all target_content_info structures. */
+      if (target->kind_on_disk == svn_node_file)
+        SVN_ERR(svn_stream_close(target->content_info->stream));
+      SVN_ERR(svn_stream_close(target->content_info->patched));
+      SVN_ERR(svn_stream_close(target->content_info->reject));
+    }
 
   if (! target->skipped)
     {
