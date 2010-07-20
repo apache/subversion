@@ -18,9 +18,16 @@ The solution's approach is as follows:
      today.  [DONE]
 
   3. Teach the client 'checkout', 'update', and 'switch' commands to
-     recognize these relocation responses and (optionally?) retry the
-     operation after performing relocation of the working copy (if
-     necessary).
+     recognize these relocation responses and retry the operation
+     after performing relocation of the working copy (if necessary).
+
+  4. Provide notification of redirection events to the user.
+
+  5. Make the retry-on-new-URL event an optional behavior, tied to the
+     particular server and defaulting to 'off', recognizing that
+     there's a security element here (compromised server, redirecting
+     folks to dangerous code, etc.)
+
 
 Questions:
 
