@@ -2333,6 +2333,8 @@ add_directory(const char *path,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t wc_kind;
   svn_boolean_t already_conflicted;
+  svn_boolean_t versioned_locally_and_present;
+  svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_error_t *err;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
@@ -2408,25 +2410,6 @@ add_directory(const char *path,
       db->ambient_depth = svn_depth_infinity;
     }
 
-  /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  db->local_abspath, pool));
-  if (already_conflicted)
-    {
-      /* Record this conflict so that its descendants are skipped silently. */
-      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
-
-      db->skip_this = TRUE;
-      db->skip_descendants = TRUE;
-      db->already_notified = TRUE;
-
-      /* ### TODO: Also print victim_path in the skip msg. */
-      do_notification(eb, db->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, pool);
-
-      return SVN_NO_ERROR;
-    }
-
   /* It may not be named the same as the administrative directory. */
   if (svn_wc_is_adm_dir(db->name, pool))
     return svn_error_createf(
@@ -2450,48 +2433,96 @@ add_directory(const char *path,
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
       status = svn_wc__db_status_normal;
+
+      versioned_locally_and_present = FALSE;
     }
+  else
+    versioned_locally_and_present = IS_NODE_PRESENT(status);
 
-  /* The path can exist, but it must be a directory. */
-  if (kind == svn_node_file || kind == svn_node_unknown ||
-      (wc_kind != svn_wc__db_kind_unknown &&
-       wc_kind != svn_wc__db_kind_dir && IS_NODE_PRESENT(status)))
+  /* Is this path a conflict victim? */
+  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
+                                  db->local_abspath, pool));
+  if (already_conflicted
+      && status == svn_wc__db_status_not_present
+      && kind == svn_node_none)
     {
-      db->already_notified = TRUE;
-      do_notification(eb, db->local_abspath, svn_node_dir,
-                      svn_wc_notify_update_obstruction, pool);
-
-      return svn_error_createf(
-       SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("Failed to add directory '%s': a non-directory object of the "
-         "same name already exists"),
-       svn_dirent_local_style(db->local_abspath, pool));
-    }
-
-  if (kind == svn_node_dir &&
-      (wc_kind == svn_wc__db_kind_unknown || !IS_NODE_PRESENT(status)))
-    {
-      /* Found an unversioned directory */
-      db->obstruction_found = TRUE;
-
-      if (!eb->allow_unver_obstructions)
+      /* A conflict is flagged. Now let's do some user convenience.
+       * When we flagged a tree conflict for a local unversioned node
+       * vs. an incoming add, and we find that this unversioned node is
+       * no longer in the way, automatically pull in the versioned node
+       * and remove the conflict marker.
+       * Right, the node status matches (not_present) and there is no
+       * unversioned obstruction in the file system (anymore?). If it
+       * has a tree conflict with reason 'unversioned', remove that. */
+      const svn_wc_conflict_description2_t *previous_tc;
+      SVN_ERR(svn_wc__get_tree_conflict(&previous_tc,
+                                        eb->wc_ctx,
+                                        db->local_abspath,
+                                        pool, pool));
+      if (previous_tc
+          && previous_tc->reason == svn_wc_conflict_reason_unversioned)
         {
-          db->already_notified = TRUE;
-          do_notification(eb, db->local_abspath, svn_node_dir,
-                          svn_wc_notify_update_obstruction, pool);
-
-          return svn_error_createf(
-             SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-             _("Failed to add directory '%s': an unversioned "
-               "directory of the same name already exists"),
-             svn_dirent_local_style(db->local_abspath, pool));
+          /* Remove tree conflict. */
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                                  db->local_abspath,
+                                                  NULL, pool));
+          /* Don't skip this path after all. */
+          already_conflicted = FALSE;
         }
     }
-  else if (wc_kind == svn_wc__db_kind_dir)
+
+  /* Now the "usual" behaviour if already conflicted. Skip it. */
+  if (already_conflicted)
     {
-      /* Directory exists */
-      if (IS_NODE_PRESENT(status) &&
-          status != svn_wc__db_status_deleted)
+      /* Record this conflict so that its descendants are skipped silently. */
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+
+      db->skip_this = TRUE;
+      db->skip_descendants = TRUE;
+      db->already_notified = TRUE;
+
+      /* ### TODO: Also print victim_path in the skip msg. */
+      do_notification(eb, db->local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip, pool);
+      return SVN_NO_ERROR;
+    }
+
+
+  if (versioned_locally_and_present)
+    {
+      /* What to do with a versioned or schedule-add dir:
+
+         A dir already added without history is OK.  Set add_existed
+         so that user notification is delayed until after any prop
+         conflicts have been found.
+
+         An existing versioned dir is an error.  In the future we may
+         relax this restriction and simply update such dirs.
+
+         A dir added with history is a tree conflict. */
+
+      svn_boolean_t local_is_dir;
+      svn_boolean_t local_is_non_dir;
+      const char *local_is_copy = NULL;
+
+      /* Is the local add a copy? */
+      if (status == svn_wc__db_status_added)
+        SVN_ERR(svn_wc__node_get_copyfrom_info(&local_is_copy,
+                                               NULL, NULL, NULL, NULL,
+                                               eb->wc_ctx,
+                                               db->local_abspath,
+                                               pool, pool));
+
+
+      /* Is there something that is a file? */
+      local_is_dir = (wc_kind == svn_wc__db_kind_dir
+                      && status != svn_wc__db_status_deleted);
+
+      /* Is there *something* that is not a dir? */
+      local_is_non_dir = (wc_kind != svn_wc__db_kind_dir
+                          && status != svn_wc__db_status_deleted);
+
+      if (local_is_dir)
         {
           svn_boolean_t wc_root;
           svn_boolean_t switched;
@@ -2533,90 +2564,140 @@ add_directory(const char *path,
             }
         }
 
-      /* What to do with a versioned or schedule-add dir:
-
-         A dir already added without history is OK.  Set add_existed
-         so that user notification is delayed until after any prop
-         conflicts have been found.
-
-         An existing versioned dir is an error.  In the future we may
-         relax this restriction and simply update such dirs.
-
-         A dir added with history is a tree conflict. */
-
-      if (status == svn_wc__db_status_added)
+      /* We can't properly handle add vs. add with mismatching
+       * node kinds before single db. */
+      if (local_is_non_dir)
         {
-          /* Specialize the added case to added, copied, moved */
-          SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, eb->db,
-                                           db->local_abspath, pool, pool));
+          db->already_notified = TRUE;
+          do_notification(eb, db->local_abspath, svn_node_dir,
+                          svn_wc_notify_update_obstruction, pool);
+          return svn_error_createf(
+                   SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                   _("Failed to add directory '%s': a non-directory object "
+                     "of the same name already exists"),
+                   svn_dirent_local_style(db->local_abspath,
+                                          pool));
         }
 
-      switch (status)
+      /* Do tree conflict checking if
+       *  - if there is a local copy.
+       *  - if this is a switch operation
+       *  - the node kinds mismatch (when single db is here)
+       *
+       * During switch, local adds at the same path as incoming adds get
+       * "lost" in that switching back to the original will no longer have the
+       * local add. So switch always alerts the user with a tree conflict.
+       *
+       * Allow pulling absent/exluded/not_present nodes back in.
+       *
+       * ### This code is already gearing up to single db with respect to
+       * add-vs.-add conflicts with mismatching node kinds. But before single
+       * db, we cannot deal with mismatching node kinds properly.
+       *
+       * ### We would also like to be checking copyfrom infos to not flag tree
+       * conflicts on two copies with identical history. But at the time of
+       * writing, add_directory() does not get any copyfrom information. */
+      if (! pb->in_deleted_and_tree_conflicted_subtree
+          && (eb->switch_relpath != NULL
+              || local_is_non_dir
+              || local_is_copy
+             )
+         )
         {
-          case svn_wc__db_status_absent:
-          case svn_wc__db_status_excluded:
-            /* Ignore these hidden states. Allow pulling them (back) in. */
-            break;
-          case svn_wc__db_status_not_present:
-            break;
-          case svn_wc__db_status_obstructed:
-          case svn_wc__db_status_obstructed_add:
-          case svn_wc__db_status_obstructed_delete:
-            /* ### In 1.6 we ignored these cases in this block as
-                   the behavior was just pulling them back in.
+          SVN_ERR(check_tree_conflict(&tree_conflict, eb,
+                                      db->local_abspath,
+                                      svn_wc_conflict_action_add,
+                                      svn_node_dir, db->new_relpath, pool));
+        }
 
-                   Explicitly handle them as not raising a tree conflict
-                   now. Will never occur once we have a central DB. */
-            break;
-          case svn_wc__db_status_added:
-            /* ### BH: I think this case should be conditional with something
-                       like allow_unver_obstructions, as this changes the
-                       base of locally added files.
-               ### BH: Always generate tree conflict? */
-            db->add_existed = TRUE;
-            break;
-          default:
+
+      if (tree_conflict == NULL)
+        {
+          /* We have a node in WORKING and we've decided not to flag a
+           * conflict, so merge it with the incoming add. */
+          db->add_existed = TRUE;
+
+          /* Pre-single-db, a dir that was OS-deleted from the working copy
+           * along with its .svn folder is seen 'obstructed' in this code
+           * path. The particular situation however better matches the word
+           * 'missing'. We do add_existed to avoid spurious errors where other
+           * code relies on add_existed to be TRUE when there is a node
+           * record (schedule_tests delete_redelete_fudgery used to XFail).
+           * Still, let's notify 'A' as the old client did. Ultimately, this
+           * should probably say 'Restored' instead of 'A', like with file. */
+          if (status == svn_wc__db_status_obstructed
+              || status == svn_wc__db_status_obstructed_add
+              || status == svn_wc__db_status_obstructed_delete)
             {
-              svn_wc_conflict_description2_t *tree_conflict = NULL;
-
-              /* Check for conflicts only when we haven't already recorded
-               * a tree-conflict on a parent node. */
-              if (!db->in_deleted_and_tree_conflicted_subtree)
-                SVN_ERR(check_tree_conflict(&tree_conflict, eb,
-                                            db->local_abspath,
-                                            svn_wc_conflict_action_add,
-                                            svn_node_dir, db->new_relpath, pool));
-
-              if (tree_conflict != NULL)
-                {
-                  svn_skel_t *work_item;
-
-                  /* Queue this conflict in the parent so that its descendants
-                     are skipped silently. */
-                  SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                                          eb->db,
-                                                          pb->local_abspath,
-                                                          tree_conflict,
-                                                          pool));
-                  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
-                                            work_item, pool));
-
-                  SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
-
-                  db->skip_this = TRUE;
-                  db->skip_descendants = TRUE;
-                  db->already_notified = TRUE;
-
-                  do_notification(eb, db->local_abspath, svn_node_unknown,
-                                  svn_wc_notify_tree_conflict, pool);
-
-                  return SVN_NO_ERROR;
-                }
+              db->already_notified = TRUE;
+              do_notification(eb, db->local_abspath, svn_node_dir,
+                              svn_wc_notify_add, pool);
             }
-            break;
         }
     }
+  else if (kind != svn_node_none)
+    {
+      /* There's an unversioned node at this path. */
+      db->obstruction_found = TRUE;
+
+      /* Unversioned, obstructing dirs are handled by prop merge/conflict,
+       * if unversioned obstructions are allowed. */
+      if (! (kind == svn_node_dir && eb->allow_unver_obstructions))
+        {
+          /* ### Instead of skipping, this should bring in the BASE node
+           * and mark some sort of obstruction-conflict. Come, o single-db! */
+          db->skip_this = TRUE;
+
+          /* If we are skipping an add, we need to tell the WC that
+           * there's a node supposed to be here which we don't have. */
+          SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, db->local_abspath,
+                                                  db->new_relpath,
+                                                  eb->repos_root,
+                                                  eb->repos_uuid,
+                                                  (eb->target_revision?
+                                                   *eb->target_revision
+                                                   : SVN_INVALID_REVNUM),
+                                                  svn_wc__db_kind_dir,
+                                                  svn_wc__db_status_not_present,
+                                                  NULL, NULL, pool));
+          SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+
+          /* Mark a conflict */
+          SVN_ERR(create_tree_conflict(&tree_conflict, eb,
+                                       db->local_abspath,
+                                       svn_wc_conflict_reason_unversioned,
+                                       svn_wc_conflict_action_add,
+                                       svn_node_dir,
+                                       db->new_relpath, pool, pool));
+          SVN_ERR_ASSERT(tree_conflict != NULL);
+        }
+    }
+
+  if (tree_conflict != NULL)
+    {
+      svn_skel_t *work_item;
+
+      /* Queue this conflict in the parent so that its descendants
+         are skipped silently. */
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
+                                              eb->db,
+                                              pb->local_abspath,
+                                              tree_conflict,
+                                              pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
+                                work_item, pool));
+
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+
+      db->skip_this = TRUE;
+      db->skip_descendants = TRUE;
+      db->already_notified = TRUE;
+
+      do_notification(eb, db->local_abspath, svn_node_unknown,
+                      svn_wc_notify_tree_conflict, pool);
+      return SVN_NO_ERROR;
+    }
+
 
 #ifdef SINGLE_DB
   SVN_ERR(svn_wc__db_temp_op_set_new_dir_to_incomplete(eb->db,
