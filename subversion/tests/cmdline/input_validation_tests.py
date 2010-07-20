@@ -67,12 +67,22 @@ def invalid_wcpath_add(sbox):
   for target in _invalid_wc_path_targets:
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'add', target)
 
+def invalid_wcpath_changelist(sbox):
+  "non-working copy paths for 'changelist'"
+  sbox.build()
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'changelist',
+                             'foo', target)
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'changelist',
+                             '--remove', target)
+
 ########################################################################
 # Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
               invalid_wcpath_add,
+              invalid_wcpath_changelist,
              ]
 
 if __name__ == '__main__':

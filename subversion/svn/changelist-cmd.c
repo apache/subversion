@@ -24,6 +24,7 @@
 #include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "svn_utf.h"
 
 #include "cl.h"
@@ -44,6 +45,7 @@ svn_cl__changelist(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   svn_depth_t depth = opt_state->depth;
+  int i;
 
   /* If we're not removing changelists, then our first argument should
      be the name of a changelist. */
@@ -69,6 +71,19 @@ svn_cl__changelist(apr_getopt_t *os,
      code here! */
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+
+  /* Don't even attempt to modify the working copy if any of the
+   * targets look like URLs. URLs are invalid input. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      if (svn_path_is_url(target))
+        return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET,
+                                                  NULL,
+                                                  _("'%s' is not a local path"),
+                                                  target));
+    }
 
   if (opt_state->quiet)
     /* FIXME: This is required because svn_client_create_context()
