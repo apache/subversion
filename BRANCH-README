@@ -9,10 +9,13 @@ The solution's approach is as follows:
      the initial OPTIONS request they always perform as part of
      session opening and capabilities exchange.
 
+      - ra_neon [DONE]
+      - ra_serf [see issue #3685]
+
   2. Rev svn_ra_open3(), teaching the new version to gracefully return
      the suggested URL provided by the server, while still allowing
      old versions to error out on redirections/relocations as they do
-     today.
+     today.  [DONE]
 
   3. Teach the client 'checkout', 'update', and 'switch' commands to
      recognize these relocation responses and (optionally?) retry the
