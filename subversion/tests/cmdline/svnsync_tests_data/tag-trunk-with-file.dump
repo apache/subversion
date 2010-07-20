@@ -4,6 +4,8 @@ UUID: 9bc56067-ff04-0410-83a8-bf961f5bc06a
 
 Revision-number: 0
 Prop-content-length: 56
+Prop-content-md5: (svn:date) 06156cb677da23ca75ca86ca4a14fb8f
+Prop-content-sha1: (svn:date) a7f2bcd4666a392a9aa9d1c739d490d22ff50bfc
 Content-length: 56
 
 K 8
@@ -14,6 +16,12 @@ PROPS-END
 
 Revision-number: 1
 Prop-content-length: 115
+Prop-content-md5: (svn:log) 4ab9e582f3170b1da8428f34f37acf20
+Prop-content-sha1: (svn:log) 43a0bac46b9fa5d856ab146334082f1edd13134e
+Prop-content-md5: (svn:author) c9bd66513549086361ea008b319307f8
+Prop-content-sha1: (svn:author) f9752bcda9e6e513d24f99a02b46cb539a5f63b9
+Prop-content-md5: (svn:date) ed886aa69961cfa6adb3b936ffc80889
+Prop-content-sha1: (svn:date) 12760e904f72cb239eea36c02488f94a65f5af3a
 Content-length: 115
 
 K 7
@@ -59,6 +67,12 @@ PROPS-END
 
 Revision-number: 2
 Prop-content-length: 111
+Prop-content-md5: (svn:log) b1f4cf34cf2348c4d30bcefce58e46e7
+Prop-content-sha1: (svn:log) 39b4de55d6c748d9adb1e13c09daf81bf2b4e89d
+Prop-content-md5: (svn:author) c9bd66513549086361ea008b319307f8
+Prop-content-sha1: (svn:author) f9752bcda9e6e513d24f99a02b46cb539a5f63b9
+Prop-content-md5: (svn:date) 1850831dfb94f96c873dfab34c9f9ed0
+Prop-content-sha1: (svn:date) 768a02028e9b7f7d70422366e9e18391db9aeb78
 Content-length: 111
 
 K 7
@@ -90,6 +104,12 @@ this is a file.
 
 Revision-number: 3
 Prop-content-length: 113
+Prop-content-md5: (svn:log) 0aaf4edeabbca22a01ab87cbb4c54543
+Prop-content-sha1: (svn:log) f42b93ee6a78447b18229c616745a5f965167383
+Prop-content-md5: (svn:author) c9bd66513549086361ea008b319307f8
+Prop-content-sha1: (svn:author) f9752bcda9e6e513d24f99a02b46cb539a5f63b9
+Prop-content-md5: (svn:date) 1872a9c3ebf036b1b88cd553bf71d9b1
+Prop-content-sha1: (svn:date) 36cf7ac0d23cd15f8e4983192a370d545e293f56
 Content-length: 113
 
 K 7

@@ -4,6 +4,8 @@ UUID: 776dcb32-51dc-11de-996d-d717ce91f81e
 
 Revision-number: 0
 Prop-content-length: 56
+Prop-content-md5: (svn:date) 41c4565f8ca9970f03a0b2974354f2b3
+Prop-content-sha1: (svn:date) 8797ac4c64d110b528c8b1d8e5196d5a02aa4a3f
 Content-length: 56
 
 K 8
@@ -14,6 +16,12 @@ PROPS-END
 
 Revision-number: 1
 Prop-content-length: 137
+Prop-content-md5: (svn:log) ae0d83ed222603c668159331b23ca53f
+Prop-content-sha1: (svn:log) e10cb48a2f911944a84f662cada6d6bdf5ab27c4
+Prop-content-md5: (svn:author) 4f3bf0db0166b782272f523c85369931
+Prop-content-sha1: (svn:author) 80a1a5ba52100c840c2eea1c417ca133b55e0d8c
+Prop-content-md5: (svn:date) d3eb2d2ffe43557d43f01f99dd23d7ee
+Prop-content-sha1: (svn:date) 3a4b04ed1626b7d0fc91a015d72a834fda180838
 Content-length: 137
 
 K 7
@@ -34,6 +42,8 @@ Node-path: file
 Node-kind: file
 Node-action: add
 Prop-content-length: 36
+Prop-content-md5: (svn:eol-style) 618441d41cce47dbcfd9bed6e5ff64e6
+Prop-content-sha1: (svn:eol-style) 91a07087a57580c557f3a426586f0c2f60ef2af4
 Text-content-length: 13
 Text-content-md5: 65cea5e7a1cc0516de76d7f523f105e6
 Text-content-sha1: ecc6621aa15c7c96d81bb9931b33f0c12c93a1c5
@@ -49,6 +59,12 @@ file-content
 
 Revision-number: 2
 Prop-content-length: 139
+Prop-content-md5: (svn:log) a6bf066b92960e6bb07b2124a9e5730d
+Prop-content-sha1: (svn:log) 9a012ac49dfef81dcbfbef9567f445af0b132022
+Prop-content-md5: (svn:author) 4f3bf0db0166b782272f523c85369931
+Prop-content-sha1: (svn:author) 80a1a5ba52100c840c2eea1c417ca133b55e0d8c
+Prop-content-md5: (svn:date) 11acbf8a3cae675137de95c1232e1783
+Prop-content-sha1: (svn:date) 07c52cfe8bc8cfb117a83838e2bafba514780118
 Content-length: 139
 
 K 7
