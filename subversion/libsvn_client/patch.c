@@ -225,14 +225,15 @@ strip_path(const char **result, const char *path, int strip_count,
   return SVN_NO_ERROR;
 }
 
-/* Obtain eol and keywords information for LOCAL_ABSPATH, from WC_CTX and
- * store the obtained information in *CONTENT_INFO.
+/* Obtain KEYWORDS, EOL_STYLE and EOL_STR for LOCAL_ABSPATH, from WC_CTX.
  * Use RESULT_POOL for allocations of fields in TARGET.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
-obtain_eol_and_keywords_for_file(svn_wc_context_t *wc_ctx,
+obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
+                                 svn_subst_eol_style_t *eol_style,
+                                 const char **eol_str,
+                                 svn_wc_context_t *wc_ctx,
                                  const char *local_abspath,
-                                 target_content_info_t *content_info,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
@@ -262,7 +263,7 @@ obtain_eol_and_keywords_for_file(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
                                    local_abspath,
                                    scratch_pool, scratch_pool));
-      SVN_ERR(svn_subst_build_keywords2(&content_info->keywords,
+      SVN_ERR(svn_subst_build_keywords2(keywords,
                                         keywords_val->data,
                                         rev_str, url, changed_date,
                                         author, result_pool));
@@ -272,8 +273,8 @@ obtain_eol_and_keywords_for_file(svn_wc_context_t *wc_ctx,
                                APR_HASH_KEY_STRING);
   if (eol_style_val)
     {
-      svn_subst_eol_style_from_value(&content_info->eol_style,
-                                     &content_info->eol_str,
+      svn_subst_eol_style_from_value(eol_style,
+                                     eol_str,
                                      eol_style_val->data);
     }
 
@@ -405,11 +406,6 @@ resolve_target_path(patch_target_t *target,
       return SVN_NO_ERROR;
     }
 
-  if (target->kind_on_disk == svn_node_file)
-    SVN_ERR(obtain_eol_and_keywords_for_file(wc_ctx, target->local_abspath,
-                                             target->content_info, 
-                                             result_pool, scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -479,6 +475,14 @@ init_patch_target(patch_target_t **patch_target,
           SVN_ERR(svn_io_is_file_executable(&target->executable,
                                             target->local_abspath,
                                             scratch_pool));
+
+          SVN_ERR(obtain_eol_and_keywords_for_file(&content_info->keywords,
+                                                   &content_info->eol_style,
+                                                   &content_info->eol_str,
+                                                   wc_ctx,
+                                                   target->local_abspath,
+                                                   result_pool,
+                                                   scratch_pool));
         }
 
       /* Create a temporary file to write the patched result to. */
