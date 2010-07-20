@@ -310,12 +310,13 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None):
 #
 
 
-def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
-                            singleton_handler_a = None,
-                            a_baton = None,
-                            singleton_handler_b = None,
-                            b_baton = None,
-                            *args):
+def run_and_verify_checkout2(do_remove,
+                             URL, wc_dir_name, output_tree, disk_tree,
+                             singleton_handler_a = None,
+                             a_baton = None,
+                             singleton_handler_b = None,
+                             b_baton = None,
+                             *args):
   """Checkout the URL into a new directory WC_DIR_NAME. *ARGS are any
   extra optional args to the checkout subcommand.
 
@@ -326,8 +327,8 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   function's doc string for more details.  Return if successful, raise
   on failure.
 
-  WC_DIR_NAME is deleted if present unless the '--force' option is passed
-  in *ARGS."""
+  WC_DIR_NAME is deleted if DO_REMOVE is True.
+  """
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
@@ -337,7 +338,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   # Remove dir if it's already there, unless this is a forced checkout.
   # In that case assume we want to test a forced checkout's toleration
   # of obstructing paths.
-  if '--force' not in args:
+  if do_remove:
     main.safe_rmtree(wc_dir_name)
 
   # Checkout and make a tree of the output, using l:foo/p:bar
@@ -367,6 +368,28 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
     print("ACTUAL DISK TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
+
+def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
+                            singleton_handler_a = None,
+                            a_baton = None,
+                            singleton_handler_b = None,
+                            b_baton = None,
+                            *args):
+  """Same as run_and_verify_checkout2(), but without the DO_REMOVE arg.
+  WC_DIR_NAME is deleted if present unless the '--force' option is passed
+  in *ARGS."""
+
+
+  # Remove dir if it's already there, unless this is a forced checkout.
+  # In that case assume we want to test a forced checkout's toleration
+  # of obstructing paths.
+  return run_and_verify_checkout2(('--force' not in args),
+                                  URL, wc_dir_name, output_tree, disk_tree,
+                                  singleton_handler_a,
+                                  a_baton,
+                                  singleton_handler_b,
+                                  b_baton,
+                                  *args)
 
 
 def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
