@@ -7126,6 +7126,7 @@ svn_wc__db_temp_get_format(int *format,
   pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
                                      scratch_pool);
 
+#ifndef SINGLE_DB
   /* ### for per-dir layouts, the wcroot should be this directory. under
      ### wc-ng, the wcroot may have become set for this missing subdir.  */
   if (pdh != NULL && pdh->wcroot != NULL
@@ -7135,6 +7136,7 @@ svn_wc__db_temp_get_format(int *format,
          got set, but has since been constructed.  */
       pdh->wcroot = NULL;
     }
+#endif
 
   /* If the PDH isn't present, or have wcroot information, then do a full
      upward traversal to find the wcroot.  */
@@ -7276,6 +7278,7 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
 
 #ifndef SVN_WC__SINGLE_DB
       if (pdh->locked)
+#endif
         {
           err = svn_wc__db_wclock_release(db, pdh->local_abspath,
                                           scratch_pool);
@@ -7289,6 +7292,7 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
             SVN_ERR(err);
         }
 
+#ifndef SVN_WC__SINGLE_DB
       SVN_ERR_ASSERT(!pdh->locked);
 #endif
 
