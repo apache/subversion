@@ -1,5 +1,7 @@
-This branch is for development towards a solution for Subversion issue #2779[1]
-("subversion does not support redirects").
+This branch is for development towards a solution for Subversion issue
+#2779[1] ("subversion does not support redirects").  It is being
+maintained as a reintegrateable branch, with occasional syncs from
+^/subversion/trunk.
 
 The solution's approach is as follows:
 
