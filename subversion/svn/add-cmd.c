@@ -71,7 +71,7 @@ svn_cl__add(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       if (svn_path_is_url(target))
-        return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET,
+        return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
                                                   NULL,
                                                   _("'%s' is not a local path"),
                                                   target));
