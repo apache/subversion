@@ -83,6 +83,13 @@ def invalid_wcpath_cleanup(sbox):
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'cleanup',
                              target)
 
+def invalid_wcpath_commit(sbox):
+  "non-working copy paths for 'commit'"
+  sbox.build()
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn: '.*' is a URL, but URLs cannot be " +
+                             "commit targets", 'commit', target)
+
 ########################################################################
 # Run the tests
 
@@ -91,6 +98,7 @@ test_list = [ None,
               invalid_wcpath_add,
               invalid_wcpath_changelist,
               invalid_wcpath_cleanup,
+              invalid_wcpath_commit,
              ]
 
 if __name__ == '__main__':
