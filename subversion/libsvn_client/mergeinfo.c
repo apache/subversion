@@ -618,7 +618,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
                   sesspool = svn_pool_create(scratch_pool);
                   SVN_ERR(svn_client__open_ra_session_internal(
                               &ra_session, NULL, url, NULL, NULL, FALSE,
-                              TRUE, FALSE, ctx, sesspool));
+                              TRUE, ctx, sesspool));
                 }
 
               SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
@@ -724,7 +724,7 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
     {
       sesspool = svn_pool_create(pool);
       SVN_ERR(svn_client__open_ra_session_internal(&session, NULL, url, NULL,
-                                                   NULL, FALSE, TRUE, FALSE,
+                                                   NULL, FALSE, TRUE,
                                                    ctx, sesspool));
     }
 
@@ -1031,7 +1031,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", scratch_pool));
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
                                                    path_or_url, NULL, NULL,
-                                                   FALSE, TRUE, FALSE, ctx,
+                                                   FALSE, TRUE, ctx,
                                                    scratch_pool));
       SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
                                               local_abspath, ra_session,
@@ -1082,7 +1082,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
       /* Check server Merge Tracking capability. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url,
                                                    NULL, NULL, FALSE, TRUE,
-                                                   FALSE, ctx, scratch_pool));
+                                                   ctx, scratch_pool));
       SVN_ERR(svn_ra__assert_mergeinfo_capable_server(ra_session, path_or_url,
                                                       scratch_pool));
 

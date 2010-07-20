@@ -218,8 +218,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
         {
           SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
                                                        item_url, NULL, NULL,
-                                                       FALSE, TRUE, FALSE,
-                                                       ctx, pool));
+                                                       FALSE, TRUE, ctx, pool));
         }
       else
         {
