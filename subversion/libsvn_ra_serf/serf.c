@@ -344,7 +344,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
   const char *client_string = NULL;
 
   /* We don't support server-prescribed redirections yet. */
-  *corrected_url = NULL;
+  if (corrected_url)
+    *corrected_url = NULL;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   serf_sess->pool = svn_pool_create(pool);

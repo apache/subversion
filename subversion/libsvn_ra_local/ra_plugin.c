@@ -446,7 +446,8 @@ svn_ra_local__open(svn_ra_session_t *session,
   const char *fs_path;
 
   /* We don't support redirections in ra-local. */
-  *corrected_url = NULL;
+  if (corrected_url)
+    *corrected_url = NULL;
 
   /* Allocate and stash the session_sess args we have already. */
   sess = apr_pcalloc(pool, sizeof(*sess));
