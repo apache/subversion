@@ -15957,8 +15957,7 @@ test_list = [ None,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
               record_only_merge_creates_self_referential_mergeinfo,
               XFail(copy_causes_phantom_eol_conflict,
-                    svntest.main.is_os_windows and
-                    svntest.main.is_ra_type_dav),
+                    svntest.main.is_windows_type_dav),
              ]
 
 if __name__ == '__main__':
