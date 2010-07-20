@@ -2659,15 +2659,16 @@ def start_commit_detect_capabilities(sbox):
 def commit_url(sbox):
   "'svn commit SOME_URL' should error"
   sbox.build()
-  wc_dir = sbox.wc_dir
-  repos_url = sbox.repo_url
+  url = sbox.repo_url
 
   # Commit directly to a URL
+  expected_error = ("svn: '" + url + 
+                    "' is a URL, but URLs cannot be commit targets")
   svntest.actions.run_and_verify_commit(None,
                                         None,
                                         None,
-                                        "Must give local path",
-                                        repos_url)
+                                        expected_error,
+                                        url)
 
 # Test for issue #3198
 def commit_added_missing(sbox):
