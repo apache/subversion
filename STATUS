@@ -155,7 +155,7 @@ Candidate changes:
      Currently, the --reintegrate option is silently ignored, which has
      led to at last one confused user.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
  * r959760
    Fix the FSFS lock deletion code to properly clean up lock information
@@ -271,12 +271,13 @@ Veto-blocked changes:
    Votes:
      -1: cmpilato (pending results of aforemented discussion)
 
- * r876615
+Approved changes:
+=================
+
+* r876615
    Make ra_neon provide a better error message upon 403 Forbidden.
    Justification:
      User complained: http://svn.haxx.se/users/archive-2010-07/0320.shtml
    Votes:
-     +1: stsp, danielsh
+     +1: stsp, danielsh, rhuijben
 
-Approved changes:
-=================
