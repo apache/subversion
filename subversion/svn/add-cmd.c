@@ -85,7 +85,7 @@ svn_cl__add(apr_getopt_t *os,
       svn_pool_clear(iterpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       SVN_ERR(svn_cl__try
-              (svn_client_add4(svn_dirent_canonicalize(target, iterpool),
+              (svn_client_add4(target,
                                opt_state->depth,
                                opt_state->force, opt_state->no_ignore,
                                opt_state->parents, ctx, iterpool),
