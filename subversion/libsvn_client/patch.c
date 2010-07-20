@@ -428,9 +428,9 @@ init_patch_target(patch_target_t **patch_target,
   patch_target_t *target;
   target_content_info_t *content_info; 
 
-  target = apr_pcalloc(result_pool, sizeof(*target));
   content_info = apr_pcalloc(result_pool, sizeof(*content_info));
 
+  /* All other fields in content_info are FALSE or NULL due to apr_pcalloc().*/
   content_info->current_line = 1;
   content_info->eol_style = svn_subst_eol_style_none;
   content_info->lines = apr_array_make(result_pool, 0,
@@ -439,12 +439,13 @@ init_patch_target(patch_target_t **patch_target,
   content_info->keywords = apr_hash_make(result_pool);
   content_info->pool = result_pool;
 
-  target->content_info = content_info;
+  target = apr_pcalloc(result_pool, sizeof(*target));
 
-  /* All other fields are FALSE or NULL due to apr_pcalloc(). */
+  /* All other fields in target are FALSE or NULL due to apr_pcalloc(). */
   target->patch = patch;
   target->db_kind = svn_node_none;
   target->kind_on_disk = svn_node_none;
+  target->content_info = content_info;
   target->pool = result_pool;
 
   SVN_ERR(resolve_target_path(target, patch->new_filename,
