@@ -104,11 +104,12 @@ struct handler_baton
 
 /**
  * Get a dump editor @a editor along with a @a edit_baton allocated in
- * @a pool.
+ * @a pool. The editor will write output to @a stream.
  */
 svn_error_t *
 get_dump_editor(const svn_delta_editor_t **editor,
                 void **edit_baton,
+                svn_stream_t *stream,
                 apr_pool_t *pool);
 
 #endif
