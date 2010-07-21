@@ -2738,7 +2738,10 @@ public class BasicTests extends SVNTests
         String aPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A"),
                                      false);
 
-        expectedDiffOutput = NL + "Property changes on: A" + NL +
+        expectedDiffOutput = "Index: A" + NL + sepLine +
+            "--- A\t(revision 1)" + NL +
+            "+++ A\t(working copy)" + NL +
+            NL + "Property changes on: A" + NL +
             underSepLine +
             "Added: testprop" + NL +
             "## -0,0 +1 ##" + NL +
@@ -2753,7 +2756,10 @@ public class BasicTests extends SVNTests
                                  expectedDiffOutput, diffOutput);
 
         // Test diff where relativeToDir and path are the same.
-        expectedDiffOutput = NL + "Property changes on: ." + NL +
+        expectedDiffOutput = "Index: ." + NL + sepLine +
+            "--- .\t(revision 1)" + NL +
+            "+++ .\t(working copy)" + NL +
+            NL + "Property changes on: ." + NL +
             underSepLine +
             "Added: testprop" + NL +
             "## -0,0 +1 ##" + NL +
