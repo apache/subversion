@@ -50,7 +50,7 @@ def basic_svnrdump(sbox):
   if (r != 0):
     raise svntest.Failure('Result code not 0')
 
-  if not out[0].startswith('SVN-FS-dump-format-version:'):
+  if not out[0].startswith('SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
 
 ########################################################################
