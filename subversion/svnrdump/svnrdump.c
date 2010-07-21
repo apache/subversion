@@ -123,6 +123,7 @@ replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
   const svn_delta_editor_t *dump_editor;
   struct replay_baton *replay_baton;
   void *dump_baton;
+  const char *uuid;
 
   SVN_ERR(get_dump_editor(&dump_editor,
                           &dump_baton, pool));
@@ -131,8 +132,10 @@ replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
   replay_baton->editor = dump_editor;
   replay_baton->edit_baton = dump_baton;
   replay_baton->verbose = verbose;
-  SVN_ERR(svn_cmdline_printf(pool, SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n",
+  SVN_ERR(svn_cmdline_printf(pool, SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
            SVN_REPOS_DUMPFILE_FORMAT_VERSION));
+  SVN_ERR(svn_ra_get_uuid2(session, &uuid, pool));
+  SVN_ERR(svn_cmdline_printf(pool, SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
   SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
                               0, TRUE, replay_revstart, replay_revend,
                               replay_baton, pool));
