@@ -384,6 +384,34 @@ svn_client_blame(const char *target,
 
 /*** From commit.c ***/
 svn_error_t *
+svn_client_import3(svn_commit_info_t **commit_info_p,
+                   const char *path,
+                   const char *url,
+                   svn_depth_t depth,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  svn_client_ctx_t shadow_ctx;
+  struct capture_baton_t cb;
+
+  cb.info = commit_info_p;
+  cb.pool = pool;
+  cb.original_callback = ctx->commit_callback2;
+  cb.original_baton = ctx->commit_baton;
+
+  shadow_ctx = *ctx;
+  shadow_ctx.commit_callback2 = capture_commit_info;
+  shadow_ctx.commit_baton = &cb;
+
+  return svn_client_import4(path, url, depth, no_ignore,
+                            ignore_unknown_node_types, revprop_table,
+                            &shadow_ctx, pool);
+}
+
+svn_error_t *
 svn_client_import2(svn_commit_info_t **commit_info_p,
                    const char *path,
                    const char *url,
