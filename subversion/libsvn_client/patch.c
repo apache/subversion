@@ -925,26 +925,21 @@ scan_for_match(svn_linenum_t *matched_line,
   return SVN_NO_ERROR;
 }
 
-/* Indicate in *MATCH whether the file at TARGET->abspath matches the
- * modified text of HUNK. Use SCRATCH_POOL for temporary allocations. */
+/* Indicate in *MATCH whether the STREAM matches the modified text of HUNK.
+ * Use CONTENT_INFO for retrieving information on eol and keywords that is
+ * needed for the comparison.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-match_existing_file(svn_boolean_t *match,
-                    patch_target_t *target,
+match_existing_target(svn_boolean_t *match,
+                    target_content_info_t *content_info,
                     const svn_hunk_t *hunk,
+                    svn_stream_t *stream,
                     apr_pool_t *scratch_pool)
 {
-  apr_file_t *file;
-  svn_stream_t *stream;
   svn_boolean_t lines_matched;
   apr_pool_t *iterpool;
   svn_boolean_t eof;
   svn_boolean_t hunk_eof;
-
-  SVN_ERR(svn_io_file_open(&file, target->local_abspath,
-                           APR_READ | APR_BINARY, APR_OS_DEFAULT,
-                           scratch_pool));
-  stream = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
-
 
   SVN_ERR(svn_diff_hunk_reset_modified_text(hunk));
 
@@ -966,19 +961,18 @@ match_existing_file(svn_boolean_t *match,
       /* Contract keywords. */
       SVN_ERR(svn_subst_translate_cstring2(line->data, &line_translated,
                                            NULL, FALSE, 
-                                           target->content_info->keywords,
+                                           content_info->keywords,
                                            FALSE, iterpool));
       SVN_ERR(svn_subst_translate_cstring2(hunk_line->data,
                                            &hunk_line_translated,
                                            NULL, FALSE,
-                                           target->content_info->keywords,
+                                           content_info->keywords,
                                            FALSE, iterpool));
       lines_matched = ! strcmp(line_translated, hunk_line_translated);
       if (eof != hunk_eof)
         {
           svn_pool_destroy(iterpool);
           *match = FALSE;
-          svn_stream_close(stream);
           return SVN_NO_ERROR;
         }
       }
@@ -986,7 +980,6 @@ match_existing_file(svn_boolean_t *match,
     svn_pool_destroy(iterpool);
 
     *match = (lines_matched && eof == hunk_eof);
-    svn_stream_close(stream);
     return SVN_NO_ERROR;
 }
 
@@ -1019,10 +1012,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
    * a new file. Don't bother matching hunks in that case, since
    * the hunk applies at line 1. If the file already exists, the hunk
    * is rejected, unless the file is versioned and its content matches
-   * the file the patch wants to create. 
-   *
-   * ### We need to be able to apply this logic to property hunks that wants
-   * ### to create a new property. Currently we just ignore added hunks. */
+   * the file the patch wants to create.  */
   if (original_start == 0 && ! is_prop_hunk)
     {
       if (target->kind_on_disk == svn_node_file)
@@ -1030,9 +1020,19 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
           if (target->db_kind == svn_node_file)
             {
               svn_boolean_t file_matches;
+              apr_file_t *file;
+              svn_stream_t *stream;
 
-              SVN_ERR(match_existing_file(&file_matches, target, hunk,
-                                          scratch_pool));
+              /* ### dannas: Why not use content_info-stream here? */
+              SVN_ERR(svn_io_file_open(&file, target->local_abspath,
+                                       APR_READ | APR_BINARY, APR_OS_DEFAULT,
+                                       scratch_pool));
+              stream = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
+
+              SVN_ERR(match_existing_target(&file_matches, content_info, hunk,
+                                            stream, scratch_pool));
+              svn_stream_close(stream);
+
               if (file_matches)
                 {
                   matched_line = 1;
@@ -1040,6 +1040,31 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
                 }
               else
                 matched_line = 0; /* reject */
+            }
+          else
+            matched_line = 0; /* reject */
+        }
+      else
+        matched_line = 1;
+    }
+  /* Same conditions apply as for the file case above. 
+   *
+   * ### Since the hunk says the prop should be added we just assume so for
+   * ### now and don't bother with storing the previous lines and such. When
+   * ### we have the diff operation available we can just check for adds. */
+  else if (original_start == 0 && is_prop_hunk)
+    {
+      if (content_info->stream)
+        {
+          svn_boolean_t prop_matches;
+
+          SVN_ERR(match_existing_target(&prop_matches, content_info, hunk,
+                                        content_info->stream, scratch_pool));
+
+          if (prop_matches)
+            {
+              matched_line = 1;
+              already_applied = TRUE;
             }
           else
             matched_line = 0; /* reject */
