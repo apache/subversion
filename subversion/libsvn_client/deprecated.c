@@ -132,7 +132,8 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
   shadow_ctx.commit_callback2 = capture_commit_info;
   shadow_ctx.commit_baton = &cb;
 
-  return svn_client_mkdir4(paths, make_parents, revprop_table, ctx, pool);
+  return svn_client_mkdir4(paths, make_parents, revprop_table, &shadow_ctx,
+                           pool);
 }
 
 svn_error_t *
