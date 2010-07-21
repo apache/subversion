@@ -94,8 +94,10 @@ replay_revend(svn_revnum_t revision,
   return SVN_NO_ERROR;
 }
 
+/* Return in *SESSION a new RA session to URL.
+ * Allocate *SESSION and related data structures in POOL. */
 static svn_error_t *
-open_connection(svn_ra_session_t *session, const char *url, apr_pool_t *pool)
+open_connection(svn_ra_session_t **session, const char *url, apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx = NULL;
   SVN_ERR(svn_config_ensure (NULL, pool));
@@ -109,7 +111,7 @@ open_connection(svn_ra_session_t *session, const char *url, apr_pool_t *pool)
                 NULL, NULL, NULL, FALSE,
                 FALSE, NULL, NULL, NULL,
                 pool));
-  SVN_ERR(svn_client_open_ra_session(&session, url, ctx, pool));
+  SVN_ERR(svn_client_open_ra_session(session, url, ctx, pool));
   return SVN_NO_ERROR;
 }
 
@@ -191,7 +193,7 @@ main(int argc, const char **argv)
     usage(stderr);
     return EXIT_FAILURE;
   }
-  SVN_INT_ERR(open_connection(session, url, pool));
+  SVN_INT_ERR(open_connection(&session, url, pool));
 
   /* Have sane start_revision and end_revision defaults if unspecified */
   if (start_revision == svn_opt_revision_unspecified)
