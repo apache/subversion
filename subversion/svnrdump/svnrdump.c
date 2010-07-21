@@ -97,10 +97,10 @@ replay_revend(svn_revnum_t revision,
 /* Return in *SESSION a new RA session to URL.
  * Allocate *SESSION and related data structures in POOL. */
 static svn_error_t *
-open_connection(svn_ra_session_t **session, const char *url, apr_pool_t *pool)
+open_connection(svn_ra_session_t **session, const char *url, const char *config_dir, apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx = NULL;
-  SVN_ERR(svn_config_ensure (NULL, pool));
+  SVN_ERR(svn_config_ensure(config_dir, pool));
   SVN_ERR(svn_client_create_context (&ctx, pool));
   SVN_ERR(svn_ra_initialize(pool));
 
@@ -165,38 +165,56 @@ main(int argc, const char **argv)
   svn_boolean_t verbose = FALSE;
   apr_pool_t *pool = NULL;
   svn_ra_session_t *session = NULL;
+  const char *config_dir;
 
   if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   pool = svn_pool_create(NULL);
 
-  for (i = 1; i < argc; i++) {
-    if (!strncmp("-r", argv[i], 2)) {
-      revision_cut = strchr(argv[i] + 2, ':');
-      if (revision_cut) {
-        start_revision = (svn_revnum_t) strtoul(argv[i] + 2, &revision_cut, 10);
-        end_revision = (svn_revnum_t) strtoul(revision_cut + 1, NULL, 10);
-      }
+  /* ### This should use the standard option parser */
+  for (i = 1; i < argc; i++)
+    {
+      if (!strncmp("-r", argv[i], 2))
+        {
+          revision_cut = strchr(argv[i] + 2, ':');
+          if (revision_cut)
+            {
+              start_revision = (svn_revnum_t) strtoul(argv[i] + 2, &revision_cut, 10);
+              end_revision = (svn_revnum_t) strtoul(revision_cut + 1, NULL, 10);
+            }
+          else
+            start_revision = (svn_revnum_t) strtoul(argv[i] + 2, NULL, 10);
+        }
+      else if (!strcmp("--config-dir", argv[i]))
+        {
+          if (++i < argc)
+            config_dir = argv[i];
+        }
+      else if (!strcmp("-v", argv[i]) || !strcmp("--verbose", argv[i]))
+        {
+          verbose = TRUE;
+        }
+      else if (!strcmp("help", argv[i]) || !strcmp("--help", argv[i]))
+        {
+          SVN_INT_ERR(usage(stdout));
+          return EXIT_SUCCESS;
+        }
+      else if (*argv[i] == '-' || url)
+        {
+          SVN_INT_ERR(usage(stderr));
+          return EXIT_FAILURE;
+        }
       else
-        start_revision = (svn_revnum_t) strtoul(argv[i] + 2, NULL, 10);
-    } else if (!strcmp("-v", argv[i]) || !strcmp("--verbose", argv[i])) {
-      verbose = TRUE;
-    } else if (!strcmp("help", argv[i]) || !strcmp("--help", argv[i])) {
-      SVN_INT_ERR(usage(stdout));
-      return EXIT_SUCCESS;
-    } else if (*argv[i] == '-' || url) {
-      SVN_INT_ERR(usage(stderr));
-      return EXIT_FAILURE;
-    } else
-      url = argv[i];
-  }
+        url = argv[i];
+    }
 
-  if (!url || !svn_path_is_url(url)) {
-    usage(stderr);
-    return EXIT_FAILURE;
-  }
-  SVN_INT_ERR(open_connection(&session, url, pool));
+  if (!url || !svn_path_is_url(url))
+    {
+      usage(stderr);
+      return EXIT_FAILURE;
+    }
+  SVN_INT_ERR(open_connection(&session, url, config_dir, pool));
 
   /* Have sane start_revision and end_revision defaults if unspecified */
   if (start_revision == svn_opt_revision_unspecified)

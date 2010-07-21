@@ -152,6 +152,7 @@ def url2pathname(path):
 svn_binary = os.path.abspath('../../svn/svn' + _exe)
 svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
 svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
+svnrdump_binary = os.path.abspath('../../svnrdump/svnrdump' + _exe)
 svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
@@ -575,6 +576,11 @@ def run_svnlook(*varargs):
   """Run svnlook with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
   return run_command(svnlook_binary, 1, 0, *varargs)
+
+def run_svnrdump(*varargs):
+  """Run svnrdump with VARARGS, returns exit code as int; stdout, stderr as
+  list of lines (including line terminators)."""
+  return run_command(svnrdump_binary, 1, 0, *(_with_config_dir(varargs)))
 
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as
