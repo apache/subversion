@@ -115,8 +115,8 @@ open_connection(svn_ra_session_t *session, const char *url, apr_pool_t *pool)
 
 static svn_error_t *
 replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
-	     svn_revnum_t end_revision, apr_pool_t *pool,
-	     svn_boolean_t verbose)
+             svn_revnum_t end_revision, apr_pool_t *pool,
+             svn_boolean_t verbose)
 {
   const svn_delta_editor_t *dump_editor;
   struct replay_baton *replay_baton;

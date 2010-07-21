@@ -71,13 +71,13 @@ make_dir_baton(const char *path,
   /* Remove leading slashes from copyfrom paths. */
   if (copyfrom_path && strcmp(copyfrom_path, "/"))
     copyfrom_path = ((*copyfrom_path == '/') ?
-		     copyfrom_path + 1 : copyfrom_path);
+                      copyfrom_path + 1 : copyfrom_path);
 
   new_db->eb = eb;
   new_db->parent_dir_baton = pb;
   new_db->abspath = abspath;
   new_db->copyfrom_path = copyfrom_path ?
-	  apr_pstrdup(pool, copyfrom_path) : NULL;
+    apr_pstrdup(pool, copyfrom_path) : NULL;
   new_db->copyfrom_rev = copyfrom_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
@@ -101,23 +101,22 @@ dump_node(struct dump_edit_baton *eb,
           const char *path,    /* an absolute path. */
           svn_node_kind_t kind,
           enum svn_node_action action,
-	  svn_boolean_t is_copy,
+          svn_boolean_t is_copy,
           const char *copyfrom_path,
           svn_revnum_t copyfrom_rev,
           apr_pool_t *pool)
 {
   /* Remove leading slashes from path and copyfrom_path */
   if (path && strcmp(path, "/"))
-    path = ((*path == '/') ?
-		     path + 1 : path);
+    path = ((*path == '/') ? path + 1 : path);
   
   if (copyfrom_path && strcmp(copyfrom_path, "/"))
     copyfrom_path = ((*copyfrom_path == '/') ?
-		     copyfrom_path + 1 : copyfrom_path);
+                      copyfrom_path + 1 : copyfrom_path);
 
   /* Node-path: commons/STATUS */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
-			    SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", path));
+          SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", path));
 
   /* Node-kind: file */
   if (kind == svn_node_file)
@@ -157,8 +156,7 @@ dump_node(struct dump_edit_baton *eb,
 
     /* Recurse: Print an additional add-with-history record. */
     SVN_ERR(dump_node(eb, path, kind, svn_node_action_add,
-                      is_copy, copyfrom_path, copyfrom_rev,
-		      pool));
+                      is_copy, copyfrom_path, copyfrom_rev, pool));
 
     /* We can leave this routine quietly now, don't need to dump any
        content; that was already done in the second record. */
@@ -280,9 +278,9 @@ add_directory(const char *path,
   SVN_ERR(dump_node(pb->eb, path,
                     svn_node_dir,
                     val ? svn_node_action_replace : svn_node_action_add,
-		    is_copy,
+                    is_copy,
                     is_copy ? copyfrom_path : NULL,
-		    is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
+                    is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
   if (val)
@@ -346,7 +344,7 @@ close_directory(void *dir_baton,
     svn_pool_clear(iterpool);
 
     SVN_ERR(dump_node(db->eb, path, svn_node_unknown, svn_node_action_delete,
-		      FALSE, NULL, SVN_INVALID_REVNUM, iterpool));
+                      FALSE, NULL, SVN_INVALID_REVNUM, iterpool));
   }
 
   svn_pool_destroy(iterpool);
@@ -378,9 +376,9 @@ add_file(const char *path,
   SVN_ERR(dump_node(pb->eb, path,
                     svn_node_file,
                     val ? svn_node_action_replace : svn_node_action_add,
-		    is_copy,
+                    is_copy,
                     is_copy ? copyfrom_path : NULL,
-		    is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
+                    is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
   if (val)
@@ -422,7 +420,7 @@ open_file(const char *path,
   }
 
   SVN_ERR(dump_node(pb->eb, path, svn_node_file, svn_node_action_change,
-		    FALSE, copyfrom_path, copyfrom_rev, pool));
+                    FALSE, copyfrom_path, copyfrom_rev, pool));
 
   /* Build a nice file baton to pass to change_file_prop and
      apply_textdelta */
@@ -455,8 +453,8 @@ change_dir_prop(void *parent_baton,
      props. */
 
     SVN_ERR(dump_node(db->eb, db->abspath, svn_node_dir,
-		      svn_node_action_change, FALSE, db->copyfrom_path,
-		      db->copyfrom_rev, pool));
+                      svn_node_action_change, FALSE, db->copyfrom_path,
+                      db->copyfrom_rev, pool));
 
     SVN_ERR(dump_props(db->eb, NULL, TRUE, pool));
     db->written_out = TRUE;
