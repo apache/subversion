@@ -124,21 +124,26 @@ replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
   struct replay_baton *replay_baton;
   void *dump_baton;
   const char *uuid;
+  svn_stream_t *stdout_stream;
 
-  SVN_ERR(get_dump_editor(&dump_editor,
-                          &dump_baton, pool));
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+
+  SVN_ERR(get_dump_editor(&dump_editor, &dump_baton, stdout_stream, pool));
 
   replay_baton = apr_pcalloc(pool, sizeof(*replay_baton));
   replay_baton->editor = dump_editor;
   replay_baton->edit_baton = dump_baton;
   replay_baton->verbose = verbose;
-  SVN_ERR(svn_cmdline_printf(pool, SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-           SVN_REPOS_DUMPFILE_FORMAT_VERSION));
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
+                            SVN_REPOS_DUMPFILE_FORMAT_VERSION));
   SVN_ERR(svn_ra_get_uuid2(session, &uuid, pool));
-  SVN_ERR(svn_cmdline_printf(pool, SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
   SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
                               0, TRUE, replay_revstart, replay_revend,
                               replay_baton, pool));
+  SVN_ERR(svn_stream_close(stdout_stream));
   return SVN_NO_ERROR;
 }
 

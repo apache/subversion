@@ -640,15 +640,16 @@ close_edit(void *edit_baton, apr_pool_t *pool)
 svn_error_t *
 get_dump_editor(const svn_delta_editor_t **editor,
                 void **edit_baton,
+                svn_stream_t *stream,
                 apr_pool_t *pool)
 {
   struct dump_edit_baton *eb;
   svn_delta_editor_t *de;
 
   eb = apr_pcalloc(pool, sizeof(struct dump_edit_baton));
-  SVN_ERR(svn_stream_for_stdout(&(eb->stream), pool));
-  de = svn_delta_default_editor(pool);
+  eb->stream = stream;
 
+  de = svn_delta_default_editor(pool);
   de->open_root = open_root;
   de->delete_entry = delete_entry;
   de->add_directory = add_directory;
