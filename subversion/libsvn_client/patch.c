@@ -1002,6 +1002,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               target_content_info_t *content_info,
               const svn_hunk_t *hunk, int fuzz, 
               svn_boolean_t ignore_whitespace,
+              svn_boolean_t is_prop_hunk,
               svn_cancel_func_t cancel_func, void *cancel_baton,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
@@ -1016,8 +1017,11 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
    * a new file. Don't bother matching hunks in that case, since
    * the hunk applies at line 1. If the file already exists, the hunk
    * is rejected, unless the file is versioned and its content matches
-   * the file the patch wants to create. */
-  if (original_start == 0)
+   * the file the patch wants to create. 
+   *
+   * ### We need to be able to apply this logic to property hunks that wants
+   * ### to create a new property. Currently we just ignore added hunks. */
+  if (original_start == 0 && ! is_prop_hunk)
     {
       if (target->kind_on_disk == svn_node_file)
         {
@@ -1041,7 +1045,11 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
       else
         matched_line = 1;
     }
-  else if (original_start > 0 && target->kind_on_disk == svn_node_file)
+  /* ### We previously checked for target->kind_on_disk == svn_node_file
+   * ### here. But that wasn't generic enough to cope with properties. How
+   * ### better describe that content_info->stream is only set if we have an
+   * ### existing target? */
+  else if (original_start > 0 && content_info->stream)
     {
       svn_linenum_t saved_line = content_info->current_line;
       svn_linenum_t modified_start;
@@ -1434,6 +1442,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   apr_pool_t *iterpool;
   int i;
   static const int MAX_FUZZ = 2;
+  apr_hash_index_t *hash_index;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
@@ -1477,6 +1486,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         {
           SVN_ERR(get_hunk_info(&hi, target, target->content_info, hunk, fuzz,
                                 ignore_whitespace,
+                                FALSE /* is_prop_hunk */,
                                 cancel_func, cancel_baton,
                                 result_pool, iterpool));
           fuzz++;
@@ -1501,7 +1511,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       else
         SVN_ERR(apply_hunk(target, target->content_info, hi, iterpool));
     }
-  svn_pool_destroy(iterpool);
 
   if (target->kind_on_disk == svn_node_file)
     {
@@ -1516,6 +1525,56 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           target->skipped = TRUE;
         }
     }
+
+  /* Match property hunks. */
+  for (hash_index = apr_hash_first(result_pool, patch->prop_patches);
+       hash_index;
+       hash_index = apr_hash_next(hash_index))
+    {
+      svn_prop_patch_t *prop_patch;
+      const char *prop_name;
+      target_content_info_t *prop_content_info;
+        
+      /* Fetching the parsed info for one property */
+      prop_name = svn__apr_hash_index_key(hash_index);
+      prop_patch = svn__apr_hash_index_val(hash_index);
+
+      /* Fetch the prop_content_info we'll use to store the matched hunks
+       * in. */
+      prop_content_info = apr_hash_get(target->prop_content_info, prop_name, 
+                                       APR_HASH_KEY_STRING);
+
+      for (i = 0; i < prop_patch->hunks->nelts; i++)
+        {
+          svn_hunk_t *hunk;
+          hunk_info_t *hi;
+          int fuzz = 0;
+
+          svn_pool_clear(iterpool);
+
+          if (cancel_func)
+            SVN_ERR((cancel_func)(cancel_baton));
+
+          hunk = APR_ARRAY_IDX(prop_patch->hunks, i, svn_hunk_t *);
+
+          /* Determine the line the hunk should be applied at.
+           * If no match is found initially, try with fuzz. */
+          do
+            {
+              SVN_ERR(get_hunk_info(&hi, target, prop_content_info, hunk, fuzz,
+                                    ignore_whitespace,
+                                    TRUE /* is_prop_hunk */,
+                                    cancel_func, cancel_baton,
+                                    result_pool, iterpool));
+              fuzz++;
+            }
+          while (hi->rejected && fuzz <= MAX_FUZZ && ! hi->already_applied);
+
+          APR_ARRAY_PUSH(prop_content_info->hunks, hunk_info_t *) = hi;
+        }
+    }
+
+  svn_pool_destroy(iterpool);
 
     {
       apr_hash_index_t *hi;
