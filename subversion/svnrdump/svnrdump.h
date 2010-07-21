@@ -53,8 +53,8 @@ write_hash_to_stringbuf(apr_hash_t *properties,
  *
  * Extract and dump the properties and del_properties stored in the
  * edit baton @a eb using @a pool for any temporary allocations. If
- * @a trigger_var is passed, it is unset. @a dump_data_too triggers
- * dumping data along with the properties.
+ * @a trigger_var is passed, it is unset. Unless @a dump_data_too is
+ * set, only property headers are dumped.
  */
 svn_error_t *
 dump_props(struct dump_edit_baton *eb,
