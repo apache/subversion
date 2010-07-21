@@ -289,13 +289,8 @@ SVN_ERROR_START
              "Unrecognized stream data")
 
   /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_STREAM_RESET_NOT_SUPPORTED,
-             SVN_ERR_STREAM_CATEGORY_START + 3,
-             "Stream doesn't support resetting")
-
-  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
-             SVN_ERR_STREAM_CATEGORY_START + 4,
+             SVN_ERR_STREAM_CATEGORY_START + 3,
              "Stream doesn't support seeking")
 
   /* node errors */

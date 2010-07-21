@@ -749,13 +749,6 @@ typedef svn_error_t *(*svn_write_fn_t)(void *baton,
 /** Close handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_close_fn_t)(void *baton);
 
-/** Reset handler function for a generic stream. @see svn_stream_t and
- * svn_stream_reset().
- *
- * @since New in 1.7.
- */
-typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
-
 /** An opaque type which represents a mark on a stream.
  *
  * @see svn_stream_mark().
@@ -804,14 +797,6 @@ svn_stream_set_write(svn_stream_t *stream,
 void
 svn_stream_set_close(svn_stream_t *stream,
                      svn_close_fn_t close_fn);
-
-/** Set @a stream's reset function to @a reset_fn
- *
- * @since New in 1.7.
- */
-void
-svn_stream_set_reset(svn_stream_t *stream,
-                     svn_io_reset_fn_t reset_fn);
 
 /** Set @a stream's mark function to @a mark_fn
  *
@@ -1094,7 +1079,8 @@ svn_stream_mark(svn_stream_t *stream,
 
 /** Seek to a @a mark in a generic @a stream.
  * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
- * if the stream doesn't implement seeking.
+ * if the stream doesn't implement seeking. Passing NULL as @a mark,
+ * seeks to the start of the stream.
  *
  * @see svn_stream_mark()
  * @since New in 1.7.
