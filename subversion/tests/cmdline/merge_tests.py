@@ -15625,7 +15625,7 @@ def record_only_merge_creates_self_referential_mergeinfo(sbox):
 # Test for issue #3657 'phantom svn:eol-style changes cause spurious merge
 # text conflicts'.
 def copy_causes_phantom_eol_conflict(sbox):
-  "copy causes phantom eol conflict"
+  "other prop changes cause phantom eol conflict"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -15648,51 +15648,33 @@ def copy_causes_phantom_eol_conflict(sbox):
                                      wc_dir)
     
   # r3 - Branch 'A' to 'A-branch':
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', A_path, A_branch_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'Create a branch of A',
                                      wc_dir)
 
-  # r4 - Copy 'A/mu' to 'A/mu2':
+  # r4 - Make a text mod and prop mod to 'A/mu':
+  svntest.main.file_write(mu_path, "The new mu!\n")
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'copy', mu_path, mu2_path)
+                                     'ps', 'prop-name', 'prop-val', mu_path)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'Copy a file',
-                                     wc_dir)
+                                     'ci', '-m', 'Edit a file', wc_dir)
 
-  # r5 - Make a text mod to 'A/mu2':
-  svntest.main.file_write(mu2_path, "The new mu!\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'Edit a copied file',
-                                     wc_dir)
-  
-  # r6 - Create a backport branch 'A-branch-backport for r5:
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
-                                     A_branch_path, A_branch_backport_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
-                                     'Create a backport branch of A-branch',
-                                     wc_dir)
-
-  # r7 - Do a file merge of r5 from 'A/mu2' to 'A-branch-backport/mu2':
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c5',
-                                     sbox.repo_url + '/A/mu2',
-                                     mu_backport_path)
-  svntest.actions.run_and_verify_svn(
-      None, None, [], 'ci',
-      '-m', 'Merge r5 from ^/A/mu2 to A-branch-backport/mu', wc_dir)
-  
-  # Now merge r7 from 'A-branch-backport' to 'A-branch'.
+  # Now merge r4 from 'A' to 'A-branch'.
   #
   # This fails over ra_neon and ra_serf on Windows:
   #
-  #   svn merge -r6:7 ^/A-branch-backport merge_tests-110\A-branch"
-  #   --- Merging r7 into 'merge_tests-110\A-branch':
-  #   CU   merge_tests-110\A-branch\mu
-  #   --- Recording mergeinfo for merge of r7 into 'merge_tests-110\A-branch':
-  #    U   merge_tests-110\A-branch
-  #   --- Recording mergeinfo for merge of r7 into 'merge_tests-110\A-branch\mu':
-  #    G   merge_tests-110\A-branch\mu
+  #   >svn merge ^^/A A-branch -c4
+  #   Conflict discovered in 'A-branch/mu'.
+  #   Select: (p) postpone, (df) diff-full, (e) edit,
+  #           (mc) mine-conflict, (tc) theirs-conflict,
+  #           (s) show all options: p
+  #   --- Merging r4 into 'A-branch':
+  #   CU   A-branch\mu
+  #   --- Recording mergeinfo for merge of r4 into 'A-branch':
+  #    U   A-branch
   #   Summary of conflicts:
   #     Text conflicts: 1
   #
@@ -15707,7 +15689,6 @@ def copy_causes_phantom_eol_conflict(sbox):
     })
   expected_mergeinfo_output = wc.State(A_branch_path, {
     ''   : Item(status=' U'),
-    'mu' : Item(status=' G'),
     })
   expected_elision_output = wc.State(A_branch_path, {})
   expected_status = wc.State(A_branch_path, {
@@ -15731,15 +15712,13 @@ def copy_causes_phantom_eol_conflict(sbox):
     'D/H/psi'   : Item(status='  '),
     'D/H/omega' : Item(status='  '),
     })
-  expected_status.tweak(wc_rev=7)
+  expected_status.tweak(wc_rev=4)
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO :
-                              '/A-branch-backport:7'}),
+                              '/A:4'}),
     'B'         : Item(),
     'mu'        : Item("The new mu!\n",
-                       props={SVN_PROP_MERGEINFO :
-                              '/A/mu2:5\n'
-                              '/A-branch-backport/mu:7',
+                       props={'prop-name' : 'prop-val',
                               'svn:eol-style' : 'native'}),
     'B/E'       : Item(),
     'B/E/alpha' : Item("This is the file 'alpha'.\n"),
@@ -15759,8 +15738,8 @@ def copy_causes_phantom_eol_conflict(sbox):
     'D/H/omega' : Item("This is the file 'omega'.\n"),
     })
   expected_skip = wc.State(A_branch_path, {})
-  svntest.actions.run_and_verify_merge(A_branch_path, 6, 7,
-                                       sbox.repo_url + '/A-branch-backport',
+  svntest.actions.run_and_verify_merge(A_branch_path, 3, 4,
+                                       sbox.repo_url + '/A',
                                        None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -15956,6 +15935,8 @@ test_list = [ None,
               foreign_repos_del_and_props,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
               record_only_merge_creates_self_referential_mergeinfo,
+              XFail(copy_causes_phantom_eol_conflict,
+                    svntest.main.is_windows_type_dav),
               XFail(copy_causes_phantom_eol_conflict,
                     svntest.main.is_windows_type_dav),
              ]
