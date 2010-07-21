@@ -1275,6 +1275,7 @@ which_trees_exist(svn_boolean_t *base_exists,
    we return a WC_ID and verify some additional constraints.  */
 static svn_error_t *
 prop_upgrade_trees(svn_boolean_t *base_exists,
+                   svn_wc__db_status_t *base_presence,
                    svn_boolean_t *working_exists,
                    svn_wc__db_status_t *work_presence,
                    apr_int64_t *wc_id,
@@ -1306,6 +1307,7 @@ prop_upgrade_trees(svn_boolean_t *base_exists,
   else
     {
       *base_exists = TRUE;  /* value == 0  */
+      *base_presence = svn_sqlite__column_token(stmt, 1, presence_map);
     }
 
   /* Return the WC_ID that was assigned.  */
@@ -1322,6 +1324,8 @@ prop_upgrade_trees(svn_boolean_t *base_exists,
          fetch the 'presence' column value.  */
       if (svn_sqlite__column_int(stmt, 0))
         *work_presence = svn_sqlite__column_token(stmt, 1, presence_map);
+      else
+        *base_presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
       /* During an upgrade, there should be just one working copy, so both
          rows should refer to the same value.  */
@@ -6805,6 +6809,7 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
 
 svn_error_t *
 svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
+                               const char *dir_abspath,
                                const char *local_relpath,
                                apr_hash_t *base_props,
                                apr_hash_t *revert_props,
@@ -6813,6 +6818,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                apr_pool_t *scratch_pool)
 {
   svn_boolean_t have_base;
+  svn_wc__db_status_t base_presence;
   svn_boolean_t have_work;
   svn_wc__db_status_t work_presence;
   apr_int64_t wc_id;
@@ -6847,15 +6853,18 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
   */
 
   /* Collect information about this node.  */
-  SVN_ERR(prop_upgrade_trees(&have_base, &have_work, &work_presence, &wc_id,
-                             sdb, local_relpath));
+  SVN_ERR(prop_upgrade_trees(&have_base, &base_presence,
+                             &have_work, &work_presence,
+                             &wc_id, sdb, local_relpath));
 
   /* Detect the buggy scenario described above. We cannot upgrade this
      working copy if we have no idea where BASE_PROPS should go.  */
   if (original_format > SVN_WC__NO_REVERT_FILES
       && revert_props == NULL
       && have_work
-      && work_presence == svn_wc__db_status_normal)
+      && work_presence == svn_wc__db_status_normal
+      && have_base
+      && base_presence != svn_wc__db_status_not_present)
     {
       /* There should be REVERT_PROPS, so it appears that we just ran into
          the described bug. Sigh.  */
@@ -6863,10 +6872,14 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                _("The properties of '%s' are in an "
                                  "indeterminate state and cannot be "
                                  "upgraded. See issue #2530."),
-                               local_relpath);
+                               svn_dirent_local_style(
+                                 svn_dirent_join(dir_abspath, local_relpath,
+                                                 scratch_pool), scratch_pool));
     }
 
-  if (have_base)
+  if (have_base
+      && (base_presence == svn_wc__db_status_normal
+          || base_presence == svn_wc__db_status_incomplete))
     {
       apr_hash_t *props = revert_props ? revert_props : base_props;
 
@@ -6889,8 +6902,9 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 
       /* Do we have a replaced node? It has properties: an empty set for
          adds, and a non-empty set for copies/moves.  */
-      if (work_presence == svn_wc__db_status_normal
-          && original_format > SVN_WC__NO_REVERT_FILES)
+      if (original_format > SVN_WC__NO_REVERT_FILES
+          && (work_presence == svn_wc__db_status_normal
+              || work_presence == svn_wc__db_status_incomplete))
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                             STMT_UPDATE_WORKING_PROPS));
@@ -6907,6 +6921,17 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
     }
 
   /* If there are WORKING_PROPS, then they always go into ACTUAL_NODE.  */
+  if (working_props != NULL
+      && base_props != NULL)
+    {
+      apr_array_header_t *diffs;
+
+      SVN_ERR(svn_prop_diffs(&diffs, working_props, base_props, scratch_pool));
+
+      if (diffs->nelts == 0)
+        working_props = NULL; /* No differences */
+    }
+
   if (working_props != NULL)
     {
       struct set_props_baton spb = { 0 };

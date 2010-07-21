@@ -90,20 +90,33 @@ read_propfile(apr_hash_t **props,
 {
   svn_error_t *err;
   svn_stream_t *stream;
+  apr_finfo_t finfo;
 
-  err = svn_stream_open_readonly(&stream, propfile_abspath,
-                                 scratch_pool, scratch_pool);
-  if (err)
+  err = svn_io_stat(&finfo, propfile_abspath, APR_FINFO_SIZE, scratch_pool);
+
+  if (err
+      && (APR_STATUS_IS_ENOENT(err->apr_err)
+          || APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
-      if (!APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
-
       svn_error_clear(err);
 
       /* The propfile was not there. Signal with a NULL.  */
       *props = NULL;
       return SVN_NO_ERROR;
     }
+  else
+    SVN_ERR(err);
+
+  /* A 0-bytes file signals an empty property list.
+     (mostly used for revert-props) */
+  if (finfo.size == 0)
+    {
+      *props = apr_hash_make(result_pool);
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_stream_open_readonly(&stream, propfile_abspath,
+                                   scratch_pool, scratch_pool));
 
   /* ### does this function need to be smarter? will we see zero-length
      ### files? see props.c::load_props(). there may be more work here.
@@ -468,16 +481,14 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                                       scratch_pool),
                     TRUE, scratch_pool));
 
-#if (SVN_WC__VERSION >= 17)
   /* Remove the old text-base directory and the old text-base files. */
   svn_error_clear(svn_io_remove_dir2(
                     svn_wc__adm_child(wcroot_abspath,
                                       TEXT_BASE_SUBDIR,
                                       scratch_pool),
                     FALSE, NULL, NULL, scratch_pool));
-#endif
 
-#if 0  /* ### NOT READY TO WIPE THESE FILES!!  */
+#if (SVN_WC__VERSION >= 18)
   /* Remove the old properties files... whole directories at a time.  */
   svn_error_clear(svn_io_remove_dir2(
                     svn_wc__adm_child(wcroot_abspath,
@@ -964,7 +975,7 @@ migrate_node_props(const char *wcroot_abspath,
                         scratch_pool, scratch_pool));
 
   return svn_error_return(svn_wc__db_upgrade_apply_props(
-                            sdb, name,
+                            sdb, wcroot_abspath, name,
                             base_props, revert_props, working_props,
                             original_format,
                             scratch_pool));
@@ -1338,21 +1349,14 @@ upgrade_to_wcng(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_upgrade_apply_dav_cache(sdb, all_wcprops, iterpool));
     }
 
+  SVN_ERR(migrate_text_bases(dir_abspath, sdb, iterpool));
+
+#if (SVN_WC__VERSION >= 18)
   /* Upgrade all the properties (including "this dir").
 
      Note: this must come AFTER the entries have been migrated into the
      database. The upgrade process needs the children in BASE_NODE and
      WORKING_NODE, and to examine the resultant WORKING state.  */
-#if 0
-  /* ### not quite yet  */
-  SVN_ERR(migrate_props(dir_abspath, sdb, old_format, iterpool));
-#endif
-
-#if (SVN_WC__VERSION >= 17)
-  SVN_ERR(migrate_text_bases(dir_abspath, sdb, iterpool));
-#endif
-
-#if (SVN_WC__VERSION >= 18)
   SVN_ERR(migrate_props(dir_abspath, sdb, old_format, iterpool));
 #endif
 
