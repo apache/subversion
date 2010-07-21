@@ -820,22 +820,32 @@ def text_base_path(file_path):
   """Return the path to the text-base file for the versioned file
      FILE_PATH."""
   dot_svn = svntest.main.get_admin_name()
-  parent_path, file_name = os.path.split(file_path)
+  root_path, relpath = os.path.split(file_path)
 
-  db_path = os.path.join(parent_path, dot_svn, 'wc.db')
-  db = svntest.sqlite3.connect(db_path)
+  while True:
+    db_path = os.path.join(root_path, dot_svn, 'wc.db')
+    try:
+      db = svntest.sqlite3.connect(db_path)
+      break
+    except: pass
+    head, tail = os.path.split(root_path)
+    if head == root_path:
+      raise svntest.Failure("No DB for " + file_path)
+    root_path = head
+    relpath = os.path.join(tail, relpath)
+
   c = db.cursor()
   c.execute("""select checksum from working_node
-               where local_relpath = '""" + file_name + """'""")
+               where local_relpath = '""" + relpath + """'""")
   checksum = c.fetchone()
   if checksum is None:
     c.execute("""select checksum from base_node
-                 where local_relpath = '""" + file_name + """'""")
+                 where local_relpath = '""" + relpath + """'""")
     checksum = c.fetchone()[0]
   if checksum is None or checksum[0:6] != "$sha1$":
-    raise svntest.Failure("No SHA1 checksum for " + file_path)
+    raise svntest.Failure("No SHA1 checksum for " + relpath)
   db.close()
-  return os.path.join(parent_path, dot_svn, 'pristine', checksum[6:])
+  return os.path.join(root_path, dot_svn, 'pristine', checksum[6:])
 
 
 # ------------
