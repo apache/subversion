@@ -652,8 +652,7 @@ add_url_parents(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-mkdir_urls(svn_commit_info_t **commit_info_p,
-           const apr_array_header_t *urls,
+mkdir_urls(const apr_array_header_t *urls,
            svn_boolean_t make_parents,
            const apr_hash_t *revprop_table,
            svn_client_ctx_t *ctx,
@@ -662,7 +661,6 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *commit_baton;
   const char *log_msg;
   apr_array_header_t *targets;
   apr_hash_t *targets_hash;
@@ -803,11 +801,10 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
     }
 
   /* Fetch RA commit editor */
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    svn_client__commit_callback,
-                                    commit_baton,
+                                    ctx->commit_callback2,
+                                    ctx->commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
@@ -865,8 +862,7 @@ svn_client__make_local_parents(const char *path,
 
 
 svn_error_t *
-svn_client_mkdir3(svn_commit_info_t **commit_info_p,
-                  const apr_array_header_t *paths,
+svn_client_mkdir4(const apr_array_header_t *paths,
                   svn_boolean_t make_parents,
                   const apr_hash_t *revprop_table,
                   svn_client_ctx_t *ctx,
@@ -877,8 +873,7 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
 
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {
-      SVN_ERR(mkdir_urls(commit_info_p, paths, make_parents,
-                         revprop_table, ctx, pool));
+      SVN_ERR(mkdir_urls(paths, make_parents, revprop_table, ctx, pool));
     }
   else
     {
