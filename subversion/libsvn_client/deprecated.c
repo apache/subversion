@@ -112,7 +112,28 @@ svn_client_add(const char *path,
   return svn_client_add3(path, recursive, FALSE, FALSE, ctx, pool);
 }
 
+svn_error_t *
+svn_client_mkdir3(svn_commit_info_t **commit_info_p,
+                  const apr_array_header_t *paths,
+                  svn_boolean_t make_parents,
+                  const apr_hash_t *revprop_table,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  svn_client_ctx_t shadow_ctx;
+  struct capture_baton_t cb;
 
+  cb.info = commit_info_p;
+  cb.pool = pool;
+  cb.original_callback = ctx->commit_callback2;
+  cb.original_baton = ctx->commit_baton;
+
+  shadow_ctx = *ctx;
+  shadow_ctx.commit_callback2 = capture_commit_info;
+  shadow_ctx.commit_baton = &cb;
+
+  return svn_client_mkdir4(paths, make_parents, revprop_table, ctx, pool);
+}
 
 svn_error_t *
 svn_client_mkdir2(svn_commit_info_t **commit_info_p,

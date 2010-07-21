@@ -1461,8 +1461,7 @@ svn_client_add(const char *path,
  *
  * If @a paths contains URLs, use the authentication baton in @a ctx
  * and @a message to immediately attempt to commit the creation of the
- * directories in @a paths in the repository.  If the commit succeeds,
- * allocate (in @a pool) and populate @a *commit_info_p.
+ * directories in @a paths in the repository.
  *
  * Else, create the directories on disk, and attempt to schedule them
  * for addition (using svn_client_add(), whose docstring you should
@@ -1486,8 +1485,27 @@ svn_client_add(const char *path,
  * @a ctx->notify_baton2 and the path of the new directory.  Note that this is
  * only called for items added to the working copy.
  *
- * @since New in 1.5.
+ * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
+ * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
+ * #svn_commit_info_t for the commit.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_mkdir4(const apr_array_header_t *paths,
+                  svn_boolean_t make_parents,
+                  const apr_hash_t *revprop_table,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_mkdir4(), but returns the @a commit_info_p directly,
+ * rather than through @a ctx->commit_callback2.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mkdir3(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
