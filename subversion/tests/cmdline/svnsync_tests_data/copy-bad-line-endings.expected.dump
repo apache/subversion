@@ -24,12 +24,6 @@ Prop-content-md5: (svn:date) dc15c87f7ae25d0af3c4a1d414062c93
 Prop-content-sha1: (svn:date) ac67780acd8acbfc2e0c266aa3ec08cbccc623d9
 Content-length: 150
 
-K 7
-svn:log
-V 48
-added svn:ignore using CRLF to
- terminate lines
-
 K 10
 svn:author
 V 7
@@ -38,6 +32,12 @@ K 8
 svn:date
 V 27
 2009-03-27T19:33:51.178381Z
+K 7
+svn:log
+V 48
+added svn:ignore using CRLF to
+ terminate lines
+
 PROPS-END
 
 Node-path: 

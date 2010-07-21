@@ -24,10 +24,6 @@ Prop-content-md5: (svn:date) cb206ac7669eef47b8114c405fae6564
 Prop-content-sha1: (svn:date) ed9527991cf785cdb071bdce4de1c5b40820c37a
 Content-length: 113
 
-K 7
-svn:log
-V 16
-add dir and file
 K 10
 svn:author
 V 2
@@ -36,6 +32,10 @@ K 8
 svn:date
 V 27
 2006-04-19T12:50:29.623828Z
+K 7
+svn:log
+V 16
+add dir and file
 PROPS-END
 
 Node-path: dir
@@ -69,10 +69,6 @@ Prop-content-md5: (svn:date) ff6b2f46707c1d5c7a25da1ac2281676
 Prop-content-sha1: (svn:date) bf4df558ea209dba9f93a3464022cde10e9b4e0f
 Content-length: 126
 
-K 7
-svn:log
-V 29
-copy dir and modify prop of f
 K 10
 svn:author
 V 2
@@ -81,6 +77,10 @@ K 8
 svn:date
 V 27
 2006-04-19T12:51:15.837786Z
+K 7
+svn:log
+V 29
+copy dir and modify prop of f
 PROPS-END
 
 Node-path: dir2

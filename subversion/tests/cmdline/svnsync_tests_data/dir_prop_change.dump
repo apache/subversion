@@ -24,11 +24,6 @@ Prop-content-md5: (svn:date) a9286b75679e0f198aebed8d81093b8f
 Prop-content-sha1: (svn:date) bf5e60dd41846af4a1938a145e5b2dc72caf7a65
 Content-length: 105
 
-K 7
-svn:log
-V 5
-blah
-
 K 10
 svn:author
 V 6
@@ -37,6 +32,11 @@ K 8
 svn:date
 V 27
 2005-12-21T23:12:58.931794Z
+K 7
+svn:log
+V 5
+blah
+
 PROPS-END
 
 Node-path: 

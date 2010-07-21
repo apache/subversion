@@ -22,15 +22,15 @@ Prop-content-md5: (svn:date) 597b5364abcbac3b321a0162ce3bdd21
 Prop-content-sha1: (svn:date) 21c46980750e710eb3c5a6a14ec3b414226673a5
 Content-length: 77
 
+K 8
+svn:date
+V 27
+2006-10-27T18:55:49.840787Z
 K 7
 svn:log
 V 4
 foo
 
-K 8
-svn:date
-V 27
-2006-10-27T18:55:49.840787Z
 PROPS-END
 
 Node-path: trunk

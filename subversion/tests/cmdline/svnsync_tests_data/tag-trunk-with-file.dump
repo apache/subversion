@@ -24,10 +24,6 @@ Prop-content-md5: (svn:date) ed886aa69961cfa6adb3b936ffc80889
 Prop-content-sha1: (svn:date) 12760e904f72cb239eea36c02488f94a65f5af3a
 Content-length: 115
 
-K 7
-svn:log
-V 14
-initial layout
 K 10
 svn:author
 V 6
@@ -36,6 +32,10 @@ K 8
 svn:date
 V 27
 2005-11-07T20:22:08.601650Z
+K 7
+svn:log
+V 14
+initial layout
 PROPS-END
 
 Node-path: branches
@@ -75,10 +75,6 @@ Prop-content-md5: (svn:date) 1850831dfb94f96c873dfab34c9f9ed0
 Prop-content-sha1: (svn:date) 768a02028e9b7f7d70422366e9e18391db9aeb78
 Content-length: 111
 
-K 7
-svn:log
-V 10
-add a file
 K 10
 svn:author
 V 6
@@ -87,6 +83,10 @@ K 8
 svn:date
 V 27
 2005-11-07T20:22:25.607033Z
+K 7
+svn:log
+V 10
+add a file
 PROPS-END
 
 Node-path: trunk/foo.txt
@@ -112,11 +112,6 @@ Prop-content-md5: (svn:date) 1872a9c3ebf036b1b88cd553bf71d9b1
 Prop-content-sha1: (svn:date) 36cf7ac0d23cd15f8e4983192a370d545e293f56
 Content-length: 113
 
-K 7
-svn:log
-V 12
-make a tag.
-
 K 10
 svn:author
 V 6
@@ -125,6 +120,11 @@ K 8
 svn:date
 V 27
 2005-11-07T20:22:46.490796Z
+K 7
+svn:log
+V 12
+make a tag.
+
 PROPS-END
 
 Node-path: tags/a-tag-with-file-contents

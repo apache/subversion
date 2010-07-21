@@ -24,10 +24,6 @@ Prop-content-md5: (svn:date) d3eb2d2ffe43557d43f01f99dd23d7ee
 Prop-content-sha1: (svn:date) 3a4b04ed1626b7d0fc91a015d72a834fda180838
 Content-length: 137
 
-K 7
-svn:log
-V 37
-adding file with prop 'svn:eol-style'
 K 10
 svn:author
 V 5
@@ -36,6 +32,10 @@ K 8
 svn:date
 V 27
 2009-06-05T14:23:41.185914Z
+K 7
+svn:log
+V 37
+adding file with prop 'svn:eol-style'
 PROPS-END
 
 Node-path: file
@@ -67,10 +67,6 @@ Prop-content-md5: (svn:date) 11acbf8a3cae675137de95c1232e1783
 Prop-content-sha1: (svn:date) 07c52cfe8bc8cfb117a83838e2bafba514780118
 Content-length: 139
 
-K 7
-svn:log
-V 39
-removing prop 'svn:eol-style' from file
 K 10
 svn:author
 V 5
@@ -79,6 +75,10 @@ K 8
 svn:date
 V 27
 2009-06-05T14:23:42.140849Z
+K 7
+svn:log
+V 39
+removing prop 'svn:eol-style' from file
 PROPS-END
 
 Node-path: file

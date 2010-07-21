@@ -24,10 +24,6 @@ Prop-content-md5: (svn:date) 64feac049b514242c014f71ac27bb68b
 Prop-content-sha1: (svn:date) a5f1b6bfa3ba00c58a7cfda966715513d6c050d2
 Content-length: 133
 
-K 7
-svn:log
-V 32
-Import the Greek Tree to /trunk.
 K 10
 svn:author
 V 6
@@ -36,6 +32,10 @@ K 8
 svn:date
 V 27
 2008-06-14T09:28:38.718750Z
+K 7
+svn:log
+V 32
+Import the Greek Tree to /trunk.
 PROPS-END
 
 Node-path: trunk
@@ -57,10 +57,6 @@ Prop-content-md5: (svn:date) f011aa8030d9689b21500e10baeed42b
 Prop-content-sha1: (svn:date) 8b2d68b4dc77c4255122d6896da1ca7f5bae6d47
 Content-length: 105
 
-K 7
-svn:log
-V 5
-add X
 K 10
 svn:author
 V 6
@@ -69,6 +65,10 @@ K 8
 svn:date
 V 27
 2010-07-08T21:22:47.484375Z
+K 7
+svn:log
+V 5
+add X
 PROPS-END
 
 Revision-number: 3
@@ -81,10 +81,6 @@ Prop-content-md5: (svn:date) 7d66d31133b86b67705c69a539842090
 Prop-content-sha1: (svn:date) d6fbd0558bcc220eea1d794975114a75c69703e8
 Content-length: 102
 
-K 7
-svn:log
-V 2
-cp
 K 10
 svn:author
 V 6
@@ -93,6 +89,10 @@ K 8
 svn:date
 V 27
 2010-07-08T21:25:07.187500Z
+K 7
+svn:log
+V 2
+cp
 PROPS-END
 
 Node-path: trunk/H
