@@ -280,6 +280,9 @@ get_client_string(void *baton,
   return SVN_NO_ERROR;
 }
 
+
+#define SVN_CLIENT__MAX_REDIRECT_ATTEMPTS 3 /* ### TODO:  Make configurable. */
+
 svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char **corrected_url,
@@ -333,9 +336,55 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
         SVN_ERR(err);
     }
 
-  return svn_error_return(svn_ra_open4(ra_session, corrected_url, base_url,
-                                       uuid, cbtable, cb, ctx->config, pool));
-}
+  /* If the caller allows for auto-following redirections, and the
+     RA->open() call above reveals a CORRECTED_URL, try the new URL.
+     We'll do this in a loop up to some maximum number follow-and-retry
+     attempts.  */
+  if (corrected_url)
+    {
+      apr_hash_t *attempted = apr_hash_make(pool);
+      int attempts_left = SVN_CLIENT__MAX_REDIRECT_ATTEMPTS;
+
+      *corrected_url = NULL;
+      while (attempts_left--)
+        {
+          const char *corrected = NULL;
+
+          /* Try to open the RA session.  If this is our last attempt,
+             don't accept corrected URLs from the RA provider. */
+          SVN_ERR(svn_ra_open4(ra_session,
+                               attempts_left == 0 ? NULL : &corrected,
+                               base_url, uuid, cbtable, cb, ctx->config, pool));
+
+          /* No error and no corrected URL?  We're done here. */
+          if (! corrected)
+            break;
+
+          /* ### TODO: Notify the user that a redirect is being followed. */
+
+          /* Our caller will want to know what our final corrected URL was. */
+          *corrected_url = corrected;
+
+          /* Make sure we've not attempted this URL before. */
+          if (apr_hash_get(attempted, corrected, APR_HASH_KEY_STRING))
+            return svn_error_createf(SVN_ERR_CLIENT_CYCLE_DETECTED, NULL,
+                                     _("Redirect cycle detected for URL '%s'"),
+                                     corrected);
+
+          /* Remember this CORRECTED_URL so we don't wind up in a loop. */
+          apr_hash_set(attempted, corrected, APR_HASH_KEY_STRING, (void *)1);
+          base_url = corrected;
+        }
+    }
+  else
+    {
+      SVN_ERR(svn_ra_open4(ra_session, NULL, base_url,
+                           uuid, cbtable, cb, ctx->config, pool));
+    }
+
+  return SVN_NO_ERROR;
+ }
+#undef SVN_CLIENT__MAX_REDIRECT_ATTEMPTS
 
 
 svn_error_t *
@@ -419,7 +468,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   svn_opt_revision_t dead_end_rev;
   svn_opt_revision_t *ignored_rev, *new_rev;
   svn_revnum_t rev;
-  const char *ignored_url;
+  const char *ignored_url, *corrected_url;
 
   SVN_ERR(svn_client_url_from_path2(&initial_url, path_or_url, ctx, pool,
                                     pool));
@@ -434,10 +483,16 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                     TRUE,
                                     pool));
 
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, initial_url,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
+                                               initial_url,
                                                base_dir_abspath, NULL,
                                                base_dir_abspath != NULL,
                                                FALSE, ctx, pool));
+
+  /* If we got a CORRECTED_URL, we'll want to refer to that as the
+     URL-ized form of PATH_OR_URL from now on. */
+  if (corrected_url && svn_path_is_url(path_or_url))
+    path_or_url = corrected_url;
 
   dead_end_rev.kind = svn_opt_revision_unspecified;
 

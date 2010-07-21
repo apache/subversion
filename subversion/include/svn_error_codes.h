@@ -1170,6 +1170,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 18,
              "Invalid path component strip count specified")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_CYCLE_DETECTED,
+             SVN_ERR_CLIENT_CATEGORY_START + 19,
+             "Detected a cycle while processing the operation")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
