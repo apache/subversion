@@ -602,13 +602,13 @@ get_ra_editor(svn_ra_session_t **ra_session,
               const char *log_msg,
               const apr_array_header_t *commit_items,
               const apr_hash_t *revprop_table,
-              svn_commit_info_t **commit_info_p,
               svn_boolean_t is_commit,
               apr_hash_t *lock_tokens,
               svn_boolean_t keep_locks,
+              svn_commit_callback2_t commit_callback,
+              void *commit_baton,
               apr_pool_t *pool)
 {
-  void *commit_baton;
   apr_hash_t *commit_revprops;
 
   /* Open an RA session to URL. */
@@ -635,7 +635,6 @@ get_ra_editor(svn_ra_session_t **ra_session,
                                            log_msg, ctx, pool));
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   return svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
                                    commit_revprops,
                                    svn_client__commit_callback,
@@ -661,6 +660,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
   const char *log_msg = "";
   const svn_delta_editor_t *editor;
   void *edit_baton;
+  void *commit_baton;
   svn_ra_session_t *ra_session;
   apr_hash_t *excludes = apr_hash_make(pool);
   svn_node_kind_t kind;
@@ -707,6 +707,8 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
   if (kind == svn_node_file)
     base_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
+  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
+
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
   subpool = svn_pool_create(pool);
@@ -737,8 +739,9 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
     }
   while ((err = get_ra_editor(&ra_session,
                               &editor, &edit_baton, ctx, url, base_dir_abspath,
-                              log_msg, NULL, revprop_table,
-                              commit_info_p, FALSE, NULL, TRUE, subpool)));
+                              log_msg, NULL, revprop_table, FALSE, NULL, TRUE,
+                              svn_client__commit_callback, commit_baton,
+                              subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
   if (new_entries->nelts)
@@ -1062,6 +1065,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 {
   const svn_delta_editor_t *editor;
   void *edit_baton;
+  void *commit_baton;
   svn_ra_session_t *ra_session;
   const char *log_msg;
   const char *base_abspath;
@@ -1223,11 +1227,13 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                      pool)))
     goto cleanup;
 
-  if ((cmt_err = get_ra_editor(&ra_session,
-                               &editor, &edit_baton, ctx,
+  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
+
+  if ((cmt_err = get_ra_editor(&ra_session, &editor, &edit_baton, ctx,
                                base_url, base_abspath, log_msg,
-                               commit_items, revprop_table, commit_info_p,
-                               TRUE, lock_tokens, keep_locks, pool)))
+                               commit_items, revprop_table, TRUE, lock_tokens,
+                               keep_locks, svn_client__commit_callback,
+                               commit_baton, pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
