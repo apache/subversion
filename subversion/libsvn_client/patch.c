@@ -65,6 +65,8 @@ typedef struct hunk_info_t {
   int fuzz;
 } hunk_info_t;
 
+/* A struct carrying the information related to the content of a target, be it
+ * a property or the the text of a file. */
 typedef struct target_content_info_t {
   /* A stream to read lines form the target file. This is NULL in case
    * the target file did not exist prior to patch application. */
