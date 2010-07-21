@@ -125,7 +125,7 @@ svn_cl__import(apr_getopt_t *os,
                               pool), pool));
 
   if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
+    SVN_ERR(svn_cl__print_commit_info(commit_info, NULL, pool));
 
   return SVN_NO_ERROR;
 }

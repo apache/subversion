@@ -357,9 +357,13 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 /* Print out commit information found in COMMIT_INFO to the console.
  * POOL is used for temporay allocations.
  * COMMIT_INFO should not be NULL.
+ *
+ * This function implements svn_commit_callback2_t.
  */
 svn_error_t *
-svn_cl__print_commit_info(svn_commit_info_t *commit_info, apr_pool_t *pool);
+svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
+                          void *baton,
+                          apr_pool_t *pool);
 
 
 /* Convert the date in DATA to a human-readable UTF-8-encoded string

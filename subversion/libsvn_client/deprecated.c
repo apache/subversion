@@ -50,6 +50,35 @@
 
 /*** Code. ***/
 
+
+/* Baton for capture_commit_info() */
+struct capture_baton_t {
+  svn_commit_callback2_t original_callback;
+  void *original_baton;
+
+  svn_commit_info_t **info;
+  apr_pool_t *pool;
+};
+
+
+/* Callback which implements svn_commit_callback2_t for use with some
+   backward compat functions. */
+static svn_error_t *
+capture_commit_info(const svn_commit_info_t *commit_info,
+                    void *baton,
+                    apr_pool_t *pool)
+{
+  struct capture_baton_t *cb = baton;
+
+  *(cb->info) = svn_commit_info_dup(commit_info, cb->pool);
+
+  if (cb->original_callback)
+    (cb->original_callback)(commit_info, cb->original_baton, pool);
+
+  return SVN_NO_ERROR;
+}
+
+
 /*** From add.c ***/
 svn_error_t *
 svn_client_add3(const char *path,
@@ -590,6 +619,31 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
 }
 
 /*** From delete.c ***/
+svn_error_t *
+svn_client_delete3(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *paths,
+                   svn_boolean_t force,
+                   svn_boolean_t keep_local,
+                   const apr_hash_t *revprop_table,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  svn_client_ctx_t shadow_ctx;
+  struct capture_baton_t cb;
+
+  cb.info = commit_info_p;
+  cb.pool = pool;
+  cb.original_callback = ctx->commit_callback2;
+  cb.original_baton = ctx->commit_baton;
+
+  shadow_ctx = *ctx;
+  shadow_ctx.commit_callback2 = capture_commit_info;
+  shadow_ctx.commit_baton = &cb;
+
+  return svn_client_delete4(paths, force, keep_local, revprop_table,
+                            &shadow_ctx, pool);
+}
+
 svn_error_t *
 svn_client_delete2(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
