@@ -636,8 +636,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
 
   /* Fetch RA commit editor. */
   return svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
-                                   commit_revprops,
-                                   svn_client__commit_callback,
+                                   commit_revprops, commit_callback,
                                    commit_baton, lock_tokens, keep_locks,
                                    pool);
 }
