@@ -7075,14 +7075,6 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * matching @a file_baton) through @a editor, then close @a file_baton
  * afterwards.  Use @a scratch_pool for any temporary allocation.
  *
- * If @a tempfile is non-NULL, make a copy of @a local_abspath with keywords
- * and eol translated to repository-normal form, and set @a *tempfile to the
- * absolute path to this copy, allocated in @a result_pool.  The copy will
- * be in the temporary-text-base directory.  Do not clean up the copy;
- * caller can do that.  (The purpose of handing back the tmp copy is that it
- * is usually about to become the new text base anyway, but the installation
- * of the new text base is outside the scope of this function.)
- *
  * If @a new_text_base_md5_checksum is non-NULL, set
  * @a *new_text_base_md5_checksum to the MD5 checksum of (@a local_abspath
  * translated to repository-normal form), allocated in @a result_pool.
@@ -7106,8 +7098,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_transmit_text_deltas3(const char **tempfile,
-                             const svn_checksum_t **new_text_base_md5_checksum,
+svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
                              const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
@@ -7120,6 +7111,14 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
 /** Similar to svn_wc_transmit_text_deltas3(), but with a relative path
  * and adm_access baton, and the checksum output is an MD5 digest instead of
  * two svn_checksum_t objects.
+ *
+ * If @a tempfile is non-NULL, make a copy of @a path with keywords
+ * and eol translated to repository-normal form, and set @a *tempfile to the
+ * absolute path to this copy, allocated in @a result_pool.  The copy will
+ * be in the temporary-text-base directory.  Do not clean up the copy;
+ * caller can do that.  (The purpose of handing back the tmp copy is that it
+ * is usually about to become the new text base anyway, but the installation
+ * of the new text base is outside the scope of this function.)
  *
  * @since New in 1.4.
  * @deprecated Provided for backwards compatibility with the 1.6 API.

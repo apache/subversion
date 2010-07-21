@@ -421,12 +421,14 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_transmit_text_deltas3(tempfile,
-                                       digest ? &new_text_base_md5_checksum
-                                              : NULL,
-                                       NULL, wc_ctx,
-                                       local_abspath, fulltext, editor,
-                                       file_baton, pool, pool));
+  SVN_ERR(svn_wc__internal_transmit_text_deltas(tempfile,
+                                                (digest
+                                                 ? &new_text_base_md5_checksum
+                                                 : NULL),
+                                                NULL, wc_ctx->db,
+                                                local_abspath, fulltext,
+                                                editor, file_baton,
+                                                pool, pool));
 
   if (digest)
     memcpy(digest, new_text_base_md5_checksum->digest, APR_MD5_DIGESTSIZE);
