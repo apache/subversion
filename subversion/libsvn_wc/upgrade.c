@@ -1350,6 +1350,9 @@ upgrade_to_wcng(svn_wc__db_t *db,
 
 #if (SVN_WC__VERSION >= 17)
   SVN_ERR(migrate_text_bases(dir_abspath, sdb, iterpool));
+
+#if (SVN_WC__VERSION >= 18)
+  SVN_ERR(migrate_props(dir_abspath, sdb, old_format, iterpool));
 #endif
 
   /* All done. DB should finalize the upgrade process now.  */
