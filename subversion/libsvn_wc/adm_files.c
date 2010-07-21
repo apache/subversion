@@ -587,15 +587,15 @@ init_adm_tmp_area(const char *path, apr_pool_t *pool)
   /* SVN_WC__ADM_TMP */
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TMP, FALSE, pool));
 
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TEXT_BASE, TRUE, pool));
-
+#if (SVN_WC__VERSION < 18)
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROP_BASE, TRUE, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
-  return svn_error_return(make_adm_subdir(path, SVN_WC__ADM_PROPS, TRUE,
-                                          pool));
+  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROPS, TRUE, pool));
+#endif
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -619,11 +619,13 @@ init_adm(svn_wc__db_t *db,
 
   /** Make subdirectories. ***/
 
+#if (SVN_WC__VERSION < 18)
   /* SVN_WC__ADM_PROP_BASE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROP_BASE, FALSE, pool));
 
   /* SVN_WC__ADM_PROPS */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROPS, FALSE, pool));
+#endif
 
   /* SVN_WC__ADM_PRISTINE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PRISTINE, FALSE, pool));

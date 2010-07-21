@@ -704,8 +704,11 @@ def basic_cleanup(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
-  # corrupted/non-existing temporary directory should be restored
-  svntest.actions.remove_admin_tmp_dir(B_path)
+  # corrupted/non-existing temporary directory should be restored while
+  # we are not at single-db (where this tmp dir will be gone)
+  tmp_path = os.path.join(B_path, svntest.main.get_admin_name(), 'tmp')
+  if os.path.exists(tmp_path):
+    svntest.main.safe_rmtree(tmp_path)
 
   # Run cleanup (### todo: cleanup doesn't currently print anything)
   svntest.actions.run_and_verify_svn("Cleanup command", None, [],
