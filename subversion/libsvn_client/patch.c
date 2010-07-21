@@ -366,7 +366,7 @@ resolve_target_path(patch_target_t *target,
 
   /* Skip things we should not be messing with. */
   err = svn_wc_status3(&status, wc_ctx, target->local_abspath,
-                         result_pool, scratch_pool);
+                       result_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -442,7 +442,7 @@ init_prop_content_info(target_content_info_t **prop_content_info,
   content_info->current_line = 1;
   content_info->eol_style = svn_subst_eol_style_none;
   content_info->lines = apr_array_make(result_pool, 0,
-                                 sizeof(svn_stream_mark_t *));
+                                       sizeof(svn_stream_mark_t *));
   content_info->hunks = apr_array_make(result_pool, 0, sizeof(hunk_info_t *));
   content_info->keywords = apr_hash_make(result_pool);
   content_info->reject = reject;
@@ -455,8 +455,7 @@ init_prop_content_info(target_content_info_t **prop_content_info,
     {
       /* We assume that a property is small enough to be kept in memory during
        * the patch process. */
-      content_info->stream = svn_stream_from_string(value,
-                                                    result_pool);
+      content_info->stream = svn_stream_from_string(value, result_pool);
     }
 
   /* Create a temporary file to write the patched result to. For properties,
@@ -498,7 +497,7 @@ init_patch_target(patch_target_t **patch_target,
   content_info->current_line = 1;
   content_info->eol_style = svn_subst_eol_style_none;
   content_info->lines = apr_array_make(result_pool, 0,
-                                 sizeof(svn_stream_mark_t *));
+                                       sizeof(svn_stream_mark_t *));
   content_info->hunks = apr_array_make(result_pool, 0, sizeof(hunk_info_t *));
   content_info->keywords = apr_hash_make(result_pool);
   content_info->pool = result_pool;
@@ -533,7 +532,7 @@ init_patch_target(patch_target_t **patch_target,
 
           /* Create a stream to read from the target. */
           content_info->stream = svn_stream_from_aprfile2(target->file,
-                                                       FALSE, result_pool);
+                                                          FALSE, result_pool);
 
           /* Also check the file for local mods and the Xbit. */
           SVN_ERR(svn_wc_text_modified_p2(&target->local_mods, wc_ctx,
@@ -931,10 +930,10 @@ scan_for_match(svn_linenum_t *matched_line,
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 match_existing_target(svn_boolean_t *match,
-                    target_content_info_t *content_info,
-                    const svn_hunk_t *hunk,
-                    svn_stream_t *stream,
-                    apr_pool_t *scratch_pool)
+                      target_content_info_t *content_info,
+                      const svn_hunk_t *hunk,
+                      svn_stream_t *stream,
+                      apr_pool_t *scratch_pool)
 {
   svn_boolean_t lines_matched;
   apr_pool_t *iterpool;
@@ -2317,7 +2316,8 @@ svn_client_patch(const char *patch_abspath,
   baton.patch_func = patch_func;
   baton.patch_baton = patch_baton;
 
-  return svn_error_return(svn_wc__call_with_write_lock(apply_patches, &baton,
-                                       ctx->wc_ctx, local_abspath,
-                                       result_pool, scratch_pool));
+  return svn_error_return(
+           svn_wc__call_with_write_lock(apply_patches, &baton,
+                                        ctx->wc_ctx, local_abspath,
+                                        result_pool, scratch_pool));
 }
