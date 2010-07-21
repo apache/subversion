@@ -44,9 +44,6 @@ struct dump_edit_baton {
      propstring so they can be printed directly to the stream */
   svn_stringbuf_t *propstring;
 
-  /* Was a copy command issued? */
-  svn_boolean_t is_copy;
-
   /* Temporary file to write delta to along with its checksum */
   char *delta_abspath;
 

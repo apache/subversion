@@ -34,17 +34,17 @@
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
 /* Make a directory baton to represent the directory at path (relative
-   to the edit_baton).
-
-   COPYFROM_PATH/COPYFROM_REV are the path/revision against which this
-   directory should be compared for changes. If the copyfrom
-   information is valid, the directory will be compared
-   against its copy source.
-
-   PARENT_DIR_BATON is the directory baton of this directory's parent,
-   or NULL if this is the top-level directory of the edit.  ADDED
-   indicates if this directory is newly added in this revision.
-   Perform all allocations in POOL.  */
+ * to the edit_baton).
+ *
+ * COPYFROM_PATH/COPYFROM_REV are the path/revision against which this
+ * directory should be compared for changes. If the copyfrom
+ * information is valid, the directory will be compared against its
+ * copy source.
+ *
+ * PARENT_DIR_BATON is the directory baton of this directory's parent,
+ * or NULL if this is the top-level directory of the edit.  ADDED
+ * indicates if this directory is newly added in this revision.
+ * Perform all allocations in POOL.  */
 static struct dir_baton *
 make_dir_baton(const char *path,
                const char *copyfrom_path,
@@ -59,7 +59,7 @@ make_dir_baton(const char *path,
   struct dir_baton *new_db = apr_pcalloc(pool, sizeof(*new_db));
   const char *abspath;
 
-  /* A path relative to nothing?  I don't think so. */
+  /* Disallow a path relative to nothing. */
   SVN_ERR_ASSERT_NO_RETURN(!path || pb);
 
   /* Construct the full path of this node. */
@@ -70,12 +70,14 @@ make_dir_baton(const char *path,
 
   /* Remove leading slashes from copyfrom paths. */
   if (copyfrom_path && strcmp(copyfrom_path, "/"))
-    copyfrom_path = ((*copyfrom_path == '/') ? copyfrom_path + 1 : copyfrom_path);
+    copyfrom_path = ((*copyfrom_path == '/') ?
+		     copyfrom_path + 1 : copyfrom_path);
 
   new_db->eb = eb;
   new_db->parent_dir_baton = pb;
   new_db->abspath = abspath;
-  new_db->copyfrom_path = copyfrom_path ? apr_pstrdup(pool, copyfrom_path) : NULL;
+  new_db->copyfrom_path = copyfrom_path ?
+	  apr_pstrdup(pool, copyfrom_path) : NULL;
   new_db->copyfrom_rev = copyfrom_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
@@ -85,28 +87,39 @@ make_dir_baton(const char *path,
 }
 /*
  * Write out a node record for PATH of type KIND under EB->FS_ROOT.
- * ACTION describes what is happening to the node (see enum svn_node_action).
- * Write record to writable EB->STREAM, using EB->BUFFER to write in chunks.
+ * ACTION describes what is happening to the node (see enum
+ * svn_node_action). Write record to writable EB->STREAM, using
+ * EB->BUFFER to write in chunks.
  *
  * If the node was itself copied, IS_COPY is TRUE and the
- * path/revision of the copy source are in COPYFROM_PATH/COPYFROM_REV.  If
- * IS_COPY is FALSE, yet COPYFROM_PATH/COPYFROM_REV are valid, this node is part
- * of a copied subtree.
+ * path/revision of the copy source are in COPYFROM_PATH/COPYFROM_REV.
+ * If IS_COPY is FALSE, yet COPYFROM_PATH/COPYFROM_REV are valid, this
+ * node is part of a copied subtree.
  */
 static svn_error_t *
 dump_node(struct dump_edit_baton *eb,
           const char *path,    /* an absolute path. */
           svn_node_kind_t kind,
           enum svn_node_action action,
+	  svn_boolean_t is_copy,
           const char *copyfrom_path,
           svn_revnum_t copyfrom_rev,
           apr_pool_t *pool)
 {
-  /* Write out metadata headers for this node. */
-  SVN_ERR(svn_stream_printf(eb->stream, pool,
-          SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
-          (*path == '/') ? path + 1 : path));
+  /* Remove leading slashes from path and copyfrom_path */
+  if (path && strcmp(path, "/"))
+    path = ((*path == '/') ?
+		     path + 1 : path);
+  
+  if (copyfrom_path && strcmp(copyfrom_path, "/"))
+    copyfrom_path = ((*copyfrom_path == '/') ?
+		     copyfrom_path + 1 : copyfrom_path);
 
+  /* Node-path: commons/STATUS */
+  SVN_ERR(svn_stream_printf(eb->stream, pool,
+			    SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", path));
+
+  /* Node-kind: file */
   if (kind == svn_node_file)
     SVN_ERR(svn_stream_printf(eb->stream, pool,
                               SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
@@ -114,11 +127,9 @@ dump_node(struct dump_edit_baton *eb,
     SVN_ERR(svn_stream_printf(eb->stream, pool,
                               SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
 
-  /* Remove leading slashes from copyfrom paths. */
-  if (copyfrom_path && strcmp(copyfrom_path, "/"))
-    copyfrom_path = ((*copyfrom_path == '/') ? copyfrom_path + 1 : copyfrom_path);
 
   switch (action) {
+  /* Write the appropriate Node-action header */
 
   case svn_node_action_change:
     SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -127,8 +138,8 @@ dump_node(struct dump_edit_baton *eb,
     break;
 
   case svn_node_action_replace:
-    if (!eb->is_copy) {
-      /* a simple delete+add, implied by a single 'replace' action. */
+    if (!is_copy) {
+      /* Node-action: replace */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_ACTION
                                 ": replace\n"));
@@ -136,24 +147,22 @@ dump_node(struct dump_edit_baton *eb,
       eb->dump_props_pending = TRUE;
       break;
     }
-    /* More complex case: eb->is_copy is true, and
-       copyfrom_path/ copyfrom_rev are present: delete the original,
-       and then re-add it */
+    /* More complex case: is_copy is true, and copyfrom_path/
+       copyfrom_rev are present: delete the original, and then re-add
+       it */
 
-    /* the path & kind headers have already been printed;  just
-       add a delete action, and end the current record.*/
     SVN_ERR(svn_stream_printf(eb->stream, pool,
                               SVN_REPOS_DUMPFILE_NODE_ACTION
                               ": delete\n\n"));
 
-    /* recurse:  print an additional add-with-history record. */
+    /* Recurse: Print an additional add-with-history record. */
     SVN_ERR(dump_node(eb, path, kind, svn_node_action_add,
-                      copyfrom_path, copyfrom_rev, pool));
+                      is_copy, copyfrom_path, copyfrom_rev,
+		      pool));
 
-    /* we can leave this routine quietly now, don't need to dump
-       any content;  that was already done in the second record. */
+    /* We can leave this routine quietly now, don't need to dump any
+       content; that was already done in the second record. */
     eb->dump_props = FALSE;
-    eb->is_copy = FALSE;
     break;
 
   case svn_node_action_delete:
@@ -161,7 +170,7 @@ dump_node(struct dump_edit_baton *eb,
                               SVN_REPOS_DUMPFILE_NODE_ACTION
                               ": delete\n"));
 
-    /* we can leave this routine quietly now, don't need to dump
+    /* We can leave this routine quietly now, don't need to dump
        any content. */
     SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
     eb->dump_props = FALSE;
@@ -171,15 +180,14 @@ dump_node(struct dump_edit_baton *eb,
     SVN_ERR(svn_stream_printf(eb->stream, pool,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
-    if (!eb->is_copy) {
+    if (!is_copy) {
       /* eb->dump_props_pending for files is handled in close_file
          which is called immediately.  However, directories are not
          closed until all the work inside them has been done;
          eb->dump_props_pending for directories is handled in all the
          functions that can possibly be called after add_directory:
          add_directory, open_directory, delete_entry, close_directory,
-         add_file, open_file and change_dir_prop; change_dir_prop is a
-         special case ofcourse */
+         add_file, open_file. change_dir_prop is a special case. */
 
       eb->dump_props_pending = TRUE;
       break;
@@ -192,17 +200,12 @@ dump_node(struct dump_edit_baton *eb,
                               ": %s\n",
                               copyfrom_rev, copyfrom_path));
 
-    /* Dump the text only if apply_textdelta sets
-       eb->dump_text */
-
-    /* UGLY hack: If a directory was copied from a
-       previous revision, nothing else can be done, and
-       close_file won't be called to write two blank
-       lines; write them here */
+    /* Ugly hack: If a directory was copied from a previous revision,
+       nothing else can be done, and close_file won't be called to
+       write two blank lines. Write them here otherwise the `svnadmin
+       load` parser will fail. */
     if (kind == svn_node_dir)
       SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
-
-    eb->is_copy = FALSE;
 
     break;
   }
@@ -218,14 +221,13 @@ static svn_error_t *open_root(void *edit_baton,
             apr_pool_t *pool,
             void **root_baton)
 {
+  struct dump_edit_baton *eb = edit_baton;
   /* Allocate a special pool for the edit_baton to avoid pool
      lifetime issues */
-  struct dump_edit_baton *eb = edit_baton;
   eb->pool = svn_pool_create(pool);
   eb->properties = apr_hash_make(eb->pool);
   eb->del_properties = apr_hash_make(eb->pool);
   eb->propstring = svn_stringbuf_create("", eb->pool);
-  eb->is_copy = FALSE;
 
   *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
                                edit_baton, NULL, FALSE, pool);
@@ -244,7 +246,8 @@ delete_entry(const char *path,
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
 
-  /* remember this path needs to be deleted */
+  /* Add this path to the deleted_entries of the parent directory
+     baton. */
   apr_hash_set(pb->deleted_entries, mypath, APR_HASH_KEY_STRING, pb);
 
   return SVN_NO_ERROR;
@@ -262,6 +265,7 @@ add_directory(const char *path,
   void *val;
   struct dir_baton *new_db
     = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb, pb, TRUE, pool);
+  svn_boolean_t is_copy;
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
@@ -270,14 +274,15 @@ add_directory(const char *path,
   val = apr_hash_get(pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
   /* Detect an add-with-history */
-  pb->eb->is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
+  is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
 
   /* Dump the node */
   SVN_ERR(dump_node(pb->eb, path,
                     svn_node_dir,
                     val ? svn_node_action_replace : svn_node_action_add,
-                    pb->eb->is_copy ? copyfrom_path : NULL,
-                    pb->eb->is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
+		    is_copy,
+                    is_copy ? copyfrom_path : NULL,
+		    is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
   if (val)
@@ -340,9 +345,8 @@ close_directory(void *dir_baton,
 
     svn_pool_clear(iterpool);
 
-    SVN_ERR(dump_node(db->eb, path,
-                      svn_node_unknown, svn_node_action_delete,
-                      NULL, SVN_INVALID_REVNUM, iterpool));
+    SVN_ERR(dump_node(db->eb, path, svn_node_unknown, svn_node_action_delete,
+		      FALSE, NULL, SVN_INVALID_REVNUM, iterpool));
   }
 
   svn_pool_destroy(iterpool);
@@ -359,6 +363,7 @@ add_file(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   void *val;
+  svn_boolean_t is_copy;
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
@@ -367,21 +372,23 @@ add_file(const char *path,
   val = apr_hash_get(pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
   /* Detect add-with-history. */
-  pb->eb->is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
+  is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
 
   /* Dump the node. */
   SVN_ERR(dump_node(pb->eb, path,
                     svn_node_file,
                     val ? svn_node_action_replace : svn_node_action_add,
-                    pb->eb->is_copy ? copyfrom_path : NULL,
-                    pb->eb->is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
+		    is_copy,
+                    is_copy ? copyfrom_path : NULL,
+		    is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
   if (val)
     /* delete the path, it's now been dumped. */
     apr_hash_set(pb->deleted_entries, path, APR_HASH_KEY_STRING, NULL);
 
-  /* Build a nice file baton to pass to change_file_prop and apply_textdelta */
+  /* Build a nice file baton to pass to change_file_prop and
+     apply_textdelta */
   *file_baton = pb->eb;
 
   return SVN_NO_ERROR;
@@ -414,11 +421,11 @@ open_file(const char *path,
     copyfrom_rev = pb->copyfrom_rev;
   }
 
-  SVN_ERR(dump_node(pb->eb, path,
-                    svn_node_file, svn_node_action_change,
-                    copyfrom_path, copyfrom_rev, pool));
+  SVN_ERR(dump_node(pb->eb, path, svn_node_file, svn_node_action_change,
+		    FALSE, copyfrom_path, copyfrom_rev, pool));
 
-  /* Build a nice file baton to pass to change_file_prop and apply_textdelta */
+  /* Build a nice file baton to pass to change_file_prop and
+     apply_textdelta */
   *file_baton = pb->eb;
 
   return SVN_NO_ERROR;
@@ -440,20 +447,16 @@ change_dir_prop(void *parent_baton,
     apr_hash_set(db->eb->del_properties, apr_pstrdup(pool, name),
                  APR_HASH_KEY_STRING, (void *)0x1);
 
-  /* This function is what distinguishes between a directory that is
-     opened to merely get somewhere, vs. one that is opened because it
-     actually changed by itself  */
   if (! db->written_out) {
-    /* If eb->dump_props_pending was set, it means that the
-       node information corresponding to add_directory has already
-       been written; just don't unset it and dump_node will dump
-       the properties before doing anything else. If it wasn't
-       set, node information hasn't been written yet: so dump the
-       node itself before dumping the props */
+  /* If db->written_out is set, it means that the node information
+     corresponding to this directory has already been written: don't
+     do anything; dump_props_pending will take care of dumping the
+     props. If it not, dump the node itself before dumping the
+     props. */
 
-    SVN_ERR(dump_node(db->eb, db->abspath,
-                      svn_node_dir, svn_node_action_change,
-                      db->copyfrom_path, db->copyfrom_rev, pool));
+    SVN_ERR(dump_node(db->eb, db->abspath, svn_node_dir,
+		      svn_node_action_change, FALSE, db->copyfrom_path,
+		      db->copyfrom_rev, pool));
 
     SVN_ERR(dump_props(db->eb, NULL, TRUE, pool));
     db->written_out = TRUE;
@@ -536,13 +539,14 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 
   hb->delta_filestream = svn_stream_from_aprfile2(hb->delta_file, TRUE, hb->pool);
 
-  /* Prepare to write the delta to the temporary file */
+  /* Prepare to write the delta to the temporary file. */
   svn_txdelta_to_svndiff2(&(hb->apply_handler), &(hb->apply_baton),
                           hb->delta_filestream, 0, hb->pool);
   eb->dump_text = TRUE;
 
-  /* The actual writing takes place when this function has finished */
-  /* Set the handler and handler_baton */
+  /* The actual writing takes place when this function has
+     finished. Set handler and handler_baton now so for
+     window_handler() */
   *handler = window_handler;
   *handler_baton = hb;
 
@@ -559,35 +563,33 @@ close_file(void *file_baton,
   svn_stream_t *delta_filestream;
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
 
-  /* We didn't write the property headers because we were
-     waiting for file_prop_change; write them now */
+  /* Some pending properties to dump? */
   SVN_ERR(dump_props(eb, &(eb->dump_props_pending), FALSE, pool));
 
-  /* The prop headers have already been dumped in dump_node */
-  /* Dump the text headers */
+  /* The prop headers have already been dumped in dump_node; now dump
+     the text headers. */
   if (eb->dump_text) {
-    /* text-delta header */
+    /* Text-delta: true */
     SVN_ERR(svn_stream_printf(eb->stream, pool,
             SVN_REPOS_DUMPFILE_TEXT_DELTA
             ": true\n"));
 
-    /* Measure the length */
     SVN_ERR(svn_io_stat(info, eb->delta_abspath, APR_FINFO_SIZE, pool));
 
-    /* text-content-length header */
+    /* Text-content-length: 39 */
     SVN_ERR(svn_stream_printf(eb->stream, pool,
             SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH
             ": %lu\n",
             (unsigned long)info->size));
-    /* text-content-md5 header */
+    /* Text-content-md5: 82705804337e04dcd0e586bfa2389a7f */
     SVN_ERR(svn_stream_printf(eb->stream, pool,
             SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
             ": %s\n",
             text_checksum));
   }
 
-  /* content-length header: if both text and props are absent,
-     skip this block */
+  /* Content-length: 1549 */
+  /* If both text and props are absent, skip this header */
   if (eb->dump_props || eb->dump_props_pending)
     SVN_ERR(svn_stream_printf(eb->stream, pool,
             SVN_REPOS_DUMPFILE_CONTENT_LENGTH
@@ -613,7 +615,6 @@ close_file(void *file_baton,
 
   /* Dump the text */
   if (eb->dump_text) {
-
     /* Open the temporary file, map it to a stream, copy
        the stream to eb->stream, close and delete the
        file */
@@ -668,7 +669,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   de->close_file = close_file;
   de->close_edit = close_edit;
 
-  /* Set the edit_baton and editor */
+  /* Set the edit_baton and editor. */
   *edit_baton = eb;
   *editor = de;
 
