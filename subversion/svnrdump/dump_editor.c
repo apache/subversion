@@ -64,7 +64,7 @@ make_dir_baton(const char *path,
 
   /* Construct the full path of this node. */
   if (pb)
-    abspath = svn_dirent_join_many(pool, "/", path);
+    abspath = svn_dirent_join_many(pool, "/", path, NULL);
   else
     abspath = apr_pstrdup(pool, "/");
 
@@ -312,7 +312,8 @@ open_directory(const char *path,
      record the same for this one. */
   if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev)) {
     copyfrom_path = svn_dirent_join_many(pool, pb->copyfrom_path,
-                                         svn_relpath_basename(path, pool));
+                                         svn_relpath_basename(path, pool),
+                                         NULL);
     copyfrom_rev = pb->copyfrom_rev;
   }
 
