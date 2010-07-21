@@ -291,7 +291,7 @@ svn_cl__propedit(apr_getopt_t *os,
                     pname_utf8, target_local));
 
               if (commit_info && ! opt_state->quiet)
-                SVN_ERR(svn_cl__print_commit_info(commit_info, subpool));
+                SVN_ERR(svn_cl__print_commit_info(commit_info, NULL, subpool));
             }
           else
             {

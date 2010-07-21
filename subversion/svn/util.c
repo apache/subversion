@@ -66,7 +66,8 @@
 
 
 svn_error_t *
-svn_cl__print_commit_info(svn_commit_info_t *commit_info,
+svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
+                          void *baton,
                           apr_pool_t *pool)
 {
   if (SVN_IS_VALID_REVNUM(commit_info->revision))

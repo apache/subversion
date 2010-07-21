@@ -947,6 +947,17 @@ typedef struct svn_client_ctx_t
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
 
+  /** A commit callback to call when a commit succeeds.
+   * @note There is no @a commit_callback member; this is named
+   * @a commit_callback2 to reflect its type.
+   * 
+   * @since New in 1.7.
+   */
+  svn_commit_callback2_t commit_callback2;
+
+  /** Callback baton for #commit_callback2. */
+  void *commit_baton;
+
 } svn_client_ctx_t;
 
 /** Initialize a client context.
@@ -1526,9 +1537,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * If the paths in @a paths are URLs, use the authentication baton in
  * @a ctx and @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to
  * immediately attempt to commit a deletion of the URLs from the
- * repository.  If the commit succeeds, allocate (in @a pool) and
- * populate @a *commit_info_p.  Every path must belong to the same
- * repository.
+ * repository.  Every path must belong to the same repository.
  *
  * Else, schedule the working copy paths in @a paths for removal from
  * the repository.  Each path's parent must be under revision control.
@@ -1561,8 +1570,28 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the deleted
  * item.
  *
- * @since New in 1.5.
+ * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
+ * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
+ * #svn_commit_info_t for the commit.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_delete4(const apr_array_header_t *paths,
+                   svn_boolean_t force,
+                   svn_boolean_t keep_local,
+                   const apr_hash_t *revprop_table,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_delete4(), but returns the @a commit_info_p directly,
+ * rather than through @a ctx->commit_callback2.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_delete3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
