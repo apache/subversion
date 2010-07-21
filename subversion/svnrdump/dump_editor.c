@@ -64,7 +64,7 @@ make_dir_baton(const char *path,
 
   /* Construct the full path of this node. */
   if (pb)
-    abspath = svn_dirent_join_many(pool, "/", path, NULL);
+    abspath = svn_uri_join("/", path, pool);
   else
     abspath = apr_pstrdup(pool, "/");
 
@@ -311,9 +311,9 @@ open_directory(const char *path,
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
   if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev)) {
-    copyfrom_path = svn_dirent_join_many(pool, pb->copyfrom_path,
-                                         svn_relpath_basename(path, pool),
-                                         NULL);
+    copyfrom_path = svn_uri_join(pb->copyfrom_path,
+                                 svn_relpath_basename(path, pool),
+                                 pool);
     copyfrom_rev = pb->copyfrom_rev;
   }
 
@@ -517,8 +517,6 @@ apply_textdelta(void *file_baton, const char *base_checksum,
                 void **handler_baton)
 {
   struct dump_edit_baton *eb = file_baton;
-  apr_status_t apr_err;
-  const char *tempdir;
 
   /* Custom handler_baton allocated in a separate pool */
   apr_pool_t *handler_pool = svn_pool_create(pool);
@@ -527,16 +525,12 @@ apply_textdelta(void *file_baton, const char *base_checksum,
   hb->eb = eb;
 
   /* Use a temporary file to measure the text-content-length */
-  SVN_ERR(svn_io_temp_dir(&tempdir, hb->pool));
+  SVN_ERR(svn_io_open_unique_file3(&(hb->delta_file), &hb->delta_abspath,
+                                   NULL, svn_io_file_del_none, hb->pool,
+                                   hb->pool));
 
-  hb->delta_abspath = svn_dirent_join(tempdir, "XXXXXX", hb->pool);
-  apr_err = apr_file_mktemp(&(hb->delta_file), hb->delta_abspath,
-          APR_CREATE | APR_READ | APR_WRITE | APR_EXCL,
-          hb->pool);
-  if (apr_err != APR_SUCCESS)
-    SVN_ERR(svn_error_wrap_apr(apr_err, NULL));
-
-  hb->delta_filestream = svn_stream_from_aprfile2(hb->delta_file, TRUE, hb->pool);
+  hb->delta_filestream = svn_stream_from_aprfile2(hb->delta_file, TRUE,
+                                                  hb->pool);
 
   /* Prepare to write the delta to the temporary file. */
   svn_txdelta_to_svndiff2(&(hb->apply_handler), &(hb->apply_baton),
