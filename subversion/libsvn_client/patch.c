@@ -449,9 +449,13 @@ init_prop_content_info(target_content_info_t **prop_content_info,
   SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name, 
                            result_pool, scratch_pool));
 
-  /* We assume that a property is small enough to be kept in memory during
-   * the patch process. */
-  content_info->stream = svn_stream_from_string(value, result_pool);
+  if (value)
+    {
+      /* We assume that a property is small enough to be kept in memory during
+       * the patch process. */
+      content_info->stream = svn_stream_from_string(value,
+                                                    result_pool);
+    }
 
   /* Create a temporary file to write the patched result to. For properties,
    * we don't have to worrry about different eol-style. */
@@ -1525,7 +1529,13 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                hi = apr_hash_next(hi))
             {
               prop_content_info = svn__apr_hash_index_val(hi);
-              svn_stream_close(prop_content_info->stream);
+
+              /* ### If the prop did not exist pre-patching we'll not have a
+               * ### stream to read from. Find a better way to store info on
+               * ### the existence of the target prop. */
+              if (prop_content_info->stream)
+                svn_stream_close(prop_content_info->stream);
+
               svn_stream_close(prop_content_info->patched);
             }
 
