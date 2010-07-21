@@ -415,10 +415,10 @@ LIMIT 1
 
 -- STMT_SELECT_BASE_WORKING_NODE
 SELECT 1 FROM base_node
-  WHERE wc_id = ?1 AND local_relpath = ?2;
+  WHERE wc_id = ?1 AND local_relpath = ?2
 UNION ALL
 SELECT 1 FROM working_node
-  WHERE wc_id = ?1 AND local_relpath = ?2;
+  WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
 
 -- STMT_DELETE_PRISTINE
