@@ -1225,7 +1225,7 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
  * Do temporary allocations in POOL. */
 static svn_error_t *
 reject_hunk(patch_target_t *target, target_content_info_t *content_info, 
-            hunk_info_t *hi, apr_pool_t *pool)
+            hunk_info_t *hi, svn_boolean_t is_prop_hunk,  apr_pool_t *pool)
 {
   const char *hunk_header;
   apr_size_t len;
@@ -1265,7 +1265,10 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
   while (! eof);
   svn_pool_destroy(iterpool);
 
-  target->had_rejects = TRUE;
+  /* ### had_rejects is used for notification. We haven't yet turned on
+   * ### notification for properties. */
+  if (! is_prop_hunk)
+    target->had_rejects = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -1274,13 +1277,15 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
  * stream of CONTENT_INFO. Do temporary allocations in POOL. */
 static svn_error_t *
 apply_hunk(patch_target_t *target, target_content_info_t *content_info,  
-           hunk_info_t *hi, apr_pool_t *pool)
+           hunk_info_t *hi, svn_boolean_t is_prop_hunk, apr_pool_t *pool)
 {
   svn_linenum_t lines_read;
   svn_boolean_t eof;
   apr_pool_t *iterpool;
 
-  if (target->kind_on_disk == svn_node_file)
+  /* ### Is there a cleaner way to describe if we have an existing target?
+   */
+  if (target->kind_on_disk == svn_node_file || is_prop_hunk)
     {
       svn_linenum_t line;
 
@@ -1300,7 +1305,7 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
         {
           /* Seek failed, reject this hunk. */
           hi->rejected = TRUE;
-          SVN_ERR(reject_hunk(target, content_info, hi, pool));
+          SVN_ERR(reject_hunk(target, content_info, hi, is_prop_hunk, pool));
           return SVN_NO_ERROR;
         }
     }
@@ -1533,9 +1538,12 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       if (hi->already_applied)
         continue;
       else if (hi->rejected)
-        SVN_ERR(reject_hunk(target, target->content_info, hi, iterpool));
+        SVN_ERR(reject_hunk(target, target->content_info, hi,
+                            FALSE /* is_prop_hunk */, 
+                            iterpool));
       else
-        SVN_ERR(apply_hunk(target, target->content_info, hi, iterpool));
+        SVN_ERR(apply_hunk(target, target->content_info, hi,
+                           FALSE /* is_prop_hunk */, iterpool));
     }
 
   if (target->kind_on_disk == svn_node_file)
@@ -1599,6 +1607,60 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           APR_ARRAY_PUSH(prop_content_info->hunks, hunk_info_t *) = hi;
         }
     }
+
+  /* Apply or reject property hunks. */
+  for (hash_index = apr_hash_first(result_pool, target->prop_content_info);
+       hash_index;
+       hash_index = apr_hash_next(hash_index))
+    {
+      const char *prop_name;
+      target_content_info_t *prop_content_info;
+      const char *prop_patched_path;
+
+      prop_name = svn__apr_hash_index_key(hash_index);
+      prop_content_info = svn__apr_hash_index_val(hash_index);
+
+      prop_patched_path = apr_hash_get(target->prop_patched_paths,
+                                       prop_name, APR_HASH_KEY_STRING);
+
+      for (i = 0; i < prop_content_info->hunks->nelts; i++)
+        {
+          hunk_info_t *hi;
+
+          svn_pool_clear(iterpool);
+
+          hi = APR_ARRAY_IDX(prop_content_info->hunks, i, hunk_info_t *);
+          if (hi->already_applied)
+            continue;
+          else if (hi->rejected)
+            SVN_ERR(reject_hunk(target, prop_content_info, hi,
+                                TRUE /* is_prop_hunk */, 
+                                iterpool));
+          else
+            SVN_ERR(apply_hunk(target, prop_content_info, hi, 
+                               TRUE /* is_prop_hunk */,
+                               iterpool));
+        }
+
+        if (prop_content_info->stream)
+          {
+            /* Copy any remaining lines to target. */
+            SVN_ERR(copy_lines_to_target(prop_content_info, 0,
+                                         prop_patched_path, scratch_pool));
+            if (! prop_content_info->eof)
+              {
+                /* We could not copy the entire target property to the
+                 * temporary file, and would truncate the target if we
+                 * copied the temporary file on top of it. Skip this target. 
+                 *
+                 * ### dannas: Do we really want to skip an entire target
+                 * ### if one of the properties does not apply cleanly,
+                 * ### e.g. both text changes and all prop changes will not be
+                 * ### installed. */
+                target->skipped = TRUE;
+              }
+          }
+      }
 
   svn_pool_destroy(iterpool);
 
