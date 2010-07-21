@@ -806,49 +806,16 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
 }
 
 
-/* Remove (if it exists) each file whose path is given by a value in the
- * hash TEMPFILES, which is a mapping from (const char *) path to (const
- * char *) tempfile abspath.  Ignore the keys of TEMPFILES. */
-static svn_error_t *
-remove_tmpfiles(apr_hash_t *tempfiles,
-                apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool;
-
-  /* Split if there's nothing to be done. */
-  if (! tempfiles)
-    return SVN_NO_ERROR;
-
-  iterpool = svn_pool_create(pool);
-
-  /* Clean up any tempfiles. */
-  for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = svn__apr_hash_index_val(hi);
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
-    }
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-
 static svn_error_t *
 reconcile_errors(svn_error_t *commit_err,
                  svn_error_t *unlock_err,
                  svn_error_t *bump_err,
-                 svn_error_t *cleanup_err,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
 
   /* Early release (for good behavior). */
-  if (! (commit_err || unlock_err || bump_err || cleanup_err))
+  if (! (commit_err || unlock_err || bump_err))
     return SVN_NO_ERROR;
 
   /* If there was a commit error, start off our error chain with
@@ -886,17 +853,6 @@ reconcile_errors(svn_error_t *commit_err,
 
       /* Append this error to the chain. */
       svn_error_compose(err, bump_err);
-    }
-
-  /* If there was a cleanup error... */
-  if (cleanup_err)
-    {
-      /* Wrap the error with some headers. */
-      cleanup_err = svn_error_quick_wrap
-        (cleanup_err, _("Error in post-commit clean-up (details follow):"));
-
-      /* Append this error to the chain. */
-      svn_error_compose(err, cleanup_err);
     }
 
   return err;
@@ -1074,12 +1030,11 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   apr_array_header_t *rel_targets;
   apr_hash_t *committables;
   apr_hash_t *lock_tokens;
-  apr_hash_t *tempfiles = NULL;
   apr_hash_t *md5_checksums;
   apr_hash_t *sha1_checksums;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
-  svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
+  svn_error_t *bump_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
   const char *current_abspath;
   const char *notify_prefix;
@@ -1241,7 +1196,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                  notify_prefix, &tempfiles, &md5_checksums,
+                                  notify_prefix, &md5_checksums,
                                   &sha1_checksums, ctx, pool);
 
   /* Handle a successful commit. */
@@ -1297,17 +1252,12 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      attempt to modify the working copy, so it doesn't prevent explicit
      clean-up. */
   if (! bump_err)
-    {
-      unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_abspath, pool);
-
-      if (! unlock_err)
-        cleanup_err = remove_tmpfiles(tempfiles, pool);
-    }
+    unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_abspath, pool);
 
   /* As per our promise, if *commit_info_p isn't set, provide a default where
      rev = SVN_INVALID_REVNUM. */
   if (! *commit_info_p)
     *commit_info_p = svn_create_commit_info(pool);
 
-  return reconcile_errors(cmt_err, unlock_err, bump_err, cleanup_err, pool);
+  return reconcile_errors(cmt_err, unlock_err, bump_err, pool);
 }

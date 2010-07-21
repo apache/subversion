@@ -1404,7 +1404,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items,
                                   editor, edit_baton,
                                   0, /* ### any notify_path_offset needed? */
-                                  NULL, NULL, NULL, ctx, pool),
+                                  NULL, NULL, ctx, pool),
             _("Commit failed (details follow):"));
 
   /* Sleep to ensure timestamp integrity. */

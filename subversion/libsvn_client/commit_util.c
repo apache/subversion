@@ -1654,7 +1654,6 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **new_text_base_abspaths,
                       apr_hash_t **md5_checksums,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
@@ -1676,11 +1675,6 @@ svn_client__do_commit(const char *base_url,
                             base_url, pool));
   }
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
-
-  /* If the caller wants us to track temporary file creation, create a
-     hash to store those paths in. */
-  if (new_text_base_abspaths)
-    *new_text_base_abspaths = apr_hash_make(pool);
 
   /* Ditto for the checksums. */
   if (md5_checksums)
@@ -1717,7 +1711,6 @@ svn_client__do_commit(const char *base_url,
     {
       struct file_mod_t *mod = svn__apr_hash_index_val(hi);
       const svn_client_commit_item3_t *item = mod->item;
-      const char *tempfile;
       const svn_checksum_t *new_text_base_md5_checksum;
       const svn_checksum_t *new_text_base_sha1_checksum;
       svn_boolean_t fulltext = FALSE;
@@ -1745,16 +1738,11 @@ svn_client__do_commit(const char *base_url,
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      SVN_ERR(svn_wc_transmit_text_deltas3(new_text_base_abspaths ? &tempfile
-                                                                  : NULL,
-                                           &new_text_base_md5_checksum,
+      SVN_ERR(svn_wc_transmit_text_deltas3(&new_text_base_md5_checksum,
                                            &new_text_base_sha1_checksum,
                                            ctx->wc_ctx, item_abspath,
                                            fulltext, editor, mod->file_baton,
                                            pool, iterpool));
-      if (new_text_base_abspaths && tempfile)
-        apr_hash_set(*new_text_base_abspaths, item->path, APR_HASH_KEY_STRING,
-                     tempfile);
       if (md5_checksums)
         apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
                      new_text_base_md5_checksum);
