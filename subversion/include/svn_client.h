@@ -1659,8 +1659,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
 /** Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx,
  * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message
- * for the (implied) commit.  Set @a *commit_info_p to the results of the
- * commit, allocated in @a pool.  If some components of @a url do not exist
+ * for the (implied) commit.  If some components of @a url do not exist
  * then create parent directories as necessary.
  *
  * This function reads an unversioned tree from disk and skips any ".svn"
@@ -1712,8 +1711,30 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
- * @since New in 1.5.
+ * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
+ * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
+ * #svn_commit_info_t for the commit.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_import4(const char *path,
+                   const char *url,
+                   svn_depth_t depth,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_import4(), but returns the @a commit_info_p directly,
+ * rather than through @a ctx->commit_callback2.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_import3(svn_commit_info_t **commit_info_p,
                    const char *path,

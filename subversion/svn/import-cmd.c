@@ -48,7 +48,6 @@ svn_cl__import(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *path;
   const char *url;
-  svn_commit_info_t *commit_info = NULL;
 
   /* Import takes two arguments, for example
    *
@@ -114,8 +113,7 @@ svn_cl__import(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__cleanup_log_msg
           (ctx->log_msg_baton3,
-           svn_client_import3(&commit_info,
-                              path,
+           svn_client_import4(path,
                               url,
                               opt_state->depth,
                               opt_state->no_ignore,
@@ -123,9 +121,6 @@ svn_cl__import(apr_getopt_t *os,
                               opt_state->revprop_table,
                               ctx,
                               pool), pool));
-
-  if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, NULL, pool));
 
   return SVN_NO_ERROR;
 }

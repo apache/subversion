@@ -444,7 +444,7 @@ import_dir(const svn_delta_editor_t *editor,
  * EDIT_BATON.  PATH can be a file or directory.
  *
  * DEPTH is the depth at which to import PATH; it behaves as for
- * svn_client_import3().
+ * svn_client_import4().
  *
  * NEW_ENTRIES is an ordered array of path components that must be
  * created in the repository (where the ordering direction is
@@ -645,8 +645,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import3(svn_commit_info_t **commit_info_p,
-                   const char *path,
+svn_client_import4(const char *path,
                    const char *url,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
@@ -659,7 +658,6 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
   const char *log_msg = "";
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *commit_baton;
   svn_ra_session_t *ra_session;
   apr_hash_t *excludes = apr_hash_make(pool);
   svn_node_kind_t kind;
@@ -706,8 +704,6 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
   if (kind == svn_node_file)
     base_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
-
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
   subpool = svn_pool_create(pool);
@@ -739,7 +735,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
   while ((err = get_ra_editor(&ra_session,
                               &editor, &edit_baton, ctx, url, base_dir_abspath,
                               log_msg, NULL, revprop_table, FALSE, NULL, TRUE,
-                              svn_client__commit_callback, commit_baton,
+                              ctx->commit_callback2, ctx->commit_baton,
                               subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
@@ -794,10 +790,6 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
       svn_error_clear(editor->abort_edit(edit_baton, subpool));
       return err;
     }
-
-  /* Transfer *COMMIT_INFO from the subpool to the callers pool */
-  if (*commit_info_p)
-    *commit_info_p = svn_commit_info_dup(*commit_info_p, pool);
 
   svn_pool_destroy(subpool);
 
