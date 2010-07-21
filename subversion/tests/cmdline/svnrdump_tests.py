@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  svnsync_tests.py:  Tests SVNSync's repository mirroring capabilities.
+#  svnrdump_tests.py: Tests svnrdump's remote repository dumping capabilities.
 #
 #  Subversion is a tool for revision control.
 #  See http://subversion.apache.org for more information.
