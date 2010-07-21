@@ -24,10 +24,6 @@ Prop-content-md5: (svn:date) 4c704226217ff1187f5b6e76ab2ac76d
 Prop-content-sha1: (svn:date) d9f19ca5f3ec340dd8f12b69519b2e4fd09c8a84
 Content-length: 103
 
-K 7
-svn:log
-V 3
-ttb
 K 10
 svn:author
 V 6
@@ -36,6 +32,10 @@ K 8
 svn:date
 V 27
 2005-11-15T21:10:58.608841Z
+K 7
+svn:log
+V 3
+ttb
 PROPS-END
 
 Node-path: branches
@@ -75,11 +75,6 @@ Prop-content-md5: (svn:date) b2e92f1550a6e7e4013780d6aa3a8c64
 Prop-content-sha1: (svn:date) f41a4e0c5eaae0b7102290ac93f6d388adc87e39
 Content-length: 116
 
-K 7
-svn:log
-V 15
-first version!
-
 K 10
 svn:author
 V 6
@@ -88,6 +83,11 @@ K 8
 svn:date
 V 27
 2005-11-15T21:11:19.415517Z
+K 7
+svn:log
+V 15
+first version!
+
 PROPS-END
 
 Node-path: trunk/file.txt
@@ -113,11 +113,6 @@ Prop-content-md5: (svn:date) 48458d341152b911b6fad8b8562fd43c
 Prop-content-sha1: (svn:date) 324d729438bf679dfce060d0bb490cd91e1ae122
 Content-length: 117
 
-K 7
-svn:log
-V 16
-second version!
-
 K 10
 svn:author
 V 6
@@ -126,6 +121,11 @@ K 8
 svn:date
 V 27
 2005-11-15T21:11:29.391885Z
+K 7
+svn:log
+V 16
+second version!
+
 PROPS-END
 
 Node-path: trunk/file.txt
@@ -149,11 +149,6 @@ Prop-content-md5: (svn:date) cc777234c61a92b795cac28418e4b2c8
 Prop-content-sha1: (svn:date) 52e42bc0954bf4e2045fc5ca3c6deb8c6fa0ee8f
 Content-length: 122
 
-K 7
-svn:log
-V 21
-a copy, but modified
-
 K 10
 svn:author
 V 6
@@ -162,6 +157,11 @@ K 8
 svn:date
 V 27
 2005-11-15T21:11:50.278301Z
+K 7
+svn:log
+V 21
+a copy, but modified
+
 PROPS-END
 
 Node-path: trunk/copy-of-file.txt

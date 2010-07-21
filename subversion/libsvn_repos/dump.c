@@ -25,6 +25,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_hash.h"
 #include "svn_iter.h"
 #include "svn_repos.h"
 #include "svn_string.h"
@@ -40,92 +41,6 @@
 
 /*----------------------------------------------------------------------*/
 
-/** A variant of our hash-writing routine in libsvn_subr;  this one
-    writes to a stringbuf instead of a file, and outputs PROPS-END
-    instead of END.  If OLDHASH is not NULL, then only properties
-    which vary from OLDHASH will be written, and properties which
-    exist only in OLDHASH will be written out with "D" entries
-    (like "K" entries but with no corresponding value). **/
-
-static void
-write_hash_to_stringbuf(apr_hash_t *hash,
-                        apr_hash_t *oldhash,
-                        svn_stringbuf_t **strbuf,
-                        apr_pool_t *pool)
-{
-  apr_hash_index_t *this;      /* current hash entry */
-
-  *strbuf = svn_stringbuf_create("", pool);
-
-  for (this = apr_hash_first(pool, hash); this; this = apr_hash_next(this))
-    {
-      const void *key;
-      void *val;
-      apr_ssize_t keylen;
-      svn_string_t *value;
-
-      /* Get this key and val. */
-      apr_hash_this(this, &key, &keylen, &val);
-      value = val;
-
-      /* Don't output properties equal to the ones in oldhash, if present. */
-      if (oldhash)
-        {
-          svn_string_t *oldvalue = apr_hash_get(oldhash, key, keylen);
-
-          if (oldvalue && svn_string_compare(value, oldvalue))
-            continue;
-        }
-
-      /* Output name length, then name. */
-
-      svn_stringbuf_appendcstr(*strbuf,
-                               apr_psprintf(pool, "K %" APR_SSIZE_T_FMT "\n",
-                                            keylen));
-
-      svn_stringbuf_appendbytes(*strbuf, (const char *) key, keylen);
-      svn_stringbuf_appendbytes(*strbuf, "\n", 1);
-
-      /* Output value length, then value. */
-
-      svn_stringbuf_appendcstr(*strbuf,
-                               apr_psprintf(pool, "V %" APR_SIZE_T_FMT "\n",
-                                            value->len));
-
-      svn_stringbuf_appendbytes(*strbuf, value->data, value->len);
-      svn_stringbuf_appendbytes(*strbuf, "\n", 1);
-    }
-
-  if (oldhash)
-    {
-      /* Output a "D " entry for each property in oldhash but not hash. */
-      for (this = apr_hash_first(pool, oldhash); this;
-           this = apr_hash_next(this))
-        {
-          const void *key;
-          apr_ssize_t keylen;
-
-          /* Get this key. */
-          apr_hash_this(this, &key, &keylen, NULL);
-
-          /* Only output values deleted in hash. */
-          if (apr_hash_get(hash, key, keylen))
-            continue;
-
-          /* Output name length, then name. */
-
-          svn_stringbuf_appendcstr(*strbuf,
-                                   apr_psprintf(pool,
-                                                "D %" APR_SSIZE_T_FMT "\n",
-                                                keylen));
-
-          svn_stringbuf_appendbytes(*strbuf, (const char *) key, keylen);
-          svn_stringbuf_appendbytes(*strbuf, "\n", 1);
-        }
-    }
-  svn_stringbuf_appendbytes(*strbuf, "PROPS-END\n", 10);
-}
-
 
 /* Compute the delta between OLDROOT/OLDPATH and NEWROOT/NEWPATH and
    store it into a new temporary file *TEMPFILE.  OLDROOT may be NULL,
@@ -556,6 +471,7 @@ dump_node(struct edit_baton *eb,
     {
       apr_hash_t *prophash, *oldhash = NULL;
       apr_size_t proplen;
+      svn_stream_t *propstream;
 
       SVN_ERR(svn_fs_node_proplist(&prophash, eb->fs_root, path, pool));
 
@@ -606,7 +522,13 @@ dump_node(struct edit_baton *eb,
                                     SVN_REPOS_DUMPFILE_PROP_DELTA
                                     ": true\n"));
         }
-      write_hash_to_stringbuf(prophash, oldhash, &propstring, pool);
+      else
+        oldhash = apr_hash_make(pool);
+      propstring = svn_stringbuf_create_ensure(0, pool);
+      propstream = svn_stream_from_stringbuf(propstring, pool);
+      svn_hash_write_incremental(prophash, oldhash, propstream, "PROPS-END",
+                                 pool);
+      SVN_ERR(svn_stream_close(propstream));
       proplen = propstring->len;
       content_length += proplen;
       SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -1010,6 +932,7 @@ write_revision_record(svn_stream_t *stream,
   svn_stringbuf_t *encoded_prophash;
   apr_time_t timetemp;
   svn_string_t *datevalue;
+  svn_stream_t *propstream;
 
   /* Read the revision props even if we're aren't going to dump
      them for verification purposes */
@@ -1029,7 +952,10 @@ write_revision_record(svn_stream_t *stream,
                    datevalue);
     }
 
-  write_hash_to_stringbuf(props, NULL, &encoded_prophash, pool);
+  encoded_prophash = svn_stringbuf_create_ensure(0, pool);
+  propstream = svn_stream_from_stringbuf(encoded_prophash, pool);
+  svn_hash_write2(props, propstream, "PROPS-END", pool);
+  SVN_ERR(svn_stream_close(propstream));
 
   /* ### someday write a revision-content-checksum */
 

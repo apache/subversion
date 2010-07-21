@@ -24,10 +24,6 @@ Prop-content-md5: (svn:date) fdb200dfc19d911f3b76b1a6c7b1a9ea
 Prop-content-sha1: (svn:date) d48ff8f98d7d4f4ea09001bebfc587594a42322f
 Content-length: 115
 
-K 7
-svn:log
-V 14
-initial layout
 K 10
 svn:author
 V 6
@@ -36,6 +32,10 @@ K 8
 svn:date
 V 27
 2005-11-07T22:20:16.583093Z
+K 7
+svn:log
+V 14
+initial layout
 PROPS-END
 
 Node-path: branches
@@ -75,11 +75,6 @@ Prop-content-md5: (svn:date) ae03b06fa8f3a5eda080fd3da5fca4d9
 Prop-content-sha1: (svn:date) 7caaa073b292e167331993804eb9757885932a5e
 Content-length: 112
 
-K 7
-svn:log
-V 11
-add a file
-
 K 10
 svn:author
 V 6
@@ -88,6 +83,11 @@ K 8
 svn:date
 V 27
 2005-11-07T22:20:39.840815Z
+K 7
+svn:log
+V 11
+add a file
+
 PROPS-END
 
 Node-path: trunk/foo.txt
@@ -113,11 +113,6 @@ Prop-content-md5: (svn:date) b821684085862165543e9747af5c4a6f
 Prop-content-sha1: (svn:date) a05bfbd3e1370b85fe541ccf1bc0c97540a12188
 Content-length: 126
 
-K 7
-svn:log
-V 25
-tag with a modified file
-
 K 10
 svn:author
 V 6
@@ -126,6 +121,11 @@ K 8
 svn:date
 V 27
 2005-11-07T22:21:15.332479Z
+K 7
+svn:log
+V 25
+tag with a modified file
+
 PROPS-END
 
 Node-path: tags/a-tag-with-mods

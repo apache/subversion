@@ -24,10 +24,6 @@ Prop-content-md5: (svn:date) 56078dd7c8ee30deab799602d25a2794
 Prop-content-sha1: (svn:date) 815da5e8791ae8d419e0c2c83f139a5fe6a3e001
 Content-length: 105
 
-K 7
-svn:log
-V 5
-setup
 K 10
 svn:author
 V 6
@@ -36,6 +32,10 @@ K 8
 svn:date
 V 27
 2005-11-04T23:04:15.060966Z
+K 7
+svn:log
+V 5
+setup
 PROPS-END
 
 Node-path: tags
@@ -66,10 +66,6 @@ Prop-content-md5: (svn:date) 862458ae04a246c9891d0b8a1d7d9644
 Prop-content-sha1: (svn:date) ab480fd6e98659ca9ce03f3eff7213ca303f8f29
 Content-length: 106
 
-K 7
-svn:log
-V 6
-tag it
 K 10
 svn:author
 V 6
@@ -78,6 +74,10 @@ K 8
 svn:date
 V 27
 2005-11-04T23:04:32.222710Z
+K 7
+svn:log
+V 6
+tag it
 PROPS-END
 
 Node-path: tags/an-empty-tag

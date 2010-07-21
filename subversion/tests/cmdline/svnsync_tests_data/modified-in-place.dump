@@ -24,11 +24,6 @@ Prop-content-md5: (svn:date) 6ec8580a0f6a77bae0ce365f41126e35
 Prop-content-sha1: (svn:date) d8b503d01cfb7391d0a5ecdf712787cdd6643cd3
 Content-length: 114
 
-K 7
-svn:log
-V 13
-Added a file
-
 K 10
 svn:author
 V 6
@@ -37,6 +32,11 @@ K 8
 svn:date
 V 27
 2005-11-09T19:58:23.561942Z
+K 7
+svn:log
+V 13
+Added a file
+
 PROPS-END
 
 Node-path: foo.txt
@@ -62,10 +62,6 @@ Prop-content-md5: (svn:date) d6010780d9e5f26194eaa2e4df698201
 Prop-content-sha1: (svn:date) 55a882a65d5c697e3fcf4f7abad507fcb7809e5c
 Content-length: 112
 
-K 7
-svn:log
-V 11
-modified it
 K 10
 svn:author
 V 6
@@ -74,6 +70,10 @@ K 8
 svn:date
 V 27
 2005-11-09T19:58:38.412025Z
+K 7
+svn:log
+V 11
+modified it
 PROPS-END
 
 Node-path: foo.txt

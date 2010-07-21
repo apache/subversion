@@ -24,10 +24,6 @@ Prop-content-md5: (svn:date) 9094b7f0719f04994da0492ece9bc403
 Prop-content-sha1: (svn:date) 3077b24c4f2074ea43fd93de1a1ff175a82bd75a
 Content-length: 101
 
-K 7
-svn:log
-V 1
-,
 K 10
 svn:author
 V 6
@@ -36,6 +32,10 @@ K 8
 svn:date
 V 27
 2006-10-23T20:26:00.932678Z
+K 7
+svn:log
+V 1
+,
 PROPS-END
 
 Node-path: foo%20bar.txt
@@ -61,10 +61,6 @@ Prop-content-md5: (svn:date) c0017ad6b8c18b45cc912f36bba3fcba
 Prop-content-sha1: (svn:date) fd8afd87628eb5d8bb40a089085d63a7a277b907
 Content-length: 101
 
-K 7
-svn:log
-V 1
-,
 K 10
 svn:author
 V 6
@@ -73,6 +69,10 @@ K 8
 svn:date
 V 27
 2006-10-23T20:26:12.565554Z
+K 7
+svn:log
+V 1
+,
 PROPS-END
 
 Node-path: foo bar.txt
@@ -98,10 +98,6 @@ Prop-content-md5: (svn:date) f4533e34ea1c7425ae4f67f72af1c2a3
 Prop-content-sha1: (svn:date) 79f998bc0125cc6fda85a357be6697ee00224215
 Content-length: 102
 
-K 7
-svn:log
-V 1
-,
 K 10
 svn:author
 V 7
@@ -110,6 +106,10 @@ K 8
 svn:date
 V 27
 2006-10-23T20:52:11.378819Z
+K 7
+svn:log
+V 1
+,
 PROPS-END
 
 Node-path: foo%20bar.txt
