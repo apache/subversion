@@ -122,6 +122,21 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that describes a moves of
+   a file or directory from SRC_ABSPATH to DST_ABSPATH, ready for
+   storing in the working copy managing DST_ABSPATH.
+
+   Perform temporary allocations in SCRATCH_POOL and *WORK_ITEM in
+   RESULT_POOL.
+*/
+svn_error_t *
+svn_wc__wq_build_file_move(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
+                           const char *src_abspath,
+                           const char *dst_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 
 /* Set *WORK_ITEM to a new work item that will synchronize the
    target node's readonly and executable flags with the values defined
