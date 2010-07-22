@@ -36,19 +36,6 @@ struct replay_baton {
 };
 
 /**
- * Write a hashtable to a string buffer.
- *
- * Write the properties in the hashtable @a properties to @a strbuf
- * allocated in @a pool. @a deleted is used to indicate deleted
- * properties.
- */
-void
-write_hash_to_stringbuf(apr_hash_t *properties,
-                        svn_boolean_t deleted,
-                        svn_stringbuf_t **strbuf,
-                        apr_pool_t *pool);
-
-/**
  * Dump revision properties, and (optionally) full text.
  *
  * Extract and dump the properties and del_properties stored in the
