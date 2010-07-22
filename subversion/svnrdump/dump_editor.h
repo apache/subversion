@@ -28,32 +28,6 @@
 #define DUMP_EDITOR_H_
 
 /**
- * The baton used by the dump editor.
- */
-struct dump_edit_baton {
-  /* The output stream we write the dumpfile to */
-  svn_stream_t *stream;
-
-  /* pool is for per-edit-session allocations */
-  apr_pool_t *pool;
-
-  /* Store the properties that changed */
-  apr_hash_t *properties;
-  apr_hash_t *del_properties; /* Value is undefined */
-  /* write_hash_to_stringbuf writes properties and del_properties to
-     propstring so they can be printed directly to the stream */
-  svn_stringbuf_t *propstring;
-
-  /* Temporary file to write delta to along with its checksum */
-  char *delta_abspath;
-
-  /* Flags to trigger dumping props and text */
-  svn_boolean_t dump_props;
-  svn_boolean_t dump_text;
-  svn_boolean_t dump_props_pending;
-};
-
-/**
  * A directory baton used by all directory-related callback functions
  * in the dump editor.
  */
