@@ -48,7 +48,10 @@ $(SVN_DEV)/prefix/svn-trunk.
 
 If at any point, you want to re-configure any of the packages to the
 default configuration in Makefile.svn, just run the "<PACKAGE>-reset"
-target in Makefile.svn before trying to rebuild again.
+target in Makefile.svn before trying to rebuild again. If, in the
+extreme case, you want to remove everything including the installed
+binaries effectively returning to the starting point, use the "nuke"
+target.
 
 Extended usage
 ==============
