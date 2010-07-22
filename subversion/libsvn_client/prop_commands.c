@@ -97,7 +97,7 @@ struct propset_walk_baton
   void *notify_baton;
 };
 
-/* An node-walk callback for svn_client_propset3.
+/* An node-walk callback for svn_client_propset4.
  *
  * For LOCAL_ABSPATH, set the property named wb->PROPNAME to the value
  * wb->PROPVAL, where "wb" is the WALK_BATON of type "struct
@@ -189,8 +189,7 @@ do_url_propset(const char *propname,
 }
 
 static svn_error_t *
-propset_on_url(svn_commit_info_t **commit_info_p,
-               const char *propname,
+propset_on_url(const char *propname,
                const svn_string_t *propval,
                const char *target,
                svn_boolean_t skip_checks,
@@ -204,7 +203,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   svn_node_kind_t node_kind;
   const char *message;
   const svn_delta_editor_t *editor;
-  void *commit_baton, *edit_baton;
+  void *edit_baton;
   apr_hash_t *commit_revprops;
   svn_error_t *err;
 
@@ -268,11 +267,10 @@ propset_on_url(svn_commit_info_t **commit_info_p,
                                            message, ctx, pool));
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    svn_client__commit_callback,
-                                    commit_baton,
+                                    ctx->commit_callback2,
+                                    ctx->commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
@@ -303,7 +301,7 @@ struct set_props_baton
   apr_hash_t *changelist_hash;
 };
 
-/* Working copy lock callback for svn_client_propset3 */
+/* Working copy lock callback for svn_client_propset4 */
 static svn_error_t *
 set_props_cb(void *baton,
              apr_pool_t *result_pool,
@@ -339,8 +337,7 @@ set_props_cb(void *baton,
 }
 
 svn_error_t *
-svn_client_propset3(svn_commit_info_t **commit_info_p,
-                    const char *propname,
+svn_client_propset4(const char *propname,
                     const svn_string_t *propval,
                     const char *target,
                     svn_depth_t depth,
@@ -398,9 +395,8 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                                  _("Setting property '%s' on non-local target "
                                    "'%s' is not supported"), propname, target);
 
-      return propset_on_url(commit_info_p, propname, propval, target,
-                            skip_checks, base_revision_for_url, revprop_table,
-                            ctx, pool);
+      return propset_on_url(propname, propval, target, skip_checks,
+                            base_revision_for_url, revprop_table, ctx, pool);
     }
   else
     {

@@ -45,6 +45,26 @@
 
 
 /*** Code. ***/
+struct commit_info_baton
+{
+  const char *pname_utf8;
+  const char *target_local;
+};
+
+static svn_error_t *
+commit_info_handler(const svn_commit_info_t *commit_info,
+                    void *baton,
+                    apr_pool_t *pool)
+{
+  struct commit_info_baton *cib = baton;
+
+  SVN_ERR(svn_cmdline_printf(pool,
+                             _("Set new value for property '%s' on '%s'\n"),
+                             cib->pname_utf8, cib->target_local));
+  SVN_ERR(svn_cl__print_commit_info(commit_info, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -153,6 +173,7 @@ svn_cl__propedit(apr_getopt_t *os,
   else  /* operate on a normal, versioned property (not a revprop) */
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+      struct commit_info_baton cib;
 
       /* The customary implicit dot rule has been prone to user error
        * here.  For example, Jon Trowbridge <trow@gnu.og> did
@@ -177,6 +198,8 @@ svn_cl__propedit(apr_getopt_t *os,
         }
 
       SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
+
+      cib.pname_utf8 = pname_utf8;
 
       /* For each target, edit the property PNAME. */
       for (i = 0; i < targets->nelts; i++)
@@ -255,11 +278,14 @@ svn_cl__propedit(apr_getopt_t *os,
 
           target_local = svn_path_is_url(target) ? target
             : svn_dirent_local_style(target, subpool);
+          cib.target_local = target_local;
+
+          ctx->commit_callback2 = commit_info_handler;
+          ctx->commit_baton = &cib;
 
           /* ...and re-set the property's value accordingly. */
           if (edited_propval && !svn_string_compare(propval, edited_propval))
             {
-              svn_commit_info_t *commit_info = NULL;
               svn_error_t *err = SVN_NO_ERROR;
 
               svn_cl__check_boolean_prop_val(pname_utf8, edited_propval->data,
@@ -270,8 +296,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
 
-              err = svn_client_propset3(&commit_info,
-                                        pname_utf8, edited_propval, target,
+              err = svn_client_propset4(pname_utf8, edited_propval, target,
                                         svn_depth_empty, opt_state->force,
                                         base_rev, NULL, opt_state->revprop_table,
                                         ctx, subpool);
@@ -284,14 +309,10 @@ svn_cl__propedit(apr_getopt_t *os,
               /* Print a message if we successfully committed or if it
                  was just a wc propset (but not if the user aborted an URL
                  propedit). */
-              if (commit_info || ! svn_path_is_url(target))
-                SVN_ERR
-                  (svn_cmdline_printf
-                   (subpool, _("Set new value for property '%s' on '%s'\n"),
-                    pname_utf8, target_local));
-
-              if (commit_info && ! opt_state->quiet)
-                SVN_ERR(svn_cl__print_commit_info(commit_info, NULL, subpool));
+              if (!svn_path_is_url(target))
+                SVN_ERR(svn_cmdline_printf(
+                        subpool, _("Set new value for property '%s' on '%s'\n"),
+                        pname_utf8, target_local));
             }
           else
             {

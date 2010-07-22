@@ -3971,8 +3971,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * supported on URLs.  The authentication baton in @a ctx and @a
  * ctx->log_msg_func3/@a ctx->log_msg_baton3 will be used to
  * immediately attempt to commit the property change in the
- * repository.  If the commit succeeds, allocate (in @a pool) and
- * populate @a *commit_info_p.
+ * repository.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * #SVN_PROP_PREFIX), then the caller is responsible for ensuring that
@@ -4000,10 +3999,34 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
+ * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
+ * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
+ * #svn_commit_info_t for the commit.
+ *
  * Use @a pool for all memory allocation.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_propset4(const char *propname,
+                    const svn_string_t *propval,
+                    const char *target,
+                    svn_depth_t depth,
+                    svn_boolean_t skip_checks,
+                    svn_revnum_t base_revision_for_url,
+                    const apr_array_header_t *changelists,
+                    const apr_hash_t *revprop_table,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_propset4(), but returns the @a commit_info_p directly,
+ * rather than through @a ctx->commit_callback2.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propset3(svn_commit_info_t **commit_info_p,
                     const char *propname,
@@ -4016,7 +4039,6 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
-
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
  * always #SVN_INVALID_REVNUM; @a commit_info_p always @c NULL; @a

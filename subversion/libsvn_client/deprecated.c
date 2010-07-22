@@ -1475,6 +1475,36 @@ svn_client_merge_peg(const char *source,
 
 /*** From prop_commands.c ***/
 svn_error_t *
+svn_client_propset3(svn_commit_info_t **commit_info_p,
+                    const char *propname,
+                    const svn_string_t *propval,
+                    const char *target,
+                    svn_depth_t depth,
+                    svn_boolean_t skip_checks,
+                    svn_revnum_t base_revision_for_url,
+                    const apr_array_header_t *changelists,
+                    const apr_hash_t *revprop_table,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  svn_client_ctx_t shadow_ctx;
+  struct capture_baton_t cb;
+
+  cb.info = commit_info_p;
+  cb.pool = pool;
+  cb.original_callback = ctx->commit_callback2;
+  cb.original_baton = ctx->commit_baton;
+
+  shadow_ctx = *ctx;
+  shadow_ctx.commit_callback2 = capture_commit_info;
+  shadow_ctx.commit_baton = &cb;
+
+  return svn_client_propset4(propname, propval, target, depth, skip_checks,
+                             base_revision_for_url, changelists, revprop_table,
+                             &shadow_ctx, pool);
+}
+
+svn_error_t *
 svn_client_propset2(const char *propname,
                     const svn_string_t *propval,
                     const char *target,
