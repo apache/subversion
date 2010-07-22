@@ -272,15 +272,18 @@ version(const char *progname, apr_pool_t *pool)
  * Evaluate @a expr. If it yields an error, handle that error and
  * return @c EXIT_FAILURE.
  */
-#define SVNRDUMP_ERR(expr)                                           \
-  do {                                                               \
-    svn_error_t *svn_err__temp = (expr);                             \
-    if (svn_err__temp) {                                             \
-      svn_handle_error2(svn_err__temp, stderr, FALSE, "svnrdump: "); \
-      svn_error_clear(svn_err__temp);                                \
-      return EXIT_FAILURE; }                                         \
-  } while (0)
-
+#define SVNRDUMP_ERR(expr)                                               \
+  do                                                                     \
+    {                                                                    \
+      svn_error_t *svn_err__temp = (expr);                               \
+      if (svn_err__temp)                                                 \
+        {                                                                \
+          svn_handle_error2(svn_err__temp, stderr, FALSE, "svnrdump: "); \
+          svn_error_clear(svn_err__temp);                                \
+          return EXIT_FAILURE;                                           \
+        }                                                                \
+    }                                                                    \
+  while (0)
 
 
 int
