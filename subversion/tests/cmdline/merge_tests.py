@@ -15664,7 +15664,7 @@ def copy_causes_phantom_eol_conflict(sbox):
 
   # Now merge r4 from 'A' to 'A-branch'.
   #
-  # This fails over ra_neon and ra_serf on Windows:
+  # Previously this failed over ra_neon and ra_serf on Windows:
   #
   #   >svn merge ^^/A A-branch -c4
   #   Conflict discovered in 'A-branch/mu'.
@@ -15678,11 +15678,8 @@ def copy_causes_phantom_eol_conflict(sbox):
   #   Summary of conflicts:
   #     Text conflicts: 1
   #
-  # The conflict is on the whole file as it appears there is an eol-style
-  # change to native, when in fact no such change is present in r7.
-  #
-  # Marking this test as XFail for [Windows] x [ra_serf | ra_neon] until
-  # this issue is fixed.
+  # The conflict was on the whole file as it appeared there was an eol-style
+  # change to native, when in fact no such change was present in r7.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(A_branch_path, {
     'mu' : Item(status='UU'),
@@ -15935,8 +15932,7 @@ test_list = [ None,
               foreign_repos_del_and_props,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
               record_only_merge_creates_self_referential_mergeinfo,
-              XFail(copy_causes_phantom_eol_conflict,
-                    svntest.main.is_windows_type_dav),
+              copy_causes_phantom_eol_conflict,
              ]
 
 if __name__ == '__main__':
