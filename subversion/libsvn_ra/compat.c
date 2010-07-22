@@ -668,7 +668,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
 
   if (kind == svn_node_dir)
     return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
-                             _("'%s' is not a file"), repos_abs_path);
+                             _("'%s' is not a file"), path);
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, pool));
   SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
