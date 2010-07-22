@@ -35,18 +35,4 @@ struct replay_baton {
   svn_boolean_t verbose;
 };
 
-/**
- * Dump revision properties, and (optionally) full text.
- *
- * Extract and dump the properties and del_properties stored in the
- * edit baton @a eb using @a pool for any temporary allocations. If
- * @a trigger_var is passed, it is unset. Unless @a dump_data_too is
- * set, only property headers are dumped.
- */
-svn_error_t *
-dump_props(struct dump_edit_baton *eb,
-           svn_boolean_t *trigger_var,
-           svn_boolean_t dump_data_too,
-           apr_pool_t *pool);
-
 #endif
