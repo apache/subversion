@@ -214,7 +214,7 @@ replay_range(svn_ra_session_t *session, const char *url,
     {
       SVN_ERR(svn_stream_printf(stdout_stream, pool,
                                 SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                                ": %d\n", start_revision));
+                                ": %ld\n", start_revision));
 
       encoded_prophash = apr_hash_make(pool);
       propstring = svn_stringbuf_create("", pool);
@@ -341,6 +341,7 @@ main(int argc, const char **argv)
   char *revision_cut = NULL;
   svn_revnum_t start_revision = svn_opt_revision_unspecified;
   svn_revnum_t end_revision = svn_opt_revision_unspecified;
+  svn_revnum_t latest_revision = svn_opt_revision_unspecified;
   svn_boolean_t quiet = FALSE;
   apr_pool_t *pool = NULL;
   svn_ra_session_t *session = NULL;
@@ -445,10 +446,19 @@ main(int argc, const char **argv)
                                pool));
 
   /* Have sane start_revision and end_revision defaults if unspecified */
+  SVNRDUMP_ERR(svn_ra_get_latest_revnum(session, &latest_revision, pool));
   if (start_revision == svn_opt_revision_unspecified)
     start_revision = 0;
   if (end_revision == svn_opt_revision_unspecified)
-    SVNRDUMP_ERR(svn_ra_get_latest_revnum(session, &end_revision, pool));
+    end_revision = latest_revision;
+  if (end_revision > latest_revision)
+    {
+      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
+                                      _("UPPER refers to"
+                                        "a non-existent revision.\n")));
+      SVNRDUMP_ERR(usage(argv[0], pool));
+      exit(EXIT_FAILURE);
+    }
 
   SVNRDUMP_ERR(replay_range(session, url, start_revision, end_revision,
                             quiet, pool));
