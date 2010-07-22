@@ -32,6 +32,35 @@
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
+/* The baton used by the dump editor. */
+struct dump_edit_baton {
+  /* The output stream we write the dumpfile to */
+  svn_stream_t *stream;
+
+  /* Pool for per-edit-session allocations */
+  apr_pool_t *pool;
+
+  /* Properties which were modified during change_file_prop
+   * or change_dir_prop. */
+  apr_hash_t *props;
+
+  /* Properties which were deleted during change_file_prop
+   * or change_dir_prop. */
+  apr_hash_t *deleted_props;
+
+  /* Temporary buffer to write property hashes to in human-readable
+   * form. ### Is this really needed? */
+  svn_stringbuf_t *propstring;
+   
+  /* Temporary file to write delta to along with its checksum. */
+  char *delta_abspath;
+
+  /* Flags to trigger dumping props and text */
+  svn_boolean_t dump_props;
+  svn_boolean_t dump_text;
+  svn_boolean_t dump_props_pending;
+};
+
 /* Make a directory baton to represent the directory at path (relative
  * to the edit_baton).
  *
@@ -85,9 +114,8 @@ make_dir_baton(const char *path,
   return new_db;
 }
 
-/* Extract and dump the properties and del_properties stored in the
- * edit baton EB, using POOL for any temporary allocations. If
- * TRIGGER_VAR is not NULL, it is set to FALSE.
+/* Extract and dump properties stored in edit baton EB, using POOL for
+ * any temporary allocations. If TRIGGER_VAR is not NULL, it is set to FALSE.
  * Unless DUMP_DATA_TOO is set, only property headers are dumped.
  */
 static svn_error_t *
@@ -103,7 +131,7 @@ dump_props(struct dump_edit_baton *eb,
 
   svn_stringbuf_setempty(eb->propstring);
   propstream = svn_stream_from_stringbuf(eb->propstring, eb->pool);
-  SVN_ERR(svn_hash_write_incremental(eb->properties, eb->del_properties,
+  SVN_ERR(svn_hash_write_incremental(eb->props, eb->deleted_props,
                                      propstream, "PROPS-END", pool));
   SVN_ERR(svn_stream_close(propstream));
   
@@ -130,8 +158,8 @@ dump_props(struct dump_edit_baton *eb,
              &(eb->propstring->len)));
 
       /* Cleanup so that data is never dumped twice. */
-      svn_hash__clear(eb->properties, pool);
-      svn_hash__clear(eb->del_properties, pool);
+      svn_hash__clear(eb->props, pool);
+      svn_hash__clear(eb->deleted_props, pool);
       if (trigger_var)
         *trigger_var = FALSE;
     }
@@ -277,8 +305,8 @@ static svn_error_t *open_root(void *edit_baton,
   /* Allocate a special pool for the edit_baton to avoid pool
      lifetime issues */
   eb->pool = svn_pool_create(pool);
-  eb->properties = apr_hash_make(eb->pool);
-  eb->del_properties = apr_hash_make(eb->pool);
+  eb->props = apr_hash_make(eb->pool);
+  eb->deleted_props = apr_hash_make(eb->pool);
   eb->propstring = svn_stringbuf_create("", eb->pool);
 
   *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
@@ -496,10 +524,10 @@ change_dir_prop(void *parent_baton,
     return SVN_NO_ERROR;
 
   if (value)
-    apr_hash_set(db->eb->properties, apr_pstrdup(pool, name),
+    apr_hash_set(db->eb->props, apr_pstrdup(pool, name),
                  APR_HASH_KEY_STRING, svn_string_dup(value, pool));
   else
-    apr_hash_set(db->eb->del_properties, apr_pstrdup(pool, name),
+    apr_hash_set(db->eb->deleted_props, apr_pstrdup(pool, name),
                  APR_HASH_KEY_STRING, "");
 
   if (! db->written_out) {
@@ -531,10 +559,10 @@ change_file_prop(void *file_baton,
     return SVN_NO_ERROR;
 
   if (value)
-    apr_hash_set(eb->properties, apr_pstrdup(pool, name),
+    apr_hash_set(eb->props, apr_pstrdup(pool, name),
                  APR_HASH_KEY_STRING, svn_string_dup(value, pool));
   else
-    apr_hash_set(eb->del_properties, apr_pstrdup(pool, name),
+    apr_hash_set(eb->deleted_props, apr_pstrdup(pool, name),
                  APR_HASH_KEY_STRING, "");
 
   /* Dump the property headers and wait; close_file might need
@@ -662,8 +690,8 @@ close_file(void *file_baton,
 
     /* Cleanup */
     eb->dump_props = eb->dump_props_pending = FALSE;
-    svn_hash__clear(eb->properties, pool);
-    svn_hash__clear(eb->del_properties, pool);
+    svn_hash__clear(eb->props, pool);
+    svn_hash__clear(eb->deleted_props, pool);
   }
 
   /* Dump the text */
