@@ -1614,7 +1614,7 @@ def lock_admin_dir(wc_dir):
     except: pass
     head, tail = os.path.split(root_path)
     if head == root_path:
-      raise svntest.Failure("No DB for " + file_path)
+      raise svntest.Failure("No DB for " + wc_dir)
     root_path = head
     relpath = os.path.join(tail, relpath).rstrip('/')
 
