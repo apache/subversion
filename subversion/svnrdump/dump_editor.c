@@ -219,15 +219,16 @@ dump_node(struct dump_edit_baton *eb,
       break;
 
     case svn_node_action_replace:
-      if (!is_copy) {
-        /* Node-action: replace */
-        SVN_ERR(svn_stream_printf(eb->stream, pool,
-                                  SVN_REPOS_DUMPFILE_NODE_ACTION
-                                  ": replace\n"));
+      if (!is_copy)
+        {
+          /* Node-action: replace */
+          SVN_ERR(svn_stream_printf(eb->stream, pool,
+                                    SVN_REPOS_DUMPFILE_NODE_ACTION
+                                    ": replace\n"));
 
-        eb->dump_props_pending = TRUE;
-        break;
-      }
+          eb->dump_props_pending = TRUE;
+          break;
+        }
       /* More complex case: is_copy is true, and copyfrom_path/
          copyfrom_rev are present: delete the original, and then re-add
          it */
