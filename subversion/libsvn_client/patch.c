@@ -2380,6 +2380,6 @@ svn_client_patch(const char *patch_abspath,
 
   return svn_error_return(
            svn_wc__call_with_write_lock(apply_patches, &baton,
-                                        ctx->wc_ctx, local_abspath,
+                                        ctx->wc_ctx, local_abspath, FALSE,
                                         result_pool, scratch_pool));
 }

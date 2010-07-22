@@ -8270,7 +8270,34 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
   /* First check and remove the owns-lock information as failure in
      removing the db record implies that we have to steal the lock later. */
 #ifndef SVN_WC__SINGLE_DB
-  SVN_ERR_ASSERT(*local_relpath == '\0');
+  if (*local_relpath != '\0')
+    {
+      svn_wc__db_status_t status;
+      svn_wc__db_kind_t kind;
+      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+      if (kind == svn_wc__db_kind_dir)
+        switch (status)
+          {
+            case svn_wc__db_status_not_present:
+            case svn_wc__db_status_absent:
+            case svn_wc__db_status_excluded:
+              return SVN_NO_ERROR; /* These directories don't have an
+                                      administrative area */
+            case svn_wc__db_status_obstructed:
+            case svn_wc__db_status_obstructed_add:
+            case svn_wc__db_status_obstructed_delete:
+              return SVN_NO_ERROR; /* Administrative area missing
+                                      -> Lock gone */
+          }
+      SVN_ERR_ASSERT(*local_relpath == '\0');
+    }
+
   if (!pdh->locked)
     return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
                              _("Working copy not locked at '%s'."),

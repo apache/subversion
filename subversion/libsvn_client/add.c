@@ -542,7 +542,7 @@ add_parent_dirs(svn_client_ctx_t *ctx,
                          scratch_pool));
 
   if (!own_lock)
-    SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, parent_abspath,
+    SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, parent_abspath, FALSE,
                                        scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc_add4(wc_ctx, local_abspath, svn_depth_infinity,
@@ -607,7 +607,8 @@ svn_client_add4(const char *path,
   baton.no_ignore = no_ignore;
   baton.ctx = ctx;
   SVN_ERR(svn_wc__call_with_write_lock(add, &baton, ctx->wc_ctx,
-                                       parent_abspath, pool, pool));
+                                       parent_abspath, FALSE,
+                                       pool, pool));
   return SVN_NO_ERROR;
 }
 

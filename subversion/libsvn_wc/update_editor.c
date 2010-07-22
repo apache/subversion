@@ -1204,7 +1204,7 @@ prep_directory(struct dir_baton *db,
   if (!locked_here)
     /* Recursive lock release on parent will release this lock. */
     SVN_ERR(svn_wc__acquire_write_lock(NULL, db->edit_baton->wc_ctx,
-                                       dir_abspath, pool, pool));
+                                       dir_abspath, FALSE, pool, pool));
 #endif
 
   return SVN_NO_ERROR;
