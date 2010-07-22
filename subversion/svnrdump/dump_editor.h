@@ -68,7 +68,7 @@ struct handler_baton
   apr_pool_t *pool;
 
   /* Information about the path of the temporary file used */
-  char *delta_abspath;
+  const char *delta_abspath;
   apr_file_t *delta_file;
   svn_stream_t *delta_filestream;
 
