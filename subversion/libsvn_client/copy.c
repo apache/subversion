@@ -310,7 +310,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   baton.dst_parent = dst_parent;
   SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_copies_with_write_lock,
                                        &baton, ctx->wc_ctx, dst_parent_abspath,
-                                       pool, pool));
+                                       FALSE, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -361,7 +361,7 @@ do_wc_to_wc_moves_with_locks1(void *baton,
   if (b->lock_dst)
     SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_moves_with_locks2, b,
                                          b->ctx->wc_ctx, b->dst_parent_abspath,
-                                         result_pool, scratch_pool));
+                                         FALSE, result_pool, scratch_pool));
   else
     SVN_ERR(do_wc_to_wc_moves_with_locks2(b, result_pool, scratch_pool));
 
@@ -430,7 +430,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_moves_with_locks1,
                                              &baton,
                                              ctx->wc_ctx, src_parent_abspath,
-                                             iterpool, iterpool));
+                                             FALSE, iterpool, iterpool));
       else
         SVN_ERR(do_wc_to_wc_moves_with_locks1(&baton, iterpool, iterpool));
 
@@ -1853,7 +1853,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   SVN_ERR(svn_wc__call_with_write_lock(repos_to_wc_copy_cb, &baton,
                                        ctx->wc_ctx, lock_abspath,
-                                       pool, pool));
+                                       FALSE, pool, pool));
   return SVN_NO_ERROR;
 }
 

@@ -441,7 +441,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       baton.changelist_hash = changelist_hash;
 
       SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
-                                           ctx->wc_ctx, target_abspath,
+                                           ctx->wc_ctx, target_abspath, FALSE,
                                            pool, pool));
 
       return SVN_NO_ERROR;

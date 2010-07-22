@@ -1099,7 +1099,7 @@ svn_client_commit5(const apr_array_header_t *targets,
                                                   pool);
 
   SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_abspath,
-                                     pool, pool));
+                                     FALSE, pool, pool));
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a

@@ -349,7 +349,8 @@ svn_client_delete4(const apr_array_header_t *paths,
           dwwlb.ctx = ctx;
           SVN_ERR(svn_wc__call_with_write_lock(delete_with_write_lock_func,
                                                &dwwlb, ctx->wc_ctx,
-                                               local_abspath, pool, subpool));
+                                               local_abspath, TRUE,
+                                               pool, subpool));
         }
       svn_pool_destroy(subpool);
     }
