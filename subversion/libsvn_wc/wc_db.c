@@ -5942,6 +5942,7 @@ determine_repos_info(apr_int64_t *repos_id,
   /* The parent MUST have a BASE node (otherwise, THIS node cannot be
      processed for a commit). Move up and re-query.   */
 
+#ifndef SVN_WC__SINGLE_DB
   if (*local_relpath == '\0')
     {
       /* There is no entry for "" in the BASE_NODE table, so this directory
@@ -5954,16 +5955,17 @@ determine_repos_info(apr_int64_t *repos_id,
       local_relpath = "";
     }
   else
+#endif
     {
       /* This was a child node within this wcroot. We want to look at the
-         BASE node of the directory, which is local_relpath == "".  */
-      local_relpath = "";
+         BASE node of the directory.  */
+      local_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
     }
 
   /* The REPOS_ID will be the same (### until we support mixed-repos)  */
   SVN_ERR(scan_upwards_for_repos(repos_id, &repos_parent_relpath,
                                  pdh->wcroot, pdh->local_abspath,
-                                 "" /* local_relpath. see above.  */,
+                                 local_relpath,
                                  scratch_pool, scratch_pool));
 
   *repos_relpath = svn_relpath_join(repos_parent_relpath, name, result_pool);
