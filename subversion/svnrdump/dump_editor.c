@@ -85,6 +85,61 @@ make_dir_baton(const char *path,
 
   return new_db;
 }
+
+/* Extract and dump the properties and del_properties stored in the
+ * edit baton EB, using POOL for any temporary allocations. If
+ * TRIGGER_VAR is not NULL, it is set to FALSE.
+ * Unless DUMP_DATA_TOO is set, only property headers are dumped.
+ */
+static svn_error_t *
+dump_props(struct dump_edit_baton *eb,
+           svn_boolean_t *trigger_var,
+           svn_boolean_t dump_data_too,
+           apr_pool_t *pool)
+{
+  svn_stream_t *propstream;
+
+  if (trigger_var && !*trigger_var)
+    return SVN_NO_ERROR;
+
+  svn_stringbuf_setempty(eb->propstring);
+  propstream = svn_stream_from_stringbuf(eb->propstring, eb->pool);
+  SVN_ERR(svn_hash_write_incremental(eb->properties, eb->del_properties,
+                                     propstream, "PROPS-END", pool));
+  SVN_ERR(svn_stream_close(propstream));
+  
+  /* Prop-delta: true */
+  SVN_ERR(svn_stream_printf(eb->stream, pool,
+          SVN_REPOS_DUMPFILE_PROP_DELTA
+          ": true\n"));
+
+  /* Prop-content-length: 193 */
+  SVN_ERR(svn_stream_printf(eb->stream, pool,
+          SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+          ": %" APR_SIZE_T_FMT "\n", eb->propstring->len));
+
+  if (dump_data_too)
+    {
+      /* Content-length: 14 */
+      SVN_ERR(svn_stream_printf(eb->stream, pool,
+              SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+              ": %" APR_SIZE_T_FMT "\n\n",
+              eb->propstring->len));
+
+      /* The properties. */
+      SVN_ERR(svn_stream_write(eb->stream, eb->propstring->data,
+             &(eb->propstring->len)));
+
+      /* Cleanup so that data is never dumped twice. */
+      svn_hash__clear(eb->properties, pool);
+      svn_hash__clear(eb->del_properties, pool);
+      if (trigger_var)
+        *trigger_var = FALSE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /*
  * Write out a node record for PATH of type KIND under EB->FS_ROOT.
  * ACTION describes what is happening to the node (see enum
