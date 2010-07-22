@@ -69,7 +69,6 @@ struct handler_baton
 
   /* Information about the path of the temporary file used */
   const char *delta_abspath;
-  apr_file_t *delta_file;
   svn_stream_t *delta_filestream;
 
   /* Global edit baton */
