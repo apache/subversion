@@ -1835,12 +1835,34 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Use @a pool for any temporary allocations.
  *
- * If no error is returned and @a (*commit_info_p)->revision is set to
+ * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
+ * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
+ * #svn_commit_info_t for the commit.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_commit5(const apr_array_header_t *targets,
+                   svn_depth_t depth,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelists,
+                   const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_commit5(), but returns the @a commit_info_p directly,
+ * rather than through @a ctx->commit_callback2.
+ *
+ * Also, if no error is returned and @a (*commit_info_p)->revision is set to
  * #SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,

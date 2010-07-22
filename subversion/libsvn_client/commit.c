@@ -592,6 +592,31 @@ import(const char *path,
 }
 
 
+struct capture_baton_t {
+  svn_commit_callback2_t original_callback;
+  void *original_baton;
+
+  svn_commit_info_t **info;
+  apr_pool_t *pool;
+};
+
+
+static svn_error_t *
+capture_commit_info(const svn_commit_info_t *commit_info,
+                    void *baton,
+                    apr_pool_t *pool)
+{
+  struct capture_baton_t *cb = baton;
+
+  *(cb->info) = svn_commit_info_dup(commit_info, cb->pool);
+
+  if (cb->original_callback)
+    SVN_ERR((cb->original_callback)(commit_info, cb->original_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 get_ra_editor(svn_ra_session_t **ra_session,
               const svn_delta_editor_t **editor,
@@ -1000,8 +1025,7 @@ check_nonrecursive_dir_delete(const char *target_path,
 }
 
 svn_error_t *
-svn_client_commit4(svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *targets,
+svn_client_commit5(const apr_array_header_t *targets,
                    svn_depth_t depth,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
@@ -1012,7 +1036,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 {
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *commit_baton;
+  struct capture_baton_t cb;
   svn_ra_session_t *ra_session;
   const char *log_msg;
   const char *base_abspath;
@@ -1027,6 +1051,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
+  svn_commit_info_t *commit_info = NULL;
   const char *current_abspath;
   const char *notify_prefix;
   int i;
@@ -1048,13 +1073,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* No targets means nothing to commit, so just return. */
   if (base_abspath == NULL)
-    {
-      /* As per our promise, if *commit_info_p isn't set, provide a
-         default where rev = SVN_INVALID_REVNUM. */
-      if (! *commit_info_p)
-        *commit_info_p = svn_create_commit_info(pool);
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(rel_targets != NULL);
 
@@ -1173,13 +1192,16 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                      pool)))
     goto cleanup;
 
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
+  cb.original_callback = ctx->commit_callback2;
+  cb.original_baton = ctx->commit_baton;
+  cb.info = &commit_info;
+  cb.pool = pool;
 
   if ((cmt_err = get_ra_editor(&ra_session, &editor, &edit_baton, ctx,
                                base_url, base_abspath, log_msg,
                                commit_items, revprop_table, TRUE, lock_tokens,
-                               keep_locks, svn_client__commit_callback,
-                               commit_baton, pool)))
+                               keep_locks, capture_commit_info,
+                               &cb, pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
@@ -1220,12 +1242,12 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
         }
       svn_pool_destroy(iterpool);
 
-      SVN_ERR_ASSERT(*commit_info_p);
+      SVN_ERR_ASSERT(commit_info);
       bump_err
         = svn_wc_process_committed_queue2(queue, ctx->wc_ctx,
-                                         (*commit_info_p)->revision,
-                                         (*commit_info_p)->date,
-                                         (*commit_info_p)->author,
+                                         commit_info->revision,
+                                         commit_info->date,
+                                         commit_info->author,
                                          pool);
     }
 
@@ -1244,11 +1266,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      clean-up. */
   if (! bump_err)
     unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_abspath, pool);
-
-  /* As per our promise, if *commit_info_p isn't set, provide a default where
-     rev = SVN_INVALID_REVNUM. */
-  if (! *commit_info_p)
-    *commit_info_p = svn_create_commit_info(pool);
 
   return reconcile_errors(cmt_err, unlock_err, bump_err, pool);
 }

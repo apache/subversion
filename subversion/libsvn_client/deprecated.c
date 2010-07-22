@@ -58,6 +58,8 @@ struct capture_baton_t {
 
   svn_commit_info_t **info;
   apr_pool_t *pool;
+
+  svn_boolean_t saw_commit;
 };
 
 
@@ -73,7 +75,9 @@ capture_commit_info(const svn_commit_info_t *commit_info,
   *(cb->info) = svn_commit_info_dup(commit_info, cb->pool);
 
   if (cb->original_callback)
-    (cb->original_callback)(commit_info, cb->original_baton, pool);
+    SVN_ERR((cb->original_callback)(commit_info, cb->original_baton, pool));
+
+  cb->saw_commit = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -443,6 +447,39 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return svn_error_return(err);
+}
+
+svn_error_t *
+svn_client_commit4(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *targets,
+                   svn_depth_t depth,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelists,
+                   const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  svn_client_ctx_t shadow_ctx;
+  struct capture_baton_t cb;
+
+  cb.info = commit_info_p;
+  cb.pool = pool;
+  cb.original_callback = ctx->commit_callback2;
+  cb.original_baton = ctx->commit_baton;
+  cb.saw_commit = FALSE;
+
+  shadow_ctx = *ctx;
+  shadow_ctx.commit_callback2 = capture_commit_info;
+  shadow_ctx.commit_baton = &cb;
+
+  SVN_ERR(svn_client_commit5(targets, depth, keep_locks, keep_changelists,
+                             changelists, revprop_table, &shadow_ctx, pool));
+
+  if (!cb.saw_commit)
+    *commit_info_p = svn_create_commit_info(pool);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
