@@ -552,7 +552,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
   shadow_ctx.commit_baton = &cb;
 
   return svn_client_copy6(sources, dst_path, copy_as_child, make_parents,
-                          ignore_externals, revprop_table, ctx, pool);
+                          ignore_externals, revprop_table, &shadow_ctx, pool);
 }
 
 svn_error_t *
