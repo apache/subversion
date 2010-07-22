@@ -691,14 +691,18 @@ else:
   
   r = subprocess.call(args + tuple(['org.apache.subversion.javahl.RunTests']))
   sys.stdout.flush()
+  sys.stderr.flush()
   if (r != 0):
+    print('[Test runner reported failure]')
     failed = True
   
   print('Running org.tigris.subversion tests:')
   sys.stdout.flush()
   r = subprocess.call(args + tuple(['org.tigris.subversion.javahl.RunTests']))
   sys.stdout.flush()
+  sys.stderr.flush()
   if (r != 0):
+    print('[Test runner reported failure]')
     failed = True
   
 # Stop service daemon, if any
