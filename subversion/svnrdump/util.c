@@ -26,70 +26,23 @@
 
 #include "svnrdump.h"
 
-void
-write_hash_to_stringbuf(apr_hash_t *properties,
-                        svn_boolean_t deleted,
-                        svn_stringbuf_t **strbuf,
-                        apr_pool_t *pool)
-{
-  apr_hash_index_t *this;
-  const void *key;
-  void *val;
-  apr_ssize_t keylen;
-  svn_string_t *value;
-
-  for (this = apr_hash_first(pool, properties); this;
-       this = apr_hash_next(this)) {
-    apr_hash_this(this, &key, &keylen, &val);
-    value = val;
-
-    /* Key corresponds to the property name and value corresponds to
-       the property itself. As per the dumpfilev3 specification, only
-       write "D <propname>" and don't write <propvalue> for deleted
-       properties */
-
-    if (!deleted)
-      svn_stringbuf_appendcstr(*strbuf,
-                               apr_psprintf(pool, "K %" APR_SSIZE_T_FMT "\n",
-                                            keylen));
-    else
-      svn_stringbuf_appendcstr(*strbuf,
-                               apr_psprintf(pool, "D %" APR_SSIZE_T_FMT "\n",
-                                            keylen));
-
-    svn_stringbuf_appendbytes(*strbuf, (const char *) key, keylen);
-    svn_stringbuf_appendbytes(*strbuf, "\n", 1);
-
-    if (!deleted) {
-      svn_stringbuf_appendcstr(*strbuf,
-                               apr_psprintf(pool, "V %" APR_SIZE_T_FMT "\n",
-                                            value->len));
-
-      svn_stringbuf_appendbytes(*strbuf, value->data, value->len);
-      svn_stringbuf_appendbytes(*strbuf, "\n", 1);
-    }
-  }
-}
-
 svn_error_t *
 dump_props(struct dump_edit_baton *eb,
            svn_boolean_t *trigger_var,
            svn_boolean_t dump_data_too,
            apr_pool_t *pool)
 {
+  svn_stream_t *propstream;
+
   if (trigger_var && !*trigger_var)
     return SVN_NO_ERROR;
 
-  /* Build up a string buffer to print. */
   svn_stringbuf_setempty(eb->propstring);
-  write_hash_to_stringbuf(eb->properties,
-        FALSE,
-        &(eb->propstring), eb->pool);
-  write_hash_to_stringbuf(eb->del_properties,
-        TRUE,
-        &(eb->propstring), eb->pool);
-  svn_stringbuf_appendbytes(eb->propstring, "PROPS-END\n", 10);
-
+  propstream = svn_stream_from_stringbuf(eb->propstring, eb->pool);
+  SVN_ERR(svn_hash_write_incremental(eb->properties, eb->del_properties,
+                                     propstream, "PROPS-END", pool));
+  SVN_ERR(svn_stream_close(propstream));
+  
   /* Prop-delta: true */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
           SVN_REPOS_DUMPFILE_PROP_DELTA

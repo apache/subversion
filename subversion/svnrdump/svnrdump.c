@@ -25,10 +25,12 @@
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_client.h"
+#include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "svn_string.h"
 
 #include "svnrdump.h"
 #include "dump_editor.h"
@@ -43,8 +45,9 @@ replay_revstart(svn_revnum_t revision,
 {
   struct replay_baton *rb = replay_baton;
   /* First, dump the revision properties. */
-  svn_stringbuf_t *propstring = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *propstring;
   svn_stream_t *stdout_stream;
+  svn_stream_t *revprop_stream;
 
   svn_stream_for_stdout(&stdout_stream, pool);
 
@@ -52,8 +55,10 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
           SVN_REPOS_DUMPFILE_REVISION_NUMBER
           ": %ld\n", revision));
-  write_hash_to_stringbuf(rev_props, FALSE, &propstring, pool);
-  svn_stringbuf_appendbytes(propstring, "PROPS-END\n", 10);
+  propstring = svn_stringbuf_create_ensure(0, pool);
+  revprop_stream = svn_stream_from_stringbuf(propstring, pool);
+  SVN_ERR(svn_hash_write2(rev_props, revprop_stream, "PROPS-END", pool));
+  SVN_ERR(svn_stream_close(revprop_stream));
 
   /* Prop-content-length: 13 */
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
