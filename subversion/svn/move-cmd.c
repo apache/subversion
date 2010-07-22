@@ -48,7 +48,6 @@ svn_cl__move(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *dst_path;
-  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -85,7 +84,7 @@ svn_cl__move(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-  err = svn_client_move5(&commit_info, targets, dst_path, opt_state->force,
+  err = svn_client_move6(targets, dst_path, opt_state->force,
                          TRUE, opt_state->parents, opt_state->revprop_table,
                          ctx, pool);
 
@@ -96,9 +95,6 @@ svn_cl__move(apr_getopt_t *os,
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
   else if (err)
     return svn_error_return(err);
-
-  if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, NULL, pool));
 
   return SVN_NO_ERROR;
 }
