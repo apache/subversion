@@ -33,7 +33,6 @@
 #include "svn_private_config.h"
 #include "svn_string.h"
 
-#include "svnrdump.h"
 #include "dump_editor.h"
 
 enum svn_svnrdump__longopt_t
@@ -63,6 +62,18 @@ static const apr_getopt_option_t svnrdump__options[] =
   {"version",       opt_version, 0, N_("show program version information")},
 
   {0,                  0,   0, 0}
+};
+
+/* Baton for the RA replay session. */
+struct replay_baton {
+  /* The editor producing diffs. */
+  const svn_delta_editor_t *editor;
+
+  /* Baton for the editor. */
+  void *edit_baton;
+
+  /* Whether to be verbose. */
+  svn_boolean_t verbose;
 };
 
 static svn_error_t *
