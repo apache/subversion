@@ -55,7 +55,6 @@ svn_cl__commit(apr_getopt_t *os,
   const char *base_dir;
   svn_config_t *cfg;
   svn_boolean_t no_unlock = FALSE;
-  svn_commit_info_t *commit_info = NULL;
   int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -114,8 +113,7 @@ svn_cl__commit(apr_getopt_t *os,
                                      ctx->config, pool));
 
   /* Commit. */
-  err = svn_client_commit4(&commit_info,
-                           targets,
+  err = svn_client_commit5(targets,
                            opt_state->depth,
                            no_unlock,
                            opt_state->keep_changelists,
@@ -138,8 +136,6 @@ svn_cl__commit(apr_getopt_t *os,
         }
     }
   SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
-  if (! err && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, NULL, pool));
 
   return SVN_NO_ERROR;
 }
