@@ -16664,10 +16664,6 @@ def copy_causes_phantom_eol_conflict(sbox):
   expected_output = wc.State(A_branch_path, {
     'mu' : Item(status='UU'),
     })
-  expected_mergeinfo_output = wc.State(A_branch_path, {
-    ''   : Item(status=' U'),
-    })
-  expected_elision_output = wc.State(A_branch_path, {})
   expected_status = wc.State(A_branch_path, {
     ''          : Item(status=' M'),
     'B'         : Item(status='  '),
@@ -16717,10 +16713,7 @@ def copy_causes_phantom_eol_conflict(sbox):
   expected_skip = wc.State(A_branch_path, {})
   svntest.actions.run_and_verify_merge(A_branch_path, 3, 4,
                                        sbox.repo_url + '/A',
-                                       None,
                                        expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
