@@ -170,7 +170,7 @@ main(int argc, const char **argv)
   svn_boolean_t verbose = FALSE;
   apr_pool_t *pool = NULL;
   svn_ra_session_t *session = NULL;
-  const char *config_dir;
+  const char *config_dir = NULL;
 
   if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
