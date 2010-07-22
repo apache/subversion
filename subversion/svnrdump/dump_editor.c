@@ -441,10 +441,12 @@ change_dir_prop(void *parent_baton,
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
-  value ? apr_hash_set(db->eb->properties, apr_pstrdup(pool, name),
-                       APR_HASH_KEY_STRING, svn_string_dup(value, pool)) :
+  if (value)
+    apr_hash_set(db->eb->properties, apr_pstrdup(pool, name),
+                 APR_HASH_KEY_STRING, svn_string_dup(value, pool));
+  else
     apr_hash_set(db->eb->del_properties, apr_pstrdup(pool, name),
-                 APR_HASH_KEY_STRING, (void *)0x1);
+                 APR_HASH_KEY_STRING, "");
 
   if (! db->written_out) {
   /* If db->written_out is set, it means that the node information
@@ -474,9 +476,13 @@ change_file_prop(void *file_baton,
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
-  apr_hash_set(eb->properties, apr_pstrdup(pool, name),
-               APR_HASH_KEY_STRING, value ?
-               svn_string_dup(value, pool): (void *)0x1);
+  if (value)
+    apr_hash_set(eb->properties, apr_pstrdup(pool, name),
+                 APR_HASH_KEY_STRING, svn_string_dup(value, pool));
+  else
+    apr_hash_set(eb->del_properties, apr_pstrdup(pool, name),
+                 APR_HASH_KEY_STRING, "");
+
   /* Dump the property headers and wait; close_file might need
      to write text headers too depending on whether
      apply_textdelta is called */
