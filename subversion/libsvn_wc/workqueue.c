@@ -76,6 +76,7 @@ struct work_item_dispatch {
   const char *name;
   svn_error_t *(*func)(svn_wc__db_t *db,
                        const svn_skel_t *work_item,
+                       const char *wri_abspath,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);
@@ -205,6 +206,7 @@ maybe_remove_conflict(const char *parent_abspath,
 static svn_error_t *
 run_revert(svn_wc__db_t *db,
            const svn_skel_t *work_item,
+           const char *wri_abspath,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
            apr_pool_t *scratch_pool)
@@ -579,6 +581,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 static svn_error_t *
 run_prepare_revert_files(svn_wc__db_t *db,
                          const svn_skel_t *work_item,
+                         const char *wri_abspath,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool)
@@ -665,6 +668,7 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
 static svn_error_t *
 run_killme(svn_wc__db_t *db,
            const svn_skel_t *work_item,
+           const char *wri_abspath,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
            apr_pool_t *scratch_pool)
@@ -790,6 +794,7 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 static svn_error_t *
 run_loggy(svn_wc__db_t *db,
           const svn_skel_t *work_item,
+          const char *wri_abspath,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
           apr_pool_t *scratch_pool)
@@ -842,6 +847,7 @@ svn_wc__wq_build_loggy(svn_skel_t **work_item,
 static svn_error_t *
 run_deletion_postcommit(svn_wc__db_t *db,
                         const svn_skel_t *work_item,
+                        const char *wri_abspath,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *scratch_pool)
@@ -1420,6 +1426,7 @@ log_do_committed(svn_wc__db_t *db,
 static svn_error_t *
 run_postcommit(svn_wc__db_t *db,
                const svn_skel_t *work_item,
+               const char *wri_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
@@ -1562,6 +1569,7 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 static svn_error_t *
 run_install_properties(svn_wc__db_t *db,
                        const svn_skel_t *work_item,
+                       const char *wri_abspath,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
@@ -1671,6 +1679,7 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
 static svn_error_t *
 run_delete(svn_wc__db_t *db,
            const svn_skel_t *work_item,
+           const char *wri_abspath,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
            apr_pool_t *scratch_pool)
@@ -1755,6 +1764,7 @@ svn_wc__wq_add_delete(svn_wc__db_t *db,
 static svn_error_t *
 run_file_install(svn_wc__db_t *db,
                  const svn_skel_t *work_item,
+                 const char *wri_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -1933,6 +1943,7 @@ svn_wc__wq_build_file_install(svn_skel_t **work_item,
 static svn_error_t *
 run_file_remove(svn_wc__db_t *db,
                  const svn_skel_t *work_item,
+                 const char *wri_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -1974,6 +1985,7 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
 static svn_error_t *
 run_file_move(svn_wc__db_t *db,
                  const svn_skel_t *work_item,
+                 const char *wri_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -2048,6 +2060,7 @@ svn_wc__wq_build_file_move(svn_skel_t **work_item,
 static svn_error_t *
 run_sync_file_flags(svn_wc__db_t *db,
                     const svn_skel_t *work_item,
+                    const char *wri_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
@@ -2085,6 +2098,7 @@ svn_wc__wq_build_sync_file_flags(svn_skel_t **work_item,
 static svn_error_t *
 run_prej_install(svn_wc__db_t *db,
                  const svn_skel_t *work_item,
+                 const char *wri_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -2153,6 +2167,7 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
 static svn_error_t *
 run_write_old_props(svn_wc__db_t *db,
                     const svn_skel_t *work_item,
+                    const char *wri_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
@@ -2231,6 +2246,7 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
 static svn_error_t *
 run_record_fileinfo(svn_wc__db_t *db,
                     const svn_skel_t *work_item,
+                    const char *wri_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
@@ -2270,6 +2286,7 @@ svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
 static svn_error_t *
 run_set_text_conflict_markers(svn_wc__db_t *db,
                     const svn_skel_t *work_item,
+                    const char *wri_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
@@ -2342,6 +2359,7 @@ svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
 static svn_error_t *
 run_set_property_conflict_marker(svn_wc__db_t *db,
                                  const svn_skel_t *work_item,
+                                 const char *wri_abspath,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
                                  apr_pool_t *scratch_pool)
@@ -2420,6 +2438,7 @@ pristine_get_translated(svn_wc__db_t *db,
 static svn_error_t *
 run_pristine_get_translated(svn_wc__db_t *db,
                             const svn_skel_t *work_item,
+                            const char *wri_abspath,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
@@ -2521,7 +2540,7 @@ dispatch_work_item(svn_wc__db_t *db,
 #ifdef DEBUG_WORK_QUEUE
           SVN_DBG(("dispatch: operation='%s'\n", scan->name));
 #endif
-          SVN_ERR((*scan->func)(db, work_item,
+          SVN_ERR((*scan->func)(db, work_item, wri_abspath,
                                 cancel_func, cancel_baton,
                                 scratch_pool));
           break;
