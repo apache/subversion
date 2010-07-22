@@ -108,6 +108,7 @@ update_internal(svn_revnum_t *result_rev,
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const char *anchor_url;
+  const char *corrected_url;
   const char *target;
   const char *repos_root;
   svn_error_t *err;
@@ -192,9 +193,19 @@ update_internal(svn_revnum_t *result_rev,
     : NULL;
 
   /* Open an RA session for the URL */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, anchor_url,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
+                                               anchor_url,
                                                anchor_abspath, NULL, TRUE,
                                                TRUE, ctx, pool));
+
+  /* If we got a corrected URL from the RA subsystem, we'll need to
+     relocate our working copy first. */
+  if (corrected_url)
+    {
+      SVN_ERR(svn_client_relocate(anchor_abspath, anchor_url, corrected_url,
+                                  TRUE, ctx, pool));
+      anchor_url = corrected_url;
+    }
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */
