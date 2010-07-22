@@ -32,6 +32,7 @@
 #include "svn_utf.h"
 #include "svn_private_config.h"
 #include "svn_string.h"
+#include "svn_props.h"
 
 #include "dump_editor.h"
 
@@ -178,14 +179,17 @@ open_connection(svn_ra_session_t **session,
 }
 
 static svn_error_t *
-replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
-             svn_revnum_t end_revision, apr_pool_t *pool,
-             svn_boolean_t quiet)
+replay_range(svn_ra_session_t *session, const char *url,
+             svn_revnum_t start_revision, svn_revnum_t end_revision,
+             svn_boolean_t quiet, apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
   struct replay_baton *replay_baton;
   void *dump_baton;
   const char *uuid;
+  apr_hash_t *encoded_prophash;
+  svn_stringbuf_t *propstring;
+  svn_stream_t *propstream;
   svn_stream_t *stdout_stream;
 
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
@@ -196,12 +200,56 @@ replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
   replay_baton->editor = dump_editor;
   replay_baton->edit_baton = dump_baton;
   replay_baton->quiet = quiet;
+
+  /* Write the magic header and UUID */
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
                             SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
                             SVN_REPOS_DUMPFILE_FORMAT_VERSION));
   SVN_ERR(svn_ra_get_uuid2(session, &uuid, pool));
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
                             SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
+
+  /* Fake revision 0 if necessary */
+  if (start_revision == 0)
+    {
+      SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                                SVN_REPOS_DUMPFILE_REVISION_NUMBER
+                                ": %d\n", start_revision));
+
+      encoded_prophash = apr_hash_make(pool);
+      propstring = svn_stringbuf_create("", pool);
+
+      /* Fake properties from svnsync ### what about svn:date? */
+      apr_hash_set(encoded_prophash, SVNSYNC_PROP_FROM_URL,
+                   APR_HASH_KEY_STRING, svn_string_create(url, pool));
+      apr_hash_set(encoded_prophash, SVNSYNC_PROP_FROM_UUID,
+                   APR_HASH_KEY_STRING, svn_string_create(uuid, pool));
+      apr_hash_set(encoded_prophash, SVNSYNC_PROP_LAST_MERGED_REV,
+                   APR_HASH_KEY_STRING, svn_string_createf(pool, "%ld",
+                                                           end_revision));
+      apr_hash_set(encoded_prophash, SVNSYNC_PROP_CURRENTLY_COPYING,
+                   APR_HASH_KEY_STRING, svn_string_createf(pool, "%ld",
+                                                           end_revision));
+
+      propstream = svn_stream_from_stringbuf(propstring, pool);
+      SVN_ERR(svn_hash_write2(encoded_prophash, propstream, "PROPS-END", pool));
+      svn_stream_close(propstream);
+
+      /* Property-content-length: 14; Content-length: 14 */
+      SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+                                ": %" APR_SIZE_T_FMT "\n",
+                                propstring->len));
+      SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                                SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                                ": %" APR_SIZE_T_FMT "\n\n",
+                                propstring->len));
+      /* The properties */
+      SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
+                               &(propstring->len)));
+      start_revision ++;
+    }
+
   SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
                               0, TRUE, replay_revstart, replay_revend,
                               replay_baton, pool));
@@ -243,7 +291,7 @@ help(const char *progname, apr_pool_t *pool)
                                "Dump the contents of repository at remote URL"
                                "to stdout in a 'dumpfile' portable format.\n"
                                "Dump revisions LOWER rev through UPPER rev.\n"
-                               "LOWER defaults to 1 and UPPER defaults to the"
+                               "LOWER defaults to 0 and UPPER defaults to the"
                                "highest possible revision if omitted.\n\n"
                                "Valid options:\n"),
                              progname));
@@ -398,12 +446,12 @@ main(int argc, const char **argv)
 
   /* Have sane start_revision and end_revision defaults if unspecified */
   if (start_revision == svn_opt_revision_unspecified)
-    start_revision = 1;
+    start_revision = 0;
   if (end_revision == svn_opt_revision_unspecified)
     SVNRDUMP_ERR(svn_ra_get_latest_revnum(session, &end_revision, pool));
 
-  SVNRDUMP_ERR(replay_range(session, start_revision, end_revision, pool,
-                            quiet));
+  SVNRDUMP_ERR(replay_range(session, url, start_revision, end_revision,
+                            quiet, pool));
 
   svn_pool_destroy(pool);
 
