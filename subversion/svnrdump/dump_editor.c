@@ -402,7 +402,8 @@ open_directory(const char *path,
       copyfrom_rev = pb->copyfrom_rev;
     }
 
-  new_db = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb, pb, FALSE, pool);
+  new_db = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb, pb,
+                          FALSE, pool);
   *child_baton = new_db;
   return SVN_NO_ERROR;
 }
@@ -594,8 +595,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     SVN_ERR(err);
 
   /* Write information about the filepath to hb->eb */
-  eb->delta_abspath = apr_pstrdup(eb->pool,
-          hb->delta_abspath);
+  eb->delta_abspath = apr_pstrdup(eb->pool, hb->delta_abspath);
 
   /* Cleanup */
   svn_pool_destroy(hb->pool);
@@ -703,8 +703,8 @@ close_file(void *file_baton,
       /* Open the temporary file, map it to a stream, copy
          the stream to eb->stream, close and delete the
          file */
-      SVN_ERR(svn_io_file_open(&delta_file, eb->delta_abspath,APR_READ,
-             0600,pool));
+      SVN_ERR(svn_io_file_open(&delta_file, eb->delta_abspath, APR_READ,
+                               APR_OS_DEFAULT, pool));
       delta_filestream = svn_stream_from_aprfile2(delta_file, TRUE, pool);
       SVN_ERR(svn_stream_copy3(delta_filestream, eb->stream, NULL, NULL, pool));
 
