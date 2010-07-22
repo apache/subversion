@@ -482,18 +482,43 @@ PRAGMA user_version =
 /* ------------------------------------------------------------------------- */
 
 /* The NODE_DATA table describes the way WORKING nodes are layered on top of
-   BASE nodes and on top of other WORKING nodes, due to nested nested tree
-   structure changes. The layers are modelled using the "oproot" column.
+   BASE nodes and on top of other WORKING nodes, due to nested tree structure
+   changes. The layers are modelled using the "op_depth" column.
 
    Each row in BASE_NODE has an associated row NODE_DATA. Additionally, each
    row in WORKING_NODE has one or more associated rows in NODE_DATA.
 
-   This table contains only those data elements which apply to all WORKING
-   layers; fields applicable only to the currently visible WORKING node or
-   BASE node are located in the WORKING_NODE and BASE_NODE tables.
+   This table contains only those data elements which apply to BASE as well as
+   all WORKING layers; fields applicable only to the currently visible WORKING
+   node or BASE node are located in the WORKING_NODE and BASE_NODE tables.
 
    ### This table is to be integrated into the SCHEMA statement as soon
        the experimental status of NODE_DATA is lifted.
+
+   For illustration, with a scenario like this:
+
+     # (0)
+     svn rm foo
+     svn cp ^/moo foo   # (1)
+     svn rm foo/bar
+     touch foo/bar
+     svn add foo/bar    # (2)
+
+   , these are the NODE_DATA for the path foo/bar (before single-db, the
+   numbering of op_depth is still a bit different):
+   
+   (0)  BASE_NODE ----->  NODE_DATA (op_depth == 0)
+   (1)                    NODE_DATA (op_depth == 1) ( <----_ )
+   (2)                    NODE_DATA (op_depth == 2)   <----- WORKING_NODE
+   
+   0 is the original data for foo/bar before 'svn rm foo' (if it existed).
+   1 is the data for foo/bar copied in from ^/moo/bar. (There would also be a
+     WORKING_NODE for the path foo, with original_* pointing at ^/moo.)
+   2 is the to-be-committed data for foo/bar, created by 'svn add foo/bar'.
+
+   An 'svn revert foo/bar' would remove the NODE_DATA of (2) (and possibly 
+   rewire the WORKING_NODE to represent a child of the operation (1)).
+   So foo/bar would be a copy of ^/moo/bar again.
  */
 -- STMT_CREATE_NODE_DATA
 CREATE TABLE NODE_DATA (
