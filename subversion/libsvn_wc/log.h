@@ -81,27 +81,6 @@ svn_wc__loggy_delete_entry(svn_skel_t **work_item,
                            svn_wc__db_kind_t kind,
                            apr_pool_t *result_pool);
 
-/* Set *WORK_ITEM to a work queue instruction to move the file SRC_ABSPATH
-   to DST_ABSPATH.
-
-   The file SRC_ABSPATH must exist.  The test for existence is made now, not
-   at log run time.
-
-   Set *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate whether the
-   destination path will have been modified after running the log: if either
-   the move or the remove will have been carried out.
-
-   ADM_ABSPATH is described above.
-*/
-svn_error_t *
-svn_wc__loggy_move(svn_skel_t **work_item,
-                   svn_wc__db_t *db,
-                   const char *adm_abspath,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   apr_pool_t *result_pool);
-
-
 /* Set *WORK_ITEM to a work queue instruction to set the timestamp of
    LOCAL_ABSPATH to the time TIMESTR.
 

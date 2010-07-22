@@ -1193,11 +1193,10 @@ merge_binary_file(svn_skel_t **work_items,
                                          target_label,
                                          svn_io_file_del_none,
                                          pool, pool));
-      SVN_ERR(svn_wc__loggy_move(work_items, db,
-                                 merge_dirpath,
-                                 detranslated_target_abspath,
-                                 mine_copy,
-                                 result_pool));
+      SVN_ERR(svn_wc__wq_build_file_move(work_items, db,
+                                         detranslated_target_abspath,
+                                         mine_copy,
+                                         pool, result_pool));
 
       mine_copy = svn_dirent_is_child(merge_dirpath,
                                       mine_copy, pool);

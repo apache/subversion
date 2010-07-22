@@ -59,6 +59,7 @@
 #define OP_DELETE "delete"
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
+#define OP_FILE_MOVE "file-move"
 #define OP_SYNC_FILE_FLAGS "sync-file-flags"
 #define OP_PREJ_INSTALL "prej-install"
 #define OP_WRITE_OLD_PROPS "write-old-props"
@@ -1963,6 +1964,79 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_FILE_MOVE  */
+
+/* Process the OP_FILE_MOVE work item WORK_ITEM.
+ * See svn_wc__wq_build_file_move() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_move(svn_wc__db_t *db,
+                 const svn_skel_t *work_item,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *src_abspath, *dst_abspath;
+  svn_error_t *err;
+
+  src_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  dst_abspath = apr_pstrmemdup(scratch_pool, arg1->next->data,
+                               arg1->next->len);
+
+  /* Use svn_io_file_move() instead of svn_io_file_rename() to allow cross
+     device copies. We should not fail in the workqueue. */
+
+  err = svn_io_file_move(src_abspath, dst_abspath, scratch_pool);
+
+  /* If the source is not found, we assume the wq op is already handled */
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err) 
+              || APR_STATUS_IS_ENODIR(err->apr_err)))
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_file_move(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
+                           const char *src_abspath,
+                           const char *dst_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  /* File must exist */
+  SVN_ERR(svn_io_check_path(src_abspath, &kind, result_pool));
+
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' not found"),
+                             svn_dirent_local_style(src_abspath,
+                                                    scratch_pool));
+
+  /* ### Once we move to a central DB we should try making
+     ### src_abspath and dst_abspath relative from the WCROOT. */
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, dst_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, src_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_MOVE, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -2409,6 +2483,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_DELETE, run_delete },
   { OP_FILE_INSTALL, run_file_install },
   { OP_FILE_REMOVE, run_file_remove },
+  { OP_FILE_MOVE, run_file_move },
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_WRITE_OLD_PROPS, run_write_old_props },

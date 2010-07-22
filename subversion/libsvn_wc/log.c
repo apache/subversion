@@ -74,9 +74,6 @@
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_KIND           "kind"
 
-/* Move file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_MV                  "mv"
-
 /* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
    expand any keywords and use any eol-style defined by properties of
    the DEST. */
@@ -172,28 +169,6 @@ log_do_file_cp_and_translate(svn_wc__db_t *db,
     {
       if (!APR_STATUS_IS_ENOENT(err->apr_err))
         return svn_error_return(err);
-      svn_error_clear(err);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-log_do_file_move(const char *from_abspath,
-                 const char *dest_abspath,
-                 apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  err = svn_io_file_rename(from_abspath, dest_abspath, scratch_pool);
-
-  /* If we got an ENOENT, that's ok;  the move has probably
-     already completed in an earlier run of this log.  */
-  if (err)
-    {
-      if (!APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_quick_wrap(err, _("Can't move source to dest"));
       svn_error_clear(err);
     }
 
@@ -427,16 +402,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
       kind = svn_node_file;
     err = log_do_delete_entry(loggy, name, revision, kind);
   }
-  else if (strcmp(eltname, SVN_WC__LOG_MV) == 0) {
-    const char *dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
-    const char *from_abspath;
-    const char *dest_abspath;
-
-    SVN_ERR_ASSERT_NO_RETURN(dest != NULL);
-    from_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-    dest_abspath = svn_dirent_join(loggy->adm_abspath, dest, loggy->pool);
-    err = log_do_file_move(from_abspath, dest_abspath, loggy->pool);
-  }
   else if (strcmp(eltname, SVN_WC__LOG_CP_AND_TRANSLATE) == 0) {
     const char *dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
     const char *versioned = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2,
@@ -610,46 +575,6 @@ svn_wc__loggy_delete_entry(svn_skel_t **work_item,
                                                  db, adm_abspath, log_accum,
                                                  result_pool));
 }
-
-svn_error_t *
-svn_wc__loggy_move(svn_skel_t **work_item,
-                   svn_wc__db_t *db,
-                   const char *adm_abspath,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   apr_pool_t *result_pool)
-{
-  svn_stringbuf_t *log_accum = NULL;
-  const char *loggy_path1;
-  const char *loggy_path2;
-  svn_node_kind_t kind;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
-
-  SVN_ERR(loggy_path(&loggy_path1, src_abspath, adm_abspath, result_pool));
-  SVN_ERR(loggy_path(&loggy_path2, dst_abspath, adm_abspath, result_pool));
-
-  SVN_ERR(svn_io_check_path(src_abspath, &kind, result_pool));
-
-  /* ### idiocy of the old world. the file better exist, if we're asking
-     ### to do some work with it.  */
-  SVN_ERR_ASSERT(kind != svn_node_none);
-
-  svn_xml_make_open_tag(&log_accum, result_pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_MV,
-                        SVN_WC__LOG_ATTR_NAME,
-                        loggy_path1,
-                        SVN_WC__LOG_ATTR_DEST,
-                        loggy_path2,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_build_loggy(work_item,
-                                                 db, adm_abspath, log_accum,
-                                                 result_pool));
-}
-
 
 svn_error_t *
 svn_wc__loggy_set_timestamp(svn_skel_t **work_item,
