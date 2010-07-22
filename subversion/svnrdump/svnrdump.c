@@ -337,11 +337,11 @@ main(int argc, const char **argv)
             break;
           case opt_version:
             SVNRDUMP_ERR(version(argv[0], pool));
-            exit(ERROR_SUCCESS);
+            exit(EXIT_SUCCESS);
             break;
           case 'h':
             SVNRDUMP_ERR(help(argv[0], pool));
-            exit(ERROR_SUCCESS);
+            exit(EXIT_SUCCESS);
             break;
           case opt_auth_username:
             SVNRDUMP_ERR(svn_utf_cstring_to_utf8(&username, opt_arg, pool));
