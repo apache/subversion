@@ -1602,12 +1602,25 @@ def get_virginal_state(wc_dir, rev):
 # Cheap administrative directory locking
 def lock_admin_dir(wc_dir):
   "Lock a SVN administrative directory"
+  dot_svn = svntest.main.get_admin_name()
+  root_path = wc_dir
+  relpath = ''
 
-  db = svntest.sqlite3.connect(os.path.join(wc_dir, main.get_admin_name(),
-                                            'wc.db'))
+  while True:
+    db_path = os.path.join(root_path, dot_svn, 'wc.db')
+    try:
+      db = svntest.sqlite3.connect(db_path)
+      break
+    except: pass
+    head, tail = os.path.split(root_path)
+    if head == root_path:
+      raise svntest.Failure("No DB for " + file_path)
+    root_path = head
+    relpath = os.path.join(tail, relpath).rstrip('/')
+
   db.execute('insert into wc_lock (wc_id, local_dir_relpath, locked_levels) '
              + 'values (?, ?, ?)',
-             (1, '', 0))
+             (1, relpath, 0))
   db.commit()
   db.close()
 
