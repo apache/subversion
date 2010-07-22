@@ -1112,12 +1112,9 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
       /* It can't be the same location as in 1.6 because the admin directory
          no longer exists. */
-      SVN_ERR(svn_io_open_unique_file3(NULL, tempfile, NULL, 
-                                       svn_io_file_del_none,
-                                       result_pool, scratch_pool));
-
-      SVN_ERR(svn_stream_open_writable(&tempstream, *tempfile,
-                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_open_unique(&tempstream, tempfile,
+                                     NULL, svn_io_file_del_none,
+                                     result_pool, scratch_pool));
 
       /* Wrap the translated stream with a new stream that writes the
          translated contents into the new text base file as we read from it.
