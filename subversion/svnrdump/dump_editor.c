@@ -300,9 +300,9 @@ dump_node(struct dump_edit_baton *eb,
 
 static svn_error_t *
 open_root(void *edit_baton,
-	  svn_revnum_t base_revision,
-	  apr_pool_t *pool,
-	  void **root_baton)
+          svn_revnum_t base_revision,
+          apr_pool_t *pool,
+          void **root_baton)
 {
   struct dump_edit_baton *eb = edit_baton;
   /* Allocate a special pool for the edit_baton to avoid pool
