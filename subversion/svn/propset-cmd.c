@@ -175,12 +175,11 @@ svn_cl__propset(apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
-          svn_commit_info_t *commit_info;
 
           svn_pool_clear(iterpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-          SVN_ERR(svn_cl__try(svn_client_propset3
-                              (&commit_info, pname_utf8, propval, target,
+          SVN_ERR(svn_cl__try(svn_client_propset4(
+                               pname_utf8, propval, target,
                                opt_state->depth, opt_state->force,
                                SVN_INVALID_REVNUM, opt_state->changelists,
                                NULL, ctx, iterpool),
