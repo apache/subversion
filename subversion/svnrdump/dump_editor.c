@@ -94,7 +94,7 @@ make_dir_baton(const char *path,
   if (pb)
     abspath = svn_uri_join("/", path, pool);
   else
-    abspath = apr_pstrdup(pool, "/");
+    abspath = "/";
 
   /* Remove leading slashes from copyfrom paths. */
   if (copyfrom_path && strcmp(copyfrom_path, "/"))
