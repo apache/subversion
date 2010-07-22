@@ -31,7 +31,8 @@
  * A directory baton used by all directory-related callback functions
  * in the dump editor.
  */
-struct dir_baton {
+struct dir_baton
+{
   struct dump_edit_baton *eb;
   struct dir_baton *parent_dir_baton;
 

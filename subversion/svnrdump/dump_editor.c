@@ -99,7 +99,7 @@ make_dir_baton(const char *path,
   /* Remove leading slashes from copyfrom paths. */
   if (copyfrom_path && strcmp(copyfrom_path, "/"))
     copyfrom_path = ((*copyfrom_path == '/') ?
-                      copyfrom_path + 1 : copyfrom_path);
+                     copyfrom_path + 1 : copyfrom_path);
 
   new_db->eb = eb;
   new_db->parent_dir_baton = pb;
@@ -137,25 +137,25 @@ dump_props(struct dump_edit_baton *eb,
   
   /* Prop-delta: true */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
-          SVN_REPOS_DUMPFILE_PROP_DELTA
-          ": true\n"));
+                            SVN_REPOS_DUMPFILE_PROP_DELTA
+                            ": true\n"));
 
   /* Prop-content-length: 193 */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
-          SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-          ": %" APR_SIZE_T_FMT "\n", eb->propstring->len));
+                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n", eb->propstring->len));
 
   if (dump_data_too)
     {
       /* Content-length: 14 */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
-              SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-              ": %" APR_SIZE_T_FMT "\n\n",
-              eb->propstring->len));
+                                SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                                ": %" APR_SIZE_T_FMT "\n\n",
+                                eb->propstring->len));
 
       /* The properties. */
       SVN_ERR(svn_stream_write(eb->stream, eb->propstring->data,
-             &(eb->propstring->len)));
+                               &(eb->propstring->len)));
 
       /* Cleanup so that data is never dumped twice. */
       svn_hash__clear(eb->props, pool);
@@ -194,11 +194,11 @@ dump_node(struct dump_edit_baton *eb,
   
   if (copyfrom_path && strcmp(copyfrom_path, "/"))
     copyfrom_path = ((*copyfrom_path == '/') ?
-                      copyfrom_path + 1 : copyfrom_path);
+                     copyfrom_path + 1 : copyfrom_path);
 
   /* Node-path: commons/STATUS */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
-          SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", path));
+                            SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", path));
 
   /* Node-kind: file */
   if (kind == svn_node_file)
@@ -545,12 +545,12 @@ change_dir_prop(void *parent_baton,
          props. If it not, dump the node itself before dumping the
          props. */
 
-        SVN_ERR(dump_node(db->eb, db->abspath, svn_node_dir,
-                          svn_node_action_change, FALSE, db->copyfrom_path,
-                          db->copyfrom_rev, pool));
+      SVN_ERR(dump_node(db->eb, db->abspath, svn_node_dir,
+                        svn_node_action_change, FALSE, db->copyfrom_path,
+                        db->copyfrom_rev, pool));
 
-        SVN_ERR(dump_props(db->eb, NULL, TRUE, pool));
-        db->written_out = TRUE;
+      SVN_ERR(dump_props(db->eb, NULL, TRUE, pool));
+      db->written_out = TRUE;
     }
   return SVN_NO_ERROR;
 }
@@ -655,42 +655,42 @@ close_file(void *file_baton,
     {
       /* Text-delta: true */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
-              SVN_REPOS_DUMPFILE_TEXT_DELTA
-              ": true\n"));
+                                SVN_REPOS_DUMPFILE_TEXT_DELTA
+                                ": true\n"));
 
       SVN_ERR(svn_io_stat(info, eb->delta_abspath, APR_FINFO_SIZE, pool));
 
       /* Text-content-length: 39 */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
-              SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH
-              ": %lu\n",
-              (unsigned long)info->size));
+                                SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH
+                                ": %lu\n",
+                                (unsigned long)info->size));
       /* Text-content-md5: 82705804337e04dcd0e586bfa2389a7f */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
-              SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
-              ": %s\n",
-              text_checksum));
+                                SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
+                                ": %s\n",
+                                text_checksum));
     }
 
   /* Content-length: 1549 */
   /* If both text and props are absent, skip this header */
   if (eb->dump_props || eb->dump_props_pending)
     SVN_ERR(svn_stream_printf(eb->stream, pool,
-            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-            ": %ld\n\n",
-            (unsigned long)info->size + eb->propstring->len));
+                              SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                              ": %ld\n\n",
+                              (unsigned long)info->size + eb->propstring->len));
   else if (eb->dump_text)
     SVN_ERR(svn_stream_printf(eb->stream, pool,
-            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-            ": %ld\n\n",
-            (unsigned long)info->size));
+                              SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                              ": %ld\n\n",
+                              (unsigned long)info->size));
 
   /* Dump the props; the propstring should have already been
      written in dump_node or above */
   if (eb->dump_props || eb->dump_props_pending)
     {
       SVN_ERR(svn_stream_write(eb->stream, eb->propstring->data,
-             &(eb->propstring->len)));
+                               &(eb->propstring->len)));
 
       /* Cleanup */
       eb->dump_props = eb->dump_props_pending = FALSE;
