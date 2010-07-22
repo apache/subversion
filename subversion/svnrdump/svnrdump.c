@@ -48,7 +48,7 @@ enum svn_svnrdump__longopt_t
 static const apr_getopt_option_t svnrdump__options[] =
 {
   {"revision",     'r', 1, N_("REV1[:REV2] range of revisions to dump")},
-  {"verbose",      'v', 0, N_("print extra information")},
+  {"quiet",         'q', 0, N_("no progress (only errors) to stderr")},
   {"config-dir",    opt_config_dir, 1, N_("read user configuration files from"
                                           " directory ARG") },
   {"username",      opt_auth_username, 1, N_("specify a username ARG")},
@@ -72,8 +72,8 @@ struct replay_baton {
   /* Baton for the editor. */
   void *edit_baton;
 
-  /* Whether to be verbose. */
-  svn_boolean_t verbose;
+  /* Whether to be quiet. */
+  svn_boolean_t quiet;
 };
 
 static svn_error_t *
@@ -135,7 +135,7 @@ replay_revend(svn_revnum_t revision,
 {
   /* No resources left to free. */
   struct replay_baton *rb = replay_baton;
-  if (rb->verbose)
+  if (! rb->quiet)
     svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu\n", revision);
   return SVN_NO_ERROR;
 }
@@ -180,7 +180,7 @@ open_connection(svn_ra_session_t **session,
 static svn_error_t *
 replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
              svn_revnum_t end_revision, apr_pool_t *pool,
-             svn_boolean_t verbose)
+             svn_boolean_t quiet)
 {
   const svn_delta_editor_t *dump_editor;
   struct replay_baton *replay_baton;
@@ -195,7 +195,7 @@ replay_range(svn_ra_session_t *session, svn_revnum_t start_revision,
   replay_baton = apr_pcalloc(pool, sizeof(*replay_baton));
   replay_baton->editor = dump_editor;
   replay_baton->edit_baton = dump_baton;
-  replay_baton->verbose = verbose;
+  replay_baton->quiet = quiet;
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
                             SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
                             SVN_REPOS_DUMPFILE_FORMAT_VERSION));
@@ -293,7 +293,7 @@ main(int argc, const char **argv)
   char *revision_cut = NULL;
   svn_revnum_t start_revision = svn_opt_revision_unspecified;
   svn_revnum_t end_revision = svn_opt_revision_unspecified;
-  svn_boolean_t verbose = FALSE;
+  svn_boolean_t quiet = FALSE;
   apr_pool_t *pool = NULL;
   svn_ra_session_t *session = NULL;
   const char *config_dir = NULL;
@@ -343,8 +343,8 @@ main(int argc, const char **argv)
                 start_revision = (svn_revnum_t)strtoul(opt_arg, NULL, 10);
             }
             break;
-          case 'v':
-            verbose = TRUE;
+          case 'q':
+            quiet = TRUE;
             break;
           case opt_config_dir:
             config_dir = opt_arg;
@@ -402,7 +402,7 @@ main(int argc, const char **argv)
   if (end_revision == svn_opt_revision_unspecified)
     SVNRDUMP_ERR(svn_ra_get_latest_revnum(session, &end_revision, pool));
 
-  SVNRDUMP_ERR(replay_range(session, start_revision, end_revision, pool, verbose));
+  SVNRDUMP_ERR(replay_range(session, start_revision, end_revision, pool, quiet));
 
   svn_pool_destroy(pool);
 
