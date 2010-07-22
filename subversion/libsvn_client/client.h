@@ -387,23 +387,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
 /* ---------------------------------------------------------------- */
 
-/*** Commit ***/
-
-/* Get the commit_baton to be used in couple with commit_callback. */
-svn_error_t *svn_client__commit_get_baton(void **baton,
-                                          svn_commit_info_t **info,
-                                          apr_pool_t *pool);
-
-/* The commit_callback function for storing svn_client_commit_info_t
-   pointed by commit_baton. If the commit_info supplied by get_baton
-   points to NULL after close_edit, it means the commit is a no-op.
-*/
-svn_error_t *svn_client__commit_callback(const svn_commit_info_t *commit_info,
-                                         void *baton,
-                                         apr_pool_t *pool);
-
-/* ---------------------------------------------------------------- */
-
 /*** Status ***/
 
 /* Verify that the path can be deleted without losing stuff,

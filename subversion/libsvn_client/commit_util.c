@@ -1757,36 +1757,6 @@ svn_client__do_commit(const char *base_url,
   return editor->close_edit(edit_baton, pool);
 }
 
-/* Commit callback baton */
-
-struct commit_baton {
-  svn_commit_info_t **info;
-  apr_pool_t *pool;
-};
-
-svn_error_t *svn_client__commit_get_baton(void **baton,
-                                          svn_commit_info_t **info,
-                                          apr_pool_t *pool)
-{
-  struct commit_baton *cb = apr_pcalloc(pool, sizeof(*cb));
-  cb->info = info;
-  cb->pool = pool;
-  *baton = cb;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *svn_client__commit_callback(const svn_commit_info_t *commit_info,
-                                         void *baton,
-                                         apr_pool_t *pool)
-{
-  struct commit_baton *cb = baton;
-
-  *(cb->info) = svn_commit_info_dup(commit_info, cb->pool);
-
-  return SVN_NO_ERROR;
-}
-
 
 #ifdef SVN_CLIENT_COMMIT_DEBUG
 
