@@ -43,7 +43,7 @@ Wimp = svntest.testcase.Wimp
 
 def basic_svnrdump(sbox):
   "dump the standard sbox repos"
-  sbox.build(create_wc = False)
+  sbox.build(read_only = True, create_wc = False)
 
   r, out, err = svntest.main.run_svnrdump(sbox.repo_url)
 
