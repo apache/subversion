@@ -975,6 +975,8 @@ svn_client__handle_externals(apr_hash_t *externals_old,
    behaves as for svn_client__handle_externals(), except that ambient
    depths are presumed to be svn_depth_infinity.
 
+   NATIVE_EOL is the value passed as NATIVE_EOL when exporting.
+
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
    is required.
@@ -987,6 +989,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
                             const char *repos_root_url,
                             svn_depth_t requested_depth,
                             svn_boolean_t is_export,
+                            const char *native_eol,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
