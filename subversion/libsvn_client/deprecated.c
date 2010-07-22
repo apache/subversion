@@ -528,6 +528,32 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
 }
 
 /*** From copy.c ***/
+svn_error_t *
+svn_client_copy5(svn_commit_info_t **commit_info_p,
+                 const apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
+                 const apr_hash_t *revprop_table,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_client_ctx_t shadow_ctx;
+  struct capture_baton_t cb;
+
+  cb.info = commit_info_p;
+  cb.pool = pool;
+  cb.original_callback = ctx->commit_callback2;
+  cb.original_baton = ctx->commit_baton;
+
+  shadow_ctx = *ctx;
+  shadow_ctx.commit_callback2 = capture_commit_info;
+  shadow_ctx.commit_baton = &cb;
+
+  return svn_client_copy6(sources, dst_path, copy_as_child, make_parents,
+                          ignore_externals, revprop_table, ctx, pool);
+}
 
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
@@ -612,6 +638,33 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return svn_error_return(err);
+}
+
+svn_error_t *
+svn_client_move5(svn_commit_info_t **commit_info_p,
+                 const apr_array_header_t *src_paths,
+                 const char *dst_path,
+                 svn_boolean_t force,
+                 svn_boolean_t move_as_child,
+                 svn_boolean_t make_parents,
+                 const apr_hash_t *revprop_table,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_client_ctx_t shadow_ctx;
+  struct capture_baton_t cb;
+
+  cb.info = commit_info_p;
+  cb.pool = pool;
+  cb.original_callback = ctx->commit_callback2;
+  cb.original_baton = ctx->commit_baton;
+
+  shadow_ctx = *ctx;
+  shadow_ctx.commit_callback2 = capture_commit_info;
+  shadow_ctx.commit_baton = &cb;
+
+  return svn_client_move6(src_paths, dst_path, force, move_as_child,
+                          make_parents, revprop_table, &shadow_ctx, pool);
 }
 
 svn_error_t *

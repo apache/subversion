@@ -48,7 +48,6 @@ svn_cl__copy(apr_getopt_t *os,
   apr_array_header_t *targets, *sources;
   const char *src_path, *dst_path;
   svn_boolean_t srcs_are_urls, dst_is_url;
-  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
   int i;
 
@@ -138,7 +137,7 @@ svn_cl__copy(apr_getopt_t *os,
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                        NULL, ctx->config, pool));
 
-  err = svn_client_copy5(&commit_info, sources, dst_path, TRUE,
+  err = svn_client_copy6(sources, dst_path, TRUE,
                          opt_state->parents, opt_state->ignore_externals,
                          opt_state->revprop_table, ctx, pool);
 
@@ -146,9 +145,6 @@ svn_cl__copy(apr_getopt_t *os,
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
   else if (err)
     return svn_error_return(err);
-
-  if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, NULL, pool));
 
   return SVN_NO_ERROR;
 }
