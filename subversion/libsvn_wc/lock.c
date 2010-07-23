@@ -1526,6 +1526,93 @@ svn_wc__adm_missing(svn_wc__db_t *db,
   return (kind == svn_wc__db_kind_dir) && !available && obstructed;
 }
 
+#ifndef SVN_WC__SINGLE_DB
+static svn_error_t *
+acquire_locks_recurively(svn_wc_context_t *wc_ctx,
+                         const char* local_abspath,
+                         svn_boolean_t lock_root,
+                         apr_pool_t *scratch_pool)
+{
+ svn_wc__db_t *db = wc_ctx->db;
+  apr_array_header_t *children;
+  apr_pool_t *iterpool;
+  svn_error_t *err;
+  int i;
+  int format;
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
+                                   scratch_pool, iterpool));
+
+  /* The current lock paradigm is that each directory holds a lock for itself,
+     and there are no inherited locks.  In the eventual wc-ng paradigm, a
+     lock on a directory, would imply a infinite-depth lock on the children.
+     But since we aren't quite there yet, we do the infinite locking
+     manually (and be sure to release them in svn_wc__release_write_lock(). */
+
+  for (i = 0; i < children->nelts; i ++)
+    {
+      svn_wc__db_kind_t kind;
+      const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+
+      svn_pool_clear(iterpool);
+      child_abspath = svn_dirent_join(local_abspath, child_relpath, iterpool);
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath, FALSE,
+                                   iterpool));
+      if (kind == svn_wc__db_kind_dir)
+        {
+          err = acquire_locks_recurively(wc_ctx, child_abspath, FALSE,
+                                         iterpool);
+          if (err && err->apr_err == SVN_ERR_WC_LOCKED)
+            {
+              while(i >= 0)
+                {
+                  svn_error_t *err2;
+                  svn_pool_clear(iterpool);
+                  child_relpath = APR_ARRAY_IDX(children, i, const char *);
+                  child_abspath = svn_dirent_join(local_abspath, child_relpath,
+                                                  iterpool);
+
+                  /* Don't release locks on non-directories as that will
+                     try to release the lock on the parent directory! */
+                  err2 = svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath,
+                                              FALSE, iterpool);
+
+                  if (!err2 && kind == svn_wc__db_kind_dir)
+                    err2 = svn_wc__release_write_lock(wc_ctx, child_abspath,
+                                                      iterpool);
+
+                  err = svn_error_compose_create(err, err2);
+                  --i;
+                }
+              return svn_error_return(err);
+            }
+        }
+    }
+
+  if (lock_root)
+    SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE, iterpool));
+  else
+    {
+      /* We don't want to try and lock an unversioned directory that
+         obstructs a versioned directory. */
+      err = svn_wc__internal_check_wc(&format, wc_ctx->db, local_abspath,
+                                      iterpool);
+
+      if (!err && format)
+          SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, 0, FALSE,
+                                          iterpool));
+
+      svn_error_clear(err);
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+#endif
 
 svn_error_t *
 svn_wc__acquire_write_lock(const char **lock_root_abspath,
@@ -1537,9 +1624,6 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_wc__db_kind_t kind;
-  apr_pool_t *iterpool;
-  const apr_array_header_t *children;
-  int format, i;
   svn_error_t *err;
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
                                (lock_root_abspath != NULL),
@@ -1608,68 +1692,7 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
     *lock_root_abspath = apr_pstrdup(result_pool, local_abspath);
 
 #ifndef SVN_WC__SINGLE_DB
-  SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
-                                   scratch_pool, scratch_pool));
-
-  /* The current lock paradigm is that each directory holds a lock for itself,
-     and there are no inherited locks.  In the eventual wc-ng paradigm, a
-     lock on a directory, would imply a infinite-depth lock on the children.
-     But since we aren't quite there yet, we do the infinite locking
-     manually (and be sure to release them in svn_wc__release_write_lock(). */
-
-  iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < children->nelts; i ++)
-    {
-      const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
-      const char *child_abspath;
-
-      svn_pool_clear(iterpool);
-      child_abspath = svn_dirent_join(local_abspath, child_relpath, iterpool);
-
-      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath, FALSE,
-                                   iterpool));
-      if (kind == svn_wc__db_kind_dir)
-        {
-          err = svn_wc__acquire_write_lock(NULL, wc_ctx, child_abspath, FALSE,
-                                           result_pool, iterpool);
-          if (err && err->apr_err == SVN_ERR_WC_LOCKED)
-            {
-              while(i >= 0)
-                {
-                  svn_error_t *err2;
-                  svn_pool_clear(iterpool);
-                  child_relpath = APR_ARRAY_IDX(children, i, const char *);
-                  child_abspath = svn_dirent_join(local_abspath, child_relpath,
-                                                  iterpool);
-
-                  /* Don't release locks on non-directories as that will
-                     try to release the lock on the parent directory! */
-                  err2 = svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath,
-                                              FALSE, iterpool);
-
-                  if (!err2 && kind == svn_wc__db_kind_dir)
-                    err2 = svn_wc__release_write_lock(wc_ctx, child_abspath,
-                                                      iterpool);
-
-                  err = svn_error_compose_create(err, err2);
-                  --i;
-                }
-              return svn_error_return(err);
-            }
-        }
-    }
-
-  /* We don't want to try and lock an unversioned directory that
-     obstructs a versioned directory. */
-  err = svn_wc__internal_check_wc(&format, wc_ctx->db, local_abspath,
-                                  iterpool);
-  if (!err && format)
-    {
-      SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, 0, FALSE,
-                                       iterpool));
-    }
-  svn_error_clear(err);
-  svn_pool_destroy(iterpool);
+  SVN_ERR(acquire_locks_recurively(wc_ctx, local_abspath, TRUE, scratch_pool));
 #else
   SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, -1, FALSE,
                                    scratch_pool));
