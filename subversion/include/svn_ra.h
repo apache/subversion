@@ -777,8 +777,8 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  * or @c SVN_PROP_REVISION_AUTHOR.
  *
  * Before @c close_edit returns, but after the commit has succeeded,
- * it will invoke @a callback with the new revision number, the
- * commit date (as a <tt>const char *</tt>), commit author (as a
+ * it will invoke @a callback (if non-NULL) with the new revision number,
+ * the commit date (as a <tt>const char *</tt>), commit author (as a
  * <tt>const char *</tt>), and @a callback_baton as arguments.  If
  * @a callback returns an error, that error will be returned from @c
  * close_edit, otherwise @c close_edit will return successfully
