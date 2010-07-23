@@ -296,10 +296,10 @@ help(const char *progname, apr_pool_t *pool)
   SVN_ERR(svn_cmdline_printf(
                              pool,
                              _("usage: %s URL [-r LOWER[:UPPER]]\n\n"
-                               "Dump the contents of repository at remote URL"
+                               "Dump the contents of repository at remote URL "
                                "to stdout in a 'dumpfile' portable format.\n"
                                "Dump revisions LOWER rev through UPPER rev.\n"
-                               "LOWER defaults to 0 and UPPER defaults to the"
+                               "LOWER defaults to 0 and UPPER defaults to the "
                                "highest possible revision if omitted.\n\n"
                                "Valid options:\n"),
                              progname));
@@ -462,8 +462,16 @@ main(int argc, const char **argv)
   if (end_revision > latest_revision)
     {
       SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
-                                      _("UPPER refers to"
-                                        "a non-existent revision.\n")));
+                                      _("UPPER refers to a "
+                                        "non-existent revision.\n")));
+      SVNRDUMP_ERR(usage(argv[0], pool));
+      exit(EXIT_FAILURE);
+    }
+  if (end_revision < start_revision)
+    {
+      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
+                                      _("LOWER cannot be greater "
+                                        "than UPPER.\n")));
       SVNRDUMP_ERR(usage(argv[0], pool));
       exit(EXIT_FAILURE);
     }
