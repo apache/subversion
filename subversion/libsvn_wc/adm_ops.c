@@ -1954,8 +1954,9 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
       /* Only check if the file was modified when it wasn't overwritten with a
          special file */
-      SVN_ERR(svn_wc__get_special(&wc_special, db, local_abspath,
-                                  scratch_pool));
+      SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
+                                         &wc_special, db, local_abspath,
+                                         scratch_pool, scratch_pool));
       SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk,
                                         &local_special, scratch_pool));
       if (wc_special || ! local_special)
