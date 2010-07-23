@@ -219,22 +219,8 @@ replay_range(svn_ra_session_t *session, const char *url,
       encoded_prophash = apr_hash_make(pool);
       propstring = svn_stringbuf_create("", pool);
 
-      /* Revision 0 has some real properties like svn:date
-         corresponding to the date the repository was created */
       SVN_ERR(svn_ra_rev_proplist(session, start_revision,
                                   &encoded_prophash, pool));
-
-      /* Write some additional fake properties like svnsync: will be
-         used in future for resume support. However, we cannot use
-         svn:sync-last-merged-rev and svn:sync-curently-copying since
-         those headers need to be updated everytime a revision is
-         written */
-
-      /* svn:sync-from-url and svn:sync-from-uuid */
-      apr_hash_set(encoded_prophash, SVNSYNC_PROP_FROM_URL,
-                   APR_HASH_KEY_STRING, svn_string_create(url, pool));
-      apr_hash_set(encoded_prophash, SVNSYNC_PROP_FROM_UUID,
-                   APR_HASH_KEY_STRING, svn_string_create(uuid, pool));
 
       propstream = svn_stream_from_stringbuf(propstring, pool);
       SVN_ERR(svn_hash_write2(encoded_prophash, propstream, "PROPS-END", pool));
