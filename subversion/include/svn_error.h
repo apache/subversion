@@ -444,6 +444,9 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
     }                                                           \
   } while (0)
 
+/** Report a "Not implemented" malfunction.  Internal use only. */
+#define SVN__NOT_IMPLEMENTED() \
+  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.")
 
 /** A helper function for the macros that report malfunctions. Handle a
  * malfunction by calling the current "malfunction handler" which may have
