@@ -1497,8 +1497,10 @@ def commit_multiple_wc_multiple_repos(sbox):
 
   # Commit should fail, since WCs come from different repositories.
   # The exact error message depends on whether or not the tests are
-  # run below a 1.7 working copy
-  error_re = ".*(is not a|Are all targets part of the same) working copy.*"
+  # run below an existing working copy
+  error_re = ( ".*(is not a working copy" +
+                 "|Are all targets part of the same working copy" +
+                 "|was not found).*" )
   svntest.actions.run_and_verify_svn("Expected output on stderr doesn't match",
                                      [], error_re,
                                      'commit', '-m', 'log',
