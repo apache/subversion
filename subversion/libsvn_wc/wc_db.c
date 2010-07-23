@@ -7983,6 +7983,16 @@ wclock_obtain_cb(void *baton,
 
 #ifdef SVN_WC__SINGLE_DB
   svn_wc__db_wclock_t lock;
+  svn_boolean_t have_base, have_working;
+
+  SVN_ERR(which_trees_exist(&have_base, &have_working, sdb,
+                            bt->pdh->wcroot->wc_id, bt->local_relpath));
+
+  if (!have_base && !have_working)
+    return svn_error_createf(
+                SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                _("The node '%s' was not found."),
+                svn_dirent_local_style(bt->local_abspath, scratch_pool));
 #else
   /* ### Can only lock this directory in the per-dir layout.  This is
      ### a temporary restriction until metadata gets centralised.
