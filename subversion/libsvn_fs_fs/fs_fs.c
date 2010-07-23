@@ -250,6 +250,14 @@ svn_fs_fs__path_rev_absolute(const char **path,
                              svn_revnum_t rev,
                              apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
+    {
+      *path = path_rev(fs, rev, pool);
+      return SVN_NO_ERROR;
+    }
+
   if (! is_packed_rev(fs, rev))
     {
       svn_node_kind_t kind;
@@ -1167,6 +1175,8 @@ update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
+  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT);
+
   return read_min_unpacked_rev(&ffd->min_unpacked_rev,
                                path_min_unpacked_rev(fs, pool),
                                pool);
@@ -1176,6 +1186,8 @@ static svn_error_t *
 update_min_unpacked_revprop(svn_fs_t *fs, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+
+  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT);
 
   return read_min_unpacked_rev(&ffd->min_unpacked_revprop,
                                path_min_unpacked_revprop(fs, pool),
@@ -2821,9 +2833,11 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
                              apr_pool_t *pool)
 {
   svn_error_t *err;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   err = revision_proplist(proplist_p, fs, rev, pool);
-  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
+  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION
+      && ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     {
       /* If a pack is occurring simultaneously, the min-unpacked-revprop value
          could change, so reload it and then attempt to fetch these revprops
