@@ -1249,11 +1249,20 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
                                           scratch_pool));
 #ifdef SVN_WC__SINGLE_DB
-      /* ### Perhaps the lock should be created in the same
-         transaction that adds the node? */
       if (!exists)
-        SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
-                                         scratch_pool));
+        {
+          /* If using the legacy 1.6 interface the parent lock may not
+             be recursive and add is expected to lock the new dir.
+
+             ### Perhaps the lock should be created in the same
+             transaction that adds the node? */
+          svn_boolean_t locked;
+          SVN_ERR(svn_wc_locked2(&locked, NULL, wc_ctx, local_abspath,
+                                 scratch_pool));
+          if (!locked)
+            SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                             scratch_pool));
+        }
 #endif
     }
   else if (!is_wc_root)
