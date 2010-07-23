@@ -74,9 +74,6 @@
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_KIND           "kind"
 
-/* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
-#define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
-
 /* Add a new tree conflict to the parent entry's tree-conflict-data. */
 /* ### rev'd to -2 because we changed the params. developers better not
    ### update across this change if they have stale logs :-)  */
@@ -87,7 +84,6 @@
     how these are used. **/
 
 #define SVN_WC__LOG_ATTR_NAME           "name"
-#define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
 #define SVN_WC__LOG_ATTR_DATA           "data"
 
 
@@ -124,43 +120,6 @@ struct log_runner
                                                   loggy->pool)),        \
                          loggy->parser)
 
-
-/* Set file NAME in log's CWD to timestamp value in ATTS. */
-static svn_error_t *
-log_do_file_timestamp(struct log_runner *loggy,
-                      const char *name,
-                      const char **atts)
-{
-  apr_time_t timestamp;
-  svn_node_kind_t kind;
-  const char *local_abspath
-    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
-  const char *timestamp_string
-    = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_TIMESTAMP, atts);
-  svn_boolean_t is_special;
-
-  if (! timestamp_string)
-    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                             _("Missing 'timestamp' attribute in '%s'"),
-                             svn_dirent_local_style(loggy->adm_abspath,
-                                                    loggy->pool));
-
-  /* Do not set the timestamp on special files. */
-  SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special,
-                                    loggy->pool));
-
-  if (! is_special)
-    {
-      SVN_ERR(svn_time_from_cstring(&timestamp, timestamp_string,
-                                    loggy->pool));
-
-      SVN_ERR(svn_io_set_file_affected_time(timestamp, local_abspath,
-                                            loggy->pool));
-    }
-
-  return SVN_NO_ERROR;
-}
 
 
 /* Ben sez:  this log command is (at the moment) only executed by the
@@ -351,9 +310,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
       kind = svn_node_file;
     err = log_do_delete_entry(loggy, name, revision, kind);
   }
-  else if (strcmp(eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
-    err = log_do_file_timestamp(loggy, name, atts);
-  }
   else if (strcmp(eltname, SVN_WC__LOG_ADD_TREE_CONFLICT) == 0) {
     err = log_do_add_tree_conflict(loggy, name, atts);
   }
@@ -471,36 +427,6 @@ svn_wc__loggy_delete_entry(svn_skel_t **work_item,
                                                  db, adm_abspath, log_accum,
                                                  result_pool));
 }
-
-svn_error_t *
-svn_wc__loggy_set_timestamp(svn_skel_t **work_item,
-                            svn_wc__db_t *db,
-                            const char *adm_abspath,
-                            const char *local_abspath,
-                            const char *timestr,
-                            apr_pool_t *result_pool)
-{
-  svn_stringbuf_t *log_accum = NULL;
-  const char *loggy_path1;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, result_pool));
-  svn_xml_make_open_tag(&log_accum,
-                        result_pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_SET_TIMESTAMP,
-                        SVN_WC__LOG_ATTR_NAME,
-                        loggy_path1,
-                        SVN_WC__LOG_ATTR_TIMESTAMP,
-                        timestr,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_build_loggy(work_item,
-                                                 db, adm_abspath, log_accum,
-                                                 result_pool));
-}
-
 
 svn_error_t *
 svn_wc__loggy_add_tree_conflict(svn_skel_t **work_item,

@@ -1029,7 +1029,9 @@ struct file_baton
 
   /* The last-changed-date of the file.  This is actually a property
      that comes through as an 'entry prop', and will be used to set
-     the working file's timestamp if it's added.  */
+     the working file's timestamp if it's added. 
+
+     Will be NULL unless eb->use_commit_times is TRUE. */
   const char *last_changed_date;
 
   /* Bump information for the directory this file lives in */
@@ -4510,7 +4512,7 @@ static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
                  const svn_string_t *value,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
@@ -4527,10 +4529,13 @@ change_file_prop(void *file_baton,
   /* Special case: If use-commit-times config variable is set we
      cache the last-changed-date propval so we can use it to set
      the working file's timestamp. */
-  if (eb->use_commit_times
-      && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
-      && value)
-    fb->last_changed_date = apr_pstrdup(fb->pool, value->data);
+  if (value
+      && eb->use_commit_times
+      && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0))
+    {
+      /* propchange is already in the right pool */
+      fb->last_changed_date = propchange->value->data;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -4974,22 +4979,28 @@ merge_file(svn_skel_t **work_items,
       && !is_locally_modified
       && (fb->adding_file || status == svn_wc__db_status_normal))
     {
+      apr_time_t set_date = 0;
       /* Adjust working copy file unless this file is an allowed
          obstruction. */
       if (fb->last_changed_date && !fb->obstruction_found)
         {
-          SVN_ERR(svn_wc__loggy_set_timestamp(
-                    &work_item, eb->db, pb->local_abspath,
-                    fb->local_abspath, fb->last_changed_date,
-                    pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
+          /* Ignore invalid dates */
+          err = svn_time_from_cstring(&set_date, fb->last_changed_date,
+                                      pool);
+
+          if (err)
+            {
+              svn_error_clear(err);
+              set_date = 0;
+            }
         }
 
-      /* ### what if the file is locally-deleted? or if there is an
-         ### obstruction. OP_RECORD_FILEINFO will deal with a missing
-         ### file, but what if this is NOT our file? (ie. obstruction)  */
+      /* If this would have been an obstruction, we wouldn't be here,
+         because we would have installed an obstruction or tree conflict
+         instead */
       SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,
                                                fb->local_abspath,
+                                               set_date,
                                                pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
     }
