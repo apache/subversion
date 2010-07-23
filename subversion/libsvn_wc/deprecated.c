@@ -2219,12 +2219,18 @@ svn_wc_prop_get(const svn_string_t **value,
 
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access), pool));
 
-  SVN_ERR(svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool));
+  err = svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }

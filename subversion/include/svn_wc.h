@@ -5725,11 +5725,14 @@ svn_wc_get_pristine_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool);
                           
 
-/** Set @a *value to the value of property @a name for @a path, allocating
- * @a *value in @a pool.  If no such prop, set @a *value to @c NULL.
- * @a name may be a regular or wc property; if it is an entry property,
- * return the error #SVN_ERR_BAD_PROP_KIND.  @a adm_access is an access
- * baton set that contains @a path.
+/** Set @a *value to the value of property @a name for @a local_abspath,
+ * allocating @a *value in @a result_pool.  If no such prop, set @a *value
+ * to @c NULL. @a name may be a regular or wc property; if it is an
+ * entry property, return the error #SVN_ERR_BAD_PROP_KIND.  @a wc_ctx
+ * is used to access the working copy.
+ *
+ * If @a local_abspath is not a versioned path, return
+ * #SVN_ERR_WC_PATH_NOT_FOUND
  *
  * @since New in 1.7.
  */
@@ -5743,6 +5746,8 @@ svn_wc_prop_get2(const svn_string_t **value,
 
 /** Similar to svn_wc_prop_get2(), but with a #svn_wc_adm_access_t /
  * relative path parameter pair.
+ *
+ * When @a path is not versioned, set @a *value to NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
