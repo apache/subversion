@@ -187,8 +187,6 @@ replay_range(svn_ra_session_t *session, const char *url,
   struct replay_baton *replay_baton;
   void *dump_baton;
   const char *uuid;
-  svn_stringbuf_t *propstring;
-  svn_stream_t *propstream;
   svn_stream_t *stdout_stream;
 
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
@@ -212,6 +210,8 @@ replay_range(svn_ra_session_t *session, const char *url,
   if (start_revision == 0)
     {
       apr_hash_t *prophash;
+      svn_stringbuf_t *propstring;
+      svn_stream_t *propstream;
       SVN_ERR(svn_stream_printf(stdout_stream, pool,
                                 SVN_REPOS_DUMPFILE_REVISION_NUMBER
                                 ": %ld\n", start_revision));
