@@ -41,10 +41,6 @@
 #include "private/svn_skel.h"
 
 
-#define NOT_IMPLEMENTED() \
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.")
-
-
 /* Workqueue operation names.  */
 #define OP_REVERT "revert"
 #define OP_PREPARE_REVERT_FILES "prep-rev-files"
@@ -356,7 +352,7 @@ run_revert(svn_wc__db_t *db,
     }
   else if (kind == svn_wc__db_kind_symlink)
     {
-      NOT_IMPLEMENTED();
+      SVN__NOT_IMPLEMENTED();
     }
 
   if (kind == svn_wc__db_kind_dir)

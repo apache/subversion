@@ -52,8 +52,7 @@
 #include "private/svn_token.h"
 
 
-#define NOT_IMPLEMENTED() \
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.")
+#define NOT_IMPLEMENTED() SVN__NOT_IMPLEMENTED()
 
 
 /*
