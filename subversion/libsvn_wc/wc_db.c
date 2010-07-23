@@ -7228,8 +7228,12 @@ svn_wc__db_temp_get_format(int *format,
         }
 
       SVN_ERR_ASSERT(pdh->wcroot != NULL);
+    }
 
 #ifdef SVN_WC__SINGLE_DB
+    {
+      const char *local_relpath = svn_dirent_skip_ancestor(pdh->wcroot->abspath,
+                                                           local_dir_abspath);
       if (*local_relpath != '\0')
         {
           svn_boolean_t base, working;
@@ -7245,8 +7249,8 @@ svn_wc__db_temp_get_format(int *format,
                                                               scratch_pool));
             }
         }
-#endif
     }
+#endif
 
   SVN_ERR_ASSERT(pdh->wcroot->format >= 1);
 
