@@ -1528,10 +1528,10 @@ svn_wc__adm_missing(svn_wc__db_t *db,
 
 #ifndef SVN_WC__SINGLE_DB
 static svn_error_t *
-acquire_locks_recurively(svn_wc_context_t *wc_ctx,
-                         const char* local_abspath,
-                         svn_boolean_t lock_root,
-                         apr_pool_t *scratch_pool)
+acquire_locks_recursively(svn_wc_context_t *wc_ctx,
+                          const char* local_abspath,
+                          svn_boolean_t lock_root,
+                          apr_pool_t *scratch_pool)
 {
  svn_wc__db_t *db = wc_ctx->db;
   apr_array_header_t *children;
@@ -1564,7 +1564,7 @@ acquire_locks_recurively(svn_wc_context_t *wc_ctx,
                                    iterpool));
       if (kind == svn_wc__db_kind_dir)
         {
-          err = acquire_locks_recurively(wc_ctx, child_abspath, FALSE,
+          err = acquire_locks_recursively(wc_ctx, child_abspath, FALSE,
                                          iterpool);
           if (err && err->apr_err == SVN_ERR_WC_LOCKED)
             {
@@ -1692,7 +1692,8 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
     *lock_root_abspath = apr_pstrdup(result_pool, local_abspath);
 
 #ifndef SVN_WC__SINGLE_DB
-  SVN_ERR(acquire_locks_recurively(wc_ctx, local_abspath, TRUE, scratch_pool));
+  SVN_ERR(acquire_locks_recursively(wc_ctx, local_abspath, TRUE,
+                                    scratch_pool));
 #else
   SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, -1, FALSE,
                                    scratch_pool));
