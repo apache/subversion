@@ -47,22 +47,6 @@ extern "C" {
    ADM_ABSPATH (or equal to it, where that makes sense).
 */
 
-
-/* Set *WORK_ITEM to a work queue instruction to generate a translated
-   file from SRC_ABSPATH to DST_ABSPATH with translation settings from
-   VERSIONED_ABSPATH.
-
-   ADM_ABSPATH is described above.
-*/
-svn_error_t *
-svn_wc__loggy_translated_file(svn_skel_t **work_item,
-                              svn_wc__db_t *db,
-                              const char *adm_abspath,
-                              const char *dst_abspath,
-                              const char *src_abspath,
-                              const char *versioned_abspath,
-                              apr_pool_t *result_pool);
-
 /* Set *WORK_ITEM to a work queue instruction to delete the entry
    associated with LOCAL_ABSPATH from the entries file.
 

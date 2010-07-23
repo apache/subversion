@@ -463,12 +463,10 @@ save_merge_result(svn_skel_t **work_item,
                                      ".edited",
                                      svn_io_file_del_none,
                                      scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__loggy_translated_file(work_item,
-                                        db, dir_abspath,
-                                        edited_copy_abspath,
-                                        source,
-                                        versioned_abspath,
-                                        result_pool));
+  SVN_ERR(svn_wc__wq_build_file_copy_translated(work_item,
+                                                db, versioned_abspath,
+                                                source, edited_copy_abspath,
+                                                result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -645,6 +643,9 @@ eval_conflict_func_result(svn_skel_t **work_items,
    The translation to working-copy form will be done according to the
    versioned properties of TARGET_ABSPATH that are current when the work
    queue items are executed.
+
+   If target_abspath is not versioned use detranslated_target_abspath
+   as the target file.
 */
 static svn_error_t *
 preserve_pre_merge_files(svn_skel_t **work_items,
@@ -658,6 +659,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
                          const char *left_label,
                          const char *right_label,
                          const char *target_label,
+                         const char *detranslated_target_abspath,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *result_pool,
@@ -730,14 +732,16 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   /* Create LEFT and RIGHT backup files, in expanded form.
      We use TARGET_ABSPATH's current properties to do the translation. */
   /* Derive the basenames of the 3 backup files. */
-  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        *left_copy, tmp_left,
-                                        target_abspath, result_pool));
+  SVN_ERR(svn_wc__wq_build_file_copy_translated(&work_item,
+                                                db, target_abspath,
+                                                tmp_left, *left_copy,
+                                                result_pool, scratch_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
-  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        *right_copy, tmp_right,
-                                        target_abspath, result_pool));
+  SVN_ERR(svn_wc__wq_build_file_copy_translated(&work_item,
+                                                 db, target_abspath,
+                                                 tmp_right, *right_copy,
+                                                 result_pool, scratch_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   /* Back up TARGET_ABSPATH through detranslation/retranslation:
@@ -754,14 +758,16 @@ preserve_pre_merge_files(svn_skel_t **work_items,
 
       /* We are merging to a not versioned file, so we have handle
          this without translation */
-      detranslated_target_copy = target_abspath;
+      detranslated_target_copy = detranslated_target_abspath;
     }
   else
     SVN_ERR(err);
 
-  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        *target_copy, detranslated_target_copy,
-                                        target_abspath, result_pool));
+  SVN_ERR(svn_wc__wq_build_file_copy_translated(&work_item,
+                                                db, target_abspath,
+                                                detranslated_target_copy,
+                                                *target_copy,
+                                                result_pool, scratch_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   return SVN_NO_ERROR;
@@ -1017,6 +1023,7 @@ merge_text_file(svn_skel_t **work_items,
                     db,
                     left_abspath, right_abspath, target_abspath,
                     left_label, right_label, target_label,
+                    detranslated_target_abspath,
                     cancel_func, cancel_baton,
                     result_pool, scratch_pool));
           *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
