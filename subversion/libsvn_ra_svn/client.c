@@ -885,8 +885,10 @@ static svn_error_t *ra_svn_end_commit(void *baton)
                                  &(commit_info->author),
                                  &(commit_info->post_commit_err)));
 
-  return ccb->callback(commit_info, ccb->callback_baton, ccb->pool);
+  if (ccb->callback)
+    SVN_ERR(ccb->callback(commit_info, ccb->callback_baton, ccb->pool));
 
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
