@@ -148,14 +148,11 @@ log_do_file_cp_and_translate(svn_wc__db_t *db,
   apr_hash_t *keywords;
   svn_boolean_t special;
 
-  err = svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
-                              scratch_pool, scratch_pool);
-  if (! err)
-    err = svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
-                               scratch_pool, scratch_pool);
-  if (! err)
-    err = svn_wc__get_special(&special, db, versioned_abspath,
-                              scratch_pool);
+  err = svn_wc__get_translate_info(&style, &eol,
+                                   &keywords,
+                                   &special,
+                                   db, versioned_abspath,
+                                   scratch_pool, scratch_pool);
 
   if (! err)
     err = svn_subst_copy_and_translate4(from_abspath, dest_abspath,

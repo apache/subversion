@@ -4687,7 +4687,7 @@ merge_file(svn_skel_t **work_items,
                                                FALSE /* compare_textbases */,
                                                pool));
     }
-  else if (new_text_base_sha1_checksum)
+  else if (new_text_base_sha1_checksum && !fb->obstruction_found)
     {
       svn_stream_t *pristine_stream;
 
@@ -4705,8 +4705,13 @@ merge_file(svn_skel_t **work_items,
     }
   else
     {
-      /* No other potential changes, so the working file is NOT modified.  */
-      is_locally_modified = FALSE;
+      /* No other potential changes, so the working file is NOT modified.
+         Except when we have a local obstruction! */
+
+      if (fb->obstruction_found)
+        is_locally_modified = TRUE;
+      else
+        is_locally_modified = FALSE;
     }
 
   if (have_base)
@@ -4924,8 +4929,11 @@ merge_file(svn_skel_t **work_items,
 
       apr_hash_t *keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&keywords, eb->db, fb->local_abspath, NULL,
-                                   pool, pool));
+      SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
+                                         &keywords,
+                                         NULL,
+                                         eb->db, fb->local_abspath,
+                                         pool, pool));
       if (magic_props_changed || keywords)
         {
           /* Special edge-case: it's possible that this file installation

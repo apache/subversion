@@ -2510,12 +2510,19 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                                              APR_HASH_KEY_STRING);
       apr_hash_t *old_keywords, *new_keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&old_keywords, db, local_abspath,
-                                   old_value ? old_value->data : "",
-                                   scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__get_keywords(&new_keywords, db, local_abspath,
-                                   value ? value->data : "",
-                                   scratch_pool, scratch_pool));
+      if (old_value)
+        SVN_ERR(svn_wc__expand_keywords(&old_keywords,
+                                        db, local_abspath, old_value->data,
+                                        scratch_pool, scratch_pool));
+      else
+        old_keywords = apr_hash_make(scratch_pool);
+
+      if (value)
+        SVN_ERR(svn_wc__expand_keywords(&new_keywords,
+                                        db, local_abspath, value->data,
+                                        scratch_pool, scratch_pool));
+      else
+        new_keywords = apr_hash_make(scratch_pool);
 
       if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE,
                                      scratch_pool))

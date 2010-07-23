@@ -1066,7 +1066,11 @@ install_committed_file(svn_boolean_t *overwrote_working,
      * it has the right executable and read_write attributes set.
      */
 
-    SVN_ERR(svn_wc__get_special(&special, db, file_abspath, scratch_pool));
+    SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
+                                       NULL,
+                                       &special,
+                                       db, file_abspath,
+                                       scratch_pool, scratch_pool));
     if (! special && tmp != tmp_wfile)
       SVN_ERR(svn_io_files_contents_same_p(&same, tmp_wfile,
                                            file_abspath, scratch_pool));
@@ -1804,7 +1808,11 @@ run_file_install(svn_wc__db_t *db,
                                        scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(svn_wc__get_special(&special, db, local_abspath, scratch_pool));
+  /* Fetch all the translation bits.  */
+  SVN_ERR(svn_wc__get_translate_info(&style, &eol,
+                                     &keywords,
+                                     &special, db, local_abspath,
+                                     scratch_pool, scratch_pool));
   if (special)
     {
       /* When this stream is closed, the resulting special file will
@@ -1821,12 +1829,6 @@ run_file_install(svn_wc__db_t *db,
       /* No need to set exec or read-only flags on special files.  */
       return SVN_NO_ERROR;
     }
-
-  /* Fetch all the translation bits.  */
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, local_abspath,
-                                scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL,
-                               scratch_pool, scratch_pool));
 
   if (svn_subst_translation_required(style, eol, keywords,
                                      FALSE /* special */,
