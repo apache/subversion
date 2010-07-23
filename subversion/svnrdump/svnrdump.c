@@ -86,7 +86,6 @@ replay_revstart(svn_revnum_t revision,
                 apr_pool_t *pool)
 {
   struct replay_baton *rb = replay_baton;
-  /* First, dump the revision properties. */
   svn_stringbuf_t *propstring;
   svn_stream_t *stdout_stream;
   svn_stream_t *revprop_stream;
@@ -116,6 +115,7 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
                            &(propstring->len)));
 
+  SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
   svn_stream_close(stdout_stream);
 
   /* Extract editor and editor_baton from the replay_baton and
@@ -252,6 +252,7 @@ replay_range(svn_ra_session_t *session, const char *url,
       /* The properties */
       SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
                                &(propstring->len)));
+      SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
       if (! quiet)
         svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu\n", start_revision);
 
