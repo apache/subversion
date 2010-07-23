@@ -272,6 +272,9 @@ Veto-blocked changes:
      using svnadmin hotcopy.
    Notes:
      r950445 fixes the issue and r950468 is a test for this issue.
+     In r967173 on trunk, svn_io_dir_walk()'s original functionality
+     was restored, and svn_io_dir_walk2() introduced to also cover
+     symlinks.
    Votes:
      +1: stylesen,
      -0: julianfoad (Tested and works fine, but changes semantics of
