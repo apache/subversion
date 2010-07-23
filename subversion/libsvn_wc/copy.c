@@ -317,6 +317,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                                          scratch_pool, scratch_pool));
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
 
+#ifndef SVN_WC__SINGLE_DB
       if (kind == svn_node_dir)
         {
           /* Create the per-directory db in the copied directory.  The
@@ -419,6 +420,7 @@ copy_versioned_dir(svn_wc__db_t *db,
           SVN_ERR(svn_wc__db_temp_forget_directory(db, tmp_dst_abspath,
                                                    scratch_pool));
         }
+#endif
     }
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
