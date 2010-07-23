@@ -478,8 +478,10 @@ assemble_status(svn_wc_status3_t **status,
 
 #ifdef HAVE_SYMLINK
       if (has_props)
-        SVN_ERR(svn_wc__get_special(&wc_special, db, local_abspath,
-                                    scratch_pool));
+        SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
+                                           &wc_special,
+                                           db, local_abspath,
+                                           scratch_pool));
       else
         wc_special = FALSE;
 #endif /* HAVE_SYMLINK */
