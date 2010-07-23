@@ -1189,17 +1189,14 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     }
 #endif
 
+#ifndef SVN_WC__SINGLE_DB
   if (kind == svn_node_dir && !exists)
     {
-#ifdef SVN_WC__SINGLE_DB
-      svn_boolean_t locked;
-      SVN_ERR(svn_wc__db_wclocked(&locked, db, local_abspath, scratch_pool));
-      if (!locked)
-#endif
-        /* Lock on parent needs to be propogated into the child db. */
-        SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
-                                         scratch_pool));
+      /* Lock on parent needs to be propogated into the child db. */
+      SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                       scratch_pool));
     }
+#endif
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   /* ### this is totally bogus. we clear these cuz turds might have been
@@ -1248,8 +1245,17 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
         }
     }
   else if (!copyfrom_url)
-    SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
-                                        scratch_pool));
+    {
+      SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
+                                          scratch_pool));
+#ifdef SVN_WC__SINGLE_DB
+      /* ### Perhaps the lock should be created in the same
+         transaction that adds the node? */
+      if (!exists)
+        SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                         scratch_pool));
+#endif
+    }
   else if (!is_wc_root)
     SVN_ERR(svn_wc__db_op_copy_dir(db,
                                    local_abspath,
