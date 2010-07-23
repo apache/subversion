@@ -157,6 +157,10 @@ dump_props(struct dump_edit_baton *eb,
       SVN_ERR(svn_stream_write(eb->stream, eb->propstring->data,
                                &(eb->propstring->len)));
 
+      /* No text is going to be dumped. Write a couple of newlines and
+         wait for the next node/ revision. */
+      SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
+
       /* Cleanup so that data is never dumped twice. */
       svn_hash__clear(eb->props, pool);
       svn_hash__clear(eb->deleted_props, pool);
