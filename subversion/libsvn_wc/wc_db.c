@@ -4462,6 +4462,14 @@ db_working_update_presence(svn_wc__db_status_t status,
                             presence_map, status));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_NODE_WORKING_PRESENCE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ist", pdh->wcroot->wc_id, local_relpath,
+                            presence_map, status));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
   flush_entries(pdh);
 
 #ifndef SINGLE_DB
@@ -4478,6 +4486,15 @@ db_working_update_presence(svn_wc__db_status_t status,
                                 svn_dirent_basename(local_abspath, NULL),
                                 presence_map, status));
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_UPDATE_NODE_WORKING_PRESENCE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "ist", pdh->wcroot->wc_id,
+                                svn_dirent_basename(local_abspath, NULL),
+                                presence_map, status));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
       flush_entries(pdh);
     }
@@ -8419,6 +8436,9 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
   svn_sqlite__stmt_t *stmt;
   svn_wc__db_pdh_t *pdh;
   int affected_rows;
+#ifdef SVN_WC__NODE_DATA
+  int affected_node_rows;
+#endif
   svn_wc__db_status_t base_status;
 
   SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL,
@@ -8432,10 +8452,17 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_dir_abspath,
                                  STMT_UPDATE_BASE_PRESENCE, scratch_pool));
-
   SVN_ERR(svn_sqlite__bind_text(stmt, 3, incomplete ? "incomplete" : "normal"));
-
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+#ifdef SVN_WC__NODE_DATA
+  SVN_ERR(get_statement_for_path(&stmt, db, local_dir_abspath,
+                                 STMT_UPDATE_NODE_BASE_PRESENCE, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, incomplete ? "incomplete" : "normal"));
+  SVN_ERR(svn_sqlite__update(&affected_node_rows, stmt));
+
+  SVN_ERR_ASSERT(affected_rows == affected_node_rows);
+#endif
 
   if (affected_rows > 0)
    {
@@ -9383,7 +9410,7 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, base));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
-#ifdef SVN_WC__NODE_DATA
+#ifdef NODE_DATA
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                        STMT_DELETE_NODE_DATA_WORKING));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, base));
@@ -9393,10 +9420,20 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_UPDATE_BASE_PRESENCE_KIND));
-
   SVN_ERR(svn_sqlite__bindf(stmt, "istt", pdh->wcroot->wc_id, base,
                             presence_map, svn_wc__db_status_normal,
                             kind_map, svn_wc__db_kind_subdir));
+#ifdef NODE_DATA
+  /* When activating this bit, I get test failures;
+     working copies seem to get disconnected from their parents...
+     Need to investigate */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_NODE_BASE_PRESENCE_KIND));
+  SVN_ERR(svn_sqlite__bindf(stmt, "istt", pdh->wcroot->wc_id, base,
+                            presence_map, svn_wc__db_status_normal,
+                            kind_map, svn_wc__db_kind_subdir));
+#endif
+
 
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
