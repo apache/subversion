@@ -1130,6 +1130,7 @@ get_dir_status(const struct walk_status_baton *wb,
   svn_wc__db_status_t dir_status;
   svn_depth_t dir_depth;
   apr_pool_t *iterpool, *subpool = svn_pool_create(scratch_pool);
+  svn_error_t *err;
 
   /* See if someone wants to cancel this operation. */
   if (cancel_func)
@@ -1150,7 +1151,18 @@ get_dir_status(const struct walk_status_baton *wb,
     SVN_ERR(svn_hash_from_cstring_keys(&nodes, child_nodes, subpool));
   }
 
-  SVN_ERR(svn_io_get_dirents3(&dirents, local_abspath, FALSE, subpool, subpool));
+  err = svn_io_get_dirents3(&dirents, local_abspath, FALSE, subpool, subpool);
+#ifdef SVN_WC__SINGLE_DB
+  if (err
+      && (APR_STATUS_IS_ENOENT(err->apr_err)
+         || APR_STATUS_IS_ENODIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      dirents = apr_hash_make(subpool);
+    }
+  else
+#endif
+    SVN_ERR(err);
 
   SVN_ERR(svn_wc__db_read_info(&dir_status, NULL, NULL, &dir_repos_relpath,
                                &dir_repos_root_url, NULL, NULL, NULL, NULL,
