@@ -97,20 +97,6 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r950445, 950468
-   Fix for issue #2591 "'svnadmin hotcopy' does not replicate symlinks".
-   Justification:
-     This fix helps server administrators who has common files symlinked
-     across their repositories and take frequent backups of their repos
-     using svnadmin hotcopy.
-   Notes:
-     r950445 fixes the issue and r950468 is a test for this issue.
-   Votes:
-     +1: stylesen,
-     -0: julianfoad, cmpilato (Tested and works fine, but changes
-           semantics of svn_io_dir_walk() which we should not do in a
-           back-port.  Discussing on list.)
-
  * r945350, r946767, r955369
    Fix issue #3242 'Subversion demands unnecessary access to parent
    directories of operations' as relates to reintegrate merges.
@@ -276,6 +262,22 @@ Veto-blocked changes:
      See discussion at http://svn.haxx.se/dev/archive-2010-04/0275.shtml
    Votes:
      -1: cmpilato (pending results of aforemented discussion)
+
+
+ * r950445, 950468
+   Fix for issue #2591 "'svnadmin hotcopy' does not replicate symlinks".
+   Justification:
+     This fix helps server administrators who has common files symlinked
+     across their repositories and take frequent backups of their repos
+     using svnadmin hotcopy.
+   Notes:
+     r950445 fixes the issue and r950468 is a test for this issue.
+   Votes:
+     +1: stylesen,
+     -0: julianfoad (Tested and works fine, but changes semantics of
+           svn_io_dir_walk() which we should not do in a back-port.
+           Discussing on list.)
+     -1: cmpilato (Changes semantics of svn_io_dir_walk()).
 
 Approved changes:
 =================
