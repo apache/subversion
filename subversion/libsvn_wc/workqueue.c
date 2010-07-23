@@ -60,6 +60,7 @@
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
 #define OP_FILE_MOVE "file-move"
+#define OP_FILE_COPY_TRANSLATED "file-translate"
 #define OP_SYNC_FILE_FLAGS "sync-file-flags"
 #define OP_PREJ_INSTALL "prej-install"
 #define OP_WRITE_OLD_PROPS "write-old-props"
@@ -2051,6 +2052,93 @@ svn_wc__wq_build_file_move(svn_skel_t **work_item,
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_FILE_COPY_TRANSLATED */
+
+/* Process the OP_FILE_COPY_TRANSLATED work item WORK_ITEM.
+ * See run_file_copy_translated() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_copy_translated(svn_wc__db_t *db,
+                         const svn_skel_t *work_item,
+                         const char *wri_abspath,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath, *src_abspath, *dst_abspath;
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
+  svn_boolean_t special;
+
+  svn_error_t *err;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  src_abspath = apr_pstrmemdup(scratch_pool, arg1->next->data,
+                               arg1->next->len);
+  dst_abspath = apr_pstrmemdup(scratch_pool, arg1->next->next->data,
+                                arg1->next->next->len);
+
+  SVN_ERR(svn_wc__get_translate_info(&style, &eol,
+                                     &keywords,
+                                     &special,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_subst_copy_and_translate4(src_abspath, dst_abspath,
+                                        eol, TRUE /* repair */,
+                                        keywords, TRUE /* expand */,
+                                        special,
+                                        NULL, NULL, /* ### cancel */
+                                        scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      const char *src_abspath,
+                                      const char *dst_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  /* File must exist */
+  SVN_ERR(svn_io_check_path(src_abspath, &kind, result_pool));
+
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' not found"),
+                             svn_dirent_local_style(src_abspath,
+                                                    scratch_pool));
+
+  /* ### Once we move to a central DB we should try making
+     ### src_abspath, dst_abspath and info_abspath relative from
+     ### the WCROOT of info_abspath. */
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, dst_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, src_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_COPY_TRANSLATED, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -2505,6 +2593,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_FILE_INSTALL, run_file_install },
   { OP_FILE_REMOVE, run_file_remove },
   { OP_FILE_MOVE, run_file_move },
+  { OP_FILE_COPY_TRANSLATED, run_file_copy_translated },
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_WRITE_OLD_PROPS, run_write_old_props },

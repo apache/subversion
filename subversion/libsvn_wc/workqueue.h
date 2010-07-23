@@ -137,6 +137,18 @@ svn_wc__wq_build_file_move(svn_skel_t **work_item,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that describes a copy from
+   SRC_ABSPATH to DST_ABSPATH, while translating the stream using
+   the information from LOCAL_ABSPATH. */
+svn_error_t *
+svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      const char *src_abspath,
+                                      const char *dst_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
 
 /* Set *WORK_ITEM to a new work item that will synchronize the
    target node's readonly and executable flags with the values defined
