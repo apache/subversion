@@ -300,8 +300,6 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
  * Indicate in TARGET->SKIPPED whether the target should be skipped.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * If the path is not skipped also obtain eol-style and keywords
- * information and store this in *TARGET.
  * Use RESULT_POOL for allocations of fields in TARGET.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
