@@ -7232,16 +7232,11 @@ svn_wc__db_temp_get_format(int *format,
 #ifdef SVN_WC__SINGLE_DB
       if (*local_relpath != '\0')
         {
-          svn_sqlite__stmt_t *stmt;
-          svn_boolean_t got_row;
+          svn_boolean_t base, working;
 
-          SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                            STMT_SELECT_BASE_WORKING_NODE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
-                                    local_relpath));
-          SVN_ERR(svn_sqlite__step(&got_row, stmt));
-          SVN_ERR(svn_sqlite__reset(stmt));
-          if (!got_row)
+          SVN_ERR(which_trees_exist(&base, &working, pdh->wcroot->sdb,
+                                    pdh->wcroot->wc_id, local_relpath));
+          if (!base && !working)
             {
               *format = 0;
               return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
