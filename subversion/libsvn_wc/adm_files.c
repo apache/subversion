@@ -189,24 +189,6 @@ make_adm_subdir(const char *path,
 
 
 svn_error_t *
-svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
-                                         svn_wc__db_t *db,
-                                         const char *local_abspath,
-                                         apr_pool_t *pool)
-{
-  const char *newpath, *base_name;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  svn_dirent_split(&newpath, &base_name, local_abspath, pool);
-  *result_abspath = simple_extend(newpath, TRUE, SVN_WC__ADM_TEXT_BASE,
-                                  base_name, SVN_WC__BASE_EXT, pool);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_wc__text_base_path_to_read(const char **result_abspath,
                                svn_wc__db_t *db,
                                const char *local_abspath,
@@ -605,15 +587,15 @@ init_adm_tmp_area(const char *path, apr_pool_t *pool)
   /* SVN_WC__ADM_TMP */
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TMP, FALSE, pool));
 
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TEXT_BASE, TRUE, pool));
-
+#if (SVN_WC__VERSION < 18)
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROP_BASE, TRUE, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
-  return svn_error_return(make_adm_subdir(path, SVN_WC__ADM_PROPS, TRUE,
-                                          pool));
+  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROPS, TRUE, pool));
+#endif
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -637,11 +619,13 @@ init_adm(svn_wc__db_t *db,
 
   /** Make subdirectories. ***/
 
+#if (SVN_WC__VERSION < 18)
   /* SVN_WC__ADM_PROP_BASE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROP_BASE, FALSE, pool));
 
   /* SVN_WC__ADM_PROPS */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROPS, FALSE, pool));
+#endif
 
   /* SVN_WC__ADM_PRISTINE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PRISTINE, FALSE, pool));
@@ -757,7 +741,9 @@ svn_wc__adm_destroy(svn_wc__db_t *db,
                     const char *dir_abspath,
                     apr_pool_t *scratch_pool)
 {
+#ifndef SINGLE_DB
   const char *adm_abspath;
+#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
@@ -767,8 +753,10 @@ svn_wc__adm_destroy(svn_wc__db_t *db,
      directory, which also removes the lock */
   SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, scratch_pool));
 
+#ifndef SINGLE_DB
   adm_abspath = svn_wc__adm_child(dir_abspath, NULL, scratch_pool);
   SVN_ERR(svn_io_remove_dir2(adm_abspath, FALSE, NULL, NULL, scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }

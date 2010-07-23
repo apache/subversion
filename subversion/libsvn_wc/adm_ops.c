@@ -1189,12 +1189,14 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     }
 #endif
 
+#ifndef SVN_WC__SINGLE_DB
   if (kind == svn_node_dir && !exists)
     {
       /* Lock on parent needs to be propogated into the child db. */
       SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
                                        scratch_pool));
     }
+#endif
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   /* ### this is totally bogus. we clear these cuz turds might have been
@@ -1243,8 +1245,26 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
         }
     }
   else if (!copyfrom_url)
-    SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
-                                        scratch_pool));
+    {
+      SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
+                                          scratch_pool));
+#ifdef SVN_WC__SINGLE_DB
+      if (!exists)
+        {
+          /* If using the legacy 1.6 interface the parent lock may not
+             be recursive and add is expected to lock the new dir.
+
+             ### Perhaps the lock should be created in the same
+             transaction that adds the node? */
+          svn_boolean_t locked;
+          SVN_ERR(svn_wc_locked2(&locked, NULL, wc_ctx, local_abspath,
+                                 scratch_pool));
+          if (!locked)
+            SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                             scratch_pool));
+        }
+#endif
+    }
   else if (!is_wc_root)
     SVN_ERR(svn_wc__db_op_copy_dir(db,
                                    local_abspath,
@@ -1949,8 +1969,9 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
       /* Only check if the file was modified when it wasn't overwritten with a
          special file */
-      SVN_ERR(svn_wc__get_special(&wc_special, db, local_abspath,
-                                  scratch_pool));
+      SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
+                                         &wc_special, db, local_abspath,
+                                         scratch_pool, scratch_pool));
       SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk,
                                         &local_special, scratch_pool));
       if (wc_special || ! local_special)
@@ -2340,7 +2361,12 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
   if (url)
     {
       external_repos_relpath = svn_uri_is_child(repos_root_url, url, NULL);
-      SVN_ERR_ASSERT(external_repos_relpath != NULL);
+
+      if (external_repos_relpath == NULL)
+          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                   _("Can't add a file external to '%s' as it"
+                                     " is not a file in repository '%s'."),
+                                   url, repos_root_url);
 
       external_repos_relpath = svn_path_uri_decode(external_repos_relpath,
                                                    scratch_pool);

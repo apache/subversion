@@ -663,24 +663,24 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   svn_stream_t *last_stream;
   apr_pool_t *currpool, *lastpool;
 
+  /* Check to make sure we're dealing with a file. */
+  SVN_ERR(svn_ra_check_path(ra_session, path, end, &kind, pool));
+
+  if (kind == svn_node_dir)
+    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+                             _("'%s' is not a file"), path);
+
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, pool));
   SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
 
   /* Create the initial path, using the repos_url and session_url */
-  tmp = svn_path_is_child(repos_url, session_url, pool);
+  tmp = svn_uri_is_child(repos_url, session_url, pool);
   repos_abs_path = apr_palloc(pool, strlen(tmp) + 1);
   repos_abs_path[0] = '/';
   memcpy(repos_abs_path + 1, tmp, strlen(tmp));
 
-  /* Check to make sure we're dealing with a file. */
-  SVN_ERR(svn_ra_check_path(ra_session, "", end, &kind, pool));
-
-  if (kind == svn_node_dir)
-    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
-                             _("'%s' is not a file"), repos_abs_path);
-
   condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
-  APR_ARRAY_PUSH(condensed_targets, const char *) = "";
+  APR_ARRAY_PUSH(condensed_targets, const char *) = path;
 
   lmb.path = svn_path_uri_decode(repos_abs_path, pool);
   lmb.eldest = NULL;

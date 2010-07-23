@@ -52,14 +52,6 @@ svn_boolean_t svn_wc__adm_area_exists(const char *adm_abspath,
                                       apr_pool_t *pool);
 
 
-/* Set *RESULT_ABSPATH to the deterministic absolute path to where
-   LOCAL_ABSPATH's temporary text-base file is or should be created. */
-svn_error_t *
-svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
-                                         svn_wc__db_t *db,
-                                         const char *local_abspath,
-                                         apr_pool_t *pool);
-
 /* Set *CONTENTS to a readonly stream on the pristine text of the working
  * version of the file LOCAL_ABSPATH in DB.  If the file is locally copied
  * or moved to this path, this means the pristine text of the copy source,

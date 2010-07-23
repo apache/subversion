@@ -5725,11 +5725,14 @@ svn_wc_get_pristine_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool);
                           
 
-/** Set @a *value to the value of property @a name for @a path, allocating
- * @a *value in @a pool.  If no such prop, set @a *value to @c NULL.
- * @a name may be a regular or wc property; if it is an entry property,
- * return the error #SVN_ERR_BAD_PROP_KIND.  @a adm_access is an access
- * baton set that contains @a path.
+/** Set @a *value to the value of property @a name for @a local_abspath,
+ * allocating @a *value in @a result_pool.  If no such prop, set @a *value
+ * to @c NULL. @a name may be a regular or wc property; if it is an
+ * entry property, return the error #SVN_ERR_BAD_PROP_KIND.  @a wc_ctx
+ * is used to access the working copy.
+ *
+ * If @a local_abspath is not a versioned path, return
+ * #SVN_ERR_WC_PATH_NOT_FOUND
  *
  * @since New in 1.7.
  */
@@ -5743,6 +5746,8 @@ svn_wc_prop_get2(const svn_string_t **value,
 
 /** Similar to svn_wc_prop_get2(), but with a #svn_wc_adm_access_t /
  * relative path parameter pair.
+ *
+ * When @a path is not versioned, set @a *value to NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
@@ -7075,14 +7080,6 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * matching @a file_baton) through @a editor, then close @a file_baton
  * afterwards.  Use @a scratch_pool for any temporary allocation.
  *
- * If @a tempfile is non-NULL, make a copy of @a local_abspath with keywords
- * and eol translated to repository-normal form, and set @a *tempfile to the
- * absolute path to this copy, allocated in @a result_pool.  The copy will
- * be in the temporary-text-base directory.  Do not clean up the copy;
- * caller can do that.  (The purpose of handing back the tmp copy is that it
- * is usually about to become the new text base anyway, but the installation
- * of the new text base is outside the scope of this function.)
- *
  * If @a new_text_base_md5_checksum is non-NULL, set
  * @a *new_text_base_md5_checksum to the MD5 checksum of (@a local_abspath
  * translated to repository-normal form), allocated in @a result_pool.
@@ -7106,8 +7103,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_transmit_text_deltas3(const char **tempfile,
-                             const svn_checksum_t **new_text_base_md5_checksum,
+svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
                              const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
@@ -7120,6 +7116,14 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
 /** Similar to svn_wc_transmit_text_deltas3(), but with a relative path
  * and adm_access baton, and the checksum output is an MD5 digest instead of
  * two svn_checksum_t objects.
+ *
+ * If @a tempfile is non-NULL, make a copy of @a path with keywords
+ * and eol translated to repository-normal form, and set @a *tempfile to the
+ * absolute path to this copy, allocated in @a result_pool.  The copy will
+ * be in the temporary-text-base directory.  Do not clean up the copy;
+ * caller can do that.  (The purpose of handing back the tmp copy is that it
+ * is usually about to become the new text base anyway, but the installation
+ * of the new text base is outside the scope of this function.)
  *
  * @since New in 1.4.
  * @deprecated Provided for backwards compatibility with the 1.6 API.

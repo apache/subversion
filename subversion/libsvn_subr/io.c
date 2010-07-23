@@ -2660,11 +2660,15 @@ svn_io_detect_mimetype2(const char **mimetype,
 
 
   /* Right now, this function is going to be really stupid.  It's
-     going to examine the first block of data, and make sure that 85%
+     going to examine the first block of data, and make sure that 15%
      of the bytes are such that their value is in the ranges 0x07-0x0D
-     or 0x20-0x7F, and that 100% of those bytes is not 0x00.
+     or 0x20-0x7F, and that none of those bytes is 0x00.  If those
+     criteria are not met, we're calling it binary.
 
-     If those criteria are not met, we're calling it binary. */
+     NOTE:  Originally, I intended to target 85% of the bytes being in
+     the specified ranges, but I flubbed the condition.  At any rate,
+     folks aren't complaining, so I'm not sure that it's worth
+     adjusting this retroactively now.  --cmpilato  */
   if (amt_read > 0)
     {
       apr_size_t i;
@@ -3218,11 +3222,11 @@ svn_io_dir_read(apr_finfo_t *finfo,
 
 
 svn_error_t *
-svn_io_dir_walk(const char *dirname,
-                apr_int32_t wanted,
-                svn_io_walk_func_t walk_func,
-                void *walk_baton,
-                apr_pool_t *pool)
+svn_io_dir_walk2(const char *dirname,
+                 apr_int32_t wanted,
+                 svn_io_walk_func_t walk_func,
+                 void *walk_baton,
+                 apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_dir_t *handle;
@@ -3291,11 +3295,11 @@ svn_io_dir_walk(const char *dirname,
           SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
                                      subpool));
           full_path = svn_dirent_join(dirname, name_utf8, subpool);
-          SVN_ERR(svn_io_dir_walk(full_path,
-                                  wanted,
-                                  walk_func,
-                                  walk_baton,
-                                  subpool));
+          SVN_ERR(svn_io_dir_walk2(full_path,
+                                   wanted,
+                                   walk_func,
+                                   walk_baton,
+                                   subpool));
         }
       else if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
         {
@@ -3309,9 +3313,10 @@ svn_io_dir_walk(const char *dirname,
                                subpool));
         }
       /* else:
-         some other type of file; skip it.
+         Some other type of file; skip it for now.  We've reserved the
+         right to expand our coverage here in the future, though,
+         without revving this API.
       */
-
     }
 
   svn_pool_destroy(subpool);

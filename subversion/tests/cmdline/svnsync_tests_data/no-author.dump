@@ -4,6 +4,8 @@ UUID: 55b1b577-cf20-0410-8f4d-bb837066729e
 
 Revision-number: 0
 Prop-content-length: 56
+Prop-content-md5: (svn:date) 42c25a2cbf4ab8d750997c7700f0a4a7
+Prop-content-sha1: (svn:date) 1c533b58c1065325ec970502fa4415476333b940
 Content-length: 56
 
 K 8
@@ -14,17 +16,21 @@ PROPS-END
 
 Revision-number: 1
 Prop-content-length: 77
+Prop-content-md5: (svn:log) d3b07384d113edec49eaa6238ad5ff00
+Prop-content-sha1: (svn:log) f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
+Prop-content-md5: (svn:date) 597b5364abcbac3b321a0162ce3bdd21
+Prop-content-sha1: (svn:date) 21c46980750e710eb3c5a6a14ec3b414226673a5
 Content-length: 77
-
-K 7
-svn:log
-V 4
-foo
 
 K 8
 svn:date
 V 27
 2006-10-27T18:55:49.840787Z
+K 7
+svn:log
+V 4
+foo
+
 PROPS-END
 
 Node-path: trunk

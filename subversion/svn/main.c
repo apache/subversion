@@ -463,8 +463,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "changelist", svn_cl__changelist, {"cl"}, N_
     ("Associate (or dissociate) changelist CLNAME with the named files.\n"
-     "usage: 1. changelist CLNAME TARGET...\n"
-     "       2. changelist --remove TARGET...\n"),
+     "usage: 1. changelist CLNAME PATH...\n"
+     "       2. changelist --remove PATH...\n"),
     { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
@@ -497,7 +497,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Recursively clean up the working copy, removing locks, resuming\n"
      "unfinished operations, etc.\n"
-     "usage: cleanup [PATH...]\n"),
+     "usage: cleanup [WCPATH...]\n"),
     {opt_merge_cmd} },
 
   { "commit", svn_cl__commit, {"ci"},
@@ -662,15 +662,18 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      {opt_force_log, N_("force validity of lock comment source")}} },
 
   { "log", svn_cl__log, {0}, N_
-    ("Show the log messages for a set of revision(s) and/or file(s).\n"
-     "usage: 1. log [PATH]\n"
+    ("Show the log messages for a set of revision(s) and/or path(s).\n"
+     "usage: 1. log [PATH][@REV]\n"
      "       2. log URL[@REV] [PATH...]\n"
      "\n"
-     "  1. Print the log messages for a local PATH (default: '.').\n"
-     "     The default revision range is BASE:1.\n"
+     "  1. Print the log messages for the URL corresponding to PATH\n"
+     "     (default: '.'). If specified, REV is the revision in which the\n"
+     "     URL is first looked up, and the default revision range is REV:1.\n"
+     "     If REV is not specified, the default revision range is BASE:1,\n"
+     "     since the URL might not exist in the HEAD revision.\n"
      "\n"
      "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
-     "     If specified, REV determines in which revision the URL is first\n"
+     "     If specified, REV is the revision in which the URL is first\n"
      "     looked up, and the default revision range is REV:1; otherwise,\n"
      "     the URL is looked up in HEAD, and the default revision range is\n"
      "     HEAD:1.\n"
@@ -691,8 +694,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Examples:\n"
      "    svn log\n"
      "    svn log foo.c\n"
+     "    svn log bar.c@42\n"
      "    svn log http://www.example.com/repo/project/foo.c\n"
-     "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
+     "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+     "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
      opt_show_diff, opt_diff_cmd, opt_internal_diff, 'x'},
@@ -1184,7 +1189,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"
-     "usage: upgrade TARGET...\n"),
+     "usage: upgrade WCPATH...\n"),
     {0} },
 
   { NULL, NULL, {0}, NULL, {0} }
@@ -2212,6 +2217,20 @@ main(int argc, const char *argv[])
   /* Set the log message callback function.  Note that individual
      subcommands will populate the ctx->log_msg_baton3. */
   ctx->log_msg_func3 = svn_cl__get_log_message;
+
+  /* Set up the notifier. */
+  if (((subcommand->cmd_func != svn_cl__status) && !opt_state.quiet)
+        || ((subcommand->cmd_func == svn_cl__status) && !opt_state.xml))
+    {
+      err = svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, pool);
+      if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
+  /* Set up our commit callback.  We leave the callback NULL. */
+  if (!opt_state.quiet)
+    ctx->commit_callback2 = svn_cl__print_commit_info;
 
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;

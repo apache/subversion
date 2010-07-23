@@ -4,6 +4,8 @@ UUID: bd4c07e3-6b11-0410-8af7-f8eca344b6da
 
 Revision-number: 0
 Prop-content-length: 56
+Prop-content-md5: (svn:date) f5dac4babcf6704064f289554907048a
+Prop-content-sha1: (svn:date) bcfed6a359522261d423ef926f94c9c6923e579e
 Content-length: 56
 
 K 8
@@ -14,12 +16,14 @@ PROPS-END
 
 Revision-number: 1
 Prop-content-length: 105
+Prop-content-md5: (svn:log) c13d88cb4cb02003daedb8a84e5d272a
+Prop-content-sha1: (svn:log) 5eee38381388b6f30efdd5c5c6f067dbf32c0bb3
+Prop-content-md5: (svn:author) c9bd66513549086361ea008b319307f8
+Prop-content-sha1: (svn:author) f9752bcda9e6e513d24f99a02b46cb539a5f63b9
+Prop-content-md5: (svn:date) 50c9b5475428091781810ef78f122277
+Prop-content-sha1: (svn:date) d28f750443887b4cf7300a6e1360212ca6c6b971
 Content-length: 105
 
-K 7
-svn:log
-V 5
-stuff
 K 10
 svn:author
 V 6
@@ -28,6 +32,10 @@ K 8
 svn:date
 V 27
 2006-04-14T22:50:10.459753Z
+K 7
+svn:log
+V 5
+stuff
 PROPS-END
 
 Node-path: a.txt

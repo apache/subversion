@@ -259,9 +259,9 @@ copy_versioned_file(svn_wc__db_t *db,
     {
       svn_skel_t *work_item;
 
-      SVN_ERR(svn_wc__loggy_move(&work_item, db, dir_abspath,
-                                 tmp_dst_abspath, dst_abspath,
-                                 scratch_pool));
+      SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
+                                         tmp_dst_abspath, dst_abspath,
+                                         scratch_pool, scratch_pool));
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
 
@@ -312,11 +312,12 @@ copy_versioned_dir(svn_wc__db_t *db,
     {
       svn_skel_t *work_item;
 
-      SVN_ERR(svn_wc__loggy_move(&work_item, db, dir_abspath,
-                                 tmp_dst_abspath, dst_abspath,
-                                 scratch_pool));
+      SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
+                                         tmp_dst_abspath, dst_abspath,
+                                         scratch_pool, scratch_pool));
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
 
+#ifndef SVN_WC__SINGLE_DB
       if (kind == svn_node_dir)
         {
           /* Create the per-directory db in the copied directory.  The
@@ -419,6 +420,7 @@ copy_versioned_dir(svn_wc__db_t *db,
           SVN_ERR(svn_wc__db_temp_forget_directory(db, tmp_dst_abspath,
                                                    scratch_pool));
         }
+#endif
     }
 
 #if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
@@ -557,9 +559,10 @@ copy_versioned_dir(svn_wc__db_t *db,
           if (tmp_dst_abspath)
             {
               svn_skel_t *work_item;
-              SVN_ERR(svn_wc__loggy_move(&work_item, db, dir_abspath,
-                                         tmp_dst_abspath, unver_dst_abspath,
-                                         iterpool));
+              SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
+                                                 tmp_dst_abspath,
+                                                 unver_dst_abspath,
+                                                 iterpool, iterpool));
               SVN_ERR(svn_wc__db_wq_add(db, dst_abspath, work_item,
                                         iterpool));
             }

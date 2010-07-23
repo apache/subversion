@@ -337,6 +337,7 @@ make_one_db(const char *dirpath,
 {
   const char *dbpath = svn_dirent_join(dirpath, "wc.db", scratch_pool);
   svn_sqlite__db_t *sdb;
+  int i;
 
   /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
   SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
@@ -347,11 +348,8 @@ make_one_db(const char *dirpath,
                            0, NULL,
                            scratch_pool, scratch_pool));
 
-  /* Create the database's schema.  */
-  SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ 0));
-
-  /* Throw our extra data into the database.  */
-  SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ 1));
+  for (i = 0; my_statements[i] != NULL; i++)
+    SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
 
   return SVN_NO_ERROR;
 }
@@ -364,11 +362,17 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
   const char *dirpath;
   const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
+#ifdef SVN_WC__NODE_DATA
+    statements[STMT_CREATE_NODE_DATA],
+#endif
     TESTING_DATA,
     NULL
   };
   const char * const M_statements[] = {
     statements[STMT_CREATE_SCHEMA],
+#ifdef SVN_WC__NODE_DATA
+    statements[STMT_CREATE_NODE_DATA],
+#endif
     M_TESTING_DATA,
     NULL
   };
@@ -536,6 +540,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
   const char *D, *D1, *D2, *D3, *D4;
   svn_boolean_t locked_here, locked;
   svn_error_t *err;
+  svn_wc_adm_access_t *adm_access, *subdir_access;
 
 #undef WC_NAME
 #define WC_NAME "test_access_batons"
@@ -549,6 +554,28 @@ test_access_baton_like_locking(apr_pool_t *pool)
   D4 = svn_dirent_join(D3, "DD", pool);
 
   SVN_ERR(svn_io_make_dir_recursively(D4, pool));
+
+  /* Use the legacy interface */
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, local_abspath, TRUE, 0,
+                           NULL, NULL, pool));
+  SVN_ERR(svn_wc_add3(D, adm_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, D, pool));
+  SVN_ERR(svn_wc_add3(D1, subdir_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, D1, pool));
+  SVN_ERR(svn_wc_add3(D2, subdir_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, D2, pool));
+  SVN_ERR(svn_wc_add3(D3, subdir_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_locked(&locked, D3, pool));
+  SVN_TEST_ASSERT(locked);
+  SVN_ERR(svn_wc_revert3(D, adm_access, -1, FALSE,
+                         NULL, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_locked(&locked, D3, pool));
+  SVN_TEST_ASSERT(!locked);
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
 

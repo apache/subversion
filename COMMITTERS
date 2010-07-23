@@ -143,6 +143,7 @@ Commit access for specific areas:
            esr   Eric S. Raymond <esr@thyrsus.com>           (svncutter)
      gmcdonald   Gavin McDonald <gavin@16degrees.com.au>     (build/hudson,
                                                               tools/buildbot)
+      artagnon   Ramkumar Ramachandra <artagnon@gmail.com>   (svnrdump)
 
   Translation of message files:
 

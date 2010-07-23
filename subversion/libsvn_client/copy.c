@@ -310,7 +310,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   baton.dst_parent = dst_parent;
   SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_copies_with_write_lock,
                                        &baton, ctx->wc_ctx, dst_parent_abspath,
-                                       pool, pool));
+                                       FALSE, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -361,7 +361,7 @@ do_wc_to_wc_moves_with_locks1(void *baton,
   if (b->lock_dst)
     SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_moves_with_locks2, b,
                                          b->ctx->wc_ctx, b->dst_parent_abspath,
-                                         result_pool, scratch_pool));
+                                         FALSE, result_pool, scratch_pool));
   else
     SVN_ERR(do_wc_to_wc_moves_with_locks2(b, result_pool, scratch_pool));
 
@@ -430,7 +430,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_moves_with_locks1,
                                              &baton,
                                              ctx->wc_ctx, src_parent_abspath,
-                                             iterpool, iterpool));
+                                             FALSE, iterpool, iterpool));
       else
         SVN_ERR(do_wc_to_wc_moves_with_locks1(&baton, iterpool, iterpool));
 
@@ -720,8 +720,7 @@ find_absent_parents2(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-repos_to_repos_copy(svn_commit_info_t **commit_info_p,
-                    const apr_array_header_t *copy_pairs,
+repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                     svn_boolean_t make_parents,
                     const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
@@ -739,7 +738,6 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *commit_baton;
   struct path_driver_cb_baton cb_baton;
   apr_array_header_t *new_dirs = NULL;
   apr_hash_t *commit_revprops;
@@ -1115,11 +1113,10 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                            message, ctx, pool));
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    svn_client__commit_callback,
-                                    commit_baton,
+                                    ctx->commit_callback2,
+                                    ctx->commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
@@ -1151,8 +1148,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
  * REVPROP_TABLE is ...
  * CTX is ... */
 static svn_error_t *
-wc_to_repos_copy(svn_commit_info_t **commit_info_p,
-                 const apr_array_header_t *copy_pairs,
+wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
                  const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
@@ -1164,7 +1160,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *commit_baton;
   apr_hash_t *committables;
   apr_array_header_t *commit_items;
   apr_pool_t *iterpool;
@@ -1392,11 +1387,10 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                FALSE, FALSE, ctx, pool));
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    svn_client__commit_callback,
-                                    commit_baton, NULL,
+                                    ctx->commit_callback2,
+                                    ctx->commit_baton, NULL,
                                     TRUE, /* No lock tokens */
                                     pool));
 
@@ -1404,7 +1398,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items,
                                   editor, edit_baton,
                                   0, /* ### any notify_path_offset needed? */
-                                  NULL, NULL, NULL, ctx, pool),
+                                  NULL, NULL, ctx, pool),
             _("Commit failed (details follow):"));
 
   /* Sleep to ensure timestamp integrity. */
@@ -1859,7 +1853,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   SVN_ERR(svn_wc__call_with_write_lock(repos_to_wc_copy_cb, &baton,
                                        ctx->wc_ctx, lock_abspath,
-                                       pool, pool));
+                                       FALSE, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1869,8 +1863,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
 
 /* Perform all allocations in POOL. */
 static svn_error_t *
-try_copy(svn_commit_info_t **commit_info_p,
-         const apr_array_header_t *sources,
+try_copy(const apr_array_header_t *sources,
          const char *dst_path_in,
          svn_boolean_t is_move,
          svn_boolean_t force,
@@ -2154,7 +2147,6 @@ try_copy(svn_commit_info_t **commit_info_p,
   /* Now, call the right handler for the operation. */
   if ((! srcs_are_urls) && (! dst_is_url))
     {
-      *commit_info_p = NULL;
       return svn_error_return(
         wc_to_wc_copy(copy_pairs, dst_path_in, is_move, make_parents, ctx,
                       pool));
@@ -2162,12 +2154,10 @@ try_copy(svn_commit_info_t **commit_info_p,
   else if ((! srcs_are_urls) && (dst_is_url))
     {
       return svn_error_return(
-        wc_to_repos_copy(commit_info_p, copy_pairs, make_parents,
-                         revprop_table, ctx, pool));
+        wc_to_repos_copy(copy_pairs, make_parents, revprop_table, ctx, pool));
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
-      *commit_info_p = NULL;
       return svn_error_return(
         repos_to_wc_copy(copy_pairs, make_parents, ignore_externals,
                          ctx, pool));
@@ -2175,7 +2165,7 @@ try_copy(svn_commit_info_t **commit_info_p,
   else
     {
       return svn_error_return(
-        repos_to_repos_copy(commit_info_p, copy_pairs, make_parents,
+        repos_to_repos_copy(copy_pairs, make_parents,
                             revprop_table, ctx, is_move, pool));
     }
 }
@@ -2184,8 +2174,7 @@ try_copy(svn_commit_info_t **commit_info_p,
 
 /* Public Interfaces */
 svn_error_t *
-svn_client_copy5(svn_commit_info_t **commit_info_p,
-                 const apr_array_header_t *sources,
+svn_client_copy6(const apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
@@ -2195,15 +2184,13 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_commit_info_t *commit_info = NULL;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   if (sources->nelts > 1 && !copy_as_child)
     return svn_error_create(SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED,
                             NULL, NULL);
 
-  err = try_copy(&commit_info,
-                 sources, dst_path,
+  err = try_copy(sources, dst_path,
                  FALSE /* is_move */,
                  TRUE /* force, set to avoid deletion check */,
                  make_parents,
@@ -2232,8 +2219,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
       if (svn_path_is_url(src_path) && ! svn_path_is_url(dst_path))
         src_basename = svn_path_uri_decode(src_basename, subpool);
 
-      err = try_copy(&commit_info,
-                     sources,
+      err = try_copy(sources,
                      dst_is_uri
                          ? svn_uri_join(dst_path, src_basename, subpool)
                          : svn_dirent_join(dst_path, src_basename, subpool),
@@ -2246,22 +2232,13 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
                      subpool);
     }
 
-  if (commit_info_p != NULL)
-    {
-      if (commit_info)
-        *commit_info_p = svn_commit_info_dup(commit_info, pool);
-      else
-        *commit_info_p = NULL;
-    }
-
   svn_pool_destroy(subpool);
   return svn_error_return(err);
 }
 
 
 svn_error_t *
-svn_client_move5(svn_commit_info_t **commit_info_p,
-                 const apr_array_header_t *src_paths,
+svn_client_move6(const apr_array_header_t *src_paths,
                  const char *dst_path,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
@@ -2270,7 +2247,6 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_commit_info_t *commit_info = NULL;
   const svn_opt_revision_t head_revision
     = { svn_opt_revision_head, { 0 } };
   svn_error_t *err;
@@ -2296,7 +2272,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
       APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = copy_source;
     }
 
-  err = try_copy(&commit_info, sources, dst_path,
+  err = try_copy(sources, dst_path,
                  TRUE /* is_move */,
                  force,
                  make_parents,
@@ -2322,7 +2298,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
       src_basename = src_is_uri ? svn_uri_basename(src_path, pool)
                                 : svn_dirent_basename(src_path, pool);
 
-      err = try_copy(&commit_info, sources,
+      err = try_copy(sources,
                      dst_is_uri
                          ? svn_uri_join(dst_path, src_basename, pool)
                          : svn_dirent_join(dst_path, src_basename, pool),
@@ -2333,14 +2309,6 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                      revprop_table,
                      ctx,
                      subpool);
-    }
-
-  if (commit_info_p != NULL)
-    {
-      if (commit_info)
-        *commit_info_p = svn_commit_info_dup(commit_info, pool);
-      else
-        *commit_info_p = commit_info;
     }
 
   svn_pool_destroy(subpool);

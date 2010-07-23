@@ -542,7 +542,7 @@ add_parent_dirs(svn_client_ctx_t *ctx,
                          scratch_pool));
 
   if (!own_lock)
-    SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, parent_abspath,
+    SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, parent_abspath, FALSE,
                                        scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc_add4(wc_ctx, local_abspath, svn_depth_infinity,
@@ -573,6 +573,11 @@ svn_client_add4(const char *path,
   const char *local_abspath;
   struct add_with_write_lock_baton baton;
 
+  if (svn_path_is_url(path))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                              _("'%s' is not a local path"),
+                                              path));
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* ### this is a hack.
@@ -602,7 +607,8 @@ svn_client_add4(const char *path,
   baton.no_ignore = no_ignore;
   baton.ctx = ctx;
   SVN_ERR(svn_wc__call_with_write_lock(add, &baton, ctx->wc_ctx,
-                                       parent_abspath, pool, pool));
+                                       parent_abspath, FALSE,
+                                       pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -647,8 +653,7 @@ add_url_parents(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-mkdir_urls(svn_commit_info_t **commit_info_p,
-           const apr_array_header_t *urls,
+mkdir_urls(const apr_array_header_t *urls,
            svn_boolean_t make_parents,
            const apr_hash_t *revprop_table,
            svn_client_ctx_t *ctx,
@@ -657,7 +662,6 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *commit_baton;
   const char *log_msg;
   apr_array_header_t *targets;
   apr_hash_t *targets_hash;
@@ -798,11 +802,10 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
     }
 
   /* Fetch RA commit editor */
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    svn_client__commit_callback,
-                                    commit_baton,
+                                    ctx->commit_callback2,
+                                    ctx->commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
@@ -860,8 +863,7 @@ svn_client__make_local_parents(const char *path,
 
 
 svn_error_t *
-svn_client_mkdir3(svn_commit_info_t **commit_info_p,
-                  const apr_array_header_t *paths,
+svn_client_mkdir4(const apr_array_header_t *paths,
                   svn_boolean_t make_parents,
                   const apr_hash_t *revprop_table,
                   svn_client_ctx_t *ctx,
@@ -872,8 +874,7 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
 
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {
-      SVN_ERR(mkdir_urls(commit_info_p, paths, make_parents,
-                         revprop_table, ctx, pool));
+      SVN_ERR(mkdir_urls(paths, make_parents, revprop_table, ctx, pool));
     }
   else
     {

@@ -2197,22 +2197,12 @@ svn_wc__internal_propget(const svn_string_t **value,
 {
   apr_hash_t *prophash = NULL;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
-  svn_wc__db_kind_t wc_kind;
   svn_boolean_t hidden;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(kind != svn_prop_entry_kind);
 
-  SVN_ERR(svn_wc__db_read_kind(&wc_kind, db, local_abspath, TRUE, scratch_pool));
-
-  if (wc_kind == svn_wc__db_kind_unknown)
-    {
-      /* The node is not present, or not really "here". Therefore, the
-         property is not present.  */
-      *value = NULL;
-      return SVN_NO_ERROR;
-    }
-
+  /* This returns SVN_ERR_WC_PATH_NOT_FOUND for unversioned paths for us */
   SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, scratch_pool));
   if (hidden)
     {
@@ -2235,14 +2225,14 @@ svn_wc__internal_propget(const svn_string_t **value,
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      SVN_ERR_W(err, _("Failed to load properties from disk"));
+      SVN_ERR_W(err, _("Failed to load properties"));
     }
   else
     {
       /* regular prop */
       SVN_ERR_W(svn_wc__get_actual_props(&prophash, db, local_abspath,
                                          result_pool, scratch_pool),
-                _("Failed to load properties from disk"));
+                _("Failed to load properties"));
     }
 
   if (prophash)
@@ -2510,12 +2500,19 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                                              APR_HASH_KEY_STRING);
       apr_hash_t *old_keywords, *new_keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&old_keywords, db, local_abspath,
-                                   old_value ? old_value->data : "",
-                                   scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__get_keywords(&new_keywords, db, local_abspath,
-                                   value ? value->data : "",
-                                   scratch_pool, scratch_pool));
+      if (old_value)
+        SVN_ERR(svn_wc__expand_keywords(&old_keywords,
+                                        db, local_abspath, old_value->data,
+                                        scratch_pool, scratch_pool));
+      else
+        old_keywords = apr_hash_make(scratch_pool);
+
+      if (value)
+        SVN_ERR(svn_wc__expand_keywords(&new_keywords,
+                                        db, local_abspath, value->data,
+                                        scratch_pool, scratch_pool));
+      else
+        new_keywords = apr_hash_make(scratch_pool);
 
       if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE,
                                      scratch_pool))
