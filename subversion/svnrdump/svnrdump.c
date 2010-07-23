@@ -116,7 +116,7 @@ replay_revstart(svn_revnum_t revision,
                            &(propstring->len)));
 
   SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
-  svn_stream_close(stdout_stream);
+  SVN_ERR(svn_stream_close(stdout_stream));
 
   /* Extract editor and editor_baton from the replay_baton and
      set them so that the editor callbacks can use them. */
@@ -187,7 +187,6 @@ replay_range(svn_ra_session_t *session, const char *url,
   struct replay_baton *replay_baton;
   void *dump_baton;
   const char *uuid;
-  apr_hash_t *encoded_prophash;
   svn_stringbuf_t *propstring;
   svn_stream_t *propstream;
   svn_stream_t *stdout_stream;
@@ -212,19 +211,20 @@ replay_range(svn_ra_session_t *session, const char *url,
   /* Fake revision 0 if necessary */
   if (start_revision == 0)
     {
+      apr_hash_t *prophash;
       SVN_ERR(svn_stream_printf(stdout_stream, pool,
                                 SVN_REPOS_DUMPFILE_REVISION_NUMBER
                                 ": %ld\n", start_revision));
 
-      encoded_prophash = apr_hash_make(pool);
+      prophash = apr_hash_make(pool);
       propstring = svn_stringbuf_create("", pool);
 
       SVN_ERR(svn_ra_rev_proplist(session, start_revision,
-                                  &encoded_prophash, pool));
+                                  &prophash, pool));
 
       propstream = svn_stream_from_stringbuf(propstring, pool);
-      SVN_ERR(svn_hash_write2(encoded_prophash, propstream, "PROPS-END", pool));
-      svn_stream_close(propstream);
+      SVN_ERR(svn_hash_write2(prophash, propstream, "PROPS-END", pool));
+      SVN_ERR(svn_stream_close(propstream));
 
       /* Property-content-length: 14; Content-length: 14 */
       SVN_ERR(svn_stream_printf(stdout_stream, pool,
@@ -242,7 +242,7 @@ replay_range(svn_ra_session_t *session, const char *url,
       if (! quiet)
         svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu\n", start_revision);
 
-      start_revision ++;
+      start_revision++;
     }
 
   SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
@@ -449,9 +449,8 @@ main(int argc, const char **argv)
   if (end_revision > latest_revision)
     {
       SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
-                                      _("UPPER refers to a "
-                                        "non-existent revision.\n")));
-      SVNRDUMP_ERR(usage(argv[0], pool));
+                                      _("Revision %ld does not exist.\n"),
+                                      end_revision));
       exit(EXIT_FAILURE);
     }
   if (end_revision < start_revision)
@@ -459,7 +458,6 @@ main(int argc, const char **argv)
       SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
                                       _("LOWER cannot be greater "
                                         "than UPPER.\n")));
-      SVNRDUMP_ERR(usage(argv[0], pool));
       exit(EXIT_FAILURE);
     }
 
