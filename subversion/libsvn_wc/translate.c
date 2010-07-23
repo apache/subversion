@@ -239,31 +239,6 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__get_eol_style(svn_subst_eol_style_t *style,
-                      const char **eol,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  const svn_string_t *propval;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  /* Get the property value. */
-  SVN_ERR(svn_wc__internal_propget(&propval, db, local_abspath,
-                                   SVN_PROP_EOL_STYLE, result_pool,
-                                   scratch_pool));
-
-  /* Convert it. */
-  svn_subst_eol_style_from_value(style, eol, propval ? propval->data : NULL);
-
-  return SVN_NO_ERROR;
-}
-
-
 void
 svn_wc__eol_value_from_string(const char **value, const char *eol)
 {
