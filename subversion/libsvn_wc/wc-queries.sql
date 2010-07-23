@@ -354,13 +354,29 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND
 update base_node set presence= ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_BASE_PRESENCE
+update node_data set presence = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_BASE_PRESENCE_KIND
 update base_node set presence = ?3, kind = ?4
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_BASE_PRESENCE_KIND
+update node_data set presence = ?3, kind = ?4
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_WORKING_PRESENCE
 update working_node set presence = ?3
 where wc_id = ?1 and local_relpath =?2;
+
+-- STMT_UPDATE_NODE_WORKING_PRESENCE
+update node_data set presence = ?3
+where wc_id = ?1 and local_relpath = ?2
+  and op_depth in (select op_depth from node_data
+                   where wc_id = ?1 and local_relpath = ?2
+                   order by op_depth desc
+                   limit 1);
 
 -- STMT_UPDATE_BASE_PRESENCE_AND_REVNUM
 update base_node set presence = ?3, revnum = ?4
