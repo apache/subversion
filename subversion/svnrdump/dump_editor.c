@@ -55,6 +55,9 @@ struct dump_edit_baton {
   /* Temporary file to write delta to along with its checksum. */
   char *delta_abspath;
 
+  /* The checksum of the file the delta is being applied to */
+  const char *base_checksum;
+
   /* Flags to trigger dumping props and text */
   svn_boolean_t dump_props;
   svn_boolean_t dump_text;
@@ -630,6 +633,7 @@ apply_textdelta(void *file_baton, const char *base_checksum,
   svn_txdelta_to_svndiff2(&(hb->apply_handler), &(hb->apply_baton),
                           hb->delta_filestream, 0, hb->pool);
   eb->dump_text = TRUE;
+  eb->base_checksum = apr_pstrdup(pool, base_checksum);
 
   /* The actual writing takes place when this function has
      finished. Set handler and handler_baton now so for
@@ -664,12 +668,20 @@ close_file(void *file_baton,
 
       SVN_ERR(svn_io_stat(info, eb->delta_abspath, APR_FINFO_SIZE, pool));
 
+      if (eb->base_checksum)
+        /* Text-delta-base-md5: */
+        SVN_ERR(svn_stream_printf(eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
+                                  ": %s\n",
+                                  eb->base_checksum));
+
       /* Text-content-length: 39 */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH
                                 ": %lu\n",
                                 (unsigned long)info->size));
-      /* Text-content-md5: 82705804337e04dcd0e586bfa2389a7f */
+
+      /* Text-content-md5: 82705804337e04dcd0e586bfa2389a7f */      
       SVN_ERR(svn_stream_printf(eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
                                 ": %s\n",
