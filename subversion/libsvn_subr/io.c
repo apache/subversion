@@ -3218,11 +3218,11 @@ svn_io_dir_read(apr_finfo_t *finfo,
 
 
 svn_error_t *
-svn_io_dir_walk(const char *dirname,
-                apr_int32_t wanted,
-                svn_io_walk_func_t walk_func,
-                void *walk_baton,
-                apr_pool_t *pool)
+svn_io_dir_walk2(const char *dirname,
+                 apr_int32_t wanted,
+                 svn_io_walk_func_t walk_func,
+                 void *walk_baton,
+                 apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_dir_t *handle;
@@ -3309,9 +3309,10 @@ svn_io_dir_walk(const char *dirname,
                                subpool));
         }
       /* else:
-         some other type of file; skip it.
+         Some other type of file; skip it for now.  We've reserved the
+         right to expand our coverage here in the future, though,
+         without revving this API.
       */
-
     }
 
   svn_pool_destroy(subpool);

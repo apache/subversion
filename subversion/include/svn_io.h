@@ -1432,19 +1432,38 @@ typedef svn_error_t * (*svn_io_walk_func_t)(void *baton,
                                             const apr_finfo_t *finfo,
                                             apr_pool_t *pool);
 
-/** This function will recursively walk over the files and directories
- * rooted at @a dirname, a utf8-encoded path. For each file or directory,
- * @a walk_func is invoked, passing in the @a walk_baton, the utf8-encoded
- * full path to the entry, an @c apr_finfo_t structure, and a temporary
- * pool for allocations.  For any directory, @a walk_func will be invoked
- * on the directory itself before being invoked on any subdirectories or
- * files within the directory.
+/** Recursively walk the directory rooted at @a dirname, a
+ * utf8-encoded path, invoking @a walk_func (with @a walk_baton) for
+ * each item in the tree.  For a given directory, invoke @a walk_func
+ * on the directory itself before invoking it on any children thereof.
  *
- * The set of information passed to @a walk_func is specified by @a wanted,
- * and the items specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
+ * Deliver to @a walk_func the information specified by @a wanted,
+ * plus the items specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
  *
- * All allocations will be performed in @a pool.
+ * Use @a pool for all allocations.
+ *
+ * @note This function does not currently pass all file types to @a
+ * walk_func -- only APR_DIR, APR_REG, and APR_LNK.  We reserve the
+ * right to pass additional file types through this interface in the
+ * future, though, so implementations of this callback should
+ * explicitly test FINFO->filetype.  See the APR library's
+ * apr_filetype_e enum for the various filetypes and their meanings.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_io_dir_walk2(const char *dirname,
+                 apr_int32_t wanted,
+                 svn_io_walk_func_t walk_func,
+                 void *walk_baton,
+                 apr_pool_t *pool);
+
+/** Similar to svn_io_dir_walk(), but only calls @a walk_func for
+ * files of type APR_DIR (directory) and APR_REG (regular file).
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_dir_walk(const char *dirname,
                 apr_int32_t wanted,
