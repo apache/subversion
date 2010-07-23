@@ -2341,8 +2341,32 @@ run_record_fileinfo(svn_wc__db_t *db,
 {
   const svn_skel_t *arg1 = work_item->children->next;
   const char *local_abspath;
+  apr_time_t set_time = 0;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
+  if (arg1->next)
+    set_time = svn_skel__parse_int(arg1->next, scratch_pool);
+
+  if (set_time != 0)
+    {
+      svn_node_kind_t kind;
+      svn_boolean_t is_special;
+
+      /* Do not set the timestamp on special files. */
+      SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special,
+                                        scratch_pool));
+
+      /* Don't set affected time when local_abspath does not exist or is
+         a special file */
+      if (kind == svn_node_file && !is_special)
+        SVN_ERR(svn_io_set_file_affected_time(set_time, local_abspath,
+                                              scratch_pool));
+
+      /* Note that we can't use the value we get here for recording as the
+         filesystem might have a different timestamp granularity */
+    }
+
 
   return svn_error_return(get_and_record_fileinfo(db, local_abspath,
                                                   TRUE /* ignore_enoent */,
@@ -2353,11 +2377,15 @@ run_record_fileinfo(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
                                  const char *local_abspath,
+                                 apr_time_t set_time,
                                  apr_pool_t *result_pool)
 {
   *work_item = svn_skel__make_empty_list(result_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (set_time)
+   svn_skel__prepend_int(set_time, *work_item, result_pool);
 
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
                         *work_item, result_pool);

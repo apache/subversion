@@ -65,19 +65,6 @@ svn_wc__loggy_delete_entry(svn_skel_t **work_item,
                            svn_wc__db_kind_t kind,
                            apr_pool_t *result_pool);
 
-/* Set *WORK_ITEM to a work queue instruction to set the timestamp of
-   LOCAL_ABSPATH to the time TIMESTR.
-
-   ADM_ABSPATH is described above.
-*/
-svn_error_t *
-svn_wc__loggy_set_timestamp(svn_skel_t **work_item,
-                            svn_wc__db_t *db,
-                            const char *adm_abspath,
-                            const char *local_abspath,
-                            const char *timestr,
-                            apr_pool_t *result_pool);
-
 /* Set *WORK_ITEM to a work queue instruction to
    ### ...
 

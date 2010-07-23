@@ -189,10 +189,14 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
    LOCAL_ABSPATH into the TRANSLATED_SIZE and LAST_MOD_TIME of the node via
    the svn_wc__db_global_record_fileinfo() function.
 
+   If SET_TIME is not 0, set LOCAL_ABSPATH's last modified time to this
+   time and after that record the actual file time.
+
    ### it is unclear whether this should survive.  */
 svn_error_t *
 svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
                                  const char *local_abspath,
+                                 apr_time_t set_time,
                                  apr_pool_t *result_pool);
 
 
