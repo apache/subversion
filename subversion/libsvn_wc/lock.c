@@ -1534,7 +1534,7 @@ acquire_locks_recursively(svn_wc_context_t *wc_ctx,
                           apr_pool_t *scratch_pool)
 {
  svn_wc__db_t *db = wc_ctx->db;
-  apr_array_header_t *children;
+  const apr_array_header_t *children;
   apr_pool_t *iterpool;
   svn_error_t *err;
   int i;
