@@ -2660,11 +2660,15 @@ svn_io_detect_mimetype2(const char **mimetype,
 
 
   /* Right now, this function is going to be really stupid.  It's
-     going to examine the first block of data, and make sure that 85%
+     going to examine the first block of data, and make sure that 15%
      of the bytes are such that their value is in the ranges 0x07-0x0D
-     or 0x20-0x7F, and that 100% of those bytes is not 0x00.
+     or 0x20-0x7F, and that none of those bytes is 0x00.  If those
+     criteria are not met, we're calling it binary.
 
-     If those criteria are not met, we're calling it binary. */
+     NOTE:  Originally, I intended to target 85% of the bytes being in
+     the specified ranges, but I flubbed the condition.  At any rate,
+     folks aren't complaining, so I'm not sure that it's worth
+     adjusting this retroactively now.  --cmpilato  */
   if (amt_read > 0)
     {
       apr_size_t i;
