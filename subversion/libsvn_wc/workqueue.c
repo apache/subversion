@@ -2074,8 +2074,6 @@ run_file_copy_translated(svn_wc__db_t *db,
   apr_hash_t *keywords;
   svn_boolean_t special;
 
-  svn_error_t *err;
-
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   src_abspath = apr_pstrmemdup(scratch_pool, arg1->next->data,
                                arg1->next->len);
@@ -2092,7 +2090,7 @@ run_file_copy_translated(svn_wc__db_t *db,
                                         eol, TRUE /* repair */,
                                         keywords, TRUE /* expand */,
                                         special,
-                                        NULL, NULL, /* ### cancel */
+                                        cancel_func, cancel_baton,
                                         scratch_pool));
 
   return SVN_NO_ERROR;
