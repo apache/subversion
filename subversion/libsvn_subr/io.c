@@ -3295,11 +3295,11 @@ svn_io_dir_walk2(const char *dirname,
           SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
                                      subpool));
           full_path = svn_dirent_join(dirname, name_utf8, subpool);
-          SVN_ERR(svn_io_dir_walk(full_path,
-                                  wanted,
-                                  walk_func,
-                                  walk_baton,
-                                  subpool));
+          SVN_ERR(svn_io_dir_walk2(full_path,
+                                   wanted,
+                                   walk_func,
+                                   walk_baton,
+                                   subpool));
         }
       else if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
         {
