@@ -474,8 +474,10 @@ init_prop_content_info(target_content_info_t **prop_content_info,
  * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * Upon success, allocate the patch target structure in RESULT_POOL.
- * Else, set *target to NULL.
+ * The patch target structure is allocated in RESULT_POOL, but if the target
+ * should be skipped, PATCH_TARGET->SKIPPED is set and the target should be
+ * treated as not fully initialized, e.g. the caller should not not do any
+ * further operations on the target if it is marked to be skipped.
  * REMOVE_TEMPFILES as in svn_client_patch().
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
