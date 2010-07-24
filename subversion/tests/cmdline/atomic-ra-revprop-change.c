@@ -52,7 +52,7 @@ aborting_prompt_func(svn_auth_cred_simple_t **cred,
 
 static svn_error_t *
 construct_auth_baton(svn_auth_baton_t **auth_baton_p,
-                     apr_pool_t *result_pool)
+                     apr_pool_t *pool)
 {
   apr_array_header_t *providers;
   svn_auth_provider_object_t *simple_provider;
