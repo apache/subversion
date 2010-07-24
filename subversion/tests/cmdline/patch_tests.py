@@ -2162,7 +2162,6 @@ def patch_no_eol_at_eof(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-### We need to add deletes and adds of properties to this test.
 def patch_with_properties(sbox):
   "patch with properties"
 
@@ -2172,10 +2171,13 @@ def patch_with_properties(sbox):
   patch_file_path = make_patch_path(sbox)
   iota_path = os.path.join(wc_dir, 'iota')
 
-  iota_prop_contents = "This is the property 'iota_prop'.\n"
+  modified_prop_contents = "This is the property 'modified'.\n"
+  deleted_prop_contents = "This is the property 'deleted'.\n"
 
-  # Set iota contents
-  svntest.main.run_svn(None, 'propset', 'prop', iota_prop_contents,
+  # Set iota prop contents
+  svntest.main.run_svn(None, 'propset', 'modified', modified_prop_contents,
+                       iota_path)
+  svntest.main.run_svn(None, 'propset', 'deleted', deleted_prop_contents,
                        iota_path)
   expected_output = svntest.wc.State(wc_dir, {
       'iota'    : Item(verb='Sending'),
@@ -2193,22 +2195,30 @@ def patch_with_properties(sbox):
     "+++ iota\t(working copy)\n",
     "Property changes on: iota\n",
     "-------------------------------------------------------------------\n",
-    "Modified: prop\n",
-    "## -1 +1 ""\n",
-    "-This is the property 'iota_prop'.\n",
-    "+This is the property 'prop'.\n",
+    "Modified: modified\n",
+    "## -1 +1 ##\n",
+    "-This is the property 'modified'.\n",
+    "+The property 'modified' has changed.\n",
+    "Added: added\n",
+    "## -0,0 +1 ""\n",
+    "+This is the property 'added'.\n",
+    "Deleted: deleted\n",
+    "## -1 +0,0 ##\n",
+    "-This is the property 'deleted'.\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  iota_prop_contents = "This is the property 'prop'.\n"
+  modified_prop_contents = "The property 'modified' has changed.\n"
+  added_prop_contents = "This is the property 'added'.\n"
 
   expected_output = [
     'U         %s\n' % os.path.join(wc_dir, 'iota'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota', props={'prop' : iota_prop_contents})
+  expected_disk.tweak('iota', props={'modified' : modified_prop_contents,
+                                     'added' : added_prop_contents})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', status=' M')
 
