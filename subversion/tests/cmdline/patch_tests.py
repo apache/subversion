@@ -2429,6 +2429,102 @@ def patch_same_twice(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+def patch_dir_properties(sbox):
+  "patch with dir properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  A_path = os.path.join(wc_dir, 'A')
+  B_path = os.path.join(wc_dir, 'A', 'B')
+
+  modified_prop_contents = "This is the property 'modified'.\n"
+  deleted_prop_contents = "This is the property 'deleted'.\n"
+
+  # Set the properties
+  svntest.main.run_svn(None, 'propset', 'modified', modified_prop_contents,
+                       A_path)
+  svntest.main.run_svn(None, 'propset', 'deleted', deleted_prop_contents,
+                       B_path)
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'    : Item(verb='Sending'),
+      'A/B'    : Item(verb='Sending'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A', wc_rev=2)
+  expected_status.tweak('A/B', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: A\n",
+    "===================================================================\n",
+    "--- A\t(revision 1)\n",
+    "+++ A\t(working copy)\n",
+    "\n",
+    "Property changes on: A\n",
+    "-------------------------------------------------------------------\n",
+    "Modified: modified\n",
+    "## -1 +1 ##\n",
+    "-This is the property 'modified'.\n",
+    "+The property 'modified' has changed.\n",
+    "Added: svn:ignore\n",
+    "## -0,0 +1,3 ##\n",
+    "+*.o\n",
+    "+.libs\n",
+    "+*.lo\n",
+    "Index: A/B\n",
+    "===================================================================\n",
+    "--- A/B\t(revision 1)\n",
+    "+++ A/B\t(working copy)\n",
+    "\n",
+    "Property changes on: A/B\n",
+    "-------------------------------------------------------------------\n",
+    "Deleted: deleted\n",
+    "## -1 +0,0 ##\n",
+    "-This is the property 'deleted'.\n",
+    "Added: svn:executable\n",
+    "## -0,0 +1 ##\n",
+    "+*\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  modified_prop_contents = "The property 'modified' has changed.\n"
+  ignore_prop_contents = "*.o\n.libs\n*.lo\n"
+
+  ### The output for properties set on illegal targets (i.e. svn:excutable
+  ### on a dir) is still subject to change. We might just want to bail out 
+  ### directly instead of catching the error and use the notify mechanism.
+  expected_output = [
+    ' U        %s\n' % os.path.join(wc_dir, 'A'),
+    ' U        %s\n' % os.path.join(wc_dir, 'A', 'B'),
+    'Skipped missing target \'svn:executable\' on (\'%s\')' % B_path,
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A', props={'modified' : modified_prop_contents,
+                                  'svn:ignore' : ignore_prop_contents})
+  expected_disk.tweak('A/B', props={})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A', status=' M')
+  expected_status.tweak('A/B', status=' M')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -2454,6 +2550,7 @@ test_list = [ None,
               patch_no_eol_at_eof,
               XFail(patch_with_properties),
               patch_same_twice,
+              XFail(patch_dir_properties),
             ]
 
 if __name__ == '__main__':
