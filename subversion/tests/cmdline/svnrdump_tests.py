@@ -73,15 +73,15 @@ def run_test(sbox, dumpfile_name):
   svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile)
 
   # Create a dump file using svnrdump
-  r, svnrdump_dumpfile, err = svntest.main.run_svnrdump(sbox.repo_url)
+  r, svnrdump_dumpfile, err = svntest.main.run_svnrdump('-q', sbox.repo_url)
 
   # Check error code
   if (r != 0):
     raise svntest.Failure('Result code not 0')
 
   # Check the output from stderr
-  if not err[0].startswith('* Dumped revision'):
-    raise svntest.Failure('No valid output')
+  if err:
+    raise SVNUnexpectedStderr(err)
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
