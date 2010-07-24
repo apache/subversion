@@ -1122,6 +1122,7 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
 svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
                                           svn_revnum_t rev,
                                           const char *name,
+                                          const svn_string_t *const *old_value_p,
                                           const svn_string_t *value,
                                           apr_pool_t *pool)
 {
@@ -1135,6 +1136,9 @@ svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
       { "DAV:", "auto-version" },
       { NULL }
     };
+
+  if (old_value_p)
+    SVN__NOT_IMPLEMENTED();
 
   /* Main objective: do a PROPPATCH (allprops) on a baseline object */
 

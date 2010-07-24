@@ -809,11 +809,15 @@ static svn_error_t *ra_svn_get_dated_rev(svn_ra_session_t *session,
 
 static svn_error_t *ra_svn_change_rev_prop(svn_ra_session_t *session, svn_revnum_t rev,
                                            const char *name,
+                                           const svn_string_t *const *old_value_p,
                                            const svn_string_t *value,
                                            apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
+
+  if (old_value_p)
+    SVN__NOT_IMPLEMENTED();
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "change-rev-prop", "rc?s",
                                rev, name, value));

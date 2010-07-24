@@ -91,8 +91,8 @@ change_rev_prop(const char *url,
   SVN_ERR(svn_ra_open3(&sess, url, NULL, callbacks, NULL /* baton */,
                        NULL /* config */, pool));
 
-  /* XXX: pass OLD_PROPVAL here */
-  SVN_ERR(svn_ra_change_rev_prop(sess, revision, propname, propval, pool));
+  SVN_ERR(svn_ra_change_rev_prop2(sess, revision, propname,
+                                  &old_value, propval, pool));
 
   return SVN_NO_ERROR;
 }

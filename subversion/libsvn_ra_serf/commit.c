@@ -2146,6 +2146,7 @@ svn_error_t *
 svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
                              svn_revnum_t rev,
                              const char *name,
+                             const svn_string_t *const *old_value_p,
                              const svn_string_t *value,
                              apr_pool_t *pool)
 {
@@ -2156,6 +2157,9 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   const char *vcc_url, *proppatch_target, *ns;
   apr_hash_t *props;
   svn_error_t *err;
+
+  if (old_value_p)
+    SVN__NOT_IMPLEMENTED();
 
   commit = apr_pcalloc(pool, sizeof(*commit));
 
