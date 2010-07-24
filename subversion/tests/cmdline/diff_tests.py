@@ -3367,6 +3367,72 @@ def diff_git_format_url_url(sbox):
                                      '--old', repo_url + '@1', '--new',
                                      repo_url + '@2')
 
+def diff_prop_missing_context(sbox):
+  "diff for property has missing context"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  prop_val = "".join([
+       "One line\n",
+       "Another line\n",
+       "\n",
+       "    $ email <<EOT\n",
+       "    > matkin@docs.uu.se\n",
+       "    > Something strange @ my place\n",
+       "    > EOT\n",
+       "\n",
+       "to a shell, will produce the output\n",
+       "\n",
+     ])
+  svntest.main.run_svn(None,
+                       "propset", "prop", prop_val, iota_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota'    : Item(verb='Sending'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  prop_val = "".join(["\n",
+               "    $ email <<EOT\n",
+               "    > matkin@docs.uu.se\n",
+               "    > Something strange @ my place\n",
+               "    > EOT\n",
+               "\n",
+               "\n",
+             ])
+  svntest.main.run_svn(None,
+                       "propset", "prop", prop_val, iota_path)
+  expected_output = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 2)\n",
+    "+++ iota\t(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Modified: prop\n",
+    "## -1,10 +1,7 ##\n",
+    "-One line\n",
+    "-Another line\n",
+    "\n", 
+    "    $ email <<EOT\n",
+    "    > matkin@docs.uu.se\n",
+    "    > Something strange @ my place\n",
+    "    > EOT\n",
+    "\n",
+    "-to a shell, will produce the output\n",
+    "\n",
+    "\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', iota_path)
+
+
 ########################################################################
 #Run the tests
 
@@ -3426,6 +3492,7 @@ test_list = [ None,
               diff_git_format_wc_wc,
               diff_git_format_url_wc,
               diff_git_format_url_url,
+              XFail(diff_prop_missing_context),
               ]
 
 if __name__ == '__main__':
