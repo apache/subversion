@@ -617,14 +617,16 @@ def run_entriesdump(path):
 
 def run_atomic_ra_revprop_change(url, revision, propname, propval, old_propval):
   """Run the atomic-ra-revprop-change helper, returning its exit code, stdout, 
-  and stderr."""
+  and stderr.  For HTTP, default HTTP library is used."""
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   #exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
   #                                                      0, 0, None, path)
 
+  # This passes HTTP_LIBRARY in addition to our params.
   return run_command(atomic_ra_revprop_change_binary, True, False, 
-                     url, revision, propname, propval, old_propval)
+                     url, revision, propname, propval, old_propval,
+                     options.http_library)
 
 
 # Chmod recursively on a whole subtree

@@ -147,7 +147,8 @@ def run_and_verify_atomic_ra_revprop_change(message,
                                             expected_exit, 
                                             url, revision, propname,
                                             propval, old_propval):
-  """Run atomic-ra-revprop-change helper and check its output and exit code."""
+  """Run atomic-ra-revprop-change helper and check its output and exit code.
+  For HTTP, the default HTTP library is used."""
 
   exit_code, out, err = main.run_atomic_ra_revprop_change(url, revision, propname,
                                                           propval, old_propval)
