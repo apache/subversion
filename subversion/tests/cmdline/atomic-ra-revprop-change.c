@@ -139,13 +139,15 @@ main(int argc, const char *argv[])
 
   if (argc != 7)
     {
-      printf("USAGE: %%s URL REVISION PROPNAME PROPVAL OLDPROPVAL HTTP_LIBRARY\n");
+      fprintf(stderr,
+              "Usage: %s URL REVISION PROPNAME PROPVAL OLDPROPVAL HTTP_LIBRARY\n",
+              argv[0]);
       exit(1);
     }
 
   if (apr_initialize() != APR_SUCCESS)
     {
-      printf("apr_initialize() failed.\n");
+      fprintf(stderr, "apr_initialize() failed.\n");
       exit(1);
     }
 
