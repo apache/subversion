@@ -194,7 +194,7 @@ static const char *bad_git_diff_header =
   "+## -0,0 +20 ##"                                                     NL
   "+@@ -1,2 +0,0 @@"                                                    NL
   "Deleted: prop_del"                                                   NL
-  "## -1,2 +0,0 ##"                                                      NL
+  "## -1,2 +0,0 ##"                                                     NL
   "---- iota"                                                           NL
   "-+++ iota"                                                           NL
   "Modified: non-existent"                                              NL
