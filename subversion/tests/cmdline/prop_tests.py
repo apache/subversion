@@ -1967,21 +1967,37 @@ def atomic_over_ra(sbox):
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
 
-  # Set some property.
+  # From this point on, similar to ../libsvn_fs-fs-test.c:revision_props().
+  s1 = "violet"
+  s2 = "wrong value"
+
+  # Initial state.
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--revprop', '-r', '0',
-                                     'state', 'old', repo_url)
+                                     'flower', 'violet', repo_url)
 
-  # Attempt to change it, unsuccessfully.
-  expected_stderr = ".*revprop 'state' has unexpected value.*"
-  svntest.actions.run_and_verify_atomic_ra_revprop_change(
-     None, None, expected_stderr, 1, repo_url, 0, 'state', 'not old', 'new')
+  def FAILS_WITH_BPV(not_the_old_value, proposed_value):
+    expected_stderr = ".*revprop 'flower' has unexpected value.*"
+    svntest.actions.run_and_verify_atomic_ra_revprop_change(
+       None, None, expected_stderr, 1, repo_url, 0, 'flower',
+       not_the_old_value, proposed_value)
+  def PASSES_WITHOUT_BPV(yes_the_old_value, proposed_value):
+    svntest.actions.run_and_verify_atomic_ra_revprop_change(
+       None, None, [], 0, repo_url, 0, 'flower',
+       yes_the_old_value, proposed_value)
 
-  # Attempt to change it, successfully.
-  svntest.actions.run_and_verify_atomic_ra_revprop_change(
-     None, None, [], 0, repo_url, 0, 'state', 'old', 'new')
-
+  # Value of "flower" is 's1'.
+  FAILS_WITH_BPV(s2, s1)
+  PASSES_WITHOUT_BPV(s1, s2)
+  # Value of "flower" is 's2'.
+  FAILS_WITH_BPV(s1, None)
+  PASSES_WITHOUT_BPV(s2, None)
+  # Value of "flower" is <not set>.
+  FAILS_WITH_BPV(s2, s1)
+  PASSES_WITHOUT_BPV(None, s1)
+  # Value of "flower" is 's1'.
+  svntest.actions.check_prop('flower', repo_url, [s1], 0)
 
 ########################################################################
 # Run the tests
