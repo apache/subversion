@@ -179,6 +179,42 @@ static const char *bad_git_diff_header =
   "## -0,0 +1 ##"                                                       NL
   "+value"                                                              NL;
 
+  /* A unidiff containing diff symbols in the body of the hunks. */
+  static const char *diff_symbols_in_prop_unidiff =
+  "Index: iota"                                                         NL
+  "===================================================================" NL
+  "--- iota"                                                            NL
+  "+++ iota"                                                            NL
+  ""                                                                    NL
+  "Property changes on: iota"                                           NL
+  "___________________________________________________________________" NL
+  "Added: prop_add"                                                     NL
+  "## -0,0 +1,3 ##"                                                     NL
+  "+Added: bogus_prop"                                                  NL
+  "+## -0,0 +20 ##"                                                     NL
+  "+@@ -1,2 +0,0 @@"                                                    NL
+  "Deleted: prop_del"                                                   NL
+  "## -1,2 +0,0 ##"                                                      NL
+  "---- iota"                                                           NL
+  "-+++ iota"                                                           NL
+  "Modified: non-existent"                                              NL
+  "blah, just noise - no valid hunk header"                             NL
+  "Modified: prop_mod"                                                  NL
+  "## -1,4 +1,4 ##"                                                     NL
+  "-## -1,2 +1,2 ##"                                                    NL
+  "+## -1,3 +1,3 ##"                                                    NL
+  " ## -1,5 -0,0 ##"                                                    NL
+  " @@ -1,5 -0,0 @@"                                                    NL
+  " Modified: prop_mod"                                                 NL
+  "## -10,4 +10,4 ##"                                                   NL
+  " context"                                                            NL
+  " context"                                                            NL
+  " context"                                                            NL
+  "-## -0,0 +1 ##"                                                      NL
+  "+## -1,2 +1,4 ##"                                                    NL
+  ""                                                                    NL;
+
+
 /* Create a PATCH_FILE with name FNAME containing the contents of DIFF. */
 static svn_error_t *
 create_patch_file(apr_file_t **patch_file, const char *fname,
@@ -651,6 +687,106 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
+{
+  svn_patch_t *patch;
+  apr_file_t *patch_file;
+  svn_prop_patch_t *prop_patch;
+  svn_hunk_t *hunk;
+  apr_array_header_t *hunks;
+  const char *fname = "test_parse_diff_symbols_in_prop_unidiff.patch";
+
+  SVN_ERR(create_patch_file(&patch_file, fname, diff_symbols_in_prop_unidiff,
+                            pool));
+
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota"));
+  SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+  SVN_TEST_ASSERT(apr_hash_count(patch->prop_patches) == 3);
+
+  /* Check the added property */
+  prop_patch = apr_hash_get(patch->prop_patches, "prop_add",
+                            APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_added);
+
+  hunks = prop_patch->hunks;
+  SVN_TEST_ASSERT(hunks->nelts == 1);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk, TRUE,
+                        "",
+                        pool));
+
+  SVN_ERR(check_content(hunk, FALSE,
+                        "Added: bogus_prop" NL
+                        "## -0,0 +20 ##" NL
+                        "@@ -1,2 +0,0 @@" NL,
+                        pool));
+
+  /* Check the deleted property */
+  prop_patch = apr_hash_get(patch->prop_patches, "prop_del",
+                            APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_deleted);
+
+  hunks = prop_patch->hunks;
+  SVN_TEST_ASSERT(hunks->nelts == 1);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk, TRUE,
+                        "--- iota" NL
+                        "+++ iota" NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk, FALSE,
+                        "",
+                        pool));
+
+  /* Check the modified property */
+  prop_patch = apr_hash_get(patch->prop_patches, "prop_mod",
+                            APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_modified);
+  hunks = prop_patch->hunks;
+  SVN_TEST_ASSERT(hunks->nelts == 2);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk, TRUE,
+                        "## -1,2 +1,2 ##" NL
+                        "## -1,5 -0,0 ##" NL
+                        "@@ -1,5 -0,0 @@" NL
+                        "Modified: prop_mod" NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk, FALSE,
+                        "## -1,3 +1,3 ##" NL
+                        "## -1,5 -0,0 ##" NL
+                        "@@ -1,5 -0,0 @@" NL
+                        "Modified: prop_mod" NL,
+                        pool));
+
+  hunk = APR_ARRAY_IDX(hunks, 1 , svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk, TRUE,
+                        "context" NL
+                        "context" NL
+                        "context" NL
+                        "## -0,0 +1 ##" NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk, FALSE,
+                        "context" NL
+                        "context" NL
+                        "context" NL
+                        "## -1,2 +1,4 ##" NL,
+                        pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* ========================================================================== */
 
@@ -669,5 +805,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test property unidiff parsing"),
     SVN_TEST_PASS2(test_parse_property_and_text_diff,
                    "test property and text unidiff parsing"),
+    SVN_TEST_PASS2(test_parse_diff_symbols_in_prop_unidiff,
+                   "test property diffs with odd symbols"),
     SVN_TEST_NULL
   };
