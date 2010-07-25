@@ -37,12 +37,26 @@
 
 /* implements svn_auth_simple_prompt_func_t */
 static svn_error_t *
-aborting_prompt_func(svn_auth_cred_simple_t **cred,
-                     void *baton,
-                     const char *realm,
-                     const char *username,
-                     svn_boolean_t may_save,
-                     apr_pool_t *pool)
+aborting_simple_prompt_func(svn_auth_cred_simple_t **cred,
+                            void *baton,
+                            const char *realm,
+                            const char *username,
+                            svn_boolean_t may_save,
+                            apr_pool_t *pool)
+{
+  /* Oops, the jrandom:rayjandom we passed for SVN_AUTH_PARAM_DEFAULT_* failed,
+     and the prompt provider has retried.
+   */
+  SVN_ERR_MALFUNCTION();
+}
+
+/* implements svn_auth_username_prompt_func_t */
+static svn_error_t *
+aborting_username_prompt_func(svn_auth_cred_username_t **cred,
+                              void *baton,
+                              const char *realm,
+                              svn_boolean_t may_save,
+                              apr_pool_t *pool)
 {
   /* Oops, the jrandom:rayjandom we passed for SVN_AUTH_PARAM_DEFAULT_* failed,
      and the prompt provider has retried.
@@ -61,8 +75,12 @@ construct_auth_baton(svn_auth_baton_t **auth_baton_p,
   /* A bit of dancing just to pass jrandom:rayjandom. */
   providers = apr_array_make(pool, 1, sizeof(svn_auth_provider_object_t *)),
   svn_auth_get_simple_prompt_provider(&simple_provider,
-                                      aborting_prompt_func, NULL,
+                                      aborting_simple_prompt_func, NULL,
                                       0, pool);
+  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = simple_provider;
+  svn_auth_get_username_prompt_provider(&simple_provider,
+                                        aborting_username_prompt_func, NULL,
+                                        0, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = simple_provider;
   svn_auth_open(&auth_baton, providers, pool);
   svn_auth_set_parameter(auth_baton,
