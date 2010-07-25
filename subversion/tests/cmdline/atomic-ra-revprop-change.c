@@ -32,7 +32,20 @@
 #include "svn_dirent_uri.h"
 #include "svn_ra.h"
 
+#include "private/svn_skel.h"
+
 #include "svn_private_config.h"
+
+
+#define KEY_OLD_PROPVAL "old_value_p"
+#define KEY_NEW_PROPVAL "value"
+
+#define USAGE_MSG \
+  "Usage: %s URL REVISION PROPNAME VALUES_SKEL HTTP_LIBRARY\n" \
+  "\n" \
+  "VALUES_SKEL is a proplist skel containing pseudo-properties '%s' \n" \
+  "and '%s'.  A pseudo-property missing from the skel is interpreted \n" \
+  "as unset.\n"
 
 
 /* implements svn_auth_simple_prompt_func_t */
@@ -140,6 +153,23 @@ change_rev_prop(const char *url,
   return SVN_NO_ERROR;
 }
 
+/* Parse SKEL_CSTR according to the description in USAGE_MSG. */
+static svn_error_t *
+extract_values_from_skel(svn_string_t **old_propval_p,
+                         svn_string_t **propval_p,
+                         const char *skel_cstr,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *proplist;
+  svn_skel_t *skel;
+  
+  skel = svn_skel__parse(skel_cstr, strlen(skel_cstr), pool);
+  SVN_ERR(svn_skel__parse_proplist(&proplist, skel, pool));
+  *old_propval_p = apr_hash_get(proplist, KEY_OLD_PROPVAL, APR_HASH_KEY_STRING);
+  *propval_p = apr_hash_get(proplist, KEY_NEW_PROPVAL, APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
+}
 
 int
 main(int argc, const char *argv[])
@@ -155,11 +185,9 @@ main(int argc, const char *argv[])
   const char *http_library;
   char *digits_end = NULL;
 
-  if (argc != 7)
+  if (argc != 6)
     {
-      fprintf(stderr,
-              "Usage: %s URL REVISION PROPNAME PROPVAL OLDPROPVAL HTTP_LIBRARY\n",
-              argv[0]);
+      fprintf(stderr, USAGE_MSG, argv[0], KEY_OLD_PROPVAL, KEY_NEW_PROPVAL);
       exit(1);
     }
 
@@ -176,9 +204,8 @@ main(int argc, const char *argv[])
   url = svn_uri_canonicalize(argv[1], pool);
   revision = strtol(argv[2], &digits_end, 10);
   propname = argv[3];
-  propval = svn_string_create(argv[4], pool);
-  old_propval = svn_string_create(argv[5], pool);
-  http_library = argv[6];
+  SVN_INT_ERR(extract_values_from_skel(&old_propval, &propval, argv[4], pool));
+  http_library = argv[5];
 
   if ((! SVN_IS_VALID_REVNUM(revision)) || (! digits_end) || *digits_end)
     SVN_INT_ERR(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,

@@ -148,10 +148,26 @@ def run_and_verify_atomic_ra_revprop_change(message,
                                             url, revision, propname,
                                             old_propval, propval):
   """Run atomic-ra-revprop-change helper and check its output and exit code.
+  Transforms OLD_PROPVAL and PROPVAL into a skel.
   For HTTP, the default HTTP library is used."""
 
-  exit_code, out, err = main.run_atomic_ra_revprop_change(url, revision, propname,
-                                                          propval, old_propval)
+  KEY_OLD_PROPVAL = "old_value_p"
+  KEY_NEW_PROPVAL = "value"
+
+  def skel_make_atom(word):
+    return "%d %s" % (len(word), word)
+
+  def make_proplist_skel_part(nick, val):
+    if val is None:
+      return ""
+    else:
+      return "%s %s" % (skel_make_atom(nick), skel_make_atom(val))
+
+  skel = "( %s %s )" % (make_proplist_skel_part(KEY_OLD_PROPVAL, old_propval),
+                        make_proplist_skel_part(KEY_NEW_PROPVAL, propval))
+
+  exit_code, out, err = main.run_atomic_ra_revprop_change(url, revision,
+                                                          propname, skel)
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code(message, exit_code, expected_exit)
