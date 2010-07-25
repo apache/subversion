@@ -1976,11 +1976,11 @@ def atomic_over_ra(sbox):
   # Attempt to change it, unsuccessfully.
   expected_stderr = ".*revprop 'state' has unexpected value.*"
   svntest.actions.run_and_verify_atomic_ra_revprop_change(
-     None, None, expected_stderr, 1, repo_url, 0, 'state', 'new', 'not old')
+     None, None, expected_stderr, 1, repo_url, 0, 'state', 'not old', 'new')
 
   # Attempt to change it, successfully.
   svntest.actions.run_and_verify_atomic_ra_revprop_change(
-     None, None, [], 0, repo_url, 0, 'state', 'new', 'old')
+     None, None, [], 0, repo_url, 0, 'state', 'old', 'new')
 
 
 ########################################################################
