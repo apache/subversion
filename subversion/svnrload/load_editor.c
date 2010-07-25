@@ -28,7 +28,7 @@
 #include "svn_props.h"
 #include "svn_dirent_uri.h"
 
-#include "dump_editor.h"
+#include "load_editor.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 

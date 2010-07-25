@@ -327,142 +327,142 @@ version(const char *progname, apr_pool_t *pool)
   while (0)
 
 
-int
-main(int argc, const char **argv)
-{
-  const char *url = NULL;
-  char *revision_cut = NULL;
-  svn_revnum_t start_revision = svn_opt_revision_unspecified;
-  svn_revnum_t end_revision = svn_opt_revision_unspecified;
-  svn_revnum_t latest_revision = svn_opt_revision_unspecified;
-  svn_boolean_t quiet = FALSE;
-  apr_pool_t *pool = NULL;
-  svn_ra_session_t *session = NULL;
-  const char *config_dir = NULL;
-  const char *username = NULL;
-  const char *password = NULL;
-  svn_boolean_t no_auth_cache = FALSE;
-  svn_boolean_t non_interactive = FALSE;
-  apr_getopt_t *os;
+/* int */
+/* main(int argc, const char **argv) */
+/* { */
+/*   const char *url = NULL; */
+/*   char *revision_cut = NULL; */
+/*   svn_revnum_t start_revision = svn_opt_revision_unspecified; */
+/*   svn_revnum_t end_revision = svn_opt_revision_unspecified; */
+/*   svn_revnum_t latest_revision = svn_opt_revision_unspecified; */
+/*   svn_boolean_t quiet = FALSE; */
+/*   apr_pool_t *pool = NULL; */
+/*   svn_ra_session_t *session = NULL; */
+/*   const char *config_dir = NULL; */
+/*   const char *username = NULL; */
+/*   const char *password = NULL; */
+/*   svn_boolean_t no_auth_cache = FALSE; */
+/*   svn_boolean_t non_interactive = FALSE; */
+/*   apr_getopt_t *os; */
 
-  if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS)
-    return EXIT_FAILURE;
+/*   if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS) */
+/*     return EXIT_FAILURE; */
 
-  pool = svn_pool_create(NULL);
+/*   pool = svn_pool_create(NULL); */
 
-  SVNRLOAD_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
+/*   SVNRLOAD_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool)); */
 
-  os->interleave = TRUE; /* Options and arguments can be interleaved */
+/*   os->interleave = TRUE; /\* Options and arguments can be interleaved *\/ */
 
-  while (1)
-    {
-      int opt;
-      const char *opt_arg;
-      apr_status_t status = apr_getopt_long(os, svnrload__options, &opt,
-                                            &opt_arg);
+/*   while (1) */
+/*     { */
+/*       int opt; */
+/*       const char *opt_arg; */
+/*       apr_status_t status = apr_getopt_long(os, svnrload__options, &opt, */
+/*                                             &opt_arg); */
 
-      if (APR_STATUS_IS_EOF(status))
-        break;
-      if (status != APR_SUCCESS)
-        {
-          SVNRLOAD_ERR(usage(argv[0], pool));
-          exit(EXIT_FAILURE);
-        }
+/*       if (APR_STATUS_IS_EOF(status)) */
+/*         break; */
+/*       if (status != APR_SUCCESS) */
+/*         { */
+/*           SVNRLOAD_ERR(usage(argv[0], pool)); */
+/*           exit(EXIT_FAILURE); */
+/*         } */
 
-      switch(opt)
-        {
-        case 'r':
-          {
-            revision_cut = strchr(opt_arg, ':');
-            if (revision_cut)
-              {
-                start_revision = (svn_revnum_t)strtoul(opt_arg,
-                                                       &revision_cut, 10);
-                end_revision = (svn_revnum_t)strtoul(revision_cut + 1,
-                                                     NULL, 10);
-              }
-            else
-              start_revision = (svn_revnum_t)strtoul(opt_arg, NULL, 10);
-          }
-          break;
-        case 'q':
-          quiet = TRUE;
-          break;
-        case opt_config_dir:
-          config_dir = opt_arg;
-          break;
-        case opt_version:
-          SVNRLOAD_ERR(version(argv[0], pool));
-          exit(EXIT_SUCCESS);
-          break;
-        case 'h':
-          SVNRLOAD_ERR(help(argv[0], pool));
-          exit(EXIT_SUCCESS);
-          break;
-        case opt_auth_username:
-          SVNRLOAD_ERR(svn_utf_cstring_to_utf8(&username, opt_arg, pool));
-          break;
-        case opt_auth_password:
-          SVNRLOAD_ERR(svn_utf_cstring_to_utf8(&password, opt_arg, pool));
-          break;
-        case opt_auth_nocache:
-          no_auth_cache = TRUE;
-          break;
-        case opt_non_interactive:
-          non_interactive = TRUE;
-          break;
-        }
-    }
+/*       switch(opt) */
+/*         { */
+/*         case 'r': */
+/*           { */
+/*             revision_cut = strchr(opt_arg, ':'); */
+/*             if (revision_cut) */
+/*               { */
+/*                 start_revision = (svn_revnum_t)strtoul(opt_arg, */
+/*                                                        &revision_cut, 10); */
+/*                 end_revision = (svn_revnum_t)strtoul(revision_cut + 1, */
+/*                                                      NULL, 10); */
+/*               } */
+/*             else */
+/*               start_revision = (svn_revnum_t)strtoul(opt_arg, NULL, 10); */
+/*           } */
+/*           break; */
+/*         case 'q': */
+/*           quiet = TRUE; */
+/*           break; */
+/*         case opt_config_dir: */
+/*           config_dir = opt_arg; */
+/*           break; */
+/*         case opt_version: */
+/*           SVNRLOAD_ERR(version(argv[0], pool)); */
+/*           exit(EXIT_SUCCESS); */
+/*           break; */
+/*         case 'h': */
+/*           SVNRLOAD_ERR(help(argv[0], pool)); */
+/*           exit(EXIT_SUCCESS); */
+/*           break; */
+/*         case opt_auth_username: */
+/*           SVNRLOAD_ERR(svn_utf_cstring_to_utf8(&username, opt_arg, pool)); */
+/*           break; */
+/*         case opt_auth_password: */
+/*           SVNRLOAD_ERR(svn_utf_cstring_to_utf8(&password, opt_arg, pool)); */
+/*           break; */
+/*         case opt_auth_nocache: */
+/*           no_auth_cache = TRUE; */
+/*           break; */
+/*         case opt_non_interactive: */
+/*           non_interactive = TRUE; */
+/*           break; */
+/*         } */
+/*     } */
 
-  /* Only continue if the only not option argument is a url, to allow
-     implementing 'svnrdump dump URL' like handling later without breaking
-     backward compatibility */
-  if ((os->ind != os->argc-1)
-      || !svn_path_is_url(os->argv[os->ind]))
-    {
-      SVNRLOAD_ERR(usage(argv[0], pool));
-      exit(EXIT_FAILURE);
-    }
+/*   /\* Only continue if the only not option argument is a url, to allow */
+/*      implementing 'svnrdump dump URL' like handling later without breaking */
+/*      backward compatibility *\/ */
+/*   if ((os->ind != os->argc-1) */
+/*       || !svn_path_is_url(os->argv[os->ind])) */
+/*     { */
+/*       SVNRLOAD_ERR(usage(argv[0], pool)); */
+/*       exit(EXIT_FAILURE); */
+/*     } */
 
-  SVNRLOAD_ERR(svn_utf_cstring_to_utf8(&url, os->argv[os->ind], pool));
+/*   SVNRLOAD_ERR(svn_utf_cstring_to_utf8(&url, os->argv[os->ind], pool)); */
 
-  url = svn_uri_canonicalize(os->argv[os->ind], pool);
+/*   url = svn_uri_canonicalize(os->argv[os->ind], pool); */
 
 
-  SVNRLOAD_ERR(open_connection(&session,
-                               url,
-                               non_interactive,
-                               username,
-                               password,
-                               config_dir,
-                               no_auth_cache,
-                               pool));
+/*   SVNRLOAD_ERR(open_connection(&session, */
+/*                                url, */
+/*                                non_interactive, */
+/*                                username, */
+/*                                password, */
+/*                                config_dir, */
+/*                                no_auth_cache, */
+/*                                pool)); */
 
-  /* Have sane start_revision and end_revision defaults if unspecified */
-  SVNRLOAD_ERR(svn_ra_get_latest_revnum(session, &latest_revision, pool));
-  if (start_revision == svn_opt_revision_unspecified)
-    start_revision = 0;
-  if (end_revision == svn_opt_revision_unspecified)
-    end_revision = latest_revision;
-  if (end_revision > latest_revision)
-    {
-      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
-                                      "Revision %ld does not exist.\n",
-                                      end_revision));
-      exit(EXIT_FAILURE);
-    }
-  if (end_revision < start_revision)
-    {
-      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
-                                      "LOWER cannot be greater "
-                                        "than UPPER.\n"));
-      exit(EXIT_FAILURE);
-    }
+/*   /\* Have sane start_revision and end_revision defaults if unspecified *\/ */
+/*   SVNRLOAD_ERR(svn_ra_get_latest_revnum(session, &latest_revision, pool)); */
+/*   if (start_revision == svn_opt_revision_unspecified) */
+/*     start_revision = 0; */
+/*   if (end_revision == svn_opt_revision_unspecified) */
+/*     end_revision = latest_revision; */
+/*   if (end_revision > latest_revision) */
+/*     { */
+/*       SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool, */
+/*                                       "Revision %ld does not exist.\n", */
+/*                                       end_revision)); */
+/*       exit(EXIT_FAILURE); */
+/*     } */
+/*   if (end_revision < start_revision) */
+/*     { */
+/*       SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool, */
+/*                                       "LOWER cannot be greater " */
+/*                                         "than UPPER.\n")); */
+/*       exit(EXIT_FAILURE); */
+/*     } */
 
-  SVNRLOAD_ERR(replay_range(session, url, start_revision, end_revision,
-                            quiet, pool));
+/*   SVNRLOAD_ERR(replay_range(session, url, start_revision, end_revision, */
+/*                             quiet, pool)); */
 
-  svn_pool_destroy(pool);
+/*   svn_pool_destroy(pool); */
 
-  return 0;
-}
+/*   return 0; */
+/* } */
