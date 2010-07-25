@@ -1742,15 +1742,22 @@ def set_prop(name, value, path, expected_err=None):
   else:
     main.run_svn(expected_err, 'propset', name, value, path)
 
-def check_prop(name, path, exp_out):
-  """Verify that property NAME on PATH has a value of EXP_OUT"""
+def check_prop(name, path, exp_out, revprop=None):
+  """Verify that property NAME on PATH has a value of EXP_OUT.
+  If REVPROP is not None, then it is a revision number and
+  a revision property is sought."""
+  if revprop is not None:
+    revprop_options = ['--revprop', '-r', revprop]
+  else:
+    revprop_options = []
   # Not using run_svn because binary_mode must be set
   exit_code, out, err = main.run_command(main.svn_binary, None, 1, 'pg',
                                          '--strict', name, path,
                                          '--config-dir',
                                          main.default_config_dir,
                                          '--username', main.wc_author,
-                                         '--password', main.wc_passwd)
+                                         '--password', main.wc_passwd,
+                                         *revprop_options)
   if out != exp_out:
     print("svn pg --strict %s output does not match expected." % name)
     print("Expected standard output:  %s\n" % exp_out)
