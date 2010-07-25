@@ -18,8 +18,7 @@ Planned work
   - [DONE] introduce svn_ra_change_rev_prop2()
       Need a new libsvn_ra-level capability.  (because atomicity can't be
       achieved with older servers, and because of planned protocol extensions)
-  - ra_local
-      Trivial.
+  - [DONE] ra_local: Trivial.
   - ra_svn
       Add a 'change-rev-prop2' verb.
   - ra_dav
@@ -28,6 +27,7 @@ Planned work
         TODO: where to document this protocol extension?
   - [DONE] unit test
       prop_tests.py 34: atomic_over_ra()
+    TODO: extend it for 3*2 testing (as in fs-test.c:revision_props())
 
 * svnsync:
   - use the new RA API to resolve the race condition in locking.
