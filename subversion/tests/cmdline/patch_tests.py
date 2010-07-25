@@ -2436,7 +2436,6 @@ def patch_dir_properties(sbox):
   wc_dir = sbox.wc_dir
 
   patch_file_path = make_patch_path(sbox)
-  A_path = os.path.join(wc_dir, 'A')
   B_path = os.path.join(wc_dir, 'A', 'B')
 
   modified_prop_contents = "This is the property 'modified'.\n"
@@ -2444,27 +2443,27 @@ def patch_dir_properties(sbox):
 
   # Set the properties
   svntest.main.run_svn(None, 'propset', 'modified', modified_prop_contents,
-                       A_path)
+                       wc_dir)
   svntest.main.run_svn(None, 'propset', 'deleted', deleted_prop_contents,
                        B_path)
   expected_output = svntest.wc.State(wc_dir, {
-      'A'    : Item(verb='Sending'),
+      '.'    : Item(verb='Sending'),
       'A/B'    : Item(verb='Sending'),
       })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A', wc_rev=2)
+  expected_status.tweak('', wc_rev=2)
   expected_status.tweak('A/B', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
   # Apply patch
 
   unidiff_patch = [
-    "Index: A\n",
+    "Index: .\n",
     "===================================================================\n",
-    "--- A\t(revision 1)\n",
-    "+++ A\t(working copy)\n",
+    "--- .\t(revision 1)\n",
+    "+++ .\t(working copy)\n",
     "\n",
-    "Property changes on: A\n",
+    "Property changes on: .\n",
     "-------------------------------------------------------------------\n",
     "Modified: modified\n",
     "## -1 +1 ##\n",
@@ -2499,7 +2498,7 @@ def patch_dir_properties(sbox):
   ### on a dir) is still subject to change. We might just want to bail out 
   ### directly instead of catching the error and use the notify mechanism.
   expected_output = [
-    ' U        %s\n' % os.path.join(wc_dir, 'A'),
+    ' U        %s\n' % wc_dir,
     ' U        %s\n' % os.path.join(wc_dir, 'A', 'B'),
     'Skipped missing target \'svn:executable\' on (\'%s\')' % B_path,
     'Summary of conflicts:\n',
@@ -2507,11 +2506,13 @@ def patch_dir_properties(sbox):
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A', props={'modified' : modified_prop_contents,
-                                  'svn:ignore' : ignore_prop_contents})
+  expected_disk.add({
+    '' : Item(props={'modified' : modified_prop_contents,
+                     'svn:ignore' : ignore_prop_contents})
+    })
   expected_disk.tweak('A/B', props={})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A', status=' M')
+  expected_status.tweak('', status=' M')
   expected_status.tweak('A/B', status=' M')
 
   expected_skip = wc.State('', { })
