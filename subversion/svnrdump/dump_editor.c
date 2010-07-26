@@ -1,5 +1,6 @@
 /*
- *  dump_editor.c: The svn_delta_editor_t editor used by svnrdump
+ *  dump_editor.c: The svn_delta_editor_t editor used by svnrdump to
+ *  dump revisions.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

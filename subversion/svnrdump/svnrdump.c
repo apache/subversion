@@ -35,6 +35,7 @@
 #include "svn_props.h"
 
 #include "dump_editor.h"
+#include "load_editor.h"
 
 static svn_opt_subcommand_t dump_cmd, load_cmd;
 
@@ -284,6 +285,26 @@ replay_revisions(svn_ra_session_t *session, const char *url,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+load_revisions(svn_ra_session_t *session, const char *url,
+               svn_boolean_t quiet, apr_pool_t *pool)
+{
+  const svn_delta_editor_t *load_editor;
+  void *load_baton;
+  apr_file_t *stdin_file;
+  svn_stream_t *stdin_stream;
+
+  apr_file_open_stdin(&stdin_file, pool);
+  stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
+
+  SVN_ERR(get_load_editor(&load_editor, &load_baton, stdin_stream, pool));
+
+  svn_stream_close(stdin_stream);
+
+  return SVN_NO_ERROR;
+}
+
+
 static const char *
 ensure_appname(const char *progname, apr_pool_t *pool)
 {
@@ -346,7 +367,9 @@ dump_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 load_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  /* Not implemented yet */
+  opt_baton_t *opt_baton = baton;
+  SVN_ERR(load_revisions(opt_baton->session, opt_baton->url,
+                         opt_baton->quiet, pool));  
   return SVN_NO_ERROR;
 }
 
