@@ -411,6 +411,7 @@ main(int argc, const char **argv)
   svn_boolean_t no_auth_cache = FALSE;
   svn_boolean_t non_interactive = FALSE;
   apr_getopt_t *os;
+  const char *first_arg;
 
   if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
@@ -485,8 +486,35 @@ main(int argc, const char **argv)
         }
     }
 
+  if (os->ind >= os->argc)
+    {
+      svn_error_clear
+                (svn_cmdline_fprintf(stderr, pool,
+                                     _("Subcommand argument required\n")));
+      SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
+      svn_pool_destroy(pool);
+      exit(EXIT_FAILURE);
+    }
+
+  first_arg = os->argv[os->ind++];
+
   subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
-                                                 os->argv[os->ind++]);
+                                                 first_arg);
+
+  if (subcommand == NULL)
+    {
+      const char *first_arg_utf8;
+      svn_error_t *err = svn_utf_cstring_to_utf8(&first_arg_utf8,
+                                                 first_arg, pool);
+      if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
+      svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                                          _("Unknown command: '%s'\n"),
+                                          first_arg_utf8));
+      SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
+      svn_pool_destroy(pool);
+      exit(EXIT_FAILURE);
+    }
 
   if (subcommand && strcmp(subcommand->name, "help") == 0)
     {
