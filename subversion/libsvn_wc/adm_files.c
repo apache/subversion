@@ -483,49 +483,6 @@ svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
 }
 
 
-svn_error_t *
-svn_wc__prop_path(const char **prop_path,
-                  const char *path,
-                  svn_wc__db_kind_t node_kind,
-                  svn_wc__props_kind_t props_kind,
-                  apr_pool_t *pool)
-{
-  if (node_kind == svn_wc__db_kind_dir)
-    {
-      static const char * names[] = {
-        SVN_WC__ADM_DIR_PROP_BASE,    /* svn_wc__props_base */
-        SVN_WC__ADM_DIR_PROP_REVERT,  /* svn_wc__props_revert */
-        SVN_WC__ADM_DIR_PROPS         /* svn_wc__props_working */
-      };
-
-      *prop_path = simple_extend(path, FALSE, NULL, names[props_kind], NULL,
-                                 pool);
-    }
-  else  /* It's a file */
-    {
-      static const char * extensions[] = {
-        SVN_WC__BASE_EXT,     /* svn_wc__props_base */
-        SVN_WC__REVERT_EXT,   /* svn_wc__props_revert */
-        SVN_WC__WORK_EXT      /* svn_wc__props_working */
-      };
-
-      static const char * dirs[] = {
-        SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_base */
-        SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_revert */
-        SVN_WC__ADM_PROPS       /* svn_wc__props_working */
-      };
-
-      const char *base_name;
-
-      svn_dirent_split(prop_path, &base_name, path, pool);
-      *prop_path = simple_extend(*prop_path, FALSE, dirs[props_kind],
-                                 base_name, extensions[props_kind], pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /*** Opening and closing files in the adm area. ***/
 
 svn_error_t *

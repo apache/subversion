@@ -298,12 +298,6 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_ENTRIES             "entries"
 #define SVN_WC__ADM_TMP                 "tmp"
-#define SVN_WC__ADM_TEXT_BASE           "text-base"
-#define SVN_WC__ADM_PROPS               "props"
-#define SVN_WC__ADM_PROP_BASE           "prop-base"
-#define SVN_WC__ADM_DIR_PROPS           "dir-props"
-#define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
-#define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_PRISTINE            "pristine"
 #define SVN_WC__ADM_NONEXISTENT_PATH    "nonexistent-path"
 
