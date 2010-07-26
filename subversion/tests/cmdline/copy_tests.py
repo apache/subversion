@@ -4767,6 +4767,62 @@ def move_added_nodes(sbox):
   expected_status.add({'X/Z' : Item(status='A ', wc_rev='0')})
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
+def locate_wrong_origin(sbox):
+  "update editor locates invalid file source"
+
+  sbox.build()
+
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  gamma = os.path.join(sbox.wc_dir, 'A/D/gamma')
+
+  D1 = os.path.join(sbox.wc_dir, 'D1')
+  D2 = os.path.join(sbox.wc_dir, 'D2')
+
+  main.run_svn(None, 'mkdir', D1, D2)
+  main.run_svn(None, 'cp', iota, os.path.join(D1, 'iota'))
+  main.run_svn(None, 'cp', gamma, os.path.join(D2, 'iota'))
+
+  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Add 2*iotas in r2')
+  main.run_svn(None, 'rm', D1)
+
+  # ### Why do I have to commit here? Isn't this a normal replacement?
+  # ### TODO: Add a separate XFail test for this
+  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Why?')
+
+  main.run_svn(None, 'cp', D2, D1)
+  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Replace one iota')
+
+  # <= 1.6 needs a new checkout here to reproduce, but not since r961831.
+  # so we just perform an update
+  main.run_svn(None, 'up', sbox.wc_dir)
+
+  main.run_svn(None, 'cp', sbox.repo_url + '/D1/iota@2',
+               sbox.repo_url + '/iobeta', '-m', 'Copy iota')
+
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 4)
+  expected_status.add({
+    'D1'                : Item(status='  ', wc_rev='4'),
+    'D1/iota'           : Item(status='  ', wc_rev='4'),
+    'D2'                : Item(status='  ', wc_rev='4'),
+    'D2/iota'           : Item(status='  ', wc_rev='4'),
+  })
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  # The next update receives an add_file('/D1/iota', 2), which it then tries
+  # to locate in the local working copy. It finds a '/D1/iota' in the expected
+  # place, with a last-changed revision of 2 and a local revision of HEAD-1
+  #
+  # locate_copyfrom identifies this file as correct because 
+  #     * last-mod <= 2 and
+  #     * 2 <= REV
+  #
+  # Luckily close_file() receives an expected_checksum which makes us fail, or
+  # we would have a completely broken working copy
+
+  # So this gives a Checksum mismatch error.
+  main.run_svn(None, 'up', sbox.wc_dir)
+
 
 ########################################################################
 # Run the tests
@@ -4862,6 +4918,7 @@ test_list = [ None,
               changed_data_should_match_checkout,
               XFail(changed_dir_data_should_match_checkout),
               XFail(move_added_nodes),
+              XFail(locate_wrong_origin),
              ]
 
 if __name__ == '__main__':
