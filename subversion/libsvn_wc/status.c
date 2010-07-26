@@ -461,20 +461,10 @@ assemble_status(svn_wc_status3_t **status,
       if (has_props)
         prop_status = svn_wc_status_normal;
 
-      /* If the entry has a property file, see if it has local changes. */
-      /* ### we could compute this ourself, based on the prop hashes
-         ### fetched above. but for now, there is some trickery we may
-         ### need to rely upon in ths function. keep it for now.  */
-      /* ### see r944980 as an example of the brittleness of this stuff.  */
+      /* If the entry has a properties, see if it has local changes. */
       if (has_props)
-        {
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-          SVN_ERR(svn_wc__props_modified(&prop_modified_p, db, local_abspath,
-                                         scratch_pool));
-#endif
-          prop_status = prop_modified_p ? svn_wc_status_modified
-                                        : svn_wc_status_normal;
-        }
+        prop_status = prop_modified_p ? svn_wc_status_modified
+                                      : svn_wc_status_normal;
 
 #ifdef HAVE_SYMLINK
       if (has_props)

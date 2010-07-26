@@ -43,7 +43,6 @@
 
 /* Workqueue operation names.  */
 #define OP_REVERT "revert"
-#define OP_PREPARE_REVERT_FILES "prep-rev-files"
 #define OP_KILLME "killme"
 #define OP_LOGGY "loggy"
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
@@ -52,14 +51,12 @@
  *    [dav_cache/wc_props], keep_changelist, [tmp_text_base_abspath]). */
 #define OP_POSTCOMMIT "postcommit"
 #define OP_INSTALL_PROPERTIES "install-properties-2"
-#define OP_DELETE "delete"
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
 #define OP_FILE_MOVE "file-move"
 #define OP_FILE_COPY_TRANSLATED "file-translate"
 #define OP_SYNC_FILE_FLAGS "sync-file-flags"
 #define OP_PREJ_INSTALL "prej-install"
-#define OP_WRITE_OLD_PROPS "write-old-props"
 #define OP_RECORD_FILEINFO "record-fileinfo"
 #define OP_TMP_SET_TEXT_CONFLICT_MARKERS "tmp-set-text-conflict-markers"
 #define OP_TMP_SET_PROPERTY_CONFLICT_MARKER "tmp-set-property-conflict-marker"
@@ -212,7 +209,6 @@ run_revert(svn_wc__db_t *db,
   const char *local_abspath;
   svn_boolean_t replaced;
   svn_wc__db_kind_t kind;
-  const char *working_props_path;
   const char *parent_abspath;
   svn_boolean_t conflicted;
 
@@ -232,39 +228,6 @@ run_revert(svn_wc__db_t *db,
             &conflicted, NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
-
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-  /* Move the "revert" props over/on the "base" props.  */
-  if (replaced)
-    {
-      const char *revert_props_path;
-      const char *base_props_path;
-
-      SVN_ERR(svn_wc__prop_path(&revert_props_path, local_abspath,
-                                kind, svn_wc__props_revert, scratch_pool));
-      SVN_ERR(svn_wc__prop_path(&base_props_path, local_abspath,
-                                kind, svn_wc__props_base, scratch_pool));
-
-      SVN_ERR(move_if_present(revert_props_path, base_props_path,
-                              scratch_pool));
-
-      /* ### we should also be setting BASE props. and really... we shouldn't
-         ### even bother zero-ing out these props. the WORKING node should
-         ### be disappearing after a revert.  */
-#if 0
-      SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
-                                                apr_hash_make(scratch_pool),
-                                                scratch_pool));
-#endif
-    }
-#endif
-
-  /* The "working" props contain changes. Nuke 'em from orbit.  */
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-  SVN_ERR(svn_wc__prop_path(&working_props_path, local_abspath,
-                            kind, svn_wc__props_working, scratch_pool));
-  SVN_ERR(svn_io_remove_file2(working_props_path, TRUE, scratch_pool));
-#endif
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, NULL, NULL,
                                   scratch_pool));
@@ -563,97 +526,6 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 
   return SVN_NO_ERROR;
 }
-
-
-/* ------------------------------------------------------------------------ */
-
-/* OP_PREPARE_REVERT_FILES  */
-
-
-/* Process the OP_PREPARE_REVERT_FILES work item WORK_ITEM.
- * See svn_wc__wq_prepare_revert_files() which generates this work item.
- * Implements (struct work_item_dispatch).func.
- * With the Pristine Store, the "revert-base" concept no longer applies
- * to texts, so this only deals with properties. */
-static svn_error_t *
-run_prepare_revert_files(svn_wc__db_t *db,
-                         const svn_skel_t *work_item,
-                         const char *wri_abspath,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *local_abspath;
-  svn_wc__db_kind_t kind;
-  const char *revert_prop_abspath;
-  const char *base_prop_abspath;
-  svn_node_kind_t on_disk;
-
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-
-  /* Rename the original text base over to the revert text base.  */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
-
-  /* Set up the revert props.  */
-
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-  SVN_ERR(svn_wc__prop_path(&revert_prop_abspath, local_abspath, kind,
-                            svn_wc__props_revert, scratch_pool));
-  SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
-                            svn_wc__props_base, scratch_pool));
-
-  /* First: try to move any base properties to the revert location.  */
-  SVN_ERR(move_if_present(base_prop_abspath, revert_prop_abspath,
-                          scratch_pool));
-
-  /* If no props exist at the revert location, then drop a set of empty
-     props there. They are expected to be present.  */
-  SVN_ERR(svn_io_check_path(revert_prop_abspath, &on_disk, scratch_pool));
-  if (on_disk == svn_node_none)
-    {
-      svn_stream_t *stream;
-
-      /* A set of empty props is just an empty file. */
-      SVN_ERR(svn_stream_open_writable(&stream, revert_prop_abspath,
-                                       scratch_pool, scratch_pool));
-      SVN_ERR(svn_stream_close(stream));
-      SVN_ERR(svn_io_set_file_read_only(revert_prop_abspath, FALSE,
-                                        scratch_pool));
-    }
-#endif
-
-  /* Put some blank properties into the WORKING node.  */
-  /* ### this seems bogus. something else should come along and put the
-     ### correct values in here. we shouldn't put empty values in.  */
-#if 0
-  SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
-                                            apr_hash_make(scratch_pool),
-                                            scratch_pool));
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-
-  /* These skel atoms hold references to very transitory state, but
-     we only need the work_item to survive for the duration of wq_add.  */
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_PREPARE_REVERT_FILES, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 /* ------------------------------------------------------------------------ */
 
@@ -1672,91 +1544,6 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
 
 /* ------------------------------------------------------------------------ */
 
-/* OP_DELETE */
-
-/* Process the OP_DELETE work item WORK_ITEM.
- * See svn_wc__wq_add_delete() which generates this work item.
- * Implements (struct work_item_dispatch).func. */
-static svn_error_t *
-run_delete(svn_wc__db_t *db,
-           const svn_skel_t *work_item,
-           const char *wri_abspath,
-           svn_cancel_func_t cancel_func,
-           void *cancel_baton,
-           apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg = work_item->children->next;
-  const char *local_abspath;
-  svn_wc__db_kind_t kind;
-  svn_boolean_t was_added, was_copied, was_replaced;
-
-  local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
-  arg = arg->next;
-  kind = (int) svn_skel__parse_int(arg, scratch_pool);
-  arg = arg->next;
-  was_added = svn_skel__parse_int(arg, scratch_pool) != 0;
-  arg = arg->next;
-  was_copied = svn_skel__parse_int(arg, scratch_pool) != 0;
-  arg = arg->next;
-  was_replaced = svn_skel__parse_int(arg, scratch_pool) != 0;
-
-  if (was_replaced && was_copied)
-    {
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-      const char *props_base, *props_revert;
-
-      SVN_ERR(svn_wc__prop_path(&props_base, local_abspath, kind,
-                                svn_wc__props_base, scratch_pool));
-      SVN_ERR(svn_wc__prop_path(&props_revert, local_abspath, kind,
-                                svn_wc__props_revert, scratch_pool));
-      SVN_ERR(move_if_present(props_revert, props_base, scratch_pool));
-#endif
-    }
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-  if (was_added)
-    {
-      const char *props_base, *props_working;
-
-      SVN_ERR(svn_wc__prop_path(&props_base, local_abspath, kind,
-                                svn_wc__props_base, scratch_pool));
-      SVN_ERR(svn_wc__prop_path(&props_working, local_abspath, kind,
-                                svn_wc__props_working, scratch_pool));
-
-      SVN_ERR(svn_io_remove_file2(props_base, TRUE, scratch_pool));
-      SVN_ERR(svn_io_remove_file2(props_working, TRUE, scratch_pool));
-    }
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__wq_add_delete(svn_wc__db_t *db,
-                      const char *parent_abspath,
-                      const char *local_abspath,
-                      svn_wc__db_kind_t kind,
-                      svn_boolean_t was_added,
-                      svn_boolean_t was_copied,
-                      svn_boolean_t was_replaced,
-                      apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-
-  svn_skel__prepend_int(was_replaced, work_item, scratch_pool);
-  svn_skel__prepend_int(was_copied, work_item, scratch_pool);
-  svn_skel__prepend_int(was_added, work_item, scratch_pool);
-  svn_skel__prepend_int(kind, work_item, scratch_pool);
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_DELETE, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, parent_abspath, work_item, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* ------------------------------------------------------------------------ */
-
 /* OP_FILE_INSTALL */
 
 /* Process the OP_FILE_INSTALL work item WORK_ITEM.
@@ -2245,85 +2032,6 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
 
 /* ------------------------------------------------------------------------ */
 
-/* OP_WRITE_OLD_PROPS  */
-
-
-static svn_error_t *
-run_write_old_props(svn_wc__db_t *db,
-                    const svn_skel_t *work_item,
-                    const char *wri_abspath,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *props_abspath;
-  svn_stream_t *stream;
-  apr_hash_t *props;
-
-  props_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-
-  /* Torch whatever may be there.  */
-  SVN_ERR(svn_io_remove_file2(props_abspath, TRUE, scratch_pool));
-
-  if (arg1->next == NULL)
-    {
-      /* PROPS == NULL means the file should be removed. Note that an
-         empty set of properties has an entirely different meaning.
-
-         The file has already been removed. Simply exit.  */
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(svn_skel__parse_proplist(&props, arg1->next, scratch_pool));
-
-  SVN_ERR(svn_stream_open_writable(&stream, props_abspath,
-                                   scratch_pool, scratch_pool));
-
-  /* An empty file is shorthand for an empty set of properties.  */
-  if (apr_hash_count(props) != 0)
-    SVN_ERR(svn_hash_write2(props, stream, SVN_HASH_TERMINATOR, scratch_pool));
-
-  SVN_ERR(svn_stream_close(stream));
-
-  SVN_ERR(svn_io_set_file_read_only(props_abspath,
-                                    FALSE /* ignore_enoent */,
-                                    scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
-                                 const char *props_abspath,
-                                 apr_hash_t *props,
-                                 apr_pool_t *result_pool)
-{
-#if (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)
-  *work_item = NULL;
-#else
-  *work_item = svn_skel__make_empty_list(result_pool);
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(props_abspath));
-
-  if (props != NULL)
-    {
-      svn_skel_t *props_skel;
-
-      SVN_ERR(svn_skel__unparse_proplist(&props_skel, props, result_pool));
-      svn_skel__prepend(props_skel, *work_item);
-    }
-  svn_skel__prepend_str(apr_pstrdup(result_pool, props_abspath),
-                        *work_item, result_pool);
-  svn_skel__prepend_str(OP_WRITE_OLD_PROPS, *work_item, result_pool);
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-
-/* ------------------------------------------------------------------------ */
-
 /* OP_RECORD_FILEINFO  */
 
 
@@ -2606,19 +2314,16 @@ svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
 
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
-  { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
   { OP_KILLME, run_killme },
   { OP_LOGGY, run_loggy },
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
   { OP_POSTCOMMIT, run_postcommit },
-  { OP_DELETE, run_delete },
   { OP_FILE_INSTALL, run_file_install },
   { OP_FILE_REMOVE, run_file_remove },
   { OP_FILE_MOVE, run_file_move },
   { OP_FILE_COPY_TRANSLATED, run_file_copy_translated },
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
-  { OP_WRITE_OLD_PROPS, run_write_old_props },
   { OP_RECORD_FILEINFO, run_record_fileinfo },
   { OP_TMP_SET_TEXT_CONFLICT_MARKERS, run_set_text_conflict_markers },
   { OP_TMP_SET_PROPERTY_CONFLICT_MARKER, run_set_property_conflict_marker },

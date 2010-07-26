@@ -160,30 +160,6 @@ process_committed_leaf(svn_wc__db_t *db,
                                 scratch_pool));
     }
 
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-  /* Queue a removal of any "revert" properties now. These correspond to
-     the BASE properties, but hidden by new pristine props in WORKING.
-     Regardless, the commit will be installing new BASE props.  */
-  /* ### this goes away once props are fully in the database  */
-  {
-    const char *revert_props_abspath;
-    svn_skel_t *work_item;
-
-    /* ### this breaks the abstraction of svn_wc__props_delete, but
-       ### screw it. this is transitional code.  */
-    /* ### what happens if the node changes its KIND? should be okay
-       ### since we disallow that today, and props should be in the DB
-       ### by the time that we DO allow that.  */
-    SVN_ERR(svn_wc__prop_path(&revert_props_abspath, local_abspath, kind,
-                              svn_wc__props_revert, scratch_pool));
-
-    SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                         db, revert_props_abspath,
-                                         scratch_pool, scratch_pool));
-    SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
-  }
-#endif
-
   /* ### this picks up file and symlink  */
   if (kind != svn_wc__db_kind_dir)
     {
@@ -858,12 +834,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_temp_op_delete(wc_ctx->db, local_abspath, pool));
       if (keep_local)
         SVN_ERR(svn_wc__db_temp_set_keep_local(db, local_abspath, TRUE, pool));
-      SVN_ERR(svn_wc__wq_add_delete(wc_ctx->db, parent_abspath, local_abspath,
-                                    kind, was_add, was_copied, was_replace,
-                                    pool));
-
-      SVN_ERR(svn_wc__wq_run(db, parent_abspath, cancel_func, cancel_baton,
-                             pool));
     }
 
   /* Report the deletion to the caller. */
@@ -1196,30 +1166,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
                                        scratch_pool));
     }
-#endif
-
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-  /* ### this is totally bogus. we clear these cuz turds might have been
-     ### left around. Thankfully, this will gone soon... */
-  if (!is_wc_root && (node_exists || is_replace))
-    SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
-                                 scratch_pool));
-#endif
-
-#if SVN_WC__VERSION < SVN_WC__PROPS_IN_DB
-    if (is_replace)
-      {
-        /* We don't want the old base text (if any) and base props to be
-           mistakenly used as the bases for the new, replacement object.
-           So, move them out of the way. */
-
-        /* ### TODO: In an ideal world, this whole function would be loggy.
-           ### Thankfully this code will be gone soon. */
-        SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath,
-                                                scratch_pool));
-        SVN_ERR(svn_wc__wq_run(db, local_abspath,
-                               cancel_func, cancel_baton, scratch_pool));
-      }
 #endif
 
   if (kind == svn_node_file)
@@ -2015,14 +1961,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
         }
       else
         SVN_ERR(err);
-
-#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
-      /* Remove prop/NAME, prop-base/NAME.svn-base. */
-      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
-                                   scratch_pool));
-      SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_base,
-                                   scratch_pool));
-#endif
 
       /* Remove NAME from PATH's entries file: */
       SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,

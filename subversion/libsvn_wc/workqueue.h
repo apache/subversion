@@ -173,18 +173,6 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
-
-/* Set *WORK_ITEM to a new work item that will install PROPS at PROPS_ABSPATH.
-   If PROPS is NULL, then the target props file will will be removed.
-
-   ### this will go away when we fully move to in-db properties.  */
-svn_error_t *
-svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
-                                 const char *props_abspath,
-                                 apr_hash_t *props,
-                                 apr_pool_t *result_pool);
-
-
 /* Set *WORK_ITEM to a new work item that will record file information of
    LOCAL_ABSPATH into the TRANSLATED_SIZE and LAST_MOD_TIME of the node via
    the svn_wc__db_global_record_fileinfo() function.
@@ -207,15 +195,6 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                       const char *local_abspath,
                       svn_boolean_t use_commit_times,
                       apr_pool_t *scratch_pool);
-
-
-/* Record a work item to prepare the "revert props" and "revert text base"
-   for LOCAL_ABSPATH.  */
-svn_error_t *
-svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool);
-
 
 /* Handle the old "KILLME" concept -- perform the actual deletion of a
    subdir (or just its admin area) during post-commit processing of a
@@ -332,23 +311,6 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
                                   apr_pool_t *scratch_pool);
 #endif
 
-/* Add a work item to delete a node.
-
-   ### LOCAL_ABSPATH is the node to be deleted and the queue exists in
-   PARENT_ABSPATH (because when LOCAL_ABSPATH is a directory it might
-   not exist on disk).  This use of PARENT_ABSPATH is inherited from
-   the log file conversion but perhaps we don't need to use a work
-   queue when deleting a directory that does not exist on disk.
- */
-svn_error_t *
-svn_wc__wq_add_delete(svn_wc__db_t *db,
-                      const char *parent_abspath,
-                      const char *local_abspath,
-                      svn_wc__db_kind_t kind,
-                      svn_boolean_t was_added,
-                      svn_boolean_t was_copied,
-                      svn_boolean_t was_replaced,
-                      apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
