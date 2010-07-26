@@ -167,31 +167,6 @@ svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
 }
 
 
-svn_error_t *
-svn_wc__get_revert_props(apr_hash_t **revert_props_p,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  svn_boolean_t replaced;
-
-  SVN_ERR_ASSERT(revert_props_p != NULL);
-
-  SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath,
-                                       scratch_pool));
-  if (replaced)
-    {
-      SVN_ERR(svn_wc__db_base_get_props(revert_props_p, db, local_abspath,
-                                        result_pool, scratch_pool));
-    }
-  else
-    *revert_props_p = apr_hash_make(result_pool);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* See props.h  */
 #ifdef SVN__SUPPORT_BASE_MERGE
 
