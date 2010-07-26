@@ -6590,33 +6590,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       }
     else if (err)
       return svn_error_return(err);
-    else if (status == svn_wc__db_status_normal ||
-             status == svn_wc__db_status_incomplete)
-      {
-        svn_boolean_t have_work;
-
-        SVN_ERR(svn_wc__db_read_info(
-                  &status, NULL, NULL,
-                  NULL, NULL, NULL, NULL, NULL, NULL,
-                  NULL, NULL, NULL, NULL, NULL, NULL,
-                  NULL, NULL, NULL, NULL,
-                  NULL, NULL, &have_work,
-                  NULL, NULL,
-                  db, local_abspath,
-                  pool, pool));
-
-        /* If there is a WORKING node present AND it is not an "add",
-           then we need to move the base/props. If an add is present,
-           that would imply we've done this move before.  */
-        if (have_work
-            && status != svn_wc__db_status_added
-            && status != svn_wc__db_status_obstructed_add)
-          {
-            /* Move around some files to keep them safe for a possible
-               future revert operation.  */
-            SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath, pool));
-          }
-      }
   }
 
   /* Set CHANGED_* to reflect the entry props in NEW_BASE_PROPS, and
