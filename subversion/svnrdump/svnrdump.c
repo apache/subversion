@@ -329,10 +329,19 @@ usage(const char *progname, apr_pool_t *pool)
 static svn_error_t *
 version(const char *progname, apr_pool_t *pool)
 {
+  const char *ra_desc_start
+    = _("The following repository access (RA) modules are available:\n\n");
+
+  svn_stringbuf_t *version_footer = svn_stringbuf_create(ra_desc_start,
+                                                         pool);
+
+  SVN_ERR(svn_ra_print_modules(version_footer, pool));
+
   progname = ensure_appname(progname, pool);
 
-  return svn_opt_print_help3(NULL, progname, TRUE, FALSE, NULL,
-                             NULL, NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help3(NULL, progname, TRUE, FALSE,
+                             version_footer->data, NULL, NULL,
+                             NULL, NULL, NULL, pool);
 }
 
 
