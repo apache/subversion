@@ -1953,16 +1953,27 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
         }
     }
 
-  /* Write out rejected hunks, if any. */
-  if (! dry_run && ! target->skipped && target->had_rejects)
+  return SVN_NO_ERROR;
+}
+
+/* Write out rejected hunks, if any, to TARGET->REJECT_PATH. If DRY_RUN is
+ * TRUE, don't modify the working copy.  
+ * Do temporary allocations in POOL.
+ */
+static svn_error_t *
+write_out_rejected_hunks(patch_target_t *target,
+                         svn_boolean_t dry_run,
+                         apr_pool_t *pool)
+{
+  if (! dry_run && target->had_rejects)
     {
+      /* Write out rejected hunks, if any. */
       SVN_ERR(svn_io_copy_file(target->reject_path,
                                apr_psprintf(pool, "%s.svnpatch.rej",
-                                            target->local_abspath),
+                               target->local_abspath),
                                FALSE, pool));
       /* ### TODO mark file as conflicted. */
     }
-
   return SVN_NO_ERROR;
 }
 
@@ -2328,9 +2339,14 @@ apply_patches(void *baton,
                              patch_target_info_t *) = target_info;
 
               if (! target->skipped)
-                SVN_ERR(install_patched_target(target, btn->abs_wc_path,
-                                               btn->ctx, btn->dry_run,
-                                               iterpool));
+                {
+                  SVN_ERR(install_patched_target(target, btn->abs_wc_path,
+                                                 btn->ctx, btn->dry_run,
+                                                 iterpool));
+
+                  SVN_ERR(write_out_rejected_hunks(target, btn->dry_run,
+                                                   iterpool));
+                }
               SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
             }
 
