@@ -186,6 +186,12 @@ typedef struct patch_target_t {
   /* True if the target has the executable bit set. */
   svn_boolean_t executable;
 
+  /* True if the patch changes the text of the target */
+  svn_boolean_t has_text_changes;
+
+  /* True if the patch changes any of the properties of the target */
+  svn_boolean_t has_prop_changes;
+
   /* All the information that is specifict to the content of the target. */
   target_content_info_t *content_info;
 
@@ -305,6 +311,8 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
  * Indicate in TARGET->SKIPPED whether the target should be skipped.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
+ * PROP_CHANGES_ONLY is used for determining if the target path is allowed
+ * to be a dir.
  * Use RESULT_POOL for allocations of fields in TARGET.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
@@ -312,6 +320,7 @@ resolve_target_path(patch_target_t *target,
                     const char *path_from_patchfile,
                     const char *local_abspath,
                     int strip_count,
+                    svn_boolean_t prop_changes_only,
                     svn_wc_context_t *wc_ctx,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
@@ -341,6 +350,8 @@ resolve_target_path(patch_target_t *target,
     {
       target->local_relpath = svn_dirent_is_child(local_abspath, stripped_path,
                                                   result_pool);
+
+      /* ### We need to allow setting props on the wc root dir */
       if (! target->local_relpath)
         {
           /* The target path is either outside of the working copy
@@ -403,7 +414,11 @@ resolve_target_path(patch_target_t *target,
     }
   SVN_ERR(svn_wc_read_kind(&target->db_kind, wc_ctx, target->local_abspath,
                            FALSE, scratch_pool));
-  if (target->db_kind == svn_node_dir)
+
+  /* If the target is a version directory not missing from disk,
+   * and there are only property changes in the patch, we accept
+   * a directory target. Else, we skip directories. */
+  if (target->db_kind == svn_node_dir && ! prop_changes_only)
     {
       /* ### We cannot yet replace a locally deleted dir with a file,
        * ### but some day we might want to allow it. */
@@ -502,6 +517,26 @@ init_patch_target(patch_target_t **patch_target,
 {
   patch_target_t *target;
   target_content_info_t *content_info; 
+  svn_boolean_t has_prop_changes = FALSE;
+  svn_boolean_t prop_changes_only = FALSE;
+
+  {
+    apr_hash_index_t *hi;
+
+    /* ### Should we use an iterpool here? */
+    for (hi = apr_hash_first(scratch_pool, patch->prop_patches);
+         hi;
+         hi = apr_hash_next(hi))
+      {
+        svn_prop_patch_t *prop_patch = svn__apr_hash_index_val(hi); 
+        if (! has_prop_changes)
+          has_prop_changes = prop_patch->hunks->nelts > 0;
+        else
+          break;
+      }
+  }
+
+  prop_changes_only = has_prop_changes && patch->hunks->nelts == 0;
 
   content_info = apr_pcalloc(result_pool, sizeof(*content_info));
 
@@ -525,8 +560,8 @@ init_patch_target(patch_target_t **patch_target,
   target->pool = result_pool;
 
   SVN_ERR(resolve_target_path(target, patch->new_filename,
-                              base_dir, strip_count, wc_ctx,
-                              result_pool, scratch_pool));
+                              base_dir, strip_count, prop_changes_only,
+                              wc_ctx, result_pool, scratch_pool));
   if (! target->skipped)
     {
       const char *diff_header;
@@ -1349,6 +1384,11 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
     }
   while (! eof);
   svn_pool_destroy(iterpool);
+
+  if (is_prop_hunk)
+    target->has_prop_changes = TRUE;
+  else
+    target->has_text_changes = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -2340,9 +2380,13 @@ apply_patches(void *baton,
 
               if (! target->skipped)
                 {
-                  SVN_ERR(install_patched_target(target, btn->abs_wc_path,
-                                                 btn->ctx, btn->dry_run,
-                                                 iterpool));
+                  if (target->has_text_changes)
+                    SVN_ERR(install_patched_target(target, btn->abs_wc_path,
+                                                   btn->ctx, btn->dry_run,
+                                                   iterpool));
+
+                  if (target->has_prop_changes)
+                    ; /* ### Here we're going to install prop targets */
 
                   SVN_ERR(write_out_rejected_hunks(target, btn->dry_run,
                                                    iterpool));
