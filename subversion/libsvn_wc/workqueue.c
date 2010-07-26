@@ -141,30 +141,6 @@ get_and_record_fileinfo(svn_wc__db_t *db,
 }
 
 
-/* If SOURCE_ABSPATH is present, then move it to DEST_ABSPATH. Ignore any
-   ENOENT message for a missing source, which may indicate the move has
-   already been performed.  */
-static svn_error_t *
-move_if_present(const char *source_abspath,
-                const char *dest_abspath,
-                apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  err = svn_io_file_rename(source_abspath, dest_abspath, scratch_pool);
-  if (err)
-    {
-      if (!APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
-
-      /* Not there. Maybe the node was moved in a prior run.  */
-      svn_error_clear(err);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* ------------------------------------------------------------------------ */
 
 /* OP_REVERT  */

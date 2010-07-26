@@ -493,7 +493,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 
       {
         apr_array_header_t *prop_diffs;
-        svn_skel_t *work_item;
 
         SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
                                pool));
