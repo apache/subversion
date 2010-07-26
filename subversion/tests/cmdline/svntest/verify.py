@@ -25,6 +25,7 @@
 ######################################################################
 
 import re, sys
+from difflib import unified_diff
 
 import svntest
 
@@ -291,6 +292,12 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
     print('ACTUAL %s:' % label)
     for x in actual:
       sys.stdout.write(x)
+
+  # Additionally print unified diff
+  print('DIFF ' + ' '.join(output.split(' ')[1:]))
+  for x in unified_diff(expected, actual,
+                        fromfile="EXPECTED", tofile="ACTUAL"):
+    sys.stdout.write(x)
 
 def compare_and_display_lines(message, label, expected, actual,
                               raisable=None):
