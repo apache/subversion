@@ -119,12 +119,16 @@ extern "C" {
  * bases into the Pristine Store (the PRISTINE table and '.svn/pristine'
  * dir), and removed the '/.svn/text-base' dir.
  *
+ * The change from 17 to 18 moved the properties from separate files in the
+ * props and prop-base directory (and .svn for the dir itself) into the
+ * wc.db file, and then removes the props and prop-base dir.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 17
+#define SVN_WC__VERSION 18
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */
