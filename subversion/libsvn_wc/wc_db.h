@@ -2515,6 +2515,7 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
                                              const char *repos_root_url,
                                              const char *repos_uuid,
                                              svn_revnum_t revision,
+                                             svn_depth_t depth,
                                              apr_pool_t *scratch_pool);
 
 /* @} */

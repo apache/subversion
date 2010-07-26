@@ -2708,12 +2708,8 @@ add_directory(const char *path,
                                                        eb->repos_root,
                                                        eb->repos_uuid,
                                                        *eb->target_revision,
+                                                       db->ambient_depth,
                                                        pool));
-
-  SVN_ERR(svn_wc__db_temp_op_set_dir_depth(eb->db,
-                                           db->local_abspath,
-                                           db->ambient_depth,
-                                           pool));
 #else
     {
       /* Immediately create an entry for the new directory in the parent.
@@ -2745,6 +2741,7 @@ add_directory(const char *path,
                                                   eb->repos_root,
                                                   eb->repos_uuid,
                                                   *eb->target_revision,
+                                                  db->ambient_depth,
                                                   pool));
 
           SVN_ERR(svn_wc__db_temp_set_parent_stub_to_normal(eb->db,
