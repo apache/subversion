@@ -284,17 +284,16 @@ def run_and_verify_dump(repo_dir):
   return output
 
 
-def run_and_verify_svnrdump(*varargs):
-  "Runs 'svnadmin dump' and reports any errors, returning the dump content."
-  exit_code, output, errput = main.run_svnrdump('-q', *varargs)
+def run_and_verify_svnrdump(expected_stdout, expected_stderr,
+                            expected_exit, *varargs):
+  """Runs 'svnrdump' checking output and exit code, and returns output
+  on stdout"""
 
-  if exit_code != 0:
-    raise svntest.Failure("Exit code not 0")
-
-  verify.verify_outputs("Missing expected output(s)", output, errput,
-                        verify.AnyOutput, [])
+  exit_code, output, err = main.run_svnrdump(*varargs)
+  verify.verify_outputs("Unexpected output", output, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return output
-
 
 def load_repo(sbox, dumpfile_path = None, dump_str = None):
   "Loads the dumpfile into sbox"

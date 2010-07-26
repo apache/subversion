@@ -73,7 +73,9 @@ def run_test(sbox, dumpfile_name):
   svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile)
 
   # Create a dump file using svnrdump
-  svnrdump_dumpfile = svntest.actions.run_and_verify_svnrdump('dump', sbox.repo_url)
+  svnrdump_dumpfile = \
+      svntest.actions.run_and_verify_svnrdump(svntest.verify.AnyOutput, [], 0,
+                                              'dump', '-q', sbox.repo_url)
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
@@ -86,15 +88,25 @@ def basic_svnrdump(sbox):
   "dump the standard sbox repos"
   sbox.build(read_only = True, create_wc = False)
 
-  out = svntest.actions.run_and_verify_svnrdump('dump', sbox.repo_url)
+  out = \
+      svntest.actions.run_and_verify_svnrdump(svntest.verify.AnyOutput, [], 0,
+                                              'dump', '-q', sbox.repo_url)
 
   if not out[0].startswith('SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
 
-def revision0(sbox):
+def revision_0(sbox):
   "dump revision zero"
-  run_test(sbox, dumpfile_name = "revision0.dump")
+  run_test(sbox, dumpfile_name = "revision-0.dump")
 
+def copy_and_modify(sbox):
+  "copy and modify"
+  run_test(sbox, "copy-and-modify.dump")
+
+def copy_from_previous_version_and_modify(sbox):
+  "copy from previous version and modify"
+  run_test(sbox, "copy-from-previous-version-and-modify.dump")
+  
 ########################################################################
 # Run the tests
 
@@ -102,7 +114,9 @@ def revision0(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               basic_svnrdump,
-              revision0,
+              revision_0,
+              XFail(copy_and_modify),
+              XFail(copy_from_previous_version_and_modify),
              ]
 
 if __name__ == '__main__':
