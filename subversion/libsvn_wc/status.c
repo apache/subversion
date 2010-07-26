@@ -367,6 +367,7 @@ assemble_status(svn_wc_status3_t **status,
           /* Highest precedence.  */
           node_status = svn_wc_status_incomplete;
         }
+#ifndef SVN_WC__SINGLE_DB
       else if (db_status == svn_wc__db_status_obstructed_delete)
         {
           /* Deleted directories are never reported as missing.  */
@@ -385,6 +386,7 @@ assemble_status(svn_wc_status3_t **status,
           else
             node_status = svn_wc_status_obstructed;
         }
+#endif
       else if (db_status == svn_wc__db_status_deleted)
         {
           node_status = svn_wc_status_deleted;
@@ -393,6 +395,17 @@ assemble_status(svn_wc_status3_t **status,
                                                      db, local_abspath,
                                                      scratch_pool));
         }
+#ifdef SVN_WC__SINGLE_DB
+      else if (path_kind != svn_node_dir)
+        {
+          /* A present or added directory should be on disk, so it is
+             reported missing or obstructed.  */
+          if (path_kind == svn_node_none)
+            node_status = svn_wc_status_missing;
+          else
+            node_status = svn_wc_status_obstructed;
+        }
+#endif
     }
   else
     {
