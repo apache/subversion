@@ -2710,6 +2710,10 @@ add_directory(const char *path,
                                                        *eb->target_revision,
                                                        pool));
 
+  SVN_ERR(svn_wc__db_temp_op_set_dir_depth(eb->db,
+                                           db->local_abspath,
+                                           db->ambient_depth,
+                                           pool));
 #else
     {
       /* Immediately create an entry for the new directory in the parent.

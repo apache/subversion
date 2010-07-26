@@ -4339,9 +4339,11 @@ update_depth_values(svn_wc__db_pdh_t *pdh,
   /* Flush any entries before we start monkeying the database.  */
   flush_entries(pdh);
 
+#ifndef SVN_WC__SINGLE_DB
   /* Parent stubs have only two depth options: excluded, or infinity.  */
   if (*local_relpath != '\0' && !excluded)
     depth = svn_depth_infinity;
+#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     excluded
