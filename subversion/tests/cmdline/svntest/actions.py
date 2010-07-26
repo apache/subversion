@@ -284,9 +284,9 @@ def run_and_verify_dump(repo_dir):
   return output
 
 
-def run_and_verify_svnrdump(repo_dir):
+def run_and_verify_svnrdump(*varargs):
   "Runs 'svnadmin dump' and reports any errors, returning the dump content."
-  exit_code, output, errput = main.run_svnrdump('-q', repo_dir)
+  exit_code, output, errput = main.run_svnrdump('-q', *varargs)
 
   if exit_code != 0:
     raise svntest.Failure("Exit code not 0")

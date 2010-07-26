@@ -73,7 +73,7 @@ def run_test(sbox, dumpfile_name):
   svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile)
 
   # Create a dump file using svnrdump
-  svnrdump_dumpfile = svntest.actions.run_and_verify_svnrdump(sbox.repo_url)
+  svnrdump_dumpfile = svntest.actions.run_and_verify_svnrdump('dump', sbox.repo_url)
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
@@ -86,7 +86,7 @@ def basic_svnrdump(sbox):
   "dump the standard sbox repos"
   sbox.build(read_only = True, create_wc = False)
 
-  out = svntest.actions.run_and_verify_svnrdump(sbox.repo_url)
+  out = svntest.actions.run_and_verify_svnrdump('dump', sbox.repo_url)
 
   if not out[0].startswith('SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
