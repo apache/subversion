@@ -719,8 +719,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                apr_pool_t *pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  svn_boolean_t was_add = FALSE, was_replace = FALSE;
-  svn_boolean_t was_copied = FALSE;
+  svn_boolean_t was_add = FALSE;
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
@@ -767,9 +766,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                        NULL, NULL, NULL, NULL,  NULL,
                                        db, local_abspath, pool, pool));
 
-      was_copied = (status == svn_wc__db_status_copied ||
-                    status == svn_wc__db_status_moved_here);
-
       if (!have_base)
         was_add = strcmp(op_root_abspath, local_abspath) == 0;
       else
@@ -780,9 +776,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                                            NULL, NULL, NULL, NULL, NULL,
                                            db, local_abspath, pool, pool));
 
-          if (base_status != svn_wc__db_status_not_present)
-            was_replace = TRUE;
-          else
+          if (base_status == svn_wc__db_status_not_present)
             was_add = TRUE;
         }
     }
@@ -824,8 +818,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   /* ### Maybe we should disallow deleting switched nodes here? */
 
     {
-      const char *parent_abspath = svn_dirent_dirname(local_abspath, pool);
-
       /* ### The following two operations should be inside one SqLite
              transaction. For even better behavior the tree operation
              before this block needs the same handling.
