@@ -4785,8 +4785,6 @@ def locate_wrong_origin(sbox):
   main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Add 2*iotas in r2')
   main.run_svn(None, 'rm', D1)
 
-  # ### Why do I have to commit here? Isn't this a normal replacement?
-  # ### TODO: Add a separate XFail test for this
   main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Why?')
 
   main.run_svn(None, 'cp', D2, D1)
@@ -4822,6 +4820,15 @@ def locate_wrong_origin(sbox):
 
   # So this gives a Checksum mismatch error.
   main.run_svn(None, 'up', sbox.wc_dir)
+
+# This test currently fails, but should work ok once we move to single DB
+def copy_over_deleted_dir(sbox):
+  "copy a directory over a deleted directory"
+  sbox.build(read_only = True)
+
+  main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'A/B'))
+  main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A/D'),
+               os.path.join(sbox.wc_dir, 'A/B'))
 
 
 ########################################################################
@@ -4918,7 +4925,10 @@ test_list = [ None,
               changed_data_should_match_checkout,
               XFail(changed_dir_data_should_match_checkout),
               XFail(move_added_nodes),
-              XFail(locate_wrong_origin),
+              # Serf needs a different testcase for this issue
+              XFail(Skip(locate_wrong_origin,
+                         svntest.main.is_ra_type_dav_serf)),
+              XFail(copy_over_deleted_dir),
              ]
 
 if __name__ == '__main__':
