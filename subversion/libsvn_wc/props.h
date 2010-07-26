@@ -179,17 +179,6 @@ svn_wc__get_actual_props(apr_hash_t **props,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-
-/* Load the revert props for ENTRY at PATH returning them in *REVERT_PROPS_P.
-   Returned hash/values are allocated in RESULT_POOL. All temporary
-   allocations are made in SCRATCH_POOL.  */
-svn_error_t *
-svn_wc__get_revert_props(apr_hash_t **revert_props_p,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
-
 /* Set *MARKED to indicate whether the versioned file at LOCAL_ABSPATH in DB
  * has a "binary" file type, as indicated by its working svn:mime-type
  * property. See svn_mime_type_is_binary() for the interpretation. */
