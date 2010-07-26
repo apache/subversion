@@ -49,7 +49,8 @@ extern "C" {
 #define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
                                                file */
 
-
+#define SVN_WC__SINGLE_DB
+#define SINGLE_DB
 
 
 /* We can handle this format or anything lower, and we (should) error

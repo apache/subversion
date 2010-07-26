@@ -9585,6 +9585,7 @@ struct set_new_dir_to_incomplete_baton
   const char *repos_root_url;
   const char *repos_uuid;
   svn_revnum_t revision;
+  svn_depth_t depth;
 };
 
 static svn_error_t *
@@ -9639,6 +9640,10 @@ set_new_dir_to_incomplete_baton_txn(void *baton,
                                             parent_relpath,
                                             (apr_int64_t)dtb->revision));
 
+  /* If depth not unknown or infinity: record depth */
+  if (dtb->depth >= svn_depth_empty && dtb->depth < svn_depth_infinity)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 7, svn_depth_to_word(dtb->depth)));
+
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -9651,6 +9656,7 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
                                              const char *repos_root_url,
                                              const char *repos_uuid,
                                              svn_revnum_t revision,
+                                             svn_depth_t depth,
                                              apr_pool_t *scratch_pool)
 {
   struct set_new_dir_to_incomplete_baton baton;
@@ -9663,6 +9669,7 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
   baton.repos_root_url = repos_root_url;
   baton.repos_uuid = repos_uuid;
   baton.revision = revision;
+  baton.depth = depth;
 
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&baton.pdh, &baton.local_relpath,
                                              db, local_abspath,
