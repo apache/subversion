@@ -500,6 +500,21 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                                       PROP_BASE_SUBDIR,
                                       scratch_pool),
                     FALSE, NULL, NULL, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(
+                     svn_wc__adm_child(wcroot_abspath,
+                                       PROP_WORKING_FOR_DIR,
+                                       scratch_pool),
+                     TRUE, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(
+                     svn_wc__adm_child(wcroot_abspath,
+                                      PROP_BASE_FOR_DIR,
+                                      scratch_pool),
+                     TRUE, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(
+                     svn_wc__adm_child(wcroot_abspath,
+                                      PROP_REVERT_FOR_DIR,
+                                      scratch_pool),
+                     TRUE, scratch_pool));
 #endif
 
 #if 0
@@ -1616,3 +1631,4 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
