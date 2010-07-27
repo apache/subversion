@@ -123,6 +123,11 @@ typedef struct prop_patch_target_t {
   /* Path to the temporary file underlying the result stream. */
   const char *patched_path;
 
+  /* Represents the operation performed on the property. It can be added,
+   * deleted or modified. 
+   * ### Should we use flags instead since we're not using all enum values? */
+  svn_diff_operation_kind_t operation;
+
   /* ### Here we'll add flags telling if the prop was added, deleted,
    * ### had_rejects, had_local_mods prior to patching and so on. */
 } prop_patch_target_t;
@@ -450,6 +455,7 @@ resolve_target_path(patch_target_t *target,
 static svn_error_t *
 init_prop_target(prop_patch_target_t **prop_target,
                  const char *prop_name,
+                 svn_diff_operation_kind_t operation,
                  svn_stream_t *reject,
                  svn_boolean_t remove_tempfiles,
                  svn_wc_context_t *wc_ctx,
@@ -476,6 +482,7 @@ init_prop_target(prop_patch_target_t **prop_target,
 
   new_prop_target = apr_palloc(result_pool, sizeof(*new_prop_target));
   new_prop_target->name = apr_pstrdup(result_pool, prop_name);
+  new_prop_target->operation = operation;
   new_prop_target->content_info = content_info;
 
   SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name, 
@@ -648,11 +655,13 @@ init_patch_target(patch_target_t **patch_target,
                hi = apr_hash_next(hi))
             {
               const char *prop_name = svn__apr_hash_index_key(hi);
+              svn_prop_patch_t *prop_patch = svn__apr_hash_index_val(hi);
               prop_patch_target_t *prop_target;
 
               /* Obtain info about this property */
               SVN_ERR(init_prop_target(&prop_target,
                                        prop_name,
+                                       prop_patch->operation,
                                        content_info->reject,
                                        remove_tempfiles,
                                        wc_ctx, target->local_abspath,
