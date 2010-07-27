@@ -2028,6 +2028,91 @@ write_out_rejected_hunks(patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
+/* Install the patched properties for TARGET. Use client context CTX to
+ * retrieve WC_CTX. If DRY_RUN is TRUE, don't modify the working copy.
+ * Do tempoary allocations in SCRATCH_POOL. */
+static svn_error_t *
+install_patched_prop_targets(patch_target_t *target,
+                             svn_client_ctx_t *ctx, svn_boolean_t dry_run,
+                             apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+
+  if (dry_run)
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  for (hi = apr_hash_first(scratch_pool, target->prop_targets);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      prop_patch_target_t *prop_target = svn__apr_hash_index_val(hi); 
+      apr_file_t *file;
+      svn_stream_t *patched_stream;
+      svn_stringbuf_t *line;
+      svn_stringbuf_t *prop_content;
+      const char *eol_str;
+      svn_boolean_t eof;
+
+      svn_pool_clear(iterpool);
+
+      /* For a deleted prop we only set the value to NULL. */
+      if (prop_target->operation == svn_diff_op_deleted)
+        {
+          SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
+                                   prop_target->name, NULL, 
+                                   TRUE /* skip_checks */,
+                                   NULL, NULL,
+                                   iterpool));
+          break;
+        }
+
+      /* A property is usually one line long.
+       * ### Is this the optimal size to allocate? */
+      prop_content = svn_stringbuf_create_ensure(80, scratch_pool);
+
+      /* svn_wc_prop_set4() wants a svn_string_t for input so we need to
+       * open the tmp file for reading again. */
+      SVN_ERR(svn_io_file_open(&file, prop_target->patched_path,
+                               APR_READ | APR_BINARY, APR_OS_DEFAULT,
+                               scratch_pool));
+
+      patched_stream = svn_stream_from_aprfile2(file, FALSE /* disown */,
+                                                iterpool);
+      do
+        {
+          SVN_ERR(svn_stream_readline_detect_eol(patched_stream,
+                                                 &line, &eol_str,
+                                                 &eof,
+                                                 iterpool));
+
+          svn_stringbuf_appendstr(prop_content, line);
+
+          if (eol_str)
+            svn_stringbuf_appendcstr(prop_content, eol_str);
+        }
+      while (! eof);
+
+      svn_stream_close(patched_stream);
+
+      /* ### How should we handle SVN_ERR_ILLEGAL_TARGET and
+       * ### SVN_ERR_BAD_MIME_TYPE? */
+      SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
+                               prop_target->name,
+                               svn_string_create_from_buf(prop_content, 
+                                                          iterpool),
+                               TRUE /* skip_checks */,
+                               NULL, NULL,
+                               iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton for find_existing_children() */
 struct status_baton
 {
@@ -2397,7 +2482,9 @@ apply_patches(void *baton,
                                                    iterpool));
 
                   if (target->has_prop_changes)
-                    ; /* ### Here we're going to install prop targets */
+                    SVN_ERR(install_patched_prop_targets(target, btn->ctx, 
+                                                         btn->dry_run,
+                                                         iterpool));
 
                   SVN_ERR(write_out_rejected_hunks(target, btn->dry_run,
                                                    iterpool));

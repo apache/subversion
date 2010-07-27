@@ -2213,7 +2213,7 @@ def patch_with_properties(sbox):
   added_prop_contents = "This is the property 'added'.\n"
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    ' U        %s\n' % os.path.join(wc_dir, 'iota'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
