@@ -1486,6 +1486,33 @@ svn_wc__db_from_relpath(const char **local_abspath,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_get_wcroot(const char **wcroot_abspath,
+                      svn_wc__db_t *db,
+                      const char *wri_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *unused_relpath;
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &unused_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  /* Can't use VERIFY_USABLE_PDH, as this should be usable to detect
+     where call upgrade */
+
+  if (pdh->wcroot == NULL)
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                             _("The node '%s' is not in a workingcopy."),
+                             svn_dirent_local_style(wri_abspath,
+                                                    scratch_pool));
+
+  *wcroot_abspath = apr_pstrdup(result_pool, pdh->wcroot->abspath);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc__db_t *db,
@@ -8048,6 +8075,7 @@ wclock_obtain_cb(void *baton,
       if (!own_lock && !bt->steal_lock)
         {
           SVN_ERR(svn_sqlite__reset(stmt));
+          SVN_DBG(("Found on %s\n", lock_relpath));
           err = svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                                    _("'%s' is already locked."),
                                    svn_dirent_local_style(lock_abspath,
@@ -8117,11 +8145,11 @@ wclock_obtain_cb(void *baton,
         break;
 
       lock_relpath = svn_relpath_dirname(lock_relpath, scratch_pool);
-
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_INSERT_WC_LOCK));
+  SVN_DBG(("Locking on %s\n", bt->local_relpath));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
                             bt->local_relpath,
                             (apr_int64_t) bt->levels_to_lock));

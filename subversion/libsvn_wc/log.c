@@ -496,8 +496,12 @@ cleanup_internal(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   int wc_format;
+#ifdef SVN_WC__SINGLE_DB
+  const char *cleanup_abspath;
+#else
   const apr_array_header_t *children;
   int i;
+#endif
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* Check cancellation; note that this catches recursive calls too. */
@@ -516,6 +520,7 @@ cleanup_internal(svn_wc__db_t *db,
     SVN_ERR(svn_wc__wq_run(db, adm_abspath, cancel_func, cancel_baton,
                            iterpool));
 
+#ifndef SVN_WC__SINGLE_DB
   /* Recurse on versioned, existing subdirectories.  */
   SVN_ERR(svn_wc__db_read_children(&children, db, adm_abspath,
                                    scratch_pool, iterpool));
@@ -541,20 +546,31 @@ cleanup_internal(svn_wc__db_t *db,
                                      iterpool));
         }
     }
+#endif
 
-#ifndef SINGLE_DB
+#ifndef SVN_WC__SINGLE_DB
   /* Purge the DAV props at and under ADM_ABSPATH. */
   /* ### in single-db mode, we need do this purge at the top-level only. */
   SVN_ERR(svn_wc__db_base_clear_dav_cache_recursive(db, adm_abspath, iterpool));
+#else
+  SVN_ERR(svn_wc__db_get_wcroot(&cleanup_abspath, db, adm_abspath,
+                                iterpool, iterpool));
+
+  /* Perform these operations if we lock the entire working copy */
+  if (strcmp(cleanup_abspath, adm_abspath))
+    {
 #endif
 
-  /* Cleanup the tmp area of the admin subdir, if running the log has not
-     removed it!  The logs have been run, so anything left here has no hope
-     of being useful. */
-  SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, adm_abspath, iterpool));
+    /* Cleanup the tmp area of the admin subdir, if running the log has not
+       removed it!  The logs have been run, so anything left here has no hope
+       of being useful. */
+      SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, adm_abspath, iterpool));
 
-  /* Remove unreferenced pristine texts */
-  SVN_ERR(svn_wc__db_pristine_cleanup(db, adm_abspath, iterpool));
+      /* Remove unreferenced pristine texts */
+      SVN_ERR(svn_wc__db_pristine_cleanup(db, adm_abspath, iterpool));
+#ifdef SVN_WC__SINGLE_DB
+    }
+#endif
 
   /* All done, toss the lock */
   SVN_ERR(svn_wc__db_wclock_release(db, adm_abspath, iterpool));
