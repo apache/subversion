@@ -368,14 +368,16 @@ copy_versioned_dir(svn_wc__db_t *db,
   SVN_ERR(svn_wc__wq_run(db, dir_abspath,
                          cancel_func, cancel_baton, scratch_pool));
 
+#ifndef SVN_WC__SINGLE_DB
   if (kind == svn_node_dir)
     {
       /* The first copy only does the parent stub, this second copy
          does the full node but can only happen after the workqueue
-         has move the destination into place. */
+         has moved the destination into place. */
       SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
                                  NULL, scratch_pool));
     }
+#endif
 
   if (notify_func)
     {
