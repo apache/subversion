@@ -3232,6 +3232,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
     }
 
 
+#ifndef SVN_WC__SINGLE_DB
   /* When copying a directory the destination may not exist, if so we
      only copy the parent stub */
   if (kind == svn_wc__db_kind_dir && !*src_relpath && *dst_relpath)
@@ -3248,6 +3249,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       src_relpath = svn_dirent_basename(src_abspath, NULL);
       kind = svn_wc__db_kind_subdir;
     }
+#endif
 
   /* Get the children for a directory if this is not the parent stub */
   if (kind == svn_wc__db_kind_dir)
