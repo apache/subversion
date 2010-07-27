@@ -44,7 +44,7 @@ public class ClientNotifyInformation extends EventObject
     private static final long serialVersionUID = 1L;
 
     /**
-     * The {@link NotifyAction} which triggered this event.
+     * The {@link Action} which triggered this event.
      */
     private Action action;
 
@@ -69,12 +69,12 @@ public class ClientNotifyInformation extends EventObject
     private String errMsg;
 
     /**
-     * The {@link NotifyStatus} of the content of the item.
+     * The {@link Status} of the content of the item.
      */
     private Status contentState;
 
     /**
-     * The {@link NotifyStatus} of the properties of the item.
+     * The {@link Status} of the properties of the item.
      */
     private Status propState;
 

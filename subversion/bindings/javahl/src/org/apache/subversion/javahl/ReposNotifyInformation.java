@@ -43,7 +43,7 @@ public class ReposNotifyInformation extends EventObject
     private static final long serialVersionUID = 1L;
 
     /**
-     * The {@link NotifyAction} which triggered this event.
+     * The {@link Action} which triggered this event.
      */
     private Action action;
 
