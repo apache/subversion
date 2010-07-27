@@ -556,8 +556,12 @@ cleanup_internal(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_get_wcroot(&cleanup_abspath, db, adm_abspath,
                                 iterpool, iterpool));
 
-  /* Perform these operations if we lock the entire working copy */
-  if (strcmp(cleanup_abspath, adm_abspath))
+  /* Perform these operations if we lock the entire working copy.
+     Note that we really need to check a wcroot value and not
+     svn_wc__check_wcroot() as that function, will just return true
+     once we start sharing databases with externals.
+   */
+  if (strcmp(cleanup_abspath, adm_abspath) == 0)
     {
 #endif
 
