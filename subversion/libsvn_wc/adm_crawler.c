@@ -113,15 +113,25 @@ restore_node(svn_boolean_t *restored,
 {
   *restored = FALSE;
 
-  /* Currently we can only restore files, but we will be able to restore
-     directories after we move to a single database and pristine store. */
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
-      /* ... recreate file from text-base, and ... */
+      /* Recreate file from text-base */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times,
                            scratch_pool));
 
       *restored = TRUE;
+    }
+#ifdef SVN_WC__SINGLE_DB
+  else if (kind == svn_wc__db_kind_dir)
+    {
+      /* Recreating a directory is just a mkdir */
+      SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
+      *restored = TRUE;
+    }
+#endif
+
+  if (*restored)
+    {
       /* ... report the restoration to the caller.  */
       if (notify_func != NULL)
         {
