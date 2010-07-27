@@ -1028,8 +1028,6 @@ migrate_props(const char *wcroot_abspath,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
-  SVN_DBG(("Migrating props on %s from %d to 18\n", wcroot_abspath, original_format));
-
   /* Migrate the props for "this dir".  */
   SVN_ERR(migrate_node_props(wcroot_abspath, "", sdb, original_format,
                              iterpool));
@@ -1518,6 +1516,17 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 99;
 #endif
     }
+
+#ifdef SVN_DEBUG
+  if (*result_format != start_format)
+    {
+      int schema_version;
+      SVN_ERR(svn_sqlite__read_schema_version(&schema_version, sdb, scratch_pool));
+
+      /* If this assertion fails the schema isn't updated correctly */
+      SVN_ERR_ASSERT(schema_version == *result_format);
+    }
+#endif
 
   /* Zap anything that might be remaining or escaped our notice.  */
   wipe_obsolete_files(wcroot_abspath, scratch_pool);
