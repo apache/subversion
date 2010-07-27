@@ -113,8 +113,14 @@ typedef struct target_content_info_t {
 } target_content_info_t;
 
 typedef struct prop_patch_target_t {
+
+  /* The name of the property */
   const char *name;
+
+  /* All the information that is specific to the content of the property. */
   target_content_info_t *content_info;
+
+  /* Path to the temporary file underlying the result stream. */
   const char *patched_path;
 
   /* ### Here we'll add flags telling if the prop was added, deleted,
@@ -192,7 +198,7 @@ typedef struct patch_target_t {
   /* True if the patch changes any of the properties of the target */
   svn_boolean_t has_prop_changes;
 
-  /* All the information that is specifict to the content of the target. */
+  /* All the information that is specific to the content of the target. */
   target_content_info_t *content_info;
 
   /* A hash table of prop_patch_target_t objects keyed by property names. */
