@@ -724,6 +724,14 @@ PRAGMA user_version = 17;
 
 /* ------------------------------------------------------------------------- */
 
+/* Format 18 involves no schema changes, it moves the property data from files
+   into the database. */
+
+-- STMT_UPGRADE_TO_18
+PRAGMA user_version = 18;
+
+/* ------------------------------------------------------------------------- */
+
 /* Format YYY introduces new handling for conflict information.  */
 -- format: YYY
 

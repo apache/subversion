@@ -1028,6 +1028,8 @@ migrate_props(const char *wcroot_abspath,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
+  SVN_DBG(("Migrating props on %s from %d to 18\n", wcroot_abspath, original_format));
+
   /* Migrate the props for "this dir".  */
   SVN_ERR(migrate_node_props(wcroot_abspath, "", sdb, original_format,
                              iterpool));
@@ -1063,10 +1065,8 @@ bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct bump_to_18_baton *b18 = baton;
 
-#if 0
   /* ### no schema changes (yet)... */
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_18));
-#endif
 
   SVN_ERR(migrate_props(b18->wcroot_abspath, sdb, b18->original_format,
                         scratch_pool));
