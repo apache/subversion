@@ -296,7 +296,8 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
   # Additionally print unified diff
   print('DIFF ' + ' '.join(output.split(' ')[1:]))
   for x in unified_diff(expected, actual,
-                        fromfile="EXPECTED", tofile="ACTUAL"):
+                        fromfile="EXPECTED %s" % label,
+                        tofile="ACTUAL %s" % label):
     sys.stdout.write(x)
 
 def compare_and_display_lines(message, label, expected, actual,
