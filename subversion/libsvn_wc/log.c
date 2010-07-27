@@ -511,8 +511,14 @@ cleanup_internal(svn_wc__db_t *db,
   /* Can we even work with this directory?  */
   SVN_ERR(can_be_cleaned(&wc_format, db, adm_abspath, iterpool));
 
+#ifdef SVN_WC__SINGLE_DB
+  /* ### This fails if ADM_ABSPATH is locked indirectly via a
+     ### recursive lock on an ancestor. */
+  SVN_ERR(svn_wc__db_wclock_obtain(db, adm_abspath, -1, TRUE, iterpool));
+#else
   /* Lock this working copy directory, or steal an existing lock */
   SVN_ERR(svn_wc__db_wclock_obtain(db, adm_abspath, 0, TRUE, iterpool));
+#endif
 
   /* Run our changes before the subdirectories. We may not have to recurse
      if we blow away a subdir.  */
