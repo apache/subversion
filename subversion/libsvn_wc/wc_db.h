@@ -413,6 +413,15 @@ svn_wc__db_from_relpath(const char **local_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/* Compute the working copy root WCROOT_ABSPATH for WRI_ABSPATH using DB.
+ */
+svn_error_t *
+svn_wc__db_get_wcroot(const char **wcroot_abspath,
+                      svn_wc__db_t *db,
+                      const char *wri_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
 /* @} */
 
 /* Different kinds of trees
