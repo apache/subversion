@@ -2200,7 +2200,7 @@ def patch_with_properties(sbox):
     "-This is the property 'modified'.\n",
     "+The property 'modified' has changed.\n",
     "Added: added\n",
-    "## -0,0 +1 ""\n",
+    "## -0,0 +1 ##\n",
     "+This is the property 'added'.\n",
     "Deleted: deleted\n",
     "## -1 +0,0 ##\n",
@@ -2220,7 +2220,7 @@ def patch_with_properties(sbox):
   expected_disk.tweak('iota', props={'modified' : modified_prop_contents,
                                      'added' : added_prop_contents})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status=' M')
+  expected_status.tweak('iota', status=' M', wc_rev='2')
 
   expected_skip = wc.State('', { })
 
