@@ -1627,7 +1627,7 @@ def lock_admin_dir(wc_dir):
     if head == root_path:
       raise svntest.Failure("No DB for " + wc_dir)
     root_path = head
-    relpath = os.path.join(tail, relpath).rstrip('/')
+    relpath = os.path.join(tail, relpath).replace(os.path.sep, '/').rstrip('/')
 
   db.execute('insert into wc_lock (wc_id, local_dir_relpath, locked_levels) '
              + 'values (?, ?, ?)',
