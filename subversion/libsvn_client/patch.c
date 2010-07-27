@@ -133,9 +133,6 @@ typedef struct prop_patch_target_t {
 } prop_patch_target_t;
 
 typedef struct patch_target_t {
-  /* The patch being applied. */
-  const svn_patch_t *patch;
-
   /* The target path as it appeared in the patch file,
    * but in canonicalised form. */
   const char *canon_path_from_patchfile;
@@ -565,7 +562,6 @@ init_patch_target(patch_target_t **patch_target,
   target = apr_pcalloc(result_pool, sizeof(*target));
 
   /* All other fields in target are FALSE or NULL due to apr_pcalloc(). */
-  target->patch = patch;
   target->db_kind = svn_node_none;
   target->kind_on_disk = svn_node_none;
   target->content_info = content_info;
