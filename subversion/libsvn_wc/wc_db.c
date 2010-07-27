@@ -8075,7 +8075,6 @@ wclock_obtain_cb(void *baton,
       if (!own_lock && !bt->steal_lock)
         {
           SVN_ERR(svn_sqlite__reset(stmt));
-          SVN_DBG(("Found on %s\n", lock_relpath));
           err = svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
                                    _("'%s' is already locked."),
                                    svn_dirent_local_style(lock_abspath,
@@ -8149,7 +8148,6 @@ wclock_obtain_cb(void *baton,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_INSERT_WC_LOCK));
-  SVN_DBG(("Locking on %s\n", bt->local_relpath));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
                             bt->local_relpath,
                             (apr_int64_t) bt->levels_to_lock));
