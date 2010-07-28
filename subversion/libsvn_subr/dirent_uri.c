@@ -1482,119 +1482,119 @@ svn_uri_get_longest_ancestor(const char *uri1,
 }
 
 const char *
-svn_dirent_is_child(const char *dirent1,
-                    const char *dirent2,
+svn_dirent_is_child(const char *parent_dirent,
+                    const char *child_dirent,
                     apr_pool_t *pool)
 {
-  return is_child(type_dirent, dirent1, dirent2, pool);
+  return is_child(type_dirent, parent_dirent, child_dirent, pool);
 }
 
 const char *
-svn_relpath_is_child(const char *relpath1,
-                     const char *relpath2,
+svn_relpath_is_child(const char *parent_relpath,
+                     const char *child_relpath,
                      apr_pool_t *pool)
 {
-  return is_child(type_relpath, relpath1, relpath2, pool);
+  return is_child(type_relpath, parent_relpath, child_relpath, pool);
 }
 
 const char *
-svn_uri_is_child(const char *uri1,
-                 const char *uri2,
+svn_uri_is_child(const char *parent_uri,
+                 const char *child_uri,
                  apr_pool_t *pool)
 {
-  return is_child(type_uri, uri1, uri2, pool);
+  return is_child(type_uri, parent_uri, child_uri, pool);
 }
 
 svn_boolean_t
-svn_dirent_is_ancestor(const char *dirent1, const char *dirent2)
+svn_dirent_is_ancestor(const char *parent_dirent, const char *child_dirent)
 {
-  return is_ancestor(type_dirent, dirent1, dirent2);
+  return is_ancestor(type_dirent, parent_dirent, child_dirent);
 }
 
 svn_boolean_t
-svn_relpath_is_ancestor(const char *relpath1, const char *relpath2)
+svn_relpath_is_ancestor(const char *parent_relpath, const char *child_relpath)
 {
-  return is_ancestor(type_relpath, relpath1, relpath2);
+  return is_ancestor(type_relpath, parent_relpath, child_relpath);
 }
 
 svn_boolean_t
-svn_uri_is_ancestor(const char *uri1, const char *uri2)
+svn_uri_is_ancestor(const char *parent_uri, const char *child_uri)
 {
-  return is_ancestor(type_uri, uri1, uri2);
+  return is_ancestor(type_uri, parent_uri, child_uri);
 }
 
 const char *
-svn_dirent_skip_ancestor(const char *dirent1,
-                         const char *dirent2)
+svn_dirent_skip_ancestor(const char *parent_dirent,
+                         const char *child_dirent)
 {
-  apr_size_t len = strlen(dirent1);
+  apr_size_t len = strlen(parent_dirent);
   apr_size_t root_len;
 
-  if (0 != memcmp(dirent1, dirent2, len))
-    return dirent2; /* dirent1 is no ancestor of dirent2 */
+  if (0 != memcmp(parent_dirent, child_dirent, len))
+    return child_dirent; /* parent_dirent is no ancestor of child_dirent */
 
-  if (dirent2[len] == 0)
-    return ""; /* dirent1 == dirent2 */
+  if (child_dirent[len] == 0)
+    return ""; /* parent_dirent == child_dirent */
 
-  root_len = dirent_root_length(dirent2, strlen(dirent2));
+  root_len = dirent_root_length(child_dirent, strlen(child_dirent));
   if (root_len > len)
-    return dirent2; /* Different root */
+    return child_dirent; /* Different root */
 
-  if (len == 1 && dirent2[0] == '/')
-    return dirent2 + 1;
+  if (len == 1 && child_dirent[0] == '/')
+    return child_dirent + 1;
 
-  if (dirent2[len] == '/')
-    return dirent2 + len + 1;
+  if (child_dirent[len] == '/')
+    return child_dirent + len + 1;
 
 #ifdef SVN_USE_DOS_PATHS
-  if (root_len == len && len > 0 && dirent2[len-1])
-    return dirent2 + len;
+  if (root_len == len && len > 0 && child_dirent[len-1])
+    return child_dirent + len;
 #endif
 
-  return dirent2;
+  return child_dirent;
 }
 
 const char *
-svn_relpath_skip_ancestor(const char *relpath1,
-                         const char *relpath2)
+svn_relpath_skip_ancestor(const char *parent_relpath,
+                          const char *child_relpath)
 {
-  apr_size_t len = strlen(relpath1);
+  apr_size_t len = strlen(parent_relpath);
 
-  if (0 != memcmp(relpath1, relpath2, len))
-    return relpath2; /* relpath1 is no ancestor of relpath2 */
+  if (0 != memcmp(parent_relpath, child_relpath, len))
+    return child_relpath; /* parent_relpath is no ancestor of child_relpath */
 
-  if (relpath2[len] == 0)
-    return ""; /* relpath1 == relpath2 */
+  if (child_relpath[len] == 0)
+    return ""; /* parent_relpath == child_relpath */
 
-  if (len == 1 && relpath2[0] == '/')
-    return relpath2 + 1;
+  if (len == 1 && child_relpath[0] == '/')
+    return child_relpath + 1;
 
-  if (relpath2[len] == '/')
-    return relpath2 + len + 1;
+  if (child_relpath[len] == '/')
+    return child_relpath + len + 1;
 
-  return relpath2;
+  return child_relpath;
 }
 
 
 const char *
-svn_uri_skip_ancestor(const char *uri1,
-                      const char *uri2)
+svn_uri_skip_ancestor(const char *parent_uri,
+                      const char *child_uri)
 {
-  apr_size_t len = strlen(uri1);
+  apr_size_t len = strlen(parent_uri);
 
-  if (0 != memcmp(uri1, uri2, len))
-    return uri2; /* dirent1 is no ancestor of dirent2 */
+  if (0 != memcmp(parent_uri, child_uri, len))
+    return child_uri; /* parent_uri is no ancestor of child_uri */
 
-  if (uri2[len] == 0)
-    return ""; /* dirent1 == dirent2 */
+  if (child_uri[len] == 0)
+    return ""; /* parent_uri == child_uri */
 
-  if (len == 1 && uri2[0] == '/')
-    return uri2 + 1;
+  if (len == 1 && child_uri[0] == '/')
+    return child_uri + 1;
 
-  if (len > 0 && uri2[len] == '/')
-    return uri2 + len + 1;
+  if (len > 0 && child_uri[len] == '/')
+    return child_uri + len + 1;
 
-  return uri2;
+  return child_uri;
 }
 
 svn_boolean_t
