@@ -95,10 +95,14 @@ def basic_svnrdump(sbox):
   if not out[0].startswith('SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
 
-def revision0(sbox):
+def revision_0(sbox):
   "dump revision zero"
-  run_test(sbox, dumpfile_name = "revision0.dump")
-  
+  run_test(sbox, dumpfile_name = "revision-0.dump")
+
+def copy_and_modify(sbox):
+  "copy and modify"
+  run_test(sbox, "copy-and-modify.dump")
+
 ########################################################################
 # Run the tests
 
@@ -106,7 +110,8 @@ def revision0(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               basic_svnrdump,
-              revision0,
+              revision_0,
+              XFail(copy_and_modify),
              ]
 
 if __name__ == '__main__':
