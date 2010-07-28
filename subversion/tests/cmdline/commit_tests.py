@@ -461,8 +461,10 @@ def nested_dir_replacements(sbox):
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
   svntest.main.run_svn(None, 'rm', A_D)
 
+  # Recreate directories for single-db
   if not os.path.exists(A_D):
     os.mkdir(A_D)
+    os.mkdir(os.path.join(A_D, 'H'))
   svntest.main.run_svn(None, 'add', '--depth=empty', A_D)
   svntest.main.run_svn(None, 'add', '--depth=empty', os.path.join(A_D, 'H'))
 
