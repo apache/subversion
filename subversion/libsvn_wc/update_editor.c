@@ -5217,24 +5217,6 @@ close_file(void *file_baton,
       /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
-      {
-        apr_hash_t *props;
-        apr_array_header_t *prop_diffs;
-
-        /* ### grr. the BASE/ACTUAL props changes need to occur before the
-           ### merge_file() work. we may be able to solve this by shifting
-           ### some of the code blocks in this function up to here. in any
-           ### case, get the old-style props files written now, before
-           ### merge_file. the in-database values are going to occur later
-           ### (skew!), but we'll get that fixed before switching over to
-           ### db properties.  */
-        props = new_actual_props;
-        SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
-                               pool));
-        if (prop_diffs->nelts == 0)
-          props = NULL;
-      }
-
     /* Merge the text. This will queue some additional work.  */
     SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
                        &content_state, fb, new_text_base_sha1_checksum,
