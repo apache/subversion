@@ -561,19 +561,19 @@ svn_dirent_get_absolute(const char **pabsolute,
                         const char *relative,
                         apr_pool_t *pool);
 
-/** Test if @a uri2 is a child of @a uri1.
+/** Test if @a child_uri is a child of @a parent_uri.
  * If not, return @c NULL.
  * If so, return a copy of the remainder uri, allocated in @a pool.
- * (The remainder is the component which, added to @a uri1, yields
- * @a uri2.  The remainder does not begin with a dir separator.)
+ * (The remainder is the component which, added to @a parent_uri, yields
+ * @a child_uri.  The remainder does not begin with a dir separator.)
  *
  * Both uris must be in canonical form, and must either be absolute,
  * or contain no ".." components.
  *
- * If @a uri2 is the same as @a uri1, it is not considered a child,
+ * If @a child_uri is the same as @a parent_uri, it is not considered a child,
  * so the result is @c NULL; an empty string is never returned.
  *
- * If @a pool is @c NULL , a pointer into @a uri2 will be returned to
+ * If @a pool is @c NULL , a pointer into @a child_uri will be returned to
  *       identify the remainder uri.
  *
  * ### @todo the ".." restriction is unfortunate, and would ideally
@@ -584,12 +584,12 @@ svn_dirent_get_absolute(const char **pabsolute,
  * @since New in 1.7.
  */
 const char *
-svn_uri_is_child(const char *uri1,
-                 const char *uri2,
+svn_uri_is_child(const char *parent_uri,
+                 const char *child_uri,
                  apr_pool_t *pool);
 
 /**
- * This function is similar as svn_uri_is_child(), except that it supports
+ * This function is similar to svn_uri_is_child(), except that it supports
  * Windows dirents and UNC paths on Windows.
  *
  * ### @todo Makes no attempt to handle one absolute and one relative
@@ -598,88 +598,90 @@ svn_uri_is_child(const char *uri1,
  * @since New in 1.6.
  */
 const char *
-svn_dirent_is_child(const char *dirent1,
-                    const char *dirent2,
+svn_dirent_is_child(const char *parent_dirent,
+                    const char *child_dirent,
                     apr_pool_t *pool);
 
 /**
- * This function is similar as svn_uri_is_child(), except that it supports
+ * This function is similar to svn_uri_is_child(), except that it supports
  * only relative paths.
  *
  * @since New in 1.7.
  */
 const char *
-svn_relpath_is_child(const char *relpath1,
-                     const char *relpath2,
+svn_relpath_is_child(const char *parent_relpath,
+                     const char *child_relpath,
                      apr_pool_t *pool);
 
-/** Return TRUE if @a dirent1 is an ancestor of @a dirent2 or the dirents are
- * equal and FALSE otherwise.
+/** Return TRUE if @a parent_dirent is an ancestor of @a child_dirent or
+ * the dirents are equal, and FALSE otherwise.
  *
  * @since New in 1.6.
  */
 svn_boolean_t
-svn_dirent_is_ancestor(const char *path1,
-                       const char *path2);
+svn_dirent_is_ancestor(const char *parent_dirent,
+                       const char *child_dirent);
 
-/** Return TRUE if @a relpath1 is an ancestor of @a relpath2 or the relpaths
- * are equal and FALSE otherwise.
+/** Return TRUE if @a parent_relpath is an ancestor of @a child_relpath or
+ * the relpaths are equal, and FALSE otherwise.
  *
  * This function supports only relative paths.
  *
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_relpath_is_ancestor(const char *relpath1,
-                        const char *relpath2);
+svn_relpath_is_ancestor(const char *parent_relpath,
+                        const char *child_relpath);
 
-/** Return TRUE if @a uri1 is an ancestor of @a uri2 or the uris are
- * equal and FALSE otherwise.
+/** Return TRUE if @a parent_uri is an ancestor of @a child_uri or
+ * the uris are equal, and FALSE otherwise.
  *
  * This function supports URLs.
  *
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_uri_is_ancestor(const char *uri1,
-                    const char *uri2);
+svn_uri_is_ancestor(const char *parent_uri,
+                    const char *child_uri);
 
 
-/** Returns the relative path part of @a dirent2 that is below @a dirent1,
- * or just "" iif @a dirent1 is equal to @a dirent2. If @a dirent2 is not
- * below @a path1, return @a dirent2 completely.
+/** Return the relative path part of @a child_dirent that is below
+ * @a parent_dirent, or just "" if @a parent_dirent is equal to
+ * @a child_dirent. If @a child_dirent is not below @a parent_dirent,
+ * return @a child_dirent completely.
  *
- * This function assumes @a dirent1 and @a dirent2 are both absolute or
+ * This function assumes @a parent_dirent and @a child_dirent are both
+ * absolute or relative in the same way.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_dirent_skip_ancestor(const char *parent_dirent,
+                         const char *child_dirent);
+
+/** Return the relative path part of @a child_relpath that is below
+ * @a parent_relpath, or just "" if @a parent_relpath is equal to
+ * @a child_relpath. If @a child_relpath is not below @a parent_relpath,
+ * return @a child_relpath.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_relpath_skip_ancestor(const char *parent_relpath,
+                          const char *child_relpath);
+
+/** Return the relative path part of @a child_uri that is below
+ * @a parent_uri, or just "" if @a parent_uri is equal to @a child_uri. If
+ * @a child_uri is not below @a parent_uri, return @a child_uri.
+ *
+ * This function assumes @a parent_uri and @a child_uri are both absolute or
  * relative in the same way.
  *
  * @since New in 1.7.
  */
 const char *
-svn_dirent_skip_ancestor(const char *dirent1,
-                         const char *dirent2);
-
-/** Returns the relative path part of @a relpath2 that is below @a relpath1,
- * or just "" iif @a relpath1 is equal to @a relpath2. If @a relpath2 is not
- * below @a relpath1, return @a relpath2.
- *
- * @since New in 1.7.
- */
-const char *
-svn_relpath_skip_ancestor(const char *relpath1,
-                          const char *relpath2);
-
-/** Returns the relative path part of @a uri2 that is below @a uri1, or just
- * "" iif @a uri1 is equal to @a uri2. If @a uri2 is not below @a uri1,
- * return @a uri2.
- *
- * This function assumes @a uri1 and @a uri2 are both absolute or relative
- * in the same way.
- *
- * @since New in 1.7.
- */
-const char *
-svn_uri_skip_ancestor(const char *uri1,
-                      const char *uri2);
+svn_uri_skip_ancestor(const char *parent_uri,
+                      const char *child_uri);
 
 /** Find the common prefix of the canonicalized dirents in @a targets
  * (an array of <tt>const char *</tt>'s), and remove redundant dirents if @a
