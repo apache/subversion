@@ -462,7 +462,7 @@ get_lock(svn_lock_t **lock_p,
 
   SVN_ERR(read_digest_file(NULL, &lock, fs, digest_path, pool));
   if (! lock)
-    return SVN_FS__ERR_NO_SUCH_LOCK(fs, path);
+    return SVN_FS__ERR_NO_SUCH_LOCK(fs, path, pool);
 
   /* Don't return an expired lock. */
   if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
@@ -472,7 +472,7 @@ get_lock(svn_lock_t **lock_p,
       if (have_write_lock)
         SVN_ERR(delete_lock(fs, lock, pool));
       *lock_p = NULL;
-      return SVN_FS__ERR_LOCK_EXPIRED(fs, lock->token);
+      return SVN_FS__ERR_LOCK_EXPIRED(fs, lock->token, pool);
     }
 
   *lock_p = lock;
@@ -676,7 +676,7 @@ lock_body(void *baton, apr_pool_t *pool)
   SVN_ERR(lb->fs->vtable->revision_root(&root, lb->fs, youngest, pool));
   SVN_ERR(svn_fs_fs__check_path(&kind, root, lb->path, pool));
   if (kind == svn_node_dir)
-    return SVN_FS__ERR_NOT_FILE(lb->fs, lb->path);
+    return SVN_FS__ERR_NOT_FILE(lb->fs, lb->path, pool);
 
   /* While our locking implementation easily supports the locking of
      nonexistent paths, we deliberately choose not to allow such madness. */
@@ -696,7 +696,7 @@ lock_body(void *baton, apr_pool_t *pool)
 
   /* We need to have a username attached to the fs. */
   if (!lb->fs->access_ctx || !lb->fs->access_ctx->username)
-    return SVN_FS__ERR_NO_USER(lb->fs);
+    return SVN_FS__ERR_NO_USER(lb->fs, pool);
 
   /* Is the caller attempting to lock an out-of-date working file? */
   if (SVN_IS_VALID_REVNUM(lb->current_rev))
@@ -742,7 +742,7 @@ lock_body(void *baton, apr_pool_t *pool)
       if (! lb->steal_lock)
         {
           /* Sorry, the path is already locked. */
-          return SVN_FS__ERR_PATH_ALREADY_LOCKED(lb->fs, existing_lock);
+          return SVN_FS__ERR_PATH_ALREADY_LOCKED(lb->fs, existing_lock, pool);
         }
       else
         {
@@ -797,16 +797,16 @@ unlock_body(void *baton, apr_pool_t *pool)
     {
       /* Sanity check:  the incoming token should match lock->token. */
       if (strcmp(ub->token, lock->token) != 0)
-        return SVN_FS__ERR_NO_SUCH_LOCK(ub->fs, lock->path);
+        return SVN_FS__ERR_NO_SUCH_LOCK(ub->fs, lock->path, pool);
 
       /* There better be a username attached to the fs. */
       if (! (ub->fs->access_ctx && ub->fs->access_ctx->username))
-        return SVN_FS__ERR_NO_USER(ub->fs);
+        return SVN_FS__ERR_NO_USER(ub->fs, pool);
 
       /* And that username better be the same as the lock's owner. */
       if (strcmp(ub->fs->access_ctx->username, lock->owner) != 0)
-        return SVN_FS__ERR_LOCK_OWNER_MISMATCH
-          (ub->fs, ub->fs->access_ctx->username, lock->owner);
+        return SVN_FS__ERR_LOCK_OWNER_MISMATCH(
+           ub->fs, ub->fs->access_ctx->username, lock->owner, pool);
     }
 
   /* Remove lock and lock token files. */
