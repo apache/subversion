@@ -599,9 +599,6 @@ def run_entriesdump(path):
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
                                                         0, 0, None, path)
-  if options.verbose:
-    ### finish the CMD output
-    print
   if exit_code or stderr_lines:
     ### report on this? or continue to just skip it?
     return None
@@ -1308,7 +1305,7 @@ def _create_parser():
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
-  parser.add_option('-v', '--verbose', action='store_true',
+  parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
                     help='Print binary command-lines (not with --quiet)')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
