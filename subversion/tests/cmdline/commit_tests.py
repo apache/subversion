@@ -456,16 +456,19 @@ def nested_dir_replacements(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  A_D = os.path.join(wc_dir, 'A', 'D')
+
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
-  svntest.main.run_svn(None, 'rm', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', '--depth=empty',
-                       os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', '--depth=empty',
-                       os.path.join(wc_dir, 'A', 'D', 'H'))
+  svntest.main.run_svn(None, 'rm', A_D)
+
+  if not os.path.exists(A_D):
+    os.mkdir(A_D)
+  svntest.main.run_svn(None, 'add', '--depth=empty', A_D)
+  svntest.main.run_svn(None, 'add', '--depth=empty', os.path.join(A_D, 'H'))
 
   # For kicks, add new file A/D/bloo.
-  svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
-  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D', 'bloo'))
+  svntest.main.file_append(os.path.join(A_D, 'bloo'), "hi")
+  svntest.main.run_svn(None, 'add', os.path.join(A_D, 'bloo'))
 
   # Verify pre-commit status:
   #
@@ -1952,6 +1955,9 @@ def mods_in_schedule_delete(sbox):
   C_path = os.path.join(wc_dir, 'A', 'C')
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'rm', C_path)
+
+  if not os.path.exists(C_path):
+    os.mkdir(C_path)
   foo_path = os.path.join(C_path, 'foo')
   foo_contents = 'zig\nzag\n'
   svntest.main.file_append(foo_path, foo_contents)

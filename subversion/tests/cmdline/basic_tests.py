@@ -1149,9 +1149,9 @@ def basic_delete(sbox):
 
   # check versioned dir is not removed
   if not verify_dir_deleted(F_path):
-    print("Removed versioned dir")
-    ### we should raise a less generic error here. which?
-    raise svntest.Failure
+    # If we are not running in single-db, this is an error
+    if os.path.isdir(os.path.join(F_path, '../' + svntest.main.get_admin_name())):
+      raise svntest.Failure("Removed administrative area")
 
   # check unversioned and added dirs has been removed
   if verify_dir_deleted(Q_path):
