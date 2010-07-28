@@ -1160,7 +1160,7 @@ get_dir_status(const struct walk_status_baton *wb,
 #ifdef SVN_WC__SINGLE_DB
   if (err
       && (APR_STATUS_IS_ENOENT(err->apr_err)
-         || SVN__APR_STATUS_IS_ENODIR(err->apr_err)))
+         || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
       svn_error_clear(err);
       dirents = apr_hash_make(subpool);
