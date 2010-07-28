@@ -214,9 +214,13 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/* Blow away the admistrative directory associated with DIR_ABSPATH */
+/* Blow away the admistrative directory associated with DIR_ABSPATH.
+   For single-db this doesn't perform actual work unless the wcroot is passed.
+ */
 svn_error_t *svn_wc__adm_destroy(svn_wc__db_t *db,
                                  const char *dir_abspath,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
                                  apr_pool_t *scratch_pool);
 
 
