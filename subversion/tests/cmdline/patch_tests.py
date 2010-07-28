@@ -2526,6 +2526,70 @@ def patch_dir_properties(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+def patch_add_path_with_props(sbox):
+  "patch that adds paths with props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Apply patch that adds a file and a dir.
+
+  unidiff_patch = [
+    "Index: new\n",
+    "===================================================================\n",
+    "--- new\t(revision 0)\n",
+    "+++ new\t(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'\n",
+    "\n",
+    "Property changes on: new\n",
+    "-------------------------------------------------------------------\n",
+    "Added: added\n",
+    "## -0,0 +1 ##\n",
+    "+This is the property 'added'.\n",
+    "Index: X\n",
+    "===================================================================\n",
+    "--- X\t(revision 0)\n",
+    "+++ X\t(working copy)\n",
+    "\n",
+    "Property changes on: X\n",
+    "-------------------------------------------------------------------\n",
+    "Added: added\n",
+    "## -0,0 +1 ##\n",
+    "+This is the property 'added'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  added_prop_contents = "This is the property 'added'.\n"
+
+  expected_output = [
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'A         %s\n' % os.path.join(wc_dir, 'X'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'new': Item(contents="This is the file 'new'\n", 
+                                 props={'added' : added_prop_contents})})
+  expected_disk.add({'X': Item(props={'added' : added_prop_contents})})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'new': Item(status='A ', wc_rev='0')})
+  expected_status.add({'X': Item(status='A ', wc_rev='0')})
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -2552,6 +2616,7 @@ test_list = [ None,
               patch_with_properties,
               patch_same_twice,
               XFail(patch_dir_properties),
+              XFail(patch_add_path_with_props),
             ]
 
 if __name__ == '__main__':
