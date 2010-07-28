@@ -325,6 +325,7 @@ path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 static APR_INLINE const char *
 path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT_NO_RETURN(txn_id != NULL);
   return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
                               apr_pstrcat(pool, txn_id, PATH_EXT_TXN, NULL),
                               NULL);
@@ -4599,6 +4600,13 @@ get_txn_proplist(apr_hash_t *proplist,
                  apr_pool_t *pool)
 {
   svn_stream_t *stream;
+
+  /* The following error has been observed at least twice in real life when
+   * WANdisco software sends a DAV 'MERGE' command to a Subversion server:
+   * "Can't open file '[...]/db/transactions/props': No such file or directory"
+   * The path should be '[...]/db/transactions/<txn-id>/props'.
+   * The only way that could happen is if txn_id was NULL here. */
+  SVN_ERR_ASSERT(txn_id != NULL);
 
   /* Open the transaction properties file. */
   SVN_ERR(svn_stream_open_readonly(&stream, path_txn_props(fs, txn_id, pool),
