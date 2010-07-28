@@ -675,8 +675,8 @@ erase_from_wc(svn_wc__db_t *db,
         {
           svn_pool_destroy(iterpool);
 
-          if (APR_STATUS_IS_ENOTDIR(err->apr_err) ||
-              APR_STATUS_IS_ENOENT(err->apr_err))
+          if (APR_STATUS_IS_ENOENT(err->apr_err) ||
+              SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
             {
               svn_error_clear(err);
               return SVN_NO_ERROR;

@@ -88,7 +88,7 @@ read_propfile(apr_hash_t **props,
 
   if (err
       && (APR_STATUS_IS_ENOENT(err->apr_err)
-          || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
       svn_error_clear(err);
 

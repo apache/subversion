@@ -257,7 +257,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             scratch_pool, scratch_pool);
 
   if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || APR_STATUS_IS_ENODIR(err->apr_err)))
+              || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
       svn_error_clear(err);
       dirents = apr_hash_make(scratch_pool);
