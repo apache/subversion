@@ -823,8 +823,9 @@ def text_base_path(file_path):
     if head == root_path:
       raise svntest.Failure("No DB for " + file_path)
     root_path = head
-    relpath = os.path.join(tail, relpath)
+    relpath = os.path.join(tail, relpath).replace(os.sep, '/')
 
+  print('%s : %s' %(db_path, relpath))
   c = db.cursor()
   c.execute("""select checksum from working_node
                where local_relpath = '""" + relpath + """'""")
@@ -836,7 +837,16 @@ def text_base_path(file_path):
   if checksum is None or checksum[0:6] != "$sha1$":
     raise svntest.Failure("No SHA1 checksum for " + relpath)
   db.close()
-  return os.path.join(root_path, dot_svn, 'pristine', checksum[6:])
+
+  checksum = checksum[6:]
+  # Calculate single DB location
+  fn = os.path.join(root_path, dot_svn, 'pristine', checksum[0:2], checksum)
+
+  if os.path.isfile(fn):
+    return fn
+
+  # Calculate per dir location
+  return os.path.join(root_path, dot_svn, 'pristine', checksum)
 
 
 # ------------
