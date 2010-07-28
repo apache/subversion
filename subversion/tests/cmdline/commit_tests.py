@@ -86,11 +86,15 @@ def make_standard_slew_of_changes(wc_dir):
   svntest.main.run_svn(None, 'add', 'Q')
 
   # Remove two directories
-  svntest.main.run_svn(None, 'rm', os.path.join('A', 'B', 'E'))
+  A_B_E = os.path.join('A', 'B', 'E')
+  svntest.main.run_svn(None, 'rm', A_B_E)
   svntest.main.run_svn(None, 'rm', os.path.join('A', 'C'))
 
   # Replace one of the removed directories
-  svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'E'))
+  # But first recreate if it doesn't exist (single-db)
+  if not os.path.exists(A_B_E):
+    os.mkdir(A_B_E)
+  svntest.main.run_svn(None, 'add', A_B_E)
 
   # Make property mods to two directories
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', os.curdir)
