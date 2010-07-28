@@ -1213,8 +1213,8 @@ def basic_checkout_deleted(sbox):
 
 #----------------------------------------------------------------------
 
-# Issue 846, changing a deleted file to an added directory is not
-# supported.
+# Issue 846, changing a deleted file to an added directory was not
+# supported before WC-NG. But we can handle it.
 
 def basic_node_kind_change(sbox):
   "attempt to change node kind"
@@ -1232,25 +1232,24 @@ def basic_node_kind_change(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Try and fail to create a directory (file scheduled for deletion)
-  svntest.actions.run_and_verify_svn('Cannot change node kind',
-                                     None, svntest.verify.AnyOutput,
-                                     'mkdir', gamma_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', gamma_path)
 
-  # Status is unchanged
+  # Status is replaced
+  expected_status.tweak('A/D/gamma', status='R ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Commit file deletion
   expected_output = wc.State(wc_dir, {
-    'A/D/gamma' : Item(verb='Deleting'),
+    'A/D/gamma' : Item(verb='Replacing'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.remove('A/D/gamma')
+  expected_status.tweak('A/D/gamma', status='  ', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
                                         None, wc_dir)
 
   # Try and fail to create a directory (file deleted)
-  svntest.actions.run_and_verify_svn('Cannot change node kind',
+  svntest.actions.run_and_verify_svn(None,
                                      None, svntest.verify.AnyOutput,
                                      'mkdir', gamma_path)
 
@@ -1261,11 +1260,12 @@ def basic_node_kind_change(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # mkdir should succeed
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', gamma_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', gamma_path)
 
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/D/gamma' : Item(status='A ', wc_rev=0),
+    'A/D/gamma' : Item(status='R ', wc_rev=2),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -2542,7 +2542,7 @@ test_list = [ None,
               basic_switch,
               basic_delete,
               basic_checkout_deleted,
-              basic_node_kind_change,
+              Wimp('Needs single-db', basic_node_kind_change),
               basic_import,
               basic_cat,
               basic_ls,
