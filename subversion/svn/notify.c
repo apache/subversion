@@ -274,7 +274,10 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
               statchar_buf[0] = 'U';
           }
 
-        if (statchar_buf[0] != ' ')
+        if (n->prop_state == svn_wc_notify_state_changed)
+              statchar_buf[1] = 'U';
+
+        if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
           {
             if ((err = svn_cmdline_printf(pool, "%s      %s\n",
                                           statchar_buf, path_local)))

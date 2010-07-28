@@ -1447,8 +1447,14 @@ send_patch_notification(const patch_target_t *target,
         notify->content_state = svn_wc_notify_state_conflicted;
       else if (target->local_mods)
         notify->content_state = svn_wc_notify_state_merged;
-      else
+      else if (target->has_text_changes)
         notify->content_state = svn_wc_notify_state_changed;
+
+      /* ### We need to decide on how we want prop notifications to work. 
+       * ### At the moment we're not reporting rejects and what about added
+       * paths with props and paths scheduled for deletion? */
+      if (target->has_prop_changes)
+        notify->prop_state = svn_wc_notify_state_changed;
     }
 
   (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
