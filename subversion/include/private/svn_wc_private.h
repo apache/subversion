@@ -222,7 +222,7 @@ svn_wc__node_get_children(const apr_array_header_t **children,
 
 /**
  * Fetch the repository root information for a given @a local_abspath into
- * @a *repos_root_url and @a repos_uuid. Use @wc_ctx to access the working copy
+ * @a *repos_root_url and @a repos_uuid. Use @a wc_ctx to access the working copy
  * for @a local_abspath, @a scratch_pool for all temporary allocations,
  * @a result_pool for result allocations. Note: the result may be NULL if the
  * given node has no repository root associated with it (e.g. locally added).
@@ -501,7 +501,7 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
  * SVN_INVALID_REVNUM. In case of a replacement, we return the BASE
  * revision. 
  *
- * The @changed_rev is set to the latest committed change to @a
+ * The @a changed_rev is set to the latest committed change to @a
  * local_abspath before or equal to @a revision, unless the node is
  * copied-here or moved-here. Then it is the revision of the latest committed
  * change before or equal to the copyfrom_rev.  NOTE, that we use
