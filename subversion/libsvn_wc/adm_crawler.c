@@ -243,6 +243,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
   int i;
   const char *dir_repos_root, *dir_repos_relpath;
   svn_depth_t dir_depth;
+  svn_error_t *err;
 
 
   /* Get both the SVN Entries and the actual on-disk entries.   Also
@@ -251,8 +252,18 @@ report_revisions_and_depths(svn_wc__db_t *db,
   dir_abspath = svn_dirent_join(anchor_abspath, dir_path, scratch_pool);
   SVN_ERR(svn_wc__db_base_get_children(&base_children, db, dir_abspath,
                                        scratch_pool, iterpool));
-  SVN_ERR(svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
-                              scratch_pool, scratch_pool));
+
+  err = svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
+                            scratch_pool, scratch_pool);
+
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || APR_STATUS_IS_ENODIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      dirents = apr_hash_make(scratch_pool);
+    }
+  else
+    SVN_ERR(err);
 
   /*** Do the real reporting and recursing. ***/
 
@@ -403,10 +414,20 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                        NULL, NULL,
                                        db, this_abspath, iterpool, iterpool));
 
-          if (restore_files && wrk_status != svn_wc__db_status_added
-              && wrk_status != svn_wc__db_status_deleted
+          if (wrk_status == svn_wc__db_status_added)
+            SVN_ERR(svn_wc__db_scan_addition(&wrk_status, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             db, this_abspath,
+                                             iterpool, iterpool));
+
+          if (restore_files
+              && wrk_status != svn_wc__db_status_added
+#ifndef SVN_WC__SINGLE_DB
               && wrk_status != svn_wc__db_status_obstructed_add
-              && wrk_status != svn_wc__db_status_obstructed_delete)
+              && wrk_status != svn_wc__db_status_obstructed_delete
+#endif
+              && wrk_status != svn_wc__db_status_deleted)
+              
             {
               svn_node_kind_t dirent_kind;
 
@@ -427,6 +448,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                     missing = TRUE;
                 }
             }
+#ifndef SVN_WC__SINGLE_DB
           else
             missing = TRUE;
 
@@ -442,6 +464,11 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                               iterpool));
               continue;
             }
+#else
+          /* With single-db, we always know about all children, so
+             never tell the server that we don't know, but want to know
+             about the missing child. */
+#endif
         }
 
       /* And finally prepare for reporting */
