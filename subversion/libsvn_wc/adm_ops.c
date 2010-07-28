@@ -1194,10 +1194,10 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
              ### Perhaps the lock should be created in the same
              transaction that adds the node? */
-          svn_boolean_t locked;
-          SVN_ERR(svn_wc_locked2(&locked, NULL, wc_ctx, local_abspath,
-                                 scratch_pool));
-          if (!locked)
+          svn_boolean_t owns_lock;
+          SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
+                                              FALSE, scratch_pool));
+          if (!owns_lock)
             SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
                                              scratch_pool));
         }
