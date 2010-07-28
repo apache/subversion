@@ -8265,6 +8265,8 @@ is_wclocked(svn_boolean_t *locked,
       *locked = FALSE;
       return SVN_NO_ERROR;
     }
+  else
+    SVN_ERR(err);
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
