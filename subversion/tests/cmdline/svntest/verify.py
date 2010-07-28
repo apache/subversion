@@ -295,6 +295,13 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
   # Additionally print unified diff
   if not expected_is_regexp:
     print('DIFF ' + ' '.join(output.split(' ')[1:]))
+
+    if type(expected) is str:
+      expected = [expected]
+
+    if type(actual) is str:
+      actual = [actual]
+
     for x in unified_diff(expected, actual,
                           fromfile="EXPECTED %s" % label,
                           tofile="ACTUAL %s" % label):
