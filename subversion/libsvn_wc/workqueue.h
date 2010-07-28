@@ -196,6 +196,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                       svn_boolean_t use_commit_times,
                       apr_pool_t *scratch_pool);
 
+#ifndef SVN_WC__SINGLE_DB
 /* Handle the old "KILLME" concept -- perform the actual deletion of a
    subdir (or just its admin area) during post-commit processing of a
    deleted subdir.  */
@@ -204,6 +205,7 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
                       const char *adm_abspath,
                       svn_boolean_t adm_only,
                       apr_pool_t *scratch_pool);
+#endif
 
 
 /* ### temporary compat for mapping the old loggy into workqueue space.

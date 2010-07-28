@@ -651,6 +651,9 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   else if (status == svn_wc__db_status_deleted
            || status == svn_wc__db_status_obstructed_delete)
     {
+#ifdef SVN_WC__SINGLE_DB
+      svn_node_kind_t path_kind;
+#endif
       /* ### we don't have to worry about moves, so this is a delete. */
       entry->schedule = svn_wc_schedule_delete;
 
@@ -668,10 +671,23 @@ read_one_entry(const svn_wc_entry_t **new_entry,
          remove working copy directories directly. So any left over
          directories after the delete operation are always kept locally.
       */
+#ifndef SVN_WC__SINGLE_DB
       if (*entry->name == '\0')
         SVN_ERR(svn_wc__db_temp_determine_keep_local(&entry->keep_local,
                                                      db, entry_abspath,
                                                      scratch_pool));
+#else
+      /* If there is still a directory on-disk we keep it, if not it is
+         already deleted. Simple, isn't it? 
+         
+         Before single-db we had to keep the administative area alive until
+         after the commit really deletes it. Setting keep alive stopped the
+         commit processing from deleting the directory. We don't delete it
+         any more, so all we have to do is provide some 'sane' value.
+       */
+      SVN_ERR(svn_io_check_path(entry_abspath, &path_kind, scratch_pool));
+      entry->keep_local = (path_kind == svn_node_dir);
+#endif
     }
   else if (status == svn_wc__db_status_added
            || status == svn_wc__db_status_obstructed_add)
