@@ -95,7 +95,7 @@ typedef struct svn_memcache_t svn_memcache_t;
 /**
  * An opaque structure representing a membuffer cache object.
  */
-typedef struct membuffer_cache_t membuffer_cache_t;
+typedef struct svn_membuffer_t svn_membuffer_t;
 
 /**
  * Opaque type for an in-memory cache.
@@ -195,7 +195,7 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
  * Allocations will be made in @a pool, in particular the data buffers.
  */
 svn_error_t* 
-svn_cache__membuffer_cache_create(membuffer_cache_t **cache,
+svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_size_t total_size,
                                   apr_size_t directory_size,
                                   svn_boolean_t thread_safe,
@@ -222,7 +222,7 @@ svn_cache__membuffer_cache_create(membuffer_cache_t **cache,
  */
 svn_error_t *
 svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
-                                  membuffer_cache_t *membuffer,
+                                  svn_membuffer_t *membuffer,
                                   svn_cache__serialize_func_t serialize,
                                   svn_cache__deserialize_func_t deserialize,
                                   apr_ssize_t klen,

@@ -147,7 +147,7 @@ typedef entry_t entry_group_t[GROUP_SIZE];
 
 /* The cache header structure.
  */
-struct membuffer_cache_t
+struct svn_membuffer_t
 {
   /* The dictionary, GROUP_SIZE * group_count entries long. Never NULL.
    */
@@ -240,7 +240,7 @@ align_entry(apr_uint64_t address)
 /* Acquire the cache mutex, if necessary.
  */
 static svn_error_t *
-lock_cache(membuffer_cache_t* cache)
+lock_cache(svn_membuffer_t *cache)
 {
 #if APR_HAS_THREADS
   if (cache->mutex)
@@ -257,7 +257,7 @@ lock_cache(membuffer_cache_t* cache)
 /* Release the cache mutex, if necessary.
  */
 static svn_error_t *
-unlock_cache(membuffer_cache_t* cache, svn_error_t *err)
+unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
 {
 #if APR_HAS_THREADS
   if (cache->mutex)
@@ -277,8 +277,8 @@ unlock_cache(membuffer_cache_t* cache, svn_error_t *err)
 /* Resolve a dictionary entry reference, i.e. return the entry
  * for the given IDX.
  */
-static APR_INLINE entry_t*
-get_entry(membuffer_cache_t* cache, apr_size_t idx)
+static APR_INLINE entry_t *
+get_entry(svn_membuffer_t *cache, apr_size_t idx)
 {
   return &cache->directory[idx / GROUP_SIZE][idx % GROUP_SIZE];
 }
@@ -286,7 +286,7 @@ get_entry(membuffer_cache_t* cache, apr_size_t idx)
 /* Get the entry references for the given ENTRY.
  */
 static APR_INLINE apr_uint32_t
-get_index(membuffer_cache_t *cache, entry_t *entry)
+get_index(svn_membuffer_t *cache, entry_t *entry)
 {
   return entry - (entry_t *)cache->directory;
 }
@@ -295,7 +295,7 @@ get_index(membuffer_cache_t *cache, entry_t *entry)
  * In contrast to insertion, removal is possible for any entry.
  */
 static void
-drop_entry(membuffer_cache_t *cache, entry_t *entry)
+drop_entry(svn_membuffer_t *cache, entry_t *entry)
 {
   apr_uint32_t idx = get_index(cache, entry);
 
@@ -354,7 +354,7 @@ drop_entry(membuffer_cache_t *cache, entry_t *entry)
  * the offset must match the beginning of the insertion window.
  */
 static void
-insert_entry(membuffer_cache_t *cache, entry_t *entry)
+insert_entry(svn_membuffer_t *cache, entry_t *entry)
 {
   apr_uint32_t idx = get_index(cache, entry);
   entry_t *next = cache->next == -1 ? NULL : get_entry(cache, cache->next);
@@ -409,7 +409,7 @@ insert_entry(membuffer_cache_t *cache, entry_t *entry)
  * item. Return the hash value in TO_FIND. Returns -1 upon error.
  */
 static apr_uint32_t
-get_group_index(membuffer_cache_t *cache,
+get_group_index(svn_membuffer_t *cache,
                 const void *key,
                 apr_size_t len,
                 unsigned char *to_find,
@@ -453,7 +453,7 @@ get_group_index(membuffer_cache_t *cache,
  * initialized with TO_FIND.
  */
 static entry_t *
-find_entry(membuffer_cache_t *cache,
+find_entry(svn_membuffer_t *cache,
            apr_uint32_t group_index,
            unsigned char *to_find,
            svn_boolean_t find_empty)
@@ -528,7 +528,7 @@ find_entry(membuffer_cache_t *cache,
  * its beginning and move the insertion window up accordingly.
  */
 static void
-move_entry(membuffer_cache_t* cache, entry_t *entry)
+move_entry(svn_membuffer_t *cache, entry_t *entry)
 {
   /* This entry survived this cleansing run. Reset half of its
    * hit count so that its removal gets more likely in the next
@@ -559,7 +559,7 @@ move_entry(membuffer_cache_t* cache, entry_t *entry)
  * SIZE bytes long. SIZE must not exceed the data buffer size;
  */
 static void
-ensure_data_insertable(membuffer_cache_t* cache, apr_size_t size)
+ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
 {
   int average_hits;
   int threashold;
@@ -627,14 +627,14 @@ ensure_data_insertable(membuffer_cache_t* cache, apr_size_t size)
  * All allocations, in particular the data buffer and dictionary will 
  * be made from POOL.
  */
-svn_error_t* 
-svn_cache__membuffer_cache_create(membuffer_cache_t **cache,
+svn_error_t *
+svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_size_t total_size,
                                   apr_size_t directory_size,
                                   svn_boolean_t thread_safe,
                                   apr_pool_t *pool)
 {
-  membuffer_cache_t* c = apr_palloc(pool, sizeof(*c));
+  svn_membuffer_t *c = apr_palloc(pool, sizeof(*c));
   int i, k;
 
   /* We use this sub-pool to allocate the data buffer and the dictionary
@@ -738,7 +738,7 @@ svn_cache__membuffer_cache_create(membuffer_cache_t **cache,
  * flat data buffer. Temporary allocations may be done in POOL.
  */
 static svn_error_t* 
-membuffer_cache_set(membuffer_cache_t *cache,
+membuffer_cache_set(svn_membuffer_t *cache,
                     const void *key,
                     apr_size_t key_len,
                     void *item,
@@ -808,7 +808,7 @@ membuffer_cache_set(membuffer_cache_t *cache,
  * Allocations will be done in POOL.
  */
 static svn_error_t *
-membuffer_cache_get(membuffer_cache_t *cache,
+membuffer_cache_get(svn_membuffer_t *cache,
                     const void *key,
                     apr_size_t key_len,
                     void **item,
@@ -886,7 +886,7 @@ typedef struct svn_membuffer_cache_t
 {
   /* this is where all our data will end up in
    */
-  membuffer_cache_t *membuffer;
+  svn_membuffer_t *membuffer;
 
   /* use this conversion function when inserting an item into the memcache
    */
@@ -1091,7 +1091,7 @@ deserialize_svn_stringbuf(void **item,
  */
 svn_error_t *
 svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
-                                  membuffer_cache_t *membuffer,
+                                  svn_membuffer_t *membuffer,
                                   svn_cache__serialize_func_t serializer,
                                   svn_cache__deserialize_func_t deserializer,
                                   apr_ssize_t klen,
