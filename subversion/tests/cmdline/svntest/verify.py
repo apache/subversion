@@ -280,25 +280,25 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
     output = 'EXPECTED %s' % label
     if expected_is_regexp:
       output += ' (regexp)'
+      expected = [expected + '\n']
     if expected_is_unordered:
       output += ' (unordered)'
     output += ':'
     print(output)
     for x in expected:
       sys.stdout.write(x)
-    if expected_is_regexp:
-      sys.stdout.write('\n')
   if actual is not None:
     print('ACTUAL %s:' % label)
     for x in actual:
       sys.stdout.write(x)
 
   # Additionally print unified diff
-  print('DIFF ' + ' '.join(output.split(' ')[1:]))
-  for x in unified_diff(expected, actual,
-                        fromfile="EXPECTED %s" % label,
-                        tofile="ACTUAL %s" % label):
-    sys.stdout.write(x)
+  if not expected_is_regexp:
+    print('DIFF ' + ' '.join(output.split(' ')[1:]))
+    for x in unified_diff(expected, actual,
+                          fromfile="EXPECTED %s" % label,
+                          tofile="ACTUAL %s" % label):
+      sys.stdout.write(x)
 
 def compare_and_display_lines(message, label, expected, actual,
                               raisable=None):
