@@ -612,6 +612,13 @@ def run_entriesdump(path):
   exec(''.join([line for line in stdout_lines if not line.startswith("DBG:")]))
   return entries
 
+def run_entriesdump_subdirs(path):
+  """Run the entries-dump helper, returning a list of directory names."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+                                                        0, 0, None, '--subdirs', path)
+  return [line.strip() for line in stdout_lines if not line.startswith("DBG:")]
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
