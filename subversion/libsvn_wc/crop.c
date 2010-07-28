@@ -85,12 +85,13 @@ crop_children(svn_wc__db_t *db,
                                NULL,
                                db, local_abspath, pool, iterpool));
 
+  if (dir_depth == svn_depth_unknown)
+    dir_depth = svn_depth_infinity;
+
   /* Update the depth of target first, if needed. */
   if (dir_depth > depth)
-    {
-      SVN_ERR(svn_wc__db_temp_op_set_dir_depth(db, local_abspath, depth,
-                                               iterpool));
-    }
+    SVN_ERR(svn_wc__db_temp_op_set_dir_depth(db, local_abspath, depth,
+                                             iterpool));
 
   /* Looping over current directory's SVN entries: */
   SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath, pool,
