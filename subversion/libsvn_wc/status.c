@@ -997,9 +997,22 @@ handle_dir_entry(const struct walk_status_baton *wb,
                  void *cancel_baton,
                  apr_pool_t *pool)
 {
-  /* We are looking at a directory on-disk.  */
-  if (path_kind == svn_node_dir
-      && db_kind == svn_wc__db_kind_dir)
+  /* We are looking at a directory on-disk.
+     With a db per directory the directory must exist to recurse, but
+     with single-db we only have to check for obstructions.
+
+     (Without recursing you would only see the root of a delete operation
+      in single db mode.)
+     ### TODO: Should we recurse on obstructions anyway?
+     ###       (Requires  changes to the test suite)
+   */
+  if (db_kind == svn_wc__db_kind_dir
+#ifdef SVN_WC__SINGLE_DB
+      && path_kind != svn_node_file
+#else
+      && path_kind == svn_node_dir
+#endif
+     )
     {
       /* Descend only if the subdirectory is a working copy directory (which
          we've discovered because we got a THIS_DIR entry. And only descend
