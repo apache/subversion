@@ -551,16 +551,13 @@ class State:
     desc = { }
     dot_svn = svntest.main.get_admin_name()
 
-    for dirpath, dirs, files in os.walk(base):
-      if dot_svn in dirs:
-        # don't visit the .svn subdir
-        dirs.remove(dot_svn)
+    for dirpath in svntest.main.run_entriesdump_subdirs(base):
+
+      if base == '.' and dirpath != '.':
+        dirpath = '.' + os.path.sep + dirpath
 
       entries = svntest.main.run_entriesdump(dirpath)
       if entries is None:
-        # this is not a versioned directory. remove all subdirectories since
-        # we don't want to visit them. then skip this directory.
-        dirs[:] = []
         continue
 
       if dirpath == '.':
@@ -602,12 +599,6 @@ class State:
 
         if implied_url and implied_url != entry.url:
           item.switched = 'S'
-
-      # only recurse into directories found in this entries. remove any
-      # which are not mentioned.
-      unmentioned = set(dirs) - set(entries.keys())
-      for subdir in unmentioned:
-        dirs.remove(subdir)
 
     return cls('', desc)
 
