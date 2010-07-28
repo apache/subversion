@@ -8503,7 +8503,9 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
    {
      pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
                                         scratch_pool);
-     flush_entries(pdh);
+
+     if (pdh != NULL)
+       flush_entries(pdh);
    }
 
   return SVN_NO_ERROR;
