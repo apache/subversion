@@ -2066,7 +2066,7 @@ install_patched_prop_targets(patch_target_t *target,
                                    TRUE /* skip_checks */,
                                    NULL, NULL,
                                    iterpool));
-          break;
+          continue;
         }
 
       /* A property is usually one line long.
