@@ -504,7 +504,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 }
 
 /* ------------------------------------------------------------------------ */
-
+#ifndef SVN_WC__SINGLE_DB
 /* OP_KILLME  */
 
 /* Process the OP_KILLME work item WORK_ITEM.
@@ -627,7 +627,7 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
-
+#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -721,6 +721,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
       const char *repos_uuid;
       svn_revnum_t parent_revision;
 
+#ifndef SVN_WC__SINGLE_DB
       /* If we are suppose to delete "this dir", drop a 'killme' file
          into my own administrative dir as a signal for svn_wc__run_log()
          to blow away the administrative area after it is finished
@@ -752,6 +753,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
                                     keep_local /* adm_only */,
                                     scratch_pool));
         }
+#endif
 
       /* Get hold of repository info, if we are going to need it,
          before deleting the file, */
@@ -772,7 +774,9 @@ run_deletion_postcommit(svn_wc__db_t *db,
                 db, local_abspath,
                 FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
 
-      /* If the parent entry's working rev 'lags' behind new_rev... */
+      /* If the parent entry's working rev 'lags' behind new_rev... 
+         ### Maybe we should also add a not-present node if the
+         ### deleted node was switched? */
       if (new_revision > parent_revision)
         {
           /* ...then the parent's revision is now officially a
@@ -2290,7 +2294,6 @@ svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
 
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
-  { OP_KILLME, run_killme },
   { OP_LOGGY, run_loggy },
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
   { OP_POSTCOMMIT, run_postcommit },
@@ -2304,6 +2307,10 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_TMP_SET_TEXT_CONFLICT_MARKERS, run_set_text_conflict_markers },
   { OP_TMP_SET_PROPERTY_CONFLICT_MARKER, run_set_property_conflict_marker },
   { OP_PRISTINE_GET_TRANSLATED, run_pristine_get_translated },
+
+#ifndef SVN_WC__SINGLE_DB
+  { OP_KILLME, run_killme },
+#endif
 
 /* See props.h  */
 #ifdef SVN__SUPPORT_BASE_MERGE

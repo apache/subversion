@@ -527,25 +527,29 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
  * from the physical filesystem. PATH is assumed to be an unversioned file
  * or directory.
  *
+ * If ignore_enoent is TRUE, ignore missing targets.
+ *
  * If CANCEL_FUNC is non-null, invoke it with CANCEL_BATON at various
  * points, return any error immediately.
  */
 static svn_error_t *
 erase_unversioned_from_wc(const char *path,
+                          svn_boolean_t ignore_enoent,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
 
   /* Optimize the common case: try to delete the file */
-  err = svn_io_remove_file2(path, FALSE, pool);
+  err = svn_io_remove_file2(path, ignore_enoent, scratch_pool);
   if (err)
     {
       /* Then maybe it was a directory? */
       svn_error_clear(err);
 
-      err = svn_io_remove_dir2(path, FALSE, cancel_func, cancel_baton, pool);
+      err = svn_io_remove_dir2(path, ignore_enoent, cancel_func, cancel_baton,
+                               scratch_pool);
 
       if (err)
         {
@@ -555,20 +559,22 @@ erase_unversioned_from_wc(const char *path,
           svn_node_kind_t kind;
 
           svn_error_clear(err);
-          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
           if (kind == svn_node_file)
-            SVN_ERR(svn_io_remove_file2(path, FALSE, pool));
+            SVN_ERR(svn_io_remove_file2(path, ignore_enoent, scratch_pool));
           else if (kind == svn_node_dir)
-            SVN_ERR(svn_io_remove_dir2(path, FALSE,
-                                       cancel_func, cancel_baton, pool));
+            SVN_ERR(svn_io_remove_dir2(path, ignore_enoent,
+                                       cancel_func, cancel_baton,
+                                       scratch_pool));
           else if (kind == svn_node_none)
             return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                      _("'%s' does not exist"),
-                                     svn_dirent_local_style(path, pool));
+                                     svn_dirent_local_style(path,
+                                                            scratch_pool));
           else
             return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                      _("Unsupported node kind for path '%s'"),
-                                     svn_dirent_local_style(path, pool));
+                                     svn_dirent_local_style(path, scratch_pool));
 
         }
     }
@@ -576,6 +582,7 @@ erase_unversioned_from_wc(const char *path,
   return SVN_NO_ERROR;
 }
 
+#ifndef SVN_WC__SINGLE_DB
 /* Remove/erase LOCAL_ABSPATH from the working copy. For files this involves
  * deletion from the physical filesystem.  For directories it involves the
  * deletion from the filesystem of all unversioned children, and all
@@ -696,6 +703,7 @@ erase_from_wc(svn_wc__db_t *db,
 
           SVN_ERR(erase_unversioned_from_wc(svn_dirent_join(local_abspath,
                                                             name, iterpool),
+                                            FALSE,
                                             cancel_func, cancel_baton,
                                             iterpool));
         }
@@ -705,7 +713,7 @@ erase_from_wc(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
-
+#endif
 
 svn_error_t *
 svn_wc_delete4(svn_wc_context_t *wc_ctx,
@@ -737,7 +745,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       svn_error_clear(err);
 
       if (!keep_local)
-        SVN_ERR(erase_unversioned_from_wc(local_abspath,
+        SVN_ERR(erase_unversioned_from_wc(local_abspath, FALSE,
                                           cancel_func, cancel_baton,
                                           pool));
       return SVN_NO_ERROR;
@@ -824,8 +832,10 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
              Luckily most of this is for free once properties and pristine
              are handled in the WC-NG way. */
       SVN_ERR(svn_wc__db_temp_op_delete(wc_ctx->db, local_abspath, pool));
+#ifndef SVN_WC__SINGLE_DB
       if (keep_local)
         SVN_ERR(svn_wc__db_temp_set_keep_local(db, local_abspath, TRUE, pool));
+#endif
     }
 
   /* Report the deletion to the caller. */
@@ -852,13 +862,15 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
      become unversioned */
   if (!keep_local)
     {
-      if (was_add)
-        SVN_ERR(erase_unversioned_from_wc(local_abspath,
-                                          cancel_func, cancel_baton,
-                                          pool));
-      else
+#ifndef SVN_WC__SINGLE_DB
+      if (!was_add)
         SVN_ERR(erase_from_wc(wc_ctx->db, local_abspath, kind,
                               cancel_func, cancel_baton, pool));
+      else
+#endif
+        SVN_ERR(erase_unversioned_from_wc(local_abspath, TRUE,
+                                          cancel_func, cancel_baton,
+                                          pool));
     }
 
   return SVN_NO_ERROR;

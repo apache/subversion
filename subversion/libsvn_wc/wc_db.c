@@ -7585,6 +7585,7 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
   return svn_error_return(svn_sqlite__reset(stmt));
 }
 
+#ifndef SVN_WC__SINGLE_DB
 svn_error_t *
 svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
                                      svn_wc__db_t *db,
@@ -7631,6 +7632,7 @@ svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
 
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
+#endif
 
 svn_error_t *
 svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
