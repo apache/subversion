@@ -104,13 +104,6 @@
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
-
-/* ### since we're putting the pristine files per-dir, then we don't need
-   ### to create subdirectories in order to keep the directory size down.
-   ### when we can aggregate pristine files across dirs/wcs, then we will
-   ### need to undo the SKIP. */
-#define SVN__SKIP_SUBDIR
-
 /* This is a character used to escape itself and the globbing character in
    globbing sql expressions below.  See escape_sqlite_like().
 
@@ -287,7 +280,7 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
    to hold CHECKSUM's pristine file, relating to the pristine store
    configured for the working copy indicated by PDH. The returned path
    does not necessarily currently exist.
-#ifndef SVN__SKIP_SUBDIR
+#ifdef SVN_WC__SINGLE_DB
    Iff CREATE_SUBDIR is TRUE, then this function will make sure that the
    parent directory of PRISTINE_ABSPATH exists. This is only useful when
    about to create a new pristine.
@@ -303,7 +296,7 @@ get_pristine_fname(const char **pristine_abspath,
 {
   const char *base_dir_abspath;
   const char *hexdigest = svn_checksum_to_cstring(sha1_checksum, scratch_pool);
-#ifndef SVN__SKIP_SUBDIR
+#ifdef SVN_WC__SINGLE_DB
   char subdir[3];
 #endif
 
@@ -325,7 +318,7 @@ get_pristine_fname(const char **pristine_abspath,
   /* We should have a valid checksum and (thus) a valid digest. */
   SVN_ERR_ASSERT(hexdigest != NULL);
 
-#ifndef SVN__SKIP_SUBDIR
+#ifdef SVN_WC__SINGLE_DB
   /* Get the first two characters of the digest, for the subdir. */
   subdir[0] = hexdigest[0];
   subdir[1] = hexdigest[1];
@@ -350,7 +343,7 @@ get_pristine_fname(const char **pristine_abspath,
   /* The file is located at DIR/.svn/pristine/XX/XXYYZZ... */
   *pristine_abspath = svn_dirent_join_many(result_pool,
                                            base_dir_abspath,
-#ifndef SVN__SKIP_SUBDIR
+#ifdef SVN_WC__SINGLE_DB
                                            subdir,
 #endif
                                            hexdigest,
