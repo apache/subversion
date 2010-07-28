@@ -1770,8 +1770,7 @@ run_file_move(svn_wc__db_t *db,
   err = svn_io_file_move(src_abspath, dst_abspath, scratch_pool);
 
   /* If the source is not found, we assume the wq op is already handled */
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err) 
-              || APR_STATUS_IS_ENODIR(err->apr_err)))
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     svn_error_clear(err);
   else
     SVN_ERR(err);
