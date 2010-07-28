@@ -45,7 +45,7 @@ public interface DiffSummaryCallback
 {
     /**
      * Implement this interface to receive diff summaries from the
-     * {@link SVNClientInterface#diffSummarize} API.
+     * {@link ISVNClient#diffSummarize} API.
      *
      * @param descriptor A summary of the diff.
      */

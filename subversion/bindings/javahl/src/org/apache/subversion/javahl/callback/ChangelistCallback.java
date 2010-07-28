@@ -25,7 +25,7 @@ package org.apache.subversion.javahl.callback;
 
 /**
  * This interface is used to receive every status item for
- * the SVNClientInterface.status call.
+ * the {@link ISVNClient#status} call.
  */
 public interface ChangelistCallback
 {
