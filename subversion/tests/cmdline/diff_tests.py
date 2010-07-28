@@ -3374,16 +3374,13 @@ def diff_prop_missing_context(sbox):
 
   iota_path = os.path.join(wc_dir, 'iota')
   prop_val = "".join([
-       "One line\n",
-       "Another line\n",
-       "\n",
-       "    $ email <<EOT\n",
-       "    > matkin@docs.uu.se\n",
-       "    > Something strange @ my place\n",
-       "    > EOT\n",
-       "\n",
-       "to a shell, will produce the output\n",
-       "\n",
+       "line 1\n",
+       "line 2\n",
+       "line 3\n",
+       "line 4\n",
+       "line 5\n",
+       "line 6\n",
+       "line 7\n",
      ])
   svntest.main.run_svn(None,
                        "propset", "prop", prop_val, iota_path)
@@ -3396,13 +3393,11 @@ def diff_prop_missing_context(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  prop_val = "".join(["\n",
-               "    $ email <<EOT\n",
-               "    > matkin@docs.uu.se\n",
-               "    > Something strange @ my place\n",
-               "    > EOT\n",
-               "\n",
-               "\n",
+  prop_val = "".join([
+               "line 3\n",
+               "line 4\n",
+               "line 5\n",
+               "line 6\n",
              ])
   svntest.main.run_svn(None,
                        "propset", "prop", prop_val, iota_path)
@@ -3415,18 +3410,14 @@ def diff_prop_missing_context(sbox):
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
     "Modified: prop\n",
-    "## -1,10 +1,7 ##\n",
-    "-One line\n",
-    "-Another line\n",
-    "\n", 
-    "    $ email <<EOT\n",
-    "    > matkin@docs.uu.se\n",
-    "    > Something strange @ my place\n",
-    "    > EOT\n",
-    "\n",
-    "-to a shell, will produce the output\n",
-    "\n",
-    "\n",
+    "## -1,8 +1,5 ##\n",
+    "-line 1\n",
+    "-line 2\n",
+    " line 3\n",
+    " line 4\n",
+    " line 5\n",
+    " line 6\n",
+    "-line 7\n",
   ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
