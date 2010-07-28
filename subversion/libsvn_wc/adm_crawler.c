@@ -300,7 +300,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
       svn_depth_t this_depth;
       svn_wc__db_lock_t *this_lock;
       svn_boolean_t this_switched;
-      svn_error_t *err;
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
