@@ -29,13 +29,56 @@
 #define LOAD_EDITOR_H_
 
 /**
- * Get a load editor @a editor along with a @a edit_baton allocated in
- * @a pool. The editor will read input from @a stream.
+ * Used to represent an operation to perform while driving the load
+ * editor.
+ */
+struct operation {
+  enum {
+    OP_OPEN,
+    OP_DELETE,
+    OP_ADD,
+    OP_REPLACE,
+    OP_PROPSET
+  } operation;
+
+  svn_revnum_t revision; /* The revision on which the operation is being performed */
+  void *baton;           /* as returned by the commit editor */
+};
+
+
+/**
+ * Build up a @a parser for parsing a dumpfile stream from @a stream
+ * set to fire the appropriate callbacks in load editor along with a
+ * @a parser_baton, using @a pool for all memory allocations.
+ */
+svn_error_t *
+build_dumpfile_parser(const svn_repos_parse_fns2_t **parser,
+                      void **parse_baton,
+                      svn_stream_t *stream,
+                      apr_pool_t *pool);
+
+/**
+ * Drive the load editor @a editor to perform the @a operation on
+ * @a revison using @a pool for all memory allocations.
+ */
+svn_error_t *
+drive_load_editor(struct operation *operation,
+                  const svn_delta_editor_t *editor,
+                  apr_pool_t *pool);
+
+/**
+ * Get a load editor @a editor along with an @a edit_baton and an
+ * operation @a root_operation corresponding to open_root, all
+ * allocated in @a pool. The editor will read a dumpstream from @a
+ * stream and load it into @a session when driven using
+ * drive_load_editor().
  */
 svn_error_t *
 get_load_editor(const svn_delta_editor_t **editor,
                 void **edit_baton,
+                struct operation **root_operation,
                 svn_stream_t *stream,
+                svn_ra_session_t *session,
                 apr_pool_t *pool);
 
 #endif
