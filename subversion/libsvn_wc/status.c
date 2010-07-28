@@ -946,15 +946,15 @@ send_unversioned_item(const struct walk_status_baton *wb,
 static svn_error_t *
 get_dir_status(const struct walk_status_baton *wb,
                const char *local_abspath,
+               const char *selected,
+               svn_boolean_t skip_this_dir,
                const char *parent_repos_root_url,
                const char *parent_repos_relpath,
-               const char *selected,
                const svn_io_dirent2_t *dirent,
                const apr_array_header_t *ignores,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
-               svn_boolean_t skip_this_dir,
                svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
@@ -1010,9 +1010,9 @@ handle_dir_entry(const struct walk_status_baton *wb,
               || depth == svn_depth_immediates
               || depth == svn_depth_infinity))
         {
-          SVN_ERR(get_dir_status(wb, local_abspath, dir_repos_root_url,
-                                 dir_repos_relpath, NULL, dirent,
-                                 ignores, depth, get_all, no_ignore, FALSE,
+          SVN_ERR(get_dir_status(wb, local_abspath, NULL, FALSE,
+                                 dir_repos_root_url, dir_repos_relpath,
+                                 dirent, ignores, depth, get_all, no_ignore,
                                  status_func, status_baton, cancel_func,
                                  cancel_baton,
                                  pool));
@@ -1104,20 +1104,23 @@ handle_externals(const struct walk_status_baton *wb,
    status will not be reported.  However, upon recursing, all subdirs
    *will* be reported, regardless of this parameter's value.
 
+   DIRENT is LOCAL_ABSPATH's own dirent and is only needed if it is reported,
+   so if SKIP_THIS_DIR or SELECTED is not-NULL DIRENT can be left NULL.
+
    Other arguments are the same as those passed to
    svn_wc_get_status_editor5().  */
 static svn_error_t *
 get_dir_status(const struct walk_status_baton *wb,
                const char *local_abspath,
+               const char *selected,
+               svn_boolean_t skip_this_dir,
                const char *parent_repos_root_url,
                const char *parent_repos_relpath,
-               const char *selected,
                const svn_io_dirent2_t *dirent,
                const apr_array_header_t *ignore_patterns,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
-               svn_boolean_t skip_this_dir,
                svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
@@ -1646,19 +1649,18 @@ make_dir_baton(void **dir_baton,
     {
       const svn_wc_status3_t *this_dir_status;
       const apr_array_header_t *ignores = eb->ignores;
-      const svn_io_dirent2_t *dirent;
 
-      SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE, pool, pool));
-
-      SVN_ERR(get_dir_status(&eb->wb, local_abspath,
+      SVN_ERR(get_dir_status(&eb->wb, local_abspath, NULL, TRUE,
                              status_in_parent->repos_root_url,
                              status_in_parent->repos_relpath,
-                             NULL, dirent, ignores,
+                             NULL /* dirent */, ignores,
                              d->depth == svn_depth_files
                                       ? svn_depth_files
                                       : svn_depth_immediates,
-                             TRUE, TRUE, TRUE, hash_stash, d->statii, NULL,
-                             NULL, pool));
+                             TRUE, TRUE,
+                             hash_stash, d->statii,
+                             eb->cancel_func, eb->cancel_baton,
+                             pool));
 
       /* If we found a depth here, it should govern. */
       this_dir_status = apr_hash_get(d->statii, d->local_abspath,
@@ -1798,8 +1800,6 @@ handle_statii(struct edit_baton *eb,
   svn_wc_status_func4_t status_func = eb->status_func;
   void *status_baton = eb->status_baton;
   struct status_baton sb;
-  apr_hash_t *dirents;
-  svn_error_t *err;
 
   if (dir_was_deleted)
     {
@@ -1808,17 +1808,6 @@ handle_statii(struct edit_baton *eb,
       status_func = mark_deleted;
       status_baton = &sb;
     }
-
-  err = svn_io_get_dirents3(&dirents, local_abspath, FALSE, pool, iterpool);
-
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
-    {
-      svn_error_clear(err);
-      dirents = apr_hash_make(pool);
-    }
-  else
-    SVN_ERR(err);
 
   /* Loop over all the statuses still in our hash, handling each one. */
   for (hi = apr_hash_first(pool, statii); hi; hi = apr_hash_next(hi))
@@ -1837,17 +1826,11 @@ handle_statii(struct edit_baton *eb,
           && (depth == svn_depth_unknown
               || depth == svn_depth_infinity))
         {
-          svn_io_dirent2_t *dirent;
-
-          dirent = apr_hash_get(dirents,
-                                svn_dirent_basename(local_abspath, NULL),
-                                APR_HASH_KEY_STRING);
-
           SVN_ERR(get_dir_status(&eb->wb,
-                                 local_abspath, dir_repos_root_url,
-                                 dir_repos_relpath, NULL, dirent,
+                                 local_abspath, NULL, TRUE,
+                                 dir_repos_root_url, dir_repos_relpath,
+                                 NULL /* dirent */,
                                  ignores, depth, eb->get_all, eb->no_ignore,
-                                 TRUE,
                                  status_func, status_baton,
                                  eb->cancel_func, eb->cancel_baton,
                                  iterpool));
@@ -2112,16 +2095,12 @@ close_directory(void *dir_baton,
               if (tgt_status->versioned
                   && tgt_status->kind == svn_node_dir)
                 {
-                  svn_io_dirent2_t *dirent;
-
-                  SVN_ERR(svn_io_stat_dirent(&dirent, eb->target_abspath, TRUE,
-                                             pool, pool));
-
-                  SVN_ERR(get_dir_status(&eb->wb, eb->target_abspath,
-                                         NULL, NULL, NULL, dirent,
+                  SVN_ERR(get_dir_status(&eb->wb,
+                                         eb->target_abspath, NULL, TRUE,
+                                         NULL, NULL, NULL /* dirent */,
                                          eb->ignores,
                                          eb->default_depth,
-                                         eb->get_all, eb->no_ignore, TRUE,
+                                         eb->get_all, eb->no_ignore,
                                          eb->status_func, eb->status_baton,
                                          eb->cancel_func, eb->cancel_baton,
                                          pool));
@@ -2452,6 +2431,8 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
   svn_node_kind_t kind;
   struct walk_status_baton wb;
   svn_io_dirent2_t *dirent;
+  const char *anchor_abspath, *target_name;
+  svn_boolean_t skip_root;
 
   wb.db = wc_ctx->db;
   wb.target_abspath = local_abspath;
@@ -2477,61 +2458,36 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
 
   if (kind == svn_node_file && dirent->kind == svn_node_file)
     {
-      SVN_ERR(get_dir_status(&wb,
-                             svn_dirent_dirname(local_abspath, scratch_pool),
-                             NULL,
-                             NULL,
-                             svn_dirent_basename(local_abspath, NULL),
-                             dirent,
-                             ignore_patterns,
-                             depth,
-                             get_all,
-                             TRUE,
-                             TRUE,
-                             status_func,
-                             status_baton,
-                             cancel_func,
-                             cancel_baton,
-                             scratch_pool));
+      anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      target_name = svn_dirent_basename(local_abspath, NULL);
+      skip_root = TRUE;
     }
   else if (kind == svn_node_dir && dirent->kind == svn_node_dir)
     {
-      SVN_ERR(get_dir_status(&wb,
-                             local_abspath,
-                             NULL,
-                             NULL,
-                             NULL,
-                             dirent,
-                             ignore_patterns,
-                             depth,
-                             get_all,
-                             no_ignore,
-                             FALSE,
-                             status_func,
-                             status_baton,
-                             cancel_func,
-                             cancel_baton,
-                             scratch_pool));
+      anchor_abspath = local_abspath;
+      target_name = NULL;
+      skip_root = FALSE;
     }
   else
     {
-      SVN_ERR(get_dir_status(&wb,
-                             svn_dirent_dirname(local_abspath, scratch_pool),
-                             NULL,
-                             NULL,
-                             svn_dirent_basename(local_abspath, NULL),
-                             dirent,
-                             ignore_patterns,
-                             depth,
-                             get_all,
-                             no_ignore,
-                             TRUE,
-                             status_func,
-                             status_baton,
-                             cancel_func,
-                             cancel_baton,
-                             scratch_pool));
+      anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      target_name = svn_dirent_basename(local_abspath, NULL);
+      skip_root = FALSE;
     }
+
+  SVN_ERR(get_dir_status(&wb,
+                         anchor_abspath,
+                         target_name,
+                         skip_root,
+                         NULL, NULL, /* parent info */
+                         dirent,
+                         ignore_patterns,
+                         depth,
+                         get_all,
+                         no_ignore,
+                         status_func, status_baton,
+                         cancel_func, cancel_baton,
+                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
