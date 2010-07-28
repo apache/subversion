@@ -71,14 +71,6 @@
 #define PRISTINE_STORAGE_RELPATH "pristine"
 
 
-/* Forward declare until we decide to shift/reorder functions.  */
-static svn_error_t *
-migrate_props(const char *wcroot_abspath,
-              svn_sqlite__db_t *sdb,
-              int original_format,
-              apr_pool_t *scratch_pool);
-
-
 /* Read the properties from the file at PROPFILE_ABSPATH, returning them
    as a hash in *PROPS. If the propfile is NOT present, then NULL will
    be returned in *PROPS.  */
