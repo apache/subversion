@@ -680,23 +680,38 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc__adm_destroy(svn_wc__db_t *db,
                     const char *dir_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
                     apr_pool_t *scratch_pool)
 {
-#ifndef SINGLE_DB
   const char *adm_abspath;
-#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
   SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
+#ifdef SVN_WC__SINGLE_DB
+  SVN_ERR(svn_wc__db_get_wcroot(&adm_abspath, db, dir_abspath,
+                                scratch_pool, scratch_pool));
+#endif
+
+
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock */
   SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, scratch_pool));
 
-#ifndef SINGLE_DB
+#ifndef SVN_WC__SINGLE_DB
   adm_abspath = svn_wc__adm_child(dir_abspath, NULL, scratch_pool);
   SVN_ERR(svn_io_remove_dir2(adm_abspath, FALSE, NULL, NULL, scratch_pool));
+#else
+  /* ### We should check if we are the only user of this DB!!! */
+
+  if (strcmp(adm_abspath, dir_abspath) == 0)
+    SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(adm_abspath, NULL,
+                                                 scratch_pool),
+                               FALSE,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 #endif
 
   return SVN_NO_ERROR;
