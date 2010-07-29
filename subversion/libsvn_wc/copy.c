@@ -141,65 +141,60 @@ copy_versioned_file(svn_wc__db_t *db,
   const char *tmp_dst_abspath;
   svn_node_kind_t kind;
 
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db, dst_abspath,
+                                         scratch_pool, scratch_pool));
+
+  /* This goes away when we centralise, but until then we might need
+     to do a cross-db pristine copy. */
+  if (strcmp(svn_dirent_dirname(src_abspath, scratch_pool),
+             svn_dirent_dirname(dst_abspath, scratch_pool)))
+    {
+      const svn_checksum_t *checksum;
+
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   &checksum,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   db, src_abspath,
+                                   scratch_pool, scratch_pool));
+      if (checksum)
+        {
+          svn_stream_t *tmp_pristine;
+          const char *tmp_pristine_abspath;
+          const svn_checksum_t *sha1_checksum, *md5_checksum;
+
+          if (checksum->kind == svn_checksum_md5)
+            {
+              md5_checksum = checksum;
+              SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db,
+                                                   src_abspath, checksum,
+                                                   scratch_pool, scratch_pool));
+            }
+          else
+            {
+              sha1_checksum = checksum;
+              SVN_ERR(svn_wc__db_pristine_get_md5(&md5_checksum, db,
+                                                  src_abspath, checksum,
+                                                  scratch_pool, scratch_pool));
+            }
+          SVN_ERR(svn_wc__db_pristine_read(&src_pristine, db,
+                                           src_abspath, sha1_checksum,
+                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_open_unique(&tmp_pristine, &tmp_pristine_abspath,
+                                         tmpdir_abspath, svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
+                                   cancel_func, cancel_baton,
+                                   scratch_pool));
+          SVN_ERR(svn_wc__db_pristine_install(db, tmp_pristine_abspath,
+                                              sha1_checksum, md5_checksum,
+                                              scratch_pool));
+        }
+    }
+
   if (!metadata_only)
     {
-      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
-                                             dst_abspath,
-                                             scratch_pool, scratch_pool));
-
-      /* This goes away when we centralise, but until then we might need
-         to do a cross-db pristine copy. */
-      if (strcmp(svn_dirent_dirname(src_abspath, scratch_pool),
-                 svn_dirent_dirname(dst_abspath, scratch_pool)))
-        {
-          const svn_checksum_t *checksum;
-
-          SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
-                                       &checksum,
-                                       NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, src_abspath,
-                                       scratch_pool, scratch_pool));
-          if (checksum)
-            {
-              svn_stream_t *tmp_pristine;
-              const char *tmp_pristine_abspath;
-              const svn_checksum_t *sha1_checksum, *md5_checksum;
-
-              if (checksum->kind == svn_checksum_md5)
-                {
-                  md5_checksum = checksum;
-                  SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db,
-                                                       src_abspath, checksum,
-                                                       scratch_pool,
-                                                       scratch_pool));
-                }
-              else
-                {
-                  sha1_checksum = checksum;
-                  SVN_ERR(svn_wc__db_pristine_get_md5(&md5_checksum, db,
-                                                      src_abspath, checksum,
-                                                      scratch_pool,
-                                                      scratch_pool));
-                }
-              SVN_ERR(svn_wc__db_pristine_read(&src_pristine, db,
-                                               src_abspath, sha1_checksum,
-                                               scratch_pool, scratch_pool));
-              SVN_ERR(svn_stream_open_unique(&tmp_pristine,
-                                             &tmp_pristine_abspath,
-                                             tmpdir_abspath,
-                                             svn_io_file_del_none,
-                                             scratch_pool, scratch_pool));
-              SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
-                                       cancel_func, cancel_baton,
-                                       scratch_pool));
-              SVN_ERR(svn_wc__db_pristine_install(db, tmp_pristine_abspath,
-                                                  sha1_checksum, md5_checksum,
-                                                  scratch_pool));
-            }
-        }
-
       SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, src_abspath,
                              tmpdir_abspath,
                              TRUE, /* recursive */
