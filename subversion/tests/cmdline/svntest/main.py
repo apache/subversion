@@ -269,6 +269,22 @@ def get_admin_name():
   else:
     return '.svn'
 
+def wc_is_singledb(wcpath):
+  """Temporary function that checks whether a working copy directory looks
+  like it is part of a single-db working copy."""
+
+  pristine = os.path.join(wcpath, get_admin_name(), 'pristine')
+  if not os.path.exists(pristine):
+    return True
+
+  for name in os.listdir(pristine):
+    if len(name) == 2:
+      return True
+    elif len(name) == 40:
+      return False
+
+  return False
+
 def get_start_commit_hook_path(repo_dir):
   "Return the path of the start-commit-hook conf file in REPO_DIR."
 
