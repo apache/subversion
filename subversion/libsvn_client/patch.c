@@ -1519,8 +1519,7 @@ send_patch_notification(const patch_target_t *target,
             svn_diff_hunk_get_modified_length(hi->hunk);
           notify->hunk_matched_line = hi->matched_line;
           notify->hunk_fuzz = hi->fuzz;
-          /* ### Should is_prop_hunk be a field in hunk_info_t? */
-          notify->is_prop_hunk = FALSE;
+          notify->prop_name = NULL;
 
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
@@ -1563,8 +1562,7 @@ send_patch_notification(const patch_target_t *target,
                 svn_diff_hunk_get_modified_length(hi->hunk);
               notify->hunk_matched_line = hi->matched_line;
               notify->hunk_fuzz = hi->fuzz;
-              /* ### Should is_prop_hunk be a field in hunk_info_t? */
-              notify->is_prop_hunk = TRUE;
+              notify->prop_name = apr_pstrdup(pool, prop_target->name);
 
               (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
             }

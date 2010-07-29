@@ -1266,10 +1266,6 @@ typedef struct svn_wc_notify_t {
    * @since New in 1.7 */
   int hunk_fuzz;
 
-  /** If @c action relates to hunks, specifies whether the hunk is a
-   * property hunk or not. */
-  svn_boolean_t is_prop_hunk;
-
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
