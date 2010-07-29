@@ -143,70 +143,76 @@ copy_versioned_file(svn_wc__db_t *db,
 
   if (!metadata_only)
     {
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
-                                         dst_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
+                                             dst_abspath,
+                                             scratch_pool, scratch_pool));
 
-  /* This goes away when we centralise, but until then we might need
-     to do a cross-db pristine copy. */
-  if (strcmp(svn_dirent_dirname(src_abspath, scratch_pool),
-             svn_dirent_dirname(dst_abspath, scratch_pool)))
-    {
-      const svn_checksum_t *checksum;
-
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   &checksum,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   db, src_abspath,
-                                   scratch_pool, scratch_pool));
-      if (checksum)
+      /* This goes away when we centralise, but until then we might need
+         to do a cross-db pristine copy. */
+      if (strcmp(svn_dirent_dirname(src_abspath, scratch_pool),
+                 svn_dirent_dirname(dst_abspath, scratch_pool)))
         {
-          svn_stream_t *tmp_pristine;
-          const char *tmp_pristine_abspath;
-          const svn_checksum_t *sha1_checksum, *md5_checksum;
+          const svn_checksum_t *checksum;
 
-          if (checksum->kind == svn_checksum_md5)
+          SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       &checksum,
+                                       NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, src_abspath,
+                                       scratch_pool, scratch_pool));
+          if (checksum)
             {
-              md5_checksum = checksum;
-              SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db,
-                                                   src_abspath, checksum,
-                                                   scratch_pool, scratch_pool));
+              svn_stream_t *tmp_pristine;
+              const char *tmp_pristine_abspath;
+              const svn_checksum_t *sha1_checksum, *md5_checksum;
+
+              if (checksum->kind == svn_checksum_md5)
+                {
+                  md5_checksum = checksum;
+                  SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db,
+                                                       src_abspath, checksum,
+                                                       scratch_pool,
+                                                       scratch_pool));
+                }
+              else
+                {
+                  sha1_checksum = checksum;
+                  SVN_ERR(svn_wc__db_pristine_get_md5(&md5_checksum, db,
+                                                      src_abspath, checksum,
+                                                      scratch_pool,
+                                                      scratch_pool));
+                }
+              SVN_ERR(svn_wc__db_pristine_read(&src_pristine, db,
+                                               src_abspath, sha1_checksum,
+                                               scratch_pool, scratch_pool));
+              SVN_ERR(svn_stream_open_unique(&tmp_pristine,
+                                             &tmp_pristine_abspath,
+                                             tmpdir_abspath,
+                                             svn_io_file_del_none,
+                                             scratch_pool, scratch_pool));
+              SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
+                                       cancel_func, cancel_baton,
+                                       scratch_pool));
+              SVN_ERR(svn_wc__db_pristine_install(db, tmp_pristine_abspath,
+                                                  sha1_checksum, md5_checksum,
+                                                  scratch_pool));
             }
-          else
-            {
-              sha1_checksum = checksum;
-              SVN_ERR(svn_wc__db_pristine_get_md5(&md5_checksum, db,
-                                                  src_abspath, checksum,
-                                                  scratch_pool, scratch_pool));
-            }
-          SVN_ERR(svn_wc__db_pristine_read(&src_pristine, db,
-                                           src_abspath, sha1_checksum,
-                                           scratch_pool, scratch_pool));
-          SVN_ERR(svn_stream_open_unique(&tmp_pristine, &tmp_pristine_abspath,
-                                         tmpdir_abspath, svn_io_file_del_none,
-                                         scratch_pool, scratch_pool));
-          SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
-                                   cancel_func, cancel_baton, scratch_pool));
-          SVN_ERR(svn_wc__db_pristine_install(db, tmp_pristine_abspath,
-                                              sha1_checksum, md5_checksum,
-                                              scratch_pool));
         }
-    }
 
-  SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, src_abspath, tmpdir_abspath,
-                         TRUE, /* recursive */
-                         cancel_func, cancel_baton, scratch_pool));
-  if (tmp_dst_abspath)
-    {
-      svn_skel_t *work_item;
+      SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, src_abspath,
+                             tmpdir_abspath,
+                             TRUE, /* recursive */
+                             cancel_func, cancel_baton, scratch_pool));
+      if (tmp_dst_abspath)
+        {
+          svn_skel_t *work_item;
 
-      SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
-                                         tmp_dst_abspath, dst_abspath,
-                                         scratch_pool, scratch_pool));
-      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
-    }
+          SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
+                                             tmp_dst_abspath, dst_abspath,
+                                             scratch_pool, scratch_pool));
+          work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+        }
     }
 
   SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
@@ -248,89 +254,109 @@ copy_versioned_dir(svn_wc__db_t *db,
 
   if (!metadata_only)
     {
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
-                                         dst_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
+                                             dst_abspath,
+                                             scratch_pool, scratch_pool));
 
-  SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, src_abspath, tmpdir_abspath,
-                         FALSE, /* recursive */
-                         cancel_func, cancel_baton, scratch_pool));
-  if (tmp_dst_abspath)
-    {
-      svn_skel_t *work_item;
+      SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, src_abspath,
+                             tmpdir_abspath, FALSE, /* recursive */
+                             cancel_func, cancel_baton, scratch_pool));
+      if (tmp_dst_abspath)
+        {
+          svn_skel_t *work_item;
 
-      SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
-                                         tmp_dst_abspath, dst_abspath,
-                                         scratch_pool, scratch_pool));
-      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+          SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
+                                             tmp_dst_abspath, dst_abspath,
+                                             scratch_pool, scratch_pool));
+          work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
 
 #ifndef SVN_WC__SINGLE_DB
-      if (kind == svn_node_dir)
-        {
-          /* Create the per-directory db in the copied directory.  The
-             copy is not yet connected to the parent so we don't need
-             to use a workqueue.  This will be removed when we
-             centralise. */
-          const char *dst_parent_abspath, *name;
-          const char *repos_root_url, *repos_uuid;
-          svn_revnum_t revision;
-          svn_depth_t depth;
-          svn_wc__db_status_t status;
-          svn_boolean_t have_base;
-
-          svn_dirent_split(&dst_parent_abspath, &name, dst_abspath,
-                           scratch_pool);
-
-          SVN_ERR(svn_wc__db_read_info(&status,
-                                       NULL, /* kind */
-                                       &revision,
-                                       NULL, /* repos_relpath */
-                                       &repos_root_url,
-                                       &repos_uuid,
-                                       NULL, /* changed_rev */
-                                       NULL, /* changed_date */
-                                       NULL, /* changed_author */
-                                       NULL, /* last_mod_time */
-                                       &depth,
-                                       NULL, /* checksum */
-                                       NULL, /* translated_size */
-                                       NULL, /* target */
-                                       NULL, /* changelist */
-                                       NULL, /* original_repos_relpath */
-                                       NULL, /* original_root_url */
-                                       NULL, /* original_uuid */
-                                       NULL, /* original_revision */
-                                       NULL, /* props_mod */
-                                       &have_base,
-                                       NULL, /* have_work */
-                                       NULL, /* conflicted */
-                                       NULL, /* lock */
-                                       db, src_abspath,
-                                       scratch_pool, scratch_pool));
-
-          if (!repos_root_url)
+          if (kind == svn_node_dir)
             {
-              if (status == svn_wc__db_status_deleted)
+              /* Create the per-directory db in the copied directory.  The
+                 copy is not yet connected to the parent so we don't need
+                 to use a workqueue.  This will be removed when we
+                 centralise. */
+              const char *dst_parent_abspath, *name;
+              const char *repos_root_url, *repos_uuid;
+              svn_revnum_t revision;
+              svn_depth_t depth;
+              svn_wc__db_status_t status;
+              svn_boolean_t have_base;
+
+              svn_dirent_split(&dst_parent_abspath, &name, dst_abspath,
+                               scratch_pool);
+
+              SVN_ERR(svn_wc__db_read_info(&status,
+                                           NULL, /* kind */
+                                           &revision,
+                                           NULL, /* repos_relpath */
+                                           &repos_root_url,
+                                           &repos_uuid,
+                                           NULL, /* changed_rev */
+                                           NULL, /* changed_date */
+                                           NULL, /* changed_author */
+                                           NULL, /* last_mod_time */
+                                           &depth,
+                                           NULL, /* checksum */
+                                           NULL, /* translated_size */
+                                           NULL, /* target */
+                                           NULL, /* changelist */
+                                           NULL, /* original_repos_relpath */
+                                           NULL, /* original_root_url */
+                                           NULL, /* original_uuid */
+                                           NULL, /* original_revision */
+                                           NULL, /* props_mod */
+                                           &have_base,
+                                           NULL, /* have_work */
+                                           NULL, /* conflicted */
+                                           NULL, /* lock */
+                                           db, src_abspath,
+                                           scratch_pool, scratch_pool));
+
+              if (!repos_root_url)
                 {
-                  const char *work_del_abspath;
-
-                  SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL,
-                                                   &work_del_abspath,
-                                                   db, src_abspath,
-                                                   scratch_pool, scratch_pool));
-                  if (work_del_abspath)
+                  if (status == svn_wc__db_status_deleted)
                     {
-                      const char *parent_del_abspath
-                        = svn_dirent_dirname(work_del_abspath, scratch_pool);
+                      const char *work_del_abspath;
 
-                      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
-                                                       &repos_root_url,
-                                                       &repos_uuid,
-                                                       NULL, NULL, NULL, NULL,
-                                                       db, parent_del_abspath,
+                      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL,
+                                                       &work_del_abspath,
+                                                       db, src_abspath,
                                                        scratch_pool,
                                                        scratch_pool));
+                      if (work_del_abspath)
+                        {
+                          const char *parent_del_abspath
+                            = svn_dirent_dirname(work_del_abspath,
+                                                 scratch_pool);
+
+                          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                                           &repos_root_url,
+                                                           &repos_uuid,
+                                                           NULL, NULL, NULL,
+                                                           NULL,
+                                                           db,
+                                                           parent_del_abspath,
+                                                           scratch_pool,
+                                                           scratch_pool));
+                        }
+                      else
+                        SVN_ERR(svn_wc__db_scan_base_repos(NULL,
+                                                           &repos_root_url,
+                                                           &repos_uuid,
+                                                           db, src_abspath,
+                                                           scratch_pool,
+                                                           scratch_pool));
                     }
+                  else if (status == svn_wc__db_status_added || !have_base)
+                    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                                     &repos_root_url,
+                                                     &repos_uuid,
+                                                     NULL, NULL, NULL, NULL,
+                                                     db, src_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
                   else
                     SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url,
                                                        &repos_uuid,
@@ -338,37 +364,26 @@ copy_versioned_dir(svn_wc__db_t *db,
                                                        scratch_pool,
                                                        scratch_pool));
                 }
-              else if (status == svn_wc__db_status_added || !have_base)
-                SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
-                                                 &repos_root_url, &repos_uuid,
-                                                 NULL, NULL, NULL, NULL,
-                                                 db, src_abspath,
-                                                 scratch_pool, scratch_pool));
-              else
-                 SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url,
-                                                    &repos_uuid,
-                                                    db, src_abspath,
-                                                    scratch_pool, scratch_pool));
+
+              /* Use the repos_root as root node url, because we are going to
+                 remove the node directly anyway. */
+              SVN_ERR(svn_wc__internal_ensure_adm(db, tmp_dst_abspath,
+                                                  repos_root_url,
+                                                  repos_root_url,
+                                                  repos_uuid, revision, depth,
+                                                  scratch_pool));
+
+              /* That creates a base node which we do not want so delete it. */
+              SVN_ERR(svn_wc__db_base_remove(db, tmp_dst_abspath,
+                                             scratch_pool));
+
+              /* ### Need to close the database so that Windows can move
+                 ### the directory. */
+              SVN_ERR(svn_wc__db_temp_forget_directory(db, tmp_dst_abspath,
+                                                       scratch_pool));
             }
-
-          /* Use the repos_root as root node url, because we are going to
-             remove the node directly anyway. */
-          SVN_ERR(svn_wc__internal_ensure_adm(db, tmp_dst_abspath,
-                                              repos_root_url, repos_root_url,
-                                              repos_uuid, revision, depth,
-                                              scratch_pool));
-
-          /* That creates a base node which we do not want so delete it. */
-          SVN_ERR(svn_wc__db_base_remove(db, tmp_dst_abspath,
-                                         scratch_pool));
-
-          /* ### Need to close the database so that Windows can move
-             ### the directory. */
-          SVN_ERR(svn_wc__db_temp_forget_directory(db, tmp_dst_abspath,
-                                                   scratch_pool));
-        }
 #endif
-    }
+        }
     }
 
   SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
