@@ -36,6 +36,7 @@ from svntest.main import SVN_PROP_MERGEINFO
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -4905,7 +4906,7 @@ test_list = [ None,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
-              XFail(allow_unversioned_parent_for_copy_src),
+              Wimp('Needs single db', allow_unversioned_parent_for_copy_src),
               replaced_local_source_for_incoming_copy,
               unneeded_parents,
               double_parents_with_url,
@@ -4924,11 +4925,11 @@ test_list = [ None,
               copy_dir_with_space,
               changed_data_should_match_checkout,
               XFail(changed_dir_data_should_match_checkout),
-              XFail(move_added_nodes),
+              Wimp('Needs single db', move_added_nodes),
               # Serf needs a different testcase for this issue
               XFail(Skip(locate_wrong_origin,
                          svntest.main.is_ra_type_dav_serf)),
-              XFail(copy_over_deleted_dir),
+              Wimp('Needs single db', copy_over_deleted_dir),
              ]
 
 if __name__ == '__main__':
