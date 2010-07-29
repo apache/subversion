@@ -858,7 +858,15 @@ def lock_switched_files(sbox):
                                      gamma_path, lambda_path)
 
   expected_status.tweak('A/D/gamma', 'A/B/lambda', writelocked='K')
-  expected_status.tweak('A/B/E/alpha', 'iota', writelocked='O')
+
+  # In WC-NG locks are kept per working copy, not per file
+  if svntest.main.wc_is_singledb(wc_dir):
+    # In single-db you see these files are locked locally
+    expected_status.tweak('A/B/E/alpha', 'iota', writelocked='K')
+  else:
+    # In multi-db you see these files are not locked in the right dir
+    expected_status.tweak('A/B/E/alpha', 'iota', writelocked='O')
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
@@ -1428,9 +1436,15 @@ def lock_twice_in_one_wc(sbox):
   os.chmod(mu2_path, 0700)
   svntest.main.file_append(mu2_path, "Updated text")
 
-  # Commit should fail because it is locked in the other location
-  svntest.actions.run_and_verify_svn(None, None,
-                                     '.*(([Nn]o)|(Server)).*[lL]ock.*',
+  if svntest.main.wc_is_singledb(wc_dir):
+    # Commit will just succeed as the DB owns the lock. It's a user decision
+    # to commit the other target instead of the one originally locked
+    expected_err = []
+  else:
+    # Commit should fail because it is locked in the other location
+    expected_err = '.*(([Nn]o)|(Server)).*[lL]ock.*'
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'commit', mu2_path, '-m', '')
 
 #----------------------------------------------------------------------
@@ -1543,6 +1557,9 @@ def replace_and_propset_locked_path(sbox):
   # Replace A/D/G and A/D/G/rho, propset on A/D/G/rho.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', G_path)
+  # Recreate path for single-db
+  if not os.path.exists(G_path):
+    os.mkdir(G_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', G_path)
   svntest.main.file_append(rho_path, "This is the new file 'rho'.\n")

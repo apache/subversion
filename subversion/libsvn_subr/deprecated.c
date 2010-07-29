@@ -751,6 +751,42 @@ svn_io_get_dirents(apr_hash_t **dirents,
   return svn_io_get_dirents2(dirents, path, pool);
 }
 
+struct walk_func_filter_baton_t
+{
+  svn_io_walk_func_t walk_func;
+  void *walk_baton;
+};
+
+/* Implements svn_io_walk_func_t, but only allows APR_DIR and APR_REG
+   finfo types through to the wrapped function/baton.  */
+static svn_error_t *
+walk_func_filter_func(void *baton,
+                      const char *path,
+                      const apr_finfo_t *finfo,
+                      apr_pool_t *pool)
+{
+  struct walk_func_filter_baton_t *b = baton;
+
+  if (finfo->filetype == APR_DIR || finfo->filetype == APR_REG)
+    SVN_ERR(b->walk_func(b->walk_baton, path, finfo, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_dir_walk(const char *dirname,
+                apr_int32_t wanted,
+                svn_io_walk_func_t walk_func,
+                void *walk_baton,
+                apr_pool_t *pool)
+{
+  struct walk_func_filter_baton_t baton;
+  baton.walk_func = walk_func;
+  baton.walk_baton = walk_baton;
+  return svn_error_return(svn_io_dir_walk2(dirname, wanted,
+                                           walk_func_filter_func,
+                                           &baton, pool));
+}
 
 /*** From constructors.c ***/
 svn_log_changed_path_t *

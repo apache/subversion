@@ -189,24 +189,6 @@ make_adm_subdir(const char *path,
 
 
 svn_error_t *
-svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
-                                         svn_wc__db_t *db,
-                                         const char *local_abspath,
-                                         apr_pool_t *pool)
-{
-  const char *newpath, *base_name;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  svn_dirent_split(&newpath, &base_name, local_abspath, pool);
-  *result_abspath = simple_extend(newpath, TRUE, SVN_WC__ADM_TEXT_BASE,
-                                  base_name, SVN_WC__BASE_EXT, pool);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_wc__text_base_path_to_read(const char **result_abspath,
                                svn_wc__db_t *db,
                                const char *local_abspath,
@@ -501,49 +483,6 @@ svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
 }
 
 
-svn_error_t *
-svn_wc__prop_path(const char **prop_path,
-                  const char *path,
-                  svn_wc__db_kind_t node_kind,
-                  svn_wc__props_kind_t props_kind,
-                  apr_pool_t *pool)
-{
-  if (node_kind == svn_wc__db_kind_dir)
-    {
-      static const char * names[] = {
-        SVN_WC__ADM_DIR_PROP_BASE,    /* svn_wc__props_base */
-        SVN_WC__ADM_DIR_PROP_REVERT,  /* svn_wc__props_revert */
-        SVN_WC__ADM_DIR_PROPS         /* svn_wc__props_working */
-      };
-
-      *prop_path = simple_extend(path, FALSE, NULL, names[props_kind], NULL,
-                                 pool);
-    }
-  else  /* It's a file */
-    {
-      static const char * extensions[] = {
-        SVN_WC__BASE_EXT,     /* svn_wc__props_base */
-        SVN_WC__REVERT_EXT,   /* svn_wc__props_revert */
-        SVN_WC__WORK_EXT      /* svn_wc__props_working */
-      };
-
-      static const char * dirs[] = {
-        SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_base */
-        SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_revert */
-        SVN_WC__ADM_PROPS       /* svn_wc__props_working */
-      };
-
-      const char *base_name;
-
-      svn_dirent_split(prop_path, &base_name, path, pool);
-      *prop_path = simple_extend(*prop_path, FALSE, dirs[props_kind],
-                                 base_name, extensions[props_kind], pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /*** Opening and closing files in the adm area. ***/
 
 svn_error_t *
@@ -605,15 +544,7 @@ init_adm_tmp_area(const char *path, apr_pool_t *pool)
   /* SVN_WC__ADM_TMP */
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TMP, FALSE, pool));
 
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TEXT_BASE, TRUE, pool));
-
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROP_BASE, TRUE, pool));
-
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
-  return svn_error_return(make_adm_subdir(path, SVN_WC__ADM_PROPS, TRUE,
-                                          pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -636,12 +567,6 @@ init_adm(svn_wc__db_t *db,
                                  APR_OS_DEFAULT, pool));
 
   /** Make subdirectories. ***/
-
-  /* SVN_WC__ADM_PROP_BASE */
-  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROP_BASE, FALSE, pool));
-
-  /* SVN_WC__ADM_PROPS */
-  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROPS, FALSE, pool));
 
   /* SVN_WC__ADM_PRISTINE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PRISTINE, FALSE, pool));
@@ -755,23 +680,38 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc__adm_destroy(svn_wc__db_t *db,
                     const char *dir_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
                     apr_pool_t *scratch_pool)
 {
-#ifndef SINGLE_DB
   const char *adm_abspath;
-#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
   SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
+#ifdef SVN_WC__SINGLE_DB
+  SVN_ERR(svn_wc__db_get_wcroot(&adm_abspath, db, dir_abspath,
+                                scratch_pool, scratch_pool));
+#endif
+
+
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock */
   SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, scratch_pool));
 
-#ifndef SINGLE_DB
+#ifndef SVN_WC__SINGLE_DB
   adm_abspath = svn_wc__adm_child(dir_abspath, NULL, scratch_pool);
   SVN_ERR(svn_io_remove_dir2(adm_abspath, FALSE, NULL, NULL, scratch_pool));
+#else
+  /* ### We should check if we are the only user of this DB!!! */
+
+  if (strcmp(adm_abspath, dir_abspath) == 0)
+    SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(adm_abspath, NULL,
+                                                 scratch_pool),
+                               FALSE,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 #endif
 
   return SVN_NO_ERROR;

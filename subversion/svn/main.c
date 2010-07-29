@@ -2228,6 +2228,10 @@ main(int argc, const char *argv[])
         return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
+  /* Set up our commit callback.  We leave the callback NULL. */
+  if (!opt_state.quiet)
+    ctx->commit_callback2 = svn_cl__print_commit_info;
+
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;
   apr_signal(SIGINT, signal_handler);

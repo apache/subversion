@@ -1057,6 +1057,27 @@ change_file_prop(void *file_baton,
   if (b->skip)
     return SVN_NO_ERROR;
 
+  /* Issue #3657 'phantom svn:eol-style changes cause spurious merge text
+     conflicts'.  When communicating with the repository via ra_serf and
+     ra_neon, the change_dir_prop and change_file_prop svn_delta_editor_t
+     callbacks are called (obviously) when a directory or file property has
+     changed between the start and end of the edit.  Less obvious however,
+     is that these callbacks may be made describing *all* of the properties
+     on FILE_BATON->PATH when using the DAV providers, not just the change(s).
+     (Specifically ra_neon does this for diff/merge and ra_serf does it
+     for diff/merge/update/switch).
+
+     Normally this is fairly harmless, but if it appears that the
+     svn:eol-style property has changed on a file, then we can get spurious
+     text conflicts (i.e. Issue #3657).  To prevent this, we populate
+     FILE_BATON->PRISTINE_PROPS only with actual property changes. */
+  if (value)
+    {
+      const char *current_prop = svn_prop_get_value(b->pristine_props, name);
+      if (current_prop && strcmp(current_prop, value->data) == 0)
+        return SVN_NO_ERROR;
+    }
+
   propchange = apr_array_push(b->propchanges);
   propchange->name = apr_pstrdup(b->pool, name);
   propchange->value = value ? svn_string_dup(value, b->pool) : NULL;

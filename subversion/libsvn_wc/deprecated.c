@@ -421,12 +421,14 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_transmit_text_deltas3(tempfile,
-                                       digest ? &new_text_base_md5_checksum
-                                              : NULL,
-                                       NULL, wc_ctx,
-                                       local_abspath, fulltext, editor,
-                                       file_baton, pool, pool));
+  SVN_ERR(svn_wc__internal_transmit_text_deltas(tempfile,
+                                                (digest
+                                                 ? &new_text_base_md5_checksum
+                                                 : NULL),
+                                                NULL, wc_ctx->db,
+                                                local_abspath, fulltext,
+                                                editor, file_baton,
+                                                pool, pool));
 
   if (digest)
     memcpy(digest, new_text_base_md5_checksum->digest, APR_MD5_DIGESTSIZE);
@@ -2217,12 +2219,18 @@ svn_wc_prop_get(const svn_string_t **value,
 
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access), pool));
 
-  SVN_ERR(svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool));
+  err = svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -3617,6 +3625,7 @@ svn_wc_copy2(const char *src,
   SVN_ERR(svn_wc_copy3(wc_ctx,
                        src_abspath,
                        dst_abspath,
+                       FALSE /* metadata_only */, 
                        cancel_func, cancel_baton,
                        notify_func, notify_baton,
                        pool));

@@ -171,14 +171,18 @@ do_auth(serf_sspi_context_t *sspi_context,
   apr_size_t tmp_len, token_len = 0;
   const char *space;
 
-  space = strchr(auth_attr, ' ');
-  if (space)
+  if (auth_attr != NULL)
     {
-      const char *base64_token = apr_pstrmemdup(pool,
-                                                auth_attr, space - auth_attr);
-      token_len = apr_base64_decode_len(base64_token);
-      token = apr_palloc(pool, token_len);
-      apr_base64_decode(token, base64_token);
+      space = strchr(auth_attr, ' ');
+      if (space)
+        {
+          const char *base64_token = apr_pstrmemdup(pool,
+                                                    auth_attr,
+                                                    space - auth_attr);
+          token_len = apr_base64_decode_len(base64_token);
+          token = apr_palloc(pool, token_len);
+          apr_base64_decode(token, base64_token);
+        }
     }
 
   /* We can get a whole batch of 401 responses from the server, but we should

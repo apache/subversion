@@ -1136,30 +1136,6 @@ translated_stream_close(void *baton)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_io_reset_fn_t. */
-static svn_error_t *
-translated_stream_reset(void *baton)
-{
-  struct translated_stream_baton *b = baton;
-  svn_error_t *err;
-
-  err = svn_stream_reset(b->stream);
-  if (err == NULL)
-    {
-      b->in_baton->newline_off = 0;
-      b->in_baton->keyword_off = 0;
-      b->in_baton->src_format_len = 0;
-      b->out_baton->newline_off = 0;
-      b->out_baton->keyword_off = 0;
-      b->out_baton->src_format_len = 0;
-
-      b->written = FALSE;
-      svn_stringbuf_setempty(b->readbuf);
-      b->readbuf_off = 0;
-    }
-
-  return svn_error_return(err);
-}
 
 /* svn_stream_mark_t for translation streams. */
 typedef struct
@@ -1201,23 +1177,43 @@ static svn_error_t *
 translated_stream_seek(void *baton, svn_stream_mark_t *mark)
 {
   struct translated_stream_baton *b = baton;
-  mark_translated_t *mt = (mark_translated_t *)mark;
 
-  /* Flush output buffer if necessary. */
-  if (b->written)
-    SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool));
+  if (mark != NULL)
+    {
+      mark_translated_t *mt = (mark_translated_t *)mark;
 
-  SVN_ERR(svn_stream_seek(b->stream, mt->mark));
+      /* Flush output buffer if necessary. */
+      if (b->written)
+        SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0,
+                                b->iterpool));
 
-  /* Restore translation state, avoiding new allocations. */
-  *b->in_baton = *mt->saved_baton.in_baton;
-  *b->out_baton = *mt->saved_baton.out_baton;
-  b->written = mt->saved_baton.written;
-  svn_stringbuf_setempty(b->readbuf);
-  svn_stringbuf_appendbytes(b->readbuf, mt->saved_baton.readbuf->data, 
-                            mt->saved_baton.readbuf->len);
-  b->readbuf_off = mt->saved_baton.readbuf_off;
-  memcpy(b->buf, mt->saved_baton.buf, SVN__TRANSLATION_BUF_SIZE);
+      SVN_ERR(svn_stream_seek(b->stream, mt->mark));
+    
+      /* Restore translation state, avoiding new allocations. */
+      *b->in_baton = *mt->saved_baton.in_baton;
+      *b->out_baton = *mt->saved_baton.out_baton;
+      b->written = mt->saved_baton.written;
+      svn_stringbuf_setempty(b->readbuf);
+      svn_stringbuf_appendbytes(b->readbuf, mt->saved_baton.readbuf->data, 
+                                mt->saved_baton.readbuf->len);
+      b->readbuf_off = mt->saved_baton.readbuf_off;
+      memcpy(b->buf, mt->saved_baton.buf, SVN__TRANSLATION_BUF_SIZE);
+    }
+  else
+    {
+      SVN_ERR(svn_stream_reset(b->stream));
+
+      b->in_baton->newline_off = 0;
+      b->in_baton->keyword_off = 0;
+      b->in_baton->src_format_len = 0;
+      b->out_baton->newline_off = 0;
+      b->out_baton->keyword_off = 0;
+      b->out_baton->src_format_len = 0;
+
+      b->written = FALSE;
+      svn_stringbuf_setempty(b->readbuf);
+      b->readbuf_off = 0;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1321,7 +1317,6 @@ svn_subst_stream_translated(svn_stream_t *stream,
   svn_stream_set_read(s, translated_stream_read);
   svn_stream_set_write(s, translated_stream_write);
   svn_stream_set_close(s, translated_stream_close);
-  svn_stream_set_reset(s, translated_stream_reset);
   svn_stream_set_mark(s, translated_stream_mark);
   svn_stream_set_seek(s, translated_stream_seek);
 

@@ -324,17 +324,23 @@ def update_missing(sbox):
   svntest.main.safe_rmtree(E_path)
   svntest.main.safe_rmtree(H_path)
 
+  # In single-db mode all missing items will just be restored
+  if svntest.main.wc_is_singledb(wc_dir):
+    A_or_Restored = Item(verb='Restored')
+  else:
+    A_or_Restored = Item(status='A ')
+
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu'        : Item(verb='Restored'),
     'A/D/G/rho'   : Item(verb='Restored'),
-    'A/B/E' : Item(status='A '),
-    'A/B/E/alpha' : Item(status='A '),
-    'A/B/E/beta' : Item(status='A '),
-    'A/D/H' : Item(status='A '),
-    'A/D/H/chi' : Item(status='A '),
-    'A/D/H/omega' : Item(status='A '),
-    'A/D/H/psi' : Item(status='A '),
+    'A/B/E'       : A_or_Restored,
+    'A/B/E/alpha' : A_or_Restored,
+    'A/B/E/beta'  : A_or_Restored,
+    'A/D/H'       : A_or_Restored,
+    'A/D/H/chi'   : A_or_Restored,
+    'A/D/H/omega' : A_or_Restored,
+    'A/D/H/psi'   : A_or_Restored,
     })
 
   # Create expected disk tree for the update.
@@ -793,15 +799,25 @@ def obstructed_update_alters_wc_props(sbox):
 
   # Update the WC to that newer rev to trigger the obstruction.
   #print "Updating WC"
-  expected_output = svntest.wc.State(wc_dir, {})
+  # svntest.factory.make(sbox, 'svn update')
+  # exit(0)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/foo'             : Item(status='  ', treeconflict='C'),
+  })
+
   expected_disk = svntest.main.greek_state.copy()
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  error_re = 'Failed to add directory.*object of the same name already exists'
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        error_re)
+  expected_disk.add({
+    'A/foo'             : Item(contents="an obstruction"),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/foo'             : Item(status='? ', treeconflict='C'),
+  })
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
 
   # Remove the file which caused the obstruction.
   #print "Removing obstruction"
@@ -1062,6 +1078,17 @@ def update_deleted_missing_dir(sbox):
     'A/D/H' : Item(status='D '),
     })
 
+  # In single-db mode the missing items are restored before the update
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_output.add({
+      'A/D/H/psi'         : Item(verb='Restored'),
+      'A/D/H/omega'       : Item(verb='Restored'),
+      'A/D/H/chi'         : Item(verb='Restored'),
+      'A/B/E/beta'        : Item(verb='Restored'),
+      'A/B/E/alpha'       : Item(verb='Restored')
+      # A/B/E and A/D/H are also restored, but are then overriden by the delete
+    })
+
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
@@ -1086,6 +1113,12 @@ def update_deleted_missing_dir(sbox):
 
   # This time we're updating the whole working copy
   expected_status.tweak(wc_rev=2)
+
+  # And now we don't expect restore operations
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E' : Item(status='D '),
+    'A/D/H' : Item(status='D '),
+    })
 
   # Do the update, on the whole working copy this time
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1134,12 +1167,23 @@ def another_hudson_problem(sbox):
   # Update missing directory to receive the delete, this should mark G
   # as 'deleted' and should not alter gamma's entry.
 
+  if not svntest.main.wc_is_singledb(wc_dir):
+    expected_output = ['D    '+G_path+'\n',
+                       'Updated to revision 3.\n',
+                       ]
+  else:
+    expected_output = ['Restored \'' + G_path + '\'\n',
+                       'Restored \'' + G_path + os.path.sep + 'pi\'\n',
+                       'Restored \'' + G_path + os.path.sep + 'rho\'\n',
+                       'Restored \'' + G_path + os.path.sep + 'tau\'\n',
+                       'D    '+G_path+'\n',
+                       'Updated to revision 3.\n',
+                       ]
+
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
   svntest.actions.run_and_verify_svn(None,
-                                     ['D    '+G_path+'\n',
-                                      'Updated to revision 3.\n',
-                                      ], [],
+                                     expected_output, [],
                                      'up', G_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
@@ -1544,6 +1588,9 @@ def nested_in_read_only(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  if svntest.main.wc_is_singledb(wc_dir):
+    raise svntest.Skip('Unsupported in single-db')
 
   # Delete/commit a file
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
@@ -2176,36 +2223,97 @@ def forced_update_failures(sbox):
 
   # A forced update that tries to add a directory when an unversioned file
   # of the same name already exists should fail.
-  C_Path = os.path.join(wc_backup, 'A', 'C')
-  svntest.actions.run_and_verify_update(C_Path, None, None, None,
-                                        ".*Failed to add directory.*" + \
-                                        "a non-directory object of the " + \
-                                        "same name already exists",
-                                        None, None, None, None, 0, C_Path,
-                                        '--force')
+  # svntest.factory.make(sbox, """
+  #   svn up --force wc_dir_backup/A/C
+  #   rm -rf wc_dir_backup/A/C/I wc_dir_backup/A/B/F/nu
+  #   svn up wc_dir_backup
+  #   svn up -r1 wc_dir_backup/A/C
+  #   svn co url/A/C/I wc_dir_backup/A/C/I
+  #   svn up --force wc_dir_backup/A/C
+  #   """)
+  # exit(0)
+  url = sbox.repo_url
+  wc_dir_backup = sbox.wc_dir + '.backup'
 
-  # Clean-up what we have done so far.  Remove the unversioned file A/C/I
-  # and the unversioned directory A/B/F/nu.  Then update the backup to
-  # r2, except for A/C, update that to r1 so A/C/I isn't present.
-  # working copy.
-  os.remove(I_path)
-  os.rmdir(nu_path)
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
-                                     'up', wc_backup)
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
-                                     'up', '-r', '1', C_Path)
+  backup_A_B_F_nu = os.path.join(wc_dir_backup, 'A', 'B', 'F', 'nu')
+  backup_A_C = os.path.join(wc_dir_backup, 'A', 'C')
+  backup_A_C_I = os.path.join(wc_dir_backup, 'A', 'C', 'I')
+  url_A_C_I = url + '/A/C/I'
 
-  # Checkout %URL%/A/C/I@2 directly to A/C/I.  A/C, being at r1, views
-  # this as an unversioned object.
-  I_url = sbox.repo_url + "/A/C/I"
-  exit_code, so, se = svntest.actions.run_and_verify_svn(
-    "Unexpected error during co",
-    ['Checked out revision 2.\n'], [],
-    "co", I_url, I_path)
-  svntest.actions.run_and_verify_update(C_Path, None, None, None,
-                               "Failed to add directory '.*I'.*already exists",
-                                        None, None, None, None, 0, C_Path,
-                                        '--force')
+  # svn up --force wc_dir_backup/A/C
+  expected_output = svntest.wc.State(wc_dir_backup, {
+    'A/C/I'             : Item(status='  ', treeconflict='C'),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/F/nu'          : Item(),
+    'A/C/I'             :
+    Item(contents="This is the file 'I'...shouldn't I be a dir?\n"),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir_backup, 1)
+  expected_status.add({
+    'A/C/I'             : Item(status='? ', treeconflict='C'),
+    'A/B/F/nu'          : Item(status='? ', treeconflict='C'),
+  })
+  expected_status.tweak('A/C', 'A/B/F', wc_rev='2')
+
+  actions.run_and_verify_update(wc_dir_backup, expected_output,
+    expected_disk, expected_status, None, None, None, None, None, False,
+    '--force', backup_A_C)
+
+  # rm -rf wc_dir_backup/A/C/I wc_dir_backup/A/B/F/nu
+  os.remove(backup_A_C_I)
+  svntest.main.safe_rmtree(backup_A_B_F_nu)
+
+  # svn up wc_dir_backup
+  expected_output = svntest.wc.State(wc_dir_backup, {
+    'A/C/I'             : Item(status='A '),
+    'A/B/F/nu'          : Item(status='A '),
+  })
+
+  expected_disk.tweak('A/B/F/nu', contents="This is the file 'nu'\n")
+  expected_disk.tweak('A/C/I', contents=None)
+
+  expected_status.tweak(wc_rev='2', status='  ')
+  expected_status.tweak('A/C/I', 'A/B/F/nu', treeconflict=None)
+
+  actions.run_and_verify_update(wc_dir_backup, expected_output,
+    expected_disk, expected_status, None, None, None, None, None, False,
+    wc_dir_backup)
+
+  # svn up -r1 wc_dir_backup/A/C
+  expected_output = svntest.wc.State(wc_dir_backup, {
+    'A/C/I'             : Item(status='D '),
+  })
+
+  expected_disk.remove('A/C/I')
+
+  expected_status.remove('A/C/I')
+  expected_status.tweak('A/C', wc_rev='1')
+
+  actions.run_and_verify_update(wc_dir_backup, expected_output,
+    expected_disk, expected_status, None, None, None, None, None, False,
+    '-r1', backup_A_C)
+
+  # svn co url/A/C/I wc_dir_backup/A/C/I
+  expected_output = svntest.wc.State(wc_dir_backup, {})
+
+  expected_disk = svntest.wc.State(wc_dir, {})
+
+  actions.run_and_verify_checkout2(False, url_A_C_I, backup_A_C_I,
+    expected_output, expected_disk, None, None, None, None)
+
+  # svn up --force wc_dir_backup/A/C
+  expected_error = (
+    "svn: Failed to add directory .*I.*working copy with the same name "
+    + "already exists"
+  )
+
+  actions.run_and_verify_update(wc_dir_backup, None, None, None,
+    expected_error, None, None, None, None, False, '--force', backup_A_C)
+
 
 #----------------------------------------------------------------------
 # Test for issue #2556. The tests maps a virtual drive to a working copy

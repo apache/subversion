@@ -16,11 +16,6 @@ Revision-number: 1
 Prop-content-length: 105
 Content-length: 105
 
-K 7
-svn:log
-V 5
-blah
-
 K 10
 svn:author
 V 6
@@ -29,6 +24,11 @@ K 8
 svn:date
 V 27
 2005-12-21T23:12:58.931794Z
+K 7
+svn:log
+V 5
+blah
+
 PROPS-END
 
 Node-path: 

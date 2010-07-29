@@ -551,16 +551,13 @@ class State:
     desc = { }
     dot_svn = svntest.main.get_admin_name()
 
-    for dirpath, dirs, files in os.walk(base):
-      if dot_svn in dirs:
-        # don't visit the .svn subdir
-        dirs.remove(dot_svn)
+    for dirpath in svntest.main.run_entriesdump_subdirs(base):
+
+      if base == '.' and dirpath != '.':
+        dirpath = '.' + os.path.sep + dirpath
 
       entries = svntest.main.run_entriesdump(dirpath)
       if entries is None:
-        # this is not a versioned directory. remove all subdirectories since
-        # we don't want to visit them. then skip this directory.
-        dirs[:] = []
         continue
 
       if dirpath == '.':
@@ -602,12 +599,6 @@ class State:
 
         if implied_url and implied_url != entry.url:
           item.switched = 'S'
-
-      # only recurse into directories found in this entries. remove any
-      # which are not mentioned.
-      unmentioned = set(dirs) - set(entries.keys())
-      for subdir in unmentioned:
-        dirs.remove(subdir)
 
     return cls('', desc)
 
@@ -820,22 +811,42 @@ def text_base_path(file_path):
   """Return the path to the text-base file for the versioned file
      FILE_PATH."""
   dot_svn = svntest.main.get_admin_name()
-  parent_path, file_name = os.path.split(file_path)
+  root_path, relpath = os.path.split(file_path)
 
-  db_path = os.path.join(parent_path, dot_svn, 'wc.db')
-  db = svntest.sqlite3.connect(db_path)
+  while True:
+    db_path = os.path.join(root_path, dot_svn, 'wc.db')
+    try:
+      db = svntest.sqlite3.connect(db_path)
+      break
+    except: pass
+    head, tail = os.path.split(root_path)
+    if head == root_path:
+      raise svntest.Failure("No DB for " + file_path)
+    root_path = head
+    relpath = os.path.join(tail, relpath).replace(os.sep, '/')
+
+  print('%s : %s' %(db_path, relpath))
   c = db.cursor()
   c.execute("""select checksum from working_node
-               where local_relpath = '""" + file_name + """'""")
+               where local_relpath = '""" + relpath + """'""")
   checksum = c.fetchone()
   if checksum is None:
     c.execute("""select checksum from base_node
-                 where local_relpath = '""" + file_name + """'""")
+                 where local_relpath = '""" + relpath + """'""")
     checksum = c.fetchone()[0]
   if checksum is None or checksum[0:6] != "$sha1$":
-    raise svntest.Failure("No SHA1 checksum for " + file_path)
+    raise svntest.Failure("No SHA1 checksum for " + relpath)
   db.close()
-  return os.path.join(parent_path, dot_svn, 'pristine', checksum[6:])
+
+  checksum = checksum[6:]
+  # Calculate single DB location
+  fn = os.path.join(root_path, dot_svn, 'pristine', checksum[0:2], checksum)
+
+  if os.path.isfile(fn):
+    return fn
+
+  # Calculate per dir location
+  return os.path.join(root_path, dot_svn, 'pristine', checksum)
 
 
 # ------------

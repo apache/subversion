@@ -1271,6 +1271,10 @@ typedef struct svn_wc_notify_t {
    * @since New in 1.7 */
   int hunk_fuzz;
 
+  /** If @c action relates to hunks, specifies whether the hunk is a
+   * property hunk or not. */
+  svn_boolean_t is_prop_hunk;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
@@ -4220,12 +4224,15 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * is used for accessing the working copy and must contain a write lock for
  * the parent directory of @a dst_abspath,
  *
+ * If metadata_only is TRUE then this a database only operation and
+ * the working directories and files are not copied.
+ *
  * @a src_abspath must be a file or directory under version control;
  * the parent of @a dst_abspath must be a directory under version control
  * in the same working copy; @a dst_abspath will be the name of the copied
- * item, and it must not exist already.  Note that when @a src points to a
- * versioned file, the working file doesn't necessarily exist in which case
- * its text-base is used instead.
+ * item, and it must not exist already if metadata_only is FALSE.  Note that
+ * when @a src points to a versioned file, the working file doesn't
+ * necessarily exist in which case its text-base is used instead.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -4248,6 +4255,7 @@ svn_error_t *
 svn_wc_copy3(svn_wc_context_t *wc_ctx,
              const char *src_abspath,
              const char *dst_abspath,
+             svn_boolean_t metadata_only,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
              svn_wc_notify_func2_t notify_func,
@@ -5730,11 +5738,14 @@ svn_wc_get_pristine_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool);
                           
 
-/** Set @a *value to the value of property @a name for @a path, allocating
- * @a *value in @a pool.  If no such prop, set @a *value to @c NULL.
- * @a name may be a regular or wc property; if it is an entry property,
- * return the error #SVN_ERR_BAD_PROP_KIND.  @a adm_access is an access
- * baton set that contains @a path.
+/** Set @a *value to the value of property @a name for @a local_abspath,
+ * allocating @a *value in @a result_pool.  If no such prop, set @a *value
+ * to @c NULL. @a name may be a regular or wc property; if it is an
+ * entry property, return the error #SVN_ERR_BAD_PROP_KIND.  @a wc_ctx
+ * is used to access the working copy.
+ *
+ * If @a local_abspath is not a versioned path, return
+ * #SVN_ERR_WC_PATH_NOT_FOUND
  *
  * @since New in 1.7.
  */
@@ -5748,6 +5759,8 @@ svn_wc_prop_get2(const svn_string_t **value,
 
 /** Similar to svn_wc_prop_get2(), but with a #svn_wc_adm_access_t /
  * relative path parameter pair.
+ *
+ * When @a path is not versioned, set @a *value to NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
@@ -7080,14 +7093,6 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * matching @a file_baton) through @a editor, then close @a file_baton
  * afterwards.  Use @a scratch_pool for any temporary allocation.
  *
- * If @a tempfile is non-NULL, make a copy of @a local_abspath with keywords
- * and eol translated to repository-normal form, and set @a *tempfile to the
- * absolute path to this copy, allocated in @a result_pool.  The copy will
- * be in the temporary-text-base directory.  Do not clean up the copy;
- * caller can do that.  (The purpose of handing back the tmp copy is that it
- * is usually about to become the new text base anyway, but the installation
- * of the new text base is outside the scope of this function.)
- *
  * If @a new_text_base_md5_checksum is non-NULL, set
  * @a *new_text_base_md5_checksum to the MD5 checksum of (@a local_abspath
  * translated to repository-normal form), allocated in @a result_pool.
@@ -7111,8 +7116,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_transmit_text_deltas3(const char **tempfile,
-                             const svn_checksum_t **new_text_base_md5_checksum,
+svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
                              const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
@@ -7125,6 +7129,14 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
 /** Similar to svn_wc_transmit_text_deltas3(), but with a relative path
  * and adm_access baton, and the checksum output is an MD5 digest instead of
  * two svn_checksum_t objects.
+ *
+ * If @a tempfile is non-NULL, make a copy of @a path with keywords
+ * and eol translated to repository-normal form, and set @a *tempfile to the
+ * absolute path to this copy, allocated in @a result_pool.  The copy will
+ * be in the temporary-text-base directory.  Do not clean up the copy;
+ * caller can do that.  (The purpose of handing back the tmp copy is that it
+ * is usually about to become the new text base anyway, but the installation
+ * of the new text base is outside the scope of this function.)
  *
  * @since New in 1.4.
  * @deprecated Provided for backwards compatibility with the 1.6 API.

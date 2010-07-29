@@ -28,7 +28,7 @@ import org.apache.subversion.javahl.DirEntry;
 
 /**
  * This interface is used to receive every single line for a file on a
- * the SVNClientInterface.blame call.
+ * the {@link ISVNClient#blame} call.
  */
 public interface ListCallback
 {

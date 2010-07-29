@@ -868,9 +868,10 @@ def props_only_file_update(sbox):
 
   # We used to leave some temporary files around. Make sure that we don't.
   temps = os.listdir(os.path.join(wc_dir, svntest.main.get_admin_name(), 'tmp'))
-  temps.remove('prop-base')
-  temps.remove('props')
-  temps.remove('text-base')
+  if os.path.exists(os.path.join(wc_dir, svntest.main.get_admin_name(),
+                                 'tmp', 'props')):
+    temps.remove('prop-base')
+    temps.remove('props')
   if temps:
     print('Temporary files leftover: %s' % (', '.join(temps),))
     raise svntest.Failure

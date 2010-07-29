@@ -86,11 +86,15 @@ def make_standard_slew_of_changes(wc_dir):
   svntest.main.run_svn(None, 'add', 'Q')
 
   # Remove two directories
-  svntest.main.run_svn(None, 'rm', os.path.join('A', 'B', 'E'))
+  A_B_E = os.path.join('A', 'B', 'E')
+  svntest.main.run_svn(None, 'rm', A_B_E)
   svntest.main.run_svn(None, 'rm', os.path.join('A', 'C'))
 
   # Replace one of the removed directories
-  svntest.main.run_svn(None, 'add', os.path.join('A', 'B', 'E'))
+  # But first recreate if it doesn't exist (single-db)
+  if not os.path.exists(A_B_E):
+    os.mkdir(A_B_E)
+  svntest.main.run_svn(None, 'add', A_B_E)
 
   # Make property mods to two directories
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', os.curdir)
@@ -452,16 +456,21 @@ def nested_dir_replacements(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  A_D = os.path.join(wc_dir, 'A', 'D')
+
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
-  svntest.main.run_svn(None, 'rm', os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', '--depth=empty',
-                       os.path.join(wc_dir, 'A', 'D'))
-  svntest.main.run_svn(None, 'add', '--depth=empty',
-                       os.path.join(wc_dir, 'A', 'D', 'H'))
+  svntest.main.run_svn(None, 'rm', A_D)
+
+  # Recreate directories for single-db
+  if not os.path.exists(A_D):
+    os.mkdir(A_D)
+    os.mkdir(os.path.join(A_D, 'H'))
+  svntest.main.run_svn(None, 'add', '--depth=empty', A_D)
+  svntest.main.run_svn(None, 'add', '--depth=empty', os.path.join(A_D, 'H'))
 
   # For kicks, add new file A/D/bloo.
-  svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'bloo'), "hi")
-  svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D', 'bloo'))
+  svntest.main.file_append(os.path.join(A_D, 'bloo'), "hi")
+  svntest.main.run_svn(None, 'add', os.path.join(A_D, 'bloo'))
 
   # Verify pre-commit status:
   #
@@ -1497,8 +1506,10 @@ def commit_multiple_wc_multiple_repos(sbox):
 
   # Commit should fail, since WCs come from different repositories.
   # The exact error message depends on whether or not the tests are
-  # run below a 1.7 working copy
-  error_re = ".*(is not a|Are all targets part of the same) working copy.*"
+  # run below an existing working copy
+  error_re = ( ".*(is not a working copy" +
+                 "|Are all targets part of the same working copy" +
+                 "|was not found).*" )
   svntest.actions.run_and_verify_svn("Expected output on stderr doesn't match",
                                      [], error_re,
                                      'commit', '-m', 'log',
@@ -1946,6 +1957,9 @@ def mods_in_schedule_delete(sbox):
   C_path = os.path.join(wc_dir, 'A', 'C')
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'rm', C_path)
+
+  if not os.path.exists(C_path):
+    os.mkdir(C_path)
   foo_path = os.path.join(C_path, 'foo')
   foo_contents = 'zig\nzag\n'
   svntest.main.file_append(foo_path, foo_contents)
@@ -2659,15 +2673,16 @@ def start_commit_detect_capabilities(sbox):
 def commit_url(sbox):
   "'svn commit SOME_URL' should error"
   sbox.build()
-  wc_dir = sbox.wc_dir
-  repos_url = sbox.repo_url
+  url = sbox.repo_url
 
   # Commit directly to a URL
+  expected_error = ("svn: '" + url + 
+                    "' is a URL, but URLs cannot be commit targets")
   svntest.actions.run_and_verify_commit(None,
                                         None,
                                         None,
-                                        "Must give local path",
-                                        repos_url)
+                                        expected_error,
+                                        url)
 
 # Test for issue #3198
 def commit_added_missing(sbox):

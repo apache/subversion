@@ -78,18 +78,29 @@ struct cfg_option_t
 
 
 svn_error_t *
+svn_config_create(svn_config_t **cfgp, apr_pool_t *result_pool)
+{
+  svn_config_t *cfg = apr_palloc(result_pool, sizeof(*cfg));
+
+  cfg->sections = apr_hash_make(result_pool);
+  cfg->pool = result_pool;
+  cfg->x_pool = svn_pool_create(result_pool);
+  cfg->x_values = FALSE;
+  cfg->tmp_key = svn_stringbuf_create("", result_pool);
+  cfg->tmp_value = svn_stringbuf_create("", result_pool);
+
+  *cfgp = cfg;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_config_read(svn_config_t **cfgp, const char *file,
                 svn_boolean_t must_exist, apr_pool_t *pool)
 {
-  svn_config_t *cfg = apr_palloc(pool, sizeof(*cfg));
+  svn_config_t *cfg;
   svn_error_t *err;
 
-  cfg->sections = apr_hash_make(pool);
-  cfg->pool = pool;
-  cfg->x_pool = svn_pool_create(pool);
-  cfg->x_values = FALSE;
-  cfg->tmp_key = svn_stringbuf_create("", pool);
-  cfg->tmp_value = svn_stringbuf_create("", pool);
+  SVN_ERR(svn_config_create(&cfg, pool));
 
   /* Yes, this is platform-specific code in Subversion, but there's no
      practical way to migrate it into APR, as it's simultaneously

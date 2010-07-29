@@ -113,15 +113,25 @@ restore_node(svn_boolean_t *restored,
 {
   *restored = FALSE;
 
-  /* Currently we can only restore files, but we will be able to restore
-     directories after we move to a single database and pristine store. */
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
-      /* ... recreate file from text-base, and ... */
+      /* Recreate file from text-base */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times,
                            scratch_pool));
 
       *restored = TRUE;
+    }
+#ifdef SVN_WC__SINGLE_DB
+  else if (kind == svn_wc__db_kind_dir)
+    {
+      /* Recreating a directory is just a mkdir */
+      SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
+      *restored = TRUE;
+    }
+#endif
+
+  if (*restored)
+    {
       /* ... report the restoration to the caller.  */
       if (notify_func != NULL)
         {
@@ -233,6 +243,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
   int i;
   const char *dir_repos_root, *dir_repos_relpath;
   svn_depth_t dir_depth;
+  svn_error_t *err;
 
 
   /* Get both the SVN Entries and the actual on-disk entries.   Also
@@ -241,8 +252,18 @@ report_revisions_and_depths(svn_wc__db_t *db,
   dir_abspath = svn_dirent_join(anchor_abspath, dir_path, scratch_pool);
   SVN_ERR(svn_wc__db_base_get_children(&base_children, db, dir_abspath,
                                        scratch_pool, iterpool));
-  SVN_ERR(svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
-                              scratch_pool, scratch_pool));
+
+  err = svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
+                            scratch_pool, scratch_pool);
+
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      dirents = apr_hash_make(scratch_pool);
+    }
+  else
+    SVN_ERR(err);
 
   /*** Do the real reporting and recursing. ***/
 
@@ -279,7 +300,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
       svn_depth_t this_depth;
       svn_wc__db_lock_t *this_lock;
       svn_boolean_t this_switched;
-      svn_error_t *err;
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
@@ -393,10 +413,20 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                        NULL, NULL,
                                        db, this_abspath, iterpool, iterpool));
 
-          if (restore_files && wrk_status != svn_wc__db_status_added
-              && wrk_status != svn_wc__db_status_deleted
+          if (wrk_status == svn_wc__db_status_added)
+            SVN_ERR(svn_wc__db_scan_addition(&wrk_status, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             db, this_abspath,
+                                             iterpool, iterpool));
+
+          if (restore_files
+              && wrk_status != svn_wc__db_status_added
+#ifndef SVN_WC__SINGLE_DB
               && wrk_status != svn_wc__db_status_obstructed_add
-              && wrk_status != svn_wc__db_status_obstructed_delete)
+              && wrk_status != svn_wc__db_status_obstructed_delete
+#endif
+              && wrk_status != svn_wc__db_status_deleted)
+              
             {
               svn_node_kind_t dirent_kind;
 
@@ -417,6 +447,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                     missing = TRUE;
                 }
             }
+#ifndef SVN_WC__SINGLE_DB
           else
             missing = TRUE;
 
@@ -432,6 +463,11 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                               iterpool));
               continue;
             }
+#else
+          /* With single-db, we always know about all children, so
+             never tell the server that we don't know, but want to know
+             about the missing child. */
+#endif
         }
 
       /* And finally prepare for reporting */
@@ -1101,21 +1137,20 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
   /* If the caller wants a copy of the working file translated to
    * repository-normal form, make the copy by tee-ing the stream and set
-   * *TEMPFILE to the path to it. */
+   * *TEMPFILE to the path to it.  This is only needed for the 1.6 API,
+   * 1.7 doesn't set TEMPFILE.  Even when using the 1.6 API this file
+   * is not used by the functions that would have used it when using
+   * the 1.6 code.  It's possible that 3rd party users (if there are any)
+   * might expect this file to be a text-base. */
   if (tempfile)
     {
       svn_stream_t *tempstream;
 
-      SVN_ERR(svn_wc__text_base_deterministic_tmp_path(tempfile,
-                                                       db, local_abspath,
-                                                       result_pool));
-
-      /* Make an untranslated copy of the working file in the
-         administrative tmp area because a) we need to detranslate eol
-         and keywords anyway, and b) after the commit, we're going to
-         copy the tmp file to become the new text base anyway. */
-      SVN_ERR(svn_stream_open_writable(&tempstream, *tempfile,
-                                       scratch_pool, scratch_pool));
+      /* It can't be the same location as in 1.6 because the admin directory
+         no longer exists. */
+      SVN_ERR(svn_stream_open_unique(&tempstream, tempfile,
+                                     NULL, svn_io_file_del_none,
+                                     result_pool, scratch_pool));
 
       /* Wrap the translated stream with a new stream that writes the
          translated contents into the new text base file as we read from it.
@@ -1317,8 +1352,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas3(const char **tempfile,
-                             const svn_checksum_t **new_text_base_md5_checksum,
+svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
                              const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
@@ -1328,7 +1362,7 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  return svn_wc__internal_transmit_text_deltas(tempfile,
+  return svn_wc__internal_transmit_text_deltas(NULL,
                                                new_text_base_md5_checksum,
                                                new_text_base_sha1_checksum,
                                                wc_ctx->db, local_abspath,
