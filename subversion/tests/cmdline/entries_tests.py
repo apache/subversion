@@ -182,7 +182,12 @@ def obstructed_entries(sbox):
 
   entries = svntest.main.run_entriesdump(D_path)
   check_names(entries, 'H')
-  validate(entries['H'], revision=-1)
+
+  if svntest.main.wc_is_singledb(wc_dir):
+    # Data is not missing in single-db
+    validate(entries['H'], revision=1)
+  else:
+    validate(entries['H'], revision=-1)
 
   ### need to get svn_wc__db_read_info() to generate obstructed_add
 
