@@ -970,27 +970,35 @@ def patch_add_new_dir(sbox):
     'A         %s\n' % os.path.join(wc_dir, 'X'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
-    'Skipped missing target: \'%s\'\n' % A_C_Y_new_path,
+    'A         %s\n' % os.path.join(wc_dir, 'A', 'C'),
+    'A         %s\n' % os.path.join(wc_dir, 'A', 'C', 'Y'),
+    'A         %s\n' % os.path.join(wc_dir, 'A', 'C', 'Y', 'new'),
     'Skipped missing target: \'%s\'\n' % A_Z_new_path,
     'Summary of conflicts:\n',
-    '  Skipped paths: 2\n',
+    '  Skipped paths: 1\n',
   ]
 
   # Create the unversioned obstructing directory
   os.mkdir(os.path.dirname(A_Z_new_path))
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({'X/Y/new': Item(contents='new\n')})
-  expected_disk.add({'A/Z': Item()})
+  expected_disk.add({
+           'X/Y/new'   : Item(contents='new\n'),
+           'A/C/Y/new' : Item(contents='new\n'),
+           'A/Z'       : Item(),
+  })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({'X' : Item(status='A ', wc_rev=0)})
-  expected_status.add({'X/Y' : Item(status='A ', wc_rev=0)})
-  expected_status.add({'X/Y/new' : Item(status='A ', wc_rev=0)})
-  expected_status.add({'A/C' : Item(status='D ', wc_rev=1)})
+  expected_status.add({
+           'X'         : Item(status='A ', wc_rev=0),
+           'X/Y'       : Item(status='A ', wc_rev=0),
+           'X/Y/new'   : Item(status='A ', wc_rev=0),
+           'A/C'       : Item(status='R ', wc_rev=1),
+           'A/C/Y'     : Item(status='A ', wc_rev=0),
+           'A/C/Y/new' : Item(status='A ', wc_rev=0),
+  })
 
-  expected_skip = wc.State('', {A_C_Y_new_path : Item(),
-                                A_Z_new_path : Item() })
+  expected_skip = wc.State('', {A_Z_new_path : Item() })
 
   svntest.actions.run_and_verify_patch(wc_dir,
                                        os.path.abspath(patch_file_path),

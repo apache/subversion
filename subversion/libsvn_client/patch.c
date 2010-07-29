@@ -1823,14 +1823,15 @@ create_missing_parents(patch_target_t *target,
   apr_pool_t *iterpool;
 
   /* Check if we can safely create the target's parent. */
-  local_abspath = apr_pstrdup(scratch_pool, abs_wc_path);
+  local_abspath = abs_wc_path;
   components = svn_path_decompose(target->local_relpath, scratch_pool);
   present_components = 0;
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < components->nelts - 1; i++)
     {
       const char *component;
-      svn_node_kind_t kind;
+      svn_node_kind_t wc_kind, disk_kind;
+      svn_boolean_t is_deleted;
 
       svn_pool_clear(iterpool);
 
@@ -1838,49 +1839,45 @@ create_missing_parents(patch_target_t *target,
                                 const char *);
       local_abspath = svn_dirent_join(local_abspath, component, scratch_pool);
 
-      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, TRUE,
+      SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx, local_abspath, TRUE,
                                iterpool));
-      if (kind == svn_node_file)
+
+      SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, iterpool));
+
+      if (wc_kind != svn_node_none)
+        SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
+                                               ctx->wc_ctx,
+                                               local_abspath,
+                                               iterpool));
+      else
+        is_deleted = FALSE;
+
+      if (disk_kind == svn_node_file
+          || (wc_kind == svn_node_file && !is_deleted))
         {
-          /* Obstructed. */
+          /* on-disk files and missing files are obstructions */
           target->skipped = TRUE;
           break;
         }
-      else if (kind == svn_node_dir)
+      else if (wc_kind == svn_node_dir)
         {
-          /* ### wc-ng should eventually be able to replace
-           * directories in-place, so this schedule conflict
-           * check will go away. We could then also make the
-           * svn_wc_read_kind() call above ignore hidden
-           * nodes.*/
-          svn_boolean_t is_deleted;
-
-          SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
-                                                 ctx->wc_ctx,
-                                                 local_abspath,
-                                                 iterpool));
           if (is_deleted)
-            {
-              target->skipped = TRUE;
-              break;
-            }
+            break;
 
+          /* continue one level deeper */
           present_components++;
+        }
+      else if (disk_kind == svn_node_dir)
+        {
+          /* Obstructed. ### BH: why? We can just add a directory */
+          target->skipped = TRUE;
+          break;
         }
       else
         {
-          /* The WC_DB doesn't know much about this node.
-           * Check what's on disk. */
-          svn_node_kind_t disk_kind;
-
-          SVN_ERR(svn_io_check_path(local_abspath, &disk_kind,
-                                    iterpool));
-          if (disk_kind != svn_node_none)
-            {
-              /* An unversioned item is in the way. */
-              target->skipped = TRUE;
-              break;
-            }
+          /* It's not a file, it's not a dir.. 
+             Let's add a dir */
+          break;
         }
     }
 
@@ -1895,6 +1892,15 @@ create_missing_parents(patch_target_t *target,
           local_abspath = svn_dirent_join(local_abspath,
                                           component, scratch_pool);
         }
+
+      if (!dry_run && present_components < components->nelts - 1)
+        SVN_ERR(svn_io_make_dir_recursively(
+                        svn_dirent_join(
+                                   abs_wc_path,
+                                   svn_relpath_dirname(target->local_relpath,
+                                                       scratch_pool),
+                                   scratch_pool),
+                        scratch_pool));
 
       for (i = present_components; i < components->nelts - 1; i++)
         {
@@ -1926,8 +1932,6 @@ create_missing_parents(patch_target_t *target,
                * to version control. Allow cancellation since we
                * have not modified the working copy yet for this
                * target. */
-              SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT,
-                                      iterpool));
               SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath,
                                   svn_depth_infinity,
                                   NULL, SVN_INVALID_REVNUM,
