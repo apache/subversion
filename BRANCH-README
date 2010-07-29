@@ -30,7 +30,7 @@ The solution's approach is as follows:
 
 Then, either:
 
-  4. Provide notification of redirection events to the user.
+  4. Provide notification of redirection events to the user.  [DONE]
 
   5. Make the retry-on-corrected-URL event an optional behavior, tied
      to the particular server and defaulting to 'off', recognizing
