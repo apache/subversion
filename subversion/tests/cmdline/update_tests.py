@@ -324,17 +324,23 @@ def update_missing(sbox):
   svntest.main.safe_rmtree(E_path)
   svntest.main.safe_rmtree(H_path)
 
+  # In single-db mode all missing items will just be restored
+  if svntest.main.wc_is_singledb(wc_dir):
+    A_or_Restored = Item(verb='Restored')
+  else:
+    A_or_Restored = Item(status='A ')
+
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu'        : Item(verb='Restored'),
     'A/D/G/rho'   : Item(verb='Restored'),
-    'A/B/E' : Item(status='A '),
-    'A/B/E/alpha' : Item(status='A '),
-    'A/B/E/beta' : Item(status='A '),
-    'A/D/H' : Item(status='A '),
-    'A/D/H/chi' : Item(status='A '),
-    'A/D/H/omega' : Item(status='A '),
-    'A/D/H/psi' : Item(status='A '),
+    'A/B/E'       : A_or_Restored,
+    'A/B/E/alpha' : A_or_Restored,
+    'A/B/E/beta'  : A_or_Restored,
+    'A/D/H'       : A_or_Restored,
+    'A/D/H/chi'   : A_or_Restored,
+    'A/D/H/omega' : A_or_Restored,
+    'A/D/H/psi'   : A_or_Restored,
     })
 
   # Create expected disk tree for the update.
@@ -1072,6 +1078,17 @@ def update_deleted_missing_dir(sbox):
     'A/D/H' : Item(status='D '),
     })
 
+  # In single-db mode the missing items are restored before the update
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_output.add({
+      'A/D/H/psi'         : Item(verb='Restored'),
+      'A/D/H/omega'       : Item(verb='Restored'),
+      'A/D/H/chi'         : Item(verb='Restored'),
+      'A/B/E/beta'        : Item(verb='Restored'),
+      'A/B/E/alpha'       : Item(verb='Restored')
+      # A/B/E and A/D/H are also restored, but are then overriden by the delete
+    })
+
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
@@ -1096,6 +1113,12 @@ def update_deleted_missing_dir(sbox):
 
   # This time we're updating the whole working copy
   expected_status.tweak(wc_rev=2)
+
+  # And now we don't expect restore operations
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E' : Item(status='D '),
+    'A/D/H' : Item(status='D '),
+    })
 
   # Do the update, on the whole working copy this time
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1144,12 +1167,23 @@ def another_hudson_problem(sbox):
   # Update missing directory to receive the delete, this should mark G
   # as 'deleted' and should not alter gamma's entry.
 
+  if not svntest.main.wc_is_singledb(wc_dir):
+    expected_output = ['D    '+G_path+'\n',
+                       'Updated to revision 3.\n',
+                       ]
+  else:
+    expected_output = ['Restored \'' + G_path + '\'\n',
+                       'Restored \'' + G_path + os.path.sep + 'pi\'\n',
+                       'Restored \'' + G_path + os.path.sep + 'rho\'\n',
+                       'Restored \'' + G_path + os.path.sep + 'tau\'\n',
+                       'D    '+G_path+'\n',
+                       'Updated to revision 3.\n',
+                       ]
+
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
   svntest.actions.run_and_verify_svn(None,
-                                     ['D    '+G_path+'\n',
-                                      'Updated to revision 3.\n',
-                                      ], [],
+                                     expected_output, [],
                                      'up', G_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
@@ -1554,6 +1588,9 @@ def nested_in_read_only(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  if svntest.main.wc_is_singledb(wc_dir):
+    raise svntest.Skip('Unsupported in single-db')
 
   # Delete/commit a file
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
