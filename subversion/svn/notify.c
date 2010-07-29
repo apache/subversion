@@ -313,8 +313,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           /* ### APR_INT64_T_FMT isn't translator-friendly */
           if (n->hunk_fuzz)
             {
-              s = _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
-                    "with offset %s");
+              if (n->is_prop_hunk)
+                s = _(">         applied hunk ## -%lu,%lu +%lu,%lu ## "
+                      "with offset %s");
+              else
+                s = _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
+                      "with offset %s");
+
               if ((err = svn_cmdline_printf(pool,
                                             apr_pstrcat(pool, s,
                                                         "%"APR_UINT64_T_FMT
@@ -329,8 +334,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
             }
           else
             {
-              s = _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
-                    "with offset %s");
+              if (n->is_prop_hunk)
+                s = _(">         applied hunk ## -%lu,%lu +%lu,%lu ## "
+                      "with offset %s");
+              else
+                s = _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
+                      "with offset %s");
+
               if ((err = svn_cmdline_printf(pool,
                                             apr_pstrcat(pool, s,
                                                         "%"APR_UINT64_T_FMT"\n",
@@ -345,14 +355,25 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         }
       else if (n->hunk_fuzz)
         {
-          if ((err = svn_cmdline_printf(pool,
+          if (n->is_prop_hunk)
+            err = svn_cmdline_printf(pool,
+                          _(">         applied hunk ## -%lu,%lu +%lu,%lu ## "
+                                        "with fuzz %d\n"),
+                                        n->hunk_original_start,
+                                        n->hunk_original_length,
+                                        n->hunk_modified_start,
+                                        n->hunk_modified_length,
+                                        n->hunk_fuzz);
+          else
+            err = svn_cmdline_printf(pool,
                           _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
                                         "with fuzz %d\n"),
                                         n->hunk_original_start,
                                         n->hunk_original_length,
                                         n->hunk_modified_start,
                                         n->hunk_modified_length,
-                                        n->hunk_fuzz)))
+                                        n->hunk_fuzz);
+          if (err)
             goto print_error;
 
         }
@@ -360,26 +381,48 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_patch_rejected_hunk:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool,
-                                    _(">         rejected hunk "
-                                      "@@ -%lu,%lu +%lu,%lu @@\n"),
-                                    n->hunk_original_start,
-                                    n->hunk_original_length,
-                                    n->hunk_modified_start,
-                                    n->hunk_modified_length)))
+
+      if (n->is_prop_hunk)
+        err = svn_cmdline_printf(pool,
+                                 _(">         rejected hunk "
+                                   "## -%lu,%lu +%lu,%lu ##\n"),
+                                 n->hunk_original_start,
+                                 n->hunk_original_length,
+                                 n->hunk_modified_start,
+                                 n->hunk_modified_length);
+      else
+        err = svn_cmdline_printf(pool,
+                                 _(">         rejected hunk "
+                                   "@@ -%lu,%lu +%lu,%lu @@\n"),
+                                 n->hunk_original_start,
+                                 n->hunk_original_length,
+                                 n->hunk_modified_start,
+                                 n->hunk_modified_length);
+      if (err)
         goto print_error;
       break;
 
     case svn_wc_notify_patch_hunk_already_applied:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool,
-                                    _(">         hunk "
-                                      "@@ -%lu,%lu +%lu,%lu @@ "
-                                      "already applied\n"),
-                                    n->hunk_original_start,
-                                    n->hunk_original_length,
-                                    n->hunk_modified_start,
-                                    n->hunk_modified_length)))
+      if (n->is_prop_hunk)
+        err = svn_cmdline_printf(pool,
+                                 _(">         hunk "
+                                   "@@ -%lu,%lu +%lu,%lu @@ "
+                                   "already applied\n"),
+                                 n->hunk_original_start,
+                                 n->hunk_original_length,
+                                 n->hunk_modified_start,
+                                 n->hunk_modified_length);
+      else
+        err = svn_cmdline_printf(pool,
+                                 _(">         hunk "
+                                   "@@ -%lu,%lu +%lu,%lu @@ "
+                                   "already applied\n"),
+                                 n->hunk_original_start,
+                                 n->hunk_original_length,
+                                 n->hunk_modified_start,
+                                 n->hunk_modified_length);
+      if (err)
         goto print_error;
       break;
 
