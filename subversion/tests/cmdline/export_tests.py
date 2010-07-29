@@ -268,20 +268,28 @@ def export_working_copy_at_base_revision(sbox):
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
+  C_path = os.path.join(wc_dir, 'A', 'C')
   kappa_path = os.path.join(wc_dir, 'kappa')
+  K_path = os.path.join(wc_dir, 'K')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
 
-  # Appends some text to A/mu, and add a new file
-  # called kappa.  These modifications should *not*
-  # get exported at the base revision.
+  # Make some local modifications: modify mu and C, add kappa and K, delete
+  # gamma and E, and replace rho.  (Directories can't yet be replaced.)
+  # These modifications should *not* get exported at the base revision.
   svntest.main.file_append(mu_path, 'Appended text')
+  svntest.main.run_svn(None, 'propset', 'p', 'v', mu_path, C_path)
   svntest.main.file_append(kappa_path, "This is the file 'kappa'.")
   svntest.main.run_svn(None, 'add', kappa_path)
+  svntest.main.run_svn(None, 'mkdir', K_path)
   svntest.main.run_svn(None, 'rm', E_path, gamma_path)
+  svntest.main.run_svn(None, 'rm', rho_path)
+  svntest.main.file_append(rho_path, "Replacement file 'rho'.")
+  svntest.main.run_svn(None, 'add', rho_path)
 
   # Note that we don't tweak the expected disk tree at all,
-  # since the appended text and kappa should not be present.
+  # since the modifications should not be present.
   expected_disk = svntest.main.greek_state.copy()
 
   export_target = sbox.add_wc_path('export')
@@ -527,7 +535,7 @@ test_list = [ None,
               export_eol_translation,
               export_working_copy_with_keyword_translation,
               export_working_copy_with_property_mods,
-              export_working_copy_at_base_revision,
+              XFail(export_working_copy_at_base_revision),
               export_native_eol_option,
               export_nonexistent_file,
               export_unversioned_file,
