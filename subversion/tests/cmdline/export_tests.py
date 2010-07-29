@@ -519,6 +519,37 @@ def export_with_url_unsafe_characters(sbox):
   if not os.path.exists(export_target):
     raise svntest.Failure("export did not fetch file with URL unsafe path")
 
+def export_working_copy_with_depths(sbox):
+  "export working copy with different depths"
+  sbox.build(read_only = True)
+
+  expected_disk = svntest.wc.State('', {
+      'A': Item(),
+      'iota': Item(contents="This is the file 'iota'.\n"),
+      })
+  export_target = sbox.add_wc_path('immediates')
+  svntest.actions.run_and_verify_export(sbox.wc_dir,
+                                        export_target,
+                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_disk,
+                                        '--depth=immediates')
+
+  expected_disk.remove('A')
+  export_target = sbox.add_wc_path('files')
+  svntest.actions.run_and_verify_export(sbox.wc_dir,
+                                        export_target,
+                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_disk,
+                                        '--depth=files')
+
+  expected_disk.remove('iota')
+  export_target = sbox.add_wc_path('empty')
+  svntest.actions.run_and_verify_export(sbox.wc_dir,
+                                        export_target,
+                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_disk,
+                                        '--depth=empty')
+
 ########################################################################
 # Run the tests
 
@@ -546,6 +577,7 @@ test_list = [ None,
               export_ignoring_keyword_translation,
               export_working_copy_ignoring_keyword_translation,
               export_with_url_unsafe_characters,
+              XFail(export_working_copy_with_depths),
              ]
 
 if __name__ == '__main__':
