@@ -3423,6 +3423,86 @@ def diff_prop_missing_context(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', iota_path)
 
+def diff_prop_multiple_hunks(sbox):
+  "diff for property with multiple hunks"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  prop_val = "".join([
+       "line 1\n",
+       "line 2\n",
+       "line 3\n",
+       "line 4\n",
+       "line 5\n",
+       "line 6\n",
+       "line 7\n",
+       "line 8\n",
+       "line 9\n",
+       "line 10\n",
+       "line 11\n",
+       "line 12\n",
+       "line 13\n",
+     ])
+  svntest.main.run_svn(None,
+                       "propset", "prop", prop_val, iota_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota'    : Item(verb='Sending'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  prop_val = "".join([
+               "line 1\n",
+               "line 2\n",
+               "line 3\n",
+               "Add a line here\n",
+               "line 4\n",
+               "line 5\n",
+               "line 6\n",
+               "line 7\n",
+               "line 8\n",
+               "line 9\n",
+               "line 10\n",
+               "And add a line here\n",
+               "line 11\n",
+               "line 12\n",
+               "line 13\n",
+             ])
+  svntest.main.run_svn(None,
+                       "propset", "prop", prop_val, iota_path)
+  expected_output = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 2)\n",
+    "+++ iota\t(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Modified: prop\n",
+    "## -1,6 +1,7 ##\n",
+    " line 1\n",
+    " line 2\n",
+    " line 3\n",
+    "+Add a line here\n",
+    " line 4\n",
+    " line 5\n",
+    " line 6\n",
+    "## -8,6 +9,7 ##\n",
+    " line 8\n",
+    " line 9\n",
+    " line 10\n",
+    "+And add a line here\n",
+    " line 11\n",
+    " line 12\n",
+    " line 13\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', iota_path)
 
 ########################################################################
 #Run the tests
@@ -3484,6 +3564,7 @@ test_list = [ None,
               diff_git_format_url_wc,
               diff_git_format_url_url,
               XFail(diff_prop_missing_context),
+              XFail(diff_prop_multiple_hunks),
               ]
 
 if __name__ == '__main__':
