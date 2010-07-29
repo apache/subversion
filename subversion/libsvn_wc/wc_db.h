@@ -2529,6 +2529,13 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
                                              svn_depth_t depth,
                                              apr_pool_t *scratch_pool);
 
+/* Close the wc root LOCAL_ABSPATH and remove any per-directory
+   handles associated with it. */
+svn_error_t *
+svn_wc__db_drop_root(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool);
+
 /* @} */
 
 

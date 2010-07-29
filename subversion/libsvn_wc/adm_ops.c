@@ -1236,12 +1236,13 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                    scratch_pool));
   else
     {
+      svn_boolean_t owns_lock;
+#ifndef SVN_WC__SINGLE_DB
       svn_wc__db_status_t absent_status;
       svn_wc__db_kind_t absent_kind;
       const char *absent_repos_relpath, *absent_repos_root_url;
       const char *absent_repos_uuid;
       svn_revnum_t absent_revision;
-      svn_boolean_t owns_lock;
 
       /* Read the not present status from the parent working copy,
          to reinsert it after hooking up the child working copy */
@@ -1285,6 +1286,35 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                 scratch_pool));
       else
         SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
+#else
+      const char *tmpdir_abspath, *moved_abspath, *moved_adm_abspath;
+      const char *adm_abspath = svn_wc__adm_child(local_abspath, "",
+                                                  scratch_pool);
+
+      /* Drop any references to the wc that is to be rewritten */
+      SVN_ERR(svn_wc__db_drop_root(db, local_abspath, scratch_pool));
+
+      /* Move the admin dir from the wc to a temporary location */
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
+                                             parent_abspath,
+                                             scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &moved_abspath, tmpdir_abspath,
+                                       svn_io_file_del_on_close,
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_dir_make(moved_abspath, APR_OS_DEFAULT, scratch_pool));
+      moved_adm_abspath = svn_wc__adm_child(moved_abspath, "", scratch_pool);
+      SVN_ERR(svn_io_file_move(adm_abspath, moved_adm_abspath, scratch_pool));
+
+      /* Copy entries from temporary location into the main db */
+      SVN_ERR(svn_wc_copy3(wc_ctx, moved_abspath, local_abspath,
+                           TRUE /* metadata_only */,
+                           NULL, NULL, NULL, NULL, scratch_pool));
+
+      /* Cleanup the temporary admin dir */
+      SVN_ERR(svn_wc__db_drop_root(db, moved_abspath, scratch_pool));
+      SVN_ERR(svn_io_remove_dir2(moved_abspath, FALSE, NULL, NULL,
+                                 scratch_pool));
+#endif
 
       /* The subdir is now part of our parent working copy. Our caller assumes
          that we return the new node locked, so obtain a lock if we didn't
