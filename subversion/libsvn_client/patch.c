@@ -176,6 +176,9 @@ typedef struct patch_target_t {
   /* True if at least one hunk was rejected. */
   svn_boolean_t had_rejects;
 
+  /* True if atleast one property hunk was rejected. */
+  svn_boolean_t had_prop_rejects;
+
   /* True if the target file had local modifications before the
    * patch was applied to it. */
   svn_boolean_t local_mods;
@@ -1271,19 +1274,38 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
  * Do temporary allocations in POOL. */
 static svn_error_t *
 reject_hunk(patch_target_t *target, target_content_info_t *content_info, 
-            hunk_info_t *hi, svn_boolean_t is_prop_hunk,  apr_pool_t *pool)
+            hunk_info_t *hi, const char *prop_name, apr_pool_t *pool)
 {
   const char *hunk_header;
   apr_size_t len;
   svn_boolean_t eof;
   apr_pool_t *iterpool;
 
-  hunk_header = apr_psprintf(pool, "@@ -%lu,%lu +%lu,%lu @@%s",
-                             svn_diff_hunk_get_original_start(hi->hunk),
-                             svn_diff_hunk_get_original_length(hi->hunk),
-                             svn_diff_hunk_get_modified_start(hi->hunk),
-                             svn_diff_hunk_get_modified_length(hi->hunk),
-                             APR_EOL_STR);
+  if (prop_name)
+    {
+      const char *prop_header;
+        
+      /* ### Print 'Added', 'Deleted' or 'Modified' instead of 'Propperty'.
+       */
+      prop_header = apr_psprintf(pool, "Property: %s\n", prop_name);
+      len = strlen(prop_header);
+
+      SVN_ERR(svn_stream_write(content_info->reject, prop_header, &len));
+
+      hunk_header = apr_psprintf(pool, "## -%lu,%lu +%lu,%lu ##%s",
+                                 svn_diff_hunk_get_original_start(hi->hunk),
+                                 svn_diff_hunk_get_original_length(hi->hunk),
+                                 svn_diff_hunk_get_modified_start(hi->hunk),
+                                 svn_diff_hunk_get_modified_length(hi->hunk),
+                                 APR_EOL_STR);
+    }
+  else
+    hunk_header = apr_psprintf(pool, "@@ -%lu,%lu +%lu,%lu @@%s",
+                               svn_diff_hunk_get_original_start(hi->hunk),
+                               svn_diff_hunk_get_original_length(hi->hunk),
+                               svn_diff_hunk_get_modified_start(hi->hunk),
+                               svn_diff_hunk_get_modified_length(hi->hunk),
+                               APR_EOL_STR);
   len = strlen(hunk_header);
   SVN_ERR(svn_stream_write(content_info->reject, hunk_header, &len));
 
@@ -1311,9 +1333,9 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
   while (! eof);
   svn_pool_destroy(iterpool);
 
-  /* ### had_rejects is used for notification. We haven't yet turned on
-   * ### notification for properties. */
-  if (! is_prop_hunk)
+  if (prop_name)
+    target->had_prop_rejects = TRUE;
+  else
     target->had_rejects = TRUE;
 
   return SVN_NO_ERROR;
@@ -1323,7 +1345,7 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
  * stream of CONTENT_INFO. Do temporary allocations in POOL. */
 static svn_error_t *
 apply_hunk(patch_target_t *target, target_content_info_t *content_info,  
-           hunk_info_t *hi, svn_boolean_t is_prop_hunk, apr_pool_t *pool)
+           hunk_info_t *hi, const char *prop_name, apr_pool_t *pool)
 {
   svn_linenum_t lines_read;
   svn_boolean_t eof;
@@ -1331,7 +1353,7 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
 
   /* ### Is there a cleaner way to describe if we have an existing target?
    */
-  if (target->kind_on_disk == svn_node_file || is_prop_hunk)
+  if (target->kind_on_disk == svn_node_file || prop_name)
     {
       svn_linenum_t line;
 
@@ -1351,7 +1373,7 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
         {
           /* Seek failed, reject this hunk. */
           hi->rejected = TRUE;
-          SVN_ERR(reject_hunk(target, content_info, hi, is_prop_hunk, pool));
+          SVN_ERR(reject_hunk(target, content_info, hi, prop_name, pool));
           return SVN_NO_ERROR;
         }
     }
@@ -1396,7 +1418,7 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
   while (! eof);
   svn_pool_destroy(iterpool);
 
-  if (is_prop_hunk)
+  if (prop_name)
     target->has_prop_changes = TRUE;
   else
     target->has_text_changes = TRUE;
@@ -1451,9 +1473,11 @@ send_patch_notification(const patch_target_t *target,
         notify->content_state = svn_wc_notify_state_changed;
 
       /* ### We need to decide on how we want prop notifications to work. 
-       * ### At the moment we're not reporting rejects and what about added
-       * paths with props and paths scheduled for deletion? */
-      if (target->has_prop_changes)
+       * ### At the moment we're not reporting property hunks and what about
+       * ### added paths with props and paths scheduled for deletion? */
+      if (target->had_prop_rejects)
+        notify->prop_state = svn_wc_notify_state_conflicted;
+      else if (target->has_prop_changes)
         notify->prop_state = svn_wc_notify_state_changed;
     }
 
@@ -1596,11 +1620,11 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         continue;
       else if (hi->rejected)
         SVN_ERR(reject_hunk(target, target->content_info, hi,
-                            FALSE /* is_prop_hunk */, 
+                            NULL /* prop_name */, 
                             iterpool));
       else
         SVN_ERR(apply_hunk(target, target->content_info, hi,
-                           FALSE /* is_prop_hunk */, iterpool));
+                           NULL /* prop_name */,  iterpool));
     }
 
   if (target->kind_on_disk == svn_node_file)
@@ -1691,11 +1715,11 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
             continue;
           else if (hi->rejected)
             SVN_ERR(reject_hunk(target, prop_content_info, hi,
-                                TRUE /* is_prop_hunk */, 
+                                prop_target->name,
                                 iterpool));
           else
             SVN_ERR(apply_hunk(target, prop_content_info, hi, 
-                               TRUE /* is_prop_hunk */,
+                               prop_target->name,
                                iterpool));
         }
 
@@ -2026,7 +2050,7 @@ write_out_rejected_hunks(patch_target_t *target,
                          svn_boolean_t dry_run,
                          apr_pool_t *pool)
 {
-  if (! dry_run && target->had_rejects)
+  if (! dry_run && (target->had_rejects || target->had_prop_rejects))
     {
       /* Write out rejected hunks, if any. */
       SVN_ERR(svn_io_copy_file(target->reject_path,

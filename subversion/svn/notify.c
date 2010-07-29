@@ -274,7 +274,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
               statchar_buf[0] = 'U';
           }
 
-        if (n->prop_state == svn_wc_notify_state_changed)
+        if (n->prop_state == svn_wc_notify_state_conflicted)
+          {
+            nb->prop_conflicts++;
+            statchar_buf[1] = 'C';
+          }
+        else if (n->prop_state == svn_wc_notify_state_changed)
               statchar_buf[1] = 'U';
 
         if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
