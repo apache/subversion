@@ -476,7 +476,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
        ### remains open.  Closing the wc-context gets around the
        ### problem but is obviously a hack. */
     SVN_ERR(svn_wc_context_destroy(ctx->wc_ctx));
-    SVN_ERR(svn_wc_context_create(&ctx->wc_ctx, ctx->config, pool, pool));
+    SVN_ERR(svn_wc_context_create(&ctx->wc_ctx, NULL, pool, pool));
 
     /* Fix up copy as add with history */
     SVN_ERR(svn_wc_add3(new_dir_path, adm_access, svn_depth_infinity,
