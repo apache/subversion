@@ -2461,16 +2461,18 @@ def move_dir_back_and_forth(sbox):
 
   # Move the moved dir: D_moved back to its starting
   # location at A/D.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, None, svntest.verify.AnyOutput,
-    'mv', D_move_path, D_path)
 
-  for line in err:
-    if re.match('.*Cannot copy to .*as it is scheduled for deletion',
-                line, ):
-      return
-  raise svntest.Failure("mv failed but not in the expected way")
+  if svntest.main.wc_is_singledb(wc_dir):
+    # In single-db target is gone on-disk after it was moved away, so this
+    # move works ok
+    expected_err = []
+  else:
+    # In !SINGLE_DB the target of the copy exists on-dir, so svn tries
+    # to move the file below the deleted directory
+    expected_err = '.*Cannot copy to .*as it is scheduled for deletion'
 
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'mv', D_move_path, D_path)
 
 def copy_move_added_paths(sbox):
   "copy and move added paths without commits"
