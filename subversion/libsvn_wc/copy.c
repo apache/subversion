@@ -406,7 +406,7 @@ copy_versioned_dir(svn_wc__db_t *db,
       (*notify_func)(notify_baton, notify, scratch_pool);
     }
 
-  if (kind == svn_node_dir)
+  if (!metadata_only && kind == svn_node_dir)
     /* All children, versioned and unversioned.  We're only interested in the
        names of the children, so we can pass TRUE as the only_check_type
        param. */
@@ -451,12 +451,12 @@ copy_versioned_dir(svn_wc__db_t *db,
                                  svn_dirent_local_style(child_src_abspath,
                                                         scratch_pool));
 
-      if (kind == svn_node_dir)
+      if (!metadata_only && kind == svn_node_dir)
         /* Remove versioned child as it has been handled */
         apr_hash_set(children, child_name, APR_HASH_KEY_STRING, NULL);
     }
 
-  if (kind == svn_node_dir && !metadata_only)
+  if (!metadata_only && kind == svn_node_dir)
     {
       /* All the remaining children are unversioned. */
       apr_hash_index_t *hi;
