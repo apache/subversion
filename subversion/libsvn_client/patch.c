@@ -1487,6 +1487,7 @@ send_patch_notification(const patch_target_t *target,
     {
       int i;
       apr_pool_t *iterpool;
+      apr_hash_index_t *hash_index;
 
       iterpool = svn_pool_create(pool);
       for (i = 0; i < target->content_info->hunks->nelts; i++)
@@ -1518,8 +1519,55 @@ send_patch_notification(const patch_target_t *target,
             svn_diff_hunk_get_modified_length(hi->hunk);
           notify->hunk_matched_line = hi->matched_line;
           notify->hunk_fuzz = hi->fuzz;
+          /* ### Should is_prop_hunk be a field in hunk_info_t? */
+          notify->is_prop_hunk = FALSE;
 
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+        }
+
+      for (hash_index = apr_hash_first(pool, target->prop_targets);
+           hash_index;
+           hash_index = apr_hash_next(hash_index))
+        {
+          prop_patch_target_t *prop_target; 
+          
+          prop_target = svn__apr_hash_index_val(hash_index);
+
+          for (i = 0; i < prop_target->content_info->hunks->nelts; i++)
+            {
+              hunk_info_t *hi;
+
+              svn_pool_clear(iterpool);
+
+              hi = APR_ARRAY_IDX(prop_target->content_info->hunks, i,
+                                 hunk_info_t *);
+
+              if (hi->already_applied)
+                action = svn_wc_notify_patch_hunk_already_applied;
+              else if (hi->rejected)
+                action = svn_wc_notify_patch_rejected_hunk;
+              else
+                action = svn_wc_notify_patch_applied_hunk;
+
+              notify = svn_wc_create_notify(target->local_abspath
+                                                ? target->local_abspath
+                                                : target->local_relpath,
+                                            action, pool);
+              notify->hunk_original_start =
+                svn_diff_hunk_get_original_start(hi->hunk);
+              notify->hunk_original_length =
+                svn_diff_hunk_get_original_length(hi->hunk);
+              notify->hunk_modified_start =
+                svn_diff_hunk_get_modified_start(hi->hunk);
+              notify->hunk_modified_length =
+                svn_diff_hunk_get_modified_length(hi->hunk);
+              notify->hunk_matched_line = hi->matched_line;
+              notify->hunk_fuzz = hi->fuzz;
+              /* ### Should is_prop_hunk be a field in hunk_info_t? */
+              notify->is_prop_hunk = TRUE;
+
+              (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+            }
         }
       svn_pool_destroy(iterpool);
     }
