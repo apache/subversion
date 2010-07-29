@@ -27,7 +27,7 @@ import org.apache.subversion.javahl.Info2;
 
 /**
  * This interface is used to retrieve info each result in a
- * SVNClientInterface.info2 call.
+ * {@link ISVNClient#info2} call.
  */
 public interface InfoCallback
 {

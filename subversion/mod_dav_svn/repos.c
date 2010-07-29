@@ -3390,7 +3390,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               */
               ap_fputs(output, bb,
                        " </ul>\n <hr noshade><em>Powered by "
-                       "<a href=\"http://subversion.apache.org/\">Subversion"
+                       "<a href=\"http://subversion.apache.org/\">"
+                       "Apache Subversion"
                        "</a> version " SVN_VERSION "."
                        "</em>\n</body></html>");
             }

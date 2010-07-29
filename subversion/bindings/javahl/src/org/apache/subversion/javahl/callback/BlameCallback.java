@@ -29,7 +29,7 @@ import java.util.Map;
 
 /**
  * This interface is used to receive every single line for a file on a
- * the SVNClientInterface.blame call.
+ * the {@link ISVNClient#blame} call.
  *
  * @since 1.7
  */

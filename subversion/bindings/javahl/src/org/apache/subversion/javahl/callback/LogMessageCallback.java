@@ -30,12 +30,12 @@ import java.util.Set;
 
 /**
  * This interface is used to receive every log message for the log
- * messages found by a SVNClientInterface.logMessages call.
+ * messages found by a {@link ISVNClient#logMessages} call.
  *
  * All log messages are returned in a list, which is terminated by an
  * invocation of this callback with the revision set to SVN_INVALID_REVNUM.
  *
- * If the includeMergedRevisions parameter to SVNClientInterface.logMessages
+ * If the includeMergedRevisions parameter to {@link ISVNClient#logMessages}
  * is true, then messages returned through this callback may have the
  * hasChildren parameter set.  This parameter indicates that a separate list,
  * which includes messages for merged revisions, will immediately follow.

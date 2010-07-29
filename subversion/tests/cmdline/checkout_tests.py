@@ -151,13 +151,88 @@ def make_local_tree(sbox, mod_files=False, add_unversioned=False):
 #----------------------------------------------------------------------
 
 def checkout_with_obstructions(sbox):
-  """co with obstructions should fail without --force"""
+  """co with obstructions conflicts without --force"""
 
   make_local_tree(sbox, False, False)
 
-  svntest.actions.run_and_verify_svn("No error where some expected",
-                                     None, svntest.verify.AnyOutput,
-                                     "co", sbox.repo_url, sbox.wc_dir)
+  #svntest.factory.make(sbox,
+  #       """# Checkout with unversioned obstructions lying around.
+  #          svn co url wc_dir
+  #          svn status""")
+  #svntest.factory.make(sbox,
+  #       """# Now see to it that we can recover from the obstructions.
+  #          rm -rf A iota
+  #          svn up""")
+  #exit(0)
+
+  wc_dir = sbox.wc_dir
+  url = sbox.repo_url
+
+  # Checkout with unversioned obstructions causes tree conflicts.
+  # svn co url wc_dir
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota'              : Item(status='  ', treeconflict='C'),
+    'A'                 : Item(status='  ', treeconflict='C'),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B', 'A/B/E', 'A/B/E/beta', 'A/B/E/alpha', 'A/B/F',
+    'A/B/lambda', 'A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
+    'A/D/H', 'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi', 'A/D/gamma', 'A/C')
+
+  actions.run_and_verify_checkout2(False, url, wc_dir, expected_output,
+    expected_disk, None, None, None, None)
+
+  # svn status
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A', 'iota', status='? ', wc_rev=None,
+    treeconflict='C')
+  expected_status.tweak('A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
+    'A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma', 'A/B',
+    'A/B/E', 'A/B/E/beta', 'A/B/E/alpha', 'A/B/F', 'A/B/lambda', 'A/C',
+    wc_rev=None)
+  expected_status.tweak('A/mu', status='? ', wc_rev=None)
+
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+
+  # Now see to it that we can recover from the obstructions.
+  # rm -rf A iota
+  svntest.main.safe_rmtree( os.path.join(wc_dir, 'A') )
+  os.remove( os.path.join(wc_dir, 'iota') )
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'                 : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'iota'              : Item(status='A '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+
 
 #----------------------------------------------------------------------
 
@@ -209,23 +284,83 @@ def forced_checkout_of_file_with_dir_obstructions(sbox):
 #----------------------------------------------------------------------
 
 def forced_checkout_of_dir_with_file_obstructions(sbox):
-  """forced co fails if a file obstructs a dir"""
+  """forced co flags conflict if a file obstructs a dir"""
 
   make_local_tree(sbox, False, False)
 
-  # Make the "other" working copy
-  other_wc = sbox.add_wc_path('other')
-  os.mkdir(other_wc)
-  svntest.main.file_append(os.path.join(other_wc, "A"), "The file A")
+  #svntest.factory.make(sbox,"""
+  #          mkdir wc_dir_other
+  #          echo "The file A" > wc_dir_other/A
+  #          svn co --force url wc_dir_other
+  #          """)
+  #svntest.factory.make(sbox,"""
+  #          # Now see to it that we can recover from the obstructions.
+  #          rm wc_dir_other/A
+  #          svn up wc_dir_other""")
+  #exit(0)
 
-  # Checkout the standard greek repos into a directory that has a file named
-  # "A" obstructing the dir "A" in the repos.  This should fail.
-  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
-    "Expected error during co", None, svntest.verify.AnyOutput,
-    "co", "--force", sbox.repo_url, other_wc)
+  url = sbox.repo_url
+  wc_dir_other = sbox.add_wc_path('other')
 
-  test_stderr(".*Failed to add directory.*a non-directory object of the " \
-              "same name already exists", serr)
+  other_A = os.path.join(wc_dir_other, 'A')
+
+  # mkdir wc_dir_other
+  os.makedirs(wc_dir_other)
+
+  # echo "The file A" > wc_dir_other/A
+  svntest.main.file_write(other_A, 'The file A\n')
+
+  # svn co --force url wc_dir_other
+  expected_output = svntest.wc.State(wc_dir_other, {
+    'iota'              : Item(status='A '),
+    'A'                 : Item(status='  ', treeconflict='C'),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B', 'A/B/E', 'A/B/E/beta', 'A/B/E/alpha', 'A/B/F',
+    'A/B/lambda', 'A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
+    'A/D/H', 'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi', 'A/D/gamma', 'A/mu',
+    'A/C')
+  expected_disk.tweak('A', contents='The file A\n')
+
+  actions.run_and_verify_checkout(url, wc_dir_other, expected_output,
+    expected_disk, None, None, None, None, '--force')
+
+
+  # Now see to it that we can recover from the obstructions.
+  # rm wc_dir_other/A
+  os.remove(other_A)
+
+  # svn up wc_dir_other
+  expected_output = svntest.wc.State(wc_dir_other, {
+    'A'                 : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+
+  expected_status = actions.get_virginal_state(wc_dir_other, 1)
+
+  actions.run_and_verify_update(wc_dir_other, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir_other)
+
 
 #----------------------------------------------------------------------
 

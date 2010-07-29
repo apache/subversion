@@ -63,9 +63,32 @@ def run_and_verify_svn_in_wc(sbox, expected_stderr, *varargs):
 
 def invalid_wcpath_add(sbox):
   "non-working copy paths for 'add'"
-  sbox.build()
+  sbox.build(read_only=True)
   for target in _invalid_wc_path_targets:
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'add', target)
+
+def invalid_wcpath_changelist(sbox):
+  "non-working copy paths for 'changelist'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'changelist',
+                             'foo', target)
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'changelist',
+                             '--remove', target)
+
+def invalid_wcpath_cleanup(sbox):
+  "non-working copy paths for 'cleanup'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'cleanup',
+                             target)
+
+def invalid_wcpath_commit(sbox):
+  "non-working copy paths for 'commit'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn: '.*' is a URL, but URLs cannot be " +
+                             "commit targets", 'commit', target)
 
 ########################################################################
 # Run the tests
@@ -73,6 +96,9 @@ def invalid_wcpath_add(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               invalid_wcpath_add,
+              invalid_wcpath_changelist,
+              invalid_wcpath_cleanup,
+              invalid_wcpath_commit,
              ]
 
 if __name__ == '__main__':

@@ -94,8 +94,8 @@ values (?1, ?2, ?3, 'incomplete', 'unknown', ?4);
 -- STMT_INSERT_BASE_NODE_INCOMPLETE_DIR
 insert or ignore into base_node (
   wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
-  kind, revnum)
-values (?1, ?2, ?3, ?4, ?5, 'incomplete', 'dir', ?6);
+  kind, revnum, depth)
+values (?1, ?2, ?3, ?4, ?5, 'incomplete', 'dir', ?6, ?7);
 
 -- STMT_INSERT_WORKING_NODE_INCOMPLETE
 INSERT OR IGNORE INTO WORKING_NODE (
@@ -354,13 +354,29 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND
 update base_node set presence= ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_BASE_PRESENCE
+update node_data set presence = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_BASE_PRESENCE_KIND
 update base_node set presence = ?3, kind = ?4
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_NODE_BASE_PRESENCE_KIND
+update node_data set presence = ?3, kind = ?4
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_WORKING_PRESENCE
 update working_node set presence = ?3
 where wc_id = ?1 and local_relpath =?2;
+
+-- STMT_UPDATE_NODE_WORKING_PRESENCE
+update node_data set presence = ?3
+where wc_id = ?1 and local_relpath = ?2
+  and op_depth in (select op_depth from node_data
+                   where wc_id = ?1 and local_relpath = ?2
+                   order by op_depth desc
+                   limit 1);
 
 -- STMT_UPDATE_BASE_PRESENCE_AND_REVNUM
 update base_node set presence = ?3, revnum = ?4
@@ -411,14 +427,6 @@ SELECT 1 FROM actual_node
   WHERE older_checksum = ?1 OR older_checksum = ?2
     OR  left_checksum  = ?1 OR left_checksum  = ?2
     OR  right_checksum = ?1 OR right_checksum = ?2
-LIMIT 1
-
--- STMT_SELECT_BASE_WORKING_NODE
-SELECT 1 FROM base_node
-  WHERE wc_id = ?1 AND local_relpath = ?2;
-UNION ALL
-SELECT 1 FROM working_node
-  WHERE wc_id = ?1 AND local_relpath = ?2;
 LIMIT 1
 
 -- STMT_DELETE_PRISTINE
@@ -656,8 +664,8 @@ SELECT local_relpath FROM WORKING_NODE
 WHERE kind = 'file';
 
 -- STMT_PLAN_PROP_UPGRADE
-SELECT 0, null, wc_id FROM BASE_NODE WHERE local_relpath = ?1
-UNION
+SELECT 0, presence, wc_id FROM BASE_NODE WHERE local_relpath = ?1
+UNION ALL
 SELECT 1, presence, wc_id FROM WORKING_NODE WHERE local_relpath = ?1;
 
 -- STMT_ATTACH_WCROOT_DB

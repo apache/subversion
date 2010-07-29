@@ -810,3 +810,40 @@ svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__db_drop_root(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *root_pdh = apr_hash_get(db->dir_data, local_abspath,
+                                            APR_HASH_KEY_STRING);
+  apr_hash_index_t *hi;
+  apr_status_t result;
+
+  if (!root_pdh)
+    return SVN_NO_ERROR;
+
+  if (!root_pdh->wcroot || strcmp(root_pdh->wcroot->abspath, local_abspath))
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                             _("'%s' is not a working copy root"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, db->dir_data);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_wc__db_pdh_t *pdh = svn__apr_hash_index_val(hi);
+
+      if (pdh->wcroot == root_pdh->wcroot)
+        apr_hash_set(db->dir_data,
+                     pdh->local_abspath, svn__apr_hash_index_klen(hi), NULL);
+    }
+
+  result = apr_pool_cleanup_run(db->state_pool, root_pdh->wcroot, close_wcroot);
+  if (result != APR_SUCCESS)
+    return svn_error_wrap_apr(result, NULL);
+
+  return SVN_NO_ERROR;
+}

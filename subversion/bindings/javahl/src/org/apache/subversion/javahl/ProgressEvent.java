@@ -26,7 +26,7 @@ package org.apache.subversion.javahl;
 /**
  * The event passed to the {@link
  * ProgressListener#onProgress(ProgressEvent)} API to inform {@link
- * SVNClientInterface} of command progress (in terms of bytes).
+ * ISVNClient} of command progress (in terms of bytes).
  *
  * @since 1.5
  */

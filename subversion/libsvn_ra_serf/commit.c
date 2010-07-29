@@ -1992,8 +1992,9 @@ close_edit(void *edit_baton,
     }
 
   /* Inform the WC that we did a commit.  */
-  SVN_ERR(ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
-                        ctx->callback_baton, pool));
+  if (ctx->callback)
+    SVN_ERR(ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
+                          ctx->callback_baton, pool));
 
   /* If we're using activities, DELETE our completed activity.  */
   if (ctx->activity_url)

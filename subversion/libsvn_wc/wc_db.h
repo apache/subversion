@@ -413,6 +413,15 @@ svn_wc__db_from_relpath(const char **local_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/* Compute the working copy root WCROOT_ABSPATH for WRI_ABSPATH using DB.
+ */
+svn_error_t *
+svn_wc__db_get_wcroot(const char **wcroot_abspath,
+                      svn_wc__db_t *db,
+                      const char *wri_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
 /* @} */
 
 /* Different kinds of trees
@@ -2099,6 +2108,7 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
 */
 svn_error_t *
 svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
+                               const char *dir_abspath,
                                const char *local_relpath,
                                apr_hash_t *base_props,
                                apr_hash_t *revert_props,
@@ -2274,6 +2284,7 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
 
+#ifndef SVN_WC__SINGLE_DB
 /* For a deleted node, determine its keep_local flag. (This flag will
    go away once we have a consolidated administrative area) */
 svn_error_t *
@@ -2289,6 +2300,7 @@ svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
                                const char *local_abspath,
                                svn_boolean_t keep_local,
                                apr_pool_t *scratch_pool);
+#endif
 
 /* Removes all references of LOCAL_ABSPATH from its working copy
    using DB. */
@@ -2514,7 +2526,15 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
                                              const char *repos_root_url,
                                              const char *repos_uuid,
                                              svn_revnum_t revision,
+                                             svn_depth_t depth,
                                              apr_pool_t *scratch_pool);
+
+/* Close the wc root LOCAL_ABSPATH and remove any per-directory
+   handles associated with it. */
+svn_error_t *
+svn_wc__db_drop_root(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool);
 
 /* @} */
 

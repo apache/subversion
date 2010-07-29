@@ -713,7 +713,7 @@ test_list = [ None,
               add_recursive_already_versioned,
               fail_add_directory,
               delete_non_existent,
-              XFail(delete_redelete_fudgery),
+              delete_redelete_fudgery,
               propset_on_deleted_should_fail,
              ]
 

@@ -16,10 +16,6 @@ Revision-number: 1
 Prop-content-length: 113
 Content-length: 113
 
-K 7
-svn:log
-V 16
-add dir and file
 K 10
 svn:author
 V 2
@@ -28,6 +24,10 @@ K 8
 svn:date
 V 27
 2006-04-19T12:50:29.623828Z
+K 7
+svn:log
+V 16
+add dir and file
 PROPS-END
 
 Node-path: dir
@@ -55,10 +55,6 @@ Revision-number: 2
 Prop-content-length: 126
 Content-length: 126
 
-K 7
-svn:log
-V 29
-copy dir and modify prop of f
 K 10
 svn:author
 V 2
@@ -67,6 +63,10 @@ K 8
 svn:date
 V 27
 2006-04-19T12:51:15.837786Z
+K 7
+svn:log
+V 29
+copy dir and modify prop of f
 PROPS-END
 
 Node-path: dir2

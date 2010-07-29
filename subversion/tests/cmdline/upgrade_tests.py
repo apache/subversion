@@ -107,6 +107,60 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
 
   db.close()
 
+# Very simple working copy property diff handler for single line textual properties
+# Should probably be moved to svntest/actions.py after some major refactoring.
+def simple_property_verify(dir_path, expected_props):
+
+  # Shows all items in dict1 that are not also in dict2
+  def diff_props(dict1, dict2, name, match):
+
+    equal = True;
+    for key in dict1:
+      node = dict1[key]
+      node2 = dict2.get(key, None)
+      if node2:
+        for prop in node:
+          v1 = node[prop]
+          v2 = node2.get(prop, None)
+
+          if not v2:
+            print('\'%s\' property on \'%s\' not found in %s' %
+                  (prop, key, name))
+            equal = False
+          if match and v1 != v2:
+            print('Expected \'%s\' on \'%s\' to be \'%s\', but found \'%s\'' %
+                  (prop, key, v1, v2))
+            equal = False
+      else:
+        print('\'%s\': %s not found in %s' % (key, dict1[key], name))
+        equal = False
+
+    return equal
+
+
+  exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
+                                                   '-v', dir_path)
+
+  actual_props = {}
+  target = None
+  name = None
+
+  for i in output:
+    if i.startswith('Properties on '):
+      target = i[15+len(dir_path)+1:-3].replace(os.path.sep, '/')
+    elif not i.startswith('    '):
+      name = i.strip()
+    else:
+      v = actual_props.get(target, {})
+      v[name] = i.strip()
+      actual_props[target] = v
+
+  v1 = diff_props(expected_props, actual_props, 'actual', True)
+  v2 = diff_props(actual_props, expected_props, 'expected', False)
+
+  if not v1 or not v2:
+    print('Actual properties: %s' % actual_props)
+    raise svntest.Failure("Properties unequal")
 
 def run_and_verify_status_no_server(wc_dir, expected_status):
   "same as svntest.actions.run_and_verify_status(), but without '-u'"
@@ -401,6 +455,29 @@ def do_x3_upgrade(sbox):
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+  simple_property_verify(sbox.wc_dir, {
+      'A/B_new/E/beta'    : {'x3'           : '3x',
+                             'svn:eol-style': 'native'},
+      'A/B/E/beta'        : {'s'            : 't',
+                             'svn:eol-style': 'native'},
+      'A/B_new/B/E/alpha' : {'svn:eol-style': 'native'},
+      'A/B/E/alpha'       : {'q': 'r',
+                             'svn:eol-style': 'native'},
+      'A_new/alpha'       : {'svn:eol-style': 'native'},
+      'A/B_new/B/new'     : {'svn:eol-style': 'native'},
+      'A/B_new/E/alpha'   : {'svn:eol-style': 'native',
+                             'u': 'v'},
+      'A/B_new/B/E'       : {'q': 'r'},
+      'A/B_new/lambda'    : {'svn:eol-style': 'native'},
+      'A/B_new/E'         : {'x3': '3x'},
+      'A/B_new/new'       : {'svn:eol-style': 'native'},
+      'A/B/lambda'        : {'svn:eol-style': 'native'},
+      'A/B_new/B/E/beta'  : {'svn:eol-style': 'native'},
+      'A/B_new/B/lambda'  : {'svn:eol-style': 'native'},
+      'A/B/new'           : {'svn:eol-style': 'native'},
+      'A/G_new/rho'       : {'svn:eol-style': 'native'}
+  })
+
   svntest.actions.run_and_verify_svn(None, 'Reverted.*', [],
                                      'revert', '-R', sbox.wc_dir)
 
@@ -424,6 +501,12 @@ def do_x3_upgrade(sbox):
       'iota'              : Item(status='  ', wc_rev='2'),
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+  simple_property_verify(sbox.wc_dir, {
+      'A/B/E/beta'        : {'svn:eol-style': 'native'},
+#      'A/B/lambda'        : {'svn:eol-style': 'native'},
+      'A/B/E/alpha'       : {'svn:eol-style': 'native'}
+  })
 
 def x3_1_4_0(sbox):
   "3x same wc upgrade 1.4.0 test"
@@ -462,7 +545,9 @@ test_list = [ None,
               logs_left_1_5,
               upgrade_wcprops,
               basic_upgrade_1_0,
-              x3_1_4_0,
+              # Upgrading from 1.4.0-1.4.5 with specific states fails
+              # See issue #2530
+              XFail(x3_1_4_0),
               x3_1_4_6,
               x3_1_6_12,
              ]

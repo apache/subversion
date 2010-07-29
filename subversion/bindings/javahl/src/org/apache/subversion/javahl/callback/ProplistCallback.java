@@ -27,7 +27,7 @@ import java.util.Map;
 
 /**
  * This interface is used to property lists for each path in a
- * SVNClientInterface.properties call.
+ * {@link ISVNClient#properties} call.
  */
 public interface ProplistCallback
 {

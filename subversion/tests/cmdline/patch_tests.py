@@ -970,27 +970,35 @@ def patch_add_new_dir(sbox):
     'A         %s\n' % os.path.join(wc_dir, 'X'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
-    'Skipped missing target: \'%s\'\n' % A_C_Y_new_path,
+    'A         %s\n' % os.path.join(wc_dir, 'A', 'C'),
+    'A         %s\n' % os.path.join(wc_dir, 'A', 'C', 'Y'),
+    'A         %s\n' % os.path.join(wc_dir, 'A', 'C', 'Y', 'new'),
     'Skipped missing target: \'%s\'\n' % A_Z_new_path,
     'Summary of conflicts:\n',
-    '  Skipped paths: 2\n',
+    '  Skipped paths: 1\n',
   ]
 
   # Create the unversioned obstructing directory
   os.mkdir(os.path.dirname(A_Z_new_path))
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({'X/Y/new': Item(contents='new\n')})
-  expected_disk.add({'A/Z': Item()})
+  expected_disk.add({
+           'X/Y/new'   : Item(contents='new\n'),
+           'A/C/Y/new' : Item(contents='new\n'),
+           'A/Z'       : Item(),
+  })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({'X' : Item(status='A ', wc_rev=0)})
-  expected_status.add({'X/Y' : Item(status='A ', wc_rev=0)})
-  expected_status.add({'X/Y/new' : Item(status='A ', wc_rev=0)})
-  expected_status.add({'A/C' : Item(status='D ', wc_rev=1)})
+  expected_status.add({
+           'X'         : Item(status='A ', wc_rev=0),
+           'X/Y'       : Item(status='A ', wc_rev=0),
+           'X/Y/new'   : Item(status='A ', wc_rev=0),
+           'A/C'       : Item(status='R ', wc_rev=1),
+           'A/C/Y'     : Item(status='A ', wc_rev=0),
+           'A/C/Y/new' : Item(status='A ', wc_rev=0),
+  })
 
-  expected_skip = wc.State('', {A_C_Y_new_path : Item(),
-                                A_Z_new_path : Item() })
+  expected_skip = wc.State('', {A_Z_new_path : Item() })
 
   svntest.actions.run_and_verify_patch(wc_dir,
                                        os.path.abspath(patch_file_path),
@@ -2162,7 +2170,6 @@ def patch_no_eol_at_eof(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-### We need to add deletes and adds of properties to this test.
 def patch_with_properties(sbox):
   "patch with properties"
 
@@ -2172,10 +2179,13 @@ def patch_with_properties(sbox):
   patch_file_path = make_patch_path(sbox)
   iota_path = os.path.join(wc_dir, 'iota')
 
-  iota_prop_contents = "This is the property 'iota_prop'.\n"
+  modified_prop_contents = "This is the property 'modified'.\n"
+  deleted_prop_contents = "This is the property 'deleted'.\n"
 
-  # Set iota contents
-  svntest.main.run_svn(None, 'propset', 'prop', iota_prop_contents,
+  # Set iota prop contents
+  svntest.main.run_svn(None, 'propset', 'modified', modified_prop_contents,
+                       iota_path)
+  svntest.main.run_svn(None, 'propset', 'deleted', deleted_prop_contents,
                        iota_path)
   expected_output = svntest.wc.State(wc_dir, {
       'iota'    : Item(verb='Sending'),
@@ -2193,24 +2203,32 @@ def patch_with_properties(sbox):
     "+++ iota\t(working copy)\n",
     "Property changes on: iota\n",
     "-------------------------------------------------------------------\n",
-    "Modified: prop\n",
-    "## -1 +1 ""\n",
-    "-This is the property 'iota_prop'.\n",
-    "+This is the property 'prop'.\n",
+    "Modified: modified\n",
+    "## -1 +1 ##\n",
+    "-This is the property 'modified'.\n",
+    "+The property 'modified' has changed.\n",
+    "Added: added\n",
+    "## -0,0 +1 ##\n",
+    "+This is the property 'added'.\n",
+    "Deleted: deleted\n",
+    "## -1 +0,0 ##\n",
+    "-This is the property 'deleted'.\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  iota_prop_contents = "This is the property 'prop'.\n"
+  modified_prop_contents = "The property 'modified' has changed.\n"
+  added_prop_contents = "This is the property 'added'.\n"
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    ' U        %s\n' % os.path.join(wc_dir, 'iota'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota', props={'prop' : iota_prop_contents})
+  expected_disk.tweak('iota', props={'modified' : modified_prop_contents,
+                                     'added' : added_prop_contents})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status=' M')
+  expected_status.tweak('iota', status=' M', wc_rev='2')
 
   expected_skip = wc.State('', { })
 
@@ -2419,6 +2437,167 @@ def patch_same_twice(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+def patch_dir_properties(sbox):
+  "patch with dir properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  B_path = os.path.join(wc_dir, 'A', 'B')
+
+  modified_prop_contents = "This is the property 'modified'.\n"
+  deleted_prop_contents = "This is the property 'deleted'.\n"
+
+  # Set the properties
+  svntest.main.run_svn(None, 'propset', 'modified', modified_prop_contents,
+                       wc_dir)
+  svntest.main.run_svn(None, 'propset', 'deleted', deleted_prop_contents,
+                       B_path)
+  expected_output = svntest.wc.State(wc_dir, {
+      '.'    : Item(verb='Sending'),
+      'A/B'    : Item(verb='Sending'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', wc_rev=2)
+  expected_status.tweak('A/B', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: .\n",
+    "===================================================================\n",
+    "--- .\t(revision 1)\n",
+    "+++ .\t(working copy)\n",
+    "\n",
+    "Property changes on: .\n",
+    "-------------------------------------------------------------------\n",
+    "Modified: modified\n",
+    "## -1 +1 ##\n",
+    "-This is the property 'modified'.\n",
+    "+The property 'modified' has changed.\n",
+    "Added: svn:ignore\n",
+    "## -0,0 +1,3 ##\n",
+    "+*.o\n",
+    "+.libs\n",
+    "+*.lo\n",
+    "Index: A/B\n",
+    "===================================================================\n",
+    "--- A/B\t(revision 1)\n",
+    "+++ A/B\t(working copy)\n",
+    "\n",
+    "Property changes on: A/B\n",
+    "-------------------------------------------------------------------\n",
+    "Deleted: deleted\n",
+    "## -1 +0,0 ##\n",
+    "-This is the property 'deleted'.\n",
+    "Added: svn:executable\n",
+    "## -0,0 +1 ##\n",
+    "+*\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  modified_prop_contents = "The property 'modified' has changed.\n"
+  ignore_prop_contents = "*.o\n.libs\n*.lo\n"
+
+  ### The output for properties set on illegal targets (i.e. svn:excutable
+  ### on a dir) is still subject to change. We might just want to bail out 
+  ### directly instead of catching the error and use the notify mechanism.
+  expected_output = [
+    ' U        %s\n' % wc_dir,
+    ' U        %s\n' % os.path.join(wc_dir, 'A', 'B'),
+    'Skipped missing target \'svn:executable\' on (\'%s\')' % B_path,
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    '' : Item(props={'modified' : modified_prop_contents,
+                     'svn:ignore' : ignore_prop_contents})
+    })
+  expected_disk.tweak('A/B', props={})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', status=' M')
+  expected_status.tweak('A/B', status=' M')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+def patch_add_path_with_props(sbox):
+  "patch that adds paths with props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Apply patch that adds a file and a dir.
+
+  unidiff_patch = [
+    "Index: new\n",
+    "===================================================================\n",
+    "--- new\t(revision 0)\n",
+    "+++ new\t(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'\n",
+    "\n",
+    "Property changes on: new\n",
+    "-------------------------------------------------------------------\n",
+    "Added: added\n",
+    "## -0,0 +1 ##\n",
+    "+This is the property 'added'.\n",
+    "Index: X\n",
+    "===================================================================\n",
+    "--- X\t(revision 0)\n",
+    "+++ X\t(working copy)\n",
+    "\n",
+    "Property changes on: X\n",
+    "-------------------------------------------------------------------\n",
+    "Added: added\n",
+    "## -0,0 +1 ##\n",
+    "+This is the property 'added'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  added_prop_contents = "This is the property 'added'.\n"
+
+  expected_output = [
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'A         %s\n' % os.path.join(wc_dir, 'X'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'new': Item(contents="This is the file 'new'\n", 
+                                 props={'added' : added_prop_contents})})
+  expected_disk.add({'X': Item(props={'added' : added_prop_contents})})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'new': Item(status='A ', wc_rev='0')})
+  expected_status.add({'X': Item(status='A ', wc_rev='0')})
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -2444,6 +2623,8 @@ test_list = [ None,
               patch_no_eol_at_eof,
               XFail(patch_with_properties),
               patch_same_twice,
+              XFail(patch_dir_properties),
+              XFail(patch_add_path_with_props),
             ]
 
 if __name__ == '__main__':
