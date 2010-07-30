@@ -995,11 +995,15 @@ handle_stream(serf_request_t *request,
 {
   report_fetch_t *fetch_ctx = handler_baton;
   serf_status_line sl;
+  const char *location;
 
   serf_bucket_response_status(response, &sl);
 
   /* Woo-hoo.  Nothing here to see.  */
-  fetch_ctx->err = svn_ra_serf__error_on_status(sl.code, fetch_ctx->info->name);
+  location = svn_ra_serf__response_get_location(response, pool);
+  fetch_ctx->err = svn_ra_serf__error_on_status(sl.code,
+                                                fetch_ctx->info->name,
+                                                location);
   if (fetch_ctx->err)
     {
       fetch_ctx->done = TRUE;

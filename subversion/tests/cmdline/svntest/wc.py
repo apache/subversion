@@ -825,7 +825,6 @@ def text_base_path(file_path):
     root_path = head
     relpath = os.path.join(tail, relpath).replace(os.sep, '/')
 
-  print('%s : %s' %(db_path, relpath))
   c = db.cursor()
   c.execute("""select checksum from working_node
                where local_relpath = '""" + relpath + """'""")
