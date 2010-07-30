@@ -134,15 +134,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r959004
-   Make 'svn' raise an error when the --reintegrate flag is supplied to a
-   2-URL merge (which isn't a supported use-case).
-   Justification:
-     Currently, the --reintegrate option is silently ignored, which has
-     led to at last one confused user.
-   Votes:
-     +1: cmpilato, rhuijben
-
  * r959760
    Fix the FSFS lock deletion code to properly clean up lock information
    instead of allowing stale lock data to remain indefinitely.
@@ -311,3 +302,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r959004
+   Make 'svn' raise an error when the --reintegrate flag is supplied to a
+   2-URL merge (which isn't a supported use-case).
+   Justification:
+     Currently, the --reintegrate option is silently ignored, which has
+     led to at last one confused user.
+   Votes:
+     +1: cmpilato, rhuijben
+
