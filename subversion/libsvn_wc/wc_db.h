@@ -2536,6 +2536,17 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc__node_get_copyfrom_info */
+svn_error_t *
+svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
+                                   const char **copyfrom_repos_relpath,
+                                   const char **copyfrom_url,
+                                   svn_revnum_t *copyfrom_rev,
+                                   svn_boolean_t *is_copy_target,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 /* @} */
 
 

@@ -597,9 +597,11 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             svn_depth_t depth,
                             apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
   int format;
   const char *repos_relpath;
+  svn_wc__db_status_t status;
+  const char *db_repos_relpath, *db_repos_root_url, *db_repos_uuid;
+  svn_revnum_t db_revision;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(url != NULL);
@@ -622,40 +624,59 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                      repos_relpath, repos_root_url, repos_uuid,
                                      revision, depth, scratch_pool));
 
-  /* Now, get the existing url and repos for PATH. */
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
-                            FALSE, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&status, NULL,
+                               &db_revision, &db_repos_relpath,
+                               &db_repos_root_url, &db_repos_uuid,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
 
-  /* When the directory exists and is scheduled for deletion do not
-   * check the revision or the URL.  The revision can be any
+  /* When the directory exists and is scheduled for deletion or is not-present
+   * do not check the revision or the URL.  The revision can be any
    * arbitrary revision and the URL may differ if the add is
    * being driven from a merge which will have a different URL. */
-  if (entry->schedule != svn_wc_schedule_delete)
+  if (status != svn_wc__db_status_deleted
+      && status != svn_wc__db_status_obstructed_delete)
     {
-      if (entry->revision != revision)
+      /* ### Should we match copyfrom_revision? */
+      if (db_revision != revision)
         return
           svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                             _("Revision %ld doesn't match existing "
                               "revision %ld in '%s'"),
-                            revision, entry->revision, local_abspath);
+                            revision, db_revision, local_abspath);
 
       /* The caller gives us a URL which should match the entry. However,
          some callers compensate for an old problem in entry->url and pass
          the copyfrom_url instead. See ^/notes/api-errata/wc002.txt. As
          a result, we allow the passed URL to match copyfrom_url if it
-         does match the entry's primary URL.  */
-      /** ### comparing URLs, should they be canonicalized first? */
-      if (strcmp(entry->url, url) != 0
-          && (entry->copyfrom_url == NULL
-              || strcmp(entry->copyfrom_url, url) != 0)
-          && (!svn_uri_is_ancestor(repos_root_url, entry->url)
-              || strcmp(entry->uuid, repos_uuid) != 0))
+         does not match the entry's primary URL.  */
+      /* ### comparing URLs, should they be canonicalized first? */
+      if (strcmp(db_repos_uuid, repos_uuid)
+          || strcmp(db_repos_root_url, repos_root_url)
+          || !svn_relpath_is_ancestor(db_repos_relpath, repos_relpath))
         {
-          return
-            svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              _("URL '%s' doesn't match existing "
-                                "URL '%s' in '%s'"),
-                              url, entry->url, local_abspath);
+          const char *copyfrom_root_url, *copyfrom_repos_relpath;
+
+          SVN_ERR(svn_wc__internal_get_copyfrom_info(&copyfrom_root_url,
+                                                     &copyfrom_repos_relpath,
+                                                     NULL, NULL, NULL,
+                                                     db, local_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
+
+          if (copyfrom_root_url == NULL
+              || strcmp(copyfrom_root_url, repos_root_url)
+              || strcmp(copyfrom_repos_relpath, repos_relpath))
+            return
+              svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                                _("URL '%s' doesn't match existing "
+                                  "URL '%s' in '%s'"),
+                                url,
+                                svn_uri_join(db_repos_root_url,
+                                             db_repos_relpath, scratch_pool),
+                                local_abspath);
         }
     }
 
