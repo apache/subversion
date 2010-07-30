@@ -299,8 +299,9 @@ load_revisions(svn_ra_session_t *session, const char *url,
   stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
 
   SVN_ERR(get_load_editor(&load_editor, &load_baton, &root_operation,
-                          stdin_stream, session, pool));
-  SVN_ERR(drive_load_editor(root_operation, load_editor, pool));
+                          session, pool));
+  SVN_ERR(drive_load_editor(load_editor, load_baton, root_operation,
+                            stdin_stream, pool));
 
   svn_stream_close(stdin_stream);
 

@@ -419,14 +419,19 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                              db, this_abspath,
                                              iterpool, iterpool));
 
+#ifndef SVN_WC__SINGLE_DB
+          if (wrk_status == svn_wc__db_status_obstructed
+              || wrk_status == svn_wc__db_status_obstructed_add
+              || wrk_status == svn_wc__db_status_obstructed_delete)
+            missing = TRUE;
+          else
+#endif
           if (restore_files
               && wrk_status != svn_wc__db_status_added
-#ifndef SVN_WC__SINGLE_DB
-              && wrk_status != svn_wc__db_status_obstructed_add
-              && wrk_status != svn_wc__db_status_obstructed_delete
-#endif
-              && wrk_status != svn_wc__db_status_deleted)
-              
+              && wrk_status != svn_wc__db_status_deleted
+              && wrk_status != svn_wc__db_status_excluded
+              && wrk_status != svn_wc__db_status_not_present
+              && wrk_status != svn_wc__db_status_absent)
             {
               svn_node_kind_t dirent_kind;
 
@@ -448,9 +453,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
                 }
             }
 #ifndef SVN_WC__SINGLE_DB
-          else
-            missing = TRUE;
-
           /* If a node is still missing from disk here, we have no way to
              recreate it locally, so report as missing and move along.
              Again, don't bother if we're reporting everything, because the
@@ -761,6 +763,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   const char *repos_relpath=NULL, *repos_root=NULL;
   svn_depth_t target_depth = svn_depth_unknown;
   svn_wc__db_lock_t *target_lock = NULL;
+  svn_node_kind_t disk_kind;
   svn_boolean_t explicit_rev;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -888,45 +891,69 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   if (target_depth == svn_depth_unknown)
     target_depth = svn_depth_infinity;
 
+  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+
+  /* Determine if there is a missing node that should be restored */
+  if (disk_kind == svn_node_none)
+    {
+      svn_wc__db_status_t wrk_status;
+      err = svn_wc__db_read_info(&wrk_status, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
+                                 db, local_abspath,
+                                 scratch_pool, scratch_pool);
+
+
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          wrk_status = svn_wc__db_status_not_present;
+        }
+      else
+        SVN_ERR(err);
+
+      if (wrk_status == svn_wc__db_status_added)
+        SVN_ERR(svn_wc__db_scan_addition(&wrk_status, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+#ifndef SVN_WC__SINGLE_DB
+      if (wrk_status == svn_wc__db_status_obstructed
+          || wrk_status == svn_wc__db_status_obstructed_add
+          || wrk_status == svn_wc__db_status_obstructed_delete)
+        missing = TRUE;
+      else
+#endif
+      if (restore_files
+          && wrk_status != svn_wc__db_status_added
+          && wrk_status != svn_wc__db_status_deleted
+          && wrk_status != svn_wc__db_status_excluded
+          && wrk_status != svn_wc__db_status_not_present
+          && wrk_status != svn_wc__db_status_absent)
+        {
+          svn_boolean_t restored;
+
+          SVN_ERR(restore_node(&restored, wc_ctx->db, local_abspath,
+                               target_kind, use_commit_times,
+                               notify_func, notify_baton,
+                               scratch_pool));
+
+          if (!restored)
+            missing = TRUE;
+        }
+    }
+
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
   SVN_ERR(reporter->set_path(report_baton, "", target_rev, target_depth,
                              start_empty, NULL, scratch_pool));
 
-  /* ### status can NEVER be deleted. should examine why this was
-     ### ever here. we may have remapped into wc-ng incorrectly.  */
-  if (status != svn_wc__db_status_deleted)
-    {
-      apr_finfo_t info;
-      err = svn_io_stat(&info, local_abspath, APR_FINFO_MIN, scratch_pool);
-      if (err)
-        {
-          if (APR_STATUS_IS_ENOENT(err->apr_err))
-            missing = TRUE;
-          svn_error_clear(err);
-          err = NULL;
-        }
-    }
-
-  if (missing && restore_files)
-    {
-      svn_boolean_t restored;
-
-      err = restore_node(&restored, wc_ctx->db, local_abspath,
-                         target_kind, use_commit_times,
-                         notify_func, notify_baton,
-                         scratch_pool);
-
-      if (err)
-          goto abort_report;
-
-      if (restored)
-        missing = FALSE;
-    }
-
   if (target_kind == svn_wc__db_kind_dir)
     {
+#ifndef SVN_WC__SINGLE_DB
       if (missing)
         {
           /* Report missing directories as deleted to retrieve them
@@ -935,7 +962,9 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           if (err)
             goto abort_report;
         }
-      else if (depth != svn_depth_empty)
+      else
+#endif
+      if (depth != svn_depth_empty)
         {
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
