@@ -46,13 +46,13 @@ commit_callback(const svn_commit_info_t *commit_info,
 svn_error_t *
 drive_load_editor(const svn_delta_editor_t *editor,
                   void *edit_baton,
-                  struct operation *operation,
                   svn_stream_t *stream,
                   apr_pool_t *pool)
 {
   const svn_repos_parse_fns2_t *parser;
   void *pb;
-  SVN_ERR(build_dumpfile_parser(&parser, &pb, pool));
+
+  SVN_ERR(build_dumpfile_parser(&parser, &pb, editor, edit_baton, pool));
   SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, pb,
                                       NULL, NULL, pool));
 
@@ -64,32 +64,21 @@ drive_load_editor(const svn_delta_editor_t *editor,
 svn_error_t *
 get_load_editor(const svn_delta_editor_t **editor,
                 void **edit_baton,
-                struct operation **root_operation,
                 svn_ra_session_t *session,
                 apr_pool_t *pool)
 {
-  const svn_delta_editor_t *de;
-  struct operation *root;
-  struct commit_dir_baton *db;
+  const svn_delta_editor_t *delta_editor;
   apr_hash_t *revprop_table;
-  void *cb;
+  void *delta_edit_baton;
 
-  root = apr_pcalloc(pool, sizeof(*root));
-  db = apr_pcalloc(pool, sizeof(*db));
-  root->baton = db;
   revprop_table = apr_hash_make(pool);
-
-  SVN_ERR(svn_ra_get_latest_revnum(session, &(root->revision), pool));
  
-  /* Call the commit editor and get back a delta_editor and
-     commit_baton to use for performing the actual commit */
-  SVN_ERR(svn_ra_get_commit_editor3(session, &de, &cb, revprop_table,
-                                    commit_callback, NULL, NULL, FALSE, pool));
-  SVN_ERR(de->open_root(cb, root->revision, pool, root->baton));
-
-  *editor = de;
-  *edit_baton = cb;
-  *root_operation = root;
+  /* Call the commit editor and get back a delta_editor and delta_editor_baton */
+  SVN_ERR(svn_ra_get_commit_editor3(session, &delta_editor, &delta_edit_baton,
+                                    revprop_table, commit_callback,
+                                    NULL, NULL, FALSE, pool));
+  *editor = delta_editor;
+  *edit_baton = delta_edit_baton;
 
   return SVN_NO_ERROR;
 }
