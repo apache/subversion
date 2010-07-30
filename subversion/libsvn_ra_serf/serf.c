@@ -343,7 +343,6 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_uri_t url;
   const char *client_string = NULL;
 
-  /* We don't support server-prescribed redirections yet. */
   if (corrected_url)
     *corrected_url = NULL;
 
@@ -457,7 +456,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  return svn_ra_serf__exchange_capabilities(serf_sess, pool);
+  return svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
 }
 
 static svn_error_t *
