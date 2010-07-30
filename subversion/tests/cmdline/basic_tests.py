@@ -2521,7 +2521,7 @@ def meta_correct_library_being_used(sbox):
                                      expected_output, [], '--version')
 
 def delete_and_add_same_file(sbox):
-  "delete and add the same file in one commit"
+  "delete and add a file with the same content in one commit"
   sbox.build()
 
   wc_dir = sbox.wc_dir
@@ -2543,7 +2543,8 @@ def delete_and_add_same_file(sbox):
   expected_status.remove('iota')
   expected_status.add({ 'iota2':  Item(status='  ', wc_rev='2')})
 
-  # Currently this commit fails with a
+  # At one time the commit post-processing used to fail with "Pristine text
+  # not found".
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -2609,7 +2610,7 @@ test_list = [ None,
               delete_from_url_with_spaces,
               SkipUnless(meta_correct_library_being_used,
                          svntest.main.is_ra_type_dav),
-              XFail(delete_and_add_same_file),
+              delete_and_add_same_file,
              ]
 
 if __name__ == '__main__':
