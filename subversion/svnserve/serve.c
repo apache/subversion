@@ -1023,7 +1023,7 @@ static svn_error_t *change_rev_prop2(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *name;
   svn_string_t *value;
-  
+  const svn_string_t *const *old_value_p;
   svn_string_t *old_value;
   svn_boolean_t dont_care;
 
