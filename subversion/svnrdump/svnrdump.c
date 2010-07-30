@@ -293,15 +293,12 @@ load_revisions(svn_ra_session_t *session, const char *url,
   void *load_baton;
   apr_file_t *stdin_file;
   svn_stream_t *stdin_stream;
-  struct operation *root_operation;
 
   apr_file_open_stdin(&stdin_file, pool);
   stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
 
-  SVN_ERR(get_load_editor(&load_editor, &load_baton, &root_operation,
-                          session, pool));
-  SVN_ERR(drive_load_editor(load_editor, load_baton, root_operation,
-                            stdin_stream, pool));
+  SVN_ERR(get_load_editor(&load_editor, &load_baton, session, pool));
+  SVN_ERR(drive_load_editor(load_editor, load_baton, stdin_stream, pool));
 
   svn_stream_close(stdin_stream);
 

@@ -13,10 +13,31 @@ new_revision_record(void **revision_baton,
 		    apr_pool_t *pool)
 {
   struct revision_baton *rb;
+  apr_hash_index_t *hi;
+  const struct svn_delta_editor_t *commit_editor;
+  void *root_baton;
+
   rb = apr_pcalloc(pool, sizeof(*rb));
   rb->pb = parse_baton;
+  commit_editor = rb->pb->commit_editor;
 
-  fprintf(stderr, "new_revision_record called\n");
+  for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *hname, *hval;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      hname = key;
+      hval = val;
+
+      if (strcmp(hname, SVN_REPOS_DUMPFILE_REVISION_NUMBER) == 0)
+        rb->rev = atoi(hval);
+    }
+
+  SVN_ERR(commit_editor->open_root(rb->pb->commit_edit_baton, rb->rev,
+                                   pool, &root_baton));
+  rb->dir_baton = root_baton;
 
   *revision_baton = rb;
   return SVN_NO_ERROR;
@@ -37,10 +58,63 @@ new_node_record(void **node_baton,
                 apr_pool_t *pool)
 {
   struct node_baton *nb;
+  apr_hash_index_t *hi;
+  void *file_baton;
+  void *child_baton;
+  const struct svn_delta_editor_t *commit_editor;
   nb = apr_pcalloc(pool, sizeof(*nb));
   nb->rb = revision_baton;
 
-  fprintf(stderr, "new_node_record called\n");
+  commit_editor = nb->rb->pb->commit_editor;
+
+  for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *hname, *hval;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      hname = key;
+      hval = val;
+
+      /* Parse the different kinds of headers we can encounter and
+         stuff them into the node_baton for writing later */
+      if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_PATH) == 0)
+        nb->path = apr_pstrdup(pool, hval);
+      if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_KIND) == 0)
+        nb->kind = strcmp(hval, "file") == 0 ? svn_node_file : svn_node_dir;
+      if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_ACTION) == 0)
+        {
+          if (strcmp(hval, "add") == 0)
+            nb->action = svn_node_action_add;
+          if (strcmp(hval, "change") == 0)
+            nb->action = svn_node_action_change;
+          if (strcmp(hval, "delete") == 0)
+            nb->action = svn_node_action_delete;
+          if (strcmp(hval, "replace") == 0)
+            nb->action = svn_node_action_replace;
+        }
+      if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV) == 0)
+        nb->copyfrom_rev = atoi(hval);
+      if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH) == 0)
+        nb->copyfrom_path = apr_pstrdup(pool, hval);
+    }
+
+  if (nb->action == svn_node_action_add)
+    {
+      if (nb->kind == svn_node_file)
+        {
+          commit_editor->add_file(nb->path, nb->rb->dir_baton, NULL,
+                                  SVN_INVALID_REVNUM, pool, &file_baton);
+          nb->file_baton = file_baton;
+        }
+      else if(nb->kind == svn_node_dir)
+        {
+          commit_editor->add_directory(nb->path, nb->rb->dir_baton, NULL,
+                                       SVN_INVALID_REVNUM, pool, &child_baton);
+          nb->rb->dir_baton = child_baton;
+        }
+    }
 
   *node_baton = nb;
   return SVN_NO_ERROR;
@@ -80,30 +154,7 @@ static svn_error_t *
 set_fulltext(svn_stream_t **stream,
              void *node_baton)
 {
-  return SVN_NO_ERROR;
-}
-
-#if 0
-static svn_error_t *
-apply_window(svn_txdelta_window_t *window, void *baton)
-{
-  struct apply_baton *apply_baton;
-  apr_size_t tlen;
-  apply_baton = baton;
-  if (window == NULL)
-    return SVN_NO_ERROR;
-
-  tlen = window->tview_len;
-  apply_baton->target = apr_pcalloc(apply_baton->pool, tlen);
-  svn_txdelta_apply_instructions(window, apply_baton->source,
-                                 apply_baton->target, &tlen);
-  return SVN_NO_ERROR;
-}
-#endif
-
-static svn_error_t *
-apply_window(svn_txdelta_window_t *window, void *baton)
-{
+  /* ### Not implemented */
   return SVN_NO_ERROR;
 }
 
@@ -113,32 +164,50 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
                 void *node_baton)
 {
   struct node_baton *nb;
+  const struct svn_delta_editor_t *commit_editor;
+  apr_pool_t *pool;
   nb = node_baton;
-  *handler = apply_window;
-  *handler_baton = nb->rb->pb->ab;
-  return SVN_NO_ERROR;
+  commit_editor = nb->rb->pb->commit_editor;
+  pool = nb->rb->pb->pool;
+  return commit_editor->apply_textdelta(nb->file_baton, NULL, pool, handler,
+                                        handler_baton);
 }
 
 static svn_error_t *
 close_node(void *baton)
 {
+  struct node_baton *nb;
+  const struct svn_delta_editor_t *commit_editor;  
+  nb = baton;
+  commit_editor = nb->rb->pb->commit_editor;
+  if (nb->kind == svn_node_file)
+      commit_editor->close_file(nb->file_baton, NULL, nb->rb->pb->pool);
+  else if(nb->kind == svn_node_dir)
+      commit_editor->close_directory(nb->rb->dir_baton, nb->rb->pb->pool);
+
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 close_revision(void *baton)
 {
+  struct revision_baton *rb;
+  const struct svn_delta_editor_t *commit_editor;    
+  rb = baton;
+  commit_editor = rb->pb->commit_editor;
+  commit_editor->close_edit(rb->pb->commit_edit_baton, rb->pb->pool);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 build_dumpfile_parser(const svn_repos_parse_fns2_t **parser,
                       void **parse_baton,
+                      const struct svn_delta_editor_t *editor,
+                      void *edit_baton,
                       apr_pool_t *pool)
 {
   svn_repos_parse_fns2_t *pf;
   struct parse_baton *pb;
-  struct apply_baton *ab;
 
   pf = apr_pcalloc(pool, sizeof(*pf));
   pf->new_revision_record = new_revision_record;
@@ -154,9 +223,9 @@ build_dumpfile_parser(const svn_repos_parse_fns2_t **parser,
   pf->close_revision = close_revision;
 
   pb = apr_pcalloc(pool, sizeof(*pb));
-  ab = apr_pcalloc(pool, sizeof(struct apply_baton));
-  ab->source = apr_pstrmemdup(pool, " ", sizeof(" "));
-  pb->ab = ab;
+  pb->commit_editor = editor;
+  pb->commit_edit_baton = edit_baton;
+  pb->pool = pool;
 
   *parser = pf;
   *parse_baton = pb;
