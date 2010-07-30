@@ -700,7 +700,8 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
 
   err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
 
-  err2 = svn_ra_serf__error_on_status(prop_ctx->status_code, prop_ctx->path);
+  err2 = svn_ra_serf__error_on_status(prop_ctx->status_code,
+                                      prop_ctx->path, NULL);
   if (err2)
     {
       svn_error_clear(err);

@@ -2676,6 +2676,32 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
 }
 
 
+/* Delete the pristine text referenced by SHA1_CHECKSUM in the database
+ * referenced by PDH. */
+static svn_error_t *
+pristine_remove(svn_wc__db_pdh_t *pdh,
+                const svn_checksum_t *sha1_checksum,
+                apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  const char *pristine_abspath;
+
+  /* Remove the DB row. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_PRISTINE));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  /* Remove the file */
+  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
+                             sha1_checksum, TRUE /* create_subdir */,
+                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_remove_file2(pristine_abspath, TRUE /* ignore_enoent */,
+                              scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_pristine_remove(svn_wc__db_t *db,
                            const char *wri_abspath,
@@ -2701,6 +2727,21 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+  /* If the work queue is not empty, don't delete any pristine text because
+   * the work queue may contain a reference to it. */
+  {
+    svn_sqlite__stmt_t *stmt;
+    svn_boolean_t have_row;
+
+    SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                      STMT_LOOK_FOR_WORK));
+    SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    SVN_ERR(svn_sqlite__reset(stmt));
+
+    if (have_row)
+      return SVN_NO_ERROR;
+  }
+
   /* Find whether the SHA-1 (or the MD-5) is referenced; set IS_REFERENCED. */
   {
     const svn_checksum_t *md5_checksum;
@@ -2720,24 +2761,10 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
     SVN_ERR(svn_sqlite__reset(stmt));
   }
 
-  /* If not referenced, remove first the PRISTINE table row, then the file. */
+  /* If not referenced, remove the PRISTINE table row and the file. */
   if (! is_referenced)
     {
-      svn_sqlite__stmt_t *stmt;
-      const char *pristine_abspath;
-
-      /* Remove the DB row. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                        STMT_DELETE_PRISTINE));
-      SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-      SVN_ERR(svn_sqlite__update(NULL, stmt));
-
-      /* Remove the file */
-      SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
-                                 sha1_checksum,
-                                 TRUE /* create_subdir */,
-                                 scratch_pool, scratch_pool));
-      SVN_ERR(svn_io_remove_file2(pristine_abspath, TRUE, scratch_pool));
+      SVN_ERR(pristine_remove(pdh, sha1_checksum, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -8348,6 +8375,8 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
             case svn_wc__db_status_obstructed_delete:
               return SVN_NO_ERROR; /* Administrative area missing
                                       -> Lock gone */
+            default:
+              break;
           }
       SVN_ERR_ASSERT(*local_relpath == '\0');
     }

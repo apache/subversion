@@ -220,16 +220,22 @@ static svn_error_t *
 return_response_err(svn_ra_serf__handler_t *handler,
                     svn_ra_serf__simple_request_context_t *ctx)
 {
+  svn_error_t *err;
+
+  /* Ye Olde Fallback Error */
+  err = svn_error_compose_create(
+            ctx->server_error.error,
+            svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                              "%s of '%s': %d %s",
+                              handler->method, handler->path,
+                              ctx->status, ctx->reason));
+
   /* Try to return one of the standard errors for 301, 404, etc.,
      then look for an error embedded in the response.  */
-  return svn_error_compose_create(
-    svn_ra_serf__error_on_status(ctx->status, handler->path),
-    svn_error_compose_create(
-      ctx->server_error.error,
-      svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                        "%s of '%s': %d %s",
-                        handler->method, handler->path,
-                        ctx->status, ctx->reason)));
+  return svn_error_compose_create(svn_ra_serf__error_on_status(ctx->status,
+                                                               handler->path,
+                                                               ctx->location),
+                                  err);
 }
 
 static serf_bucket_t *

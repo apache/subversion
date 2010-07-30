@@ -804,6 +804,18 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
     }
 }
 
+const char *
+svn_ra_serf__response_get_location(serf_bucket_t *response,
+                                   apr_pool_t *pool)
+{
+  serf_bucket_t *headers;
+  const char *val;
+
+  headers = serf_bucket_response_get_headers(response);
+  val = serf_bucket_headers_get(headers, "Location");
+  return val ? svn_uri_canonicalize(val, pool) : NULL;
+}
+
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
 svn_ra_serf__handle_status_only(serf_request_t *request,
@@ -826,7 +838,7 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
 
       ctx->status = sl.code;
       ctx->reason = sl.reason;
-
+      ctx->location = svn_ra_serf__response_get_location(response, pool);
       ctx->done = TRUE;
     }
 
@@ -986,6 +998,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 
       ctx->status = sl.code;
       ctx->reason = sl.reason;
+      ctx->location = svn_ra_serf__response_get_location(response, pool);
     }
 
   return svn_error_return(err);
@@ -1058,6 +1071,11 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   if (ctx->status_code)
     {
       *ctx->status_code = sl.code;
+    }
+
+  if (sl.code == 301 || sl.code == 302)
+    {
+      ctx->location = svn_ra_serf__response_get_location(response, pool);
     }
 
   /* Woo-hoo.  Nothing here to see.  */
@@ -1702,18 +1720,20 @@ svn_ra_serf__report_resource(const char **report_target,
 }
 
 svn_error_t *
-svn_ra_serf__error_on_status(int status_code, const char *path)
+svn_ra_serf__error_on_status(int status_code,
+                             const char *path,
+                             const char *location)
 {
   switch(status_code)
     {
       case 301:
       case 302:
         return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
-                        (status_code == 301)
-                        ? _("Repository moved permanently to '%s';"
-                            " please relocate")
-                        : _("Repository moved temporarily to '%s';"
-                            " please relocate"), path);
+                                 (status_code == 301)
+                                 ? _("Repository moved permanently to '%s';"
+                                     " please relocate")
+                                 : _("Repository moved temporarily to '%s';"
+                                     " please relocate"), location);
       case 404:
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);

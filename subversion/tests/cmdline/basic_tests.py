@@ -2520,6 +2520,37 @@ def meta_correct_library_being_used(sbox):
   svntest.actions.run_and_verify_svn("is $http_library available",
                                      expected_output, [], '--version')
 
+def delete_and_add_same_file(sbox):
+  "commit deletes a file and adds one with same text"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  iota = os.path.join(wc_dir, 'iota')
+  iota2 = os.path.join(wc_dir, 'iota2')
+
+  shutil.copyfile(iota, iota2)
+
+  svntest.main.run_svn(None, 'rm', iota)
+  svntest.main.run_svn(None, 'add', iota2)
+
+  expected_output = wc.State(wc_dir, {
+    'iota' : Item(verb='Deleting'),
+    'iota2' : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('iota')
+  expected_status.add({ 'iota2':  Item(status='  ', wc_rev='2')})
+
+  # At one time the commit post-processing used to fail with "Pristine text
+  # not found".
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -2579,6 +2610,7 @@ test_list = [ None,
               delete_from_url_with_spaces,
               SkipUnless(meta_correct_library_being_used,
                          svntest.main.is_ra_type_dav),
+              delete_and_add_same_file,
              ]
 
 if __name__ == '__main__':
