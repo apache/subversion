@@ -8375,6 +8375,8 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
             case svn_wc__db_status_obstructed_delete:
               return SVN_NO_ERROR; /* Administrative area missing
                                       -> Lock gone */
+            default:
+              break;
           }
       SVN_ERR_ASSERT(*local_relpath == '\0');
     }
