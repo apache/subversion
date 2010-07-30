@@ -13,6 +13,7 @@ Planned work
 
 * repos layer support
   - [DONE] extend svn_repos_fs_change_rev_prop3() to wrap svn_fs_change_rev_prop2()
+  - [DONE] make sure *OLD_VALUE_P isn't used unless user has read access
 
 * RA layer support
   - [DONE] introduce svn_ra_change_rev_prop2()
@@ -24,7 +25,8 @@ Planned work
   - ra_dav
       Extend PROPPATCH syntax to provide the old value: add a <S:oldvalue/>
       tag inside the <${propname}> tag.
-        TODO: where to document this protocol extension?
+        Q: where to document this protocol extension?
+        A: notes/http-and-webdav/webdav-protocol
   - [DONE] unit test
       prop_tests.py 34: atomic_over_ra()
     TODO: extend it for 3*2 testing (as in fs-test.c:revision_props())
