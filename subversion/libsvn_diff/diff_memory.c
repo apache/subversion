@@ -353,6 +353,10 @@ typedef struct unified_output_baton_t
   apr_off_t hunk_length[2]; /* 0 == original; 1 == modified */
   apr_off_t hunk_start[2];  /* 0 == original; 1 == modified */
 
+  /* The delimiters of the hunk header, '@@' for text hunks and '##' for
+   * property hunks. */
+  const char *hunk_delimiter;
+
   /* Pool for allocation of temporary memory in the callbacks
      Should be cleared on entry of each iteration of a callback */
   apr_pool_t *pool;
@@ -516,7 +520,7 @@ output_unified_diff_modified(void *baton,
   targ_mod = modified_start;
 
   if (btn->next_token + SVN_DIFF__UNIFIED_CONTEXT_SIZE < targ_orig)
-    SVN_ERR(output_unified_flush_hunk(btn, NULL));
+    SVN_ERR(output_unified_flush_hunk(btn, btn->hunk_delimiter));
 
   if (btn->hunk_length[0] == 0
       && btn->hunk_length[1] == 0)
@@ -569,6 +573,7 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
       baton.pool = svn_pool_create(pool);
       baton.header_encoding = header_encoding;
       baton.hunk = svn_stringbuf_create("", pool);
+      baton.hunk_delimiter = hunk_delimiter;
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&(baton.prefix_str[unified_output_context]), " ",
