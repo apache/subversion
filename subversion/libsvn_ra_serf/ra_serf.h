@@ -623,6 +623,10 @@ struct svn_ra_serf__xml_parser_t {
    */
   int *status_code;
 
+  /* If non-NULL, this is the value of the response's Location header.
+   */
+  const char *location;
+
   /* If non-NULL, this value will be set to TRUE when the response is
    * completed.
    */
@@ -685,6 +689,10 @@ typedef struct svn_ra_serf__simple_request_context_t {
 
   /* The HTTP status line of the response */
   const char *reason;
+
+  /* The Location header value of the response, or NULL if there
+     wasn't one. */
+  const char *location;
 
   /* This value is set to TRUE when the response is completed. */
   svn_boolean_t done;
@@ -774,6 +782,13 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
                                       serf_bucket_t *response,
                                       void *baton,
                                       apr_pool_t *pool);
+
+/* Return the value of the RESPONSE's Location header if any, or NULL
+ * otherwise.  All allocations will be made in POOL.
+ */
+const char *
+svn_ra_serf__response_get_location(serf_bucket_t *response,
+                                   apr_pool_t *pool);
 
 /** XML helper functions. **/
 
@@ -1498,11 +1513,14 @@ svn_ra_serf__encode_auth_header(const char *protocol,
 /*** General utility functions ***/
 
 /**
- * Convert an HTTP status code resulting from a WebDAV request to the relevant
- * error code.
+ * Convert an HTTP STATUS_CODE resulting from a WebDAV request against
+ * PATH to the relevant error code.  Use the response-supplied LOCATION
+ * where it necessary.
  */
 svn_error_t *
-svn_ra_serf__error_on_status(int status_code, const char *path);
+svn_ra_serf__error_on_status(int status_code,
+                             const char *path,
+                             const char *location);
 
 #ifdef __cplusplus
 }
