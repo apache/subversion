@@ -2035,7 +2035,7 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
                               apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_fs_change_rev_prop3(), but with @a old_value_p always
+ * Similar to svn_repos_fs_change_rev_prop4(), but with @a old_value_p always
  * set to @c NULL.  (In other words, it is similar to
  * svn_fs_change_rev_prop().)
  *
