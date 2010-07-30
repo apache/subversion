@@ -20,8 +20,7 @@ Planned work
       Need a new libsvn_ra-level capability.  (because atomicity can't be
       achieved with older servers, and because of planned protocol extensions)
   - [DONE] ra_local: Trivial.
-  - ra_svn
-      Add a 'change-rev-prop2' verb.
+  - [DONE] ra_svn: Add a 'change-rev-prop2' verb.
   - ra_dav
       Extend PROPPATCH syntax to provide the old value: add a <S:oldvalue/>
       tag inside the <${propname}> tag.
