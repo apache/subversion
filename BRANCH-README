@@ -38,6 +38,9 @@ Planned work
 Potential work
 ==============
 
+* svn_log__ interface
+  - extend svn_log__change_rev_prop() with a "was old value provided?" boolean
+
 * repos layer hooks interface
   - pass the old value to pre-revprop-change
 
