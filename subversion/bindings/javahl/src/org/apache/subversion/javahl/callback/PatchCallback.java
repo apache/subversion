@@ -25,7 +25,7 @@ package org.apache.subversion.javahl.callback;
 
 /**
  * This interface is invoked before each patch in a
- * SVNClientInterface.patch call.
+ * {@link ISVNClient#patch} call.
  */
 public interface PatchCallback
 {

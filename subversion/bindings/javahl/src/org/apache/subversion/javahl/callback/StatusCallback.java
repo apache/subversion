@@ -27,7 +27,7 @@ import org.apache.subversion.javahl.Status;
 
 /**
  * This interface is used to receive every status item for
- * the SVNClientInterface.status call.
+ * the {@link ISVNClient#status} call.
  */
 public interface StatusCallback
 {

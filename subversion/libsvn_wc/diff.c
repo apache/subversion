@@ -736,9 +736,9 @@ file_diff(struct dir_baton *db,
           /* We don't want the normal pristine properties (which are
              from the WORKING tree). We want the pristines associated
              with the BASE tree, which are saved as "revert" props.  */
-          SVN_ERR(svn_wc__get_revert_props(&baseprops,
-                                           eb->db, local_abspath,
-                                           pool, pool));
+          SVN_ERR(svn_wc__db_base_get_props(&baseprops,
+                                            eb->db, local_abspath,
+                                            pool, pool));
         }
       else
         {
@@ -750,6 +750,10 @@ file_diff(struct dir_baton *db,
 
           SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
                                              pool, pool));
+
+          /* baseprops will be NULL for added nodes */
+          if (!baseprops)
+            baseprops = apr_hash_make(pool);
         }
       base_mimetype = get_prop_mimetype(baseprops);
 

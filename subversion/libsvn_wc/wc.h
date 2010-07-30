@@ -49,7 +49,8 @@ extern "C" {
 #define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
                                                file */
 
-
+/*#define SVN_WC__SINGLE_DB
+#define SINGLE_DB*/
 
 
 /* We can handle this format or anything lower, and we (should) error
@@ -119,12 +120,16 @@ extern "C" {
  * bases into the Pristine Store (the PRISTINE table and '.svn/pristine'
  * dir), and removed the '/.svn/text-base' dir.
  *
+ * The change from 17 to 18 moved the properties from separate files in the
+ * props and prop-base directory (and .svn for the dir itself) into the
+ * wc.db file, and then removes the props and prop-base dir.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 17
+#define SVN_WC__VERSION 18
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */
@@ -294,12 +299,6 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_ENTRIES             "entries"
 #define SVN_WC__ADM_TMP                 "tmp"
-#define SVN_WC__ADM_TEXT_BASE           "text-base"
-#define SVN_WC__ADM_PROPS               "props"
-#define SVN_WC__ADM_PROP_BASE           "prop-base"
-#define SVN_WC__ADM_DIR_PROPS           "dir-props"
-#define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
-#define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_PRISTINE            "pristine"
 #define SVN_WC__ADM_NONEXISTENT_PATH    "nonexistent-path"
 

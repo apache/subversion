@@ -317,6 +317,17 @@ def run_and_verify_dump(repo_dir):
   return output
 
 
+def run_and_verify_svnrdump(expected_stdout, expected_stderr,
+                            expected_exit, *varargs):
+  """Runs 'svnrdump' checking output and exit code, and returns output
+  on stdout"""
+
+  exit_code, output, err = main.run_svnrdump(*varargs)
+  verify.verify_outputs("Unexpected output", output, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
+  return output
+
 def load_repo(sbox, dumpfile_path = None, dump_str = None):
   "Loads the dumpfile into sbox"
   if not dump_str:
@@ -1649,7 +1660,7 @@ def lock_admin_dir(wc_dir):
     if head == root_path:
       raise svntest.Failure("No DB for " + wc_dir)
     root_path = head
-    relpath = os.path.join(tail, relpath).rstrip('/')
+    relpath = os.path.join(tail, relpath).replace(os.path.sep, '/').rstrip('/')
 
   db.execute('insert into wc_lock (wc_id, local_dir_relpath, locked_levels) '
              + 'values (?, ?, ?)',

@@ -71,14 +71,6 @@
 #define PRISTINE_STORAGE_RELPATH "pristine"
 
 
-/* Forward declare until we decide to shift/reorder functions.  */
-static svn_error_t *
-migrate_props(const char *wcroot_abspath,
-              svn_sqlite__db_t *sdb,
-              int original_format,
-              apr_pool_t *scratch_pool);
-
-
 /* Read the properties from the file at PROPFILE_ABSPATH, returning them
    as a hash in *PROPS. If the propfile is NOT present, then NULL will
    be returned in *PROPS.  */
@@ -96,7 +88,7 @@ read_propfile(apr_hash_t **props,
 
   if (err
       && (APR_STATUS_IS_ENOENT(err->apr_err)
-          || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
       svn_error_clear(err);
 
@@ -500,6 +492,21 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                                       PROP_BASE_SUBDIR,
                                       scratch_pool),
                     FALSE, NULL, NULL, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(
+                     svn_wc__adm_child(wcroot_abspath,
+                                       PROP_WORKING_FOR_DIR,
+                                       scratch_pool),
+                     TRUE, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(
+                     svn_wc__adm_child(wcroot_abspath,
+                                      PROP_BASE_FOR_DIR,
+                                      scratch_pool),
+                     TRUE, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(
+                     svn_wc__adm_child(wcroot_abspath,
+                                      PROP_REVERT_FOR_DIR,
+                                      scratch_pool),
+                     TRUE, scratch_pool));
 #endif
 
 #if 0
@@ -1048,10 +1055,8 @@ bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct bump_to_18_baton *b18 = baton;
 
-#if 0
   /* ### no schema changes (yet)... */
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_18));
-#endif
 
   SVN_ERR(migrate_props(b18->wcroot_abspath, sdb, b18->original_format,
                         scratch_pool));
@@ -1504,6 +1509,17 @@ svn_wc__upgrade_sdb(int *result_format,
 #endif
     }
 
+#ifdef SVN_DEBUG
+  if (*result_format != start_format)
+    {
+      int schema_version;
+      SVN_ERR(svn_sqlite__read_schema_version(&schema_version, sdb, scratch_pool));
+
+      /* If this assertion fails the schema isn't updated correctly */
+      SVN_ERR_ASSERT(schema_version == *result_format);
+    }
+#endif
+
   /* Zap anything that might be remaining or escaped our notice.  */
   wipe_obsolete_files(wcroot_abspath, scratch_pool);
 
@@ -1616,3 +1632,4 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+

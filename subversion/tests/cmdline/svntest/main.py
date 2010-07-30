@@ -271,6 +271,22 @@ def get_admin_name():
   else:
     return '.svn'
 
+def wc_is_singledb(wcpath):
+  """Temporary function that checks whether a working copy directory looks
+  like it is part of a single-db working copy."""
+
+  pristine = os.path.join(wcpath, get_admin_name(), 'pristine')
+  if not os.path.exists(pristine):
+    return True
+
+  for name in os.listdir(pristine):
+    if len(name) == 2:
+      return True
+    elif len(name) == 40:
+      return False
+
+  return False
+
 def get_start_commit_hook_path(repo_dir):
   "Return the path of the start-commit-hook conf file in REPO_DIR."
 
@@ -601,9 +617,6 @@ def run_entriesdump(path):
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
                                                         0, 0, None, path)
-  if options.verbose:
-    ### finish the CMD output
-    print
   if exit_code or stderr_lines:
     ### report on this? or continue to just skip it?
     return None
@@ -614,6 +627,13 @@ def run_entriesdump(path):
   exec(''.join([line for line in stdout_lines if not line.startswith("DBG:")]))
   return entries
 
+def run_entriesdump_subdirs(path):
+  """Run the entries-dump helper, returning a list of directory names."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+                                                        0, 0, None, '--subdirs', path)
+  return [line.strip() for line in stdout_lines if not line.startswith("DBG:")]
 
 def run_atomic_ra_revprop_change(url, revision, propname, skel):
   """Run the atomic-ra-revprop-change helper, returning its exit code, stdout, 
@@ -1317,7 +1337,7 @@ def _create_parser():
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
-  parser.add_option('-v', '--verbose', action='store_true',
+  parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
                     help='Print binary command-lines (not with --quiet)')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')

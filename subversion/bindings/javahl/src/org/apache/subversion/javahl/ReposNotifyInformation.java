@@ -27,7 +27,7 @@ import java.util.EventObject;
 
 /**
  * The event passed to the {@link Notify2#onNotify(NotifyInformation)}
- * API to notify {@link SVNClientInterface} of relevant events.
+ * API to notify {@link ISVNClient} of relevant events.
  *
  * @since 1.2
  */
@@ -43,7 +43,7 @@ public class ReposNotifyInformation extends EventObject
     private static final long serialVersionUID = 1L;
 
     /**
-     * The {@link NotifyAction} which triggered this event.
+     * The {@link Action} which triggered this event.
      */
     private Action action;
 

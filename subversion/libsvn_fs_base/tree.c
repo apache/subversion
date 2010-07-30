@@ -430,7 +430,7 @@ mutable_root_node(dag_node_t **node_p,
                                        trail, pool);
   else
     /* If it's not a transaction root, we can't change its contents.  */
-    return SVN_FS__ERR_NOT_MUTABLE(root->fs, root->rev, error_path);
+    return SVN_FS__ERR_NOT_MUTABLE(root->fs, root->rev, error_path, pool);
 }
 
 
@@ -768,7 +768,7 @@ open_path(parent_path_t **parent_path_p,
 
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_base__dag_node_kind(child) != svn_node_dir)
-        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far),
+        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far, pool),
                   apr_psprintf(pool, _("Failure opening '%s'"), path));
 
       rest = next;

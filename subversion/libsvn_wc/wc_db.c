@@ -104,13 +104,6 @@
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
-
-/* ### since we're putting the pristine files per-dir, then we don't need
-   ### to create subdirectories in order to keep the directory size down.
-   ### when we can aggregate pristine files across dirs/wcs, then we will
-   ### need to undo the SKIP. */
-#define SVN__SKIP_SUBDIR
-
 /* This is a character used to escape itself and the globbing character in
    globbing sql expressions below.  See escape_sqlite_like().
 
@@ -287,7 +280,7 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
    to hold CHECKSUM's pristine file, relating to the pristine store
    configured for the working copy indicated by PDH. The returned path
    does not necessarily currently exist.
-#ifndef SVN__SKIP_SUBDIR
+#ifdef SVN_WC__SINGLE_DB
    Iff CREATE_SUBDIR is TRUE, then this function will make sure that the
    parent directory of PRISTINE_ABSPATH exists. This is only useful when
    about to create a new pristine.
@@ -303,7 +296,7 @@ get_pristine_fname(const char **pristine_abspath,
 {
   const char *base_dir_abspath;
   const char *hexdigest = svn_checksum_to_cstring(sha1_checksum, scratch_pool);
-#ifndef SVN__SKIP_SUBDIR
+#ifdef SVN_WC__SINGLE_DB
   char subdir[3];
 #endif
 
@@ -325,7 +318,7 @@ get_pristine_fname(const char **pristine_abspath,
   /* We should have a valid checksum and (thus) a valid digest. */
   SVN_ERR_ASSERT(hexdigest != NULL);
 
-#ifndef SVN__SKIP_SUBDIR
+#ifdef SVN_WC__SINGLE_DB
   /* Get the first two characters of the digest, for the subdir. */
   subdir[0] = hexdigest[0];
   subdir[1] = hexdigest[1];
@@ -350,7 +343,7 @@ get_pristine_fname(const char **pristine_abspath,
   /* The file is located at DIR/.svn/pristine/XX/XXYYZZ... */
   *pristine_abspath = svn_dirent_join_many(result_pool,
                                            base_dir_abspath,
-#ifndef SVN__SKIP_SUBDIR
+#ifdef SVN_WC__SINGLE_DB
                                            subdir,
 #endif
                                            hexdigest,
@@ -1486,6 +1479,33 @@ svn_wc__db_from_relpath(const char **local_abspath,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_get_wcroot(const char **wcroot_abspath,
+                      svn_wc__db_t *db,
+                      const char *wri_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *unused_relpath;
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &unused_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  /* Can't use VERIFY_USABLE_PDH, as this should be usable to detect
+     where call upgrade */
+
+  if (pdh->wcroot == NULL)
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                             _("The node '%s' is not in a workingcopy."),
+                             svn_dirent_local_style(wri_abspath,
+                                                    scratch_pool));
+
+  *wcroot_abspath = apr_pstrdup(result_pool, pdh->wcroot->abspath);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc__db_t *db,
@@ -3205,6 +3225,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
     }
 
 
+#ifndef SVN_WC__SINGLE_DB
   /* When copying a directory the destination may not exist, if so we
      only copy the parent stub */
   if (kind == svn_wc__db_kind_dir && !*src_relpath && *dst_relpath)
@@ -3221,6 +3242,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       src_relpath = svn_dirent_basename(src_abspath, NULL);
       kind = svn_wc__db_kind_subdir;
     }
+#endif
 
   /* Get the children for a directory if this is not the parent stub */
   if (kind == svn_wc__db_kind_dir)
@@ -4339,9 +4361,11 @@ update_depth_values(svn_wc__db_pdh_t *pdh,
   /* Flush any entries before we start monkeying the database.  */
   flush_entries(pdh);
 
+#ifndef SVN_WC__SINGLE_DB
   /* Parent stubs have only two depth options: excluded, or infinity.  */
   if (*local_relpath != '\0' && !excluded)
     depth = svn_depth_infinity;
+#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     excluded
@@ -7554,6 +7578,7 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
   return svn_error_return(svn_sqlite__reset(stmt));
 }
 
+#ifndef SVN_WC__SINGLE_DB
 svn_error_t *
 svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
                                      svn_wc__db_t *db,
@@ -7600,6 +7625,7 @@ svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
 
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
+#endif
 
 svn_error_t *
 svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
@@ -8115,7 +8141,6 @@ wclock_obtain_cb(void *baton,
         break;
 
       lock_relpath = svn_relpath_dirname(lock_relpath, scratch_pool);
-
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -8235,6 +8260,8 @@ is_wclocked(svn_boolean_t *locked,
       *locked = FALSE;
       return SVN_NO_ERROR;
     }
+  else
+    SVN_ERR(err);
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
@@ -8476,7 +8503,9 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
    {
      pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
                                         scratch_pool);
-     flush_entries(pdh);
+
+     if (pdh != NULL)
+       flush_entries(pdh);
    }
 
   return SVN_NO_ERROR;
@@ -9583,6 +9612,7 @@ struct set_new_dir_to_incomplete_baton
   const char *repos_root_url;
   const char *repos_uuid;
   svn_revnum_t revision;
+  svn_depth_t depth;
 };
 
 static svn_error_t *
@@ -9637,6 +9667,10 @@ set_new_dir_to_incomplete_baton_txn(void *baton,
                                             parent_relpath,
                                             (apr_int64_t)dtb->revision));
 
+  /* If depth not unknown or infinity: record depth */
+  if (dtb->depth >= svn_depth_empty && dtb->depth < svn_depth_infinity)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 7, svn_depth_to_word(dtb->depth)));
+
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -9649,6 +9683,7 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
                                              const char *repos_root_url,
                                              const char *repos_uuid,
                                              svn_revnum_t revision,
+                                             svn_depth_t depth,
                                              apr_pool_t *scratch_pool)
 {
   struct set_new_dir_to_incomplete_baton baton;
@@ -9661,6 +9696,7 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
   baton.repos_root_url = repos_root_url;
   baton.repos_uuid = repos_uuid;
   baton.revision = revision;
+  baton.depth = depth;
 
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&baton.pdh, &baton.local_relpath,
                                              db, local_abspath,
