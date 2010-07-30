@@ -277,7 +277,9 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool);
 
   SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(loc_ctx->status_code, req_url),
+              svn_ra_serf__error_on_status(loc_ctx->status_code,
+                                           req_url,
+                                           parser_ctx->location),
               err));
 
   return SVN_NO_ERROR;

@@ -290,12 +290,12 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool);
 
-  err2 = svn_ra_serf__error_on_status(status_code, handler->path);
-
+  err2 = svn_ra_serf__error_on_status(status_code, handler->path,
+                                      parser_ctx->location);
   if (err2)
     {
       svn_error_clear(err);
-      SVN_ERR(err2);
+      return err2;
     }
 
   SVN_ERR(err);
