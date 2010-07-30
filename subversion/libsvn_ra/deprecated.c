@@ -157,16 +157,8 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                           apr_hash_t *config,
                           apr_pool_t *pool)
 {
-  const char *corrected_url;
-
-  SVN_ERR(svn_ra_open4(session_p, &corrected_url, repos_URL, uuid,
-                       callbacks, callback_baton, config, pool));
-  if (corrected_url)
-    return svn_error_createf(SVN_ERR_RA_SESSION_URL_MISMATCH, NULL,
-                             _("The repository has been moved to '%s'; "
-                               "consider relocating."), corrected_url);
-
-  return SVN_NO_ERROR;
+  return svn_ra_open4(session_p, NULL, repos_URL, uuid,
+                      callbacks, callback_baton, config, pool);
 }
 
 svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
