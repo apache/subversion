@@ -1426,6 +1426,47 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
   return SVN_NO_ERROR;
 }
 
+/* Use client context CTX to send a suitable notification for hunk HI,
+ * using TARGET to determine the path. If the hunk is a property hunk,
+ * PROP_NAME is set, else NULL. Use POOL for temporary allocations. */
+static svn_error_t *
+send_hunk_notification(const hunk_info_t *hi, 
+                       const patch_target_t *target, 
+                       const char *prop_name, 
+                       const svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+{
+  svn_wc_notify_t *notify;
+  svn_wc_notify_action_t action;
+
+  if (hi->already_applied)
+    action = svn_wc_notify_patch_hunk_already_applied;
+  else if (hi->rejected)
+    action = svn_wc_notify_patch_rejected_hunk;
+  else
+    action = svn_wc_notify_patch_applied_hunk;
+
+  notify = svn_wc_create_notify(target->local_abspath
+                                    ? target->local_abspath
+                                    : target->local_relpath,
+                                action, pool);
+  notify->hunk_original_start =
+    svn_diff_hunk_get_original_start(hi->hunk);
+  notify->hunk_original_length =
+    svn_diff_hunk_get_original_length(hi->hunk);
+  notify->hunk_modified_start =
+    svn_diff_hunk_get_modified_start(hi->hunk);
+  notify->hunk_modified_length =
+    svn_diff_hunk_get_modified_length(hi->hunk);
+  notify->hunk_matched_line = hi->matched_line;
+  notify->hunk_fuzz = hi->fuzz;
+  notify->prop_name = prop_name;
+
+  (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Use client context CTX to send a suitable notification for a patch TARGET.
  * Use POOL for temporary allocations. */
 static svn_error_t *
@@ -1489,36 +1530,14 @@ send_patch_notification(const patch_target_t *target,
       iterpool = svn_pool_create(pool);
       for (i = 0; i < target->content_info->hunks->nelts; i++)
         {
-          hunk_info_t *hi;
+          const hunk_info_t *hi;
 
           svn_pool_clear(iterpool);
 
           hi = APR_ARRAY_IDX(target->content_info->hunks, i, hunk_info_t *);
 
-          if (hi->already_applied)
-            action = svn_wc_notify_patch_hunk_already_applied;
-          else if (hi->rejected)
-            action = svn_wc_notify_patch_rejected_hunk;
-          else
-            action = svn_wc_notify_patch_applied_hunk;
-
-          notify = svn_wc_create_notify(target->local_abspath
-                                            ? target->local_abspath
-                                            : target->local_relpath,
-                                        action, pool);
-          notify->hunk_original_start =
-            svn_diff_hunk_get_original_start(hi->hunk);
-          notify->hunk_original_length =
-            svn_diff_hunk_get_original_length(hi->hunk);
-          notify->hunk_modified_start =
-            svn_diff_hunk_get_modified_start(hi->hunk);
-          notify->hunk_modified_length =
-            svn_diff_hunk_get_modified_length(hi->hunk);
-          notify->hunk_matched_line = hi->matched_line;
-          notify->hunk_fuzz = hi->fuzz;
-          notify->prop_name = NULL;
-
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+          SVN_ERR(send_hunk_notification(hi, target, NULL /* prop_name */, 
+                                         ctx, iterpool));
         }
 
       for (hash_index = apr_hash_first(pool, target->prop_targets);
@@ -1531,37 +1550,14 @@ send_patch_notification(const patch_target_t *target,
 
           for (i = 0; i < prop_target->content_info->hunks->nelts; i++)
             {
-              hunk_info_t *hi;
+              const hunk_info_t *hi;
 
               svn_pool_clear(iterpool);
 
               hi = APR_ARRAY_IDX(prop_target->content_info->hunks, i,
                                  hunk_info_t *);
-
-              if (hi->already_applied)
-                action = svn_wc_notify_patch_hunk_already_applied;
-              else if (hi->rejected)
-                action = svn_wc_notify_patch_rejected_hunk;
-              else
-                action = svn_wc_notify_patch_applied_hunk;
-
-              notify = svn_wc_create_notify(target->local_abspath
-                                                ? target->local_abspath
-                                                : target->local_relpath,
-                                            action, pool);
-              notify->hunk_original_start =
-                svn_diff_hunk_get_original_start(hi->hunk);
-              notify->hunk_original_length =
-                svn_diff_hunk_get_original_length(hi->hunk);
-              notify->hunk_modified_start =
-                svn_diff_hunk_get_modified_start(hi->hunk);
-              notify->hunk_modified_length =
-                svn_diff_hunk_get_modified_length(hi->hunk);
-              notify->hunk_matched_line = hi->matched_line;
-              notify->hunk_fuzz = hi->fuzz;
-              notify->prop_name = apr_pstrdup(pool, prop_target->name);
-
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+              SVN_ERR(send_hunk_notification(hi, target, prop_target->name, 
+                                             ctx, iterpool));
             }
         }
       svn_pool_destroy(iterpool);
