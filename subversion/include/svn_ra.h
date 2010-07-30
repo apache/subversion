@@ -65,7 +65,7 @@ svn_ra_version(void);
  * @a close_baton as appropriate.
  *
  * @a path is relative to the "root" of the session, defined by the
- * @a repos_URL passed to svn_ra_open3() vtable call.
+ * @a repos_URL passed to svn_ra_open4() vtable call.
  *
  * @a name is the name of the property to fetch. If the property is present,
  * then it is returned in @a value. Otherwise, @a *value is set to @c NULL.
@@ -294,7 +294,7 @@ typedef struct svn_ra_reporter3_t
    * implementor should assume the directory has no entries or props.
    *
    * This will *override* any previous set_path() calls made on parent
-   * paths.  @a path is relative to the URL specified in svn_ra_open3().
+   * paths.  @a path is relative to the URL specified in svn_ra_open4().
    *
    * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
    *
@@ -445,7 +445,7 @@ typedef struct svn_ra_reporter_t
 /** A collection of callbacks implemented by libsvn_client which allows
  * an RA layer to "pull" information from the client application, or
  * possibly store information.  libsvn_client passes this vtable to
- * svn_ra_open3().
+ * svn_ra_open4().
  *
  * Each routine takes a @a callback_baton originally provided with the
  * vtable.
