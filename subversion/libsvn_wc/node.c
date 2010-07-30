@@ -608,7 +608,16 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
 }
 
 
-/* A recursive node-walker, helper for svn_wc__node_walk_children(). */
+/* A recursive node-walker, helper for svn_wc__node_walk_children().
+ *
+ * Call WALK_CALLBACK with WALK_BATON on all children (recursively) of
+ * DIR_ABSPATH in DB, but not on DIR_ABSPATH itself. DIR_ABSPATH must be a
+ * versioned directory. If SHOW_HIDDEN is true, visit hidden nodes, else
+ * ignore them. Restrict the depth of the walk to DEPTH.
+ *
+ * ### Is it possible for a subdirectory to be hidden and known to be a
+ *     directory?  If so, and if show_hidden is true, this will try to
+ *     recurse into it.  */
 static svn_error_t *
 walker_helper(svn_wc__db_t *db,
               const char *dir_abspath,
