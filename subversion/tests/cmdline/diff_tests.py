@@ -3475,12 +3475,12 @@ def diff_prop_multiple_hunks(sbox):
   svntest.main.run_svn(None,
                        "propset", "prop", prop_val, iota_path)
   expected_output = [
-    "Index: iota\n",
+    "Index: %s\n" % iota_path,
     "===================================================================\n",
-    "--- iota\t(revision 2)\n",
-    "+++ iota\t(working copy)\n",
+    "--- %s\t(revision 2)\n" % iota_path,
+    "+++ %s\t(working copy)\n" % iota_path,
     "\n",
-    "Property changes on: iota\n",
+    "Property changes on: %s\n" % iota_path,
     "___________________________________________________________________\n",
     "Modified: prop\n",
     "## -1,6 +1,7 ##\n",
@@ -3564,7 +3564,7 @@ test_list = [ None,
               diff_git_format_url_wc,
               diff_git_format_url_url,
               XFail(diff_prop_missing_context),
-              XFail(diff_prop_multiple_hunks),
+              diff_prop_multiple_hunks,
               ]
 
 if __name__ == '__main__':
