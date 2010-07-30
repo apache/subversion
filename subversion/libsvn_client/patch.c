@@ -1472,9 +1472,6 @@ send_patch_notification(const patch_target_t *target,
       else if (target->has_text_changes)
         notify->content_state = svn_wc_notify_state_changed;
 
-      /* ### We need to decide on how we want prop notifications to work. 
-       * ### At the moment we're not reporting property hunks and what about
-       * ### added paths with props and paths scheduled for deletion? */
       if (target->had_prop_rejects)
         notify->prop_state = svn_wc_notify_state_conflicted;
       else if (target->has_prop_changes)
