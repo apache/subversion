@@ -104,14 +104,16 @@ new_node_record(void **node_baton,
     {
       if (nb->kind == svn_node_file)
         {
-          commit_editor->add_file(nb->path, nb->rb->dir_baton, NULL,
-                                  SVN_INVALID_REVNUM, pool, &file_baton);
+          SVN_ERR(commit_editor->add_file(nb->path, nb->rb->dir_baton, NULL,
+                                          SVN_INVALID_REVNUM, pool,
+                                          &file_baton));
           nb->file_baton = file_baton;
         }
       else if(nb->kind == svn_node_dir)
         {
-          commit_editor->add_directory(nb->path, nb->rb->dir_baton, NULL,
-                                       SVN_INVALID_REVNUM, pool, &child_baton);
+          SVN_ERR(commit_editor->add_directory(nb->path, nb->rb->dir_baton,
+                                               NULL, SVN_INVALID_REVNUM,
+                                               pool, &child_baton));
           nb->rb->dir_baton = child_baton;
         }
     }
@@ -169,8 +171,8 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
   nb = node_baton;
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pb->pool;
-  return commit_editor->apply_textdelta(nb->file_baton, NULL, pool, handler,
-                                        handler_baton);
+  return commit_editor->apply_textdelta(nb->file_baton, NULL, pool,
+                                        handler, handler_baton);
 }
 
 static svn_error_t *
@@ -181,9 +183,11 @@ close_node(void *baton)
   nb = baton;
   commit_editor = nb->rb->pb->commit_editor;
   if (nb->kind == svn_node_file)
-      commit_editor->close_file(nb->file_baton, NULL, nb->rb->pb->pool);
+    SVN_ERR(commit_editor->close_file(nb->file_baton, NULL,
+                                      nb->rb->pb->pool));
   else if(nb->kind == svn_node_dir)
-      commit_editor->close_directory(nb->rb->dir_baton, nb->rb->pb->pool);
+    SVN_ERR(commit_editor->close_directory(nb->rb->dir_baton,
+                                           nb->rb->pb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -195,7 +199,7 @@ close_revision(void *baton)
   const struct svn_delta_editor_t *commit_editor;    
   rb = baton;
   commit_editor = rb->pb->commit_editor;
-  commit_editor->close_edit(rb->pb->commit_edit_baton, rb->pb->pool);
+  SVN_ERR(commit_editor->close_edit(rb->pb->commit_edit_baton, rb->pb->pool));
   return SVN_NO_ERROR;
 }
 
