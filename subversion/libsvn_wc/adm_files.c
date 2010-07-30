@@ -637,7 +637,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
    * arbitrary revision and the URL may differ if the add is
    * being driven from a merge which will have a different URL. */
   if (status != svn_wc__db_status_deleted
-      && status != svn_wc__db_status_obstructed_delete)
+      && status != svn_wc__db_status_obstructed_delete
+      && status != svn_wc__db_status_not_present)
     {
       /* ### Should we match copyfrom_revision? */
       if (db_revision != revision)
