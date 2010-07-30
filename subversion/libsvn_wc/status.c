@@ -1786,7 +1786,6 @@ mark_deleted(void *baton,
    a deletion.  Use POOL for all allocations. */
 static svn_error_t *
 handle_statii(struct edit_baton *eb,
-              const char *local_abspath,
               const char *dir_repos_root_url,
               const char *dir_repos_relpath,
               apr_hash_t *statii,
@@ -1809,7 +1808,7 @@ handle_statii(struct edit_baton *eb,
       status_baton = &sb;
     }
 
-  /* Loop over all the statuses still in our hash, handling each one. */
+  /* Loop over all the statii still in our hash, handling each one. */
   for (hi = apr_hash_first(pool, statii); hi; hi = apr_hash_next(hi))
     {
       const char *local_abspath = svn__apr_hash_index_key(hi);
@@ -2070,7 +2069,7 @@ close_directory(void *dir_baton,
         was_deleted = TRUE;
 
       /* Now do the status reporting. */
-      SVN_ERR(handle_statii(eb, db->local_abspath,
+      SVN_ERR(handle_statii(eb,
                             dir_status ? dir_status->repos_root_url : NULL,
                             dir_status ? dir_status->repos_relpath : NULL,
                             db->statii, was_deleted, db->depth, pool));
@@ -2116,7 +2115,7 @@ close_directory(void *dir_baton,
           /* Otherwise, we report on all our children and ourself.
              Note that our directory couldn't have been deleted,
              because it is the root of the edit drive. */
-          SVN_ERR(handle_statii(eb, eb->anchor_abspath,
+          SVN_ERR(handle_statii(eb,
                                 eb->anchor_status->repos_root_url,
                                 eb->anchor_status->repos_relpath,
                                 db->statii, FALSE, eb->default_depth, pool));
