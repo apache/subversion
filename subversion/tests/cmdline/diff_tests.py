@@ -3474,13 +3474,10 @@ def diff_prop_multiple_hunks(sbox):
              ])
   svntest.main.run_svn(None,
                        "propset", "prop", prop_val, iota_path)
-  expected_output = [
-    "Index: %s\n" % iota_path,
-    "===================================================================\n",
-    "--- %s\t(revision 2)\n" % iota_path,
-    "+++ %s\t(working copy)\n" % iota_path,
+  expected_output = make_diff_header(iota_path, 'revision 2', 
+                                     'working copy') + [
     "\n",
-    "Property changes on: %s\n" % iota_path,
+    "Property changes on: %s\n" % iota_path.replace('\\', '/'),
     "___________________________________________________________________\n",
     "Modified: prop\n",
     "## -1,6 +1,7 ##\n",
