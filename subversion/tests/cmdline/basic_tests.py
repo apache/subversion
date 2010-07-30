@@ -2521,7 +2521,7 @@ def meta_correct_library_being_used(sbox):
                                      expected_output, [], '--version')
 
 def delete_and_add_same_file(sbox):
-  "delete and add a file with the same content in one commit"
+  "commit deletes a file and adds one with same text"
   sbox.build()
 
   wc_dir = sbox.wc_dir
