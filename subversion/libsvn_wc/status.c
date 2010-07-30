@@ -2429,7 +2429,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
 {
   svn_node_kind_t kind;
   struct walk_status_baton wb;
-  svn_io_dirent2_t *dirent;
+  const svn_io_dirent2_t *dirent;
   const char *anchor_abspath, *target_name;
   svn_boolean_t skip_root;
 
