@@ -1138,7 +1138,18 @@ svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
     };
 
   if (old_value_p)
-    SVN__NOT_IMPLEMENTED();
+    {
+      svn_boolean_t capable;
+      SVN_ERR(svn_ra_neon__has_capability(session, &capable,
+                                          SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                          pool));
+
+      /* How did you get past the same check in svn_ra_change_rev_prop2()? */
+      SVN_ERR_ASSERT(capable);
+
+      /* ### server-side support hasn't been implemented yet */
+      SVN__NOT_IMPLEMENTED();
+    }
 
   /* Main objective: do a PROPPATCH (allprops) on a baseline object */
 

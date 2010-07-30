@@ -142,6 +142,7 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   /* Send SVN_RA_CAPABILITY_* capabilities. */
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_DEPTH);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY);
   /* Mergeinfo is a special case: here we merely say that the server
    * knows how to handle mergeinfo -- whether the repository does too

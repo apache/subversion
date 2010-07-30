@@ -2159,7 +2159,18 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   svn_error_t *err;
 
   if (old_value_p)
-    SVN__NOT_IMPLEMENTED();
+    {
+      svn_boolean_t capable;
+      SVN_ERR(svn_ra_serf__has_capability(ra_session, &capable,
+                                          SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                          pool));
+
+      /* How did you get past the same check in svn_ra_change_rev_prop2()? */
+      SVN_ERR_ASSERT(capable);
+
+      /* ### server-side support hasn't been implemented yet */
+      SVN__NOT_IMPLEMENTED();
+    }
 
   commit = apr_pcalloc(pool, sizeof(*commit));
 
