@@ -1987,19 +1987,37 @@ def atomic_over_ra(sbox):
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--revprop', '-r', '0',
-                                     'flower', 'violet', repo_url)
+                                     'flower', s1, repo_url)
 
   # Helpers.
-  def FAILS_WITH_BPV(not_the_old_value, proposed_value):
-    expected_stderr = ".*revprop 'flower' has unexpected value.*"
+  
+  def expect_old_server_fail(old_value, proposed_value):
+    # We are setting a (possibly "not present") expectation for the old value,
+    # so we should fail.
+    expected_stderr = ".*doesn't advertise.*ATOMIC_REVPROP"
     svntest.actions.run_and_verify_atomic_ra_revprop_change(
        None, None, expected_stderr, 1, repo_url, 0, 'flower',
-       not_the_old_value, proposed_value)
+       old_value, proposed_value)
+
+    # The original value is still there.
+    svntest.actions.check_prop('flower', repo_url, [s1], 0)
+
+  def FAILS_WITH_BPV(not_the_old_value, proposed_value):
+    if svntest.main.server_has_atomic_revprop():
+      expected_stderr = ".*revprop 'flower' has unexpected value.*"
+      svntest.actions.run_and_verify_atomic_ra_revprop_change(
+         None, None, expected_stderr, 1, repo_url, 0, 'flower',
+         not_the_old_value, proposed_value)
+    else:
+      expect_old_server_fail(not_the_old_value, proposed_value)
 
   def PASSES_WITHOUT_BPV(yes_the_old_value, proposed_value):
-    svntest.actions.run_and_verify_atomic_ra_revprop_change(
-       None, None, [], 0, repo_url, 0, 'flower',
-       yes_the_old_value, proposed_value)
+    if svntest.main.server_has_atomic_revprop():
+      svntest.actions.run_and_verify_atomic_ra_revprop_change(
+         None, None, [], 0, repo_url, 0, 'flower',
+         yes_the_old_value, proposed_value)
+    else:
+      expect_old_server_fail(yes_the_old_value, proposed_value)
 
   # Value of "flower" is 's1'.
   FAILS_WITH_BPV(s2, s1)

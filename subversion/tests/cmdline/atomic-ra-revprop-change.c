@@ -139,6 +139,7 @@ change_rev_prop(const char *url,
   svn_ra_callbacks2_t *callbacks;
   svn_ra_session_t *sess;
   apr_hash_t *config;
+  svn_boolean_t capable;
 
   SVN_ERR(svn_ra_create_callbacks(&callbacks, pool));
   SVN_ERR(construct_auth_baton(&callbacks->auth_baton, pool));
@@ -147,8 +148,17 @@ change_rev_prop(const char *url,
   SVN_ERR(svn_ra_open3(&sess, url, NULL, callbacks, NULL /* baton */,
                        config, pool));
 
-  SVN_ERR(svn_ra_change_rev_prop2(sess, revision, propname,
-                                  &old_value, propval, pool));
+  SVN_ERR(svn_ra_has_capability(sess, &capable,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                pool));
+  if (capable)
+    SVN_ERR(svn_ra_change_rev_prop2(sess, revision, propname,
+                                    &old_value, propval, pool));
+  else
+    /* Running under --server-minor-version? */
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Server doesn't advertise "
+                            "SVN_RA_CAPABILITY_ATOMIC_REVPROPS");
 
   return SVN_NO_ERROR;
 }

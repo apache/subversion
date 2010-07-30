@@ -1085,6 +1085,9 @@ def server_has_partial_replay():
 def server_enforces_date_syntax():
   return options.server_minor_version >= 5
 
+def server_has_atomic_revprop():
+  return options.server_minor_version >= 7
+
 ######################################################################
 
 
