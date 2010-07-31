@@ -737,7 +737,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  * The SERIALIZER is called to transform the ITEM into a single,
  * flat data buffer. Temporary allocations may be done in POOL.
  */
-static svn_error_t* 
+static svn_error_t *
 membuffer_cache_set(svn_membuffer_t *cache,
                     const void *key,
                     apr_size_t key_len,
@@ -821,7 +821,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
   svn_error_t *err = SVN_NO_ERROR;
 
   /* find the entry group that will hold the key.
-  */
+   */
   group_index = get_group_index(cache, key, key_len, to_find, pool);
   if (group_index == -1)
     {
@@ -1103,7 +1103,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   /* allocate the cache header structures
    */
   svn_cache__t *wrapper = apr_pcalloc(pool, sizeof(*wrapper));
-  svn_membuffer_cache_t* cache = apr_palloc(pool, sizeof(*cache));
+  svn_membuffer_cache_t *cache = apr_palloc(pool, sizeof(*cache));
 
   /* initialize our internal cache header
    */
