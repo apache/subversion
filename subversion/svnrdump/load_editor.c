@@ -37,11 +37,8 @@ commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
                 apr_pool_t *pool)
 {
-  SVN_ERR(svn_cmdline_printf(pool, "r%ld committed by %s at %s\n",
-                             commit_info->revision,
-                             (commit_info->author
-                              ? commit_info->author : "(no author)"),
-                             commit_info->date));
+  SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld\n",
+                             commit_info->revision));
   return SVN_NO_ERROR;
 }
 
@@ -297,9 +294,10 @@ close_revision(void *baton)
   commit_editor = rb->pb->commit_editor;
   commit_edit_baton = rb->pb->commit_edit_baton;
 
-  /* Ignore revision 0 in the stream, since the commit editor can't
-     change a revision that's already written. */
-  if (rb->rev > 0)
+  /* r0 doesn't have a corresponding commit_editor; we fake it */
+  if (rb->rev == 0)
+    SVN_ERR(svn_cmdline_printf(rb->pb->pool, "* Loaded revision 0\n"));
+  else
     SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pb->pool));
 
   /* svn_fs_commit_txn rewrites the datestamp property to the current
