@@ -53,7 +53,7 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
-def run_test(sbox, dumpfile_name):
+def run_dump_test(sbox, dumpfile_name):
   """Load a dumpfile using svnadmin load, dump it with svnrdump and
   check that the same dumpfile is produced"""
 
@@ -64,44 +64,100 @@ def run_test(sbox, dumpfile_name):
   svnrdump_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnrdump_tests_data')
 
-  # Load the specified dump file into the repository
+  # Load the specified dump file into the sbox repository using
+  # svnadmin load
   svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                         dumpfile_name),
                            'rb').readlines()
 
-  # Load dumpfile_contents into the sbox repository
   svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile)
 
   # Create a dump file using svnrdump
   svnrdump_dumpfile = \
-      svntest.actions.run_and_verify_svnrdump(svntest.verify.AnyOutput, [], 0,
-                                              'dump', '-q', sbox.repo_url)
+      svntest.actions.run_and_verify_svnrdump_dump(svntest.verify.AnyOutput,
+                                                   [], 0, '-q', sbox.repo_url)
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
     "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile)
 
+def run_load_test(sbox, dumpfile_name):
+  """Load a dumpfile using svnrdump, dump it with svnadmin dump and
+  check that the same dumpfile is produced"""
+
+  # Create an empty sanbox repository
+  build_repos(sbox)
+
+  # Create the revprop-change hook for this test
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+
+  # This directory contains all the dump files
+  svnrdump_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnrdump_tests_data')
+
+  # Load the specified dump file into the sbox repository using
+  # svnrdump load
+  svnrdump_dumpfile = open(os.path.join(svnrdump_tests_dir,
+                                        dumpfile_name),
+                           'rb').readlines()
+
+  # Set the UUID of the sbox repository to the UUID specified in the
+  # dumpfile
+  uuid = svnrdump_dumpfile[2].split(' ')[1][:-1]
+  svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
+                                           'setuuid', sbox.repo_dir,
+                                           uuid)
+
+  svntest.actions.run_and_verify_svnrdump_load(svnrdump_dumpfile,
+                                               svntest.verify.AnyOutput,
+                                               [], 0, '-q', sbox.repo_url)
+
+  # Create a dump file using svnadmin dump
+  svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, True)
+
+  # Compare the output from stdout
+  svntest.verify.compare_and_display_lines(
+    "Dump files", "DUMP", svnrdump_dumpfile, svnadmin_dumpfile)
+
 ######################################################################
 # Tests
 
-def basic_svnrdump(sbox):
+def basic_dump(sbox):
   "dump the standard sbox repos"
   sbox.build(read_only = True, create_wc = False)
 
   out = \
-      svntest.actions.run_and_verify_svnrdump(svntest.verify.AnyOutput, [], 0,
-                                              'dump', '-q', sbox.repo_url)
+      svntest.actions.run_and_verify_svnrdump_dump(svntest.verify.AnyOutput,
+                                                   [], 0, '-q', sbox.repo_url)
 
   if not out[0].startswith('SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
 
-def revision_0(sbox):
+def revision_0_dump(sbox):
   "dump revision zero"
-  run_test(sbox, dumpfile_name = "revision-0.dump")
+  run_dump_test(sbox, "revision-0.dump")
+
+def revision_0_load(sbox):
+  "load revision zero"
+  run_load_test(sbox, "revision-0.dump")
+
+# skeleton.dump repository layout
+#
+#   Projects/       (Added r1)
+#     README        (Added r2)
+#     Project-X     (Added r3)
+#     Project-Y     (Added r4)
+#     Project-Z     (Added r5)
+#     docs/         (Added r6)
+#       README      (Added r6)
+
+def skeleton_load(sbox):
+  "skeleton repository"
+  run_load_test(sbox, "skeleton.dump")
 
 def copy_and_modify(sbox):
   "copy and modify"
-  run_test(sbox, "copy-and-modify.dump")
+  run_dump_test(sbox, "copy-and-modify.dump")
 
 ########################################################################
 # Run the tests
@@ -109,9 +165,11 @@ def copy_and_modify(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              basic_svnrdump,
-              revision_0,
-              XFail(copy_and_modify),
+              basic_dump,
+              revision_0_dump,
+              revision_0_load,
+              Wimp("Under construction", skeleton_load),
+              Wimp("Need to fix headers in RA layer", copy_and_modify),
              ]
 
 if __name__ == '__main__':

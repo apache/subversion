@@ -276,24 +276,39 @@ def run_and_verify_load(repo_dir, dump_file_content):
                         None, expected_stderr)
 
 
-def run_and_verify_dump(repo_dir):
+def run_and_verify_dump(repo_dir, deltas=False):
   "Runs 'svnadmin dump' and reports any errors, returning the dump content."
-  exit_code, output, errput = main.run_svnadmin('dump', repo_dir)
+  if deltas:
+    exit_code, output, errput = main.run_svnadmin('dump', '--deltas',
+                                                  repo_dir)
+  else:
+    exit_code, output, errput = main.run_svnadmin('dump', repo_dir)
   verify.verify_outputs("Missing expected output(s)", output, errput,
                         verify.AnyOutput, verify.AnyOutput)
   return output
 
 
-def run_and_verify_svnrdump(expected_stdout, expected_stderr,
-                            expected_exit, *varargs):
-  """Runs 'svnrdump' checking output and exit code, and returns output
-  on stdout"""
+def run_and_verify_svnrdump_dump(expected_stdout, expected_stderr,
+                                 expected_exit, *varargs):
+  """Runs 'svnrdump dump' reporting errors and returning output on
+  stdout."""
 
-  exit_code, output, err = main.run_svnrdump(*varargs)
+  exit_code, output, err = main.run_svnrdump('dump', *varargs)
   verify.verify_outputs("Unexpected output", output, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return output
+
+def run_and_verify_svnrdump_load(dumpfile_content, expected_stdout,
+                                 expected_stderr, expected_exit, *varargs):
+  """Runs 'svnrdump load' and reports any errors."""
+
+  exit_code, output, err = main.run_command_stdin(
+    main.svnrdump_binary, expected_stderr, 0, 1, dumpfile_content,
+    'load', *varargs)
+  verify.verify_outputs("Unexpected output", output, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
 
 def load_repo(sbox, dumpfile_path = None, dump_str = None):
   "Loads the dumpfile into sbox"
