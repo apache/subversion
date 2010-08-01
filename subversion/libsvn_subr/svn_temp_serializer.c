@@ -97,9 +97,9 @@ align_buffer_end(svn_temp_serializer__context_t *context)
  */
 svn_temp_serializer__context_t *
 svn_temp_serializer__init(const void *source_struct,
-                     apr_size_t struct_size,
-                     apr_size_t suggested_buffer_size,
-                     apr_pool_t *pool)
+                          apr_size_t struct_size,
+                          apr_size_t suggested_buffer_size,
+                          apr_pool_t *pool)
 {
   /* select a meaningful initial memory buffer capacity */
   apr_size_t init_size = suggested_buffer_size < struct_size
@@ -129,7 +129,7 @@ svn_temp_serializer__init(const void *source_struct,
  */
 static void
 store_current_end_pointer(svn_temp_serializer__context_t *context,
-                          PCPCVOID source_pointer)
+                          const void * const * source_pointer)
 {
   /* relative position of the serialized pointer to the begin of the buffer */
   apr_size_t offset = (const char *)source_pointer
@@ -156,7 +156,7 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
  */
 void
 svn_temp_serializer__push(svn_temp_serializer__context_t *context,
-                          PCPCVOID source_struct,
+                          const void * const * source_struct,
                           apr_size_t struct_size)
 {
   /* create a new entry for the structure stack */
@@ -202,7 +202,8 @@ svn_temp_serializer__pop(svn_temp_serializer__context_t *context)
  * structure can be established.
  */
 void
-svn_temp_serializer__add_string(svn_temp_serializer__context_t *context, PCPCSTR s)
+svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
+                                const char * const * s)
 {
   /* Store the offset at which the string data that will the appended.
    * Write 0 for NULL pointers. Strings don't need special alignment. */
@@ -226,7 +227,7 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context)
  * proper pointer value.
  */
 void
-svn_temp_deserializer__resolve(void *buffer, PPVOID ptr)
+svn_temp_deserializer__resolve(void *buffer, void **ptr)
 {
   if ((apr_size_t)*ptr)
     {

@@ -34,15 +34,6 @@
 /* forward declaration */
 struct svn_stringbuf_t;
 
-/* We often use references to pointers. Although converting a pointer to
- * a pointer can safely be cast to references to constant pointers to
- * constant data, C compilers tend to reject them. Provide a couple of
- * typedefs to simplify explicit casts.
- */
-typedef const char * const * PCPCSTR;
-typedef const void * const * PCPCVOID;
-typedef void * * PPVOID;
-
 /**
  * Opaque structure controlling the serialization process and holding the
  * intermediate as well as final results.
@@ -85,7 +76,7 @@ svn_temp_serializer__init(const void *source_struct,
  */
 void
 svn_temp_serializer__push(svn_temp_serializer__context_t *context,
-                          PCPCVOID source_struct,
+                          const void * const * source_struct,
                           apr_size_t struct_size);
 
 /**
@@ -106,7 +97,8 @@ svn_temp_serializer__pop(svn_temp_serializer__context_t *context);
  * serialized structure can be established.
  */
 void
-svn_temp_serializer__add_string(svn_temp_serializer__context_t *context, PCPCSTR s);
+svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
+                                const char * const * s);
 
 /**
  * @return a reference to the data buffer containing the data serialialized
@@ -125,4 +117,4 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context);
  * the pointer to resolve in @a ptr.
  */
 void
-svn_temp_deserializer__resolve(void *buffer, PPVOID ptr);
+svn_temp_deserializer__resolve(void *buffer, void **ptr);
