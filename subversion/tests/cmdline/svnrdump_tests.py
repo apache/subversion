@@ -171,7 +171,7 @@ test_list = [ None,
               basic_dump,
               revision_0_dump,
               revision_0_load,
-              Wimp("Under construction", skeleton_load),
+              skeleton_load,
               Wimp("Need to fix headers in RA layer", copy_and_modify),
              ]
 

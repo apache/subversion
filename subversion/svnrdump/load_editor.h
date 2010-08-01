@@ -67,6 +67,7 @@ struct revision_baton
   apr_hash_t *revprop_table;
 
   const svn_string_t *datestamp;
+  const svn_string_t *author;
 
   struct parse_baton *pb;
   apr_pool_t *pool;
