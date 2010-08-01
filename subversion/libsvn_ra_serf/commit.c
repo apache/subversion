@@ -633,6 +633,46 @@ checkout_file(file_context_t *file)
   return SVN_NO_ERROR;
 }
 
+/* Helper function for proppatch_walker() below. */
+static svn_error_t *
+get_encoding_and_cdata(const char **encoding_p,
+                       serf_bucket_t **cdata_bkt_p,
+                       serf_bucket_alloc_t *alloc,
+                       const svn_string_t *value,
+                       apr_pool_t *pool)
+{
+  const char *encoding;
+  const char *cdata;
+  apr_size_t len; /* of cdata */
+
+  SVN_ERR_ASSERT(value);
+
+  /* If a property is XML-safe, XML-encode it.  Else, base64-encode
+     it. */
+  if (svn_xml_is_xml_safe(value->data, value->len))
+    {
+      svn_stringbuf_t *xml_esc = NULL;
+      svn_xml_escape_cdata_string(&xml_esc, value, pool);
+      encoding = NULL;
+      cdata = xml_esc->data;
+      len = xml_esc->len;
+    }
+  else
+    {
+      const svn_string_t *base64ed = svn_base64_encode_string2(value, TRUE,
+                                                               pool);
+      encoding = "base64";
+      cdata = base64ed->data;
+      len = base64ed->len;
+    }
+
+  /* ENCODING, CDATA, and LEN are now set. */
+
+  *encoding_p = encoding;
+  *cdata_bkt_p = SERF_BUCKET_SIMPLE_STRING_LEN(cdata, len, alloc);
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 proppatch_walker(void *baton,
                  const char *ns, apr_ssize_t ns_len,
@@ -641,14 +681,10 @@ proppatch_walker(void *baton,
                  apr_pool_t *pool)
 {
   serf_bucket_t *body_bkt = baton;
+  serf_bucket_t *cdata_bkt;
   serf_bucket_alloc_t *alloc;
-  svn_boolean_t binary_prop;
+  const char *encoding;
   char *prop_name;
-
-  if (svn_xml_is_xml_safe(val->data, val->len))
-    binary_prop = FALSE;
-  else
-    binary_prop = TRUE;
 
   /* Use the namespace prefix instead of adding the xmlns attribute to support
      property names containing ':' */
@@ -660,24 +696,14 @@ proppatch_walker(void *baton,
 
   alloc = body_bkt->allocator;
 
+  SVN_ERR(get_encoding_and_cdata(&encoding, &cdata_bkt, alloc, val, pool));
+
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
-                                    "V:encoding", binary_prop ? "base64" : NULL,
+                                    "V:encoding", encoding,
                                     NULL);
-
-  if (binary_prop)
-    {
-      serf_bucket_t *tmp_bkt;
-      val = svn_base64_encode_string2(val, TRUE, pool);
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(val->data, val->len, alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-    }
-  else
-    {
-      svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc, val->data, val->len);
-    }
-
-
+  serf_bucket_aggregate_append(body_bkt, cdata_bkt);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, prop_name);
+
   return SVN_NO_ERROR;
 }
 
