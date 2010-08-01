@@ -54,8 +54,8 @@ def build_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
 def run_dump_test(sbox, dumpfile_name):
-  """Load a dumpfile using svnadmin load, dump it with svnrdump and
-  check that the same dumpfile is produced"""
+  """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
+  dump' and check that the same dumpfile is produced"""
 
   # Create an empty sanbox repository
   build_repos(sbox)
@@ -74,16 +74,17 @@ def run_dump_test(sbox, dumpfile_name):
 
   # Create a dump file using svnrdump
   svnrdump_dumpfile = \
-      svntest.actions.run_and_verify_svnrdump_dump(svntest.verify.AnyOutput,
-                                                   [], 0, '-q', sbox.repo_url)
+      svntest.actions.run_and_verify_svnrdump(None, svntest.verify.AnyOutput,
+                                              [], 0, '-q', 'dump',
+                                              sbox.repo_url)
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
     "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile)
 
 def run_load_test(sbox, dumpfile_name):
-  """Load a dumpfile using svnrdump, dump it with svnadmin dump and
-  check that the same dumpfile is produced"""
+  """Load a dumpfile using 'svnrdump load', dump it with 'svnadmin
+  dump' and check that the same dumpfile is produced"""
 
   # Create an empty sanbox repository
   build_repos(sbox)
@@ -102,15 +103,16 @@ def run_load_test(sbox, dumpfile_name):
                            'rb').readlines()
 
   # Set the UUID of the sbox repository to the UUID specified in the
-  # dumpfile
+  # dumpfile ### RA layer doesn't have a set_uuid functionality
   uuid = svnrdump_dumpfile[2].split(' ')[1][:-1]
   svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
                                            'setuuid', sbox.repo_dir,
                                            uuid)
 
-  svntest.actions.run_and_verify_svnrdump_load(svnrdump_dumpfile,
-                                               svntest.verify.AnyOutput,
-                                               [], 0, '-q', sbox.repo_url)
+  svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
+                                          svntest.verify.AnyOutput,
+                                          [], 0, '-q', 'load',
+                                          sbox.repo_url)
 
   # Create a dump file using svnadmin dump
   svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, True)
@@ -127,8 +129,9 @@ def basic_dump(sbox):
   sbox.build(read_only = True, create_wc = False)
 
   out = \
-      svntest.actions.run_and_verify_svnrdump_dump(svntest.verify.AnyOutput,
-                                                   [], 0, '-q', sbox.repo_url)
+      svntest.actions.run_and_verify_svnrdump(None, svntest.verify.AnyOutput,
+                                              [], 0, '-q', 'dump',
+                                              sbox.repo_url)
 
   if not out[0].startswith('SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
