@@ -29,6 +29,17 @@ IF ERRORLEVEL 1 (
   EXIT /B 0
 )
 
+PATH %PATH%;%TESTDIR%\bin
+SET result=0
+
+
+echo python win-tests.py -r -f fsfs --javahl "%TESTDIR%\tests"
+python win-tests.py -r -f fsfs --javahl "%TESTDIR%\tests"
+IF ERRORLEVEL 1 (
+  echo [python reported error %ERRORLEVEL%]
+  SET result=1
+)
+
 IF EXIST "%TESTDIR%\swig" rmdir /s /q "%TESTDIR%\swig"
 mkdir "%TESTDIR%\swig\py-release\libsvn"
 mkdir "%TESTDIR%\swig\py-release\svn"
@@ -38,16 +49,12 @@ xcopy "release\subversion\bindings\swig\python\libsvn_swig_py\*.dll" "%TESTDIR%\
 xcopy "subversion\bindings\swig\python\*.py" "%TESTDIR%\swig\py-release\libsvn\*.py"
 xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\*.py"
 
-PATH %PATH%;%TESTDIR%\bin
 SET PYTHONPATH=%TESTDIR%\swig\py-release
 
-SET result=0
-
 python subversion\bindings\swig\python\tests\run_all.py
-IF ERRORLEVEL 1 SET result=1
+IF ERRORLEVEL 1 (
+  echo [Python reported error %ERRORLEVEL%]
+  SET result=1
+)
 
-echo win-tests.py -r -f fsfs --javahl "%TESTDIR%\tests"
-win-tests.py -r -f fsfs --javahl "%TESTDIR%\tests"
-IF ERRORLEVEL 1 SET result=1
-
-exit /b %RESULT%
+exit /b %result%
