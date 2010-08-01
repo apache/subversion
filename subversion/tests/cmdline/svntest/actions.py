@@ -288,27 +288,16 @@ def run_and_verify_dump(repo_dir, deltas=False):
   return output
 
 
-def run_and_verify_svnrdump_dump(expected_stdout, expected_stderr,
-                                 expected_exit, *varargs):
-  """Runs 'svnrdump dump' reporting errors and returning output on
-  stdout."""
+def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
+                            expected_stderr, expected_exit, *varargs):
+  """Runs 'svnrdump dump|load' depending on dumpfile_content and
+  reports any errors."""
+  exit_code, output, err = main.run_svnrdump(dumpfile_content, *varargs)
 
-  exit_code, output, err = main.run_svnrdump('dump', *varargs)
   verify.verify_outputs("Unexpected output", output, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return output
-
-def run_and_verify_svnrdump_load(dumpfile_content, expected_stdout,
-                                 expected_stderr, expected_exit, *varargs):
-  """Runs 'svnrdump load' and reports any errors."""
-
-  exit_code, output, err = main.run_command_stdin(
-    main.svnrdump_binary, expected_stderr, 0, 1, dumpfile_content,
-    'load', *varargs)
-  verify.verify_outputs("Unexpected output", output, err,
-                        expected_stdout, expected_stderr)
-  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
 
 def load_repo(sbox, dumpfile_path = None, dump_str = None):
   "Loads the dumpfile into sbox"
