@@ -349,21 +349,26 @@ copy_versioned_files(const char *from,
 
   if (from_kind == svn_node_dir)
     {
+      apr_fileperms_t perm = APR_OS_DEFAULT;
+
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
          care. */
 
-      /* Skip retrieving the umask on windows. Apr does not implement setting
+      /* Keep the source directory's permissions if applicable.
+         Skip retrieving the umask on windows. Apr does not implement setting
          filesystem privileges on Windows.
          Retrieving the file permissions with APR_FINFO_PROT | APR_FINFO_OWNER
          is documented to be 'incredibly expensive' */
-#ifdef WIN32
-      err = svn_io_dir_make(to, APR_OS_DEFAULT, pool);
-#else
-      apr_finfo_t finfo;
-      SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
-      err = svn_io_dir_make(to, finfo.protection, pool);
+#ifndef WIN32
+      if (revision->kind == svn_opt_revision_working)
+        {
+          apr_finfo_t finfo;
+          SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
+          perm = finfo.protection;
+        }
 #endif
+      err = svn_io_dir_make(to, perm, pool);
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
