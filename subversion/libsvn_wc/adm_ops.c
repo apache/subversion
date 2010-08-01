@@ -1653,7 +1653,17 @@ revert_internal(svn_wc__db_t *db,
   else if (err)
     return svn_error_return(err);
   else
-    unversioned = FALSE;
+    switch (status)
+      {
+        case svn_wc__db_status_not_present:
+        case svn_wc__db_status_absent:
+        case svn_wc__db_status_excluded:
+          unversioned = TRUE;
+          break;
+        default:
+          unversioned = FALSE;
+          break;
+      }
 
   SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, db, local_abspath,
                                            pool, pool));
@@ -1666,9 +1676,13 @@ revert_internal(svn_wc__db_t *db,
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, pool));
   if (!unversioned && (db_kind == svn_wc__db_kind_dir))
     {
+#ifndef SVN_WC__SINGLE_DB
       if ((disk_kind != svn_node_dir)
           && (status != svn_wc__db_status_added)
           && (status != svn_wc__db_status_obstructed_add))
+#else
+      if (disk_kind == svn_node_file)
+#endif
         {
           /* When the directory itself is missing, we can't revert without
              hitting the network.  Someday a '--force' option will
@@ -1687,7 +1701,9 @@ revert_internal(svn_wc__db_t *db,
 
   /* Safeguard 2:  can we handle this entry's recorded kind? */
   if (!unversioned
-      && (db_kind != svn_wc__db_kind_file) && (db_kind != svn_wc__db_kind_dir))
+      && (db_kind != svn_wc__db_kind_file)
+      && (db_kind != svn_wc__db_kind_dir)
+      && (db_kind != svn_wc__db_kind_symlink))
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot revert '%s': unsupported entry node kind"),
