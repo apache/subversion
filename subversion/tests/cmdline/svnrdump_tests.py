@@ -158,10 +158,14 @@ def skeleton_load(sbox):
   "skeleton repository"
   run_load_test(sbox, "skeleton.dump")
 
-def copy_and_modify(sbox):
+def copy_and_modify_dump(sbox):
   "copy and modify"
   run_dump_test(sbox, "copy-and-modify.dump")
 
+def copy_and_modify_load(sbox):
+  "copy and modify"
+  run_load_test(sbox, "copy-and-modify.dump")
+  
 ########################################################################
 # Run the tests
 
@@ -172,7 +176,8 @@ test_list = [ None,
               revision_0_dump,
               revision_0_load,
               skeleton_load,
-              Wimp("Need to fix headers in RA layer", copy_and_modify),
+              copy_and_modify_load,
+              Wimp("Need to fix headers in RA layer", copy_and_modify_dump),
              ]
 
 if __name__ == '__main__':
