@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, setup_path, tempfile
+import unittest, setup_path
 from sys import version_info # For Python version check
 if version_info[0] >= 3:
   # Python >=3.0
@@ -28,9 +28,7 @@ else:
   from StringIO import StringIO
 from svn import core, repos, fs, delta
 from svn.core import SubversionException
-
-from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH
+import utils
 
 class ChangeReceiver(delta.Editor):
   """A delta editor which saves textdeltas for later use"""
@@ -55,13 +53,16 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
   def setUp(self):
     """Load a Subversion repository"""
-    self.repos = repos.open(REPOS_PATH)
+    self.temper = utils.Temper()
+    (self.repos, _, _) = self.temper.alloc_known_repo(
+      'trac/versioncontrol/tests/svnrepos.dump', suffix='-repository')
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)
 
   def tearDown(self):
     self.fs = None
     self.repos = None
+    self.temper.cleanup()
 
   def test_cease_invocation(self):
     """Test returning SVN_ERR_CEASE_INVOCATION from a callback"""
@@ -81,9 +82,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
        using a config hash"""
     fs_config = { "fs-type": "fsfs" }
     for i in range(5):
-      path = core.svn_dirent_internal_style(tempfile.mkdtemp("-test" + str(i)))
+      path = self.temper.alloc_empty_dir(suffix='-repository-create%d' % i)
       repos.create(path, "", "", None, fs_config)
-      repos.delete(path)
 
   def test_dump_fs2(self):
     """Test the dump_fs2 function"""
@@ -197,8 +197,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
                      "Youngest revision")
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
-                              suiteClass=SubversionRepositoryTestSetup)
+    return unittest.makeSuite(SubversionRepositoryTestCase, 'test')
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()
