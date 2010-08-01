@@ -213,10 +213,12 @@ set_revision_property(void *baton,
     svn_ra_change_rev_prop(rb->pb->session, rb->rev, name, value,
                            rb->pb->pool);
 
-  /* Remember any datestamp that passes through!  (See comment in
-     close_revision() below.) */
-  if (! strcmp(name, SVN_PROP_REVISION_DATE))
+  /* Remember any datestamp/ author that passes through (see comment
+     in close_revision). */
+  if (!strcmp(name, SVN_PROP_REVISION_DATE))
     rb->datestamp = svn_string_dup(value, rb->pb->pool);
+  if (!strcmp(name, SVN_PROP_REVISION_AUTHOR))
+    rb->author = svn_string_dup(value, rb->pb->pool);
 
   return SVN_NO_ERROR;
 }
@@ -226,6 +228,20 @@ set_node_property(void *baton,
                   const char *name,
                   const svn_string_t *value)
 {
+  struct node_baton *nb;
+  const struct svn_delta_editor_t *commit_editor;
+  apr_pool_t *pool;
+  nb = baton;
+  commit_editor = nb->rb->pb->commit_editor;
+  pool = nb->rb->pb->pool;
+
+  if (nb->kind == svn_node_file)
+    SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
+                                            value, pool));
+  else
+    SVN_ERR(commit_editor->change_dir_prop(nb->rb->dir_baton, name,
+                                           value, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -233,6 +249,20 @@ static svn_error_t *
 delete_node_property(void *baton,
                      const char *name)
 {
+  struct node_baton *nb;
+  const struct svn_delta_editor_t *commit_editor;
+  apr_pool_t *pool;
+  nb = baton;
+  commit_editor = nb->rb->pb->commit_editor;
+  pool = nb->rb->pb->pool;
+
+  if (nb->kind == svn_node_file)
+    SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
+                                            NULL, pool));
+  else
+    SVN_ERR(commit_editor->change_dir_prop(nb->rb->dir_baton, name,
+                                           NULL, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -300,12 +330,14 @@ close_revision(void *baton)
   else
     SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pb->pool));
 
-  /* svn_fs_commit_txn rewrites the datestamp property to the current
-     clock-time, and this is not desired. Rewrite it by hand after
-     closing the commit_editor. */
+  /* svn_fs_commit_txn rewrites the datestamp/ author property-
+     rewrite it by hand after closing the commit_editor. */
   SVN_ERR(svn_ra_change_rev_prop(rb->pb->session, rb->rev,
                                  SVN_PROP_REVISION_DATE,
                                  rb->datestamp, rb->pb->pool));
+  SVN_ERR(svn_ra_change_rev_prop(rb->pb->session, rb->rev,
+                                 SVN_PROP_REVISION_AUTHOR,
+                                 rb->author, rb->pb->pool));
 
   svn_pool_destroy(rb->pb->pool);
 
