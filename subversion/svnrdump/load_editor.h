@@ -75,6 +75,71 @@ struct revision_baton
 };
 
 /**
+ * Imported from commit.c
+ * (see comment in new_node_record in load_editor.h)
+ */
+struct commit_edit_baton
+{
+  apr_pool_t *pool;
+
+  /** Supplied when the editor is created: **/
+
+  /* Revision properties to set for this commit. */
+  apr_hash_t *revprop_table;
+
+  /* Callback to run when the commit is done. */
+  svn_commit_callback2_t commit_callback;
+  void *commit_callback_baton;
+
+  /* Callback to check authorizations on paths. */
+  svn_repos_authz_callback_t authz_callback;
+  void *authz_baton;
+
+  /* The already-open svn repository to commit to. */
+  svn_repos_t *repos;
+
+  /* URL to the root of the open repository. */
+  const char *repos_url;
+
+  /* The name of the repository (here for convenience). */
+  const char *repos_name;
+
+  /* The filesystem associated with the REPOS above (here for
+     convenience). */
+  svn_fs_t *fs;
+
+  /* Location in fs where the edit will begin. */
+  const char *base_path;
+
+  /* Does this set of interfaces 'own' the commit transaction? */
+  svn_boolean_t txn_owner;
+
+  /* svn transaction associated with this edit (created in
+     open_root, or supplied by the public API caller). */
+  svn_fs_txn_t *txn;
+
+  /** Filled in during open_root: **/
+
+  /* The name of the transaction. */
+  const char *txn_name;
+
+  /* The object representing the root directory of the svn txn. */
+  svn_fs_root_t *txn_root;
+
+  /** Filled in when the edit is closed: **/
+
+  /* The new revision created by this commit. */
+  svn_revnum_t *new_rev;
+
+  /* The date (according to the repository) of this commit. */
+  const char **committed_date;
+
+  /* The author (also according to the repository) of this commit. */
+  const char **committed_author;
+};
+
+
+/**
  * Build up a load editor @a parser for parsing a dumpfile stream from @a stream
  * set to fire the appropriate callbacks in load editor along with a
  * @a parser_baton, using @a pool for all memory allocations. The

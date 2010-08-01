@@ -22,6 +22,7 @@
  * ====================================================================
  */
 
+#include "svn_dirent_uri.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_delta.h"
@@ -106,6 +107,7 @@ new_node_record(void **node_baton,
   void *child_baton;
   const struct svn_delta_editor_t *commit_editor;
   void *commit_edit_baton;
+  struct commit_edit_baton *eb;
   void *root_baton;
 
   rb = revision_baton;
@@ -165,7 +167,17 @@ new_node_record(void **node_baton,
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV) == 0)
         nb->copyfrom_rev = atoi(hval);
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH) == 0)
-        nb->copyfrom_path = apr_pstrdup(rb->pb->pool, hval);
+        {
+          /* Due to a historical detail in the commit editor, it
+             demands that the copyfrom_path includes the URI to the
+             repository; to implement this, the edit_baton structure
+             from commit.c had to be imported as a commit_edit_baton
+             structure in load_editor.h */
+          eb = commit_edit_baton;
+          nb->copyfrom_path = svn_uri_join(eb->repos_url,
+                                           apr_pstrdup(rb->pb->pool, hval),
+                                           rb->pb->pool);
+        }
     }
 
   switch (nb->action)
