@@ -126,9 +126,7 @@ new_node_record(void **node_baton,
       rb->pb->commit_editor = commit_editor;
       rb->pb->commit_edit_baton = commit_edit_baton;
 
-      SVN_ERR(commit_editor->set_target_revision(commit_edit_baton,
-                                                 rb->rev, rb->pb->pool));
-      SVN_ERR(commit_editor->open_root(commit_edit_baton, rb->rev,
+      SVN_ERR(commit_editor->open_root(commit_edit_baton, rb->rev - 1,
                                        rb->pb->pool, &root_baton));
       rb->dir_baton = root_baton;
 
