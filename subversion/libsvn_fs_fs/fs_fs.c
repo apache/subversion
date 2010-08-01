@@ -1547,8 +1547,6 @@ svn_fs_fs__hotcopy(const char *src_path,
               const char *dst_abspath;
               const char *config_relpath;
 
-              svn_error_clear(err);
-
               config_relpath = svn_dirent_join(src_path, PATH_CONFIG, pool);
               SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
               SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
