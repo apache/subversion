@@ -112,6 +112,9 @@ new_node_record(void **node_baton,
   nb = apr_pcalloc(rb->pb->pool, sizeof(*nb));
   nb->rb = rb;
 
+  nb->copyfrom_path = NULL;
+  nb->copyfrom_rev = SVN_INVALID_REVNUM;
+
   commit_editor = rb->pb->commit_editor;
   commit_edit_baton = rb->pb->commit_edit_baton;
 
