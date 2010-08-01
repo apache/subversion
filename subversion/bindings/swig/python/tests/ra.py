@@ -386,7 +386,8 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
       self.assert_(called[0])
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionRepositoryAccessTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

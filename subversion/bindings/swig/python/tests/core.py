@@ -106,7 +106,8 @@ class SubversionCoreTestCase(unittest.TestCase):
       t.cleanup()
 
 def suite():
-    return unittest.makeSuite(SubversionCoreTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionCoreTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()
