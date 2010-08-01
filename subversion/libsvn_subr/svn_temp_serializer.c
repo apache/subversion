@@ -1,5 +1,5 @@
 /*
- * svn_serializer.c: serialization helper functions
+ * svn_serializer.c: implement the tempoary structure serialization API
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -22,7 +22,7 @@
  */
 
 #include <assert.h>
-#include "private/svn_serializer.h"
+#include "private/svn_temp_serializer.h"
 #include "svn_string.h"
 
 /* This is a very efficient serialization and especially efficient
@@ -58,7 +58,7 @@ typedef struct source_stack_t
 /* Serialization context info. It basically consists of the buffer holding
  * the serialized result and the stack of source structure information.
  */
-struct svn_serializer__context_t
+struct svn_temp_serializer__context_t
 {
   /* allocations are made from this pool */
   apr_pool_t *pool;
@@ -77,7 +77,7 @@ struct svn_serializer__context_t
  * guarantees.
  */
 static void
-align_buffer_end(svn_serializer__context_t *context)
+align_buffer_end(svn_temp_serializer__context_t *context)
 {
   apr_size_t current_len = context->buffer->len;
   apr_size_t aligned_len = APR_ALIGN_DEFAULT(current_len);
@@ -95,8 +95,8 @@ align_buffer_end(svn_serializer__context_t *context)
  * re-allocations during the serialization process. All allocations will
  * be made from POOL.
  */
-svn_serializer__context_t *
-svn_serializer__init(const void *source_struct,
+svn_temp_serializer__context_t *
+svn_temp_serializer__init(const void *source_struct,
                      apr_size_t struct_size,
                      apr_size_t suggested_buffer_size,
                      apr_pool_t *pool)
@@ -108,7 +108,7 @@ svn_serializer__init(const void *source_struct,
 
   /* create the serialization context and initialize it, including the
    * structure stack */
-  svn_serializer__context_t *context = apr_palloc(pool, sizeof(*context));
+  svn_temp_serializer__context_t *context = apr_palloc(pool, sizeof(*context));
   context->pool = pool;
   context->buffer = svn_stringbuf_create_ensure(init_size, pool);
   context->source = apr_palloc(pool, sizeof(*context->source));
@@ -128,7 +128,7 @@ svn_serializer__init(const void *source_struct,
  * right after this function call.
  */
 static void
-store_current_end_pointer(svn_serializer__context_t *context,
+store_current_end_pointer(svn_temp_serializer__context_t *context,
                           PCPCVOID source_pointer)
 {
   /* relative position of the serialized pointer to the begin of the buffer */
@@ -155,9 +155,9 @@ store_current_end_pointer(svn_serializer__context_t *context,
  * result of sizeof() of the actual structure.
  */
 void
-svn_serializer__push(svn_serializer__context_t *context,
-                     PCPCVOID source_struct,
-                     apr_size_t struct_size)
+svn_temp_serializer__push(svn_temp_serializer__context_t *context,
+                          PCPCVOID source_struct,
+                          apr_size_t struct_size)
 {
   /* create a new entry for the structure stack */
   source_stack_t *new = apr_palloc(context->pool, sizeof(*new));
@@ -187,7 +187,7 @@ svn_serializer__push(svn_serializer__context_t *context,
 /* Remove the lastest structure from the stack.
  */
 void
-svn_serializer__pop(svn_serializer__context_t *context)
+svn_temp_serializer__pop(svn_temp_serializer__context_t *context)
 {
   /* we may pop the original struct but not further */
   assert(context->source);
@@ -202,7 +202,7 @@ svn_serializer__pop(svn_serializer__context_t *context)
  * structure can be established.
  */
 void
-svn_serializer__add_string(svn_serializer__context_t *context, PCPCSTR s)
+svn_temp_serializer__add_string(svn_temp_serializer__context_t *context, PCPCSTR s)
 {
   /* Store the offset at which the string data that will the appended.
    * Write 0 for NULL pointers. Strings don't need special alignment. */
@@ -217,7 +217,7 @@ svn_serializer__add_string(svn_serializer__context_t *context, PCPCSTR s)
  * the given serialization CONTEXT.
  */
 svn_stringbuf_t *
-svn_serializer__get(svn_serializer__context_t *context)
+svn_temp_serializer__get(svn_temp_serializer__context_t *context)
 {
   return context->buffer;
 }
@@ -226,7 +226,7 @@ svn_serializer__get(svn_serializer__context_t *context)
  * proper pointer value.
  */
 void
-svn_deserializer__resolve(void *buffer, PPVOID ptr)
+svn_temp_deserializer__resolve(void *buffer, PPVOID ptr)
 {
   if ((apr_size_t)*ptr)
     {
