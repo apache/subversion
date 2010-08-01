@@ -375,7 +375,8 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(readme_text, 'This is a test.\n')
 
 def suite():
-    return unittest.makeSuite(SubversionClientTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionClientTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

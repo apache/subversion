@@ -157,7 +157,8 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
 
 
 def suite():
-    return unittest.makeSuite(SubversionMergeinfoTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionMergeinfoTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

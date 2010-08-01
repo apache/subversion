@@ -443,7 +443,8 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.temper.cleanup()
 
 def suite():
-    return unittest.makeSuite(SubversionWorkingCopyTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionWorkingCopyTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

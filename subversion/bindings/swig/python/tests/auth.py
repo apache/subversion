@@ -110,7 +110,8 @@ class SubversionAuthTestCase(unittest.TestCase):
     self.assert_(creds is not None)
 
 def suite():
-    return unittest.makeSuite(SubversionAuthTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionAuthTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

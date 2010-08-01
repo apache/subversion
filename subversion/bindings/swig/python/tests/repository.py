@@ -197,7 +197,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
                      "Youngest revision")
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionRepositoryTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()
