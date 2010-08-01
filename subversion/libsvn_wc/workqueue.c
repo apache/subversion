@@ -293,6 +293,16 @@ run_revert(svn_wc__db_t *db,
     {
       SVN__NOT_IMPLEMENTED();
     }
+#ifdef SVN_WC__SINGLE_DB
+  else if (kind == svn_wc__db_kind_dir)
+    {
+      svn_node_kind_t disk_kind;
+      SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+
+      if (disk_kind == svn_node_none)
+        SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
+    }
+#endif
 
   if (kind == svn_wc__db_kind_dir)
     parent_abspath = local_abspath;
