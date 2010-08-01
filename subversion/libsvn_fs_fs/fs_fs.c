@@ -1288,16 +1288,16 @@ upgrade_body(void *baton, apr_pool_t *pool)
     case svn_node_none:
       SVN_ERR(write_config(fs, pool));
       break;
-    case svn_node_dir:
+    case svn_node_file:
+      break;
+    default:
       return svn_error_return(svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                                _("'%s' is a directory. "
-                                                  "Please move it out of "
+                                                _("'%s' is not a regular file."
+                                                  " Please move it out of "
                                                   "the way and try again"),
                                                 svn_dirent_join(fs->path,
                                                                 PATH_CONFIG,
                                                                 pool)));
-    default:
-      break;
     }
 
   /* If we're already up-to-date, there's nothing else to be done here. */
