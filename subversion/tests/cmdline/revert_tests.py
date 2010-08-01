@@ -767,7 +767,7 @@ def status_of_missing_dir_after_revert(sbox):
                                        "-R", A_D_G_path)
 
     expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+    svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 # Test for issue #2804 with replaced directory
