@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl.callback;
 
 import org.apache.subversion.javahl.Info2;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * This interface is used to retrieve info each result in a

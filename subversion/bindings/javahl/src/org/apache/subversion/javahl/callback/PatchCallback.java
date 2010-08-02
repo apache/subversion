@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl.callback;
 
+import org.apache.subversion.javahl.ISVNClient;
+
 /**
  * This interface is invoked before each patch in a
  * {@link ISVNClient#patch} call.
