@@ -172,6 +172,16 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 %}
 #endif
 
+#ifdef SWIGPYTHON
+%ignore svn_txdelta_window_t::ops;
+%inline %{
+static PyObject *
+svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
+{
+  return svn_swig_py_txdelta_window_t_ops_get(window);
+}
+%}
+#endif
 
 %include svn_delta_h.swg
 

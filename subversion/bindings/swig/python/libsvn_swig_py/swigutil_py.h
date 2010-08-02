@@ -508,6 +508,12 @@ svn_error_t *svn_swig_py_ra_lock_callback(
 SVN_SWIG_SWIGUTIL_EXPORT
 extern const svn_ra_reporter2_t swig_py_ra_reporter2;
 
+/* Get a list of ops from a window. Used to replace the naive
+   svn_txdelta_window_t.ops accessor. */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *
+svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
