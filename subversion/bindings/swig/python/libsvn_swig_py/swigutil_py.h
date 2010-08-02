@@ -509,10 +509,12 @@ SVN_SWIG_SWIGUTIL_EXPORT
 extern const svn_ra_reporter2_t swig_py_ra_reporter2;
 
 /* Get a list of ops from a window. Used to replace the naive
-   svn_txdelta_window_t.ops accessor. */
+   svn_txdelta_window_t.ops accessor. op_type_info is supposed to be
+   the SWIG descriptor of "svn_txdelta_op_t *". */
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *
-svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window);
+svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window,
+                                     swig_type_info * op_type_info);
 
 #ifdef __cplusplus
 }
