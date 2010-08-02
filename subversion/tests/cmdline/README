@@ -83,6 +83,8 @@ paths adjusted appropriately:
      Require valid-user
    </Location>
 
+   RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-(.*)$ /svn-test-work/repositories/$1
+
 Httpd should be running on port 80.  You may also need to ensure that
 it's running as you, so it has read/write access to the repositories
 that are probably living in your Subversion working copy.  To do this,
