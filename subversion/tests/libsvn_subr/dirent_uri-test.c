@@ -2820,8 +2820,8 @@ test_dirent_is_under_root(apr_pool_t *pool)
 #else
     { "C:/file",  "a\\d",           TRUE, "C:/file/a\\d"},
     { "C:/file",  "aa\\..\\d",      TRUE, "C:/file/aa\\..\\d"},
-    { "C:/file",  "aa\\..\\..\\d",  TRUE, "C:/file/aa\\..\\..\d"},
-#endif
+    { "C:/file",  "aa\\..\\..\\d",  TRUE, "C:/file/aa\\..\\..\\d"},
+#endif /* SVN_USE_DOS_PATHS */
   };
   int i;
 
