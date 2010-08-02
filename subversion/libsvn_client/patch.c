@@ -1567,8 +1567,12 @@ send_patch_notification(const patch_target_t *target,
 
               hi = APR_ARRAY_IDX(prop_target->content_info->hunks, i,
                                  hunk_info_t *);
-              SVN_ERR(send_hunk_notification(hi, target, prop_target->name, 
-                                             ctx, iterpool));
+
+              /* Don't notify on the hunk level for added or deleted props. */
+              if (prop_target->operation != svn_diff_op_added &&
+                  prop_target->operation != svn_diff_op_deleted)
+                SVN_ERR(send_hunk_notification(hi, target, prop_target->name, 
+                                               ctx, iterpool));
             }
         }
       svn_pool_destroy(iterpool);
