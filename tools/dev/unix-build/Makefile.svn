@@ -722,6 +722,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
 			LD_LIBRARY_PATH="$(PREFIX)/bdb/lib:$(PREFIX)/iconv/lib:$$LD_LIBRARY_PATH" \
+			CFLAGS="-Wno-system-headers" \
 			$(SVN_SRCDIR)/configure \
 			--enable-maintainer-mode \
 			--with-ssl \
