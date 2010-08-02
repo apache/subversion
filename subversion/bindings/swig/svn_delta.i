@@ -178,7 +178,8 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 static PyObject *
 svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 {
-  return svn_swig_py_txdelta_window_t_ops_get(window);
+  return svn_swig_py_txdelta_window_t_ops_get(window,
+    SWIG_TypeQuery("svn_txdelta_op_t *"));
 }
 %}
 #endif
