@@ -4070,3 +4070,17 @@ svn_swig_py_setup_wc_diff_callbacks2(void **baton,
   callbacks->dir_props_changed  = wc_diff_callbacks2_dir_props_changed;
   return callbacks;
 }
+
+PyObject *
+svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
+{
+  PyObject *result = PyList_New(window->num_ops);
+  swig_type_info *op_type_info = SWIG_TypeQuery("svn_txdelta_op_t *");
+  int i;
+
+  for (i = 0; i < window->num_ops; ++i)
+      PyList_SET_ITEM(result, i,
+	                  SWIG_NewPointerObj(window->ops + i, op_type_info, 0));
+
+  return result;
+}
