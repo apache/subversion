@@ -33,6 +33,7 @@
 
 #include "svn_pools.h"
 #include "svn_fs.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_props.h"
@@ -1470,10 +1471,15 @@ svn_fs_fs__hotcopy(const char *src_path,
               const char *src_abspath;
               const char *dst_abspath;
               const char *config_relpath;
+              svn_error_t *err2;
 
               config_relpath = svn_dirent_join(src_path, PATH_CONFIG, pool);
-              SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
-              SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
+              err2 = svn_dirent_get_absolute(&src_abspath, src_path, pool);
+              if (err2)
+                return svn_error_compose_create(err, err2);
+              err2 = svn_dirent_get_absolute(&dst_abspath, dst_path, pool);
+              if (err2)
+                return svn_error_compose_create(err, err2);
               
               /* ### hack: strip off the 'db/' directory from paths so
                * ### they make sense to the user */
