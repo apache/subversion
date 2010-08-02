@@ -27,6 +27,7 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_config.h"
+#include "svn_pools.h"
 
 #include "svn_private_config.h"
 
@@ -189,6 +190,80 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
+/* Access to the cache settings as a process-wide singleton. */
+static svn_fs_fs__cache_config_t *
+internal_get_cache_config(void)
+{
+  static svn_fs_fs__cache_config_t settings =
+    {
+      /* default configuration:
+       */
+      0x8000000,   /* 128 MB for caches */
+      16,          /* up to 16 files kept open */
+      FALSE,       /* don't cache fulltexts */
+      FALSE,       /* don't cache text deltas */
+      FALSE        /* assume multi-threaded operation */
+    };
+
+  return &settings;
+}
+
+/* Get the current FSFS cache configuration. */
+const svn_fs_fs__cache_config_t *
+svn_fs_fs__get_cache_config(void)
+{
+  return internal_get_cache_config();
+}
+
+/* Access the process-global (singleton) membuffer cache. The first call
+ * will automatically allocate the cache using the current cache config.
+ * NULL will be returned if the desired cache size is 0.
+ */
+static svn_membuffer_t *
+get_global_membuffer_cache(void)
+{
+  static svn_membuffer_t *cache = NULL;
+
+  apr_uint64_t cache_size = svn_fs_fs__get_cache_config()->cache_size;
+  if (!cache && cache_size)
+    {
+      /* auto-allocate cache*/
+      apr_allocator_t *allocator = NULL;
+      apr_pool_t *pool = NULL;
+
+      if (apr_allocator_create(&allocator))
+        return NULL;
+
+      /* ensure that a we free partially allocated data if we run OOM
+       * before the cache is complete.
+       */
+      apr_allocator_max_free_set(allocator, 1);
+      pool = svn_pool_create_ex(NULL, allocator);
+
+      svn_cache__membuffer_cache_create
+          (&cache,
+           cache_size,
+           cache_size / 16,
+           ! svn_fs_fs__get_cache_config()->single_threaded,
+           pool);
+    }
+
+  return cache;
+}
+
+/* Set the current FSFS cache configuration. Apply it immediately to ensure
+ * thread-safety: since this function should be called from the processes'
+ * initialization code, no race with background / worker threads should occur.
+ */
+void
+svn_fs_fs__set_cache_config(svn_fs_fs__cache_config_t *settings)
+{
+  *internal_get_cache_config() = *settings;
+
+  /* Allocate global membuffer cache as a side-effect.
+   * Only the first call will actually take affect. */
+  get_global_membuffer_cache();
+}
 
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs,
@@ -300,12 +375,27 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                          apr_pstrcat(pool, prefix, "TEXT",
                                                      NULL),
                                          fs->pool));
-      if (! no_handler)
-        SVN_ERR(svn_cache__set_error_handler(ffd->fulltext_cache,
-                                             warn_on_cache_errors, fs, pool));
+    }
+  else if (get_global_membuffer_cache() && 
+           svn_fs_fs__get_cache_config()->cache_fulltexts)
+    {
+      SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->fulltext_cache),
+                                                get_global_membuffer_cache(),
+                                                /* Values are svn_string_t */
+                                                NULL, NULL,
+                                                APR_HASH_KEY_STRING,
+                                                apr_pstrcat(pool, prefix, "TEXT",
+                                                            NULL),
+                                                fs->pool));
     }
   else
-    ffd->fulltext_cache = NULL;
+    {
+      ffd->fulltext_cache = NULL;
+    }
+
+  if (ffd->fulltext_cache && ! no_handler)
+    SVN_ERR(svn_cache__set_error_handler(ffd->fulltext_cache,
+            warn_on_cache_errors, fs, pool));
 
   return SVN_NO_ERROR;
 }
