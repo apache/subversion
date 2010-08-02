@@ -766,23 +766,22 @@ svn_uri_condense_targets(const char **pcommon,
                          apr_pool_t *scratch_pool);
 
 /** Check that when @a path is joined to @a base_path, the resulting path
- * is still under BASE_PATH in the local filesystem. If not, return @c FALSE.
- * If @c TRUE is returned, @a *full_path will be set to the absolute path
- * of @a path, allocated in @a pool.
+ * is still under BASE_PATH in the local filesystem. If not, set @a under_root
+ * to @c FALSE. If @a under_root is @c TRUE is returned, and @a result_path is
+ * not @c NULL, then @a *result_path will be set to the absolute path of @a
+ * path, allocated in @a result_pool.
  *
  * Note: Use of this function is strongly encouraged. Do not roll your own.
  * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
  *
- * ### @todo If path is "", then full_path will have a trailing '/' and thus
- * not be canonicalized.
- *
  * @since New in 1.7.
  */
-svn_boolean_t
-svn_dirent_is_under_root(char **full_path,
+svn_error_t *
+svn_dirent_is_under_root(svn_boolean_t *under_root,
+                         const char **result_path,
                          const char *base_path,
                          const char *path,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 /** Set @a *dirent to the path corresponding to the file:// URL @a url, using
  * the platform-specific file:// rules.

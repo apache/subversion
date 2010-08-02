@@ -340,6 +340,7 @@ resolve_target_path(patch_target_t *target,
   char *full_path;
   svn_wc_status3_t *status;
   svn_error_t *err;
+  svn_boolean_t under_root;
 
   target->canon_path_from_patchfile = svn_dirent_internal_style(
                                         path_from_patchfile, result_pool);
@@ -384,8 +385,11 @@ resolve_target_path(patch_target_t *target,
 
   /* Make sure the path is secure to use. We want the target to be inside
    * of the working copy and not be fooled by symlinks it might contain. */
-  if (! svn_dirent_is_under_root(&full_path, local_abspath,
-                                 target->local_relpath, result_pool))
+  SVN_ERR(svn_dirent_is_under_root(&under_root,
+                                   &full_path, local_abspath,
+                                   target->local_relpath, result_pool));
+
+  if (! under_root)
     {
       /* The target path is outside of the working copy. Skip it. */
       target->skipped = TRUE;
@@ -393,13 +397,8 @@ resolve_target_path(patch_target_t *target,
       return SVN_NO_ERROR;
     }
 
-  target->local_abspath = full_path;
-
-  /* ### Joining a path with "" in svn_dirent_is_under_root() creates a
-   * ### non-canonicalized path. Until that behaviour is fixed, we do an
-   * ### extra canonicalization step. */
-  target->local_abspath = svn_dirent_canonicalize( target->local_abspath,
-                                                   result_pool);
+  SVN_ERR(svn_dirent_get_absolute(&target->local_abspath, full_path,
+                                  result_pool));
 
   /* Skip things we should not be messing with. */
   err = svn_wc_status3(&status, wc_ctx, target->local_abspath,
