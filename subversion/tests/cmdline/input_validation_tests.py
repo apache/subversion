@@ -112,6 +112,16 @@ def invalid_delete_targets(sbox):
     run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
                              "copy targets", 'delete', target1, target2)
 
+def invalid_diff_targets(sbox):
+  "invalid targets for 'diff'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                             "copy targets", 'diff', target1, target2)
+  run_and_verify_svn_in_wc(sbox, "svn: Summarizing diff can only compare "
+                           "repository to repository",
+                           'diff', '--summarize', "iota", "A")
+
 ########################################################################
 # Run the tests
 
@@ -124,6 +134,7 @@ test_list = [ None,
               invalid_copy_sources,
               invalid_copy_target,
               invalid_delete_targets,
+              invalid_diff_targets,
              ]
 
 if __name__ == '__main__':
