@@ -337,7 +337,7 @@ resolve_target_path(patch_target_t *target,
                     apr_pool_t *scratch_pool)
 {
   const char *stripped_path;
-  char *full_path;
+  const char *full_path;
   svn_wc_status3_t *status;
   svn_error_t *err;
   svn_boolean_t under_root;
