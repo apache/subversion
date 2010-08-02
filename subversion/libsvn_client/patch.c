@@ -145,7 +145,7 @@ typedef struct patch_target_t {
   /* The absolute path of the target on the filesystem.
    * Any symlinks the path from the patch file may contain are resolved.
    * Is not always known, so it may be NULL. */
-  char *local_abspath;
+  const char *local_abspath;
 
   /* The target file, read-only, seekable. This is NULL in case the target
    * file did not exist prior to patch application. */
@@ -337,12 +337,17 @@ resolve_target_path(patch_target_t *target,
                     apr_pool_t *scratch_pool)
 {
   const char *stripped_path;
+  char *full_path;
   svn_wc_status3_t *status;
   svn_error_t *err;
 
   target->canon_path_from_patchfile = svn_dirent_internal_style(
                                         path_from_patchfile, result_pool);
-  if (target->canon_path_from_patchfile[0] == '\0')
+
+  /* We allow properties to be set on the wc root dir.
+   * ### Do we need to check for empty paths here, shouldn't the parser
+   * ### guarentee that the paths returned are non-empty? */
+  if (! prop_changes_only && target->canon_path_from_patchfile[0] == '\0')
     {
       /* An empty patch target path? What gives? Skip this. */
       target->skipped = TRUE;
@@ -362,7 +367,6 @@ resolve_target_path(patch_target_t *target,
       target->local_relpath = svn_dirent_is_child(local_abspath, stripped_path,
                                                   result_pool);
 
-      /* ### We need to allow setting props on the wc root dir */
       if (! target->local_relpath)
         {
           /* The target path is either outside of the working copy
@@ -380,7 +384,7 @@ resolve_target_path(patch_target_t *target,
 
   /* Make sure the path is secure to use. We want the target to be inside
    * of the working copy and not be fooled by symlinks it might contain. */
-  if (! svn_dirent_is_under_root(&target->local_abspath, local_abspath,
+  if (! svn_dirent_is_under_root(&full_path, local_abspath,
                                  target->local_relpath, result_pool))
     {
       /* The target path is outside of the working copy. Skip it. */
@@ -388,6 +392,14 @@ resolve_target_path(patch_target_t *target,
       target->local_abspath = NULL;
       return SVN_NO_ERROR;
     }
+
+  target->local_abspath = full_path;
+
+  /* ### Joining a path with "" in svn_dirent_is_under_root() creates a
+   * ### non-canonicalized path. Until that behaviour is fixed, we do an
+   * ### extra canonicalization step. */
+  target->local_abspath = svn_dirent_canonicalize( target->local_abspath,
+                                                   result_pool);
 
   /* Skip things we should not be messing with. */
   err = svn_wc_status3(&status, wc_ctx, target->local_abspath,
