@@ -24,9 +24,10 @@
 package org.apache.subversion.javahl;
 
 import java.util.EventObject;
+import org.apache.subversion.javahl.callback.ReposNotifyCallback;
 
 /**
- * The event passed to the {@link Notify2#onNotify(NotifyInformation)}
+ * The event passed to the {@link ReposNotifyCallback#onNotify}
  * API to notify {@link ISVNClient} of relevant events.
  *
  * @since 1.2

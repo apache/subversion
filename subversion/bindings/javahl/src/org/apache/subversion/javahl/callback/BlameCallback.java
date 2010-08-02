@@ -26,6 +26,7 @@ package org.apache.subversion.javahl.callback;
 import org.apache.subversion.javahl.ClientException;
 
 import java.util.Map;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * This interface is used to receive every single line for a file on a
