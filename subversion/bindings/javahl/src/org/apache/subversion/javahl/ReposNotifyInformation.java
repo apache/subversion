@@ -71,7 +71,7 @@ public class ReposNotifyInformation extends EventObject
     /**
      * This constructor is to be used by the native code.
      *
-     * @param action The {@link NotifyAction} which triggered this event.
+     * @param action The {@link Action} which triggered this event.
      * @param revision potentially the revision.
      */
     public ReposNotifyInformation(Action action, long revision, String warning,
@@ -91,7 +91,7 @@ public class ReposNotifyInformation extends EventObject
     }
 
     /**
-     * @return The {@link NotifyAction} which triggered this event.
+     * @return The {@link Action} which triggered this event.
      */
     public Action getAction()
     {

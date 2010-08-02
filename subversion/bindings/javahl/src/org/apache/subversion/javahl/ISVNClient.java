@@ -620,11 +620,11 @@ public interface ISVNClient
      *
      * @param target Path or URL.
      * @param pegRevision Revision at which to interpret
-     * <code>target</code>.  If {@link RevisionKind#unspecified} or
+     * <code>target</code>.  If {@link Revision.Kind#unspecified} or
      * <code>null</code>, behave identically to {@link
-     * #diffSummarize(String, Revision, String, Revision, int,
-     * boolean, DiffSummaryCallback)}, using <code>path</code> for
-     * both of that method's targets.
+     * #diffSummarize(String, Revision, String, Revision, Depth,
+     * Collection, boolean, DiffSummaryCallback)}, using
+     * <code>path</code> for both of that method's targets.
      * @param startRevision Beginning of range for comparsion of
      * <code>target</code>.
      * @param endRevision End of range for comparsion of
