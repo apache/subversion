@@ -30,9 +30,7 @@ import svn.diff
 from svn import core, repos, wc, client
 from svn import delta, ra
 from svn.core import SubversionException, SVN_INVALID_REVNUM
-
-from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH, REPOS_URL
+import utils
 
 class SubversionWorkingCopyTestCase(unittest.TestCase):
   """Test cases for the Subversion working copy layer"""
@@ -40,23 +38,21 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def setUp(self):
     """Load a Subversion repository"""
 
-    # Isolate each test from the others with a fresh repository.
-    # Eventually, we should move this into a shared TestCase base
-    # class that all test cases in this directory can use.
-    SubversionRepositoryTestSetup().setUp()
+    self.temper = utils.Temper()
 
-    # Open repository directly for cross-checking
-    self.repos = repos.open(REPOS_PATH)
+    # Isolate each test from the others with a fresh repository.
+    (self.repos, _, self.repos_uri) = self.temper.alloc_known_repo(
+      'trac/versioncontrol/tests/svnrepos.dump', suffix='-wc-repo')
     self.fs = repos.fs(self.repos)
 
-    self.path = core.svn_dirent_internal_style(tempfile.mktemp())
+    self.path = self.temper.alloc_empty_dir(suffix='-wc-wc')
 
     client_ctx = client.create_context()
 
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    client.checkout2(REPOS_URL, self.path, rev, rev, True, True,
+    client.checkout2(self.repos_uri, self.path, rev, rev, True, True,
             client_ctx)
 
     self.wc = wc.adm_open3(None, self.path, True, -1, None)
@@ -159,7 +155,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assert_(wc.check_wc(self.path) > 0)
 
   def test_get_ancestry(self):
-      self.assertEqual([REPOS_URL, 12],
+      self.assertEqual([self.repos_uri, 12],
                        wc.get_ancestry(self.path, self.wc))
 
   def test_status(self):
@@ -237,7 +233,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     # Setup ra_ctx.
     ra.initialize()
     callbacks = ra.Callbacks()
-    ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
+    ra_ctx = ra.open2(self.repos_uri, callbacks, None, None)
 
     # Get commit editor.
     commit_info = [None]
@@ -294,7 +290,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def test_diff_editor4(self):
     pool = None
     depth = core.svn_depth_infinity
-    url = REPOS_URL
+    url = self.repos_uri
 
     # cause file_changed: Replace README.txt's contents.
     readme_path = '%s/trunk/README.txt' % self.path
@@ -441,16 +437,14 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.assertEqual(got_diffs, expected_diffs)
 
   def tearDown(self):
-      try:
-        wc.adm_close(self.wc)
-        core.svn_io_remove_dir(self.path)
-      except:
-        print('Error in tearDown: %s' % sys.exc_info()[0])
+      wc.adm_close(self.wc)
       self.fs = None
       self.repos = None
+      self.temper.cleanup()
 
 def suite():
-    return unittest.makeSuite(SubversionWorkingCopyTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionWorkingCopyTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

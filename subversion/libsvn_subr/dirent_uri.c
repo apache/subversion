@@ -2254,21 +2254,42 @@ svn_uri_condense_targets(const char **pcommon,
   return SVN_NO_ERROR;
 }
 
-svn_boolean_t
-svn_dirent_is_under_root(char **full_path,
+svn_error_t *
+svn_dirent_is_under_root(svn_boolean_t *under_root,
+                         const char **abspath,
                          const char *base_path,
                          const char *path,
                          apr_pool_t *pool)
 
 {
   apr_status_t status;
+  char *full_path;
 
-  status = apr_filepath_merge(
-     full_path, base_path, path,
-     APR_FILEPATH_NOTABOVEROOT | APR_FILEPATH_SECUREROOTTEST,
-     pool);
+  *under_root = FALSE;
+  if (abspath)
+    *abspath = NULL;
 
-  return status == APR_SUCCESS ? TRUE : FALSE;
+  status = apr_filepath_merge(&full_path,
+                              base_path,
+                              path,
+                              APR_FILEPATH_NOTABOVEROOT
+                              | APR_FILEPATH_SECUREROOTTEST,
+                              pool);
+
+  if (status == APR_SUCCESS)
+    {
+      if (abspath)
+        *abspath = svn_dirent_canonicalize(full_path, pool);
+      *under_root = TRUE;
+      return SVN_NO_ERROR;
+    }
+  else if (status == APR_EABOVEROOT)
+    {
+      *under_root = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_wrap_apr(status, NULL);
 }
 
 svn_error_t *

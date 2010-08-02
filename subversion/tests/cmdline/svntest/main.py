@@ -593,11 +593,15 @@ def run_svnlook(*varargs):
   list of lines (including line terminators)."""
   return run_command(svnlook_binary, 1, 0, *varargs)
 
-def run_svnrdump(*varargs):
+def run_svnrdump(stdin_input, *varargs):
   """Run svnrdump with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnrdump_binary, 1, 0,
-                     *(_with_auth(_with_config_dir(varargs))))
+  if stdin_input:
+    return run_command_stdin(svnrdump_binary, 0, 1, 0, stdin_input,
+                             *(_with_auth(_with_config_dir(varargs))))
+  else:
+    return run_command(svnrdump_binary, 1, 0,
+                       *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as

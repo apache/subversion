@@ -519,8 +519,13 @@ output_unified_diff_modified(void *baton,
   targ_orig = (targ_orig < 0) ? 0 : targ_orig;
   targ_mod = modified_start;
 
+  /* If the changed ranges are far enough apart (no overlapping or
+   * connecting context), flush the current hunk. */
   if (btn->next_token + SVN_DIFF__UNIFIED_CONTEXT_SIZE < targ_orig)
     SVN_ERR(output_unified_flush_hunk(btn, btn->hunk_delimiter));
+  /* Adjust offset if it's not the first hunk. */
+  else if (btn->hunk_length[0] != 0)
+    targ_orig = btn->next_token;
 
   if (btn->hunk_length[0] == 0
       && btn->hunk_length[1] == 0)

@@ -1279,9 +1279,12 @@ check_path_under_root(const char *base_path,
                       const char *add_path,
                       apr_pool_t *pool)
 {
-  char *full_path;
+  const char *full_path;
+  svn_boolean_t under_root;
 
-  if (! svn_dirent_is_under_root(&full_path, base_path, add_path, pool))
+  SVN_ERR(svn_dirent_is_under_root(&under_root, &full_path, base_path, add_path, pool));
+
+  if (! under_root)
     {
       return svn_error_createf(
           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -3167,6 +3170,12 @@ close_directory(void *dir_baton,
         changed_date = new_changed_date;
       if (new_changed_author != NULL)
         changed_author = new_changed_author;
+
+#ifdef SINGLE_DB
+      /* If no depth is set yet, set to infinity. */
+      if (depth == svn_depth_unknown)
+        depth = svn_depth_infinity;
+#endif
 
       /* Do we have new properties to install? Or shall we simply retain
          the prior set of properties? If we're installing new properties,
