@@ -90,6 +90,22 @@ def invalid_wcpath_commit(sbox):
     run_and_verify_svn_in_wc(sbox, "svn: '.*' is a URL, but URLs cannot be " +
                              "commit targets", 'commit', target)
 
+def invalid_copy_sources(sbox):
+  "invalid sources for 'copy'"
+  sbox.build(read_only=True)
+  for (src1, src2) in [("iota", "^/"), ("^/", "iota"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working " +
+                             "copy sources", 'copy', src1, src2, "A")
+
+def invalid_copy_target(sbox):
+  "invalid target for 'copy'"
+  sbox.build(read_only=True)
+  mu_path = os.path.join('A', 'mu')
+  C_path = os.path.join('A', 'C')
+  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' is not a directory",
+                           'copy', mu_path, C_path, "iota")
+
+
 ########################################################################
 # Run the tests
 
@@ -99,6 +115,8 @@ test_list = [ None,
               invalid_wcpath_changelist,
               invalid_wcpath_cleanup,
               invalid_wcpath_commit,
+              invalid_copy_sources,
+              invalid_copy_target,
              ]
 
 if __name__ == '__main__':
