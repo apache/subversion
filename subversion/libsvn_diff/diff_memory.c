@@ -521,6 +521,8 @@ output_unified_diff_modified(void *baton,
 
   if (btn->next_token + SVN_DIFF__UNIFIED_CONTEXT_SIZE < targ_orig)
     SVN_ERR(output_unified_flush_hunk(btn, btn->hunk_delimiter));
+  else
+    targ_orig = btn->next_token;
 
   if (btn->hunk_length[0] == 0
       && btn->hunk_length[1] == 0)
