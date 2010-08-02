@@ -66,6 +66,7 @@ validator_func(void *baton,
 {
   struct validator_baton_t *b = baton;
   struct url_uuid_t *url_uuid = NULL;
+  const char *disable_checks;
 
   apr_array_header_t *uuids = b->url_uuids;
   int i;
@@ -79,6 +80,16 @@ validator_func(void *baton,
           url_uuid = uu;
           break;
         }
+    }
+
+  disable_checks = getenv("SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION");
+  if (disable_checks && (strcmp(disable_checks, "yes") == 0))
+    {
+      /* Lie about URL_UUID's components, claiming they match the
+         expectations of the validation code below.  */
+      url_uuid = apr_pcalloc(pool, sizeof(*url_uuid));
+      url_uuid->root = apr_pstrdup(pool, root_url);
+      url_uuid->uuid = apr_pstrdup(pool, uuid);
     }
 
   /* We use an RA session in a subpool to get the UUID of the
