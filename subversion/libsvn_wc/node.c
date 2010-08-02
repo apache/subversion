@@ -626,7 +626,7 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
                                                         is_copy_target,
                                                         wc_ctx->db,
                                                         local_abspath,
-                                                        scratch_pool,
+                                                        result_pool,
                                                         scratch_pool));
 }
 

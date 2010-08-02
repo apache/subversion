@@ -1288,16 +1288,16 @@ upgrade_body(void *baton, apr_pool_t *pool)
     case svn_node_none:
       SVN_ERR(write_config(fs, pool));
       break;
-    case svn_node_dir:
+    case svn_node_file:
+      break;
+    default:
       return svn_error_return(svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                                _("'%s' is a directory. "
-                                                  "Please move it out of "
+                                                _("'%s' is not a regular file."
+                                                  " Please move it out of "
                                                   "the way and try again"),
                                                 svn_dirent_join(fs->path,
                                                                 PATH_CONFIG,
                                                                 pool)));
-    default:
-      break;
     }
 
   /* If we're already up-to-date, there's nothing else to be done here. */
@@ -1546,10 +1546,15 @@ svn_fs_fs__hotcopy(const char *src_path,
               const char *src_abspath;
               const char *dst_abspath;
               const char *config_relpath;
+              svn_error_t *err2;
 
               config_relpath = svn_dirent_join(src_path, PATH_CONFIG, pool);
-              SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
-              SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
+              err2 = svn_dirent_get_absolute(&src_abspath, src_path, pool);
+              if (err2)
+                return svn_error_return(svn_error_compose_create(err, err2));
+              err2 = svn_dirent_get_absolute(&dst_abspath, dst_path, pool);
+              if (err2)
+                return svn_error_return(svn_error_compose_create(err, err2));
               
               /* ### hack: strip off the 'db/' directory from paths so
                * ### they make sense to the user */

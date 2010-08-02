@@ -3367,6 +3367,8 @@ def diff_git_format_url_url(sbox):
                                      '--old', repo_url + '@1', '--new',
                                      repo_url + '@2')
 
+# Regression test for an off-by-one error when printing intermediate context
+# lines.
 def diff_prop_missing_context(sbox):
   "diff for property has missing context"
   sbox.build()
@@ -3401,16 +3403,13 @@ def diff_prop_missing_context(sbox):
              ])
   svntest.main.run_svn(None,
                        "propset", "prop", prop_val, iota_path)
-  expected_output = [
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(revision 2)\n",
-    "+++ iota\t(working copy)\n",
+  expected_output = make_diff_header(iota_path, 'revision 2', 
+                                     'working copy') + [
     "\n",
-    "Property changes on: iota\n",
+    "Property changes on: %s\n" % iota_path.replace('\\', '/'),
     "___________________________________________________________________\n",
     "Modified: prop\n",
-    "## -1,8 +1,5 ##\n",
+    "## -1,7 +1,4 ##\n",
     "-line 1\n",
     "-line 2\n",
     " line 3\n",
@@ -3560,7 +3559,7 @@ test_list = [ None,
               diff_git_format_wc_wc,
               diff_git_format_url_wc,
               diff_git_format_url_url,
-              XFail(diff_prop_missing_context),
+              diff_prop_missing_context,
               diff_prop_multiple_hunks,
               ]
 

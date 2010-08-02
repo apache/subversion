@@ -276,20 +276,24 @@ def run_and_verify_load(repo_dir, dump_file_content):
                         None, expected_stderr)
 
 
-def run_and_verify_dump(repo_dir):
+def run_and_verify_dump(repo_dir, deltas=False):
   "Runs 'svnadmin dump' and reports any errors, returning the dump content."
-  exit_code, output, errput = main.run_svnadmin('dump', repo_dir)
+  if deltas:
+    exit_code, output, errput = main.run_svnadmin('dump', '--deltas',
+                                                  repo_dir)
+  else:
+    exit_code, output, errput = main.run_svnadmin('dump', repo_dir)
   verify.verify_outputs("Missing expected output(s)", output, errput,
                         verify.AnyOutput, verify.AnyOutput)
   return output
 
 
-def run_and_verify_svnrdump(expected_stdout, expected_stderr,
-                            expected_exit, *varargs):
-  """Runs 'svnrdump' checking output and exit code, and returns output
-  on stdout"""
+def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
+                            expected_stderr, expected_exit, *varargs):
+  """Runs 'svnrdump dump|load' depending on dumpfile_content and
+  reports any errors."""
+  exit_code, output, err = main.run_svnrdump(dumpfile_content, *varargs)
 
-  exit_code, output, err = main.run_svnrdump(*varargs)
   verify.verify_outputs("Unexpected output", output, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)

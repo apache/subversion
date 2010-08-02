@@ -1412,7 +1412,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   /* Do the same for the first target. */
   SVN_ERR(svn_ra_reparent(ra_session, drr->url1, pool));
   SVN_ERR(svn_client__get_revision_number(&drr->rev1, NULL, ctx->wc_ctx,
-           (params->path1 == drr->url1) ? NULL : params_path1_abspath,
+           (strcmp(params->path1, drr->url1) == 0) ? NULL : params_path1_abspath,
            ra_session, params->revision1, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev1, &kind1, pool));
   if (kind1 == svn_node_none)
@@ -1735,7 +1735,7 @@ diff_repos_wc(const char *path1,
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
   SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
-                                          (path1 == url1) ? NULL : abspath1,
+                                          (strcmp(path1, url1) == 0) ? NULL : abspath1,
                                           ra_session, revision1, pool));
 
   if (!reverse)

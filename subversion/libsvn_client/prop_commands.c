@@ -118,7 +118,8 @@ propset_walk_cb(const char *local_abspath,
 
   err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->propname, wb->propval,
                          wb->force, wb->notify_func, wb->notify_baton, pool);
-  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
+  if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
+              || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
