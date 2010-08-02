@@ -129,14 +129,14 @@ public class ClientNotifyInformation extends EventObject
      * This constructor is to be used by the native code.
      *
      * @param path The path of the item, which is the source of the event.
-     * @param action The {@link NotifyAction} which triggered this event.
+     * @param action The {@link Action} which triggered this event.
      * @param kind The {@link NodeKind} of the item.
      * @param mimeType The MIME type of the item.
      * @param lock Any lock for the item.
      * @param errMsg Any error message for the item.
-     * @param contentState The {@link NotifyStatus} of the content of
+     * @param contentState The {@link Status} of the content of
      * the item.
-     * @param propState The {@link NotifyStatus} of the properties of
+     * @param propState The {@link Status} of the properties of
      * the item.
      * @param lockState The {@link LockStatus} of the lock of the item.
      * @param revision The revision of the item.
@@ -188,7 +188,7 @@ public class ClientNotifyInformation extends EventObject
     }
 
     /**
-     * @return The {@link NotifyAction} which triggered this event.
+     * @return The {@link Action} which triggered this event.
      */
     public Action getAction()
     {
@@ -228,7 +228,7 @@ public class ClientNotifyInformation extends EventObject
     }
 
     /**
-     * @return The {@link NotifyStatus} of the content of the item.
+     * @return The {@link Status} of the content of the item.
      */
     public Status getContentState()
     {
@@ -236,7 +236,7 @@ public class ClientNotifyInformation extends EventObject
     }
 
     /**
-     * @return The {@link NotifyStatus} of the properties of the item.
+     * @return The {@link Status} of the properties of the item.
      */
     public Status getPropState()
     {
