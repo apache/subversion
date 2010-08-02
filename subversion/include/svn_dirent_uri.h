@@ -773,6 +773,9 @@ svn_uri_condense_targets(const char **pcommon,
  * Note: Use of this function is strongly encouraged. Do not roll your own.
  * (http://cve.mitre.org/cgi-bin/cvename.cgi?name=2007-3846)
  *
+ * ### @todo If path is "", then full_path will have a trailing '/' and thus
+ * not be canonicalized.
+ *
  * @since New in 1.7.
  */
 svn_boolean_t
