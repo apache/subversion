@@ -223,6 +223,8 @@ svn_wc_read_kind(svn_node_kind_t *kind,
         case svn_wc__db_status_absent:
         case svn_wc__db_status_excluded:
           *kind = svn_node_none;
+
+        default:
           break;
       }
 
