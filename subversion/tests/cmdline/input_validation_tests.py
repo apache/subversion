@@ -105,6 +105,12 @@ def invalid_copy_target(sbox):
   run_and_verify_svn_in_wc(sbox, "svn: Path '.*' is not a directory",
                            'copy', mu_path, C_path, "iota")
 
+def invalid_delete_targets(sbox):
+  "invalid targets for 'delete'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                             "copy targets", 'delete', target1, target2)
 
 ########################################################################
 # Run the tests
@@ -117,6 +123,7 @@ test_list = [ None,
               invalid_wcpath_commit,
               invalid_copy_sources,
               invalid_copy_target,
+              invalid_delete_targets,
              ]
 
 if __name__ == '__main__':
