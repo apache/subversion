@@ -1349,7 +1349,9 @@ merge_file_changed(const char *local_dir_abspath,
     SVN_ERR(svn_wc__node_get_depth(&parent_depth, merge_b->ctx->wc_ctx,
                                    svn_dirent_dirname(mine_abspath, subpool),
                                    subpool));
-    if (wc_kind == svn_node_none && parent_depth < svn_depth_files)
+    if (wc_kind == svn_node_none
+        && parent_depth < svn_depth_files
+        && parent_depth != svn_depth_unknown)
       {
         if (content_state)
           *content_state = svn_wc_notify_state_missing;
