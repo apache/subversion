@@ -131,6 +131,16 @@ def invalid_export_targets(sbox):
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 
                              'export', '.', target)
 
+def invalid_import_args(sbox):
+  "invalid arguments for 'import'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path",
+                           'import', '^/', '^/')
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path",
+                           'import', '^/', 'iota')
+  run_and_verify_svn_in_wc(sbox, "svn: Invalid URL 'iota'",
+                           'import', 'iota', 'iota')
+
 ########################################################################
 # Run the tests
 
@@ -145,6 +155,7 @@ test_list = [ None,
               invalid_delete_targets,
               invalid_diff_targets,
               invalid_export_targets,
+              invalid_import_args,
              ]
 
 if __name__ == '__main__':
