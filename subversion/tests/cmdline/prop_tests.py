@@ -1983,6 +1983,10 @@ def atomic_over_ra(sbox):
   s1 = "violet"
   s2 = "wrong value"
 
+  # But test "" explicitly, since the RA layers have to marshal "" and <unset>
+  # differently.
+  s3 = ""
+
   # Initial state.
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -2021,14 +2025,25 @@ def atomic_over_ra(sbox):
 
   # Value of "flower" is 's1'.
   FAILS_WITH_BPV(s2, s1)
+  FAILS_WITH_BPV(s3, s1)
   PASSES_WITHOUT_BPV(s1, s2)
 
   # Value of "flower" is 's2'.
+  PASSES_WITHOUT_BPV(s2, s3)
+
+  # Value of "flower" is 's3'.
+  FAILS_WITH_BPV(None, s3)
+  FAILS_WITH_BPV(s1, s3)
+  PASSES_WITHOUT_BPV(s3, s2)
+
+  # Value of "flower" is 's2'.
   FAILS_WITH_BPV(s1, None)
+  FAILS_WITH_BPV(s3, None)
   PASSES_WITHOUT_BPV(s2, None)
 
   # Value of "flower" is <not set>.
   FAILS_WITH_BPV(s2, s1)
+  FAILS_WITH_BPV(s3, s1)
   PASSES_WITHOUT_BPV(None, s1)
 
   # Value of "flower" is 's1'.
