@@ -796,7 +796,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
           SVN_ERR(svn_wc__db_base_add_absent_node(
                     db, local_abspath,
                     repos_relpath, repos_root_url, repos_uuid,
-                    new_revision, svn_wc__db_kind_file,
+                    new_revision, kind,
                     svn_wc__db_status_not_present,
                     NULL, NULL,
                     scratch_pool));
