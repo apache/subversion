@@ -831,8 +831,11 @@ def missing_dir_in_anchor(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # At one point this caused a "foo not locked" error
+  is_singledb = svntest.main.wc_is_singledb(foo_path)
   svntest.main.safe_rmtree(foo_path)
   expected_status.tweak('foo', status='! ', wc_rev='?')
+  if is_singledb:
+    expected_status.tweak('foo', entry_status='A ', entry_rev='0')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
