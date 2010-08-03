@@ -567,7 +567,10 @@ def relocate_deleted_missing_copied(sbox):
     'A/D2/H/omega' : Item(status='  ', wc_rev='-', copied='+'),
     'A/D2/H/psi'   : Item(status='  ', wc_rev='-', copied='+'),
     })
-  expected_status.tweak('A/B/F', status='! ', wc_rev='?')
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_status.tweak('A/B/F', status='! ', wc_rev='1')
+  else:
+    expected_status.tweak('A/B/F', status='! ', wc_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Relocate
@@ -581,20 +584,28 @@ def relocate_deleted_missing_copied(sbox):
 
   # Deleted and missing entries should be preserved, so update should
   # show only A/B/F being reinstated
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/B/F' : Item(status='A '),
-    })
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_output = svntest.wc.State(wc_dir, {
+        'A/B/F' : Item(verb='Restored'),
+        })
+  else:
+    expected_output = svntest.wc.State(wc_dir, {
+        'A/B/F' : Item(status='A '),
+        })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/mu')
   expected_disk.add({
     'A/D2'       : Item(),
     'A/D2/gamma'   : Item("This is the file 'gamma'.\n"),
-    'A/D2/G'       : Item(),
     'A/D2/H'       : Item(),
     'A/D2/H/chi'   : Item("This is the file 'chi'.\n"),
     'A/D2/H/omega' : Item("This is the file 'omega'.\n"),
     'A/D2/H/psi'   : Item("This is the file 'psi'.\n"),
     })
+  if not svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.add({
+        'A/D2/G'       : Item(),
+        })
   expected_status.add({
     'A/B/F'       : Item(status='  ', wc_rev='2'),
     })
