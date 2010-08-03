@@ -6084,11 +6084,12 @@ make_editor(svn_revnum_t *target_revision,
   if (!depth_is_sticky)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
-                                                inner_editor,
-                                                inner_baton,
+                                                wc_ctx->db,
                                                 anchor_abspath,
                                                 target_basename,
-                                                wc_ctx->db,
+                                                TRUE /* read_base */,
+                                                inner_editor,
+                                                inner_baton,
                                                 result_pool));
 
   return svn_delta_get_cancellation_editor(cancel_func,
