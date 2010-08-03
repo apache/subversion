@@ -958,20 +958,20 @@ def status_missing_dir(sbox):
                                      "status", wc_dir)
 
   if svntest.main.wc_is_singledb(wc_dir):
-    expected = svntest.verify.UnorderedOutput([
+    expected = [
           "!                1   " + a_d_g + "\n",
           "!                1   " + os.path.join(a_d_g, "rho") + "\n",
           "!                1   " + os.path.join(a_d_g, "pi") + "\n",
           "!                1   " + os.path.join(a_d_g, "tau") + "\n",
-          "Status against revision:      1\n" ])
+          "Status against revision:      1\n" ]
   else:
-    expected = svntest.verify.UnorderedOutput(
-         ["        *            " + os.path.join(a_d_g, "pi") + "\n",
+    expected = [
+          "        *            " + os.path.join(a_d_g, "pi") + "\n",
           "        *            " + os.path.join(a_d_g, "rho") + "\n",
           "        *            " + os.path.join(a_d_g, "tau") + "\n",
           "!       *       ?    " + a_d_g + "\n",
           "        *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
-          "Status against revision:      1\n" ])
+          "Status against revision:      1\n" ]
 
   # now run status -u, we should be able to do this without crashing
   svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
