@@ -1950,7 +1950,10 @@ create_missing_parents(patch_target_t *target,
       else if (wc_kind == svn_node_dir)
         {
           if (is_deleted)
-            break;
+            {
+              target->skipped = TRUE;
+              break;
+            }
 
           /* continue one level deeper */
           present_components++;
@@ -2072,7 +2075,25 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                                    svn_dirent_dirname(target->local_abspath,
                                                       pool),
                                    FALSE, pool));
-          if (parent_db_kind != svn_node_dir)
+
+          /* We don't allow targets to be added under dirs scheduled for
+           * deletion. */
+          if (parent_db_kind == svn_node_dir)
+            {
+              const char *parent_abspath;
+              svn_boolean_t is_deleted;
+              
+              parent_abspath = svn_dirent_dirname(target->local_abspath,
+                                                  pool);
+              SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
+                                                     parent_abspath, pool));
+              if (is_deleted)
+                {
+                  target->skipped = TRUE;
+                  return SVN_NO_ERROR;
+                }
+            }
+          else
             SVN_ERR(create_missing_parents(target, abs_wc_path, ctx,
                                            dry_run, pool));
         }
