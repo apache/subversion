@@ -277,6 +277,8 @@ def wc_is_singledb(wcpath):
   if not os.path.exists(pristine):
     return True
 
+  # Now we must be looking at a multi-db WC dir or the root dir of a
+  # single-DB WC.  Sharded 'pristine' dir => single-db, else => multi-db.
   for name in os.listdir(pristine):
     if len(name) == 2:
       return True
