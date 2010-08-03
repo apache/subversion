@@ -57,6 +57,11 @@
 
 #include "server.h"
 
+#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
+#include "libsvn_fs_fs/fs_fs.h"
+#endif
+
+
 /* The strategy for handling incoming connections.  Some of these may be
    unavailable due to platform limitations. */
 enum connection_handling_mode {
@@ -187,6 +192,33 @@ static const apr_getopt_option_t svnserve__options[] =
         "at the same time is not supported in daemon mode.\n"
         "                             "
         "Use inetd mode or tunnel mode if you need this.]")},
+    {"compression",      'c', 1,
+     N_("compression level to use for network transmissions\n"
+        "                             "
+        "[0 .. no compression, 5 .. default, \n"
+        "                             "
+        " 9 .. maximum compresssion]")},
+
+#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
+    {"memory-cache-size", 'M', 1, 
+     N_("size of the extra in-memory cache in MB used to\n"
+        "                             "
+        "minimize redundant operations.\n"
+        "                             "
+        "Default is 128 and 16 for non-threaded mode.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
+
+    {"open-file-count", 'F', 1, 
+     N_("maximum number of files kept open after usage\n"
+        "                             "
+        "to reduce OS and I/O overhead.\n"
+        "                             "
+        "Default is 64 and 16 for non-threaded mode.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
+#endif
+
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -430,6 +462,8 @@ int main(int argc, const char *argv[])
   params.authzdb = NULL;
   params.compression_level = SVNDIFF1_COMPRESS_LEVEL;
   params.log_file = NULL;
+  params.memory_cache_size = -1;
+  params.open_file_count = -1;
 
   while (1)
     {
@@ -527,6 +561,22 @@ int main(int argc, const char *argv[])
 
         case 'T':
           handling_mode = connection_mode_thread;
+          break;
+
+        case 'c':
+          params.compression_level = atoi(arg);
+          if (params.compression_level < 0)
+            params.compression_level = 0;
+          if (params.compression_level > 9)
+            params.compression_level = 9;
+          break;
+
+        case 'M':
+          params.memory_cache_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
+          break;
+
+        case 'F':
+          params.open_file_count = apr_strtoi64(arg, NULL, 0);
           break;
 
 #ifdef WIN32
@@ -774,6 +824,32 @@ int main(int argc, const char *argv[])
   /* At this point, the service is "running".  Notify the SCM. */
   if (run_mode == run_mode_service)
     winservice_running();
+#endif
+
+#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
+  /* Configure FSFS caches for maximum efficiency with svnserve. 
+   * For pre-forked (i.e. multi-processed) mode of operation,
+   * keep the per-process caches smaller than the default.
+   * Also, apply the respective command line parameters, if given. */
+  {
+    svn_fs_fs__cache_config_t settings = *svn_fs_fs__get_cache_config();
+
+    if (params.memory_cache_size != -1)
+      settings.cache_size = params.memory_cache_size;
+    else if (handling_mode != connection_mode_thread)
+      settings.cache_size = 0x1000000;
+
+    if (params.open_file_count != -1)
+      settings.file_handle_count = params.open_file_count;
+    else if (handling_mode != connection_mode_thread)
+      settings.file_handle_count = 16;
+
+    settings.cache_fulltexts = TRUE;
+    settings.cache_txdeltas = FALSE;
+    settings.single_threaded = handling_mode != connection_mode_thread;
+
+    svn_fs_fs__set_cache_config(&settings);
+  }
 #endif
 
   while (1)

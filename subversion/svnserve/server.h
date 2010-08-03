@@ -107,6 +107,13 @@ typedef struct serve_params_t {
      fall back to txdelta "version 0" bypassing zlib entirely.
      Defaults to SVNDIFF1_COMPRESS_LEVEL. */
   int compression_level;
+
+  /* Size of the in-memory cache (used by FSFS only). */
+  apr_uint64_t memory_cache_size;
+
+  /* Number of handles kept open independently of there actual use
+     (used by FSFS only). */
+  apr_size_t open_file_count;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */
