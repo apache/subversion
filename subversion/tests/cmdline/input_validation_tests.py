@@ -141,6 +141,14 @@ def invalid_import_args(sbox):
   run_and_verify_svn_in_wc(sbox, "svn: Invalid URL 'iota'",
                            'import', 'iota', 'iota')
 
+def invalid_log_targets(sbox):
+  "invalid targets for 'log'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [('^/', '/a/b/c'), ('^/', '^/'), ('^/', 'file://')]:
+    run_and_verify_svn_in_wc(sbox, "svn: Only relative paths can be " +
+                             "specified after a URL for 'svn log', but.*is " +
+                             "not a relative path", 'log', target1, target2)
+
 ########################################################################
 # Run the tests
 
@@ -156,6 +164,7 @@ test_list = [ None,
               invalid_diff_targets,
               invalid_export_targets,
               invalid_import_args,
+              invalid_log_targets,
              ]
 
 if __name__ == '__main__':
