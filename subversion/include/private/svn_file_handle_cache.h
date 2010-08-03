@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn__file_handle_cache.h
+ * @file svn_file_handle_cache.h
  * @brief File handle cache API
  */
 
@@ -30,14 +30,14 @@
 /**
  * An opaque structure representing a cache for open file handles.
  */
-typedef struct svn__file_handle_cache_t svn__file_handle_cache_t;
+typedef struct svn_file_handle_cache_t svn_file_handle_cache_t;
 
 /**
  * An opaque structure representing a cached file handle being used
  * by the calling application.
  */
 typedef
-struct svn__file_handle_cache__handle_t svn__file_handle_cache__handle_t;
+struct svn_file_handle_cache__handle_t svn_file_handle_cache__handle_t;
 
 /**
  * Get an open file handle in @a f, for the file named @a fname with the
@@ -51,14 +51,14 @@ struct svn__file_handle_cache__handle_t svn__file_handle_cache__handle_t;
  * returned is undefined.
  */
 svn_error_t *
-svn__file_handle_cache__open(svn__file_handle_cache__handle_t **f,
-                             svn__file_handle_cache_t *cache,
-                             const char *fname,
-                             apr_int32_t flag,
-                             apr_fileperms_t perm,
-                             apr_off_t offset,
-                             int cookie,
-                             apr_pool_t *pool);
+svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
+                            svn_file_handle_cache_t *cache,
+                            const char *fname,
+                            apr_int32_t flag,
+                            apr_fileperms_t perm,
+                            apr_off_t offset,
+                            int cookie,
+                            apr_pool_t *pool);
 
 /**
  * Efficiently check whether the file handle cache @a cache holds an open 
@@ -67,8 +67,8 @@ svn__file_handle_cache__open(svn__file_handle_cache__handle_t **f,
  * that the respective file does not exist.
  */
 svn_boolean_t
-svn__file_handle_cache__has_file(svn__file_handle_cache_t *cache,
-                                 const char *fname);
+svn_file_handle_cache__has_file(svn_file_handle_cache_t *cache,
+                                const char *fname);
 
 /**
  * Return the APR level file handle underlying the cache file handle @a f.
@@ -76,7 +76,7 @@ svn__file_handle_cache__has_file(svn__file_handle_cache_t *cache,
  * invalidated.
  */
 apr_file_t *
-svn__file_handle_cache__get_apr_handle(svn__file_handle_cache__handle_t *f);
+svn_file_handle_cache__get_apr_handle(svn_file_handle_cache__handle_t *f);
 
 /**
  * Return the name of the file that the cached handle @a f refers to.
@@ -84,7 +84,7 @@ svn__file_handle_cache__get_apr_handle(svn__file_handle_cache__handle_t *f);
  * invalidated.
  */
 const char *
-svn__file_handle_cache__get_name(svn__file_handle_cache__handle_t *f);
+svn_file_handle_cache__get_name(svn_file_handle_cache__handle_t *f);
 
 /**
  * Return the cached file handle @a f to the cache. Depending on the number
@@ -92,13 +92,13 @@ svn__file_handle_cache__get_name(svn__file_handle_cache__handle_t *f);
  * is NULL, already closed or an invalidated handle, this is a no-op.
  */
 svn_error_t *
-svn__file_handle_cache__close(svn__file_handle_cache__handle_t *f);
+svn_file_handle_cache__close(svn_file_handle_cache__handle_t *f);
 
 /**
  * Close all file handles currently not held by the application.
  */
 svn_error_t *
-svn__file_handle_cache__flush(svn__file_handle_cache_t *cache);
+svn_file_handle_cache__flush(svn_file_handle_cache_t *cache);
 
 /**
  * Creates a new file handle cache in @a cache. Up to @a max_handles
@@ -109,7 +109,7 @@ svn__file_handle_cache__flush(svn__file_handle_cache_t *cache);
  * cache, @a thread_safe may be @c FALSE. Otherwise, it must be @c TRUE.
  */
 svn_error_t *
-svn__file_handle_cache__create_cache(svn__file_handle_cache_t **cache,
-                                     size_t max_handles,
-                                     svn_boolean_t thread_safe,
-                                     apr_pool_t *pool);
+svn_file_handle_cache__create_cache(svn_file_handle_cache_t **cache,
+                                    size_t max_handles,
+                                    svn_boolean_t thread_safe,
+                                    apr_pool_t *pool);

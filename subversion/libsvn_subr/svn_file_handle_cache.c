@@ -1,5 +1,5 @@
 /*
- * svn__file_handle_cache.c: open file handle caching for Subversion
+ * svn_file_handle_cache.c: open file handle caching for Subversion
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -67,7 +67,7 @@
  * between read-after-write, write-after-read or others.
  *
  * For similar reasons, an application may want to close all idle handles
- * explicitly, i.e. without opening new ones. svn__file_handle_cache__flush
+ * explicitly, i.e. without opening new ones. svn_file_handle_cache__flush
  * is the function to call in that case.
  */
 
@@ -129,7 +129,7 @@ struct cache_entry_t
 
   /* The cached file handle object handed out to the application.
    * If this is NULL, the entry is either idle or unused. */
-  svn__file_handle_cache__handle_t *open_handle;
+  svn_file_handle_cache__handle_t *open_handle;
 
   /* the file name. NULL for unused entries */
   const char *name;
@@ -161,7 +161,7 @@ struct cache_entry_t
 
 /* The file handle cache structure.
  */
-struct svn__file_handle_cache_t
+struct svn_file_handle_cache_t
 {
   /* all cache sub-structures are allocated from this pool */
   apr_pool_t *pool;
@@ -199,12 +199,12 @@ struct svn__file_handle_cache_t
  * either the handle has already been returned to the cache or the cache
  * itself has been destroyed already.
  */
-struct svn__file_handle_cache__handle_t
+struct svn_file_handle_cache__handle_t
 {
   /* the issuing cache. Having that element here simplifies function
    * signatures dealing with cached file handles. It also makes them
    * harder to use incorrectly. */
-  svn__file_handle_cache_t *cache;
+  svn_file_handle_cache_t *cache;
 
   /* the handle-specific information */
   cache_entry_t *entry;
@@ -213,7 +213,7 @@ struct svn__file_handle_cache__handle_t
 /* If applicable, locks CACHE's mutex. 
  */
 static svn_error_t *
-lock_cache(svn__file_handle_cache_t *cache)
+lock_cache(svn_file_handle_cache_t *cache)
 {
 #if APR_HAS_THREADS
   apr_status_t status;
@@ -231,7 +231,7 @@ lock_cache(svn__file_handle_cache_t *cache)
 /* If applicable, unlocks CACHE's mutex, then returns ERR. 
  */
 static svn_error_t *
-unlock_cache(svn__file_handle_cache_t *cache, svn_error_t *err)
+unlock_cache(svn_file_handle_cache_t *cache, svn_error_t *err)
 {
 #if APR_HAS_THREADS
   apr_status_t status;
@@ -354,7 +354,7 @@ remove_from_list(entry_list_t *list, entry_link_t *link)
  * If no such entry exists, the result is NULL.
  */
 static cache_entry_t *
-find_first(svn__file_handle_cache_t *cache, const char *name)
+find_first(svn_file_handle_cache_t *cache, const char *name)
 {
   cache_entry_t *result =
     (cache_entry_t *)apr_hash_get(cache->first_by_name,
@@ -394,7 +394,7 @@ auto_close_cached_handle(void *entry_void)
  */
 static svn_error_t *
 internal_file_open(cache_entry_t **result,
-                   svn__file_handle_cache_t *cache,
+                   svn_file_handle_cache_t *cache,
                    const char *name,
                    apr_int32_t flag,
                    apr_fileperms_t perm,
@@ -471,7 +471,7 @@ internal_file_open(cache_entry_t **result,
  * The entry will be in "unused" state afterwards.
  */
 static svn_error_t *
-internal_close_file(svn__file_handle_cache_t *cache, cache_entry_t *entry)
+internal_close_file(svn_file_handle_cache_t *cache, cache_entry_t *entry)
 {
   /* any cached file handle held by the application must have either
    * been returned or invalidated before, i.e. this entry must be "idle" */
@@ -524,14 +524,14 @@ internal_close_file(svn__file_handle_cache_t *cache, cache_entry_t *entry)
 static apr_status_t
 close_handle_before_cleanup(void *handle_void)
 {
-  svn__file_handle_cache__handle_t *f = handle_void;
+  svn_file_handle_cache__handle_t *f = handle_void;
   svn_error_t *err = SVN_NO_ERROR;
 
   /* if this hasn't been done before: 
    * "close" the handle, i.e. return it to the cache 
    */
   if (f->entry)
-    err = svn__file_handle_cache__close(f);
+    err = svn_file_handle_cache__close(f);
 
   /* fully reset all members to prevent zombies doing damage */
   f->entry = NULL;
@@ -546,8 +546,8 @@ close_handle_before_cleanup(void *handle_void)
  * is cleared or destroyed.
  */
 static svn_error_t *
-open_entry(svn__file_handle_cache__handle_t **f,
-           svn__file_handle_cache_t *cache,
+open_entry(svn_file_handle_cache__handle_t **f,
+           svn_file_handle_cache_t *cache,
            cache_entry_t *entry,
            apr_pool_t *pool)
 {
@@ -558,7 +558,7 @@ open_entry(svn__file_handle_cache__handle_t **f,
   remove_from_list(&cache->idle_entries, &entry->idle_link);
 
   /* create and initialize the cached file handle structure */
-  *f = apr_palloc(pool, sizeof(svn__file_handle_cache__handle_t));
+  *f = apr_palloc(pool, sizeof(svn_file_handle_cache__handle_t));
   (*f)->cache = cache;
   (*f)->entry = entry;
   entry->open_handle = *f;
@@ -576,7 +576,7 @@ open_entry(svn__file_handle_cache__handle_t **f,
  * underlying APR file handle rendering the entry "unused".
  */
 static svn_error_t *
-close_oldest_idle(svn__file_handle_cache_t *cache)
+close_oldest_idle(svn_file_handle_cache_t *cache)
 {
   return cache->idle_entries.first
     ? internal_close_file(cache, cache->idle_entries.first->item)
@@ -587,7 +587,7 @@ close_oldest_idle(svn__file_handle_cache_t *cache)
  * if there is such an entry.
  */
 static svn_error_t *
-auto_close_oldest(svn__file_handle_cache_t *cache)
+auto_close_oldest(svn_file_handle_cache_t *cache)
 {
   return cache->used_entries.count > cache->max_used_count
     ? close_oldest_idle(cache)
@@ -639,14 +639,14 @@ pointer_is_closer(const cache_entry_t *entry,
  * is undefined.
  */
 svn_error_t *
-svn__file_handle_cache__open(svn__file_handle_cache__handle_t **f,
-                             svn__file_handle_cache_t *cache,
-                             const char *fname,
-                             apr_int32_t flag,
-                             apr_fileperms_t perm,
-                             apr_off_t offset,
-                             int cookie,
-                             apr_pool_t *pool)
+svn_file_handle_cache__open(svn_file_handle_cache__handle_t **f,
+                            svn_file_handle_cache_t *cache,
+                            const char *fname,
+                            apr_int32_t flag,
+                            apr_fileperms_t perm,
+                            apr_off_t offset,
+                            int cookie,
+                            apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   cache_entry_t *entry;
@@ -728,8 +728,8 @@ svn__file_handle_cache__open(svn__file_handle_cache__handle_t **f,
  * the respective file does not exist.
  */
 svn_boolean_t
-svn__file_handle_cache__has_file(svn__file_handle_cache_t *cache, 
-                                 const char *fname)
+svn_file_handle_cache__has_file(svn_file_handle_cache_t *cache, 
+                                const char *fname)
 {
   svn_boolean_t result = FALSE;
 
@@ -764,7 +764,7 @@ svn__file_handle_cache__has_file(svn__file_handle_cache_t *cache,
  * invalidated.
  */
 apr_file_t *
-svn__file_handle_cache__get_apr_handle(svn__file_handle_cache__handle_t *f)
+svn_file_handle_cache__get_apr_handle(svn_file_handle_cache__handle_t *f)
 {
   return (f && f->entry) ? f->entry->file : NULL;
 }
@@ -774,7 +774,7 @@ svn__file_handle_cache__get_apr_handle(svn__file_handle_cache__handle_t *f)
  * invalidated.
  */
 const char *
-svn__file_handle_cache__get_name(svn__file_handle_cache__handle_t *f)
+svn_file_handle_cache__get_name(svn_file_handle_cache__handle_t *f)
 {
   return (f && f->entry) ? f->entry->name : NULL;
 }
@@ -783,10 +783,10 @@ svn__file_handle_cache__get_name(svn__file_handle_cache__handle_t *f)
  * of open handles, the underlying handle may actually get closed.
  */
 svn_error_t *
-svn__file_handle_cache__close(svn__file_handle_cache__handle_t *f)
+svn_file_handle_cache__close(svn_file_handle_cache__handle_t *f)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  svn__file_handle_cache_t *cache = f ? f->cache : NULL;
+  svn_file_handle_cache_t *cache = f ? f->cache : NULL;
   cache_entry_t *entry = f ? f->entry : NULL;
 
   /* no-op for closed or invalidated cached file handles */
@@ -828,7 +828,7 @@ svn__file_handle_cache__close(svn__file_handle_cache__handle_t *f)
 /* Close all file handles currently not held by the application.
  */
 svn_error_t *
-svn__file_handle_cache__flush(svn__file_handle_cache_t *cache)
+svn_file_handle_cache__flush(svn_file_handle_cache_t *cache)
 {
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -867,14 +867,14 @@ svn__file_handle_cache__flush(svn__file_handle_cache_t *cache)
  * THREAD_SAFE may be FALSE. Otherwise, it must be TRUE.
  */
 svn_error_t *
-svn__file_handle_cache__create_cache(svn__file_handle_cache_t **cache,
-                                     size_t max_handles,
-                                     svn_boolean_t thread_safe,
-                                     apr_pool_t *pool)
+svn_file_handle_cache__create_cache(svn_file_handle_cache_t **cache,
+                                    size_t max_handles,
+                                    svn_boolean_t thread_safe,
+                                    apr_pool_t *pool)
 {
   /* allocate cache header */
-  svn__file_handle_cache_t *new_cache =
-      (svn__file_handle_cache_t *)apr_palloc(pool, sizeof(*new_cache));
+  svn_file_handle_cache_t *new_cache =
+      (svn_file_handle_cache_t *)apr_palloc(pool, sizeof(*new_cache));
 
   /* create sub-pool for all cache sub-structures */
   new_cache->pool = svn_pool_create(pool);
