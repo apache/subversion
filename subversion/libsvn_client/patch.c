@@ -477,7 +477,7 @@ init_prop_target(prop_patch_target_t **prop_target,
   target_content_info_t *content_info; 
   const svn_string_t *value;
   const char *patched_path;
-
+  svn_error_t *err;
 
   content_info = apr_pcalloc(result_pool, sizeof(*content_info));
 
@@ -496,8 +496,18 @@ init_prop_target(prop_patch_target_t **prop_target,
   new_prop_target->operation = operation;
   new_prop_target->content_info = content_info;
 
-  SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name, 
-                           result_pool, scratch_pool));
+  err = svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name, 
+                           result_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          value = NULL;
+        }
+      else
+        return svn_error_return(err);
+    }
 
   if (value)
     {
