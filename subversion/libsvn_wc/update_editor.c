@@ -1176,9 +1176,11 @@ prep_directory(struct dir_baton *db,
                svn_revnum_t ancestor_revision,
                apr_pool_t *pool)
 {
-  const char *repos_root;
   const char *dir_abspath;
+#ifndef SINGLE_DB
+  const char *repos_root;
   svn_boolean_t locked_here;
+#endif
 
   dir_abspath = db->local_abspath;
 
