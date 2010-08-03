@@ -3179,7 +3179,7 @@ close_directory(void *dir_baton,
       if (new_changed_author != NULL)
         changed_author = new_changed_author;
 
-#ifdef SINGLE_DB
+#ifdef SVN_WC__SINGLE_DB
       /* If no depth is set yet, set to infinity. */
       if (depth == svn_depth_unknown)
         depth = svn_depth_infinity;
