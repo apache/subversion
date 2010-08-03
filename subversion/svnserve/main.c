@@ -428,6 +428,7 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.pwdb = NULL;
   params.authzdb = NULL;
+  params.compression_level = SVNDIFF1_COMPRESS_LEVEL;
   params.log_file = NULL;
 
   while (1)
@@ -619,7 +620,8 @@ int main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
         }
 
-      conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
+      conn = svn_ra_svn_create_conn2(NULL, in_file, out_file, 
+                                     params.compression_level, pool);
       svn_error_clear(serve(conn, &params, pool));
       exit(0);
     }
@@ -820,7 +822,9 @@ int main(int argc, const char *argv[])
           /* It's not a fatal error if we cannot enable keep-alives. */
         }
 
-      conn = svn_ra_svn_create_conn(usock, NULL, NULL, connection_pool);
+      conn = svn_ra_svn_create_conn2(usock, NULL, NULL,
+                                     params.compression_level,
+                                     connection_pool);
 
       if (run_mode == run_mode_listen_once)
         {

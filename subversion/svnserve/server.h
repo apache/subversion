@@ -101,6 +101,12 @@ typedef struct serve_params_t {
 
   /* A filehandle open for writing logs to; possibly NULL. */
   apr_file_t *log_file;
+
+  /* Data compression level to reduce for network traffic. If this
+     is 0, no compression should be applied and the protocol may
+     fall back to txdelta "version 0" bypassing zlib entirely.
+     Defaults to SVNDIFF1_COMPRESS_LEVEL. */
+  int compression_level;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */
