@@ -424,23 +424,15 @@ db_map_namespaces(dav_db *db,
 
 
 static dav_error *
-db_store(dav_db *db,
-         const dav_prop_name *name,
-         const apr_xml_elem *elem,
-         dav_namespace_map *mapping)
+decode_property_value(const svn_string_t **out_propval_p,
+                      const svn_string_t *maybe_encoded_propval,
+                      const apr_xml_elem *elem,
+                      apr_pool_t *pool)
 {
-  const svn_string_t *propval;
-  apr_pool_t *pool = db->p;
   apr_xml_attr *attr = elem->attr;
 
-  /* SVN sends property values as a big blob of bytes. Thus, there should be
-     no child elements of the property-name element. That also means that
-     the entire contents of the blob is located in elem->first_cdata. The
-     dav_xml_get_cdata() will figure it all out for us, but (normally) it
-     should be awfully fast and not need to copy any data. */
-
-  propval = svn_string_create
-    (dav_xml_get_cdata(elem, pool, 0 /* strip_white */), pool);
+  /* Default: no "encoding" attribute. */
+  *out_propval_p = maybe_encoded_propval;
 
   /* Check for special encodings of the property value. */
   while (attr)
@@ -451,7 +443,7 @@ db_store(dav_db *db,
 
           /* Handle known encodings here. */
           if (enc_type && (strcmp(enc_type, "base64") == 0))
-            propval = svn_base64_decode_string(propval, pool);
+            *out_propval_p = svn_base64_decode_string(maybe_encoded_propval, pool);
           else
             return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                                  "Unknown property encoding");
@@ -460,6 +452,32 @@ db_store(dav_db *db,
       /* Next attribute, please. */
       attr = attr->next;
     }
+
+  return NULL;
+}
+
+static dav_error *
+db_store(dav_db *db,
+         const dav_prop_name *name,
+         const apr_xml_elem *elem,
+         dav_namespace_map *mapping)
+{
+  const svn_string_t *propval;
+  apr_pool_t *pool = db->p;
+  dav_error *derr;
+
+  /* SVN sends property values as a big blob of bytes. Thus, there should be
+     no child elements of the property-name element. That also means that
+     the entire contents of the blob is located in elem->first_cdata. The
+     dav_xml_get_cdata() will figure it all out for us, but (normally) it
+     should be awfully fast and not need to copy any data. */
+
+  propval = svn_string_create
+    (dav_xml_get_cdata(elem, pool, 0 /* strip_white */), pool);
+
+  derr = decode_property_value(&propval, propval, elem, pool);
+  if (derr)
+    return derr;
 
   return save_value(db, name, propval);
 }

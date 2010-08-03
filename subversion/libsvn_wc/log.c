@@ -469,7 +469,7 @@ can_be_cleaned(int *wc_format,
                apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_wc__internal_check_wc(wc_format, db,
-                                    local_abspath, scratch_pool));
+                                    local_abspath, FALSE, scratch_pool));
 
   /* a "version" of 0 means a non-wc directory */
   if (*wc_format == 0)

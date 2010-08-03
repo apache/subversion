@@ -48,7 +48,7 @@ class DeltaTestCase(unittest.TestCase):
     window_handler(None, baton)
 
 def suite():
-  return unittest.makeSuite(DeltaTestCase, 'test')
+  return unittest.defaultTestLoader.loadTestsFromTestCase(DeltaTestCase)
 
 if __name__ == '__main__':
   runner = unittest.TextTestRunner()

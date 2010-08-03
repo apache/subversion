@@ -145,7 +145,7 @@ typedef struct patch_target_t {
   /* The absolute path of the target on the filesystem.
    * Any symlinks the path from the patch file may contain are resolved.
    * Is not always known, so it may be NULL. */
-  char *local_abspath;
+  const char *local_abspath;
 
   /* The target file, read-only, seekable. This is NULL in case the target
    * file did not exist prior to patch application. */
@@ -337,12 +337,18 @@ resolve_target_path(patch_target_t *target,
                     apr_pool_t *scratch_pool)
 {
   const char *stripped_path;
+  const char *full_path;
   svn_wc_status3_t *status;
   svn_error_t *err;
+  svn_boolean_t under_root;
 
   target->canon_path_from_patchfile = svn_dirent_internal_style(
                                         path_from_patchfile, result_pool);
-  if (target->canon_path_from_patchfile[0] == '\0')
+
+  /* We allow properties to be set on the wc root dir.
+   * ### Do we need to check for empty paths here, shouldn't the parser
+   * ### guarentee that the paths returned are non-empty? */
+  if (! prop_changes_only && target->canon_path_from_patchfile[0] == '\0')
     {
       /* An empty patch target path? What gives? Skip this. */
       target->skipped = TRUE;
@@ -362,7 +368,6 @@ resolve_target_path(patch_target_t *target,
       target->local_relpath = svn_dirent_is_child(local_abspath, stripped_path,
                                                   result_pool);
 
-      /* ### We need to allow setting props on the wc root dir */
       if (! target->local_relpath)
         {
           /* The target path is either outside of the working copy
@@ -380,14 +385,20 @@ resolve_target_path(patch_target_t *target,
 
   /* Make sure the path is secure to use. We want the target to be inside
    * of the working copy and not be fooled by symlinks it might contain. */
-  if (! svn_dirent_is_under_root(&target->local_abspath, local_abspath,
-                                 target->local_relpath, result_pool))
+  SVN_ERR(svn_dirent_is_under_root(&under_root,
+                                   &full_path, local_abspath,
+                                   target->local_relpath, result_pool));
+
+  if (! under_root)
     {
       /* The target path is outside of the working copy. Skip it. */
       target->skipped = TRUE;
       target->local_abspath = NULL;
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(svn_dirent_get_absolute(&target->local_abspath, full_path,
+                                  result_pool));
 
   /* Skip things we should not be messing with. */
   err = svn_wc_status3(&status, wc_ctx, target->local_abspath,
@@ -466,7 +477,7 @@ init_prop_target(prop_patch_target_t **prop_target,
   target_content_info_t *content_info; 
   const svn_string_t *value;
   const char *patched_path;
-
+  svn_error_t *err;
 
   content_info = apr_pcalloc(result_pool, sizeof(*content_info));
 
@@ -485,8 +496,18 @@ init_prop_target(prop_patch_target_t **prop_target,
   new_prop_target->operation = operation;
   new_prop_target->content_info = content_info;
 
-  SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name, 
-                           result_pool, scratch_pool));
+  err = svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name, 
+                           result_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          value = NULL;
+        }
+      else
+        return svn_error_return(err);
+    }
 
   if (value)
     {
@@ -1556,8 +1577,12 @@ send_patch_notification(const patch_target_t *target,
 
               hi = APR_ARRAY_IDX(prop_target->content_info->hunks, i,
                                  hunk_info_t *);
-              SVN_ERR(send_hunk_notification(hi, target, prop_target->name, 
-                                             ctx, iterpool));
+
+              /* Don't notify on the hunk level for added or deleted props. */
+              if (prop_target->operation != svn_diff_op_added &&
+                  prop_target->operation != svn_diff_op_deleted)
+                SVN_ERR(send_hunk_notification(hi, target, prop_target->name, 
+                                               ctx, iterpool));
             }
         }
       svn_pool_destroy(iterpool);
@@ -1925,7 +1950,10 @@ create_missing_parents(patch_target_t *target,
       else if (wc_kind == svn_node_dir)
         {
           if (is_deleted)
-            break;
+            {
+              target->skipped = TRUE;
+              break;
+            }
 
           /* continue one level deeper */
           present_components++;
@@ -2047,7 +2075,25 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                                    svn_dirent_dirname(target->local_abspath,
                                                       pool),
                                    FALSE, pool));
-          if (parent_db_kind != svn_node_dir)
+
+          /* We don't allow targets to be added under dirs scheduled for
+           * deletion. */
+          if (parent_db_kind == svn_node_dir)
+            {
+              const char *parent_abspath;
+              svn_boolean_t is_deleted;
+              
+              parent_abspath = svn_dirent_dirname(target->local_abspath,
+                                                  pool);
+              SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
+                                                     parent_abspath, pool));
+              if (is_deleted)
+                {
+                  target->skipped = TRUE;
+                  return SVN_NO_ERROR;
+                }
+            }
+          else
             SVN_ERR(create_missing_parents(target, abs_wc_path, ctx,
                                            dry_run, pool));
         }

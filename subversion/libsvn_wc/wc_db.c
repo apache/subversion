@@ -7280,28 +7280,6 @@ svn_wc__db_temp_get_format(int *format,
       SVN_ERR_ASSERT(pdh->wcroot != NULL);
     }
 
-#ifdef SVN_WC__SINGLE_DB
-    {
-      const char *local_relpath = svn_dirent_skip_ancestor(pdh->wcroot->abspath,
-                                                           local_dir_abspath);
-      if (*local_relpath != '\0')
-        {
-          svn_boolean_t base, working;
-
-          SVN_ERR(which_trees_exist(&base, &working, pdh->wcroot->sdb,
-                                    pdh->wcroot->wc_id, local_relpath));
-          if (!base && !working)
-            {
-              *format = 0;
-              return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
-                                       _("'%s' is not a working copy"),
-                                       svn_dirent_local_style(local_dir_abspath,
-                                                              scratch_pool));
-            }
-        }
-    }
-#endif
-
   SVN_ERR_ASSERT(pdh->wcroot->format >= 1);
 
   *format = pdh->wcroot->format;

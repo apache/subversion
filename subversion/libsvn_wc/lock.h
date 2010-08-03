@@ -91,11 +91,14 @@ svn_wc__adm_retrieve_internal2(svn_wc__db_t *db,
 
 /* ### this is probably bunk. but I dunna want to trace backwards-compat
    ### users of svn_wc_check_wc(). probably gonna be rewritten for wc-ng
-   ### in any case.  */
+   ### in any case.
+   
+   If CHECK_PATH is TRUE, a not-existing directory is not a working copy */
 svn_error_t *
 svn_wc__internal_check_wc(int *wc_format,
                           svn_wc__db_t *db,
                           const char *local_abspath,
+                          svn_boolean_t check_path,
                           apr_pool_t *scratch_pool);
 
 

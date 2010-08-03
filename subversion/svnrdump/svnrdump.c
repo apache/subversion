@@ -37,6 +37,8 @@
 #include "dump_editor.h"
 #include "load_editor.h"
 
+#include "private/svn_cmdline_private.h"
+
 static svn_opt_subcommand_t dump_cmd, load_cmd;
 
 enum svn_svnrdump__longopt_t
@@ -47,6 +49,7 @@ enum svn_svnrdump__longopt_t
     opt_non_interactive,
     opt_auth_nocache,
     opt_version,
+    opt_config_option,
   };
 
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
@@ -86,7 +89,14 @@ static const apr_getopt_option_t svnrdump__options[] =
   
     {"help",          'h', 0, N_("display this help")},
     {"version",       opt_version, 0, N_("show program version information")},
-
+    {"config-option", opt_config_option, 1,
+                    N_("set user configuration option in the format:\n"
+                       "                             "
+                       "    FILE:SECTION:OPTION=[VALUE]\n"
+                       "                             "
+                       "For example:\n"
+                       "                             "
+                       "    servers:global:http-library=serf")},
     {0,                  0,   0, 0}
   };
 
@@ -177,7 +187,8 @@ replay_revend(svn_revnum_t revision,
 /* Return in *SESSION a new RA session to URL.
  * Allocate *SESSION and related data structures in POOL.
  * Use CONFIG_DIR and pass USERNAME, PASSWORD, CONFIG_DIR and
- * NO_AUTH_CACHE to initialize the authorization baton.*/
+ * NO_AUTH_CACHE to initialize the authorization baton.
+ * CONFIG_OPTIONS (if not NULL) is a list of configuration overrides. */
 static svn_error_t *
 open_connection(svn_ra_session_t **session,
                 const char *url,
@@ -186,6 +197,7 @@ open_connection(svn_ra_session_t **session,
                 const char *password,
                 const char *config_dir,
                 svn_boolean_t no_auth_cache,
+                apr_array_header_t *config_options,
                 apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx = NULL;
@@ -197,6 +209,10 @@ open_connection(svn_ra_session_t **session,
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
   SVN_ERR(svn_config_get_config(&(ctx->config), config_dir, pool));
+
+  if (config_options)
+    SVN_ERR(svn_cmdline__apply_config_options(ctx->config, config_options,
+                                              "svnrdump: ", "--config-option"));
 
   cfg_config = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                             APR_HASH_KEY_STRING);
@@ -411,6 +427,7 @@ main(int argc, const char **argv)
   const char *password = NULL;
   svn_boolean_t no_auth_cache = FALSE;
   svn_boolean_t non_interactive = FALSE;
+  apr_array_header_t *config_options = NULL;
   apr_getopt_t *os;
   const char *first_arg;
 
@@ -484,6 +501,15 @@ main(int argc, const char **argv)
         case opt_non_interactive:
           non_interactive = TRUE;
           break;
+        case opt_config_option:
+          if (!config_options)
+              config_options =
+                    apr_array_make(pool, 1,
+                                   sizeof(svn_cmdline__config_argument_t*));
+
+            SVNRDUMP_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
+            SVNRDUMP_ERR(svn_cmdline__parse_config_option(config_options,
+                                                          opt_arg, pool));
         }
     }
 
@@ -542,6 +568,7 @@ main(int argc, const char **argv)
                                password,
                                config_dir,
                                no_auth_cache,
+                               config_options,
                                pool));
 
   /* Have sane opt_baton->start_revision and end_revision defaults if unspecified */

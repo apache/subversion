@@ -1546,10 +1546,15 @@ svn_fs_fs__hotcopy(const char *src_path,
               const char *src_abspath;
               const char *dst_abspath;
               const char *config_relpath;
+              svn_error_t *err2;
 
               config_relpath = svn_dirent_join(src_path, PATH_CONFIG, pool);
-              SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
-              SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
+              err2 = svn_dirent_get_absolute(&src_abspath, src_path, pool);
+              if (err2)
+                return svn_error_return(svn_error_compose_create(err, err2));
+              err2 = svn_dirent_get_absolute(&dst_abspath, dst_path, pool);
+              if (err2)
+                return svn_error_return(svn_error_compose_create(err, err2));
               
               /* ### hack: strip off the 'db/' directory from paths so
                * ### they make sense to the user */
@@ -6369,11 +6374,12 @@ svn_fs_fs__reserve_copy_id(const char **copy_id_p,
 static svn_error_t *
 write_revision_zero(svn_fs_t *fs)
 {
+  const char *path_revision_zero = path_rev(fs, 0, fs->pool);
   apr_hash_t *proplist;
   svn_string_t date;
 
   /* Write out a rev file for revision 0. */
-  SVN_ERR(svn_io_file_create(path_rev(fs, 0, fs->pool),
+  SVN_ERR(svn_io_file_create(path_revision_zero,
                              "PLAIN\nEND\nENDREP\n"
                              "id: 0.0.r0/17\n"
                              "type: dir\n"
@@ -6382,6 +6388,7 @@ write_revision_zero(svn_fs_t *fs)
                              "2d2977d1c96f487abe4a1e202dd03b4e\n"
                              "cpath: /\n"
                              "\n\n17 107\n", fs->pool));
+  SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
 
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
@@ -7484,6 +7491,8 @@ pack_shard(const char *revs_dir,
   SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, pool));
+  SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, pool));
+  SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, pool));
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
    * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)

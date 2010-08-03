@@ -824,6 +824,7 @@ complete_directory(struct edit_baton *eb,
 
       node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
+#ifndef SVN_WC__SINGLE_DB
       /* ### there is an edge case that we can run into right now: this
          ### dir can have a "subdir" node in the BASE_NODE, but the
          ### actual subdir does NOT have a record.
@@ -841,12 +842,16 @@ complete_directory(struct edit_baton *eb,
          ### the "subdir" record. maybe there is a good place to remove
          ### that record (or wait for single-dir). for now, we can correct
          ### it when we detect it.  */
+#endif
       err = svn_wc__db_base_get_info(&status, &kind, &revnum,
                                      NULL, NULL, NULL,
                                      NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, node_abspath,
                                      iterpool, iterpool);
+#ifdef SVN_WC__SINGLE_DB
+      SVN_ERR(err);
+#else
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -858,6 +863,7 @@ complete_directory(struct edit_baton *eb,
                                                        iterpool));
           continue;
         }
+#endif
 
       /* ### obsolete comment?
          Any entry still marked as deleted (and not schedule add) can now
@@ -1176,9 +1182,11 @@ prep_directory(struct dir_baton *db,
                svn_revnum_t ancestor_revision,
                apr_pool_t *pool)
 {
-  const char *repos_root;
   const char *dir_abspath;
+#ifndef SINGLE_DB
+  const char *repos_root;
   svn_boolean_t locked_here;
+#endif
 
   dir_abspath = db->local_abspath;
 
@@ -1279,9 +1287,12 @@ check_path_under_root(const char *base_path,
                       const char *add_path,
                       apr_pool_t *pool)
 {
-  char *full_path;
+  const char *full_path;
+  svn_boolean_t under_root;
 
-  if (! svn_dirent_is_under_root(&full_path, base_path, add_path, pool))
+  SVN_ERR(svn_dirent_is_under_root(&under_root, &full_path, base_path, add_path, pool));
+
+  if (! under_root)
     {
       return svn_error_createf(
           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -3167,6 +3178,12 @@ close_directory(void *dir_baton,
         changed_date = new_changed_date;
       if (new_changed_author != NULL)
         changed_author = new_changed_author;
+
+#ifdef SINGLE_DB
+      /* If no depth is set yet, set to infinity. */
+      if (depth == svn_depth_unknown)
+        depth = svn_depth_infinity;
+#endif
 
       /* Do we have new properties to install? Or shall we simply retain
          the prior set of properties? If we're installing new properties,
@@ -6067,11 +6084,12 @@ make_editor(svn_revnum_t *target_revision,
   if (!depth_is_sticky)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
-                                                inner_editor,
-                                                inner_baton,
+                                                wc_ctx->db,
                                                 anchor_abspath,
                                                 target_basename,
-                                                wc_ctx->db,
+                                                TRUE /* read_base */,
+                                                inner_editor,
+                                                inner_baton,
                                                 result_pool));
 
   return svn_delta_get_cancellation_editor(cancel_func,

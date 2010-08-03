@@ -609,7 +609,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(svn_uri_is_ancestor(repos_root_url, url));
 
-  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, TRUE,
+                                    scratch_pool));
 
   repos_relpath = svn_uri_is_child(repos_root_url, url, scratch_pool);
   if (repos_relpath == NULL)
@@ -647,6 +648,24 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             _("Revision %ld doesn't match existing "
                               "revision %ld in '%s'"),
                             revision, db_revision, local_abspath);
+
+      if (!db_repos_root_url)
+        {
+          if (status == svn_wc__db_status_added)
+            SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
+                                             &db_repos_relpath,
+                                             &db_repos_root_url,
+                                             &db_repos_uuid,
+                                             NULL, NULL, NULL, NULL,
+                                             db, local_abspath,
+                                             scratch_pool, scratch_pool));
+          else
+            SVN_ERR(svn_wc__db_scan_base_repos(&db_repos_relpath,
+                                               &db_repos_root_url,
+                                               &db_repos_uuid,
+                                               db, local_abspath,
+                                               scratch_pool, scratch_pool));
+        }
 
       /* The caller gives us a URL which should match the entry. However,
          some callers compensate for an old problem in entry->url and pass

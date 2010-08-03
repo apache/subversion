@@ -2150,13 +2150,19 @@ svn_wc_prop_set3(const char *name,
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access), pool));
 
-  SVN_ERR(svn_wc_prop_set4(wc_ctx, local_abspath, name, value, skip_checks,
-                           notify_func, notify_baton, pool));
+  err = svn_wc_prop_set4(wc_ctx, local_abspath, name, value, skip_checks,
+                         notify_func, notify_baton, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
