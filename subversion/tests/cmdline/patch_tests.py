@@ -935,9 +935,10 @@ def patch_add_new_dir(sbox):
   patch_file_path = make_patch_path(sbox)
 
   # The first diff is adding 'new' with two missing dirs. The second is
-  # adding 'new' with one missing dir to a 'A' that is locally deleted
-  # (should be skipped). The third is adding 'new' with a directory that
-  # is unversioned (should be skipped as well).
+  # adding 'new' with one missing dir to a 'A/B/E' that is locally deleted
+  # (should be skipped). The third is adding 'new' to 'A/C' that is locally
+  # deleted (should be skipped too). The fourth is adding 'new' with a
+  # directory that is unversioned (should be skipped as well).
   unidiff_patch = [
     "Index: new\n",
     "===================================================================\n",
@@ -947,8 +948,14 @@ def patch_add_new_dir(sbox):
     "+new\n",
     "Index: new\n",
     "===================================================================\n",
-    "--- A/C/Y/new\t(revision 0)\n",
-    "+++ A/C/Y/new\t(revision 0)\n",
+    "--- A/B/E/Y/new\t(revision 0)\n",
+    "+++ A/B/E/Y/new\t(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
+    "Index: new\n",
+    "===================================================================\n",
+    "--- A/C/new\t(revision 0)\n",
+    "+++ A/C/new\t(revision 0)\n",
     "@@ -0,0 +1 @@\n",
     "+new\n",
     "Index: new\n",
@@ -960,22 +967,25 @@ def patch_add_new_dir(sbox):
   ]
 
   C_path = os.path.join(wc_dir, 'A', 'C')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   svntest.actions.run_and_verify_svn("Deleting C failed", None, [],
                                      'rm', C_path)
+  svntest.actions.run_and_verify_svn("Deleting E failed", None, [],
+                                     'rm', E_path)
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  A_C_Y_new_path = os.path.join(wc_dir, 'A', 'C', 'Y', 'new')
+  A_B_E_Y_new_path = os.path.join(wc_dir, 'A', 'B', 'E', 'Y', 'new')
+  A_C_new_path = os.path.join(wc_dir, 'A', 'C', 'new')
   A_Z_new_path = os.path.join(wc_dir, 'A', 'Z', 'new')
   expected_output = [
     'A         %s\n' % os.path.join(wc_dir, 'X'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
-    'A         %s\n' % os.path.join(wc_dir, 'A', 'C'),
-    'A         %s\n' % os.path.join(wc_dir, 'A', 'C', 'Y'),
-    'A         %s\n' % os.path.join(wc_dir, 'A', 'C', 'Y', 'new'),
     'Skipped missing target: \'%s\'\n' % A_Z_new_path,
+    'Skipped missing target: \'%s\'\n' % A_B_E_Y_new_path,
+    'Skipped missing target: \'%s\'\n' % A_C_new_path,
     'Summary of conflicts:\n',
-    '  Skipped paths: 1\n',
+    '  Skipped paths: 3\n',
   ]
 
   # Create the unversioned obstructing directory
@@ -984,8 +994,6 @@ def patch_add_new_dir(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
            'X/Y/new'   : Item(contents='new\n'),
-           'A/C/Y/new' : Item(contents='new\n'),
-           'A/Z'       : Item(),
   })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -993,12 +1001,11 @@ def patch_add_new_dir(sbox):
            'X'         : Item(status='A ', wc_rev=0),
            'X/Y'       : Item(status='A ', wc_rev=0),
            'X/Y/new'   : Item(status='A ', wc_rev=0),
-           'A/C'       : Item(status='R ', wc_rev=1),
-           'A/C/Y'     : Item(status='A ', wc_rev=0),
-           'A/C/Y/new' : Item(status='A ', wc_rev=0),
   })
 
-  expected_skip = wc.State('', {A_Z_new_path : Item() })
+  expected_skip = wc.State('', {A_Z_new_path : Item(),
+                                A_B_E_Y_new_path : Item(),
+                                A_C_new_path : Item()})
 
   svntest.actions.run_and_verify_patch(wc_dir,
                                        os.path.abspath(patch_file_path),
@@ -2965,7 +2972,7 @@ test_list = [ None,
               patch_chopped_leading_spaces,
               patch_strip1,
               patch_no_index_line,
-              patch_add_new_dir,
+              XFail(patch_add_new_dir),
               patch_remove_empty_dirs,
               patch_reject,
               patch_keywords,
