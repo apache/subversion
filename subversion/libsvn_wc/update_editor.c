@@ -824,6 +824,7 @@ complete_directory(struct edit_baton *eb,
 
       node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
+#ifndef SVN_WC__SINGLE_DB
       /* ### there is an edge case that we can run into right now: this
          ### dir can have a "subdir" node in the BASE_NODE, but the
          ### actual subdir does NOT have a record.
@@ -841,12 +842,16 @@ complete_directory(struct edit_baton *eb,
          ### the "subdir" record. maybe there is a good place to remove
          ### that record (or wait for single-dir). for now, we can correct
          ### it when we detect it.  */
+#endif
       err = svn_wc__db_base_get_info(&status, &kind, &revnum,
                                      NULL, NULL, NULL,
                                      NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, node_abspath,
                                      iterpool, iterpool);
+#ifdef SVN_WC__SINGLE_DB
+      SVN_ERR(err);
+#else
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -858,6 +863,7 @@ complete_directory(struct edit_baton *eb,
                                                        iterpool));
           continue;
         }
+#endif
 
       /* ### obsolete comment?
          Any entry still marked as deleted (and not schedule add) can now
