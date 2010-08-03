@@ -122,6 +122,15 @@ def invalid_diff_targets(sbox):
                            "repository to repository",
                            'diff', '--summarize', "iota", "A")
 
+def invalid_export_targets(sbox):
+  "invalid targets for 'export'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn: Can't create directory 'iota': " +
+                           "File exists", 'export', '.', 'iota')
+  for target in ["^/", "file://"]:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 
+                             'export', '.', target)
+
 ########################################################################
 # Run the tests
 
@@ -135,6 +144,7 @@ test_list = [ None,
               invalid_copy_target,
               invalid_delete_targets,
               invalid_diff_targets,
+              invalid_export_targets,
              ]
 
 if __name__ == '__main__':
