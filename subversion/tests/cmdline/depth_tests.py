@@ -2442,6 +2442,8 @@ def make_depth_tree_conflicts(sbox):
   expected_disk.remove('A/mu',
                        'A/B', 'A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
                        'A/D/gamma');
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_disk.remove('A/B/E', 'A/B/F')
 
   # This test is set XFail because this (correct) status cannot be
   # verified due to an "svn update" bug. The tree-conflict on A/B
