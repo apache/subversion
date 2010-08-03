@@ -39,6 +39,7 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
+UnorderedOutput = svntest.verify.UnorderedOutput
 
 
 
@@ -180,7 +181,8 @@ def status_type_change(sbox):
         '~       iota\n',
     ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status')
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
   # Now change the file that is obstructing the versioned dir into an
   # unversioned dir.
@@ -220,7 +222,8 @@ def status_type_change(sbox):
         '~       iota\n',
     ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status')
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
   # Now change the versioned dir that is obstructing the file into an
   # unversioned dir.
@@ -235,7 +238,8 @@ def status_type_change(sbox):
         '~       iota\n',
     ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status')
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
 #----------------------------------------------------------------------
 
@@ -394,7 +398,7 @@ def status_nonrecursive_update_different_cwd(sbox):
 
   os.chdir('A')
   svntest.actions.run_and_verify_svn(None,
-                                     expected_output,
+                                     UnorderedOutput(expected_output),
                                      [],
                                      'status', '-v', '-N', '-u', 'C')
 
@@ -406,7 +410,7 @@ def status_nonrecursive_update_different_cwd(sbox):
 
   os.chdir('C')
   svntest.actions.run_and_verify_svn(None,
-                                     expected_output,
+                                     UnorderedOutput(expected_output),
                                      [],
                                      'status', '-v', '-N', '-u', '.')
 
@@ -950,7 +954,8 @@ def status_missing_dir(sbox):
   else:
     expected = ["!       " + a_d_g + "\n"]
 
-  svntest.actions.run_and_verify_svn(None, expected, [], "status", wc_dir)
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
+                                     "status", wc_dir)
 
   if svntest.main.wc_is_singledb(wc_dir):
     expected = svntest.verify.UnorderedOutput([
@@ -969,7 +974,7 @@ def status_missing_dir(sbox):
           "Status against revision:      1\n" ])
 
   # now run status -u, we should be able to do this without crashing
-  svntest.actions.run_and_verify_svn(None, expected, [],
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
                                      "status", "-u", wc_dir)
 
   # Finally run an explicit status request directly on the missing directory.
@@ -984,7 +989,8 @@ def status_missing_dir(sbox):
                  for s in expected ]
   else:
     expected = ["!       " + a_d_g + "\n"]
-  svntest.actions.run_and_verify_svn(None, expected, [], "status", a_d_g)
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
+                                     "status", a_d_g)
 
 def status_add_plus_conflict(sbox):
   "status on conflicted added file"
