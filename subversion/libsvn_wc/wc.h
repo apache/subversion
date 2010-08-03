@@ -49,8 +49,16 @@ extern "C" {
 #define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
                                                file */
 
-/*#define SVN_WC__SINGLE_DB
-#define SINGLE_DB*/
+
+/* ### Both SVN_WC__SINGLE_DB and SINGLE_DB are needed for proper use of the
+   ### experimental single-db feature.  They have slightly different meanings,
+   ### which is why there are two contants.  They will both disappear in the
+   ### final 1.7 release, but for now, if you want to use SINGLE_DB, you'll
+   ### need to uncomment the following line. */
+/* #define SVN_WC__SINGLE_DB */
+#ifdef SVN_WC__SINGLE_DB
+#define SINGLE_DB
+#endif
 
 
 /* We can handle this format or anything lower, and we (should) error
