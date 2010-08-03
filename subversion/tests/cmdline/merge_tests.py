@@ -15247,6 +15247,8 @@ def committed_case_only_move_and_revert(sbox):
     })
   expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A:3,5'})
   expected_disk.add({'c' : Item()})
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.remove('C')
   expected_status.tweak('MU', status='  ', wc_rev=4, copied=None)
   expected_status.remove('mu')
   expected_status.tweak('C', status='D ')
