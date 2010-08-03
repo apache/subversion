@@ -981,9 +981,9 @@ def patch_add_new_dir(sbox):
     'A         %s\n' % os.path.join(wc_dir, 'X'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
-    'Skipped missing target: \'%s\'\n' % A_Z_new_path,
     'Skipped missing target: \'%s\'\n' % A_B_E_Y_new_path,
     'Skipped missing target: \'%s\'\n' % A_C_new_path,
+    'Skipped missing target: \'%s\'\n' % A_Z_new_path,
     'Summary of conflicts:\n',
     '  Skipped paths: 3\n',
   ]
@@ -994,13 +994,20 @@ def patch_add_new_dir(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
            'X/Y/new'   : Item(contents='new\n'),
+           'A/Z'       : Item()
   })
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.remove('A/B/E/beta')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
            'X'         : Item(status='A ', wc_rev=0),
            'X/Y'       : Item(status='A ', wc_rev=0),
            'X/Y/new'   : Item(status='A ', wc_rev=0),
+           'A/B/E'     : Item(status='D ', wc_rev=1),
+           'A/B/E/alpha': Item(status='D ', wc_rev=1),
+           'A/B/E/beta': Item(status='D ', wc_rev=1),
+           'A/C'       : Item(status='D ', wc_rev=1),
   })
 
   expected_skip = wc.State('', {A_Z_new_path : Item(),
@@ -2976,7 +2983,7 @@ test_list = [ None,
               patch_chopped_leading_spaces,
               patch_strip1,
               patch_no_index_line,
-              XFail(patch_add_new_dir),
+              patch_add_new_dir,
               patch_remove_empty_dirs,
               patch_reject,
               patch_keywords,
