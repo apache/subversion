@@ -1096,6 +1096,10 @@ def patch_remove_empty_dirs(sbox):
   expected_disk.remove('A/B/lambda')
   expected_disk.remove('A/B/E/alpha')
   expected_disk.remove('A/B/E/beta')
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.remove('A/B/E')
+    expected_disk.remove('A/B/F')
+    expected_disk.remove('A/B')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'A/D/H/chi' : Item(status='! ', wc_rev=1)})
