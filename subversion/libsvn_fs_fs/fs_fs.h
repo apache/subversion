@@ -524,7 +524,7 @@ svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
 
 /* FSFS cache settings. It controls what caches, in what size and
-   how they will be created. The settomgs apply for the whole process.
+   how they will be created. The settings apply for the whole process.
  */
 typedef struct svn_fs_fs__cache_config_t
 {
@@ -545,7 +545,7 @@ typedef struct svn_fs_fs__cache_config_t
 } svn_fs_fs__cache_config_t;
 
 /* Get the current FSFS cache configuration. If it has not been set,
-   yet, this function will return the default settings.
+   this function will return the default settings.
  */
 const svn_fs_fs__cache_config_t *
 svn_fs_fs__get_cache_config(void);
@@ -553,9 +553,12 @@ svn_fs_fs__get_cache_config(void);
 /* Set the FSFS cache configuration. Please note that it may not change
    the actual configuration *in use*. Therefore, call it before reading
    data from any FSFS repo and call it only once.
+
+   This function is not thread-safe. Therefore, it should be called once
+   from the processes' initialization code only.
  */
 void
-svn_fs_fs__set_cache_config(svn_fs_fs__cache_config_t *settings);
+svn_fs_fs__set_cache_config(const svn_fs_fs__cache_config_t *settings);
 
 /* Possibly pack the repository at PATH.  This just take full shards, and
    combines all the revision files into a single one, with a manifest header.

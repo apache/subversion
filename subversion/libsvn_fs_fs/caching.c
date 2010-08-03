@@ -190,29 +190,24 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
-/* Access to the cache settings as a process-wide singleton. */
-static svn_fs_fs__cache_config_t *
-internal_get_cache_config(void)
-{
-  static svn_fs_fs__cache_config_t settings =
-    {
-      /* default configuration:
-       */
-      0x8000000,   /* 128 MB for caches */
-      16,          /* up to 16 files kept open */
-      FALSE,       /* don't cache fulltexts */
-      FALSE,       /* don't cache text deltas */
-      FALSE        /* assume multi-threaded operation */
-    };
-
-  return &settings;
-}
+/* The cache settings as a process-wide singleton.
+ */
+static svn_fs_fs__cache_config_t cache_settings =
+  {
+    /* default configuration:
+      */
+    0x8000000,   /* 128 MB for caches */
+    16,          /* up to 16 files kept open */
+    FALSE,       /* don't cache fulltexts */
+    FALSE,       /* don't cache text deltas */
+    FALSE        /* assume multi-threaded operation */
+  };
 
 /* Get the current FSFS cache configuration. */
 const svn_fs_fs__cache_config_t *
 svn_fs_fs__get_cache_config(void)
 {
-  return internal_get_cache_config();
+  return &cache_settings;
 }
 
 /* Access the process-global (singleton) membuffer cache. The first call
@@ -224,7 +219,7 @@ get_global_membuffer_cache(void)
 {
   static svn_membuffer_t *cache = NULL;
 
-  apr_uint64_t cache_size = svn_fs_fs__get_cache_config()->cache_size;
+  apr_uint64_t cache_size = cache_settings.cache_size;
   if (!cache && cache_size)
     {
       /* auto-allocate cache*/
@@ -234,8 +229,11 @@ get_global_membuffer_cache(void)
       if (apr_allocator_create(&allocator))
         return NULL;
 
-      /* ensure that a we free partially allocated data if we run OOM
-       * before the cache is complete.
+      /* Ensure that we free partially allocated data if we run OOM
+       * before the cache is complete: If the cache cannot be allocated
+       * in its full size, the create() function will clear the pool
+       * explicitly. The allocator will make sure that any memory no
+       * longer used by the pool will actually be returned to the OS.
        */
       apr_allocator_max_free_set(allocator, 1);
       pool = svn_pool_create_ex(NULL, allocator);
@@ -256,9 +254,9 @@ get_global_membuffer_cache(void)
  * initialization code, no race with background / worker threads should occur.
  */
 void
-svn_fs_fs__set_cache_config(svn_fs_fs__cache_config_t *settings)
+svn_fs_fs__set_cache_config(const svn_fs_fs__cache_config_t *settings)
 {
-  *internal_get_cache_config() = *settings;
+  cache_settings = *settings;
 
   /* Allocate global membuffer cache as a side-effect.
    * Only the first call will actually take affect. */
