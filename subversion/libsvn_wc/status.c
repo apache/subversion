@@ -1288,16 +1288,21 @@ get_dir_status(const struct walk_status_baton *wb,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    wb->db, node_abspath, iterpool, iterpool));
 
+#ifndef SVN_WC__SINGLE_DB
+          /* Hidden looks in the parent stubs, which should not be necessary.
+             Also skip excluded/absent/not-present working nodes, which
+             only have an implied status via their parent. */
+
           SVN_ERR(svn_wc__db_node_hidden(&hidden, wb->db, node_abspath,
                                          iterpool));
 
-          /* Hidden looks in the parent stubs, which should not be necessary
-             later. Also skip excluded/absent/not-present working nodes, which
-             only have an implied status via their parent. */
-          if (!hidden
+          if (hidden)
+            node_status = svn_wc__db_status_not_present;
+#endif
+
+          if (node_status != svn_wc__db_status_not_present
               && node_status != svn_wc__db_status_excluded
-              && node_status != svn_wc__db_status_absent
-              && node_status != svn_wc__db_status_not_present)
+              && node_status != svn_wc__db_status_absent)
             {
               if (depth == svn_depth_files && node_kind == svn_wc__db_kind_dir)
                 continue;
