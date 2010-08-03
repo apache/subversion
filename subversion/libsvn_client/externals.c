@@ -877,7 +877,8 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
             SVN_ERR(svn_client_export4(NULL, new_item->url, local_abspath,
                                        &(new_item->peg_revision),
                                        &(new_item->revision),
-                                       FALSE, TRUE, svn_depth_infinity, NULL,
+                                       FALSE, TRUE, svn_depth_infinity,
+                                       ib->native_eol,
                                        ib->ctx, ib->iter_pool));
           else
             SVN_ERR(switch_file_external(local_abspath,
