@@ -28,7 +28,7 @@ Planned work
         A: notes/http-and-webdav/webdav-protocol
   - [DONE] unit test
       prop_tests.py 34: atomic_over_ra()
-    TODO: extend it for 3*2 testing (as in fs-test.c:revision_props())
+    TODO: extend it to test props set to the empty string
 
 * svnsync:
   - use the new RA API to resolve the race condition in locking.
@@ -39,6 +39,8 @@ Potential work
 
 * svn_log__ interface
   - extend svn_log__change_rev_prop() with a "was old value provided?" boolean
+
+* [needsdesign] specific error code for the "expectation didn't match" condition?
 
 * repos layer hooks interface
   - pass the old value to pre-revprop-change
