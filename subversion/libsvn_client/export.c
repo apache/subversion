@@ -942,6 +942,11 @@ svn_client_export5(svn_revnum_t *result_rev,
   SVN_ERR_ASSERT(peg_revision != NULL);
   SVN_ERR_ASSERT(revision != NULL);
 
+  if (svn_path_is_url(to))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                              _("'%s' is not a local path"),
+                                              to));
+    
   peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision, from);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 
