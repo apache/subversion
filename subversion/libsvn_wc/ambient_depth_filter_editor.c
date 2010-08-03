@@ -271,6 +271,10 @@ make_file_baton(struct file_baton **f_p,
 {
   struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
   struct edit_baton *eb = pb->edit_baton;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_boolean_t hidden;
+  const char *abspath;
 
   SVN_ERR_ASSERT(path);
 
@@ -281,33 +285,37 @@ make_file_baton(struct file_baton **f_p,
       return SVN_NO_ERROR;
     }
 
+  abspath = svn_dirent_join(eb->anchor_abspath,
+                            svn_dirent_skip_ancestor(eb->anchor_abspath,
+                                                     path),
+                            pool);
+
+  SVN_ERR(ambient_read_info(&hidden, &status, &kind, NULL,
+                            eb->db, abspath, eb->read_base, pool));
+
   if (pb->ambient_depth == svn_depth_empty)
     {
       /* This is not a depth upgrade, and the parent directory is
          depth==empty.  So if the parent doesn't
          already have an entry for the file, then the parent
          doesn't want to hear about the file at all. */
-      svn_wc__db_kind_t kind;
-      svn_boolean_t unavailable;
-      const char *abspath;
-
-      abspath = svn_dirent_join(eb->anchor_abspath,
-                                svn_dirent_skip_ancestor(eb->anchor_abspath,
-                                                         path),
-                                pool);
-
-      SVN_ERR(ambient_read_info(&unavailable, NULL, &kind, NULL,
-                                eb->db, abspath, eb->read_base, pool));
-
-      if (kind == svn_wc__db_kind_unknown)
-        unavailable = TRUE;
-
-      if (unavailable)
+      
+      if (hidden || kind == svn_wc__db_kind_unknown)
         {
           f->ambiently_excluded = TRUE;
           *f_p = f;
           return SVN_NO_ERROR;
         }
+    }
+
+  /* If pb->ambient_depth == svn_depth_unknown we are pulling
+     in new nodes */
+  if (pb->ambient_depth != svn_depth_unknown
+      && status == svn_wc__db_status_excluded)
+    {
+      f->ambiently_excluded = TRUE;
+      *f_p = f;
+      return SVN_NO_ERROR;
     }
 
   f->edit_baton = pb->edit_baton;
