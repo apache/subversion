@@ -208,6 +208,31 @@ Candidate changes:
     Votes:
       +1: rhuijben
 
+ * r980811, r981449
+   Improve handling of missing fsfs.conf during svnadmin hotcopy.
+   Justification:
+     People are complaining. There's Debian bug reports and whatnot.
+     See http://svn.haxx.se/dev/archive-2010-07/0471.shtml and follow-ups.
+   Notes:
+     r980811 is the actual fix
+     r981449 is a follow-up which fixes an error leak
+   Backport branch:
+     ^/subversion/branches/1.6.x-r980811
+   Votes:
+     +1: stsp
+
+ * r981921
+   fsfs: make rev files read-only.
+   Justification:
+     They should never be changed.  Revprop edits are one suspected cause of
+     rev file corruption; this *may* (total guess) prevent the corruption.
+   Thread:
+     http://svn.haxx.se/dev/archive-2010-08/0060.shtml
+   Backport branch:
+     ^/subversion/branches/1.6.x-r981921
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
@@ -281,7 +306,6 @@ Veto-blocked changes:
    Votes:
      -1: cmpilato (pending results of aforemented discussion)
 
-
  * r950445, 950468
    Fix for issue #2591 "'svnadmin hotcopy' does not replicate symlinks".
    Justification:
@@ -299,31 +323,6 @@ Veto-blocked changes:
            svn_io_dir_walk() which we should not do in a back-port.
            Discussing on list.)
      -1: cmpilato (Changes semantics of svn_io_dir_walk()).
-
- * r980811, r981449
-   Improve handling of missing fsfs.conf during svnadmin hotcopy.
-   Justification:
-     People are complaining. There's Debian bug reports and whatnot.
-     See http://svn.haxx.se/dev/archive-2010-07/0471.shtml and follow-ups.
-   Notes:
-     r980811 is the actual fix
-     r981449 is a follow-up which fixes an error leak
-   Backport branch:
-     ^/subversion/branches/1.6.x-r980811
-   Votes:
-     +1: stsp
-
- * r981921
-   fsfs: make rev files read-only.
-   Justification:
-     They should never be changed.  Revprop edits are one suspected cause of
-     rev file corruption; this *may* (total guess) prevent the corruption.
-   Thread:
-     http://svn.haxx.se/dev/archive-2010-08/0060.shtml
-   Backport branch:
-     ^/subversion/branches/1.6.x-r981921
-   Votes:
-     +1: danielsh
 
 Approved changes:
 =================
