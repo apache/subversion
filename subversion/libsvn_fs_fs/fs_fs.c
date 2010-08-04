@@ -113,6 +113,17 @@
 #define REP_PLAIN          "PLAIN"
 #define REP_DELTA          "DELTA"
 
+/* Cookies used to classify cached file handle usage */
+/* Used whenever no other specific region of the rev file is being read. */
+#define DEFAULT_FILE_COOKIE 0
+
+/* Used when reading representation data.
+ * Since this is often interleaved with other reads, use a separate 
+ * cookie (hence a separate file handle) for the reps.  That way, rep
+ * access can often be satisfied from the APR read buffer.  The same
+ * applies to the meta data because it is not rep data. */
+#define REP_FILE_COOKIE     1
+
 /* Notes:
 
 To avoid opening and closing the rev-files all the time, it would
@@ -252,11 +263,18 @@ svn_fs_fs__path_rev_absolute(const char **path,
 {
   if (! is_packed_rev(fs, rev))
     {
+      fs_fs_data_t *ffd = fs->fsap_data;
       svn_node_kind_t kind;
 
       /* Initialize the return variable. */
       *path = path_rev(fs, rev, pool);
 
+      /* quick check the path. For revs close to HEAD, this will often
+       * be effective (and, hence, efficient). */
+      if (svn_file_handle_cache__has_file(ffd->file_handle_cache, *path))
+        return SVN_NO_ERROR;
+
+      /* the expensive standard lookup check */
       SVN_ERR(svn_io_check_path(*path, &kind, pool));
       if (kind == svn_node_file)
         {
@@ -642,6 +660,17 @@ with_txn_current_lock(svn_fs_t *fs,
                         mutex,
 #endif
                         pool);
+}
+
+/* A frequently used utility method: close all cached, idle file handles.
+ * Call this at the end of write transactions to ensure that successive
+ * reads will see the new file content.
+ */
+static svn_error_t *
+sync_file_handle_cache(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return svn_file_handle_cache__flush(ffd->file_handle_cache);
 }
 
 /* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
@@ -1780,21 +1809,40 @@ ensure_revision_exists(svn_fs_t *fs,
 /* Open the correct revision file for REV.  If the filesystem FS has
    been packed, *FILE will be set to the packed file; otherwise, set *FILE
    to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
-   file doesn't exist.  Use POOL for allocations. */
+   file doesn't exist.  Move the file pointer of OFFSET, if the latter is
+   not -1.  Prefer cached file handles that share the same COOKIE (again,
+   if not -1).  Use POOL for allocations. */
 static svn_error_t *
-open_pack_or_rev_file(apr_file_t **file,
+open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
+                      apr_off_t offset,
+                      int cookie,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
   const char *path;
 
+  /* make sure file has a defined state */
+  *file = NULL;
   err = svn_fs_fs__path_rev_absolute(&path, fs, rev, pool);
 
   if (! err)
-    err = svn_io_file_open(file, path,
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+    {
+      /* open the revision file in buffered r/o mode */
+      fs_fs_data_t *ffd = fs->fsap_data;
+      err = svn_file_handle_cache__open(file,
+                                        ffd->file_handle_cache,
+                                        path,
+                                        APR_READ | APR_BUFFERED,
+                                        APR_OS_DEFAULT,
+                                        offset,
+                                        cookie,
+                                        pool);
+
+      /* if that succeeded, there must be an underlying APR file */
+      assert(err || svn_file_handle_cache__get_apr_handle(*file));
+    }
 
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -1870,20 +1918,18 @@ get_packed_offset(apr_off_t *rev_offset,
 
 /* Open the revision file for revision REV in filesystem FS and store
    the newly opened file in FILE.  Seek to location OFFSET before
-   returning.  Perform temporary allocations in POOL. */
+   returning.  Prefer cached file handles with the specified COOKIE
+   (if not -1).  Perform temporary allocations in POOL. */
 static svn_error_t *
-open_and_seek_revision(apr_file_t **file,
+open_and_seek_revision(svn_file_handle_cache__handle_t **file,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
                        apr_off_t offset,
+                       int cookie,
                        apr_pool_t *pool)
 {
-  apr_file_t *rev_file;
-
+  /* none of the following requires the file handle */
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
-
-  SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, pool));
-
   if (is_packed_rev(fs, rev))
     {
       apr_off_t rev_offset;
@@ -1892,53 +1938,55 @@ open_and_seek_revision(apr_file_t **file,
       offset += rev_offset;
     }
 
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-
-  *file = rev_file;
-
-  return SVN_NO_ERROR;
+  /* So, open the revision file and position the pointer here in one go. */
+  return open_pack_or_rev_file(file, fs, rev, offset, cookie, pool);
 }
 
 /* Open the representation for a node-revision in transaction TXN_ID
    in filesystem FS and store the newly opened file in FILE.  Seek to
-   location OFFSET before returning.  Perform temporary allocations in
+   location OFFSET before returning.  Prefer cached file handles witt
+   the specified COOKIE (if not -1).  Perform temporary allocations in
    POOL.  Only appropriate for file contents, nor props or directory
    contents. */
 static svn_error_t *
-open_and_seek_transaction(apr_file_t **file,
+open_and_seek_transaction(svn_file_handle_cache__handle_t **file,
                           svn_fs_t *fs,
                           const char *txn_id,
                           representation_t *rep,
+                          int cookie,
                           apr_pool_t *pool)
 {
-  apr_file_t *rev_file;
-  apr_off_t offset;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_io_file_open(&rev_file, path_txn_proto_rev(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  offset = rep->offset;
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-
-  *file = rev_file;
-
-  return SVN_NO_ERROR;
+  /* open & seek in one call */
+  return svn_file_handle_cache__open(file,
+                                     ffd->file_handle_cache,
+                                     path_txn_proto_rev(fs, txn_id, pool),
+                                     APR_READ | APR_BUFFERED, 
+                                     APR_OS_DEFAULT, 
+                                     rep->offset,
+                                     cookie,
+                                     pool);
 }
 
 /* Given a node-id ID, and a representation REP in filesystem FS, open
    the correct file and seek to the correction location.  Store this
    file in *FILE_P.  Perform any allocations in POOL. */
 static svn_error_t *
-open_and_seek_representation(apr_file_t **file_p,
+open_and_seek_representation(svn_file_handle_cache__handle_t **file_p,
                              svn_fs_t *fs,
                              representation_t *rep,
                              apr_pool_t *pool)
 {
+  /* representation headers tend to cluster. Therefore, use separate
+   * file handles for them (controlled by the cookie) to maximize APR 
+   * buffer effectiveness. */
   if (! rep->txn_id)
     return open_and_seek_revision(file_p, fs, rep->revision, rep->offset,
-                                  pool);
+                                  REP_FILE_COOKIE, pool);
   else
-    return open_and_seek_transaction(file_p, fs, rep->txn_id, rep, pool);
+    return open_and_seek_transaction(file_p, fs, rep->txn_id, rep, 
+                                     REP_FILE_COOKIE, pool);
 }
 
 /* Parse the description of a representation from STRING and store it
@@ -2039,14 +2087,21 @@ get_node_revision_body(node_revision_t **noderev_p,
                        const svn_fs_id_t *id,
                        apr_pool_t *pool)
 {
-  apr_file_t *revision_file;
+  svn_file_handle_cache__handle_t *revision_file;
   svn_error_t *err;
 
   if (svn_fs_fs__id_txn_id(id))
     {
       /* This is a transaction node-rev. */
-      err = svn_io_file_open(&revision_file, path_txn_node_rev(fs, id, pool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+      fs_fs_data_t *ffd = fs->fsap_data;
+      err = svn_file_handle_cache__open(&revision_file,
+                                        ffd->file_handle_cache,
+                                        path_txn_node_rev(fs, id, pool),
+                                        APR_READ | APR_BUFFERED,
+                                        APR_OS_DEFAULT,
+                                        0,
+                                        DEFAULT_FILE_COOKIE,
+                                        pool);
     }
   else
     {
@@ -2054,6 +2109,7 @@ get_node_revision_body(node_revision_t **noderev_p,
       err = open_and_seek_revision(&revision_file, fs,
                                    svn_fs_fs__id_rev(id),
                                    svn_fs_fs__id_offset(id),
+                                   DEFAULT_FILE_COOKIE,
                                    pool);
     }
 
@@ -2069,8 +2125,10 @@ get_node_revision_body(node_revision_t **noderev_p,
     }
 
   return svn_fs_fs__read_noderev(noderev_p,
-                                 svn_stream_from_aprfile2(revision_file, FALSE,
-                                                          pool),
+                                 svn_stream_from_cached_file_handle
+                                     (revision_file,
+                                      FALSE,
+                                      pool),
                                  pool);
 }
 
@@ -2360,7 +2418,10 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
-  return svn_io_file_close(noderev_file, pool);
+  SVN_ERR(svn_io_file_close(noderev_file, pool));
+
+  /* we wrote to the db -> sync file contents */
+  return sync_file_handle_cache(fs);
 }
 
 
@@ -2652,7 +2713,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_file_t *revision_file;
+  svn_file_handle_cache__handle_t *revision_file;
+  apr_file_t *apr_rev_file;
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
   svn_boolean_t is_cached;
@@ -2664,14 +2726,19 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   if (is_cached)
     return SVN_NO_ERROR;
 
-  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, pool));
-  SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, fs, rev,
+  /* we don't care about the file pointer position */
+  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, -1,
+                                DEFAULT_FILE_COOKIE, pool));
+  apr_rev_file = svn_file_handle_cache__get_apr_handle(revision_file);
+
+  /* it will moved here anyways */
+  SVN_ERR(get_root_changes_offset(&root_offset, NULL, apr_rev_file, fs, rev,
                                   pool));
 
-  SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
-                              root_offset, pool));
+  SVN_ERR(get_fs_id_at_offset(&root_id, apr_rev_file, fs, rev, root_offset, 
+                              pool));
 
-  SVN_ERR(svn_io_file_close(revision_file, pool));
+  SVN_ERR(svn_file_handle_cache__close(revision_file));
 
   SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
 
@@ -2842,7 +2909,10 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
    representation is. */
 struct rep_state
 {
-  apr_file_t *file;
+  svn_file_handle_cache__handle_t *file;
+                    /* For convenience, store the APR file handle
+                       along with the surrounding cached file handle. */
+  apr_file_t *apr_file;
   apr_off_t start;  /* The starting offset for the raw
                        svndiff/plaintext data minus header. */
   apr_off_t off;    /* The current offset into the file. */
@@ -2864,8 +2934,10 @@ create_rep_state_body(struct rep_state **rep_state,
   unsigned char buf[4];
 
   SVN_ERR(open_and_seek_representation(&rs->file, fs, rep, pool));
-  SVN_ERR(read_rep_line(&ra, rs->file, pool));
-  SVN_ERR(get_file_offset(&rs->start, rs->file, pool));
+  rs->apr_file = svn_file_handle_cache__get_apr_handle(rs->file);
+
+  SVN_ERR(read_rep_line(&ra, rs->apr_file, pool));
+  SVN_ERR(get_file_offset(&rs->start, rs->apr_file, pool));
   rs->off = rs->start;
   rs->end = rs->start + rep->size;
   *rep_state = rs;
@@ -2876,7 +2948,7 @@ create_rep_state_body(struct rep_state **rep_state,
     return SVN_NO_ERROR;
 
   /* We are dealing with a delta, find out what version. */
-  SVN_ERR(svn_io_file_read_full(rs->file, buf, sizeof(buf), NULL, pool));
+  SVN_ERR(svn_io_file_read_full(rs->apr_file, buf, sizeof(buf), NULL, pool));
   if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
     return svn_error_create
       (SVN_ERR_FS_CORRUPT, NULL,
@@ -3067,9 +3139,9 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
   /* Skip windows to reach the current chunk if we aren't there yet. */
   while (rs->chunk_index < this_chunk)
     {
-      SVN_ERR(svn_txdelta_skip_svndiff_window(rs->file, rs->ver, pool));
+      SVN_ERR(svn_txdelta_skip_svndiff_window(rs->apr_file, rs->ver, pool));
       rs->chunk_index++;
-      SVN_ERR(get_file_offset(&rs->off, rs->file, pool));
+      SVN_ERR(get_file_offset(&rs->off, rs->apr_file, pool));
       if (rs->off >= rs->end)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Reading one svndiff window read "
@@ -3078,10 +3150,10 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
     }
 
   /* Read the next window. */
-  stream = svn_stream_from_aprfile2(rs->file, TRUE, pool);
+  stream = svn_stream_from_cached_file_handle(rs->file, TRUE, pool);
   SVN_ERR(svn_txdelta_read_svndiff_window(nwin, stream, rs->ver, pool));
   rs->chunk_index++;
-  SVN_ERR(get_file_offset(&rs->off, rs->file, pool));
+  SVN_ERR(get_file_offset(&rs->off, rs->apr_file, pool));
 
   if (rs->off > rs->end)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -3154,7 +3226,7 @@ get_contents(struct rep_read_baton *rb,
   char *sbuf, *tbuf, *cur = buf;
   struct rep_state *rs;
   svn_txdelta_window_t *cwindow, *lwindow;
-
+  
   /* Special case for when there are no delta reps, only a plain
      text. */
   if (rb->rs_list->nelts == 0)
@@ -3163,7 +3235,7 @@ get_contents(struct rep_read_baton *rb,
       rs = rb->src_state;
       if (((apr_off_t) copy_len) > rs->end - rs->off)
         copy_len = (apr_size_t) (rs->end - rs->off);
-      SVN_ERR(svn_io_file_read_full(rs->file, cur, copy_len, NULL,
+      SVN_ERR(svn_io_file_read_full(rs->apr_file, cur, copy_len, NULL,
                                     rb->pool));
       rs->off += copy_len;
       *len = copy_len;
@@ -3236,10 +3308,10 @@ get_contents(struct rep_read_baton *rb,
                   if ((rs->start + lwindow->sview_offset) != rs->off)
                     {
                       rs->off = rs->start + lwindow->sview_offset;
-                      SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off,
+                      SVN_ERR(svn_io_file_seek(rs->apr_file, APR_SET, &rs->off,
                                                rb->pool));
                     }
-                  SVN_ERR(svn_io_file_read_full(rs->file, sbuf,
+                  SVN_ERR(svn_io_file_read_full(rs->apr_file, sbuf,
                                                 lwindow->sview_len,
                                                 NULL, rb->pool));
                   rs->off += lwindow->sview_len;
@@ -3485,7 +3557,7 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
           return SVN_NO_ERROR;
         }
       else
-        SVN_ERR(svn_io_file_close(rep_state->file, pool));
+        SVN_ERR(svn_file_handle_cache__close(rep_state->file));
     }
 
   /* Read both fulltexts and construct a delta. */
@@ -4272,24 +4344,29 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 {
   apr_off_t changes_offset;
   apr_hash_t *changed_paths;
-  apr_file_t *revision_file;
+  svn_file_handle_cache__handle_t *revision_file;
+  apr_file_t *apr_revision_file;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, pool));
+  /* we don't care about the file pointer position */
+  SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, -1, 
+                                DEFAULT_FILE_COOKIE, pool));
+  apr_revision_file = svn_file_handle_cache__get_apr_handle(revision_file);
 
-  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, fs,
-                                  rev, pool));
+  /* it will moved here anyways */
+  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, apr_revision_file, 
+                                  fs, rev, pool));
 
-  SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
+  SVN_ERR(svn_io_file_seek(apr_revision_file, APR_SET, &changes_offset, pool));
 
   changed_paths = apr_hash_make(pool);
 
-  SVN_ERR(fetch_all_changes(changed_paths, copyfrom_cache, revision_file,
+  SVN_ERR(fetch_all_changes(changed_paths, copyfrom_cache, apr_revision_file,
                             TRUE, pool));
 
   /* Close the revision file. */
-  SVN_ERR(svn_io_file_close(revision_file, pool));
+  SVN_ERR(svn_file_handle_cache__close(revision_file));
 
   *changed_paths_p = changed_paths;
 
@@ -4709,7 +4786,10 @@ write_next_ids(svn_fs_t *fs,
   SVN_ERR(svn_stream_printf(out_stream, pool, "%s %s\n", node_id, copy_id));
 
   SVN_ERR(svn_stream_close(out_stream));
-  return svn_io_file_close(file, pool);
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* we wrote to the db -> sync file contents */
+  return sync_file_handle_cache(fs);
 }
 
 /* Find out what the next unique node-id and copy-id are for
@@ -4921,7 +5001,10 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
                                 strlen(name), name));
     }
 
-  return svn_io_file_close(file, pool);
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* we wrote to the db -> sync file contents */
+  return sync_file_handle_cache(fs);
 }
 
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
@@ -5021,7 +5104,10 @@ svn_fs_fs__add_change(svn_fs_t *fs,
 
   SVN_ERR(write_change_entry(file, path, change, TRUE, pool));
 
-  return svn_io_file_close(file, pool);
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* we wrote to the db -> sync file contents */
+  return sync_file_handle_cache(fs);
 }
 
 /* This baton is used by the representation writing streams.  It keeps
@@ -5276,7 +5362,8 @@ rep_write_contents_close(void *baton)
   SVN_ERR(unlock_proto_rev(b->fs, rep->txn_id, b->lockcookie, b->pool));
   svn_pool_destroy(b->pool);
 
-  return SVN_NO_ERROR;
+  /* we wrote to the db -> sync file contents */
+  return sync_file_handle_cache(b->fs);
 }
 
 /* Store a writable stream in *CONTENTS_P that will receive all data
@@ -5377,7 +5464,8 @@ svn_fs_fs__set_proplist(svn_fs_t *fs,
       SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, FALSE, pool));
     }
 
-  return SVN_NO_ERROR;
+  /* we wrote to the db -> sync file contents */
+  return sync_file_handle_cache(fs);
 }
 
 /* Read the 'current' file for filesystem FS and store the next
@@ -5920,6 +6008,9 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));
 
+  /* we wrote to the db -> sync file contents */
+  SVN_ERR(sync_file_handle_cache(cb->fs));
+
   /* We don't unlock the prototype revision file immediately to avoid a
      race with another caller writing to the prototype revision file
      before we commit it. */
@@ -6090,6 +6181,9 @@ commit_obliteration_body(void *baton, apr_pool_t *pool)
                                  pool));
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));
+
+  /* we wrote to the db -> sync file contents */
+  SVN_ERR(sync_file_handle_cache(cb->fs));
 
   /* We don't unlock the prototype revision file immediately to avoid a
      race with another caller writing to the prototype revision file
@@ -6428,9 +6522,12 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
   while (1)
     {
       svn_error_t *err;
-      apr_file_t *file;
+      svn_file_handle_cache__handle_t *file;
 
-      err = open_pack_or_rev_file(&file, fs, right, iterpool);
+      /* We don't care about the file pointer position as long as the file 
+         itself exists. */
+      err = open_pack_or_rev_file(&file, fs, right, -1, 
+                                  DEFAULT_FILE_COOKIE, iterpool);
       svn_pool_clear(iterpool);
 
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
@@ -6452,9 +6549,11 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
     {
       svn_revnum_t probe = left + ((right - left) / 2);
       svn_error_t *err;
-      apr_file_t *file;
+      svn_file_handle_cache__handle_t *file;
 
-      err = open_pack_or_rev_file(&file, fs, probe, iterpool);
+      /* Again, ignore the file pointer position. */
+      err = open_pack_or_rev_file(&file, fs, probe, -1, 
+                                  DEFAULT_FILE_COOKIE, iterpool);
       svn_pool_clear(iterpool);
 
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
@@ -6738,7 +6837,8 @@ recover_body(void *baton, apr_pool_t *pool)
 
       for (rev = 0; rev <= max_rev; rev++)
         {
-          apr_file_t *rev_file;
+          svn_file_handle_cache__handle_t *rev_file;
+          apr_file_t *apr_rev_file;
           apr_off_t root_offset;
 
           svn_pool_clear(iterpool);
@@ -6746,12 +6846,18 @@ recover_body(void *baton, apr_pool_t *pool)
           if (b->cancel_func)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
-          SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, iterpool));
-          SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, fs, rev,
+          /* Any file pointer position will do ... */
+          SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, -1,
+                                        DEFAULT_FILE_COOKIE, iterpool));
+          apr_rev_file = svn_file_handle_cache__get_apr_handle(rev_file);
+
+          /* ... because it gets set here explicitly */
+          SVN_ERR(get_root_changes_offset(&root_offset, NULL, 
+                                          apr_rev_file, fs, rev,
                                           iterpool));
-          SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
+          SVN_ERR(recover_find_max_ids(fs, rev, apr_rev_file, root_offset,
                                        max_node_id, max_copy_id, iterpool));
-          SVN_ERR(svn_io_file_close(rev_file, iterpool));
+          SVN_ERR(svn_file_handle_cache__close(rev_file));
         }
       svn_pool_destroy(iterpool);
 
