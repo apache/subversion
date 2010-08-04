@@ -1485,7 +1485,9 @@ modcheck_found_node(const char *local_abspath,
 
   if (status != svn_wc__db_status_normal)
     modified = TRUE;
-  else
+  /* No need to check if we already have at least one non-delete
+     modification */
+  else if (!baton->found_mod || baton->all_edits_are_deletes)
     SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
                                  kind, scratch_pool));
 
