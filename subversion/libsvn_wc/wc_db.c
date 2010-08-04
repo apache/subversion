@@ -3806,6 +3806,7 @@ set_properties(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN__SUPPORT_BASE_MERGE
 
 svn_error_t *
 svn_wc__db_temp_base_set_props(svn_wc__db_t *db,
@@ -3842,6 +3843,7 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
                                          scratch_pool));
 }
 
+#endif /* SVN__SUPPORT_BASE_MERGE  */
 
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
