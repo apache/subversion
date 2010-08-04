@@ -378,8 +378,9 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  *     different kind is expected, or if the disk node cannot be read.
  *   - Return 'missing' if there is no node on disk but one is expected.
  *     Also return 'missing' for absent nodes (not here due to authz).*/
-static svn_wc_notify_state_t
-obstructed_or_missing(const char *local_abspath,
+static svn_error_t *
+obstructed_or_missing(svn_wc_notify_state_t *obstr_state,
+                      const char *local_abspath,
                       const char *local_dir_abspath,
                       const merge_cmd_baton_t *merge_b,
                       apr_pool_t *pool)
@@ -391,19 +392,13 @@ obstructed_or_missing(const char *local_abspath,
 
   /* In a dry run, make as if nodes "deleted" by the dry run appear so. */
   if (merge_b->dry_run && dry_run_deleted_p(merge_b, local_abspath))
-    return svn_wc_notify_state_inapplicable;
-
-  /* Since this function returns no svn_error_t, we make all errors look like
-   * no node found in the wc. */
-
-  err = svn_wc_read_kind(&kind_expected, merge_b->ctx->wc_ctx,
-                         local_abspath, FALSE, pool);
-
-  if (err)
     {
-      svn_error_clear(err);
-      kind_expected = svn_node_none;
+      *obstr_state = svn_wc_notify_state_inapplicable;
+      return SVN_NO_ERROR;
     }
+
+  SVN_ERR(svn_wc_read_kind(&kind_expected, merge_b->ctx->wc_ctx,
+                           local_abspath, FALSE, pool));
 
   /* Report absent nodes as 'missing'. First of all, they count as 'hidden',
    * and since we pass show_hidden == FALSE above, they will show up as
@@ -413,44 +408,66 @@ obstructed_or_missing(const char *local_abspath,
       svn_boolean_t is_absent;
       err = svn_wc__node_is_status_absent(&is_absent, merge_b->ctx->wc_ctx,
                                           local_abspath, pool);
-      if (err)
-        svn_error_clear(err);
-      else if (is_absent)
-        return svn_wc_notify_state_missing;
+      if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+      else if (!err && is_absent)
+        {
+          *obstr_state = svn_wc_notify_state_missing;
+          return SVN_NO_ERROR;
+        }
+
+      svn_error_clear(err);
     }
 
-  /* If a node is deleted, we will still get its kind from the working copy.
+  SVN_ERR(svn_io_check_path(local_abspath, &kind_on_disk, pool));
+
+  /* If a node is deleted, the node might be gone in the working copy (and
+   * it probably is gone after we switch to single-db
+   *
    * But to compare with disk state, we want to consider deleted nodes as
-   * svn_node_none instead of their original kind.
-   * ### Not necessary with central DB:
-   * Because deleted directories are expected to remain on disk until commit
-   * to keep the metadata available, we only do this for files, not dirs. */
-  if (kind_expected == svn_node_file)
+   * svn_node_none instead of their original kind. */
+
+  if (kind_expected == svn_node_file
+      || kind_expected == svn_node_dir)
     {
       svn_boolean_t is_deleted;
-      err = svn_wc__node_is_status_deleted(&is_deleted,
-                                           merge_b->ctx->wc_ctx,
-                                           local_abspath,
-                                           pool);
-      if (err)
-        svn_error_clear(err);
-      else if (is_deleted)
-        kind_expected = svn_node_none;
-    }
 
-  err = svn_io_check_path(local_abspath, &kind_on_disk, pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      kind_on_disk = svn_node_unknown;
+      SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
+                                             merge_b->ctx->wc_ctx,
+                                             local_abspath,
+                                             pool));
+      if (is_deleted)
+        {
+          /* ### While we are not at single-db: detect missing .svn dirs.
+             ### Once we switch to single db expected kind should be always
+             ### none, just like for files */
+          if (kind_expected == svn_node_dir)
+            {
+              if (kind_on_disk == svn_node_none)
+                {
+                  svn_boolean_t is_obstructed;
+                  
+                  SVN_ERR(svn_wc__node_is_status_obstructed(&is_obstructed,
+                                                            merge_b->ctx->wc_ctx,
+                                                            local_abspath,
+                                                            pool));
+                  if (!is_obstructed)
+                    kind_expected = svn_node_none; 
+                }
+            }
+          else
+            kind_expected = svn_node_none;
+        }
     }
 
   if (kind_expected == kind_on_disk)
-    return svn_wc_notify_state_inapplicable;
+    *obstr_state = svn_wc_notify_state_inapplicable;
   else if (kind_on_disk == svn_node_none)
-    return svn_wc_notify_state_missing;
+    *obstr_state = svn_wc_notify_state_missing;
   else
-    return svn_wc_notify_state_obstructed;
+    *obstr_state = svn_wc_notify_state_obstructed;
+
+  return SVN_NO_ERROR;
 }
 
 /* Create *LEFT and *RIGHT conflict versions for conflict victim
@@ -1083,8 +1100,9 @@ merge_props_changed(const char *local_dir_abspath,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(local_abspath, local_dir_abspath,
-                                        merge_b, subpool);
+    SVN_ERR(obstructed_or_missing(&obstr_state,
+                                  local_abspath, local_dir_abspath,
+                                  merge_b, subpool));
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (state)
@@ -1319,8 +1337,9 @@ merge_file_changed(const char *local_dir_abspath,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(mine_abspath, local_dir_abspath,
-                                        merge_b, subpool);
+    SVN_ERR(obstructed_or_missing(&obstr_state,
+                                  mine_abspath, local_dir_abspath,
+                                  merge_b, subpool));
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (content_state)
@@ -1637,8 +1656,9 @@ merge_file_added(const char *local_dir_abspath,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(mine_abspath, local_dir_abspath,
-                                        merge_b, subpool);
+    SVN_ERR(obstructed_or_missing(&obstr_state,
+                                  mine_abspath, local_dir_abspath,
+                                  merge_b, subpool));
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (content_state)
@@ -1923,8 +1943,9 @@ merge_file_deleted(const char *local_dir_abspath,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(mine_abspath, local_dir_abspath,
-                                        merge_b, subpool);
+    SVN_ERR(obstructed_or_missing(&obstr_state,
+                                  mine_abspath, local_dir_abspath,
+                                  merge_b, subpool));
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (state)
@@ -2111,8 +2132,9 @@ merge_dir_added(const char *local_dir_abspath,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(local_abspath, local_dir_abspath,
-                                        merge_b, subpool);
+    SVN_ERR(obstructed_or_missing(&obstr_state,
+                                  local_abspath, local_dir_abspath,
+                                  merge_b, subpool));
 
     /* In this case of adding a directory, we have an exception to the usual
      * "skip if it's inconsistent" rule. If the directory exists on disk
@@ -2140,7 +2162,7 @@ merge_dir_added(const char *local_dir_abspath,
         merge_b->added_path = apr_pstrdup(merge_b->pool, local_abspath);
       else
         {
-          SVN_ERR(svn_io_make_dir_recursively(local_abspath, subpool));
+          SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, subpool));
           SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
                               svn_depth_infinity,
                               copyfrom_url, copyfrom_rev,
@@ -2300,8 +2322,9 @@ merge_dir_deleted(const char *local_dir_abspath,
   {
     svn_wc_notify_state_t obstr_state;
 
-    obstr_state = obstructed_or_missing(local_abspath, local_dir_abspath,
-                                        merge_b, subpool);
+    SVN_ERR(obstructed_or_missing(&obstr_state,
+                                  local_abspath, local_dir_abspath,
+                                  merge_b, subpool));
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (state)
@@ -2432,8 +2455,9 @@ merge_dir_opened(const char *local_dir_abspath,
     }
 
   /* Check for an obstructed or missing node on disk. */
-  obstr_state = obstructed_or_missing(path, local_dir_abspath, merge_b,
-                                      subpool);
+  SVN_ERR(obstructed_or_missing(&obstr_state,
+                                path, local_dir_abspath,
+                                merge_b, subpool));
   if (obstr_state != svn_wc_notify_state_inapplicable)
     {
       if (skip_children)
