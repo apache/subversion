@@ -736,7 +736,7 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
   return SVN_NO_ERROR;
 }
 
-void
+svn_error_t *
 svn_ra_serf__walk_all_props(apr_hash_t *props,
                             const char *name,
                             svn_revnum_t rev,
@@ -751,14 +751,14 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
 
   if (!ver_props)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   path_props = apr_hash_get(ver_props, name, strlen(name));
 
   if (!path_props)
     {
-      return;
+      return SVN_NO_ERROR;
     }
 
   for (ns_hi = apr_hash_first(pool, path_props); ns_hi;
@@ -778,9 +778,12 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
 
           apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
           /* use a subpool? */
-          walker(baton, ns_name, ns_len, prop_name, prop_len, prop_val, pool);
+          SVN_ERR(walker(baton, ns_name, ns_len, prop_name, prop_len,
+                         prop_val, pool));
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
 void
