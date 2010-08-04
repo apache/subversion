@@ -6501,10 +6501,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                        void *cancel_baton,
                        svn_wc_notify_func2_t notify_func,
                        void *notify_baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
+  const char *dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
   const char *tmp_text_base_abspath;
   svn_checksum_t *new_text_base_md5_checksum;
   svn_checksum_t *new_text_base_sha1_checksum;
@@ -6518,6 +6520,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
+  svn_error_t *err;
+  apr_pool_t *pool = scratch_pool;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(new_base_contents != NULL);
@@ -6525,6 +6529,60 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* We should have a write lock on this file's parent directory.  */
   SVN_ERR(svn_wc__write_check(db, dir_abspath, pool));
+
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             db, local_abspath, scratch_pool, scratch_pool);
+
+  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    return svn_error_return(err);
+  else if(err)
+    svn_error_clear(err);
+  else
+    switch (status)
+      {
+        case svn_wc__db_status_not_present:
+        case svn_wc__db_status_deleted:
+          break;
+        default:
+          return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                                   _("Node '%s' exists."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+      }
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               db, dir_abspath, scratch_pool, scratch_pool));
+
+  switch (status)
+    {
+      case svn_wc__db_status_normal:
+      case svn_wc__db_status_added:
+        break;
+      case svn_wc__db_status_deleted:
+        return
+          svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                            _("Can't add '%s' to a parent directory"
+                              " scheduled for deletion"),
+                            svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
+      default:
+        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, err,
+                                 _("Can't find parent directory's node while"
+                                   " trying to add '%s'"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+    }
+  if (kind != svn_wc__db_kind_dir)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Can't schedule an addition of '%s'"
+                               " below a not-directory node"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
@@ -6558,30 +6616,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       original_uuid = NULL;
       copyfrom_rev = SVN_INVALID_REVNUM;  /* Just to be sure.  */
     }
-
-  /* If we're replacing the file then we need to save the destination file's
-     original text base and prop base before replacing it. This allows us to
-     revert the entire change.
-
-     Note: We don't do this when the file was already replaced before because
-     the revert-base is already present and has the original text base.
-
-     ### This block can be removed once the new pristine store is in place */
-  {
-    svn_error_t *err;
-    svn_wc__db_status_t status;
-
-    err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, db, local_abspath, pool, pool);
-    if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-      {
-        /* There is no BASE node. Thus, we'll have nothing to save.  */
-        svn_error_clear(err);
-      }
-    else if (err)
-      return svn_error_return(err);
-  }
 
   /* Set CHANGED_* to reflect the entry props in NEW_BASE_PROPS, and
      filter NEW_BASE_PROPS so it contains only regular props. */
