@@ -673,6 +673,7 @@ walker_helper(svn_wc__db_t *db,
     {
       const char *child_abspath;
       svn_wc__db_kind_t child_kind;
+      svn_wc__db_status_t child_status;
 
       svn_pool_clear(iterpool);
 
@@ -685,27 +686,31 @@ walker_helper(svn_wc__db_t *db,
                                                     const char *),
                                       iterpool);
 
-      if (!show_hidden)
-        {
-          svn_boolean_t hidden;
-
-          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
-          if (hidden)
-            continue;
-        }
-
-      SVN_ERR(svn_wc__db_read_info(NULL, &child_kind, NULL, NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_read_info(&child_status, &child_kind, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
-                                   NULL,
+                                   NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
+
+      if (!show_hidden)
+        switch (child_status)
+          {
+            case svn_wc__db_status_not_present:
+            case svn_wc__db_status_absent:
+            case svn_wc__db_status_excluded:
+              continue;
+            default:
+              break;
+          }
 
       /* Return the child, if appropriate.  (For a directory,
        * this is the first visit: as a child.) */
       if (child_kind == svn_wc__db_kind_file
             || depth >= svn_depth_immediates)
         {
+          /* ### Maybe we should pass kind to the callback?.
+             ### almost every callee starts by asking for this */
           SVN_ERR(walk_callback(child_abspath, walk_baton, iterpool));
         }
 
@@ -1246,9 +1251,9 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool)
 {
+#ifndef SVN_WC__SINGLE_DB
   svn_boolean_t is_deleted;
 
-#ifndef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, local_abspath,
                                          scratch_pool));
   if (is_deleted)
