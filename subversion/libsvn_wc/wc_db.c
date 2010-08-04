@@ -802,7 +802,7 @@ insert_incomplete_working_children(svn_sqlite__db_t *sdb,
                                 svn_relpath_join(local_relpath, name,
                                                  scratch_pool),
 #ifndef SINGLE_DB
-				(apr_int64_t) 2, /* non-THIS_DIR working */
+                                (apr_int64_t) 2, /* non-THIS_DIR working */
 #endif
                                 local_relpath));
       SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
@@ -840,8 +840,8 @@ insert_working_node(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "isstt",
                             piwb->wc_id, piwb->local_relpath,
                             parent_relpath,
-			    presence_map, piwb->presence,
-			    kind_map, piwb->kind));
+                            presence_map, piwb->presence,
+                            kind_map, piwb->kind));
 
   if (piwb->original_repos_relpath != NULL)
     {
@@ -899,11 +899,11 @@ insert_working_node(void *baton,
 #endif
   SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE_DATA));
   SVN_ERR(svn_sqlite__bindf(stmt_node, "isistt",
-			    piwb->wc_id, piwb->local_relpath,
-			    op_depth,
-			    parent_relpath,
-			    presence_map, piwb->presence,
-			    kind_map, piwb->kind));
+                            piwb->wc_id, piwb->local_relpath,
+                            op_depth,
+                            parent_relpath,
+                            presence_map, piwb->presence,
+                            kind_map, piwb->kind));
 
   if (SVN_IS_VALID_REVNUM(piwb->changed_rev))
     SVN_ERR(svn_sqlite__bind_int64(stmt_node, 7, piwb->changed_rev));
@@ -915,7 +915,7 @@ insert_working_node(void *baton,
   if (piwb->kind == svn_wc__db_kind_dir)
     {
       SVN_ERR(svn_sqlite__bind_text(stmt_node, 10,
-				    svn_depth_to_word(piwb->depth)));
+                                    svn_depth_to_word(piwb->depth)));
     }
   else if (piwb->kind == svn_wc__db_kind_file)
     {
@@ -933,7 +933,7 @@ insert_working_node(void *baton,
     {
       SVN_ERR(svn_sqlite__bind_int64(stmt_node, 13, piwb->original_repos_id));
       SVN_ERR(svn_sqlite__bind_text(stmt_node, 14,
-				    piwb->original_repos_relpath));
+                    piwb->original_repos_relpath));
       SVN_ERR(svn_sqlite__bind_int64(stmt_node, 15, piwb->original_revnum));
     }
 
@@ -942,7 +942,7 @@ insert_working_node(void *baton,
 
 
   SVN_ERR(svn_sqlite__bind_properties(stmt_node, 16, piwb->props,
-				      scratch_pool));
+                      scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
 #endif
@@ -3815,8 +3815,8 @@ svn_wc__db_temp_base_set_props(svn_wc__db_t *db,
 {
 #ifdef SVN_WC__NODE_DATA
   SVN_ERR(set_properties(db, local_abspath, props,
-			 STMT_UPDATE_NODE_DATA_BASE_PROPS, "base node",
-			 scratch_pool));
+                         STMT_UPDATE_NODE_DATA_BASE_PROPS,
+                         "base node", scratch_pool));
 #endif
   return svn_error_return(set_properties(db, local_abspath, props,
                                          STMT_UPDATE_BASE_PROPS,
@@ -3833,8 +3833,8 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 {
 #ifdef SVN_WC__NODE_DATA
   SVN_ERR(set_properties(db, local_abspath, props,
-			 STMT_UPDATE_NODE_DATA_WORKING_PROPS, "working node",
-			 scratch_pool));
+                         STMT_UPDATE_NODE_DATA_WORKING_PROPS,
+                         "working node", scratch_pool));
 #endif
   return svn_error_return(set_properties(db, local_abspath, props,
                                          STMT_UPDATE_WORKING_PROPS,
@@ -4300,9 +4300,9 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
 
 #ifdef SVN_WC__NODE_DATA
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-					STMT_DELETE_NODE_DATA_LAYERS));
+                                        STMT_DELETE_NODE_DATA_LAYERS));
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-				wc_id, local_relpath, (apr_int64_t)0));
+                                wc_id, local_relpath, (apr_int64_t)0));
       SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 
@@ -5523,9 +5523,9 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                STMT_UPDATE_NODE_DATA_RECURSIVE_ORIGINAL_REPO));
   SVN_ERR(svn_sqlite__bindf(stmt, "issii",
-			    rb->wc_id, rb->local_relpath,
+                            rb->wc_id, rb->local_relpath,
                             like_arg, rb->old_repos_id,
-			    new_repos_id));
+                            new_repos_id));
   SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 
@@ -9657,8 +9657,8 @@ set_new_dir_to_incomplete_baton_txn(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_DELETE_NODE_DATA_LAYERS));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", dtb->pdh->wcroot->wc_id,
-                dtb->local_relpath,
-                (apr_int64_t)0));
+                            dtb->local_relpath,
+                            (apr_int64_t)0));
   SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 
