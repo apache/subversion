@@ -5871,7 +5871,8 @@ close_edit(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  /* If there is a target and that target is missing, then it
+  #ifndef SVN_WC__SINGLE_DB
+  /* If the explicit target still misses its administrative data, then it
      apparently wasn't re-added by the update process, so we'll
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
@@ -5884,6 +5885,7 @@ close_edit(void *edit_baton,
        * NULL handling code in do_entry_deletion(). */
       SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
     }
+#endif
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
