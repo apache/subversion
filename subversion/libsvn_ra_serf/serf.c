@@ -541,8 +541,9 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                                       propfind_path, rev, "0", all_props,
                                       pool));
 
-  svn_ra_serf__walk_all_props(props, propfind_path, rev,
-                              svn_ra_serf__set_bare_props, *ret_props, pool);
+  SVN_ERR(svn_ra_serf__walk_all_props(props, propfind_path, rev,
+                                      svn_ra_serf__set_bare_props, *ret_props,
+                                      pool));
 
   return SVN_NO_ERROR;
 }
@@ -801,13 +802,13 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
           return SVN_NO_ERROR;
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   entry = apr_pcalloc(pool, sizeof(*entry));
 
-  svn_ra_serf__walk_all_props(props, path, fetched_rev, dirent_walker, entry,
-                              pool);
+  SVN_ERR(svn_ra_serf__walk_all_props(props, path, fetched_rev, dirent_walker,
+                                      entry, pool));
 
   *dirent = entry;
 
@@ -920,9 +921,9 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       /* Check if the path is really a directory. */
       SVN_ERR(resource_is_directory (props, path, revision));
 
-      svn_ra_serf__walk_all_props(props, path, revision,
-                                  svn_ra_serf__set_flat_props,
-                                  *ret_props, pool);
+      SVN_ERR(svn_ra_serf__walk_all_props(props, path, revision,
+                                          svn_ra_serf__set_flat_props,
+                                          *ret_props, pool));
     }
 
   return SVN_NO_ERROR;
