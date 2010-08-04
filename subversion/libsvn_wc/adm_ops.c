@@ -1534,6 +1534,9 @@ revert_entry(svn_depth_t *depth,
         }
       else if (kind == svn_wc__db_kind_dir)
         {
+#ifndef SVN_WC__SINGLE_DB
+          /* Before single-db we didn't have to perform a recursive delete
+             here. With single-db we really must delete missing nodes */
           if (disk_kind == svn_node_none
               || svn_wc__adm_missing(db, local_abspath, pool))
             {
@@ -1547,6 +1550,7 @@ revert_entry(svn_depth_t *depth,
                                                       pool));
             }
           else
+#endif
             {
               SVN_ERR(svn_wc__internal_remove_from_revision_control(
                                            db,
@@ -2045,15 +2049,16 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
         }
 
     }  /* done with file case */
+#ifndef SVN_WC__SINGLE_DB
   else if (svn_wc__adm_missing(db, local_abspath, scratch_pool))
     {
-      /* The directory is missing  so don't try to recurse,
-         just delete the entry in the parent directory.
-
-         ### This case disappears after we move to one DB. */
+      /* The directory is missing  so don't try to recurse, in
+         not existing administrative data, just delete the
+         entry in the parent directory. */
       SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
                                               scratch_pool));
     }
+#endif
   else /* looking at THIS_DIR */
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -2076,7 +2081,10 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
           entry_abspath = svn_dirent_join(local_abspath, entry_name, iterpool);
 
-          /* ### where did the adm_missing and depth_exclude test go?!?  */
+          /* ### where did the adm_missing and depth_exclude test go?!? 
+
+             ### BH: depth exclude is handled by hidden and missing is ok
+                     for this temp_op. */
 
           SVN_ERR(svn_wc__db_node_hidden(&hidden, db, entry_abspath,
                                          iterpool));
