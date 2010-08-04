@@ -60,12 +60,16 @@
    last-commit-time.  Either way, set entry-timestamp to match that of
    the working file when all is finished.
 
+   If REMOVE_TEXT_CONFLICT is TRUE, remove an existing text conflict
+   from LOCAL_ABSPATH.
+
    Not that a valid access baton with a write lock to the directory of
    LOCAL_ABSPATH must be available in DB.*/
 static svn_error_t *
 restore_file(svn_wc__db_t *db,
              const char *local_abspath,
              svn_boolean_t use_commit_times,
+             svn_boolean_t remove_text_conflicts,
              apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item;
@@ -87,8 +91,77 @@ restore_file(svn_wc__db_t *db,
                          scratch_pool));
 
   /* Remove any text conflict */
-  return svn_error_return(svn_wc__resolve_text_conflict(db, local_abspath,
+  if (remove_text_conflicts)
+    SVN_ERR(svn_wc__resolve_text_conflict(db, local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_restore(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t use_commit_times,
+               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_node_kind_t disk_kind;
+
+  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+
+  if (disk_kind != svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
+                             _("The existing node '%s' can not be restored."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  switch (status)
+    {
+      case svn_wc__db_status_added:
+        SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
+                                         wc_ctx->db, local_abspath,
+                                         scratch_pool, scratch_pool));
+        if (status != svn_wc__db_status_added)
+          break; /* Has pristine version */
+      case svn_wc__db_status_deleted:
+      case svn_wc__db_status_not_present:
+      case svn_wc__db_status_absent:
+      case svn_wc__db_status_excluded:
+#ifndef SVN_WC__SINGLE_DB
+      case svn_wc__db_status_obstructed:
+      case svn_wc__db_status_obstructed_add:
+      case svn_wc__db_status_obstructed_delete:
+#endif
+        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                 _("The node '%s' can not be restored."),
+                                 svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
+    }
+
+  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
+    SVN_ERR(restore_file(wc_ctx->db, local_abspath, use_commit_times, FALSE,
+                         scratch_pool));
+  else
+#ifdef SVN_WC__SINGLE_DB
+    SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
+#else
+     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                 _("The node '%s' can not be restored."),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+#endif
+
+  return SVN_NO_ERROR;
 }
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
@@ -116,7 +189,7 @@ restore_node(svn_boolean_t *restored,
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
       /* Recreate file from text-base */
-      SVN_ERR(restore_file(db, local_abspath, use_commit_times,
+      SVN_ERR(restore_file(db, local_abspath, use_commit_times, TRUE,
                            scratch_pool));
 
       *restored = TRUE;
