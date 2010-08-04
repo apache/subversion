@@ -34,6 +34,7 @@
 #include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_file_handle_cache.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -240,6 +241,9 @@ typedef struct
      pack files. */
   svn_cache__t *packed_offset_cache;
 
+  /* Reference to the process-global open file handle cache */
+  svn_file_handle_cache_t *file_handle_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 
@@ -249,14 +253,14 @@ typedef struct
   /* Thread-safe boolean */
   svn_atomic_t rep_cache_db_opened;
 
-   /* The sqlite database used for revprops. */
-   svn_sqlite__db_t *revprop_db;
+  /* The sqlite database used for revprops. */
+  svn_sqlite__db_t *revprop_db;
 
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
 
-   /* The oldest revision property not in a pack db. */
-   svn_revnum_t min_unpacked_revprop;
+  /* The oldest revision property not in a pack db. */
+  svn_revnum_t min_unpacked_revprop;
 
   /* Whether rep-sharing is supported by the filesystem
    * and allowed by the configuration. */

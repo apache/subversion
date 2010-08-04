@@ -249,11 +249,25 @@ get_global_membuffer_cache(void)
   return cache;
 }
 
-/* Set the current FSFS cache configuration. Apply it immediately to ensure
- * thread-safety: since this function should be called from the processes'
- * initialization code, no race with background / worker threads should occur.
+/* Access the process-global (singleton) open file handle cache. The first
+ * call will automatically allocate the cache using the current cache config.
+ * Even for file handle limit of 0, a cache object will be returned.
  */
-void
+static svn_file_handle_cache_t *
+get_global_file_handle_cache(void)
+{
+  static svn_file_handle_cache_t *cache = NULL;
+
+  if (!cache)
+    svn_file_handle_cache__create_cache(&cache,
+                                        cache_settings.file_handle_count,
+                                        !cache_settings.single_threaded,
+                                        svn_pool_create(NULL));
+
+  return cache;
+}
+
+void 
 svn_fs_fs__set_cache_config(const svn_fs_fs__cache_config_t *settings)
 {
   cache_settings = *settings;
@@ -261,6 +275,9 @@ svn_fs_fs__set_cache_config(const svn_fs_fs__cache_config_t *settings)
   /* Allocate global membuffer cache as a side-effect.
    * Only the first call will actually take affect. */
   get_global_membuffer_cache();
+
+  /* Same for the file handle cache. */
+  get_global_file_handle_cache();
 }
 
 svn_error_t *
@@ -363,6 +380,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     SVN_ERR(svn_cache__set_error_handler(ffd->packed_offset_cache,
                                          warn_on_cache_errors, fs, pool));
 
+  /* initialize fulltext cache as configured */
   if (memcache)
     {
       SVN_ERR(svn_cache__create_memcache(&(ffd->fulltext_cache),
@@ -394,6 +412,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   if (ffd->fulltext_cache && ! no_handler)
     SVN_ERR(svn_cache__set_error_handler(ffd->fulltext_cache,
             warn_on_cache_errors, fs, pool));
+
+  /* initialize file handle cache as configured */
+  ffd->file_handle_cache = get_global_file_handle_cache();
 
   return SVN_NO_ERROR;
 }
