@@ -214,6 +214,17 @@ static const char *bad_git_diff_header =
   "+## -1,2 +1,4 ##"                                                    NL
   ""                                                                    NL;
 
+  /* A unidiff containing paths with spaces. */
+  static const char *path_with_spaces_unidiff =
+  "git --diff a/path 1 b/path 1"                                        NL
+  "new file mode 100644"                                                NL
+  "git --diff a/path one 1 b/path one 1"                                NL
+  "new file mode 100644"                                                NL
+  "git --diff a/dir/b/path b/dir/b/path"                                NL
+  "new file mode 100644"                                                NL
+  "git --diff a/b/path 1 b/b/path 1"                                    NL
+  "new file mode 100644"                                                NL;
+
 
 /* Create a PATCH_FILE with name FNAME containing the contents of DIFF. */
 static svn_error_t *
@@ -788,6 +799,58 @@ test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_git_diffs_with_spaces_diff(apr_pool_t *pool)
+{
+  apr_file_t *patch_file;
+  svn_patch_t *patch;
+  const char *fname = "test_git_diffs_with_spaces_diff.patch";
+
+  SVN_ERR(create_patch_file(&patch_file, fname, path_with_spaces_unidiff,
+                            pool));
+
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "path 1"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "path 1"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+  
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "path one 1"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "path one 1"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "dir/b/path"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "dir/b/path"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "b/path 1"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "b/path 1"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+
+  return SVN_NO_ERROR;
+}
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -807,5 +870,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test property and text unidiff parsing"),
     SVN_TEST_PASS2(test_parse_diff_symbols_in_prop_unidiff,
                    "test property diffs with odd symbols"),
+    SVN_TEST_XFAIL2(test_git_diffs_with_spaces_diff,
+                   "test git diffs with spaces in paths"),
     SVN_TEST_NULL
   };
