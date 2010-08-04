@@ -1021,7 +1021,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       {
         return
           svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, err,
-                            _("Can't find parent directory's entry while"
+                            _("Can't find parent directory's node while"
                               " trying to add '%s'"),
                             svn_dirent_local_style(local_abspath,
                                                    scratch_pool));
