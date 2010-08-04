@@ -4238,7 +4238,7 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * @par Important:
  * This is a variant of svn_wc_add4().  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
- * removed with svn_client_revert2().
+ * removed with svn_client_revert4().
  *
  * @since New in 1.7.
  */
@@ -6951,6 +6951,23 @@ svn_wc_revert(const char *path,
               svn_wc_notify_func_t notify_func,
               void *notify_baton,
               apr_pool_t *pool);
+
+/**
+ * Restores a missing node, @a local_abspath using the @a wc_ctx. Records
+ * the new last modified time of the file for status processing.
+ *
+ * If @a use_commit_times is TRUE, then set restored files' timestamps
+ * to their last-commit-times.
+ *
+ * ### Before Single-DB this function can only restore missing files.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_restore(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t use_commit_times,
+               apr_pool_t *scratch_pool);
 
 
 /* Tmp files */
