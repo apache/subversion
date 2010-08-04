@@ -1211,6 +1211,8 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool);
 
+/* See props.h  */
+#ifdef SVN__SUPPORT_BASE_MERGE
 /* ### Set the properties of the node LOCAL_ABSPATH in the BASE tree to PROPS.
    ###
    ### This function should not exist because properties should be stored
@@ -1243,7 +1245,7 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   const apr_hash_t *props,
                                   apr_pool_t *scratch_pool);
-
+#endif
 
 /* ### KFF: This handles files, dirs, symlinks, anything else? */
 /* ### dlr: Does this support recursive dir deletes (e.g. _revert)? Document. */
