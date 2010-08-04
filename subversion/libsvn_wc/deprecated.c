@@ -2330,12 +2330,26 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access), pool));
 
-  return svn_wc__props_modified(modified_p, db, local_abspath, pool);
+  err = svn_wc_props_modified_p2(modified_p,
+                                 wc_ctx,
+                                 local_abspath,
+                                 pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *modified_p = FALSE;
+    }
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
 
