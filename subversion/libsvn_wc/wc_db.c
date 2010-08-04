@@ -9657,8 +9657,8 @@ set_new_dir_to_incomplete_baton_txn(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_DELETE_NODE_DATA_LAYERS));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", dtb->pdh->wcroot->wc_id,
-			    dtb->local_relpath,
-			    (apr_int64_t)0));
+                dtb->local_relpath,
+                (apr_int64_t)0));
   SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 
@@ -9674,8 +9674,8 @@ set_new_dir_to_incomplete_baton_txn(void *baton,
                                             parent_relpath,
                                             (apr_int64_t)dtb->revision));
 
-  /* If depth not unknown or infinity: record depth */
-  if (dtb->depth >= svn_depth_empty && dtb->depth < svn_depth_infinity)
+  /* If depth is not unknown: record depth */
+  if (dtb->depth >= svn_depth_empty && dtb->depth <= svn_depth_infinity)
     SVN_ERR(svn_sqlite__bind_text(stmt, 7, svn_depth_to_word(dtb->depth)));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
