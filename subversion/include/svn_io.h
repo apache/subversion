@@ -923,6 +923,26 @@ svn_stream_from_aprfile2(apr_file_t *file,
                          svn_boolean_t disown,
                          apr_pool_t *pool);
 
+/* "forward-declare" svn_file_handle_cache__handle_t */
+struct svn_file_handle_cache__handle_t;
+
+/** Create a stream from a cached file handle.  For convenience, if @a file
+ * is @c NULL, an empty stream created by svn_stream_empty() is returned.
+ *
+ * This function should normally be called with @a disown set to FALSE,
+ * in which case closing the stream will also return the file handle to
+ * the respective cache object.
+ *
+ * If @a disown is TRUE, the stream will disown the file handle, meaning 
+ * that svn_stream_close() will not close the cached file handle.
+ *
+ * @since New in 1.7.
+ */
+svn_stream_t *
+svn_stream_from_aprfile3(struct svn_file_handle_cache__handle_t *file,
+                         svn_boolean_t disown,
+                         apr_pool_t *pool);
+
 /** Similar to svn_stream_from_aprfile2(), except that the file will
  * always be disowned.
  *

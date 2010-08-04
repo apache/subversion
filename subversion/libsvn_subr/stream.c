@@ -43,7 +43,7 @@
 #include "svn_checksum.h"
 #include "svn_path.h"
 #include "private/svn_eol_private.h"
-
+#include "private/svn_file_handle_cache.h"
 
 struct svn_stream_t {
   void *baton;
@@ -579,6 +579,10 @@ struct baton_apr {
   apr_file_t *file;
   apr_pool_t *pool;
 
+  /* If not NULL, file is actually wrapped into this cached file handle
+   * and should be returned to the file handle cache asap. */
+  svn_file_handle_cache__handle_t *cached_handle;
+
   /* Offsets when reading from a range of the file.
    * When either of these is negative, no range has been specified. */
   apr_off_t start;
@@ -620,6 +624,17 @@ close_handler_apr(void *baton)
   struct baton_apr *btn = baton;
 
   return svn_io_file_close(btn->file, btn->pool);
+}
+
+/* Returns the cached file handle back to the respective cache object.
+ * This is call is allowed even for btn->cached_handle == NULL.
+ */
+static svn_error_t *
+close_handler_cached_handle(void *baton)
+{
+  struct baton_apr *btn = baton;
+
+  return svn_file_handle_cache__close(btn->cached_handle);
 }
 
 static svn_error_t *
@@ -713,32 +728,79 @@ svn_stream_open_unique(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
-
-svn_stream_t *
-svn_stream_from_aprfile2(apr_file_t *file,
-                         svn_boolean_t disown,
-                         apr_pool_t *pool)
+/* Common initialization code for svn_stream_from_aprfile2() and
+ * svn_stream_from_aprfile3().
+ */
+static svn_stream_t *
+stream_from_aprfile(struct baton_apr **baton,
+                    apr_file_t *file,
+                    apr_pool_t *pool)
 {
-  struct baton_apr *baton;
+  struct baton_apr *new_baton;
   svn_stream_t *stream;
 
-  if (file == NULL)
-    return svn_stream_empty(pool);
+  /* create and fully initialize the baton */
+  new_baton = apr_palloc(pool, sizeof(*new_baton));
+  new_baton->file = file;
+  new_baton->cached_handle = NULL; /* default */
+  new_baton->pool = pool;
+  new_baton->start = -1;
+  new_baton->end = -1;
 
-  baton = apr_palloc(pool, sizeof(*baton));
-  baton->file = file;
-  baton->pool = pool;
-  baton->start = -1;
-  baton->end = -1;
-  stream = svn_stream_create(baton, pool);
+  /* construct the stream vtable, except for the close() function */
+  stream = svn_stream_create(new_baton, pool);
   svn_stream_set_read(stream, read_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
   svn_stream_set_reset(stream, reset_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
 
+  /* return structures */
+  *baton = new_baton;
+
+  return stream;
+}
+
+svn_stream_t *
+svn_stream_from_aprfile2(apr_file_t *file,
+                         svn_boolean_t disown,
+                         apr_pool_t *pool)
+{
+  /* having no file at all is a special case */
+  struct baton_apr *baton;
+  if (file == NULL)
+    return svn_stream_empty(pool);
+
+  /* construct and init the default stream structures */
+  svn_stream_t *stream = stream_from_aprfile(&baton, file, pool);
+
+  /* make sure to close the file handle after use if we own it */
   if (! disown)
     svn_stream_set_close(stream, close_handler_apr);
+
+  return stream;
+}
+
+svn_stream_t *
+svn_stream_from_aprfile3(svn_file_handle_cache__handle_t *file,
+                         svn_boolean_t disown,
+                         apr_pool_t *pool)
+{
+  struct baton_apr *baton;
+
+  /* having no file at all is a special case (file == NULL is legal, too) */
+  apr_file_t *apr_file = svn_file_handle_cache__get_apr_handle(file);
+  if (apr_file == NULL)
+    return svn_stream_empty(pool);
+
+  /* construct and init the default stream structures */
+  svn_stream_t *stream = stream_from_aprfile(&baton, apr_file, pool);
+
+  /* store the cached file handle and return it to the cache after use,
+   * if we own it */
+  baton->cached_handle = file;
+  if (! disown)
+    svn_stream_set_close(stream, close_handler_cached_handle);
 
   return stream;
 }
