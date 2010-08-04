@@ -708,15 +708,10 @@ complete_directory(struct edit_baton *eb,
   int i;
   apr_pool_t *iterpool;
 
-  /* If this is the root directory and there is a target, we can't
+  /* If this is the root directory and there is a target, we don't have to
      mark this directory complete. */
   if (is_root_dir && *eb->target_basename != '\0')
     {
-      /* ### obsolete comment?
-         Before we can finish, we may need to clear the exclude flag for
-         target. Also give a chance to the target that is explicitly pulled
-         in. */
-      svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
       svn_error_t *err;
 
@@ -731,38 +726,26 @@ complete_directory(struct edit_baton *eb,
 
          If there is no BASE node for the target, then we certainly don't
          have to worry about removing it.  */
-      err = svn_wc__db_base_get_info(&status, &kind, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
-                                     eb->db, eb->target_abspath,
-                                     pool, pool);
+      err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL,
+                                     eb->db, eb->target_abspath, pool, pool);
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
             return svn_error_return(err);
 
           svn_error_clear(err);
-          return SVN_NO_ERROR;
         }
 
-      if (status == svn_wc__db_status_excluded)
+      if (!err && status == svn_wc__db_status_excluded)
         {
-          /* ### obsolete comment?
-             There is a small chance that the target is gone in the
-             repository.  If so, we should get rid of the entry now. */
+          /* There is a small chance that the explicit target of an update/
+             switch is gone in the repository, in that specific case the node
+             hasn't been re-added to the BASE tree by this update. If so, we
+             should get rid of this excluded node now. */
 
-          if (kind == svn_wc__db_kind_dir &&
-              svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
-            {
-              /* ### obsolete comment?
-               * Still passing NULL for THEIR_URL. A case where THEIR_URL
-               * is needed in this call is rare or even non-existant.
-               * ### TODO: Construct a proper THEIR_URL anyway. See also
-               * NULL handling code in do_entry_deletion(). */
-              SVN_ERR(do_entry_deletion(eb, eb->target_abspath,
-                                        NULL, FALSE, pool));
-            }
+          SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
         }
 
       return SVN_NO_ERROR;
@@ -903,6 +886,9 @@ complete_directory(struct edit_baton *eb,
         {
           SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
         }
+#ifndef SVN_WC__SINGLE_DB
+      /* In Single-DB mode, administrative data is never reported as missing
+         by the adm crawler, and we should always remove nodes recursively */
       else if (kind == svn_wc__db_kind_dir
                && svn_wc__adm_missing(eb->db, node_abspath, iterpool)
                && status != svn_wc__db_status_absent)
@@ -916,6 +902,7 @@ complete_directory(struct edit_baton *eb,
                             : svn_node_file,
                           iterpool);
         }
+#endif
     }
 
   svn_pool_destroy(iterpool);
@@ -5629,7 +5616,6 @@ tweak_entries(svn_wc__db_t *db,
               apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
-  svn_wc_notify_t *notify;
   const apr_array_header_t *children;
   int i;
 
@@ -5714,6 +5700,7 @@ tweak_entries(svn_wc__db_t *db,
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
+#ifndef SVN_WC__SINGLE_DB
           /* If the directory is 'missing', remove it.  This is safe as
              long as this function is only called as a helper to
              svn_wc__do_update_cleanup, since the update will already have
@@ -5729,6 +5716,8 @@ tweak_entries(svn_wc__db_t *db,
 
                   if (notify_func)
                     {
+                      svn_wc_notify_t *notify;
+
                       notify = svn_wc_create_notify(child_abspath,
                                                     svn_wc_notify_delete,
                                                     iterpool);
@@ -5748,6 +5737,7 @@ tweak_entries(svn_wc__db_t *db,
 
           /* Not missing, deleted, or absent, so recurse. */
           else
+#endif
             {
               SVN_ERR(tweak_entries(db, child_abspath, child_repos_relpath,
                                     new_repos_root_url, new_repos_uuid,
