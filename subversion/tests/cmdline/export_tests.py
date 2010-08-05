@@ -570,7 +570,7 @@ def export_externals_with_native_eol(sbox):
   externals_prop = """^/A/B/E/alpha exfile_alpha 
   ^/A/B/E exdir_E"""
   
-  (fd, tmp_f) = tempfile.mkstemp(dir=svntest.main.temp_dir)
+  tmp_f = sbox.get_tempname('props')
   svntest.main.file_append(tmp_f, externals_prop)
   svntest.main.run_svn(None, 'ps', '-F', tmp_f, 'svn:externals', C_path)
   svntest.main.run_svn(None,'ci', '-m', 'log msg', '--quiet', C_path)
