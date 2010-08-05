@@ -1274,9 +1274,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              _("Missing revision attr in target-revision element"));
         }
 
-      ctx->update_editor->set_target_revision(ctx->update_baton,
-                                              SVN_STR_TO_REV(rev),
-                                              ctx->sess->pool);
+      SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
+                                                      SVN_STR_TO_REV(rev),
+                                                      ctx->sess->pool));
     }
   else if (state == NONE && strcmp(name.name, "open-directory") == 0)
     {
@@ -1512,9 +1512,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      ctx->update_editor->absent_directory(file_name,
-                                           info->dir->dir_baton,
-                                           info->dir->pool);
+      SVN_ERR(ctx->update_editor->absent_directory(file_name,
+                                                   info->dir->dir_baton,
+                                                   info->dir->pool));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "absent-file") == 0)
@@ -1535,9 +1535,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      ctx->update_editor->absent_file(file_name,
-                                      info->dir->dir_baton,
-                                      info->dir->pool);
+      SVN_ERR(ctx->update_editor->absent_file(file_name,
+                                              info->dir->dir_baton,
+                                              info->dir->pool));
     }
   else if (state == OPEN_DIR || state == ADD_DIR)
     {
