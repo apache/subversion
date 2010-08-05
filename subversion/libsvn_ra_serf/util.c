@@ -370,30 +370,44 @@ accept_head(serf_request_t *request,
   return response;
 }
 
+static svn_error_t *
+connection_closed(serf_connection_t *conn,
+                  svn_ra_serf__connection_t *sc,
+                  apr_status_t why,
+                  apr_pool_t *pool)
+{
+  if (why)
+    {
+      SVN_ERR_MALFUNCTION();
+    }
+
+  if (sc->using_ssl)
+      sc->ssl_context = NULL;
+
+  /* Restart the authentication phase on this new connection. */
+  if (sc->session->auth_protocol)
+    SVN_ERR(sc->session->auth_protocol->init_conn_func(sc->session,
+                                                       sc,
+                                                       sc->session->pool));
+
+  return SVN_NO_ERROR;
+}
+
 void
 svn_ra_serf__conn_closed(serf_connection_t *conn,
                          void *closed_baton,
                          apr_status_t why,
                          apr_pool_t *pool)
 {
-  svn_ra_serf__connection_t *our_conn = closed_baton;
+  svn_ra_serf__connection_t *sc = closed_baton;
+  svn_error_t *err;
 
-  if (why)
-    {
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
+  err = connection_closed(conn, sc, why, pool);
 
-  if (our_conn->using_ssl)
-    {
-      our_conn->ssl_context = NULL;
-    }
-  /* Restart the authentication phase on this new connection. */
-  if (our_conn->session->auth_protocol)
-    {
-      our_conn->session->auth_protocol->init_conn_func(our_conn->session,
-                                                       our_conn,
-                                                       our_conn->session->pool);
-    }
+  if (err)
+    sc->session->pending_error = svn_error_compose_create(
+                                            sc->session->pending_error,
+                                            err);
 }
 
 apr_status_t
@@ -437,7 +451,9 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
 
     if (err)
       {
-        session->pending_error = err;
+        session->pending_error = svn_error_compose_create(
+                                      session->pending_error,
+                                      err);
         return err->apr_err;
       }
 
@@ -480,7 +496,8 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
 
     if (err)
       {
-        session->pending_error = err;
+        session->pending_error = svn_error_compose_create(session->pending_error,
+                                                          err);
         return err->apr_err;
       }
 
