@@ -1323,7 +1323,8 @@ svn_ra_serf__credentials_callback(char **username, char **password,
 
       if (err)
         {
-          ctx->session->pending_error = err;
+          session->pending_error
+              = svn_error_compose_create(session->pending_error, err);
           return err->apr_err;
         }
 
@@ -1332,10 +1333,13 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!creds || session->auth_attempts > 4)
         {
           /* No more credentials. */
-          ctx->session->pending_error =
-            svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
-                             "No more credentials or we tried too many times.\n"
-                             "Authentication failed");
+          session->pending_error
+              = svn_error_compose_create(
+                    session->pending_error,
+                    svn_error_create(
+                          SVN_ERR_AUTHN_FAILED, NULL,
+                          _("No more credentials or we tried too many times.\n"
+                            "Authentication failed")));
           return SVN_ERR_AUTHN_FAILED;
         }
 
@@ -1353,9 +1357,11 @@ svn_ra_serf__credentials_callback(char **username, char **password,
       if (!session->proxy_username || session->proxy_auth_attempts > 4)
         {
           /* No more credentials. */
-          ctx->session->pending_error =
-            svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
-                             "Proxy authentication failed");
+          session->pending_error
+              = svn_error_compose_create(
+                      ctx->session->pending_error,
+                      svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                                       _("Proxy authentication failed")));
           return SVN_ERR_AUTHN_FAILED;
         }
     }
