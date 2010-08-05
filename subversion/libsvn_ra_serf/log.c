@@ -459,8 +459,9 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_log_body(void *baton,
+static svn_error_t *
+create_log_body(serf_bucket_t **body_bkt,
+                void *baton,
                 serf_bucket_alloc_t *alloc,
                 apr_pool_t *pool)
 {
@@ -550,7 +551,8 @@ create_log_body(void *baton,
   svn_ra_serf__add_close_tag_buckets(buckets, alloc,
                                      "S:log-report");
 
-  return buckets;
+  *body_bkt = buckets;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

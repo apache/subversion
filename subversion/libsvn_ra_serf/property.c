@@ -420,7 +420,7 @@ cdata_propfind(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_propfind_headers(serf_bucket_t *headers,
                         void *setup_baton,
                         apr_pool_t *pool)
@@ -437,14 +437,15 @@ setup_propfind_headers(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Label", ctx->label);
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 #define PROPFIND_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\">"
 #define PROPFIND_TRAILER "</propfind>"
 
-static serf_bucket_t*
-create_propfind_body(void *setup_baton,
+static svn_error_t *
+create_propfind_body(serf_bucket_t **bkt,
+                     void *setup_baton,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
@@ -515,7 +516,8 @@ create_propfind_body(void *setup_baton,
                                       alloc);
   serf_bucket_aggregate_append(body_bkt, tmp);
 
-  return body_bkt;
+  *bkt = body_bkt;
+  return SVN_NO_ERROR;
 }
 
 static svn_boolean_t

@@ -405,7 +405,7 @@ cdata_merge(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_merge_headers(serf_bucket_t *headers,
                     void *baton,
                     apr_pool_t *pool)
@@ -418,7 +418,7 @@ setup_merge_headers(serf_bucket_t *headers,
                               SVN_DAV_OPTION_RELEASE_LOCKS);
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 void
@@ -469,8 +469,9 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
   svn_ra_serf__add_close_tag_buckets(body, alloc, "S:lock-token-list");
 }
 
-static serf_bucket_t*
-create_merge_body(void *baton,
+static svn_error_t*
+create_merge_body(serf_bucket_t **bkt,
+                  void *baton,
                   serf_bucket_alloc_t *alloc,
                   apr_pool_t *pool)
 {
@@ -508,7 +509,9 @@ create_merge_body(void *baton,
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:merge");
 
-  return body_bkt;
+  *bkt = body_bkt;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

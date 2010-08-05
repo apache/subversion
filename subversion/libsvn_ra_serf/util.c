@@ -1507,8 +1507,8 @@ setup_request_cb(serf_request_t *request,
 
       if (ctx->body_delegate)
         {
-          body_bkt =
-              ctx->body_delegate(ctx->body_delegate_baton, bkt_alloc, pool);
+          SVN_ERR(ctx->body_delegate(&body_bkt, ctx->body_delegate_baton,
+                                     bkt_alloc, pool));
         }
       else
         {
@@ -1521,7 +1521,8 @@ setup_request_cb(serf_request_t *request,
 
       if (ctx->header_delegate)
         {
-          ctx->header_delegate(headers_bkt, ctx->header_delegate_baton, pool);
+          SVN_ERR(ctx->header_delegate(headers_bkt, ctx->header_delegate_baton,
+                                       pool));
         }
     }
 

@@ -382,8 +382,10 @@ cdata_blame(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t*
-create_file_revs_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_file_revs_body(serf_bucket_t **body_bkt,
+                      void *baton,
                       serf_bucket_alloc_t *alloc,
                       apr_pool_t *pool)
 {
@@ -419,7 +421,7 @@ create_file_revs_body(void *baton,
   svn_ra_serf__add_close_tag_buckets(buckets, alloc,
                                      "S:file-revs-report");
 
-  return buckets;
+  *body_bkt = buckets;
 }
 
 svn_error_t *
