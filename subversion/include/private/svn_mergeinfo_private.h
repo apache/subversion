@@ -225,6 +225,21 @@ svn_rangelist__initialize(svn_revnum_t start,
                           svn_boolean_t inheritable,
                           apr_pool_t *result_pool);
 
+/* Adjust in-place MERGEINFO's rangelists by OFFSET.  If OFFSET is negative 
+   and would adjust any part of MERGEINFO's source revisions to 0 or less,
+   then those revisions are dropped.  If all the source revisions for a merge
+   source path are dropped, then the path itself is dropped.  If all merge
+   source paths are dropped, then *ADJUSTED_MERGEINFO is set to an empty
+   hash.  *ADJUSTED_MERGEINFO is allocated in RESULT_POOL.  SCRATCH_POOL is
+   used for any temporary allocations. */
+svn_error_t *
+svn_mergeinfo__adjust_mergeinfo_rangelists(svn_mergeinfo_t *adjusted_mergeinfo,
+                                           svn_mergeinfo_t mergeinfo,
+                                           svn_revnum_t offset,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
