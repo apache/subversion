@@ -422,6 +422,7 @@ create_file_revs_body(serf_bucket_t **body_bkt,
                                      "S:file-revs-report");
 
   *body_bkt = buckets;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
