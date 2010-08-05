@@ -1515,7 +1515,9 @@ handle_response(serf_request_t *request,
 
       err = ctx->response_handler(request,response, ctx->response_baton, pool);
 
-      if (err && !SERF_BUCKET_READ_ERROR(err->apr_err))
+      if (err
+          && (!SERF_BUCKET_READ_ERROR(err->apr_err)
+               || APR_STATUS_IS_ECONNRESET(err->apr_err)))
         {
           /* These errors are special cased in serf
              ### We hope no handler returns these by accident. */
@@ -1542,7 +1544,8 @@ handle_response_cb(serf_request_t *request,
   svn_error_t *err;
   apr_status_t serf_status = APR_SUCCESS;
 
-  err = handle_response(request, response, ctx, &serf_status, pool);
+  err = svn_error_return(
+          handle_response(request, response, ctx, &serf_status, pool));
 
   if (err || session->pending_error)
     {
@@ -1552,10 +1555,7 @@ handle_response_cb(serf_request_t *request,
       serf_status = session->pending_error->apr_err;
     }
 
-  if (serf_status != APR_SUCCESS)
-    return serf_status;
-
-  return APR_SUCCESS;
+  return serf_status;
 }
 
 /* If the CTX->setup() callback is non-NULL, invoke it to carry out the
