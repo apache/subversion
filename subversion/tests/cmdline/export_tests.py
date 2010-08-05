@@ -26,6 +26,7 @@
 
 # General modules
 import os
+import tempfile
 
 # Our testing module
 import svntest
@@ -550,6 +551,76 @@ def export_working_copy_with_depths(sbox):
                                         expected_disk,
                                         '--depth=empty')
 
+def export_externals_with_native_eol(sbox):
+  "export externals with eol translation"
+  sbox.build()
+  
+  wc_dir = sbox.wc_dir
+  
+  # Set svn:eol-style to 'native' to see if it's applied correctly to
+  # externals in the export operation
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'native', alpha_path)
+  svntest.main.run_svn(None, 'ci',
+                       '-m', 'Added eol-style prop to alpha', alpha_path)
+  
+  # Set 'svn:externals' property in 'A/C' to 'A/B/E/alpha'(file external),
+  # 'A/B/E'(directory external) & commit the property
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  externals_prop = """^/A/B/E/alpha exfile_alpha 
+  ^/A/B/E exdir_E"""
+  
+  (fd, tmp_f) = tempfile.mkstemp(dir=svntest.main.temp_dir)
+  svntest.main.file_append(tmp_f, externals_prop)
+  svntest.main.run_svn(None, 'ps', '-F', tmp_f, 'svn:externals', C_path)
+  svntest.main.run_svn(None,'ci', '-m', 'log msg', '--quiet', C_path)
+
+  
+  # Update the working copy to receive all changes(file external and
+  # directroy external changes) from repository 
+  svntest.main.run_svn(None, 'up', wc_dir)
+  
+  # After export, expected_disk will have all those present in standard
+  # greek tree and new externals we added above. 
+  # Update the expected disk tree to include all those externals.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/C/exfile_alpha'  : Item("This is the file 'alpha'.\n"),
+      'A/C/exdir_E'       : Item(),
+      'A/C/exdir_E/alpha' : Item("This is the file 'alpha'.\n"),
+      'A/C/exdir_E/beta'  : Item("This is the file 'beta'.\n")
+      })
+  
+  # We are exporting with '--native-eol CR' option. 
+  # So change the contents of files under *expected_disk* tree 
+  # which have svn:eol-style property set to 'native' to verify
+  # with the exported tree.
+  # Here A/B/E/alpha and its external manifestations A/C/exfile_alpha
+  # and A/C/exdir_E/alpha needs a tweak.
+  new_contents = expected_disk.desc['A/C/exfile_alpha'].contents.replace("\n",
+                                                                         "\r")
+  expected_disk.tweak('A/C/exfile_alpha', 'A/B/E/alpha','A/C/exdir_E/alpha', 
+                      contents=new_contents)
+  
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.add({
+      'A/C/exfile_alpha'  : Item("This is the file 'alpha'.\r"),
+      'A/C/exdir_E'       : Item(),
+      'A/C/exdir_E/alpha' : Item("This is the file 'alpha'.\r"),
+      'A/C/exdir_E/beta'  : Item("This is the file 'beta'.\n")
+      })
+  
+  # Export the repository with '--native-eol CR' option
+  export_target = sbox.add_wc_path('export')
+  expected_output.wc_dir = export_target
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+  svntest.actions.run_and_verify_export(sbox.repo_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk,
+                                        '--native-eol', 'CR')
+
 ########################################################################
 # Run the tests
 
@@ -578,6 +649,7 @@ test_list = [ None,
               export_working_copy_ignoring_keyword_translation,
               export_with_url_unsafe_characters,
               XFail(export_working_copy_with_depths),
+              export_externals_with_native_eol,
              ]
 
 if __name__ == '__main__':
