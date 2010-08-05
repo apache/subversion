@@ -692,7 +692,7 @@ headers_fetch(serf_bucket_t *headers,
   return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 cancel_fetch(serf_request_t *request,
              serf_bucket_t *response,
              int status_code,
@@ -725,7 +725,7 @@ cancel_fetch(serf_request_t *request,
     }
 
   /* We have no idea what went wrong. */
-  SVN_ERR_MALFUNCTION_NO_RETURN();
+  SVN_ERR_MALFUNCTION();
 }
 
 static svn_error_t *

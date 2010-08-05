@@ -1290,18 +1290,20 @@ svn_ra_serf__credentials_callback(char **username, char **password,
   return APR_SUCCESS;
 }
 
-/* Implements the serf_response_handler_t interface.  Wait for HTTP
-   response status and headers, and invoke CTX->response_handler() to
-   carry out operation-specific processing.  Afterwards, check for
-   connection close.
+/* Wait for HTTP response status and headers, and invoke CTX->
+   response_handler() to carry out operation-specific processing.
+   Afterwards, check for connection close.
+
+   SERF_STATUS allows returning errors to serf without creating a
+   subversion error object.
    */
-static apr_status_t
+static svn_error_t *
 handle_response(serf_request_t *request,
                 serf_bucket_t *response,
-                void *baton,
+                svn_ra_serf__handler_t *ctx,
+                apr_status_t *serf_status,
                 apr_pool_t *pool)
 {
-  svn_ra_serf__handler_t *ctx = baton;
   serf_status_line sl;
   apr_status_t status;
 
@@ -1309,14 +1311,8 @@ handle_response(serf_request_t *request,
     {
       /* Uh-oh.  Our connection died.  Requeue. */
       if (ctx->response_error)
-        {
-          status = ctx->response_error(request, response, 0,
-                                       ctx->response_error_baton);
-          if (status)
-            {
-              goto cleanup;
-            }
-        }
+        SVN_ERR(ctx->response_error(request, response, 0,
+                                    ctx->response_error_baton));
 
       svn_ra_serf__request_create(ctx);
 
@@ -1326,12 +1322,14 @@ handle_response(serf_request_t *request,
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      return status;
+      *serf_status = status;
+      return SVN_NO_ERROR; /* Handled by serf */
     }
   if (!sl.version && (APR_STATUS_IS_EOF(status) ||
                       APR_STATUS_IS_EAGAIN(status)))
     {
-      goto cleanup;
+      *serf_status = status;
+      return SVN_NO_ERROR; /* Handled by serf */
     }
 
   status = serf_bucket_response_wait_for_headers(response);
@@ -1339,7 +1337,8 @@ handle_response(serf_request_t *request,
     {
       if (!APR_STATUS_IS_EOF(status))
         {
-          goto cleanup;
+          *serf_status = status;
+          return SVN_NO_ERROR;
         }
 
       /* Cases where a lack of a response body (via EOF) is okay:
@@ -1352,7 +1351,7 @@ handle_response(serf_request_t *request,
        */
       if (strcmp(ctx->method, "HEAD") != 0 && sl.code != 204 && sl.code != 304)
         {
-          ctx->session->pending_error =
+          svn_error_t *err =
               svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
                                 svn_error_compose_create(
                                            ctx->session->pending_error,
@@ -1362,16 +1361,14 @@ handle_response(serf_request_t *request,
           /* This discard may be no-op, but let's preserve the algorithm
              used elsewhere in this function for clarity's sake. */
           svn_ra_serf__response_discard_handler(request, response, NULL, pool);
-          status = ctx->session->pending_error->apr_err;
-          goto cleanup;
+          return err;
         }
     }
 
   if (ctx->conn->last_status_code == 401 && sl.code < 400)
     {
-      svn_error_clear(
-           svn_auth_save_credentials(ctx->session->auth_state,
-                                     ctx->session->pool));
+      SVN_ERR(svn_auth_save_credentials(ctx->session->auth_state,
+                                        ctx->session->pool));
       ctx->session->auth_attempts = 0;
       ctx->session->auth_state = NULL;
       ctx->session->realm = NULL;
@@ -1382,49 +1379,38 @@ handle_response(serf_request_t *request,
   if (sl.code == 401 || sl.code == 407)
     {
       /* 401 Authorization or 407 Proxy-Authentication required */
-      svn_error_t *err;
       status = svn_ra_serf__response_discard_handler(request, response, NULL, pool);
 
       /* Don't bother handling the authentication request if the response
          wasn't received completely yet. Serf will call handle_response
          again when more data is received. */
-      if (! APR_STATUS_IS_EAGAIN(status))
+      if (APR_STATUS_IS_EAGAIN(status))
         {
-          err = svn_ra_serf__handle_auth(sl.code, ctx,
-                                         request, response, pool);
-          if (err)
-            {
-              ctx->session->pending_error = svn_error_compose_create(
-                                                  err,
-                                                  ctx->session->pending_error);
-              status = ctx->session->pending_error->apr_err;
-              goto cleanup;
-            }
+          *serf_status = status;
+          return SVN_NO_ERROR;
+        }
 
-          svn_ra_serf__priority_request_create(ctx);
-          return status;
-        }
-      else
-        {
-          return status;
-        }
+      SVN_ERR(svn_ra_serf__handle_auth(sl.code, ctx,
+                                       request, response, pool));
+
+      svn_ra_serf__priority_request_create(ctx);
+
+      return SVN_NO_ERROR;
     }
   else if (sl.code == 409 || sl.code >= 500)
     {
       /* 409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
-      ctx->session->pending_error = svn_error_compose_create(
-                 svn_ra_serf__handle_server_error(request, response, pool),
-                 ctx->session->pending_error);
+      SVN_ERR(svn_ra_serf__handle_server_error(request, response, pool));
 
       if (!ctx->session->pending_error)
         {
-          ctx->session->pending_error =
+          return
               svn_error_createf(APR_EGENERAL, NULL,
               _("Unspecified error message: %d %s"), sl.code, sl.reason);
         }
-      status = ctx->session->pending_error->apr_err;
-      goto cleanup;
+
+      return SVN_NO_ERROR; /* Error is set in caller */
     }
   else
     {
@@ -1446,46 +1432,65 @@ handle_response(serf_request_t *request,
             {
               svn_ra_serf__response_discard_handler(request, response, NULL,
                                                     pool);
-              ctx->session->pending_error = err;
-              status = ctx->session->pending_error->apr_err;
-              goto cleanup;
+              /* Ignore serf status code, just return the real error */
+
+              return svn_error_return(err);
             }
         }
 
       err = ctx->response_handler(request,response, ctx->response_baton, pool);
 
-      if (err)
+      if (err && !SERF_BUCKET_READ_ERROR(err->apr_err))
         {
-          status = err->apr_err;
-          if (!SERF_BUCKET_READ_ERROR(err->apr_err))
-            {
-              /* These errors are special cased in serf
-                 ### We hope no handler returns these by accident. */
-              svn_error_clear(err);
-            }
-          else
-            {
-              ctx->session->pending_error =
-                       svn_error_return(svn_error_compose_create(
-                                                       err,
-                                                       ctx->session->pending_error));
-            }
+          /* These errors are special cased in serf
+             ### We hope no handler returns these by accident. */
+          *serf_status = err->apr_err;
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
         }
+
+      return svn_error_return(err);
     }
-
-cleanup:
-
-  return status;
 }
 
-/* svn_error_t * returning wrapper for setup_request.  If the CTX->setup()
-   callback is non-NULL, invoke it to carry out the majority of the
-   serf_request_setup_t implementation.  Otherwise, perform default
-   setup, with special handling for HEAD requests, and finer-grained
+
+/* Implements serf_response_handler_t for handle_response. Storing
+   errors in ctx->session->pending_error if appropriate. */
+static apr_status_t
+handle_response_cb(serf_request_t *request,
+                   serf_bucket_t *response,
+                   void *baton,
+                   apr_pool_t *pool)
+{
+  svn_ra_serf__handler_t *ctx = baton;
+  svn_error_t *err;
+  apr_status_t serf_status = APR_SUCCESS;
+
+  err = handle_response(request, response, ctx, &serf_status, pool);
+
+  if (err)
+    {
+      ctx->session->pending_error =
+          svn_error_compose_create(ctx->session->pending_error, err);
+
+      serf_status = err->apr_err;
+    }
+
+  if (serf_status != APR_SUCCESS)
+    return serf_status;
+  else if (ctx->session->pending_error)
+    ctx->session->pending_error->apr_err;
+
+  return APR_SUCCESS;
+}
+
+/* If the CTX->setup() callback is non-NULL, invoke it to carry out the
+   majority of the serf_request_setup_t implementation.  Otherwise, perform
+   default setup, with special handling for HEAD requests, and finer-grained
    callbacks invoked (if non-NULL) to produce the request headers and
    body. */
 static svn_error_t *
-setup_request_cb(serf_request_t *request,
+setup_request(serf_request_t *request,
                  svn_ra_serf__handler_t *ctx,
                  serf_bucket_t **req_bkt,
                  serf_response_acceptor_t *acceptor,
@@ -1543,7 +1548,7 @@ setup_request_cb(serf_request_t *request,
         }
     }
 
-  *handler = handle_response;
+  *handler = handle_response_cb;
   *handler_baton = ctx;
 
   return APR_SUCCESS;
@@ -1553,7 +1558,7 @@ setup_request_cb(serf_request_t *request,
    request and its response handler callback). Handles errors for
    setup_request_cb */
 static apr_status_t
-setup_request(serf_request_t *request,
+setup_request_cb(serf_request_t *request,
               void *setup_baton,
               serf_bucket_t **req_bkt,
               serf_response_acceptor_t *acceptor,
@@ -1565,11 +1570,11 @@ setup_request(serf_request_t *request,
   svn_ra_serf__handler_t *ctx = setup_baton;
   svn_error_t *err;
 
-  err = setup_request_cb(request, ctx,
-                         req_bkt,
-                         acceptor, acceptor_baton,
-                         handler, handler_baton,
-                         pool);
+  err = setup_request(request, ctx,
+                      req_bkt,
+                      acceptor, acceptor_baton,
+                      handler, handler_baton,
+                      pool);
 
   if (err)
     {
@@ -1587,14 +1592,14 @@ serf_request_t *
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
   return serf_connection_request_create(handler->conn->conn,
-                                        setup_request, handler);
+                                        setup_request_cb, handler);
 }
 
 serf_request_t *
 svn_ra_serf__priority_request_create(svn_ra_serf__handler_t *handler)
 {
   return serf_connection_priority_request_create(handler->conn->conn,
-                                                 setup_request, handler);
+                                                 setup_request_cb, handler);
 }
 
 svn_error_t *
