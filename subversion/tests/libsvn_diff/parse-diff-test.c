@@ -116,7 +116,7 @@ static const char *git_tree_and_text_unidiff =
   "--- a/A/B/lambda\t(revision 2)"                                      NL
   "+++ /dev/null\t(working copy)"                                       NL
   "@@ -1 +0,0 @@"                                                       NL
-  "-This is the file 'labmda'."                                         NL
+  "-This is the file 'lambda'."                                         NL
   ""                                                                    NL;
 
   /* Only the last git diff header is valid. The other ones either misses a
@@ -919,8 +919,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test unidiff parsing"),
     SVN_TEST_PASS2(test_parse_git_diff,
                     "test git unidiff parsing"),
-    SVN_TEST_XFAIL2(test_parse_git_tree_and_text_diff,
-                    "test git unidiff parsing of tree and text changes"),
+    SVN_TEST_PASS2(test_parse_git_tree_and_text_diff,
+                   "test git unidiff parsing of tree and text changes"),
     SVN_TEST_XFAIL2(test_bad_git_diff_headers,
                     "test badly formatted git diff headers"),
     SVN_TEST_PASS2(test_parse_property_diff,
