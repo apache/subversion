@@ -881,10 +881,12 @@ static svn_error_t *
 git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  const char *old_path;
-  const char *new_path;
-  char *end_old_path;
-  char *slash;
+  const char *old_path_start;
+  char *old_path_end;
+  const char *new_path_start;
+  const char *new_path_end;
+  char *new_path_marker;
+  const char *old_path_marker;
 
   /* ### Add handling of escaped paths
    * http://www.kernel.org/pub/software/scm/git/docs/git-diff.html: 
@@ -897,58 +899,78 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   /* Our line should look like this: 'git --diff a/path b/path'. 
    * If we find any deviations from that format, we return with state reset
    * to start.
-   *
-   * ### We can't handle paths with spaces!
    */
-  slash = strchr(line, '/');
+  old_path_marker = strstr(line, " a/");
 
-  if (! slash)
+  if (! old_path_marker)
     {
       *new_state = state_start;
       return SVN_NO_ERROR;
     }
 
-  old_path = slash + 1;
-
-  if (! *old_path)
+  if (! *(old_path_marker + 3))
     {
       *new_state = state_start;
       return SVN_NO_ERROR;
     }
 
-  end_old_path = strchr(old_path, ' ');
+  new_path_marker = strstr(old_path_marker, " b/");
 
-  if (end_old_path)
-    *end_old_path = '\0';
-  else
+  if (! new_path_marker)
     {
       *new_state = state_start;
       return SVN_NO_ERROR;
     }
 
-  /* The new path begins after the first slash after the old path. */
-  slash = strchr(end_old_path + 1, '/');
-
-  if (! slash)
+  if (! *(new_path_marker + 3))
     {
       *new_state = state_start;
       return SVN_NO_ERROR;
     }
 
-  /* The path starts after the slash */
-  new_path = slash + 1;
+  /* By now, we know that we have a line on the form '--git diff a/.+ b/.+'
+   * We only need the filenames when we have deleted or added empty
+   * files. In those cases the old_path and new_path is identical on the
+   * '--git diff' line.  For all other cases we fetch the filenames from
+   * other header lines. */ 
+  old_path_start = line + strlen("--git diff a/");
+  new_path_end = line + strlen(line);
+  new_path_start = old_path_start;
 
-  if (! *new_path)
+  while (TRUE)
     {
-      *new_state = state_start;
-      return SVN_NO_ERROR;
+      int len_old;
+      int len_new;
+
+      new_path_marker = strstr(new_path_start, " b/");
+
+      /* No new path marker, bail out. */
+      if (! new_path_marker)
+        break;
+
+      old_path_end = new_path_marker;
+      new_path_start = new_path_marker + strlen(" b/");
+
+      /* No path after the marker. */
+      if (! *new_path_start)
+        break;
+
+      len_old = old_path_end - old_path_start;
+      len_new = new_path_end - new_path_start;
+
+      /* Are the paths before and after the " b/" marker the same? */
+      if (len_old == len_new
+          && ! strncmp(old_path_start, new_path_start, len_old))
+        {
+          *old_path_end = '\0';
+          SVN_ERR(grab_filename(&patch->old_filename, old_path_start,
+                                result_pool, scratch_pool));
+
+          SVN_ERR(grab_filename(&patch->new_filename, new_path_start,
+                                result_pool, scratch_pool));
+          break;
+        }
     }
-
-  SVN_ERR(grab_filename(&patch->old_filename, old_path,
-                        result_pool, scratch_pool));
-
-  SVN_ERR(grab_filename(&patch->new_filename, new_path,
-                        result_pool, scratch_pool));
 
   /* We assume that the path is only modified until we've found a 'tree'
    * header */
@@ -965,6 +987,16 @@ git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
 
+  /* If we can find a tab, it separates the filename from
+   * the rest of the line which we can discard. */
+  char *tab = strchr(line, '\t');
+  if (tab)
+    *tab = '\0';
+
+  /* ### What if we have "--- /dev/null"? */
+  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- a/"),
+                        result_pool, scratch_pool));
+
   *new_state = state_git_minus_seen;
   return SVN_NO_ERROR;
 }
@@ -975,6 +1007,16 @@ git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
+
+  /* If we can find a tab, it separates the filename from
+   * the rest of the line which we can discard. */
+  char *tab = strchr(line, '\t');
+  if (tab)
+    *tab = '\0';
+
+  /* ### What if we have "+++ /dev/null" ? */
+  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ b/"),
+                        result_pool, scratch_pool));
 
   *new_state = state_git_header_found;
   return SVN_NO_ERROR;
@@ -987,6 +1029,9 @@ git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
 
+  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("rename from "),
+                        result_pool, scratch_pool));
+
   *new_state = state_move_from_seen;
   return SVN_NO_ERROR;
 }
@@ -997,6 +1042,9 @@ git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
+
+  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("rename to "),
+                        result_pool, scratch_pool));
 
   patch->operation = svn_diff_op_moved;
 
@@ -1011,6 +1059,9 @@ git_copy_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
 
+  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("copy from "),
+                        result_pool, scratch_pool));
+
   *new_state = state_copy_from_seen; 
   return SVN_NO_ERROR;
 }
@@ -1021,6 +1072,9 @@ git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   /* ### Check that the path is consistent with the 'git --diff ' line. */
+
+  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("copy to "),
+                        result_pool, scratch_pool));
 
   patch->operation = svn_diff_op_copied;
 
