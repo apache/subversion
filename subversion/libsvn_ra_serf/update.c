@@ -2466,7 +2466,10 @@ abort_report(void *report_baton,
 #if 0
   report_context_t *report = report_baton;
 #endif
-  SVN_ERR_MALFUNCTION();
+
+  /* Should we perform some cleanup here? */
+
+  return SVN_NO_ERROR;
 }
 
 static const svn_ra_reporter3_t ra_serf_reporter = {
