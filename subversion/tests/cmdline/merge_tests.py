@@ -1715,10 +1715,10 @@ def merge_into_missing(sbox):
     ''      : Item(status='  ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
     'Q'     : Item(status='! ', wc_rev='?'),
-# In some intermediate WC-NG state (since r937468) this was:
-#   'Q'     : Item(status='! ', wc_rev='2', entry_rev='?'),
-# but the expected value is now back what it was.
     })
+  if svntest.main.wc_is_singledb(wc_dir):
+    # This also applied in some intermediate WC-NG state (since r937468)
+    expected_status.tweak('Q', wc_rev=2, entry_rev='?')
   expected_skip = wc.State(F_path, {
     'Q'   : Item(),
     'foo' : Item(),
@@ -1740,14 +1740,17 @@ def merge_into_missing(sbox):
     ''      : Item(status=' M', wc_rev=1),
     'foo'   : Item(status='!M', wc_rev=2),
     'Q'     : Item(status='! ', wc_rev='?'),
-# In some intermediate WC-NG state (since r937468) this was:
-#   'Q'     : Item(status='! ', wc_rev='2', entry_rev='?'),
-# but the expected value is now back what it was.
     })
+  if svntest.main.wc_is_singledb(wc_dir):
+    # This also applied in some intermediate WC-NG state (since r937468)
+    expected_status.tweak('Q', wc_rev=2, entry_rev='?')
   expected_mergeinfo_output = wc.State(F_path, {
     ''    : Item(status=' U'),
     'foo' : Item(status=' U'), # Mergeinfo is set on missing/obstructed files.
     })
+  if svntest.main.wc_is_singledb(wc_dir):
+    # mergeinfo is set on missing/obstructed directories as well
+    expected_mergeinfo_output.add({'Q'   : Item(status=' U')})
   svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url, None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -1774,10 +1777,10 @@ def merge_into_missing(sbox):
     'A/B/F'     : Item(status=' M', wc_rev=1),
     'A/B/F/foo' : Item(status='!M', wc_rev=2),
     'A/B/F/Q'   : Item(status='! ', wc_rev='?'),
-# In some intermediate WC-NG state (since r937468) this was:
-#  'A/B/F/Q'   : Item(status='! ', wc_rev='2', entry_rev='?'),
-# but the expected value is now back what it was.
     })
+  if svntest.main.wc_is_singledb(wc_dir):
+    # This also applied in some intermediate WC-NG state (since r937468)
+    expected_status.tweak('A/B/F/Q', wc_rev=2, entry_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
