@@ -440,7 +440,6 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   err = svn_ra_neon__request_dispatch(code, request, extra_headers, body,
                                       201 /* Created */,
                                       allow_404 ? 404 /* Not Found */ : 0,
-                                      0,
                                       pool);
   if (err)
     goto cleanup;
@@ -824,7 +823,6 @@ static svn_error_t * commit_delete_entry(const char *path,
       err = svn_ra_neon__request_dispatch(&code, request, NULL, body,
                                           204 /* Created */,
                                           404 /* Not Found */,
-                                          0,
                                           pool);
     cleanup:
       svn_ra_neon__request_destroy(request);
@@ -1318,7 +1316,6 @@ static svn_error_t * commit_close_file(void *file_baton,
       err = svn_ra_neon__request_dispatch(NULL, request, extra_headers, NULL,
                                           201 /* Created */,
                                           204 /* No Content */,
-                                          0,
                                           pool);
     cleanup:
       svn_ra_neon__request_destroy(request);

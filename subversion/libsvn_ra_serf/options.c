@@ -493,8 +493,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
      carries such a thing, report as much.  We'll disregard ERR --
      it's most likely just a complaint about the response body not
      successfully parsing as XML or somesuch. */
-  if (corrected_url && ((opt_ctx->status_code == 301) ||
-                        (opt_ctx->status_code == 302)))
+  if (corrected_url && (opt_ctx->status_code == 301))
     {
       svn_error_clear(err);
       *corrected_url = opt_ctx->parser_ctx->location;

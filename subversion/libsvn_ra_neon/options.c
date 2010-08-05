@@ -285,11 +285,10 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
                                            "</D:options>",
                                            200,
                                            relocation_location ? 301 : 0,
-                                           relocation_location ? 302 : 0,
                                            pool)))
     goto cleanup;
 
-  if ((req->code == 301) || (req->code == 302))
+  if (req->code == 301)
     {
       *relocation_location = svn_ra_neon__request_get_location(req, pool);
       goto cleanup;

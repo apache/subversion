@@ -558,6 +558,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
 
         case 301:
         case 302:
+        case 307:
           return svn_error_create
             (SVN_ERR_RA_DAV_RELOCATED, NULL,
              apr_psprintf(pool,
@@ -1259,13 +1260,10 @@ parsed_request(svn_ra_neon__request_t *req,
                                                  success_parser, pool));
 
   /* run the request and get the resulting status code. */
-  SVN_ERR(svn_ra_neon__request_dispatch(status_code,
-                                        req, extra_headers, body,
-                                        (strcmp(method, "PROPFIND") == 0)
-                                        ? 207 : 200,
-                                        0, /* not used */
-                                        0, /* not used */
-                                        pool));
+  SVN_ERR(svn_ra_neon__request_dispatch(
+              status_code, req, extra_headers, body,
+              (strcmp(method, "PROPFIND") == 0) ? 207 : 200,
+              0, pool));
 
   if (spool_response)
     {
@@ -1344,7 +1342,7 @@ svn_ra_neon__simple_request(int *code,
      reader.  Neon will take care of the Content-Length calculation */
   err = svn_ra_neon__request_dispatch(code, req, extra_headers,
                                       body ? body : "",
-                                      okay_1, okay_2, 0, pool);
+                                      okay_1, okay_2, pool);
   svn_ra_neon__request_destroy(req);
 
   return err;
@@ -1430,7 +1428,6 @@ svn_ra_neon__request_dispatch(int *code_p,
                               const char *body,
                               int okay_1,
                               int okay_2,
-                              int okay_3,
                               apr_pool_t *pool)
 {
   ne_xml_parser *error_parser;
@@ -1493,9 +1490,7 @@ svn_ra_neon__request_dispatch(int *code_p,
 
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */
-  if (req->rv == NE_OK && (req->code == okay_1
-                           || req->code == okay_2
-                           || req->code == okay_3))
+  if (req->rv == NE_OK && (req->code == okay_1 || req->code == okay_2))
     return SVN_NO_ERROR;
 
   /* Any other errors? Report them */
