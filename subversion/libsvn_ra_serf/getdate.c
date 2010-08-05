@@ -164,8 +164,10 @@ cdata_getdate(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t*
-create_getdate_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_getdate_body(serf_bucket_t **body_bkt,
+                    void *baton,
                     serf_bucket_alloc_t *alloc,
                     apr_pool_t *pool)
 {
@@ -186,7 +188,8 @@ create_getdate_body(void *baton,
 
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "S:dated-rev-report");
 
-  return buckets;
+  *body_bkt = buckets;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

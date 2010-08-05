@@ -210,8 +210,9 @@ cdata_options(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t*
-create_options_body(void *baton,
+static svn_error_t *
+create_options_body(serf_bucket_t **body_bkt,
+                    void *baton,
                     serf_bucket_alloc_t *alloc,
                     apr_pool_t *pool)
 {
@@ -224,7 +225,8 @@ create_options_body(void *baton,
   svn_ra_serf__add_tag_buckets(body, "D:activity-collection-set", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(body, alloc, "D:options");
 
-  return body;
+  *body_bkt = body;
+  return SVN_NO_ERROR;
 }
 
 svn_boolean_t*

@@ -2343,8 +2343,11 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                                  local_abspath,
                                  pool);
 
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  if (err)
     {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
       svn_error_clear(err);
       *modified_p = FALSE;
     }
