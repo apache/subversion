@@ -834,7 +834,6 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_DBG(("%s\n", patch->old_filename));
   SVN_TEST_ASSERT(! strcmp(patch->old_filename, "dir/ b/path"));
   SVN_TEST_ASSERT(! strcmp(patch->new_filename, "dir/ b/path"));
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
