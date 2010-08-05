@@ -155,10 +155,6 @@ print_dir(const char *local_abspath,
   if (kind != svn_node_dir)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
-  if (kind != svn_node_dir)
-    return SVN_NO_ERROR;
-
   printf("%s\n",
          svn_dirent_local_style(
                    svn_dirent_join(bt->prefix_path,
