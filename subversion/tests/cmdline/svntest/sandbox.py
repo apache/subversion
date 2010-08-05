@@ -133,6 +133,20 @@ class Sandbox:
     self.add_test_path(path, remove)
     return path
 
+  tempname_offs = 0 # Counter for get_tempname
+
+  def get_tempname(self, prefix='tmp'):
+    """Get a stable name for a temporary file that will be removed after
+       running the test"""
+
+    dir = self.add_wc_path('tmp')
+    if not os.path.exists(dir):
+      os.mkdir(dir)
+
+    self.tempname_offs = self.tempname_offs + 1
+
+    return os.path.join(dir, '%s-%s' % (prefix, self.tempname_offs))
+
   def cleanup_test_paths(self):
     "Clean up detritus from this sandbox, and any dependents."
     if self.dependents:
