@@ -101,6 +101,22 @@ static const char *git_tree_and_text_unidiff =
   "@@ -1 +1,2 @@"                                                       NL
   " This is the file 'mu'."                                             NL
   "+some more bytes to 'mu'"                                            NL
+  "Index: new"                                                          NL
+  "===================================================================" NL
+  "git --diff a/new b/new"                                              NL
+  "new file mode 100644"                                                NL
+  "--- /dev/null\t(revision 0)"                                         NL
+  "+++ b/new\t(working copy)"                                           NL
+  "@@ -0,0 +1 @@"                                                       NL
+  "+This is the file 'new'."                                            NL
+  "Index: A/B/lambda"                                                   NL
+  "===================================================================" NL
+  "git --diff a/A/B/lambda b/A/B/lambda"                                NL
+  "deleted file mode 100644"                                            NL
+  "--- a/A/B/lambda\t(revision 2)"                                      NL
+  "+++ /dev/null\t(working copy)"                                       NL
+  "@@ -1 +0,0 @@"                                                       NL
+  "-This is the file 'labmda'."                                         NL
   ""                                                                    NL;
 
   /* Only the last git diff header is valid. The other ones either misses a
@@ -504,6 +520,45 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
                         "some more bytes to 'mu'" NL,
                         pool));
 
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "/dev/null"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "new"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk, TRUE,
+                        "",
+                        pool));
+
+  SVN_ERR(check_content(hunk, FALSE,
+                        "This is the file 'new'." NL,
+                        pool));
+
+  SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, 
+                                    FALSE, /* reverse */
+                                    FALSE, /* ignore_whitespace */ 
+                                    pool, pool));
+  SVN_TEST_ASSERT(patch);
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/B/lambda"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "/dev/null"));
+  SVN_TEST_ASSERT(patch->operation == svn_diff_op_deleted);
+  SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk, TRUE,
+                        "This is the file 'lambda'." NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk, FALSE,
+                        "",
+                        pool));
   return SVN_NO_ERROR;
 }
 
@@ -864,7 +919,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test unidiff parsing"),
     SVN_TEST_PASS2(test_parse_git_diff,
                     "test git unidiff parsing"),
-    SVN_TEST_PASS2(test_parse_git_tree_and_text_diff,
+    SVN_TEST_XFAIL2(test_parse_git_tree_and_text_diff,
                     "test git unidiff parsing of tree and text changes"),
     SVN_TEST_XFAIL2(test_bad_git_diff_headers,
                     "test badly formatted git diff headers"),
