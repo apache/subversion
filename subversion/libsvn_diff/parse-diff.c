@@ -985,8 +985,6 @@ static svn_error_t *
 git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  /* ### Check that the path is consistent with the 'git --diff ' line. */
-
   /* If we can find a tab, it separates the filename from
    * the rest of the line which we can discard. */
   char *tab = strchr(line, '\t');
@@ -1006,8 +1004,6 @@ static svn_error_t *
 git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
           apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  /* ### Check that the path is consistent with the 'git --diff ' line. */
-
   /* If we can find a tab, it separates the filename from
    * the rest of the line which we can discard. */
   char *tab = strchr(line, '\t');
@@ -1027,8 +1023,6 @@ static svn_error_t *
 git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  /* ### Check that the path is consistent with the 'git --diff ' line. */
-
   SVN_ERR(grab_filename(&patch->old_filename, line + strlen("rename from "),
                         result_pool, scratch_pool));
 
@@ -1041,8 +1035,6 @@ static svn_error_t *
 git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  /* ### Check that the path is consistent with the 'git --diff ' line. */
-
   SVN_ERR(grab_filename(&patch->new_filename, line + strlen("rename to "),
                         result_pool, scratch_pool));
 
@@ -1057,8 +1049,6 @@ static svn_error_t *
 git_copy_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  /* ### Check that the path is consistent with the 'git --diff ' line. */
-
   SVN_ERR(grab_filename(&patch->old_filename, line + strlen("copy from "),
                         result_pool, scratch_pool));
 
@@ -1071,8 +1061,6 @@ static svn_error_t *
 git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  /* ### Check that the path is consistent with the 'git --diff ' line. */
-
   SVN_ERR(grab_filename(&patch->new_filename, line + strlen("copy to "),
                         result_pool, scratch_pool));
 
@@ -1148,11 +1136,6 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
   apr_pool_t *iterpool;
 
   enum parse_state state = state_start;
-
-  /* ### dannas: As I've understood the git diff format, the first line
-   * ### contains both paths and the paths in the headers that follow are only
-   * ### there to ensure that the path is valid. Not sure though, the
-   * ### research continues... */
 
   /* Our table consisting of:
    * Expected Input     Required state          Function to call */
