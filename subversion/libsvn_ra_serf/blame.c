@@ -330,7 +330,7 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
   else if (state == TXDELTA &&
            strcmp(name.name, "txdelta") == 0)
     {
-      svn_stream_close(info->stream);
+      SVN_ERR(svn_stream_close(info->stream));
 
       svn_ra_serf__xml_pop_state(parser);
     }
