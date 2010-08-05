@@ -2458,77 +2458,28 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *local_propchanges;
-  apr_hash_t *localprops;
-  apr_hash_t *baseprops;
-  svn_wc__db_status_t status;
-  svn_error_t *err;
-
-  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
-                             db, local_abspath,
-                             scratch_pool, scratch_pool);
-
-  /* If we have no entry, we can't have any prop mods. */
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      *modified_p = FALSE;
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return err;
-
-  SVN_ERR(load_actual_props(&localprops, db, local_abspath,
-                            scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(localprops != NULL);
-
-  /* ### this should not apply nowadays. especially if
-                            (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)  */
-#if 0
-  {
-    svn_boolean_t replaced;
-
-    /* If something is scheduled for replacement, we do *not* want to
-       pay attention to any base-props;  they might be residual from the
-       old deleted file. */
-    /* ### in modern WC formats, they should be the replaced file's
-       ### base props. hard to know on old WCs tho? (given the above
-       ### comment). just declare propmods if the node has any working
-       ### properties. */
-    SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath,
-                                         scratch_pool));
-    if (replaced)
-      {
-        *modified_p = apr_hash_count(localprops) > 0;
-        return SVN_NO_ERROR;
-      }
-  }
-#endif
-
-  /* The WORKING props are present, so let's dig in and see what the
-     differences are. On really old WCs, they might be the same. On
-     newer WCs, the file would have been removed if there was no delta. */
-  SVN_ERR(load_pristine_props(&baseprops, db, local_abspath,
-                              scratch_pool, scratch_pool));
-  if (baseprops == NULL)
-    {
-      /* No pristines are defined. Let's say mods exist if there are any
-         ACTUAL props on this node.  */
-      *modified_p = apr_hash_count(localprops) > 0;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops,
-                         scratch_pool));
-
-  *modified_p = (local_propchanges->nelts > 0);
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, modified_p,
+                               NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_props_modified_p2(svn_boolean_t *modified_p,
+                         svn_wc_context_t* wc_ctx,
+                         const char *local_abspath,
+                         apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+             svn_wc__props_modified(modified_p,
+                                    wc_ctx->db,
+                                    local_abspath,
+                                    scratch_pool));
+}
 
 svn_error_t *
 svn_wc__internal_propdiff(apr_array_header_t **propchanges,

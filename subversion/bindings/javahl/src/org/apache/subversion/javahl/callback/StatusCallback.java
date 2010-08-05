@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl.callback;
 
 import org.apache.subversion.javahl.Status;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * This interface is used to receive every status item for

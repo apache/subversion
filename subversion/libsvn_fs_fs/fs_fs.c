@@ -6374,11 +6374,12 @@ svn_fs_fs__reserve_copy_id(const char **copy_id_p,
 static svn_error_t *
 write_revision_zero(svn_fs_t *fs)
 {
+  const char *path_revision_zero = path_rev(fs, 0, fs->pool);
   apr_hash_t *proplist;
   svn_string_t date;
 
   /* Write out a rev file for revision 0. */
-  SVN_ERR(svn_io_file_create(path_rev(fs, 0, fs->pool),
+  SVN_ERR(svn_io_file_create(path_revision_zero,
                              "PLAIN\nEND\nENDREP\n"
                              "id: 0.0.r0/17\n"
                              "type: dir\n"
@@ -6387,6 +6388,7 @@ write_revision_zero(svn_fs_t *fs)
                              "2d2977d1c96f487abe4a1e202dd03b4e\n"
                              "cpath: /\n"
                              "\n\n17 107\n", fs->pool));
+  SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
 
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
@@ -6624,7 +6626,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 {
   apr_hash_t *headers;
   char *value;
-  node_revision_t noderev;
+  representation_t *data_rep;
   struct rep_args *ra;
   struct recover_read_from_file_baton baton;
   svn_stream_t *stream;
@@ -6637,10 +6639,6 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
                                                                pool),
                             pool));
 
-  /* We're going to populate a skeletal noderev - just the id and data_rep. */
-  value = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
-  noderev.id = svn_fs_fs__id_parse(value, strlen(value), pool);
-
   /* Check that this is a directory.  It should be. */
   value = apr_hash_get(headers, HEADER_TYPE, APR_HASH_KEY_STRING);
   if (value == NULL || strcmp(value, KIND_DIR) != 0)
@@ -6651,18 +6649,18 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   value = apr_hash_get(headers, HEADER_TEXT, APR_HASH_KEY_STRING);
   if (!value)
     return SVN_NO_ERROR;
-  SVN_ERR(read_rep_offsets(&noderev.data_rep, value, NULL, FALSE, pool));
+  SVN_ERR(read_rep_offsets(&data_rep, value, NULL, FALSE, pool));
 
   /* If the directory's data representation wasn't changed in this revision,
      we've already scanned the directory's contents for noderevs, so we don't
      need to again.  This will occur if a property is changed on a directory
      without changing the directory's contents. */
-  if (noderev.data_rep->revision != rev)
+  if (data_rep->revision != rev)
     return SVN_NO_ERROR;
 
   /* We could use get_dir_contents(), but this is much cheaper.  It does
      rely on directory entries being stored as PLAIN reps, though. */
-  offset = noderev.data_rep->offset;
+  offset = data_rep->offset;
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
   SVN_ERR(read_rep_line(&ra, rev_file, pool));
   if (ra->is_delta)
@@ -6674,7 +6672,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
      stored in the representation. */
   baton.file = rev_file;
   baton.pool = pool;
-  baton.remaining = noderev.data_rep->expanded_size;
+  baton.remaining = data_rep->expanded_size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read(stream, read_handler_recover);
 
@@ -7489,6 +7487,8 @@ pack_shard(const char *revs_dir,
   SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_stream_close(pack_stream));
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, pool));
+  SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, pool));
+  SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, pool));
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
    * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)

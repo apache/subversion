@@ -694,6 +694,11 @@ svn_client_import4(const char *path,
   const char *dir;
   apr_pool_t *subpool;
 
+  if (svn_path_is_url(path))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                              _("'%s' is not a local path"),
+                                              path));
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   base_dir_abspath = local_abspath;
 

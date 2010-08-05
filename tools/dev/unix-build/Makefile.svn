@@ -129,7 +129,7 @@ nuke:
 			yes)    echo "You said $$ANSWER. I will continue."; \
 				echo rm -rf $(SRCDIR) $(OBJDIR) $(PREFIX); \
 				rm -rf $(SRCDIR) $(OBJDIR) $(PREFIX); \
-				echo "Remember to reset the build!"; \
+				$(MAKE) reset; \
 				;; \
 			"")     echo "You said no."; \
 				;; \

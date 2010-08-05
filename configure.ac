@@ -902,6 +902,9 @@ AS_HELP_STRING([--enable-maintainer-mode],
         CFLAGS="-Wold-style-definition $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
+        CFLAGS="-Wno-system-headers $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
         AC_LANG_POP([C])
         CFLAGS="$CFLAGS_KEEP"
       fi

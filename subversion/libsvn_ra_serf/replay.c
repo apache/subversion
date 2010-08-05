@@ -183,9 +183,10 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       /* Create a pool for the commit editor. */
       ctx->dst_rev_pool = svn_pool_create(ctx->src_rev_pool);
       ctx->props = apr_hash_make(ctx->dst_rev_pool);
-      svn_ra_serf__walk_all_props(ctx->revs_props, ctx->report_target,
-                                  ctx->revision, svn_ra_serf__set_bare_props,
-                                  ctx->props, ctx->dst_rev_pool);
+      SVN_ERR(svn_ra_serf__walk_all_props(ctx->revs_props, ctx->report_target,
+                                          ctx->revision,
+                                          svn_ra_serf__set_bare_props,
+                                          ctx->props, ctx->dst_rev_pool));
       if (ctx->revstart_func)
         {
           SVN_ERR(ctx->revstart_func(ctx->revision, ctx->replay_baton,
@@ -563,8 +564,9 @@ cdata_replay(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_replay_body(void *baton,
+static svn_error_t *
+create_replay_body(serf_bucket_t **bkt,
+                   void *baton,
                    serf_bucket_alloc_t *alloc,
                    apr_pool_t *pool)
 {
@@ -594,7 +596,8 @@ create_replay_body(void *baton,
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "S:replay-report");
 
-  return body_bkt;
+  *bkt = body_bkt;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

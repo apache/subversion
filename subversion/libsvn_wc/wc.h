@@ -49,8 +49,16 @@ extern "C" {
 #define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
                                                file */
 
-/*#define SVN_WC__SINGLE_DB
-#define SINGLE_DB*/
+
+/* ### Both SVN_WC__SINGLE_DB and SINGLE_DB are needed for proper use of the
+   ### experimental single-db feature.  They have slightly different meanings,
+   ### which is why there are two contants.  They will both disappear in the
+   ### final 1.7 release, but for now, if you want to use SINGLE_DB, you'll
+   ### need to uncomment the following line. */
+/* #define SVN_WC__SINGLE_DB */
+#ifdef SVN_WC__SINGLE_DB
+#define SINGLE_DB
+#endif
 
 
 /* We can handle this format or anything lower, and we (should) error
@@ -469,17 +477,21 @@ svn_wc__walker_default_error_handler(const char *path,
  * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
  * @c svn_depth_immediates, or @c svn_depth_unknown.
  *
+ * If @a read_base is TRUE, always read the depth data from BASE_NODE
+ * instead of from WORKING when that exists.
+ *
  * Allocations are done in POOL.
  */
 svn_error_t *
 svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void **edit_baton,
-                                    const svn_delta_editor_t *wrapped_editor,
-                                    void *wrapped_edit_baton,
+                                    svn_wc__db_t *db,
                                     const char *anchor_abspath,
                                     const char *target,
-                                    svn_wc__db_t *db,
-                                    apr_pool_t *pool);
+                                    svn_boolean_t read_base,
+                                    const svn_delta_editor_t *wrapped_editor,
+                                    void *wrapped_edit_baton,
+                                    apr_pool_t *result_pool);
 
 
 /* Similar to svn_wc_conflicted_p3(), but with a wc_db parameter in place of
