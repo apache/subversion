@@ -86,6 +86,8 @@ static const char *git_tree_and_text_unidiff =
   "git --diff a/iota b/iota.copied"                                     NL
   "copy from iota"                                                      NL
   "copy to iota.copied"                                                 NL
+  "--- a/iota\t(revision 2)"                                            NL
+  "+++ b/iota.copied\t(working copy)"                                   NL
   "@@ -1 +1,2 @@"                                                       NL
   " This is the file 'iota'."                                           NL
   "+some more bytes to 'iota'"                                          NL
@@ -94,6 +96,8 @@ static const char *git_tree_and_text_unidiff =
   "git --diff a/A/mu b/A/mu.moved"                                      NL
   "rename from A/mu"                                                    NL
   "rename to A/mu.moved"                                                NL
+  "--- a/A/mu\t(revision 2)"                                            NL
+  "+++ b/A/mu.moved\t(working copy)"                                    NL
   "@@ -1 +1,2 @@"                                                       NL
   " This is the file 'mu'."                                             NL
   "+some more bytes to 'mu'"                                            NL
