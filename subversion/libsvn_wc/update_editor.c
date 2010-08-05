@@ -708,15 +708,10 @@ complete_directory(struct edit_baton *eb,
   int i;
   apr_pool_t *iterpool;
 
-  /* If this is the root directory and there is a target, we can't
+  /* If this is the root directory and there is a target, we don't have to
      mark this directory complete. */
   if (is_root_dir && *eb->target_basename != '\0')
     {
-      /* ### obsolete comment?
-         Before we can finish, we may need to clear the exclude flag for
-         target. Also give a chance to the target that is explicitly pulled
-         in. */
-      svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
       svn_error_t *err;
 
@@ -731,38 +726,26 @@ complete_directory(struct edit_baton *eb,
 
          If there is no BASE node for the target, then we certainly don't
          have to worry about removing it.  */
-      err = svn_wc__db_base_get_info(&status, &kind, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
-                                     eb->db, eb->target_abspath,
-                                     pool, pool);
+      err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL,
+                                     eb->db, eb->target_abspath, pool, pool);
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
             return svn_error_return(err);
 
           svn_error_clear(err);
-          return SVN_NO_ERROR;
         }
 
-      if (status == svn_wc__db_status_excluded)
+      if (!err && status == svn_wc__db_status_excluded)
         {
-          /* ### obsolete comment?
-             There is a small chance that the target is gone in the
-             repository.  If so, we should get rid of the entry now. */
+          /* There is a small chance that the explicit target of an update/
+             switch is gone in the repository, in that specific case the node
+             hasn't been re-added to the BASE tree by this update. If so, we
+             should get rid of this excluded node now. */
 
-          if (kind == svn_wc__db_kind_dir &&
-              svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
-            {
-              /* ### obsolete comment?
-               * Still passing NULL for THEIR_URL. A case where THEIR_URL
-               * is needed in this call is rare or even non-existant.
-               * ### TODO: Construct a proper THEIR_URL anyway. See also
-               * NULL handling code in do_entry_deletion(). */
-              SVN_ERR(do_entry_deletion(eb, eb->target_abspath,
-                                        NULL, FALSE, pool));
-            }
+          SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
         }
 
       return SVN_NO_ERROR;
@@ -824,6 +807,7 @@ complete_directory(struct edit_baton *eb,
 
       node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
+#ifndef SVN_WC__SINGLE_DB
       /* ### there is an edge case that we can run into right now: this
          ### dir can have a "subdir" node in the BASE_NODE, but the
          ### actual subdir does NOT have a record.
@@ -841,12 +825,16 @@ complete_directory(struct edit_baton *eb,
          ### the "subdir" record. maybe there is a good place to remove
          ### that record (or wait for single-dir). for now, we can correct
          ### it when we detect it.  */
+#endif
       err = svn_wc__db_base_get_info(&status, &kind, &revnum,
                                      NULL, NULL, NULL,
                                      NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, node_abspath,
                                      iterpool, iterpool);
+#ifdef SVN_WC__SINGLE_DB
+      SVN_ERR(err);
+#else
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -858,6 +846,7 @@ complete_directory(struct edit_baton *eb,
                                                        iterpool));
           continue;
         }
+#endif
 
       /* ### obsolete comment?
          Any entry still marked as deleted (and not schedule add) can now
@@ -897,6 +886,9 @@ complete_directory(struct edit_baton *eb,
         {
           SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
         }
+#ifndef SVN_WC__SINGLE_DB
+      /* In Single-DB mode, administrative data is never reported as missing
+         by the adm crawler, and we should always remove nodes recursively */
       else if (kind == svn_wc__db_kind_dir
                && svn_wc__adm_missing(eb->db, node_abspath, iterpool)
                && status != svn_wc__db_status_absent)
@@ -910,6 +902,7 @@ complete_directory(struct edit_baton *eb,
                             : svn_node_file,
                           iterpool);
         }
+#endif
     }
 
   svn_pool_destroy(iterpool);
@@ -1176,9 +1169,11 @@ prep_directory(struct dir_baton *db,
                svn_revnum_t ancestor_revision,
                apr_pool_t *pool)
 {
-  const char *repos_root;
   const char *dir_abspath;
+#ifndef SINGLE_DB
+  const char *repos_root;
   svn_boolean_t locked_here;
+#endif
 
   dir_abspath = db->local_abspath;
 
@@ -1490,7 +1485,9 @@ modcheck_found_node(const char *local_abspath,
 
   if (status != svn_wc__db_status_normal)
     modified = TRUE;
-  else
+  /* No need to check if we already have at least one non-delete
+     modification */
+  else if (!baton->found_mod || baton->all_edits_are_deletes)
     SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
                                  kind, scratch_pool));
 
@@ -3171,7 +3168,7 @@ close_directory(void *dir_baton,
       if (new_changed_author != NULL)
         changed_author = new_changed_author;
 
-#ifdef SINGLE_DB
+#ifdef SVN_WC__SINGLE_DB
       /* If no depth is set yet, set to infinity. */
       if (depth == svn_depth_unknown)
         depth = svn_depth_infinity;
@@ -5621,7 +5618,6 @@ tweak_entries(svn_wc__db_t *db,
               apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
-  svn_wc_notify_t *notify;
   const apr_array_header_t *children;
   int i;
 
@@ -5706,6 +5702,7 @@ tweak_entries(svn_wc__db_t *db,
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
+#ifndef SVN_WC__SINGLE_DB
           /* If the directory is 'missing', remove it.  This is safe as
              long as this function is only called as a helper to
              svn_wc__do_update_cleanup, since the update will already have
@@ -5721,6 +5718,8 @@ tweak_entries(svn_wc__db_t *db,
 
                   if (notify_func)
                     {
+                      svn_wc_notify_t *notify;
+
                       notify = svn_wc_create_notify(child_abspath,
                                                     svn_wc_notify_delete,
                                                     iterpool);
@@ -5740,6 +5739,7 @@ tweak_entries(svn_wc__db_t *db,
 
           /* Not missing, deleted, or absent, so recurse. */
           else
+#endif
             {
               SVN_ERR(tweak_entries(db, child_abspath, child_repos_relpath,
                                     new_repos_root_url, new_repos_uuid,
@@ -5871,7 +5871,8 @@ close_edit(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  /* If there is a target and that target is missing, then it
+  #ifndef SVN_WC__SINGLE_DB
+  /* If the explicit target still misses its administrative data, then it
      apparently wasn't re-added by the update process, so we'll
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
@@ -5884,6 +5885,7 @@ close_edit(void *edit_baton,
        * NULL handling code in do_entry_deletion(). */
       SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
     }
+#endif
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
@@ -6076,11 +6078,12 @@ make_editor(svn_revnum_t *target_revision,
   if (!depth_is_sticky)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
-                                                inner_editor,
-                                                inner_baton,
+                                                wc_ctx->db,
                                                 anchor_abspath,
                                                 target_basename,
-                                                wc_ctx->db,
+                                                TRUE /* read_base */,
+                                                inner_editor,
+                                                inner_baton,
                                                 result_pool));
 
   return svn_delta_get_cancellation_editor(cancel_func,
@@ -6498,10 +6501,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                        void *cancel_baton,
                        svn_wc_notify_func2_t notify_func,
                        void *notify_baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
+  const char *dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
   const char *tmp_text_base_abspath;
   svn_checksum_t *new_text_base_md5_checksum;
   svn_checksum_t *new_text_base_sha1_checksum;
@@ -6515,6 +6520,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
+  svn_error_t *err;
+  apr_pool_t *pool = scratch_pool;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(new_base_contents != NULL);
@@ -6522,6 +6529,60 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* We should have a write lock on this file's parent directory.  */
   SVN_ERR(svn_wc__write_check(db, dir_abspath, pool));
+
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             db, local_abspath, scratch_pool, scratch_pool);
+
+  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    return svn_error_return(err);
+  else if(err)
+    svn_error_clear(err);
+  else
+    switch (status)
+      {
+        case svn_wc__db_status_not_present:
+        case svn_wc__db_status_deleted:
+          break;
+        default:
+          return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                                   _("Node '%s' exists."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+      }
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               db, dir_abspath, scratch_pool, scratch_pool));
+
+  switch (status)
+    {
+      case svn_wc__db_status_normal:
+      case svn_wc__db_status_added:
+        break;
+      case svn_wc__db_status_deleted:
+        return
+          svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                            _("Can't add '%s' to a parent directory"
+                              " scheduled for deletion"),
+                            svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
+      default:
+        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, err,
+                                 _("Can't find parent directory's node while"
+                                   " trying to add '%s'"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+    }
+  if (kind != svn_wc__db_kind_dir)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Can't schedule an addition of '%s'"
+                               " below a not-directory node"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
@@ -6555,30 +6616,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       original_uuid = NULL;
       copyfrom_rev = SVN_INVALID_REVNUM;  /* Just to be sure.  */
     }
-
-  /* If we're replacing the file then we need to save the destination file's
-     original text base and prop base before replacing it. This allows us to
-     revert the entire change.
-
-     Note: We don't do this when the file was already replaced before because
-     the revert-base is already present and has the original text base.
-
-     ### This block can be removed once the new pristine store is in place */
-  {
-    svn_error_t *err;
-    svn_wc__db_status_t status;
-
-    err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, db, local_abspath, pool, pool);
-    if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-      {
-        /* There is no BASE node. Thus, we'll have nothing to save.  */
-        svn_error_clear(err);
-      }
-    else if (err)
-      return svn_error_return(err);
-  }
 
   /* Set CHANGED_* to reflect the entry props in NEW_BASE_PROPS, and
      filter NEW_BASE_PROPS so it contains only regular props. */

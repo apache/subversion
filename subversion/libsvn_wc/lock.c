@@ -109,6 +109,7 @@ svn_error_t *
 svn_wc__internal_check_wc(int *wc_format,
                           svn_wc__db_t *db,
                           const char *local_abspath,
+                          svn_boolean_t check_path,
                           apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
@@ -143,6 +144,68 @@ svn_wc__internal_check_wc(int *wc_format,
         }
     }
 
+#ifdef SVN_WC__SINGLE_DB
+    if (*wc_format >= SVN_WC__WC_NG_VERSION)
+      {
+        svn_error_t *err;
+        svn_wc__db_status_t db_status;
+        svn_wc__db_kind_t db_kind;
+
+        if (check_path)
+          {
+            /* If a node is not a directory, it is not a working copy directory.
+               This allows creating new working copies as a path below an existing
+               working copy.
+             */
+            svn_node_kind_t wc_kind;
+
+            SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
+            if (wc_kind != svn_node_dir)
+              {
+                *wc_format = 0; /* Not a directory, so not a wc-directory */
+                return SVN_NO_ERROR;
+              }
+          }
+      
+        err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool);
+      
+        if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+          {
+            svn_error_clear(err);
+            *wc_format = 0;
+            return SVN_NO_ERROR; 
+          }
+        else
+          SVN_ERR(err);
+
+        if (db_kind != svn_wc__db_kind_dir)
+          {
+            /* The WC thinks there must be a file, so this is not
+               a wc-directory */
+            *wc_format = 0;
+            return SVN_NO_ERROR;
+          }
+
+        switch (db_status)
+          {
+            case svn_wc__db_status_not_present:
+            case svn_wc__db_status_absent:
+            case svn_wc__db_status_excluded:
+              /* If there is a directory here, it is not related to the parent
+                 working copy: Obstruction */
+              *wc_format = 0;
+              return SVN_NO_ERROR;
+            default:
+              break;
+          }
+      }
+#endif
+
   return SVN_NO_ERROR;
 }
 
@@ -151,10 +214,13 @@ svn_error_t *
 svn_wc_check_wc2(int *wc_format,
                  svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
+  /* ### Should we pass TRUE for check_path to find obstructions and
+         missing directories? */
   return svn_error_return(
-    svn_wc__internal_check_wc(wc_format, wc_ctx->db, local_abspath, pool));
+    svn_wc__internal_check_wc(wc_format, wc_ctx->db, local_abspath, FALSE,
+                              scratch_pool));
 }
 
 
@@ -422,7 +488,8 @@ probe(svn_wc__db_t *db,
       const char *local_abspath;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-      SVN_ERR(svn_wc__internal_check_wc(&wc_format, db, local_abspath, pool));
+      SVN_ERR(svn_wc__internal_check_wc(&wc_format, db, local_abspath,
+                                        FALSE, pool));
     }
 
   /* a "version" of 0 means a non-wc directory */
@@ -469,7 +536,8 @@ open_single(svn_wc_adm_access_t **adm_access,
   svn_wc_adm_access_t *lock;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  err = svn_wc__internal_check_wc(&wc_format, db, local_abspath, scratch_pool);
+  err = svn_wc__internal_check_wc(&wc_format, db, local_abspath, FALSE,
+                                  scratch_pool);
   if (wc_format == 0 || (err && APR_STATUS_IS_ENOENT(err->apr_err)))
     {
       return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, err,
@@ -1599,7 +1667,7 @@ acquire_locks_recursively(svn_wc_context_t *wc_ctx,
     {
       /* We don't want to try and lock an unversioned directory that
          obstructs a versioned directory. */
-      err = svn_wc__internal_check_wc(&format, wc_ctx->db, local_abspath,
+      err = svn_wc__internal_check_wc(&format, wc_ctx->db, local_abspath, FALSE,
                                       iterpool);
 
       if (!err && format)

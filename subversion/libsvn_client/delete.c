@@ -318,17 +318,31 @@ svn_client_delete4(const apr_array_header_t *paths,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
+  svn_boolean_t is_url;
+  int i;
+
   if (! paths->nelts)
     return SVN_NO_ERROR;
 
-  if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
+  /* Check that all targets are of the same type. */
+  is_url = svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *));
+  for (i = 1; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      if (is_url != svn_path_is_url(path))
+        return svn_error_return(
+                 svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                  _("Cannot mix repository and working copy "
+                                    "targets")));
+    }
+
+  if (is_url)
     {
       SVN_ERR(delete_urls(paths, revprop_table, ctx, pool));
     }
   else
     {
       apr_pool_t *subpool = svn_pool_create(pool);
-      int i;
 
       for (i = 0; i < paths->nelts; i++)
         {

@@ -22,12 +22,12 @@
  * ====================================================================
  */
 
-#include "svn_dirent_uri.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_repos.h"
 #include "svn_props.h"
+#include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_io.h"
 
@@ -107,7 +107,6 @@ new_node_record(void **node_baton,
   void *child_baton;
   const struct svn_delta_editor_t *commit_editor;
   void *commit_edit_baton;
-  struct commit_edit_baton *eb;
   void *root_baton;
 
   rb = revision_baton;
@@ -173,8 +172,7 @@ new_node_record(void **node_baton,
              repository; to implement this, the edit_baton structure
              from commit.c had to be imported as a commit_edit_baton
              structure in load_editor.h */
-          eb = commit_edit_baton;
-          nb->copyfrom_path = svn_uri_join(eb->repos_url,
+          nb->copyfrom_path = svn_path_url_add_component2(rb->pb->root_url,
                                            apr_pstrdup(rb->pb->pool, hval),
                                            rb->pb->pool);
         }
@@ -205,7 +203,6 @@ new_node_record(void **node_baton,
   *node_baton = nb;
   return SVN_NO_ERROR;
 }
-
 
 static svn_error_t *
 set_revision_property(void *baton,
@@ -395,10 +392,11 @@ drive_dumpstream_loader(svn_stream_t *stream,
                         svn_ra_session_t *session,
                         apr_pool_t *pool)
 {
-  void *pb;
+  struct parse_baton *pb;
   pb = parse_baton;
 
-  SVN_ERR(svn_repos_parse_dumpstream2(stream, parser,parse_baton,
+  SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
+  SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,
                                       NULL, NULL, pool));
 
   return SVN_NO_ERROR;

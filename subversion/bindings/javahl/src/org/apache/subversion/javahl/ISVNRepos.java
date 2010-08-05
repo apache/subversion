@@ -137,7 +137,6 @@ public interface ISVNRepos {
 	 * load the data of a dump into a repository,
 	 * @param path              the path to the repository
 	 * @param dataInput         the data input source
-	 * @param messageOutput     the target for processing messages
 	 * @param ignoreUUID        ignore any UUID found in the input stream
 	 * @param forceUUID         set the repository UUID to any found in the
 	 *                          stream
@@ -145,6 +144,7 @@ public interface ISVNRepos {
 	 * @param usePostCommitHook use the post-commit hook when processing commits
 	 * @param relativePath      the directory in the repository, where the data
 	 *                          in put optional.
+	 * @param callback          the target for processing messages
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.5
 	 */

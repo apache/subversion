@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl.callback;
 
 import org.apache.subversion.javahl.DiffSummary;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * Subversion diff summarization interface.  An implementation which

@@ -173,15 +173,20 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
 svn_error_t *
 svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_wc_context_t *wc_ctx,
-                 const char *abspath,
+                 const char *local_abspath,
                  svn_boolean_t show_hidden,
                  apr_pool_t *scratch_pool)
 {
+  svn_wc__db_status_t db_status;
   svn_wc__db_kind_t db_kind;
   svn_error_t *err;
 
-  err = svn_wc__db_read_kind(&db_kind, wc_ctx->db, abspath, FALSE,
-                             scratch_pool);
+  err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
+                             wc_ctx->db, local_abspath,
+                             scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
@@ -212,14 +217,16 @@ svn_wc_read_kind(svn_node_kind_t *kind,
 
   /* Make sure hidden nodes return svn_node_none. */
   if (! show_hidden)
-    {
-      svn_boolean_t hidden;
+    switch (db_status)
+      {
+        case svn_wc__db_status_not_present:
+        case svn_wc__db_status_absent:
+        case svn_wc__db_status_excluded:
+          *kind = svn_node_none;
 
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, wc_ctx->db, abspath,
-                                     scratch_pool));
-      if (hidden)
-        *kind = svn_node_none;
-    }
+        default:
+          break;
+      }
 
   return SVN_NO_ERROR;
 }
@@ -666,6 +673,7 @@ walker_helper(svn_wc__db_t *db,
     {
       const char *child_abspath;
       svn_wc__db_kind_t child_kind;
+      svn_wc__db_status_t child_status;
 
       svn_pool_clear(iterpool);
 
@@ -678,27 +686,31 @@ walker_helper(svn_wc__db_t *db,
                                                     const char *),
                                       iterpool);
 
-      if (!show_hidden)
-        {
-          svn_boolean_t hidden;
-
-          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
-          if (hidden)
-            continue;
-        }
-
-      SVN_ERR(svn_wc__db_read_info(NULL, &child_kind, NULL, NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_read_info(&child_status, &child_kind, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
-                                   NULL,
+                                   NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
+
+      if (!show_hidden)
+        switch (child_status)
+          {
+            case svn_wc__db_status_not_present:
+            case svn_wc__db_status_absent:
+            case svn_wc__db_status_excluded:
+              continue;
+            default:
+              break;
+          }
 
       /* Return the child, if appropriate.  (For a directory,
        * this is the first visit: as a child.) */
       if (child_kind == svn_wc__db_kind_file
             || depth >= svn_depth_immediates)
         {
+          /* ### Maybe we should pass kind to the callback?.
+             ### almost every callee starts by asking for this */
           SVN_ERR(walk_callback(child_abspath, walk_baton, iterpool));
         }
 
@@ -1239,9 +1251,9 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool)
 {
+#ifndef SVN_WC__SINGLE_DB
   svn_boolean_t is_deleted;
 
-#ifndef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, local_abspath,
                                          scratch_pool));
   if (is_deleted)
