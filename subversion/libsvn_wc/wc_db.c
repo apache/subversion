@@ -2433,7 +2433,6 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
   VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(svn_wc__db_pristine_check(&present, db, wri_abspath, sha1_checksum,
-                                    svn_wc__db_checkmode_usable,
                                     scratch_pool));
   if (! present)
     return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
@@ -2815,7 +2814,6 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_wc__db_t *db,
                           const char *wri_abspath,
                           const svn_checksum_t *sha1_checksum,
-                          svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
