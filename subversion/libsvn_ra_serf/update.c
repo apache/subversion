@@ -239,9 +239,6 @@ typedef struct report_fetch_t {
   /* Our pool. */
   apr_pool_t *pool;
 
-  /* Non-NULL if we received an error during processing. */
-  svn_error_t *err;
-
   /* The session we should use to fetch the file. */
   svn_ra_serf__session_t *sess;
 
@@ -721,7 +718,7 @@ cancel_fetch(serf_request_t *request,
           fetch_ctx->read_size = 0;
         }
 
-      return APR_SUCCESS;
+      return SVN_NO_ERROR;
     }
 
   /* We have no idea what went wrong. */
@@ -733,8 +730,6 @@ error_fetch(serf_request_t *request,
             report_fetch_t *fetch_ctx,
             svn_error_t *err)
 {
-  fetch_ctx->err = err;
-
   fetch_ctx->done = TRUE;
 
   fetch_ctx->done_item.data = fetch_ctx;
@@ -746,7 +741,7 @@ error_fetch(serf_request_t *request,
   serf_request_set_handler(request,
                            svn_ra_serf__response_discard_handler, NULL);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /* Implements svn_ra_serf__response_handler_t */
@@ -1003,19 +998,25 @@ handle_stream(serf_request_t *request,
   report_fetch_t *fetch_ctx = handler_baton;
   serf_status_line sl;
   const char *location;
+  svn_error_t *err;
 
   serf_bucket_response_status(response, &sl);
 
   /* Woo-hoo.  Nothing here to see.  */
   location = svn_ra_serf__response_get_location(response, pool);
-  fetch_ctx->err = svn_ra_serf__error_on_status(sl.code,
-                                                fetch_ctx->info->name,
-                                                location);
-  if (fetch_ctx->err)
+  
+  err = svn_ra_serf__error_on_status(sl.code,
+                                     fetch_ctx->info->name,
+                                     location);
+  if (err)
     {
       fetch_ctx->done = TRUE;
 
-      return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+      err = svn_error_compose_create(
+                  err,
+                  svn_ra_serf__handle_discard_body(request, response, NULL, pool));
+
+      return svn_error_return(err);
     }
 
   while (1)
@@ -2203,10 +2204,12 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
 
       /* Authentication protocol specific initalization. */
       if (sess->auth_protocol)
-        sess->auth_protocol->init_conn_func(sess, sess->conns[cur], sess->pool);
+        SVN_ERR(sess->auth_protocol->init_conn_func(sess, sess->conns[cur],
+                                                    sess->pool));
       if (sess->proxy_auth_protocol)
-        sess->proxy_auth_protocol->init_conn_func(sess, sess->conns[cur],
-                                                  sess->pool);
+        SVN_ERR(sess->proxy_auth_protocol->init_conn_func(sess,
+                                                          sess->conns[cur],
+                                                          sess->pool));
     }
 
   return SVN_NO_ERROR;
@@ -2385,21 +2388,6 @@ finish_report(void *report_baton,
         {
           report_fetch_t *done_fetch = done_list->data;
           report_dir_t *cur_dir;
-
-          if (done_fetch->err)
-            {
-              svn_error_t *err = done_fetch->err;
-              /* Error found. There might be more, clear those first. */
-              done_list = done_list->next;
-              while (done_list)
-                {
-                  done_fetch = done_list->data;
-                  if (done_fetch->err)
-                    svn_error_clear(done_fetch->err);
-                  done_list = done_list->next;
-                }
-              return err;
-            }
 
           /* decrease our parent's directory refcount. */
           cur_dir = done_fetch->info->dir;
@@ -2763,7 +2751,6 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
 
       SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
-      SVN_ERR(stream_ctx->err);
     }
 
   return SVN_NO_ERROR;
