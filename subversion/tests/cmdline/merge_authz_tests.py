@@ -442,7 +442,6 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_skip = wc.State(A_COPY_2_H_path, {})
   saved_cwd = os.getcwd()
-  #raise svntest.Failure("PTB")
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
                                        sbox.repo_url + '/A/D/H', None,
                                        expected_output,
