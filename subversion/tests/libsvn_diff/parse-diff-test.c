@@ -870,7 +870,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test property and text unidiff parsing"),
     SVN_TEST_PASS2(test_parse_diff_symbols_in_prop_unidiff,
                    "test property diffs with odd symbols"),
-    SVN_TEST_XFAIL2(test_git_diffs_with_spaces_diff,
+    SVN_TEST_PASS2(test_git_diffs_with_spaces_diff,
                    "test git diffs with spaces in paths"),
     SVN_TEST_NULL
   };
