@@ -991,9 +991,12 @@ git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   if (tab)
     *tab = '\0';
 
-  /* ### What if we have "--- /dev/null"? */
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- a/"),
-                        result_pool, scratch_pool));
+  if (starts_with(line, "--- /dev/null"))
+    SVN_ERR(grab_filename(&patch->old_filename, "/dev/null",
+                          result_pool, scratch_pool));
+  else
+    SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- a/"),
+                          result_pool, scratch_pool));
 
   *new_state = state_git_minus_seen;
   return SVN_NO_ERROR;
@@ -1010,9 +1013,12 @@ git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   if (tab)
     *tab = '\0';
 
-  /* ### What if we have "+++ /dev/null" ? */
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ b/"),
-                        result_pool, scratch_pool));
+  if (starts_with(line, "+++ /dev/null"))
+    SVN_ERR(grab_filename(&patch->new_filename, "/dev/null",
+                          result_pool, scratch_pool));
+  else
+    SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ b/"),
+                          result_pool, scratch_pool));
 
   *new_state = state_git_header_found;
   return SVN_NO_ERROR;
@@ -1077,7 +1083,7 @@ git_new_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 {
   patch->operation = svn_diff_op_added;
 
-  *new_state = state_git_header_found;
+  *new_state = state_git_tree_seen;
   return SVN_NO_ERROR;
 }
 
@@ -1088,7 +1094,7 @@ git_deleted_file(enum parse_state *new_state, const char *line, svn_patch_t *pat
 {
   patch->operation = svn_diff_op_deleted;
 
-  *new_state = state_git_header_found;
+  *new_state = state_git_tree_seen;
   return SVN_NO_ERROR;
 }
 
@@ -1146,7 +1152,9 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
       {"git --diff",    state_start,            git_start},
       {"--- a/",        state_git_diff_seen,    git_minus},
       {"--- a/",        state_git_tree_seen,    git_minus},
+      {"--- /dev/null", state_git_tree_seen,    git_minus},
       {"+++ b/",        state_git_minus_seen,   git_plus},
+      {"+++ /dev/null", state_git_minus_seen,   git_plus},
       {"rename from ",  state_git_diff_seen,    git_move_from},
       {"rename to ",    state_move_from_seen,   git_move_to},
       {"copy from ",    state_git_diff_seen,    git_copy_from},
