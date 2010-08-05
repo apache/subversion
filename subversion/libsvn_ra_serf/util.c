@@ -1418,22 +1418,13 @@ handle_response(serf_request_t *request,
 
       /* Cases where a lack of a response body (via EOF) is okay:
        *  - A HEAD request
-       *  - responses with the following status codes: 
-       *       204, 301, 302, 304, 307, 401, 407
+       *  - 204/304 response
        *
        * Otherwise, if we get an EOF here, something went really wrong: either
        * the server closed on us early or we're reading too much.  Either way,
        * scream loudly.
        */
-      if (strcmp(ctx->method, "HEAD") != 0 
-          && sl.code != 204
-          && sl.code != 301 
-          && sl.code != 302 
-          && sl.code != 304
-          && sl.code != 307
-          && sl.code != 401
-          && sl.code != 407
-          )
+      if (strcmp(ctx->method, "HEAD") != 0 && sl.code != 204 && sl.code != 304)
         {
           svn_error_t *err =
               svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
