@@ -220,9 +220,9 @@ static const char *bad_git_diff_header =
   "new file mode 100644"                                                NL
   "git --diff a/path one 1 b/path one 1"                                NL
   "new file mode 100644"                                                NL
-  "git --diff a/dir/b/path b/dir/b/path"                                NL
+  "git --diff a/dir/ b/path b/dir/ b/path"                              NL
   "new file mode 100644"                                                NL
-  "git --diff a/b/path 1 b/b/path 1"                                    NL
+  "git --diff a/ b/path 1 b/ b/path 1"                                  NL
   "new file mode 100644"                                                NL;
 
 
@@ -834,8 +834,9 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "dir/b/path"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "dir/b/path"));
+  SVN_DBG(("%s\n", patch->old_filename));
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "dir/ b/path"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "dir/ b/path"));
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 
@@ -844,8 +845,8 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "b/path 1"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "b/path 1"));
+  SVN_TEST_ASSERT(! strcmp(patch->old_filename, " b/path 1"));
+  SVN_TEST_ASSERT(! strcmp(patch->new_filename, " b/path 1"));
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 
