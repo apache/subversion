@@ -162,7 +162,7 @@ pristine_write_read(const svn_test_opts_t *opts,
     svn_boolean_t present;
 
     SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
-                                      svn_wc__db_checkmode_usable, pool));
+                                      pool));
     SVN_ERR_ASSERT(! present);
   }
 
@@ -175,7 +175,7 @@ pristine_write_read(const svn_test_opts_t *opts,
     svn_boolean_t present;
 
     SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
-                                      svn_wc__db_checkmode_usable, pool));
+                                      pool));
     SVN_ERR_ASSERT(present);
   }
 
@@ -220,7 +220,7 @@ pristine_write_read(const svn_test_opts_t *opts,
     svn_boolean_t present;
 
     SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
-                                      svn_wc__db_checkmode_usable, pool));
+                                      pool));
     SVN_ERR_ASSERT(! present);
   }
 

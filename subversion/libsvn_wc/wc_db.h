@@ -857,53 +857,6 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
    @{
 */
 
-/* Enumerated constants for how hard svn_wc__db_pristine_check() should
-   work on checking for the pristine file.
-*/
-typedef enum {
-
-  /* ### bah. this is bogus. we open the sqlite database "all the time",
-     ### and don't worry about optimizing that. so: given the db is always
-     ### open, then the following modes are overengineered, premature
-     ### optimizations. ... will clean up in a future rev.  */
-
-  /* The caller wants to be sure the pristine file is present and usable.
-     This is the typical mode to use.
-
-     Implementation note: the SQLite database is opened (if not already)
-       and its state is verified against the file in the filesystem. */
-  svn_wc__db_checkmode_usable,
-
-  /* The caller is performing just this one check. The implementation will
-     optimize around the assumption no further calls to _check() will occur
-     (but of course has no problem if they do).
-
-     Note: this test is best used for detecting a *missing* file
-     rather than for detecting a usable file.
-
-     Implementation note: this will examine the presence of the pristine file
-       in the filesystem. The SQLite database is untouched, though if it is
-       (already) open, then it will be used instead. */
-  svn_wc__db_checkmode_single,
-
-  /* The caller is going to perform multiple calls, so the implementation
-     should optimize its operation around that.
-
-     Note: this test is best used for detecting a *missing* file
-     rather than for detecting a usable file.
-
-     Implementation note: the SQLite database will be opened (if not already),
-     and all checks will simply look in the TEXT_BASE table to see if the
-     given key is present. Note that the file may not be present. */
-  svn_wc__db_checkmode_multi,
-
-  /* Similar to _usable, but the file is checksum'd to ensure that it has
-     not been corrupted in some way. */
-  svn_wc__db_checkmode_validate
-
-} svn_wc__db_checkmode_t;
-
-
 /* Set *PRISTINE_ABSPATH to the path to the pristine text file
    identified by SHA1_CHECKSUM.  Error if it does not exist.
 
@@ -1023,15 +976,14 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/* ### check for presence, according to the given mode (on how hard we
-   ### should examine things)
+/* Set *PRESENT to true if the pristine store for WRI_ABSPATH in DB contains
+   a pristine text with SHA-1 checksum SHA1_CHECKSUM, and to false otherwise.
 */
 svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_wc__db_t *db,
                           const char *wri_abspath,
                           const svn_checksum_t *sha1_checksum,
-                          svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool);
 
 
