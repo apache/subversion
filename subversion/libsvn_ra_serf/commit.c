@@ -770,10 +770,9 @@ create_proppatch_body(serf_bucket_t **bkt,
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", NULL);
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
-      err = svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
-                                        SVN_INVALID_REVNUM,
-                                         proppatch_walker, body_bkt, pool);
-      svn_error_clear(err); /* ### */
+      SVN_ERR(svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
+                                          SVN_INVALID_REVNUM,
+                                          proppatch_walker, body_bkt, pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:set");
@@ -784,10 +783,9 @@ create_proppatch_body(serf_bucket_t **bkt,
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:remove", NULL);
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
-      err = svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
-                                        SVN_INVALID_REVNUM,
-                                        proppatch_walker, body_bkt, pool);
-      svn_error_clear(err); /* ### */
+      SVN_ERR(svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
+                                          SVN_INVALID_REVNUM,
+                                          proppatch_walker, body_bkt, pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:remove");
