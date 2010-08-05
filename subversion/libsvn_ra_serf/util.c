@@ -494,7 +494,7 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
     return APR_SUCCESS;
 }
 
-void
+svn_error_t *
 svn_ra_serf__setup_serf_req(serf_request_t *request,
                             serf_bucket_t **req_bkt,
                             serf_bucket_t **ret_hdrs_bkt,
@@ -527,13 +527,15 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   /* Setup server authorization headers */
   if (conn->session->auth_protocol)
-    conn->session->auth_protocol->setup_request_func(conn, method, url,
-                                                     hdrs_bkt);
+    SVN_ERR(conn->session->auth_protocol->setup_request_func(conn, method, url,
+                                                             hdrs_bkt));
 
   /* Setup proxy authorization headers */
   if (conn->session->proxy_auth_protocol)
-    conn->session->proxy_auth_protocol->setup_request_func(conn, method,
-                                                           url, hdrs_bkt);
+    SVN_ERR(conn->session->proxy_auth_protocol->setup_request_func(conn,
+                                                                   method,
+                                                                   url,
+                                                                   hdrs_bkt));
 
 #if ! SERF_VERSION_AT_LEAST(0, 4, 0)
   /* Set up SSL if we need to */
@@ -559,6 +561,8 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
     {
       *ret_hdrs_bkt = hdrs_bkt;
     }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1457,24 +1461,22 @@ cleanup:
   return status;
 }
 
-/* Implements the serf_request_setup_t interface (which sets up both a
-   request and its response handler callback).  If the CTX->setup()
+/* svn_error_t * returning wrapper for setup_request.  If the CTX->setup()
    callback is non-NULL, invoke it to carry out the majority of the
    serf_request_setup_t implementation.  Otherwise, perform default
    setup, with special handling for HEAD requests, and finer-grained
    callbacks invoked (if non-NULL) to produce the request headers and
    body. */
-static apr_status_t
-setup_request(serf_request_t *request,
-              void *setup_baton,
-              serf_bucket_t **req_bkt,
-              serf_response_acceptor_t *acceptor,
-              void **acceptor_baton,
-              serf_response_handler_t *handler,
-              void **handler_baton,
-              apr_pool_t *pool)
+static svn_error_t *
+setup_request_cb(serf_request_t *request,
+                 svn_ra_serf__handler_t *ctx,
+                 serf_bucket_t **req_bkt,
+                 serf_response_acceptor_t *acceptor,
+                 void **acceptor_baton,
+                 serf_response_handler_t *handler,
+                 void **handler_baton,
+                 apr_pool_t *pool)
 {
-  svn_ra_serf__handler_t *ctx = setup_baton;
   serf_bucket_t *headers_bkt;
 
   *acceptor = svn_ra_serf__accept_response;
@@ -1484,17 +1486,11 @@ setup_request(serf_request_t *request,
     {
       svn_ra_serf__response_handler_t response_handler;
       void *response_baton;
-      svn_error_t *error;
 
-      error = ctx->setup(request, ctx->setup_baton, req_bkt,
-                          acceptor, acceptor_baton,
-                          &response_handler, &response_baton,
-                          pool);
-      if (error)
-        {
-          ctx->session->pending_error = error;
-          return error->apr_err;
-        }
+      SVN_ERR(ctx->setup(request, ctx->setup_baton, req_bkt,
+                         acceptor, acceptor_baton,
+                         &response_handler, &response_baton,
+                         pool));
 
       ctx->response_handler = response_handler;
       ctx->response_baton = response_baton;
@@ -1519,9 +1515,9 @@ setup_request(serf_request_t *request,
           body_bkt = NULL;
         }
 
-      svn_ra_serf__setup_serf_req(request, req_bkt, &headers_bkt, ctx->conn,
-                                  ctx->method, ctx->path,
-                                  body_bkt, ctx->body_type);
+      SVN_ERR(svn_ra_serf__setup_serf_req(request, req_bkt, &headers_bkt,
+                                          ctx->conn, ctx->method, ctx->path,
+                                          body_bkt, ctx->body_type));
 
       if (ctx->header_delegate)
         {
@@ -1531,6 +1527,40 @@ setup_request(serf_request_t *request,
 
   *handler = handle_response;
   *handler_baton = ctx;
+
+  return APR_SUCCESS;
+}
+
+/* Implements the serf_request_setup_t interface (which sets up both a
+   request and its response handler callback). Handles errors for
+   setup_request_cb */
+static apr_status_t
+setup_request(serf_request_t *request,
+              void *setup_baton,
+              serf_bucket_t **req_bkt,
+              serf_response_acceptor_t *acceptor,
+              void **acceptor_baton,
+              serf_response_handler_t *handler,
+              void **handler_baton,
+              apr_pool_t *pool)
+{
+  svn_ra_serf__handler_t *ctx = setup_baton;
+  svn_error_t *err;
+
+  err = setup_request_cb(request, ctx,
+                         req_bkt,
+                         acceptor, acceptor_baton,
+                         handler, handler_baton,
+                         pool);
+
+  if (err)
+    {
+      ctx->session->pending_error 
+                = svn_error_compose_create(ctx->session->pending_error,
+                                           err);
+
+      return err->apr_err;
+    }
 
   return APR_SUCCESS;
 }
