@@ -1428,9 +1428,7 @@ handle_response(serf_request_t *request,
         {
           svn_error_t *err =
               svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                                svn_error_compose_create(
-                                           ctx->session->pending_error,
-                                           svn_error_wrap_apr(status, NULL)),
+                                svn_error_wrap_apr(status, NULL),
                                 _("Premature EOF seen from server "
                                   "(http status=%d)"), sl.code);
           /* This discard may be no-op, but let's preserve the algorithm
@@ -1470,6 +1468,7 @@ handle_response(serf_request_t *request,
 
       svn_ra_serf__priority_request_create(ctx);
 
+      *serf_status = status;
       return SVN_NO_ERROR;
     }
   else if (sl.code == 409 || sl.code >= 500)
