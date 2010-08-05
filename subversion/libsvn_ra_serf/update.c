@@ -1066,7 +1066,8 @@ handle_stream(serf_request_t *request,
 
           written_len = len;
 
-          svn_stream_write(fetch_ctx->target_stream, data, &written_len);
+          SVN_ERR(svn_stream_write(fetch_ctx->target_stream, data,
+                                   &written_len));
         }
 
       if (APR_STATUS_IS_EOF(status))
@@ -2306,17 +2307,23 @@ finish_report(void *report_baton,
 
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
+      svn_error_t *err;
       status = serf_context_run(sess->context, sess->timeout, pool);
+
+      err = sess->pending_error;
+      sess->pending_error = SVN_NO_ERROR;
+
       if (APR_STATUS_IS_TIMEUP(status))
         {
+          svn_error_clear(err);
           return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
                                   NULL,
                                   _("Connection timed out"));
         }
+
+      SVN_ERR(err);
       if (status)
         {
-          SVN_ERR(sess->pending_error);
-
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
                                     status);
         }
