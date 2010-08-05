@@ -457,7 +457,7 @@ typedef svn_error_t *
                                           apr_pool_t *pool);
 
 /* Callback for when a response has an error. */
-typedef apr_status_t
+typedef svn_error_t *
 (*svn_ra_serf__response_error_t)(serf_request_t *request,
                                  serf_bucket_t *response,
                                  int status_code,
