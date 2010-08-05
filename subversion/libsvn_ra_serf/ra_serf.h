@@ -408,7 +408,7 @@ svn_ra_serf__handle_client_cert_pw(void *data,
  *
  * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
  */
-void
+svn_error_t *
 svn_ra_serf__setup_serf_req(serf_request_t *request,
                             serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
                             svn_ra_serf__connection_t *conn,
