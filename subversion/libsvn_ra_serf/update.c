@@ -962,9 +962,10 @@ handle_fetch(serf_request_t *request,
                                                 info, info->editor_pool);
             }
 
-          err = info->dir->update_editor->close_file(info->file_baton,
-                                                     info->final_checksum,
-                                                     info->editor_pool);
+          if (!err)
+            err = info->dir->update_editor->close_file(info->file_baton,
+                                                       info->final_checksum,
+                                                       info->editor_pool);
 
           if (err)
             {
