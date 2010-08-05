@@ -167,13 +167,18 @@ class Sandbox:
       wc_dir = self.wc_dir
     return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
 
-  def redirected_root_url(self):
-    """Return the URL which should be configured to redirect to the root
-       of this repository."""
+  def redirected_root_url(self, temporary=False):
+    """If TEMPORARY is set, return the URL which should be configured
+       to temporarily redirect to the root of this repository;
+       otherwise, return the URL which should be configured to
+       permanent redirect there.  (Assumes that the sandbox is not
+       read-only.)"""
     assert not self.read_only
     assert self.repo_url.startswith("http")
     parts = self.repo_url.rsplit('/', 1)
-    return parts[0] + '/REDIRECT-' + parts[1]
+    return '%s/REDIRECT-%s-%s' % (parts[0],
+                                  temporary and 'TEMP' or 'PERM',
+                                  parts[1])
     
   def simple_commit(self, target=None):
     assert not self.read_only

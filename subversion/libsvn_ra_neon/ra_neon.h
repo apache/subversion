@@ -942,10 +942,10 @@ svn_ra_neon__maybe_store_auth_info_after_result(svn_error_t *err,
    NULL, as this will cause Neon to generate a "Content-Length: 0"
    header (which is important to some proxies).
 
-   OKAY_1, OKAY_2, and OKAY_3 are the "acceptable" result codes.
-   Anything other than one of these will generate an error. OKAY_1
-   should always be specified (e.g. as 200); use 0 for OKAY_2 and/or
-   OKAY_3 if additional result codes aren't allowed.  */
+   OKAY_1 and OKAY_2 are the "acceptable" result codes.  Anything
+   other than one of these will generate an error.  OKAY_1 should
+   always be specified (e.g. as 200); use 0 for OKAY_2 if additional
+   result codes aren't allowed.  */
 svn_error_t *
 svn_ra_neon__request_dispatch(int *code_p,
                               svn_ra_neon__request_t *request,
@@ -953,7 +953,6 @@ svn_ra_neon__request_dispatch(int *code_p,
                               const char *body,
                               int okay_1,
                               int okay_2,
-                              int okay_3,
                               apr_pool_t *pool);
 
 /* A layer over SVN_RA_NEON__REQUEST_DISPATCH() adding a
@@ -969,8 +968,9 @@ svn_ra_neon__simple_request(int *code,
                             const char *url,
                             apr_hash_t *extra_headers,
                             const char *body,
-                            int okay_1, int okay_2, apr_pool_t *pool);
-
+                            int okay_1,
+                            int okay_2,
+                            apr_pool_t *pool);
 
 /* Convenience statement macro for setting headers in a hash */
 #define svn_ra_neon__set_header(hash, hdr, val) \

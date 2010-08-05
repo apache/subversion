@@ -1169,7 +1169,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       *ctx->status_code = sl.code;
     }
 
-  if (sl.code == 301 || sl.code == 302)
+  if (sl.code == 301 || sl.code == 302 || sl.code == 307)
     {
       ctx->location = svn_ra_serf__response_get_location(response, pool);
     }
@@ -1418,13 +1418,22 @@ handle_response(serf_request_t *request,
 
       /* Cases where a lack of a response body (via EOF) is okay:
        *  - A HEAD request
-       *  - 204/304 response
+       *  - responses with the following status codes: 
+       *       204, 301, 302, 304, 307, 401, 407
        *
        * Otherwise, if we get an EOF here, something went really wrong: either
        * the server closed on us early or we're reading too much.  Either way,
        * scream loudly.
        */
-      if (strcmp(ctx->method, "HEAD") != 0 && sl.code != 204 && sl.code != 304)
+      if (strcmp(ctx->method, "HEAD") != 0 
+          && sl.code != 204
+          && sl.code != 301 
+          && sl.code != 302 
+          && sl.code != 304
+          && sl.code != 307
+          && sl.code != 401
+          && sl.code != 407
+          )
         {
           svn_error_t *err =
               svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
@@ -1855,6 +1864,7 @@ svn_ra_serf__error_on_status(int status_code,
     {
       case 301:
       case 302:
+      case 307:
         return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
                                  (status_code == 301)
                                  ? _("Repository moved permanently to '%s';"

@@ -420,7 +420,6 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
   err = svn_ra_neon__request_dispatch(NULL, request, NULL, NULL,
                                       200 /* OK */,
                                       226 /* IM Used */,
-                                      0,
                                       pool);
   svn_ra_neon__request_destroy(request);
 
