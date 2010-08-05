@@ -92,8 +92,8 @@ static const char *git_tree_and_text_unidiff =
   "Index: A/mu.moved"                                                   NL
   "===================================================================" NL
   "git --diff a/A/mu b/A/mu.moved"                                      NL
-  "move from A/mu"                                                      NL
-  "move to A/mu.moved"                                                  NL
+  "rename from A/mu"                                                    NL
+  "rename to A/mu.moved"                                                NL
   "@@ -1 +1,2 @@"                                                       NL
   " This is the file 'mu'."                                             NL
   "+some more bytes to 'mu'"                                            NL
