@@ -176,8 +176,9 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_mergeinfo_body(void *baton,
+static svn_error_t *
+create_mergeinfo_body(serf_bucket_t **bkt,
+                      void *baton,
                       serf_bucket_alloc_t *alloc,
                       apr_pool_t *pool)
 {
@@ -221,7 +222,8 @@ create_mergeinfo_body(void *baton,
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc,
                                      "S:" SVN_DAV__MERGEINFO_REPORT);
 
-  return body_bkt;
+  *bkt = body_bkt;
+  return SVN_NO_ERROR;
 }
 
 /* Request a mergeinfo-report from the URL attached to SESSION,

@@ -564,8 +564,9 @@ cdata_replay(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_replay_body(void *baton,
+static svn_error_t *
+create_replay_body(serf_bucket_t **bkt,
+                   void *baton,
                    serf_bucket_alloc_t *alloc,
                    apr_pool_t *pool)
 {
@@ -595,7 +596,8 @@ create_replay_body(void *baton,
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "S:replay-report");
 
-  return body_bkt;
+  *bkt = body_bkt;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

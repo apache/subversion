@@ -321,7 +321,7 @@ static const svn_ra_serf__dav_props_t lock_props[] =
   { NULL }
 };
 
-static apr_status_t
+static svn_error_t *
 set_lock_headers(serf_bucket_t *headers,
                  void *baton,
                  apr_pool_t *pool)
@@ -430,8 +430,10 @@ handle_lock(serf_request_t *request,
                                         handler_baton, pool);
 }
 
-static serf_bucket_t*
-create_getlock_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_getlock_body(serf_bucket_t **body_bkt,
+                    void *baton,
                     serf_bucket_alloc_t *alloc,
                     apr_pool_t *pool)
 {
@@ -448,21 +450,24 @@ create_getlock_body(void *baton,
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "prop");
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "propfind");
 
-  return buckets;
+  *body_bkt = buckets;
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t*
 setup_getlock_headers(serf_bucket_t *headers,
                       void *baton,
                       apr_pool_t *pool)
 {
   serf_bucket_headers_set(headers, "Depth", "0");
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static serf_bucket_t*
-create_lock_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_lock_body(serf_bucket_t **body_bkt,
+                 void *baton,
                  serf_bucket_alloc_t *alloc,
                  apr_pool_t *pool)
 {
@@ -492,7 +497,8 @@ create_lock_body(void *baton,
 
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "lockinfo");
 
-  return buckets;
+  *body_bkt = buckets;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -651,7 +657,7 @@ struct unlock_context_t {
   svn_boolean_t force;
 };
 
-static apr_status_t
+static svn_error_t *
 set_unlock_headers(serf_bucket_t *headers,
                    void *baton,
                    apr_pool_t *pool)
@@ -665,7 +671,7 @@ set_unlock_headers(serf_bucket_t *headers,
                               SVN_DAV_OPTION_LOCK_BREAK);
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

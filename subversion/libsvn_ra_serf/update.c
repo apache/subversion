@@ -668,7 +668,7 @@ check_lock(report_info_t *info)
     }
 }
 
-static apr_status_t
+static svn_error_t *
 headers_fetch(serf_bucket_t *headers,
               void *baton,
               apr_pool_t *pool)
@@ -689,7 +689,7 @@ headers_fetch(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 static apr_status_t
@@ -2213,8 +2213,9 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
 }
 
 /* Serf callback to create update request body bucket. */
-static serf_bucket_t *
-create_update_report_body(void *baton,
+static svn_error_t *
+create_update_report_body(serf_bucket_t **body_bkt,
+                          void *baton,
                           serf_bucket_alloc_t *alloc,
                           apr_pool_t *pool)
 {
@@ -2224,7 +2225,9 @@ create_update_report_body(void *baton,
   offset = 0;
   apr_file_seek(report->body_file, APR_SET, &offset);
 
-  return serf_bucket_file_create(report->body_file, alloc);
+  *body_bkt = serf_bucket_file_create(report->body_file, alloc);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

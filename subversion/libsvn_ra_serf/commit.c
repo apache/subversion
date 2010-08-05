@@ -238,8 +238,10 @@ return_response_err(svn_ra_serf__handler_t *handler,
                                   err);
 }
 
-static serf_bucket_t *
-create_checkout_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_checkout_body(serf_bucket_t **bkt,
+                     void *baton,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
@@ -263,7 +265,8 @@ create_checkout_body(void *baton,
   svn_ra_serf__add_tag_buckets(body_bkt, "D:apply-to-version", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:checkout");
 
-  return body_bkt;
+  *bkt = body_bkt;
+  return SVN_NO_ERROR;
 }
 
 /* Implements svn_ra_serf__response_handler_t */
@@ -707,7 +710,7 @@ proppatch_walker(void *baton,
   return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_proppatch_headers(serf_bucket_t *headers,
                         void *baton,
                         apr_pool_t *pool)
@@ -738,11 +741,13 @@ setup_proppatch_headers(serf_bucket_t *headers,
         }
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_proppatch_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_proppatch_body(serf_bucket_t **bkt,
+                      void *baton,
                       serf_bucket_alloc_t *alloc,
                       apr_pool_t *pool)
 {
@@ -790,7 +795,8 @@ create_proppatch_body(void *baton,
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:propertyupdate");
 
-  return body_bkt;
+  *bkt = body_bkt;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t*
@@ -832,8 +838,10 @@ proppatch_resource(proppatch_context_t *proppatch,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_put_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_put_body(serf_bucket_t **body_bkt,
+                void *baton,
                 serf_bucket_alloc_t *alloc,
                 apr_pool_t *pool)
 {
@@ -856,18 +864,22 @@ create_put_body(void *baton,
   offset = 0;
   apr_file_seek(ctx->svndiff, APR_SET, &offset);
 
-  return serf_bucket_file_create(ctx->svndiff, alloc);
+  *body_bkt = serf_bucket_file_create(ctx->svndiff, alloc);
+  return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_empty_put_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_empty_put_body(serf_bucket_t **body_bkt,
+                      void *baton,
                       serf_bucket_alloc_t *alloc,
                       apr_pool_t *pool)
 {
-  return SERF_BUCKET_SIMPLE_STRING("", alloc);
+  *body_bkt = SERF_BUCKET_SIMPLE_STRING("", alloc);
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_put_headers(serf_bucket_t *headers,
                   void *baton,
                   apr_pool_t *pool)
@@ -912,7 +924,7 @@ setup_put_headers(serf_bucket_t *headers,
   return APR_SUCCESS;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_copy_file_headers(serf_bucket_t *headers,
                         void *baton,
                         apr_pool_t *pool)
@@ -931,10 +943,10 @@ setup_copy_file_headers(serf_bucket_t *headers,
   serf_bucket_headers_set(headers, "Depth", "0");
   serf_bucket_headers_set(headers, "Overwrite", "T");
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_copy_dir_headers(serf_bucket_t *headers,
                        void *baton,
                        apr_pool_t *pool)
@@ -975,10 +987,10 @@ setup_copy_dir_headers(serf_bucket_t *headers,
                apr_pstrdup(dir->commit->pool, dir->name), APR_HASH_KEY_STRING,
                (void*)1);
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_delete_headers(serf_bucket_t *headers,
                      void *baton,
                      apr_pool_t *pool)
@@ -1008,11 +1020,13 @@ setup_delete_headers(serf_bucket_t *headers,
         }
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_delete_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_delete_body(serf_bucket_t **body_bkt,
+                   void *baton,
                    serf_bucket_alloc_t *alloc,
                    apr_pool_t *pool)
 {
@@ -1026,7 +1040,8 @@ create_delete_body(void *baton,
   svn_ra_serf__merge_lock_token_list(ctx->lock_token_hash, ctx->path,
                                      body, alloc, pool);
 
-  return body;
+  *body_bkt = body;
+  return SVN_NO_ERROR;
 }
 
 /* Helper function to write the svndiff stream to temporary file. */
