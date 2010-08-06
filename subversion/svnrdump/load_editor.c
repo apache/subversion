@@ -189,13 +189,15 @@ new_node_record(void **node_baton,
           if (strcmp(hval, "replace") == 0)
             nb->action = svn_node_action_replace;
         }
+      if (strcmp(hname, SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5) == 0)
+        nb->base_checksum = apr_pstrdup(rb->pool, hval);
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV) == 0)
         nb->copyfrom_rev = atoi(hval);
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH) == 0)
-          nb->copyfrom_path =
-            svn_path_url_add_component2(rb->pb->root_url,
-                                        apr_pstrdup(rb->pool, hval),
-                                        rb->pool);
+        nb->copyfrom_path =
+          svn_path_url_add_component2(rb->pb->root_url,
+                                      apr_pstrdup(rb->pool, hval),
+                                      rb->pool);
     }
 
   if (svn_path_compare_paths(svn_relpath_dirname(nb->path, pool),
@@ -252,14 +254,14 @@ new_node_record(void **node_baton,
                                           nb->copyfrom_path,
                                           nb->copyfrom_rev,
                                           rb->pool, &(nb->file_baton)));
-          LDR_DBG(("Adding file %s to dir %p as %p\n", nb->path, rb->db->baton, nb->file_baton));
+          LDR_DBG(("Added file %s to dir %p as %p\n", nb->path, rb->db->baton, nb->file_baton));
           break;
         case svn_node_dir:
           SVN_ERR(commit_editor->add_directory(nb->path, rb->db->baton,
                                                nb->copyfrom_path,
                                                nb->copyfrom_rev,
                                                rb->pool, &child_baton));
-          LDR_DBG(("Adding dir %s to dir %p as %p\n", nb->path, rb->db->baton, child_baton));
+          LDR_DBG(("Added dir %s to dir %p as %p\n", nb->path, rb->db->baton, child_baton));
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
@@ -288,21 +290,9 @@ new_node_record(void **node_baton,
         }
       break;
     case svn_node_action_delete:
-      switch (nb->kind)
-        {
-        case svn_node_file:
-          LDR_DBG(("Deleting file %s in %p\n", nb->path, rb->db->baton));
-          SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
-                                              rb->db->baton, rb->pool));
-          break;
-        case svn_node_dir:
-          LDR_DBG(("Deleting dir %s in %p\n", nb->path, rb->db->baton));
-          SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
-                                              rb->db->baton, rb->pool));
-          break;
-        default:
-          break;
-        }
+      LDR_DBG(("Deleting entry %s in %p\n", nb->path, rb->db->baton));
+      SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
+                                          rb->db->baton, rb->pool));
       break;
     case svn_node_action_replace:
       /* Absent in dumpstream; represented as a delete + add */
@@ -411,9 +401,9 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
   nb = node_baton;
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pool;
-  SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, NULL /* base_checksum */, 
-                                         pool, handler, handler_baton));
   LDR_DBG(("Applying textdelta to %p\n", nb->file_baton));
+  SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, nb->base_checksum,
+                                         pool, handler, handler_baton));
 
   return SVN_NO_ERROR;
 }
@@ -429,8 +419,8 @@ close_node(void *baton)
 
   if (nb->kind == svn_node_file)
     {
-      SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, nb->rb->pool));
       LDR_DBG(("Closing file %p\n", nb->file_baton));
+      SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, nb->rb->pool));
     }
 
   /* The svn_node_dir case is handled in close_revision */
