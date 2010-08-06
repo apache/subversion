@@ -38,7 +38,7 @@ def no_sleep_for_timestamps():
 def do_sleep_for_timestamps():
   os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'no'
 
-def setup_pristine_repository():
+def setup_pristine_greek_repository():
   """Create the pristine repository and 'svn import' the greek tree"""
 
   # these directories don't exist out of the box, so we may have to create them
@@ -49,8 +49,8 @@ def setup_pristine_repository():
     os.makedirs(main.general_repo_dir) # this also creates all the intermediate dirs
 
   # If there's no pristine repos, create one.
-  if not os.path.exists(main.pristine_dir):
-    main.create_repos(main.pristine_dir)
+  if not os.path.exists(main.pristine_greek_repos_dir):
+    main.create_repos(main.pristine_greek_repos_dir)
 
     # if this is dav, gives us access rights to import the greek tree.
     if main.is_ra_type_dav():
@@ -66,7 +66,7 @@ def setup_pristine_repository():
     exit_code, output, errput = main.run_svn(None, 'import', '-m',
                                              'Log message for revision 1.',
                                              main.greek_dump_dir,
-                                             main.pristine_url)
+                                             main.pristine_greek_repos_url)
 
     # check for any errors from the import
     if len(errput):
@@ -99,9 +99,9 @@ def setup_pristine_repository():
 
     # Finally, disallow any changes to the "pristine" repos.
     error_msg = "Don't modify the pristine repository"
-    create_failing_hook(main.pristine_dir, 'start-commit', error_msg)
-    create_failing_hook(main.pristine_dir, 'pre-lock', error_msg)
-    create_failing_hook(main.pristine_dir, 'pre-revprop-change', error_msg)
+    create_failing_hook(main.pristine_greek_repos_dir, 'start-commit', error_msg)
+    create_failing_hook(main.pristine_greek_repos_dir, 'pre-lock', error_msg)
+    create_failing_hook(main.pristine_greek_repos_dir, 'pre-revprop-change', error_msg)
 
 
 ######################################################################
@@ -110,7 +110,7 @@ def guarantee_empty_repository(path):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing."""
 
-  if path == main.pristine_dir:
+  if path == main.pristine_greek_repos_dir:
     print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
     sys.exit(1)
 
@@ -121,19 +121,19 @@ def guarantee_empty_repository(path):
 # Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
-# Note: make sure setup_pristine_repository was called once before
+# Note: make sure setup_pristine_greek_repository was called once before
 # using this function.
 def guarantee_greek_repository(path):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing but the greek-tree at revision 1."""
 
-  if path == main.pristine_dir:
+  if path == main.pristine_greek_repos_dir:
     print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
     sys.exit(1)
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
-  if main.copy_repos(main.pristine_dir, path, 1):
+  if main.copy_repos(main.pristine_greek_repos_dir, path, 1):
     print("ERROR:  copying repository failed.")
     sys.exit(1)
 
