@@ -1170,7 +1170,6 @@ static svn_error_t *svn_ra_neon__do_get_uuid(svn_ra_session_t *session,
       SVN_ERR(svn_ra_neon__search_for_starting_props(&rsrc, &lopped_path,
                                                      ras, ras->url->data,
                                                      pool));
-      SVN_ERR(svn_ra_neon__maybe_store_auth_info(ras, pool));
 
       if (! ras->uuid)
         {
