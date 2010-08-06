@@ -62,6 +62,9 @@ class DeltaTestCase(unittest.TestCase):
     self.assertEqual(window.src_ops, len([op for op in window.ops
       if op.action_code == svn.delta.svn_txdelta_source]))
 
+    # Check that the ops inherit the window's pool
+    self.assertEqual(window.ops[0]._parent_pool, window._parent_pool)
+
 def suite():
   return unittest.defaultTestLoader.loadTestsFromTestCase(DeltaTestCase)
 

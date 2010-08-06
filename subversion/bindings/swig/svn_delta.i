@@ -179,7 +179,7 @@ static PyObject *
 svn_txdelta_window_t_ops_get(PyObject *window_ob)
 {
   void *window;
-  PyObject * ops_list;
+  PyObject *ops_list, *window_pool;
   int status;
   
   /* Kludge alert!
@@ -209,8 +209,16 @@ svn_txdelta_window_t_ops_get(PyObject *window_ob)
       return NULL;
     }
     
+  window_pool = PyObject_GetAttrString(window_ob, "_parent_pool");
+
+  if (window_pool == NULL)
+    {
+      svn_swig_py_release_py_lock();
+      return NULL;
+    }
+    
   ops_list = svn_swig_py_txdelta_window_t_ops_get(window,
-    SWIG_TypeQuery("svn_txdelta_op_t *"));
+    SWIG_TypeQuery("svn_txdelta_op_t *"), window_pool);
     
   svn_swig_py_release_py_lock();
   
