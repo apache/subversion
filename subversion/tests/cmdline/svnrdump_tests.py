@@ -177,8 +177,8 @@ test_list = [ None,
               revision_0_load,
               XFail(XFail(skeleton_load, svntest.main.is_ra_type_dav),
                     svntest.main.is_ra_type_svn),
-              Wimp("Need to interpret response 501", copy_and_modify_load,
-                   svntest.main.is_ra_type_dav),
+              XFail(XFail(copy_and_modify_load, svntest.main.is_ra_type_dav),
+                    svntest.main.is_ra_type_svn),
               Wimp("Need to fix headers in RA layer", copy_and_modify_dump),
              ]
 
