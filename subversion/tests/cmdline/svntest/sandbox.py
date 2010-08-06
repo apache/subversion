@@ -96,11 +96,8 @@ class Sandbox:
        and check out a WC from it (unless CREATE_WC is false). Change the
        sandbox's name to NAME. See actions.make_repo_and_wc() for details."""
     self._set_name(name, read_only)
-    if svntest.actions.make_repo_and_wc(self, create_wc, read_only):
-      raise svntest.Failure("Could not build repository and sandbox '%s'"
-                            % self.name)
-    else:
-      self._is_built = True
+    svntest.actions.make_repo_and_wc(self, create_wc, read_only)
+    self._is_built = True
 
   def add_test_path(self, path, remove=True):
     self.test_paths.append(path)
