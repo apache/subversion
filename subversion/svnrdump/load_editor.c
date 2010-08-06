@@ -130,6 +130,16 @@ new_node_record(void **node_baton,
   /* If the creation of commit_editor is pending, create it now and
      open_root on it; also create a top-level directory baton. */
   if (!commit_editor) {
+
+      if (rb->revprop_table)
+        {
+          /* Clear revprops that we aren't allowed to set with the commit */
+          apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_AUTHOR,
+                       APR_HASH_KEY_STRING, NULL);
+          apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_DATE,
+                       APR_HASH_KEY_STRING, NULL);
+        }
+
       SVN_ERR(svn_ra_get_commit_editor3(rb->pb->session, &commit_editor,
                                         &commit_edit_baton, rb->revprop_table,
                                         commit_callback, NULL, NULL, FALSE,
