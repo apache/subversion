@@ -175,10 +175,8 @@ test_list = [ None,
               basic_dump,
               revision_0_dump,
               revision_0_load,
-              XFail(XFail(skeleton_load, svntest.main.is_ra_type_dav),
-                    svntest.main.is_ra_type_svn),
-              XFail(XFail(copy_and_modify_load, svntest.main.is_ra_type_dav),
-                    svntest.main.is_ra_type_svn),
+              Wimp("Response code: 501", skeleton_load, svntest.main.is_ra_type_dav),
+              Wimp("Response code: 501", copy_and_modify_load, svntest.main.is_ra_type_dav),
               Wimp("Need to fix headers in RA layer", copy_and_modify_dump),
              ]
 
