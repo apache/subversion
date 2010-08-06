@@ -741,6 +741,11 @@ error_fetch(serf_request_t *request,
   serf_request_set_handler(request,
                            svn_ra_serf__response_discard_handler, NULL);
 
+  /* Some errors would be handled by serf; make sure they really make
+     the update fail by wrapping it in a different error. */
+  if (!SERF_BUCKET_READ_ERROR(err->apr_err))
+    return svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
+
   return err;
 }
 
