@@ -383,13 +383,13 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
   struct node_baton *nb;
   const struct svn_delta_editor_t *commit_editor;
   apr_pool_t *pool;
+
   nb = node_baton;
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pool;
   SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, NULL /* base_checksum */, 
                                          pool, handler, handler_baton));
-  SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, pool));
-  LDR_DBG(("Closing file %p\n", nb->file_baton));
+  LDR_DBG(("Applying textdelta to %p\n", nb->file_baton));
 
   return SVN_NO_ERROR;
 }
@@ -397,7 +397,20 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
 static svn_error_t *
 close_node(void *baton)
 {
-  /* Nothing to do */
+  struct node_baton *nb;
+  const struct svn_delta_editor_t *commit_editor;
+
+  nb = baton;
+  commit_editor = nb->rb->pb->commit_editor;
+
+  if (nb->kind == svn_node_file)
+    {
+      SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, nb->rb->pool));
+      LDR_DBG(("Closing file %p\n", nb->file_baton));
+    }
+
+  /* The svn_node_dir case is handled in close_revision */
+
   return SVN_NO_ERROR;
 }
 
