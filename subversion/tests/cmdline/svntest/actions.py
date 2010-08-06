@@ -1553,16 +1553,15 @@ def run_and_verify_resolved(expected_paths, *args):
 def make_repo_and_wc(sbox, create_wc = True, read_only = False):
   """Create a fresh 'Greek Tree' repository and check out a WC from it.
 
-  If read_only is False, a dedicated repository will be created, named
-  TEST_NAME. The repository will live in the global dir 'general_repo_dir'.
-  If read_only is True the pristine repository will be used.
+  If READ_ONLY is False, a dedicated repository will be created, at the path
+  SBOX.repo_dir.  If READ_ONLY is True, the pristine repository will be used.
+  In either case, SBOX.repo_url is assumed to point to the repository that
+  will be used.
 
   If create_wc is True, a dedicated working copy will be checked out from
-  the repository, named TEST_NAME. The wc directory will live in the global
-  dir 'general_wc_dir'.
+  the repository, at the path SBOX.wc_dir.
 
-  Both variables 'general_repo_dir' and 'general_wc_dir' are defined at the
-  top of this test suite.)  Returns on success, raises on failure."""
+  Returns on success, raises on failure."""
 
   # Create (or copy afresh) a new repos with a greek tree in it.
   if not read_only:
