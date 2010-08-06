@@ -2547,7 +2547,8 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
 
   j = os.path.join
 
-  sbox.build()
+  if not sbox.is_built():
+    sbox.build()
   wc_dir = sbox.wc_dir
 
 
