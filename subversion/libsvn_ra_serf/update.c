@@ -741,6 +741,11 @@ error_fetch(serf_request_t *request,
   serf_request_set_handler(request,
                            svn_ra_serf__response_discard_handler, NULL);
 
+  /* Some errors would be handled by serf; make sure they really make
+     the update fail by wrapping it in a different error. */
+  if (!SERF_BUCKET_READ_ERROR(err->apr_err))
+    return svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
+
   return err;
 }
 
@@ -1066,7 +1071,8 @@ handle_stream(serf_request_t *request,
 
           written_len = len;
 
-          svn_stream_write(fetch_ctx->target_stream, data, &written_len);
+          SVN_ERR(svn_stream_write(fetch_ctx->target_stream, data,
+                                   &written_len));
         }
 
       if (APR_STATUS_IS_EOF(status))
@@ -1273,9 +1279,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              _("Missing revision attr in target-revision element"));
         }
 
-      ctx->update_editor->set_target_revision(ctx->update_baton,
-                                              SVN_STR_TO_REV(rev),
-                                              ctx->sess->pool);
+      SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
+                                                      SVN_STR_TO_REV(rev),
+                                                      ctx->sess->pool));
     }
   else if (state == NONE && strcmp(name.name, "open-directory") == 0)
     {
@@ -1511,9 +1517,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      ctx->update_editor->absent_directory(file_name,
-                                           info->dir->dir_baton,
-                                           info->dir->pool);
+      SVN_ERR(ctx->update_editor->absent_directory(file_name,
+                                                   info->dir->dir_baton,
+                                                   info->dir->pool));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "absent-file") == 0)
@@ -1534,9 +1540,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      ctx->update_editor->absent_file(file_name,
-                                      info->dir->dir_baton,
-                                      info->dir->pool);
+      SVN_ERR(ctx->update_editor->absent_file(file_name,
+                                              info->dir->dir_baton,
+                                              info->dir->pool));
     }
   else if (state == OPEN_DIR || state == ADD_DIR)
     {
@@ -2306,17 +2312,23 @@ finish_report(void *report_baton,
 
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
+      svn_error_t *err;
       status = serf_context_run(sess->context, sess->timeout, pool);
+
+      err = sess->pending_error;
+      sess->pending_error = SVN_NO_ERROR;
+
       if (APR_STATUS_IS_TIMEUP(status))
         {
+          svn_error_clear(err);
           return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
                                   NULL,
                                   _("Connection timed out"));
         }
+
+      SVN_ERR(err);
       if (status)
         {
-          SVN_ERR(sess->pending_error);
-
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
                                     status);
         }

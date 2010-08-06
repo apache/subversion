@@ -575,8 +575,7 @@ def add_recursive_already_versioned(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
+  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some files, then schedule them for addition
   delta_path = sbox.ospath('delta')
