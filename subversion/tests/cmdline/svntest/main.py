@@ -161,7 +161,7 @@ entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
-pristine_url = None
+pristine_greek_repos_url = None
 
 # Global variable to track all of our options
 options = None
@@ -187,7 +187,7 @@ general_wc_dir = os.path.join(work_dir, "working_copies")
 temp_dir = os.path.join(work_dir, 'local_tmp')
 
 # (derivatives of the tmp dir.)
-pristine_dir = os.path.join(temp_dir, "repos")
+pristine_greek_repos_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 
@@ -1418,7 +1418,7 @@ def run_tests(test_list, serial_only = False):
         appropriate exit code.
   """
 
-  global pristine_url
+  global pristine_greek_repos_url
   global svn_binary
   global svnadmin_binary
   global svnlook_binary
@@ -1482,8 +1482,8 @@ def run_tests(test_list, serial_only = False):
       parser.error("invalid test number, range of numbers, " +
                    "or function '%s'\n" % arg)
 
-  # Calculate pristine_url from test_area_url.
-  pristine_url = options.test_area_url + '/' + pathname2url(pristine_dir)
+  # Calculate pristine_greek_repos_url from test_area_url.
+  pristine_greek_repos_url = options.test_area_url + '/' + pathname2url(pristine_greek_repos_dir)
 
   if options.use_jsvn:
     if options.svn_bin is None:
@@ -1536,7 +1536,7 @@ def run_tests(test_list, serial_only = False):
     create_config_dir(default_config_dir)
 
     # Setup the pristine repository
-    svntest.actions.setup_pristine_repository()
+    svntest.actions.setup_pristine_greek_repository()
 
   # Run the tests.
   exit_code = _internal_run_tests(test_list, testnums, options.parallel)

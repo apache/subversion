@@ -51,8 +51,8 @@ class Sandbox:
       self.repo_url = (svntest.main.options.test_area_url + '/'
                        + svntest.main.pathname2url(self.repo_dir))
     else:
-      self.repo_dir = svntest.main.pristine_dir
-      self.repo_url = svntest.main.pristine_url
+      self.repo_dir = svntest.main.pristine_greek_repos_dir
+      self.repo_url = svntest.main.pristine_greek_repos_url
 
     ### TODO: Move this into to the build() method
     # For dav tests we need a single authz file which must be present,
@@ -155,7 +155,7 @@ class Sandbox:
         sbox.cleanup_test_paths()
     # cleanup all test specific working copies and repositories
     for path in self.test_paths:
-      if not path is svntest.main.pristine_dir:
+      if not path is svntest.main.pristine_greek_repos_dir:
         _cleanup_test_path(path)
 
   def is_built(self):
