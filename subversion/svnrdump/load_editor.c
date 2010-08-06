@@ -148,7 +148,7 @@ new_node_record(void **node_baton,
       child_db->baton = child_baton;
       child_db->depth = 0;
       child_db->parent = NULL;
-      child_db->relpath = apr_pstrdup(rb->pool, "/");
+      child_db->relpath = svn_relpath_canonicalize("/", rb->pool);
       rb->db = child_db;
   }
 
@@ -250,6 +250,13 @@ new_node_record(void **node_baton,
                                                nb->copyfrom_rev,
                                                rb->pool, &child_baton));
           LDR_DBG(("Adding dir %s to dir %p as %p\n", nb->path, rb->db->baton, child_baton));
+          child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
+          child_db->baton = child_baton;
+          child_db->depth = rb->db->depth + 1;
+          child_db->relpath = svn_relpath_join(rb->db->relpath,
+                                               residual_path->elts + i,
+                                               rb->pool);
+          rb->db = child_db;
           break;
         default:
           break;
