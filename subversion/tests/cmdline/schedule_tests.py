@@ -35,6 +35,7 @@ import svntest
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -705,7 +706,7 @@ test_list = [ None,
               SkipUnless(revert_add_executable, svntest.main.is_posix_os),
               revert_delete_files,
               revert_delete_dirs,
-              XFail(unschedule_missing_added),
+              Wimp('Needs single-db', unschedule_missing_added),
               delete_missing,
               revert_inside_newly_added_dir,
               status_add_deleted_directory,
