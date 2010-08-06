@@ -166,37 +166,52 @@ new_node_record(void **node_baton,
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV) == 0)
         nb->copyfrom_rev = atoi(hval);
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH) == 0)
-        {
-          /* Due to a historical detail in the commit editor, it
-             demands that the copyfrom_path includes the URI to the
-             repository; to implement this, the edit_baton structure
-             from commit.c had to be imported as a commit_edit_baton
-             structure in load_editor.h */
-          nb->copyfrom_path = svn_path_url_add_component2(rb->pb->root_url,
-                                           apr_pstrdup(rb->pb->pool, hval),
-                                           rb->pb->pool);
-        }
+          nb->copyfrom_path =
+            svn_path_url_add_component2(rb->pb->root_url,
+                                        apr_pstrdup(rb->pb->pool, hval),
+                                        rb->pb->pool);
     }
 
   switch (nb->action)
     {
     case svn_node_action_add:
-      if (nb->kind == svn_node_file)
+      switch (nb->kind)
         {
-          SVN_ERR(commit_editor->add_file(nb->path, nb->rb->dir_baton,
-                                          nb->copyfrom_path, nb->copyfrom_rev,
+        case svn_node_file:
+          SVN_ERR(commit_editor->add_file(nb->path, rb->dir_baton,
+                                          nb->copyfrom_path,
+                                          nb->copyfrom_rev,
                                           rb->pb->pool, &file_baton));
           nb->file_baton = file_baton;
-        }
-      else if(nb->kind == svn_node_dir)
-        {
-          SVN_ERR(commit_editor->add_directory(nb->path, nb->rb->dir_baton,
-                                               nb->copyfrom_path, nb->copyfrom_rev,
+          break;
+        case svn_node_dir:
+          SVN_ERR(commit_editor->add_directory(nb->path, rb->dir_baton,
+                                               nb->copyfrom_path,
+                                               nb->copyfrom_rev,
                                                rb->pb->pool, &child_baton));
-          nb->rb->dir_baton = child_baton;
+          break;
+        default:
+          break;
         }
+    case svn_node_action_change:
+      /* Handled in set_node_property/ delete_node_property */
       break;
-    default:
+    case svn_node_action_delete:
+      switch (nb->kind)
+        {
+        case svn_node_file:
+          SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
+                                              rb->dir_baton, rb->pb->pool));
+          break;
+        case svn_node_dir:
+          SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
+                                              rb->dir_baton, rb->pb->pool));
+          break;
+        default:
+          break;
+        }
+    case svn_node_action_replace:
+      /* Absent in dumpstream; represented as a delete + add */
       break;
     }
 
@@ -213,10 +228,8 @@ set_revision_property(void *baton,
   rb = baton;
 
   if (rb->rev > 0)
-    {
-      apr_hash_set(rb->revprop_table, apr_pstrdup(rb->pb->pool, name),
-                   APR_HASH_KEY_STRING, svn_string_dup(value, rb->pb->pool));
-    }
+    apr_hash_set(rb->revprop_table, apr_pstrdup(rb->pb->pool, name),
+                 APR_HASH_KEY_STRING, svn_string_dup(value, rb->pb->pool));
   else
     /* Special handling for revision 0; this is safe because the
        commit_editor hasn't been created yet. */
@@ -279,6 +292,7 @@ delete_node_property(void *baton,
 static svn_error_t *
 remove_node_props(void *baton)
 {
+  /* ### Not implemented */
   return SVN_NO_ERROR;
 }
 
@@ -301,25 +315,17 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
   nb = node_baton;
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pb->pool;
-  return commit_editor->apply_textdelta(nb->file_baton, NULL, pool,
-                                        handler, handler_baton);
+  SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, NULL, pool,
+                                         handler, handler_baton));
+  SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 close_node(void *baton)
 {
-  struct node_baton *nb;
-  const struct svn_delta_editor_t *commit_editor;
-  apr_pool_t * pool;
-  nb = baton;
-  pool = nb->rb->pb->pool;
-  commit_editor = nb->rb->pb->commit_editor;
-  if (nb->kind == svn_node_file)
-    SVN_ERR(commit_editor->close_file(nb->file_baton, NULL,
-                                      pool));
-  else if (nb->kind == svn_node_dir)
-    SVN_ERR(commit_editor->close_directory(nb->rb->dir_baton,
-                                           pool));
+  /* Nothing to do */
   return SVN_NO_ERROR;
 }
 
@@ -337,8 +343,10 @@ close_revision(void *baton)
   /* r0 doesn't have a corresponding commit_editor; we fake it */
   if (rb->rev == 0)
     SVN_ERR(svn_cmdline_printf(rb->pb->pool, "* Loaded revision 0\n"));
-  else
+  else {
+    SVN_ERR(commit_editor->close_directory(rb->dir_baton, rb->pb->pool));
     SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pb->pool));
+  }
 
   /* svn_fs_commit_txn rewrites the datestamp/ author property-
      rewrite it by hand after closing the commit_editor. */
