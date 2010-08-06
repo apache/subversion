@@ -416,8 +416,8 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
      ### place result into res->wr_url and return it */
 
   /* create/prep the request */
-  request =
-    svn_ra_neon__request_create(cc->ras, "CHECKOUT", vsn_url, pool);
+  SVN_ERR(svn_ra_neon__request_create(&request, cc->ras, "CHECKOUT", vsn_url,
+                                      pool));
 
   /* ### store this into cc to avoid pool growth */
   body = apr_psprintf(request->pool,
@@ -807,9 +807,8 @@ static svn_error_t * commit_delete_entry(const char *path,
                                 APR_HASH_KEY_STRING)))
         apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
 
-
-      request =
-        svn_ra_neon__request_create(parent->cc->ras, "DELETE", child, pool);
+      SVN_ERR(svn_ra_neon__request_create(&request, parent->cc->ras, "DELETE",
+                                          child, pool));
 
       err = svn_ra_neon__assemble_locktoken_body(&locks_list,
                                                  child_tokens, request->pool);
@@ -1274,7 +1273,8 @@ static svn_error_t * commit_close_file(void *file_baton,
       svn_error_t *err = SVN_NO_ERROR;
 
       /* create/prep the request */
-      request = svn_ra_neon__request_create(cc->ras, "PUT", url, pool);
+      SVN_ERR(svn_ra_neon__request_create(&request, cc->ras, "PUT", url,
+                                          pool));
 
       extra_headers = apr_hash_make(request->pool);
 
@@ -1355,7 +1355,6 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       cc->disable_merge_response,
                                       pool));
   SVN_ERR(delete_activity(edit_baton, pool));
-  SVN_ERR(svn_ra_neon__maybe_store_auth_info(cc->ras, pool));
 
   if (cc->callback && commit_info->revision != SVN_INVALID_REVNUM)
     SVN_ERR(cc->callback(commit_info, cc->callback_baton, pool));

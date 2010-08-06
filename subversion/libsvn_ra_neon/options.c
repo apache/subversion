@@ -266,7 +266,8 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
   if (relocation_location)
     *relocation_location = NULL;
 
-  req = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
+  SVN_ERR(svn_ra_neon__request_create(&req, ras, "OPTIONS", ras->url->data,
+                                      pool));
 
   /* ### Use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req->ne_req, "Content-Type", "text/xml");
