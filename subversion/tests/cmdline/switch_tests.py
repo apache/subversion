@@ -2476,6 +2476,8 @@ j = os.path.join
 def tree_conflicts_on_switch_1_1(sbox):
   "tree conflicts 1.1: tree del, leaf edit on switch"
 
+  sbox.build()
+
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
 
@@ -2563,6 +2565,8 @@ def tree_conflicts_on_switch_1_1(sbox):
 
 def tree_conflicts_on_switch_1_2(sbox):
   "tree conflicts 1.2: tree del, leaf del on switch"
+
+  sbox.build()
 
   # 1.2) local tree delete, incoming leaf delete
 
