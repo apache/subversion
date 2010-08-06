@@ -2143,12 +2143,19 @@ do_entry_deletion(struct edit_baton *eb,
 
   if (tree_conflict != NULL)
     {
-      /* When we raise a tree conflict on a directory, we want to avoid
+      /* When we raise a tree conflict on a node, we want to avoid
        * making any changes inside it. (Will an update ever try to make
-       * further changes to or inside a directory it's just deleted?) */
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item, eb->db, dir_abspath,
-                                              tree_conflict, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
+       * further changes to or inside a directory it's just deleted?)
+       *
+       * ### BH: Only if a new node is added in it's place.
+       *          See svn_delta.h for further details. */
+
+      /* ### Note that we still add this on the parent of a node, so it is
+         ### safe to add it now, while we remove the node later */
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                              tree_conflict->local_abspath,
+                                              tree_conflict,
+                                              pool));
 
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
@@ -2164,13 +2171,6 @@ do_entry_deletion(struct edit_baton *eb,
            * To prepare the "accept mine" resolution for the tree conflict,
            * we must schedule the existing content for re-addition as a copy
            * of what it was, but with its local modifications preserved. */
-
-          /* Run the log in the parent dir, to record the tree conflict.
-           * Do this before schedule_existing_item_for_re_add(), in case
-           * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
-                                 eb->cancel_func, eb->cancel_baton,
-                                 pool));
 
           SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
                                                pool));
@@ -2189,19 +2189,17 @@ do_entry_deletion(struct edit_baton *eb,
       else if (tree_conflict->reason == svn_wc_conflict_reason_replaced)
         {
           /* The item was locally replaced with something else. We should
-           * keep the existing item schedule-replace, but we also need to
-           * update the BASE rev of the item to the revision we are updating
-           * to. Otherwise, the replace cannot be committed because the item
-           * is considered out-of-date, and it cannot be updated either because
-           * we're here to do just that. */
+           * remove the BASE node below the new working node, which turns
+           * the replacement in an addition.
+           */
 
-          /* Run the log in the parent dir, to record the tree conflict.
-           * Do this before schedule_existing_item_for_re_add(), in case
-           * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
-                                 eb->cancel_func, eb->cancel_baton,
-                                 pool));
+          /* ### This does something similar, but not exactly what is
+             ### required: Copy working to working and then delete
+             ### BASE_NODE. Not exactly right, but not
+             ### completely wrong as the result is the same.
 
+             ### It only misses the explicit target check for adding
+             ### back a not-present node. */
           SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
                                                pool));
 
