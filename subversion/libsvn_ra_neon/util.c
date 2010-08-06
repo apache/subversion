@@ -362,6 +362,9 @@ svn_ra_neon__request_create(svn_ra_neon__session_t *sess,
   apr_pool_t *reqpool = svn_pool_create(pool);
   svn_ra_neon__request_t *req = apr_pcalloc(reqpool, sizeof(*req));
 
+  /* If there is auth credentials in this session, store it if we can. */
+  SVN_ERR(svn_ra_neon__maybe_store_auth_info(sess, pool));
+
   /* We never want to send Neon an absolute URL, since that can cause
      problems with some servers (for example, those that may be accessed
      using different server names from different locations, or those that
