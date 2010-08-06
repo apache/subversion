@@ -4073,14 +4073,16 @@ svn_swig_py_setup_wc_diff_callbacks2(void **baton,
 
 PyObject *
 svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window,
-                                     swig_type_info * op_type_info)
+                                     swig_type_info * op_type_info,
+                                     PyObject *window_pool)
 {
   PyObject *result = PyList_New(window->num_ops);
   int i;
   
   for (i = 0; i < window->num_ops; ++i)
       PyList_SET_ITEM(result, i,
-                      SWIG_NewPointerObj(window->ops + i, op_type_info, 0));
+                      svn_swig_NewPointerObj(window->ops + i, op_type_info,
+                                             window_pool, NULL));
 
   return result;
 }
