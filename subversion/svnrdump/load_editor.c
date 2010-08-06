@@ -271,8 +271,21 @@ new_node_record(void **node_baton,
         default:
           break;
         }
+      break;
     case svn_node_action_change:
-      /* Handled in set_node_property/ delete_node_property */
+      switch (nb->kind)
+        {
+        case svn_node_file:
+          /* open_file to set the file_baton so we can apply props,
+             txdelta to it */
+          SVN_ERR(commit_editor->open_file(nb->path, rb->db->baton,
+                                           SVN_INVALID_REVNUM, rb->pool,
+                                           &(nb->file_baton)));
+          break;
+        default:
+          /* The directory baton has already been set */
+          break;
+        }
       break;
     case svn_node_action_delete:
       switch (nb->kind)
@@ -290,6 +303,7 @@ new_node_record(void **node_baton,
         default:
           break;
         }
+      break;
     case svn_node_action_replace:
       /* Absent in dumpstream; represented as a delete + add */
       break;
