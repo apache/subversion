@@ -394,7 +394,7 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
       delta_base = NULL;
     }
 
-  request = svn_ra_neon__request_create(ras, "GET", url, pool);
+  SVN_ERR(svn_ra_neon__request_create(&request, ras, "GET", url, pool));
 
   if (delta_base)
     {
@@ -2439,6 +2439,8 @@ static svn_error_t * reporter_finish_report(void *report_baton,
         (SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
          _("REPORT response handling failed to complete the editor drive"));
     }
+
+  return SVN_NO_ERROR;
 }
 
 static const svn_ra_reporter3_t ra_neon_reporter = {
