@@ -2155,7 +2155,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
           err = svn_io_dir_remove_nonrecursive(local_abspath, iterpool);
           if (err)
             {
-              left_something = TRUE;
+              if (!APR_STATUS_IS_ENOENT(err->apr_err))
+                left_something = TRUE;
               svn_error_clear(err);
             }
         }
