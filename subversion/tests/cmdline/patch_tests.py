@@ -998,6 +998,9 @@ def patch_add_new_dir(sbox):
   })
   expected_disk.remove('A/B/E/alpha')
   expected_disk.remove('A/B/E/beta')
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.remove('A/B/E')
+    expected_disk.remove('A/C')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
