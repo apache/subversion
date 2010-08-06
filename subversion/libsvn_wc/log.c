@@ -74,11 +74,6 @@
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_KIND           "kind"
 
-/* Add a new tree conflict to the parent entry's tree-conflict-data. */
-/* ### rev'd to -2 because we changed the params. developers better not
-   ### update across this change if they have stale logs :-)  */
-#define SVN_WC__LOG_ADD_TREE_CONFLICT   "add-tree-conflict-2"
-
 
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
@@ -242,37 +237,6 @@ log_do_delete_entry(struct log_runner *loggy,
 }
 
 /* */
-static svn_error_t *
-log_do_add_tree_conflict(struct log_runner *loggy,
-                         const char *victim_basename,
-                         const char **atts)
-{
-  svn_skel_t *skel;
-  const char *raw_conflict;
-  const svn_wc_conflict_description2_t *new_conflict;
-  svn_error_t *err;
-
-  /* Convert the text data to a conflict. */
-  raw_conflict = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DATA, atts);
-  skel = svn_skel__parse(raw_conflict, strlen(raw_conflict), loggy->pool);
-  SVN_ERR(svn_wc__deserialize_conflict(&new_conflict,
-                                       skel,
-                                       loggy->adm_abspath,
-                                       loggy->pool, loggy->pool));
-
-  err = svn_wc__db_op_set_tree_conflict(loggy->db,
-                                        new_conflict->local_abspath,
-                                        new_conflict,
-                                        loggy->pool);
-  if (err)
-    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                             _("Error recording tree conflict on '%s'"),
-                             new_conflict->local_abspath);
-
-  return SVN_NO_ERROR;
-}
-
-/* */
 static void
 start_handler(void *userData, const char *eltname, const char **atts)
 {
@@ -309,9 +273,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
     else
       kind = svn_node_file;
     err = log_do_delete_entry(loggy, name, revision, kind);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_ADD_TREE_CONFLICT) == 0) {
-    err = log_do_add_tree_conflict(loggy, name, atts);
   }
   else
     {
@@ -427,37 +388,6 @@ svn_wc__loggy_delete_entry(svn_skel_t **work_item,
                                                  db, adm_abspath, log_accum,
                                                  result_pool));
 }
-
-svn_error_t *
-svn_wc__loggy_add_tree_conflict(svn_skel_t **work_item,
-                                svn_wc__db_t *db,
-                                const char *adm_abspath,
-                                const svn_wc_conflict_description2_t *conflict,
-                                apr_pool_t *result_pool)
-{
-  svn_stringbuf_t *log_accum = NULL;
-  const char *victim_basename;
-  svn_skel_t *skel;
-  const char *conflict_data;
-
-  victim_basename = svn_dirent_basename(conflict->local_abspath, result_pool);
-  SVN_ERR(svn_wc__serialize_conflict(&skel, conflict,
-                                     result_pool, result_pool));
-  conflict_data = svn_skel__unparse(skel, result_pool)->data,
-
-  svn_xml_make_open_tag(&log_accum, result_pool, svn_xml_self_closing,
-                        SVN_WC__LOG_ADD_TREE_CONFLICT,
-                        SVN_WC__LOG_ATTR_NAME,
-                        victim_basename,
-                        SVN_WC__LOG_ATTR_DATA,
-                        conflict_data,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_build_loggy(work_item,
-                                                 db, adm_abspath, log_accum,
-                                                 result_pool));
-}
-
 
 /*** Recursively do log things. ***/
 

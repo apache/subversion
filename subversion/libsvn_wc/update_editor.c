@@ -2675,17 +2675,10 @@ add_directory(const char *path,
 
   if (tree_conflict != NULL)
     {
-      svn_skel_t *work_item;
-
       /* Queue this conflict in the parent so that its descendants
          are skipped silently. */
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                              eb->db,
-                                              pb->local_abspath,
-                                              tree_conflict,
-                                              pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
-                                work_item, pool));
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
+                                              tree_conflict, pool));
 
       SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
@@ -2874,13 +2867,9 @@ open_directory(const char *path,
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
     {
-      svn_skel_t *work_item;
-
       /* Place a tree conflict into the parent work queue.  */
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                              eb->db, pb->local_abspath,
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
                                               tree_conflict, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
 
       do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, pool);
@@ -4165,17 +4154,12 @@ add_file(const char *path,
 
   if (tree_conflict != NULL)
     {
-      svn_skel_t *work_item;
-
       fb->obstruction_found = TRUE;
 
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                              eb->db,
-                                              pb->local_abspath,
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                              fb->local_abspath,
                                               tree_conflict,
                                               subpool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
-                                work_item, pool));
 
       fb->already_notified = TRUE;
       do_notification(eb, fb->local_abspath, svn_node_unknown,
@@ -4266,17 +4250,14 @@ open_file(const char *path,
   if (!pb->in_deleted_and_tree_conflicted_subtree)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 svn_wc_conflict_action_edit, svn_node_file,
-                                fb->new_relpath, pool));
+                                fb->new_relpath, subpool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict)
     {
-      svn_skel_t *work_item;
-
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                              eb->db, pb->local_abspath,
-                                              tree_conflict, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                              fb->local_abspath,
+                                              tree_conflict, subpool));
 
       if (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
           tree_conflict->reason == svn_wc_conflict_reason_replaced)
@@ -4291,7 +4272,7 @@ open_file(const char *path,
 
       fb->already_notified = TRUE;
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_tree_conflict, pool);
+                      svn_wc_notify_tree_conflict, subpool);
     }
 
   svn_pool_destroy(subpool);
@@ -5178,13 +5159,10 @@ close_file(void *file_baton,
                                       svn_wc_conflict_action_add, svn_node_file,
                                       fb->new_relpath, pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
-          SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                                  eb->db,
-                                                  fb->dir_baton->local_abspath,
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                                  fb->local_abspath,
                                                   tree_conflict,
-                                                  pool));
-          SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
-                                    work_item, pool));
+                                                  scratch_pool));
 
           fb->already_notified = TRUE;
           do_notification(eb, fb->local_abspath, svn_node_unknown,
