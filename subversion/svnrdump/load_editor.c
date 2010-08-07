@@ -434,26 +434,43 @@ close_revision(void *baton)
   struct revision_baton *rb;
   const svn_delta_editor_t *commit_editor;
   void *commit_edit_baton;
+  void *child_baton;
   rb = baton;
 
   commit_editor = rb->pb->commit_editor;
   commit_edit_baton = rb->pb->commit_edit_baton;
 
-  /* r0 doesn't have a corresponding commit_editor; we fake it */
+  /* Fake revision 0 */
   if (rb->rev == 0)
     SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0\n"));
-  else {
-    /* Close all pending open directories, and then close the edit
-       session itself */
-    while (rb->db && rb->db->parent)
-      {
-        LDR_DBG(("Closing dir %p\n", rb->db->baton));
-        SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
-        rb->db = rb->db->parent;
-      }
-    LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
-    SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
-  }
+  else if (commit_editor)
+    {
+      /* Close all pending open directories, and then close the edit
+         session itself */
+      while (rb->db && rb->db->parent)
+        {
+          LDR_DBG(("Closing dir %p\n", rb->db->baton));
+          SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
+          rb->db = rb->db->parent;
+        }
+      LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
+      SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
+    }
+  else
+    {
+      /* Legitimate revision with no node information */
+      SVN_ERR(svn_ra_get_commit_editor3(rb->pb->session, &commit_editor,
+                                        &commit_edit_baton, rb->revprop_table,
+                                        commit_callback, NULL, NULL, FALSE,
+                                        rb->pool));
+
+      SVN_ERR(commit_editor->open_root(commit_edit_baton, rb->rev - 1,
+                                       rb->pool, &child_baton));
+
+      LDR_DBG(("Opened root %p\n", child_baton));
+      LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
+      SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
+    }
 
   /* svn_fs_commit_txn rewrites the datestamp/ author property-
      rewrite it by hand after closing the commit_editor. */
