@@ -364,9 +364,6 @@ svn_ra_neon__request_create(svn_ra_neon__request_t **request,
   svn_ra_neon__request_t *req;
   const char *path;
 
-    /* If there is auth credentials in this session, store it if we can. */
-  SVN_ERR(svn_ra_neon__maybe_store_auth_info(sess, pool));
-
   /* We never want to send Neon an absolute URL, since that can cause
      problems with some servers (for example, those that may be accessed
      using different server names from different locations, or those that
@@ -1492,6 +1489,15 @@ svn_ra_neon__request_dispatch(int *code_p,
   statstruct = ne_get_status(req->ne_req);
   req->code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
   req->code = statstruct->code;
+
+  /* If we see a successful request that used authentication, we should store
+     the credentials for future use. */
+  if (req->sess->auth_used
+      && statstruct->code < 400)
+    {
+      req->sess->auth_used = FALSE;
+      SVN_ERR(svn_ra_neon__maybe_store_auth_info(req->sess, pool));
+    }
 
   if (code_p)
      *code_p = req->code;
