@@ -22,9 +22,7 @@ Planned work
   - [DONE] ra_local: Trivial.
   - [DONE] ra_svn: Add a 'change-rev-prop2' verb.
   - [DONE] ra_dav: Extend PROPPATCH: see notes/http-and-webdav/webdav-protocol
-  - [DONE] unit test
-      prop_tests.py 34: atomic_over_ra()
-  - TODO: extend it to test props set to the empty string and unset props
+  - [DONE] unit test: prop_tests.py 34: atomic_over_ra()
   - upgrade svn_ra_change_rev_prop() callers
 
 * [DONE] client support: svn_client_revprop_set2()

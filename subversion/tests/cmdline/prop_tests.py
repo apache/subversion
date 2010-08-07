@@ -2037,6 +2037,7 @@ def atomic_over_ra(sbox):
   PASSES_WITHOUT_BPV(s3, s2)
 
   # Value of "flower" is 's2'.
+  FAILS_WITH_BPV(None, None)
   FAILS_WITH_BPV(s1, None)
   FAILS_WITH_BPV(s3, None)
   PASSES_WITHOUT_BPV(s2, None)
