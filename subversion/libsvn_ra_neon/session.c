@@ -94,8 +94,8 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   void *creds;
   svn_auth_cred_simple_t *simple_creds;
 
-  /* Start by clearing the cache of any previously-fetched username. */
-  ras->auth_username = NULL;
+  /* Start by marking the current credentials invalid. */
+  ras->auth_used = FALSE;
 
   /* No auth_baton?  Give up. */
   if (! ras->callbacks->auth_baton)
@@ -135,12 +135,13 @@ static int request_auth(void *userdata, const char *realm, int attempt,
     }
   simple_creds = creds;
 
+  /* Make svn_ra_neon__request_dispatch store the credentials after it
+     sees a succesful response */
+  ras->auth_used = TRUE;
+
   /* ### silently truncates username/password to 256 chars. */
   apr_cpystrn(username, simple_creds->username, NE_ABUFSIZ);
   apr_cpystrn(password, simple_creds->password, NE_ABUFSIZ);
-
-  /* Cache the fetched username in ra_session. */
-  ras->auth_username = apr_pstrdup(ras->pool, simple_creds->username);
 
   return 0;
 }
@@ -1170,7 +1171,6 @@ static svn_error_t *svn_ra_neon__do_get_uuid(svn_ra_session_t *session,
       SVN_ERR(svn_ra_neon__search_for_starting_props(&rsrc, &lopped_path,
                                                      ras, ras->url->data,
                                                      pool));
-      SVN_ERR(svn_ra_neon__maybe_store_auth_info(ras, pool));
 
       if (! ras->uuid)
         {

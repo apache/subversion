@@ -38,7 +38,18 @@ struct parse_baton
   svn_ra_session_t *session;
   const char *uuid;
   const char *root_url;
-  apr_pool_t *pool;
+};
+
+/**
+ * Use to wrap the dir_context_t in commit.c so we can keep track of
+ * depth, relpath and parent for open_directory and close_directory.
+ */
+struct directory_baton
+{
+  void *baton;
+  const char *relpath;
+  int depth;
+  struct directory_baton *parent;
 };
 
 /**
@@ -55,6 +66,8 @@ struct node_baton
   const char *copyfrom_path;
 
   void *file_baton;
+  const char *base_checksum;
+
   struct revision_baton *rb;
 };
 
@@ -71,8 +84,8 @@ struct revision_baton
   const svn_string_t *author;
 
   struct parse_baton *pb;
+  struct directory_baton *db;
   apr_pool_t *pool;
-  void *dir_baton;                    /* Keep track of dirs */
 };
 
 /**

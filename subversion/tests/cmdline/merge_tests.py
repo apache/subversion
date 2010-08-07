@@ -6788,6 +6788,8 @@ def merge_loses_mergeinfo(sbox):
     '' : Item(status=' U'),
     })
   expected_disk = wc.State('', {'J': Item()})
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.remove('J')
   expected_status = wc.State(A_C_wc_dir,
                              { ''    : Item(wc_rev=4, status=' M'),
                                'J'   : Item(wc_rev=4, status='D ')
@@ -6809,6 +6811,8 @@ def merge_loses_mergeinfo(sbox):
     'J'       : Item(),
     ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:3'}),
     })
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.remove('J')
   expected_status = wc.State(A_C_wc_dir,
                              { ''    : Item(wc_rev=4, status=' M'),
                                'K'   : Item(status='A ',
@@ -13775,6 +13779,8 @@ def no_self_referential_filtering_on_added_path(sbox):
     'D/H/psi'   : Item("New content"),
     'D/H/omega' : Item("New content"),
     })
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_A_COPY_2_disk.remove('C')
   expected_A_COPY_2_skip = wc.State(A_COPY_2_path, { })
   svntest.actions.run_and_verify_merge(A_COPY_2_path, None, None,
                                        sbox.repo_url + '/A', None,

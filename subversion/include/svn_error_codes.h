@@ -969,6 +969,11 @@ SVN_ERROR_START
              SVN_ERR_RA_SERF_CATEGORY_START + 2,
              "Initialization of the GSSAPI context failed")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_WRAPPED_ERROR,
+             SVN_ERR_RA_SERF_CATEGORY_START + 3,
+             "While handling serf response:")
+
   /* libsvn_auth errors */
 
        /* this error can be used when an auth provider doesn't have

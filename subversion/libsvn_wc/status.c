@@ -1280,7 +1280,6 @@ get_dir_status(const struct walk_status_baton *wb,
           /* Versioned node */
           svn_wc__db_status_t node_status;
           svn_wc__db_kind_t node_kind;
-          svn_boolean_t hidden;
 
           SVN_ERR(svn_wc__db_read_info(&node_status, &node_kind, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,

@@ -147,7 +147,6 @@ svn_wc__internal_check_wc(int *wc_format,
 #ifdef SVN_WC__SINGLE_DB
     if (*wc_format >= SVN_WC__WC_NG_VERSION)
       {
-        svn_error_t *err;
         svn_wc__db_status_t db_status;
         svn_wc__db_kind_t db_kind;
 

@@ -98,7 +98,8 @@ typedef struct svn_ra_neon__session_t {
   void *callback_baton;
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
-  const char *auth_username;            /* last authenticated username used */
+  svn_boolean_t auth_used;              /* Save authorization state after
+                                           successful usage */
 
   svn_auth_iterstate_t *p11pin_iterstate; /* state of PKCS#11 pin retries */
 
@@ -200,8 +201,9 @@ typedef struct {
  *
  * Register a pool cleanup for any allocated Neon resources.
  */
-svn_ra_neon__request_t *
-svn_ra_neon__request_create(svn_ra_neon__session_t *sess,
+svn_error_t *
+svn_ra_neon__request_create(svn_ra_neon__request_t **request,
+                            svn_ra_neon__session_t *sess,
                             const char *method, const char *url,
                             apr_pool_t *pool);
 

@@ -8912,9 +8912,6 @@ make_copy_txn(void *baton,
   /* Remove the BASE_NODE if the caller asked us to do that */
   if (mcb->remove_base)
     {
-      const char *local_relpath;
-      svn_wc__db_pdh_t *pdh;
-
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_DELETE_BASE_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
@@ -8935,6 +8932,9 @@ make_copy_txn(void *baton,
       /* Remove BASE_NODE_STUB */
       if (*mcb->local_relpath == '\0')
         {
+          const char *local_relpath;
+          svn_wc__db_pdh_t *pdh;
+
           SVN_ERR(navigate_to_parent(&pdh, mcb->db, mcb->pdh,
                                      svn_sqlite__mode_readwrite,
                                      FALSE, iterpool));

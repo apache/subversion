@@ -720,6 +720,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   while (active_reports || rev <= end_revision)
     {
       apr_status_t status;
+      svn_error_t *err;
       svn_ra_serf__list_t *done_list;
       svn_ra_serf__list_t *done_reports = NULL;
       replay_context_t *replay_ctx;
@@ -804,8 +805,12 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       status = serf_context_run(session->context, session->timeout,
                                 pool);
 
+      err = session->pending_error;
+      session->pending_error = NULL;
+
       if (APR_STATUS_IS_TIMEUP(status))
         {
+          svn_error_clear(err);
           return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
                                   NULL,
                                   _("Connection timed out"));
@@ -824,10 +829,9 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           active_reports--;
         }
 
+      SVN_ERR(err);
       if (status)
         {
-          SVN_ERR(session->pending_error);
-
           return svn_error_wrap_apr(status,
                                     _("Error retrieving replay REPORT (%d)"),
                                     status);

@@ -394,7 +394,7 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
       delta_base = NULL;
     }
 
-  request = svn_ra_neon__request_create(ras, "GET", url, pool);
+  SVN_ERR(svn_ra_neon__request_create(&request, ras, "GET", url, pool));
 
   if (delta_base)
     {
@@ -1111,7 +1111,6 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
                                              ras, ras->root.path,
                                              SVN_INVALID_REVNUM, pool));
     }
-  SVN_ERR(svn_ra_neon__maybe_store_auth_info(ras, pool));
 
   return NULL;
 }
@@ -2468,8 +2467,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
          _("REPORT response handling failed to complete the editor drive"));
     }
 
-  /* store auth info if we can. */
-  return svn_ra_neon__maybe_store_auth_info(rb->ras, pool);
+  return SVN_NO_ERROR;
 }
 
 static const svn_ra_reporter3_t ra_neon_reporter = {

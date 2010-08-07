@@ -354,21 +354,24 @@ path_from_url(const char *url)
   return *p == '\0' ? "/" : p;
 }
 
-svn_ra_neon__request_t *
-svn_ra_neon__request_create(svn_ra_neon__session_t *sess,
+svn_error_t *
+svn_ra_neon__request_create(svn_ra_neon__request_t **request,
+                            svn_ra_neon__session_t *sess,
                             const char *method, const char *url,
                             apr_pool_t *pool)
 {
   apr_pool_t *reqpool = svn_pool_create(pool);
-  svn_ra_neon__request_t *req = apr_pcalloc(reqpool, sizeof(*req));
+  svn_ra_neon__request_t *req;
+  const char *path;
 
   /* We never want to send Neon an absolute URL, since that can cause
      problems with some servers (for example, those that may be accessed
      using different server names from different locations, or those that
      want to rewrite the incoming URL).  If the URL passed in is absolute,
      convert it to a path-absolute relative URL. */
-  const char *path = path_from_url(url);
+  path = path_from_url(url);
 
+  req = apr_pcalloc(reqpool, sizeof(*req));
   req->ne_sess = sess->main_session_busy ? sess->ne_sess2 : sess->ne_sess;
   req->ne_req = ne_request_create(req->ne_sess, method, path);
   req->sess = sess;
@@ -387,7 +390,8 @@ svn_ra_neon__request_create(svn_ra_neon__session_t *sess,
                             dav_request_cleanup,
                             apr_pool_cleanup_null);
 
-  return req;
+  *request = req;
+  return SVN_NO_ERROR;
 }
 
 static apr_status_t
@@ -1309,14 +1313,16 @@ svn_ra_neon__parsed_request(svn_ra_neon__session_t *sess,
                             apr_pool_t *pool)
 {
   /* create/prep the request */
-  svn_ra_neon__request_t* req = svn_ra_neon__request_create(sess, method, url,
-                                                           pool);
-  svn_error_t *err = parsed_request(req,
-                                    sess, method, url, body, body_file,
-                                    set_parser,
-                                    startelm_cb, cdata_cb, endelm_cb,
-                                    baton, extra_headers, status_code,
-                                    spool_response, pool);
+  svn_ra_neon__request_t* req;
+  svn_error_t *err;
+
+  SVN_ERR(svn_ra_neon__request_create(&req, sess, method, url, pool));
+
+  err = parsed_request(req, sess, method, url, body, body_file,
+                       set_parser, startelm_cb, cdata_cb, endelm_cb,
+                       baton, extra_headers, status_code, spool_response,
+                       pool);
+
   svn_ra_neon__request_destroy(req);
   return err;
 }
@@ -1331,9 +1337,10 @@ svn_ra_neon__simple_request(int *code,
                             const char *body,
                             int okay_1, int okay_2, apr_pool_t *pool)
 {
-  svn_ra_neon__request_t *req =
-    svn_ra_neon__request_create(ras, method, url, pool);
+  svn_ra_neon__request_t *req;
   svn_error_t *err;
+
+  SVN_ERR(svn_ra_neon__request_create(&req, ras, method, url, pool));
 
   /* we don't need the status parser: it's attached to the request
      and detected errors will be returned there... */
@@ -1482,6 +1489,15 @@ svn_ra_neon__request_dispatch(int *code_p,
   statstruct = ne_get_status(req->ne_req);
   req->code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
   req->code = statstruct->code;
+
+  /* If we see a successful request that used authentication, we should store
+     the credentials for future use. */
+  if (req->sess->auth_used
+      && statstruct->code < 400)
+    {
+      req->sess->auth_used = FALSE;
+      SVN_ERR(svn_ra_neon__maybe_store_auth_info(req->sess, pool));
+    }
 
   if (code_p)
      *code_p = req->code;
