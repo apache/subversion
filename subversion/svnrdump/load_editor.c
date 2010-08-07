@@ -115,8 +115,8 @@ new_node_record(void **node_baton,
   void *commit_edit_baton;
   char *ancestor_path;
   apr_array_header_t *residual_open_path;
-  apr_array_header_t *residual_close_path;
   const char *nb_dirname;
+  apr_size_t residual_close_count;
   int i;
 
   rb = revision_baton;
@@ -212,18 +212,16 @@ new_node_record(void **node_baton,
       ancestor_path =
         svn_relpath_get_longest_ancestor(nb_dirname,
                                          rb->db->relpath, pool);
-      residual_close_path =
-        svn_path_decompose(svn_relpath_skip_ancestor(ancestor_path,
-                                                     rb->db->relpath),
-                           rb->pool);
+      residual_close_count =
+        svn_path_component_count(svn_relpath_skip_ancestor(ancestor_path,
+                                                           rb->db->relpath));
       residual_open_path =
         svn_path_decompose(svn_relpath_skip_ancestor(ancestor_path,
-                                                     nb_dirname),
-                           rb->pool);
+                                                     nb_dirname), pool);
 
       /* First close all as many directories as there are after
          skip_ancestor, and then open fresh directories */
-      for (i = 0; i < residual_close_path->nelts; i ++)
+      for (i = 0; i < residual_close_count; i ++)
         {
           /* Don't worry about destroying the actual rb->db object,
              since the pool we're using has the lifetime of one
