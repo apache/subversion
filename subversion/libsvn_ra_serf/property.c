@@ -175,6 +175,7 @@ void
 svn_ra_serf__set_ver_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name,
+                          const svn_string_t *const *old_value_p,
                           const svn_string_t *val, apr_pool_t *pool)
 {
   apr_hash_t *ver_props, *path_props, *ns_props;
@@ -215,10 +216,11 @@ void
 svn_ra_serf__set_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns, const char *name,
+                      const svn_string_t *const *old_value_p,
                       const svn_string_t *val, apr_pool_t *pool)
 {
   svn_ra_serf__set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name,
-                            val, pool);
+                            old_value_p, val, pool);
 }
 
 static prop_info_t *
@@ -370,7 +372,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
       /* set the return props and update our cache too. */
       svn_ra_serf__set_ver_prop(ctx->ret_props,
                                 ctx->current_path, ctx->rev,
-                                ns, pname, val_str,
+                                ns, pname, NULL, val_str,
                                 ctx->pool);
       if (ctx->cache_props)
         {
@@ -381,7 +383,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
 
           svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
                                     ctx->current_path, ctx->rev,
-                                    ns, pname, val_str,
+                                    ns, pname, NULL, val_str,
                                     ctx->sess->pool);
         }
 
@@ -542,7 +544,8 @@ check_cache(apr_hash_t *ret_props,
       if (val)
         {
           svn_ra_serf__set_ver_prop(ret_props, path, rev,
-                                    prop->namespace, prop->name, val, pool);
+                                    prop->namespace, prop->name, NULL,
+                                    val, pool);
         }
       else
         {
@@ -742,6 +745,7 @@ svn_error_t *
 svn_ra_serf__walk_all_props(apr_hash_t *props,
                             const char *name,
                             svn_revnum_t rev,
+                            svn_boolean_t values_are_proppairs,
                             svn_ra_serf__walker_visitor_t walker,
                             void *baton,
                             apr_pool_t *pool)
@@ -781,7 +785,7 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
           apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
           /* use a subpool? */
           SVN_ERR(walker(baton, ns_name, ns_len, prop_name, prop_len,
-                         prop_val, pool));
+                         NULL /* ### */, prop_val, pool));
         }
     }
 
@@ -926,6 +930,7 @@ svn_error_t *
 svn_ra_serf__set_flat_props(void *baton,
                             const char *ns, apr_ssize_t ns_len,
                             const char *name, apr_ssize_t name_len,
+                            const svn_string_t *const *ignored,
                             const svn_string_t *val,
                             apr_pool_t *pool)
 {
@@ -937,6 +942,7 @@ svn_error_t *
 svn_ra_serf__set_bare_props(void *baton,
                             const char *ns, apr_ssize_t ns_len,
                             const char *name, apr_ssize_t name_len,
+                            const svn_string_t *const *ignored,
                             const svn_string_t *val,
                             apr_pool_t *pool)
 {

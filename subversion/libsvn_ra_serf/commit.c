@@ -680,6 +680,7 @@ static svn_error_t *
 proppatch_walker(void *baton,
                  const char *ns, apr_ssize_t ns_len,
                  const char *name, apr_ssize_t name_len,
+                 const svn_string_t *const *old_val_p, /* ### */
                  const svn_string_t *val,
                  apr_pool_t *pool)
 {
@@ -771,7 +772,7 @@ create_proppatch_body(serf_bucket_t **bkt,
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
       SVN_ERR(svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
-                                          SVN_INVALID_REVNUM,
+                                          SVN_INVALID_REVNUM, FALSE,
                                           proppatch_walker, body_bkt, pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
@@ -784,7 +785,7 @@ create_proppatch_body(serf_bucket_t **bkt,
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
       SVN_ERR(svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
-                                          SVN_INVALID_REVNUM,
+                                          SVN_INVALID_REVNUM, FALSE,
                                           proppatch_walker, body_bkt, pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
@@ -1307,7 +1308,7 @@ open_root(void *edit_baton,
         }
 
       svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
-                            ns, name, value, proppatch_ctx->pool);
+                            ns, name, NULL, value, proppatch_ctx->pool);
     }
 
   SVN_ERR(proppatch_resource(proppatch_ctx, dir->commit, ctx->pool));
@@ -1600,13 +1601,13 @@ change_dir_prop(void *dir_baton,
     {
       value = svn_string_dup(value, dir->pool);
       svn_ra_serf__set_prop(dir->changed_props, proppatch_target,
-                            ns, name, value, dir->pool);
+                            ns, name, NULL, value, dir->pool);
     }
   else
     {
       value = svn_string_create("", dir->pool);
       svn_ra_serf__set_prop(dir->removed_props, proppatch_target,
-                            ns, name, value, dir->pool);
+                            ns, name, NULL, value, dir->pool);
     }
 
   return SVN_NO_ERROR;
@@ -1852,14 +1853,14 @@ change_file_prop(void *file_baton,
     {
       value = svn_string_dup(value, file->pool);
       svn_ra_serf__set_prop(file->changed_props, file->url,
-                            ns, name, value, file->pool);
+                            ns, name, NULL, value, file->pool);
     }
   else
     {
       value = svn_string_create("", file->pool);
 
       svn_ra_serf__set_prop(file->removed_props, file->url,
-                            ns, name, value, file->pool);
+                            ns, name, NULL, value, file->pool);
     }
 
   return SVN_NO_ERROR;
@@ -2271,14 +2272,14 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   if (value)
     {
       svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
-                            ns, name, value, proppatch_ctx->pool);
+                            ns, name, NULL, value, proppatch_ctx->pool);
     }
   else
     {
       value = svn_string_create("", proppatch_ctx->pool);
 
       svn_ra_serf__set_prop(proppatch_ctx->removed_props, proppatch_ctx->path,
-                            ns, name, value, proppatch_ctx->pool);
+                            ns, name, NULL, value, proppatch_ctx->pool);
     }
 
   err = proppatch_resource(proppatch_ctx, commit, proppatch_ctx->pool);
