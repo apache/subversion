@@ -2092,7 +2092,7 @@ test_list = [ None,
               rm_of_replaced_file,
               prop_reject_grind,
               obstructed_subdirs,
-              XFail(atomic_over_ra),
+              atomic_over_ra,
              ]
 
 if __name__ == '__main__':
