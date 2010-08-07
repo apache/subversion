@@ -235,7 +235,8 @@ new_node_record(void **node_baton,
         
       for (i = 0; i < residual_open_path->nelts; i ++)
         {
-          SVN_ERR(commit_editor->open_directory(residual_open_path->elts + i,
+          SVN_ERR(commit_editor->open_directory(APR_ARRAY_IDX(residual_open_path,
+                                                              i, const char *),
                                                 rb->db->baton,
                                                 rb->rev - 1,
                                                 rb->pool, &child_baton));
@@ -244,7 +245,8 @@ new_node_record(void **node_baton,
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
           child_db->relpath = svn_relpath_join(rb->db->relpath,
-                                               residual_open_path->elts + i,
+                                               APR_ARRAY_IDX(residual_open_path,
+                                                             i, const char *),
                                                rb->pool);
           child_db->parent = rb->db;
           rb->db = child_db;
