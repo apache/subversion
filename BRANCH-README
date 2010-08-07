@@ -30,6 +30,8 @@ Planned work
       prop_tests.py 34: atomic_over_ra()
     TODO: extend it to test props set to the empty string
 
+* client support: svn_client_revprop_set2()
+
 * svnsync:
   - use the new RA API to resolve the race condition in locking.
 
