@@ -487,8 +487,8 @@ check_and_set_revprop(svn_revnum_t *set_rev,
     }
 
   /* The actual RA call. */
-  SVN_ERR(svn_ra_change_rev_prop(ra_session, *set_rev, propname, 
-                                 propval, pool));
+  SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname, 
+                                  NULL, propval, pool));
 
   return SVN_NO_ERROR;
 }
@@ -505,6 +505,7 @@ svn_client_revprop_set2(const char *propname,
                         apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
+  svn_boolean_t be_atomic;
 
   if ((strcmp(propname, SVN_PROP_REVISION_AUTHOR) == 0)
       && propval
@@ -528,8 +529,29 @@ svn_client_revprop_set2(const char *propname,
   SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
                                           ra_session, revision, pool));
 
-  SVN_ERR(check_and_set_revprop(set_rev, ra_session, propname,
-                                original_propval, propval, pool));
+  SVN_ERR(svn_ra_has_capability(ra_session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS, pool));
+  if (be_atomic)
+    {
+      /* Convert ORIGINAL_PROPVAL to an OLD_VALUE_P. */
+      const svn_string_t *const *old_value_p;
+      const svn_string_t *unset = NULL;
+
+      if (original_propval == NULL)
+      	old_value_p = NULL;
+      else if (original_propval->data == NULL)
+      	old_value_p = &unset;
+      else
+      	old_value_p = &original_propval;
+
+      SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname, 
+                                      old_value_p, propval, pool));
+    }
+  else
+    {
+      SVN_ERR(check_and_set_revprop(set_rev, ra_session, propname,
+                                    original_propval, propval, pool));
+    }
 
   if (ctx->notify_func2)
     {
