@@ -220,8 +220,8 @@ set_revision_property(void *baton,
   else
     /* Special handling for revision 0; this is safe because the
        commit_editor hasn't been created yet. */
-    svn_ra_change_rev_prop(rb->pb->session, rb->rev, name, value,
-                           rb->pb->pool);
+    svn_ra_change_rev_prop2(rb->pb->session, rb->rev, name, NULL, value,
+                            rb->pb->pool);
 
   /* Remember any datestamp/ author that passes through (see comment
      in close_revision). */
@@ -342,12 +342,12 @@ close_revision(void *baton)
 
   /* svn_fs_commit_txn rewrites the datestamp/ author property-
      rewrite it by hand after closing the commit_editor. */
-  SVN_ERR(svn_ra_change_rev_prop(rb->pb->session, rb->rev,
-                                 SVN_PROP_REVISION_DATE,
-                                 rb->datestamp, rb->pb->pool));
-  SVN_ERR(svn_ra_change_rev_prop(rb->pb->session, rb->rev,
-                                 SVN_PROP_REVISION_AUTHOR,
-                                 rb->author, rb->pb->pool));
+  SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, rb->rev,
+                                  SVN_PROP_REVISION_DATE,
+                                  NULL, rb->datestamp, rb->pb->pool));
+  SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, rb->rev,
+                                  SVN_PROP_REVISION_AUTHOR,
+                                  NULL, rb->author, rb->pb->pool));
 
   svn_pool_destroy(rb->pb->pool);
 
