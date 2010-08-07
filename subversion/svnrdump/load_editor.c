@@ -323,8 +323,8 @@ set_revision_property(void *baton,
   else
     /* Special handling for revision 0; this is safe because the
        commit_editor hasn't been created yet. */
-    svn_ra_change_rev_prop(rb->pb->session, rb->rev, name, value,
-                           rb->pool);
+    SVN_ERR(svn_ra_change_rev_prop(rb->pb->session, rb->rev, name, value,
+                                   rb->pool));
 
   /* Remember any datestamp/ author that passes through (see comment
      in close_revision). */
