@@ -21,11 +21,7 @@ Planned work
       achieved with older servers, and because of planned protocol extensions)
   - [DONE] ra_local: Trivial.
   - [DONE] ra_svn: Add a 'change-rev-prop2' verb.
-  - ra_dav
-      Extend PROPPATCH syntax to provide the old value: add a <S:oldvalue/>
-      tag inside the <${propname}> tag.
-        Q: where to document this protocol extension?
-        A: notes/http-and-webdav/webdav-protocol
+  - [DONE] ra_dav: Extend PROPPATCH: see notes/http-and-webdav/webdav-protocol
   - [DONE] unit test
       prop_tests.py 34: atomic_over_ra()
   - TODO: extend it to test props set to the empty string and unset props

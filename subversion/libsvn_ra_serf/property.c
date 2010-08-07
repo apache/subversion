@@ -209,7 +209,19 @@ svn_ra_serf__set_ver_prop(apr_hash_t *props,
       apr_hash_set(path_props, ns, APR_HASH_KEY_STRING, ns_props);
     }
 
-  apr_hash_set(ns_props, name, APR_HASH_KEY_STRING, val);
+  if (old_value_p)
+    {
+      /* This must be PROPPATCH_CTX->ATOMIC_PROPS. */
+      svn_dav__two_props_t *both_values;
+      both_values = apr_palloc(pool, sizeof(*both_values));
+      both_values->old_value_p = old_value_p;
+      both_values->new_value = val;
+      apr_hash_set(ns_props, name, APR_HASH_KEY_STRING, both_values);
+    }
+  else
+    {
+      apr_hash_set(ns_props, name, APR_HASH_KEY_STRING, val);
+    }
 }
 
 void
@@ -784,8 +796,18 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
 
           apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
           /* use a subpool? */
-          SVN_ERR(walker(baton, ns_name, ns_len, prop_name, prop_len,
-                         NULL /* ### */, prop_val, pool));
+          if (values_are_proppairs)
+            {
+              svn_dav__two_props_t *both_values = prop_val;
+              SVN_ERR(walker(baton, ns_name, ns_len, prop_name, prop_len,
+                             both_values->old_value_p, both_values->new_value,
+                             pool));
+            }
+          else
+            {
+              SVN_ERR(walker(baton, ns_name, ns_len, prop_name, prop_len,
+                             NULL, prop_val, pool));
+            }
         }
     }
 

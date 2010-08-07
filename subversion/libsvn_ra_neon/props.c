@@ -1075,12 +1075,14 @@ get_encoding_and_cdata(const char **encoding_p,
 static svn_error_t *
 append_setprop(svn_stringbuf_t *body,
                const char *name,
+               const svn_string_t *const *old_value_p,
                const svn_string_t *value,
                apr_pool_t *pool)
 {
   const char *encoding;
   const char *xml_safe;
   const char *xml_tag_name;
+  const char *old_value_tag;
 
   /* Map property names to namespaces */
 #define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
@@ -1094,11 +1096,45 @@ append_setprop(svn_stringbuf_t *body,
       xml_tag_name = apr_pstrcat(pool, "C:", name, NULL);
     }
 
-  SVN_ERR(get_encoding_and_cdata(&encoding, &xml_safe, value, pool));
+  if (old_value_p)
+    {
+      if (*old_value_p)
+        {
+          const char *encoding2;
+          const char *xml_safe2;
+          SVN_ERR(get_encoding_and_cdata(&encoding2, &xml_safe2,
+                                         *old_value_p, pool));
+          old_value_tag = apr_psprintf(pool, "<%s %s>%s</%s>",
+                                       "V:" SVN_DAV__OLD_VALUE, encoding2,
+                                       xml_safe2, "V:" SVN_DAV__OLD_VALUE);
+        }
+      else
+        {
+#define OLD_VALUE_ABSENT_TAG \
+          "<" "V:" SVN_DAV__OLD_VALUE \
+              " V:" SVN_DAV__OLD_VALUE__ABSENT "=\"1\" " \
+          "/>"
+          old_value_tag = OLD_VALUE_ABSENT_TAG;
+        }
+    }
+  else
+    {
+      old_value_tag = "";
+    }
+
+  if (old_value_p && !value)
+    {
+      encoding = "V:" SVN_DAV__OLD_VALUE__ABSENT "=\"1\"" ;
+      xml_safe = "";
+    }
+  else
+    {
+      SVN_ERR(get_encoding_and_cdata(&encoding, &xml_safe, value, pool));
+    }
 
   svn_stringbuf_appendcstr(body,
-                           apr_psprintf(pool,"<%s %s>%s</%s>",
-                                        xml_tag_name, encoding,
+                           apr_psprintf(pool,"<%s %s>%s%s</%s>",
+                                        xml_tag_name, encoding, old_value_tag,
                                         xml_safe, xml_tag_name));
   return SVN_NO_ERROR;
 }
@@ -1109,6 +1145,7 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
                           const char *url,
                           apr_hash_t *prop_changes,
                           const apr_array_header_t *prop_deletes,
+                          apr_hash_t *prop_old_values,
                           apr_hash_t *extra_headers,
                           apr_pool_t *pool)
 {
@@ -1118,7 +1155,8 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
 
   /* just punt if there are no changes to make. */
   if ((prop_changes == NULL || (! apr_hash_count(prop_changes)))
-      && (prop_deletes == NULL || prop_deletes->nelts == 0))
+      && (prop_deletes == NULL || prop_deletes->nelts == 0)
+      && (prop_old_values == NULL || (! apr_hash_count(prop_old_values))))
     return SVN_NO_ERROR;
 
   /* easier to roll our own PROPPATCH here than use ne_proppatch(), which
@@ -1129,6 +1167,22 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
      SVN_DAV_PROP_NS_DAV "\" xmlns:C=\""
      SVN_DAV_PROP_NS_CUSTOM "\" xmlns:S=\""
      SVN_DAV_PROP_NS_SVN "\">" DEBUG_CR, pool);
+
+  /* Handle property changes/deletions with expected old values. */
+  if (prop_old_values)
+    {
+      apr_hash_index_t *hi;
+      svn_stringbuf_appendcstr(body, "<D:set><D:prop>");
+      for (hi = apr_hash_first(pool, prop_old_values); hi; hi = apr_hash_next(hi))
+        {
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_dav__two_props_t *both_values = svn__apr_hash_index_val(hi);
+          svn_pool_clear(subpool);
+          SVN_ERR(append_setprop(body, name, both_values->old_value_p,
+                                 both_values->new_value, subpool));
+        }
+      svn_stringbuf_appendcstr(body, "</D:prop></D:set>");
+    }
 
   /* Handle property changes. */
   if (prop_changes)
@@ -1141,7 +1195,7 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
           void *val;
           svn_pool_clear(subpool);
           apr_hash_this(hi, &key, NULL, &val);
-          SVN_ERR(append_setprop(body, key, val, subpool));
+          SVN_ERR(append_setprop(body, key, NULL, val, subpool));
         }
       svn_stringbuf_appendcstr(body, "</D:prop></D:set>");
     }
@@ -1155,7 +1209,7 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
         {
           const char *name = APR_ARRAY_IDX(prop_deletes, n, const char *);
           svn_pool_clear(subpool);
-          SVN_ERR(append_setprop(body, name, NULL, subpool));
+          SVN_ERR(append_setprop(body, name, NULL, NULL, subpool));
         }
       svn_stringbuf_appendcstr(body, "</D:prop></D:remove>");
     }

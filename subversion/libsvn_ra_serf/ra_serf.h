@@ -961,8 +961,8 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
 
 /* Set PROPS for PATH at REV revision with a NS:NAME VAL.
  * 
- * ### If OLD_VALUE_P is not NULL, it must equal the current value of the
- * ### revprop.
+ * If OLD_VALUE_P is not NULL, it must equal the current value of the
+ * revprop.
  *
  * The POOL governs allocation.
  */
@@ -984,7 +984,6 @@ typedef svn_error_t *
                                  const svn_string_t *val,
                                  apr_pool_t *pool);
 
-/* ### VALUES_ARE_PROPPAIRS is not implemented */
 svn_error_t *
 svn_ra_serf__walk_all_props(apr_hash_t *props,
                             const char *name,

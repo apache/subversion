@@ -573,12 +573,15 @@ svn_error_t *svn_ra_neon__get_vcc(const char **vcc,
 /* Issue a PROPPATCH request on URL, transmitting PROP_CHANGES (a hash
    of const svn_string_t * values keyed on Subversion user-visible
    property names) and PROP_DELETES (an array of property names to
-   delete).  Send any extra request headers in EXTRA_HEADERS. Use POOL
-   for all allocations.  */
+   delete). PROP_OLD_VALUES is a hash of Subversion user-visible property
+   names mapped to svn_dav__two_props_t * values. Send any extra
+   request headers in EXTRA_HEADERS. Use POOL for all allocations.
+ */
 svn_error_t *svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
                                        const char *url,
                                        apr_hash_t *prop_changes,
                                        const apr_array_header_t *prop_deletes,
+                                       apr_hash_t *prop_old_values,
                                        apr_hash_t *extra_headers,
                                        apr_pool_t *pool);
 
