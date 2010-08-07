@@ -114,7 +114,9 @@ new_node_record(void **node_baton,
   void *child_baton;
   void *commit_edit_baton;
   char *ancestor_path;
-  apr_array_header_t *residual_path;
+  apr_array_header_t *residual_open_path;
+  apr_array_header_t *residual_close_path;
+  const char *nb_dirname;
   int i;
 
   rb = revision_baton;
@@ -157,8 +159,8 @@ new_node_record(void **node_baton,
       child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
       child_db->baton = child_baton;
       child_db->depth = 0;
-      child_db->parent = NULL;
       child_db->relpath = svn_relpath_canonicalize("/", rb->pool);
+      child_db->parent = NULL;
       rb->db = child_db;
   }
 
@@ -200,23 +202,28 @@ new_node_record(void **node_baton,
                                       rb->pool);
     }
 
-  if (svn_path_compare_paths(svn_relpath_dirname(nb->path, pool),
-                             rb->db->baton) != 0)
+  nb_dirname = svn_relpath_dirname(nb->path, pool);
+  if (svn_path_compare_paths(nb_dirname,
+                             rb->db->relpath) != 0)
     {
       /* Before attempting to handle the action, call open_directory
          for all the path components and set the directory baton
          accordingly */
       ancestor_path =
-        svn_relpath_get_longest_ancestor(nb->path,
+        svn_relpath_get_longest_ancestor(nb_dirname,
                                          rb->db->relpath, pool);
-      residual_path =
-        svn_path_decompose(svn_relpath_skip_ancestor(nb->path,
-                                                     ancestor_path),
+      residual_close_path =
+        svn_path_decompose(svn_relpath_skip_ancestor(ancestor_path,
+                                                     rb->db->relpath),
+                           rb->pool);
+      residual_open_path =
+        svn_path_decompose(svn_relpath_skip_ancestor(ancestor_path,
+                                                     nb_dirname),
                            rb->pool);
 
       /* First close all as many directories as there are after
          skip_ancestor, and then open fresh directories */
-      for (i = 0; i < residual_path->nelts; i ++)
+      for (i = 0; i < residual_close_path->nelts; i ++)
         {
           /* Don't worry about destroying the actual rb->db object,
              since the pool we're using has the lifetime of one
@@ -226,9 +233,9 @@ new_node_record(void **node_baton,
           rb->db = rb->db->parent;
         }
         
-      for (i = 0; i < residual_path->nelts; i ++)
+      for (i = 0; i < residual_open_path->nelts; i ++)
         {
-          SVN_ERR(commit_editor->open_directory(residual_path->elts + i,
+          SVN_ERR(commit_editor->open_directory(residual_open_path->elts + i,
                                                 rb->db->baton,
                                                 rb->rev - 1,
                                                 rb->pool, &child_baton));
@@ -237,11 +244,11 @@ new_node_record(void **node_baton,
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
           child_db->relpath = svn_relpath_join(rb->db->relpath,
-                                               residual_path->elts + i,
+                                               residual_open_path->elts + i,
                                                rb->pool);
+          child_db->parent = rb->db;
           rb->db = child_db;
         }
-
     }
 
   switch (nb->action)
@@ -265,9 +272,8 @@ new_node_record(void **node_baton,
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
-          child_db->relpath = svn_relpath_join(rb->db->relpath,
-                                               residual_path->elts + i,
-                                               rb->pool);
+          child_db->relpath = apr_pstrdup(rb->pool, nb->path);
+          child_db->parent = rb->db;
           rb->db = child_db;
           break;
         default:
