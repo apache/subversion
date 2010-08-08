@@ -155,6 +155,235 @@ deserialize_svn_string(void *buffer, const svn_string_t **string)
   svn_temp_deserializer__resolve(buffer, (void **)&(*string)->data);
 }
 
+/* Utility function to serialize checkum CS within the given serialization
+ * CONTEXT.
+ */
+static void
+serialize_checksum(svn_temp_serializer__context_t *context,
+                   svn_checksum_t * const *cs)
+{
+  const svn_checksum_t *checksum = *cs;
+  if (checksum == NULL)
+    return;
+
+  svn_temp_serializer__push(context,
+                            (const void * const *)cs,
+                            sizeof(*checksum));
+
+  /* The digest is arbitrary binary data.
+   * Thus, we cannot use svn_temp_serializer__add_string. */
+  svn_temp_serializer__push(context,
+                            (const void * const *)&checksum->digest,
+                            svn_checksum_size(checksum));
+
+  /* return to the caller's nesting level */
+  svn_temp_serializer__pop(context);
+  svn_temp_serializer__pop(context);
+}
+
+/* Utility function to deserialize the checksum CS inside the BUFFER.
+ */
+static void
+deserialize_checksum(void *buffer, svn_checksum_t * const *cs)
+{
+  if (*cs == NULL)
+    return;
+
+  svn_temp_deserializer__resolve(buffer, (void **)cs);
+  svn_temp_deserializer__resolve(buffer, (void **)&(*cs)->digest);
+}
+
+/* Utility function to serialize the REPRESENTATION within the given
+ * serialization CONTEXT.
+ */
+static void
+serialize_representation(svn_temp_serializer__context_t *context,
+                         representation_t * const *representation)
+{
+  const representation_t * rep = *representation;
+  if (rep == NULL)
+    return;
+
+  /* serialize the representation struct itself */
+  svn_temp_serializer__push(context,
+                            (const void * const *)representation,
+                            sizeof(*rep));
+
+  /* serialize sub-structures */
+  serialize_checksum(context, &rep->md5_checksum);
+  serialize_checksum(context, &rep->sha1_checksum);
+
+  svn_temp_serializer__add_string(context, &rep->txn_id);
+  svn_temp_serializer__add_string(context, &rep->uniquifier);
+
+  /* return to the caller's nesting level */
+  svn_temp_serializer__pop(context);
+}
+
+/* Utility function to deserialize the REPRESENTATIONS inside the BUFFER.
+ */
+static void
+deserialize_representation(void *buffer,
+                           representation_t **representation)
+{
+  const representation_t *rep;
+  if (*representation == NULL)
+    return;
+
+  /* fixup the reference to the representation itself */
+  svn_temp_deserializer__resolve(buffer, (void **)representation);
+  rep = *representation;
+
+  /* fixup of sub-structures */
+  deserialize_checksum(buffer, &rep->md5_checksum);
+  deserialize_checksum(buffer, &rep->sha1_checksum);
+
+  svn_temp_deserializer__resolve(buffer, (void **)&rep->txn_id);
+  svn_temp_deserializer__resolve(buffer, (void **)&rep->uniquifier);
+}
+
+/* auxilliary structure representing the content of a directory hash */
+typedef struct hash_data_t
+{
+  /* number of entries in the directory */
+  apr_size_t count;
+
+  /* reference to the entries */
+  svn_fs_dirent_t *entries;
+} hash_data_t;
+
+/* Utility function to serialize the ENTRIES into a new serialization
+ * context to be returned. Allocation will be made form POOL.
+ */
+static svn_temp_serializer__context_t *
+serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
+{
+  hash_data_t hash_data;
+  apr_hash_index_t *hi;
+  apr_size_t i = 0;
+  svn_temp_serializer__context_t *context;
+
+  /* calculate sizes */
+  apr_size_t count = apr_hash_count(entries);
+  apr_size_t entries_len = sizeof(svn_fs_dirent_t[count]);
+
+  /* copy the hash entries to an auxilliary struct of known layout */
+  hash_data.count = count;
+  hash_data.entries = apr_palloc(pool, entries_len);
+
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi), ++i)
+    hash_data.entries[i] = *(svn_fs_dirent_t *)svn__apr_hash_index_val(hi);
+
+  /* serialize that aux. structure into a new  */
+  context = svn_temp_serializer__init(&hash_data,
+                                      sizeof(hash_data),
+                                      50 + count * 200 + entries_len,
+                                      pool);
+
+  /* serialize all entries as a single array */
+  svn_temp_serializer__push(context,
+                            (const void * const *)&hash_data.entries,
+                            entries_len);
+
+  /* serialize the sub-structures of each element*/
+  for (i = 0; i < count; ++i)
+    {
+      svn_fs_fs__id_serialize(context, &hash_data.entries[i].id);
+      svn_temp_serializer__add_string(context, &hash_data.entries[i].name);
+    }
+
+  return context;
+}
+
+/* Utility function to reconstruct a dir entries hash from serialized data
+ * in BUFFER and HASH_DATA. Allocation will be made form POOL.
+ */
+static apr_hash_t *
+deserialize_dir(void *buffer, hash_data_t *hash_data, apr_pool_t *pool)
+{
+  apr_hash_t *result = apr_hash_make(pool);
+  apr_size_t i;
+  apr_size_t count;
+
+  /* resolve the reference to the entries array */
+  svn_temp_deserializer__resolve(buffer, (void **)&hash_data->entries);
+
+  /* fixup the references within each entry and add it to the hash */
+  for (i = 0, count = hash_data->count; i < count; ++i)
+    {
+      svn_fs_dirent_t *entry = &hash_data->entries[i];
+
+      /* pointer fixup */
+      svn_temp_deserializer__resolve(buffer, (void **)&entry->name);
+      svn_fs_fs__id_deserialize(buffer, (svn_fs_id_t **)&entry->id);
+
+      /* add the entry to the hash */
+      apr_hash_set(result, entry->name, APR_HASH_KEY_STRING, entry);
+    }
+
+  /* return the now complete hash */
+  return result;
+}
+
+
+/* Serialize a NODEREV_P within the serialization CONTEXT.
+ */
+void
+svn_fs_fs__noderev_serialize(svn_temp_serializer__context_t *context,
+                             node_revision_t * const *noderev_p)
+{
+  const node_revision_t *noderev = *noderev_p;
+  if (noderev == NULL)
+    return;
+
+  /* serialize the representation struct itself */
+  svn_temp_serializer__push(context,
+                            (const void * const *)noderev_p,
+                            sizeof(*noderev));
+
+  /* serialize sub-structures */
+  svn_fs_fs__id_serialize(context, &noderev->id);
+  svn_fs_fs__id_serialize(context, &noderev->predecessor_id);
+  serialize_representation(context, &noderev->prop_rep);
+  serialize_representation(context, &noderev->data_rep);
+
+  svn_temp_serializer__add_string(context, &noderev->copyfrom_path);
+  svn_temp_serializer__add_string(context, &noderev->copyroot_path);
+  svn_temp_serializer__add_string(context, &noderev->created_path);
+
+  /* return to the caller's nesting level */
+  svn_temp_serializer__pop(context);
+}
+
+
+/* Deserialize a NODEREV_P within the BUFFER.
+ */
+void
+svn_fs_fs__noderev_deserialize(void *buffer,
+                               node_revision_t **noderev_p)
+{
+  node_revision_t *noderev;
+  if (*noderev_p == NULL)
+    return;
+
+  /* fixup the reference to the representation itself,
+   * if this is part of a parent structure. */
+  if (buffer != *noderev_p)
+    svn_temp_deserializer__resolve(buffer, (void **)noderev_p);
+
+  noderev = *noderev_p;
+
+  /* fixup of sub-structures */
+  svn_fs_fs__id_deserialize(buffer, (svn_fs_id_t **)&noderev->id);
+  svn_fs_fs__id_deserialize(buffer, (svn_fs_id_t **)&noderev->predecessor_id);
+  deserialize_representation(buffer, &noderev->prop_rep);
+  deserialize_representation(buffer, &noderev->data_rep);
+
+  svn_temp_deserializer__resolve(buffer, (void **)&noderev->copyfrom_path);
+  svn_temp_deserializer__resolve(buffer, (void **)&noderev->copyroot_path);
+  svn_temp_deserializer__resolve(buffer, (void **)&noderev->created_path);
+}
+
 
 /* Utility function to serialize COUNT svn_txdelta_op_t objects 
  * at OPS in the given serialization CONTEXT.
@@ -194,7 +423,7 @@ serialize_txdeltawindow(svn_temp_serializer__context_t *context,
   svn_temp_serializer__pop(context);
 }
 
-/* Implements serialize_fn_t for svn_fs_fs__txdelta_cached_window_t 
+/* Implements svn_cache__serialize_fn_t for svn_fs_fs__txdelta_cached_window_t
  */
 svn_error_t *
 svn_fs_fs__serialize_txdelta_window(char **buffer,
@@ -228,7 +457,8 @@ svn_fs_fs__serialize_txdelta_window(char **buffer,
   return SVN_NO_ERROR;
 }
 
-/* Implements deserialize_fn_t for svn_fs_fs__txdelta_cached_window_t.
+/* Implements svn_cache__deserialize_fn_t for
+ * svn_fs_fs__txdelta_cached_window_t.
  */
 svn_error_t *
 svn_fs_fs__deserialize_txdelta_window(void **item,
@@ -255,4 +485,173 @@ svn_fs_fs__deserialize_txdelta_window(void **item,
 
   return SVN_NO_ERROR;
 }
+
+/* Implements svn_cache__serialize_fn_t for manifests.
+ */
+svn_error_t *
+svn_fs_fs__serialize_manifest(char **data,
+                              apr_size_t *data_len,
+                              void *in,
+                              apr_pool_t *pool)
+{
+  apr_array_header_t *manifest = in;
+
+  *data_len = sizeof(apr_off_t) *manifest->nelts;
+  *data = apr_palloc(pool, *data_len);
+  memcpy(*data, manifest->elts, *data_len);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__deserialize_fn_t for manifests.
+ */
+svn_error_t *
+svn_fs_fs__deserialize_manifest(void **out,
+                                const char *data,
+                                apr_size_t data_len,
+                                apr_pool_t *pool)
+{
+  apr_array_header_t *manifest = apr_array_make(pool,
+                                                data_len / sizeof(apr_off_t),
+                                                sizeof(apr_off_t));
+  memcpy(manifest->elts, data, data_len);
+  manifest->nelts = data_len / sizeof(apr_off_t);
+  *out = manifest;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__serialize_fn_t for svn_fs_id_t
+ */
+svn_error_t *
+svn_fs_fs__serialize_id(char **data,
+                        apr_size_t *data_len,
+                        void *in,
+                        apr_pool_t *pool)
+{
+  const svn_fs_id_t *id = in;
+  svn_stringbuf_t *serialized;
+
+  /* create an (empty) serialization context with plenty of buffer space */
+  svn_temp_serializer__context_t *context =
+      svn_temp_serializer__init(NULL, 0, 250, pool);
+
+  /* serialize the id */
+  svn_fs_fs__id_serialize(context, &id);
+
+  /* return serialized data */
+  serialized = svn_temp_serializer__get(context);
+  *data = serialized->data;
+  *data_len = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__deserialize_fn_t for svn_fs_id_t
+ */
+svn_error_t *
+svn_fs_fs__deserialize_id(void **out,
+                          const char *data,
+                          apr_size_t data_len,
+                          apr_pool_t *pool)
+{
+  /* Copy the _full_ buffer as it also contains the sub-structures. */
+  svn_fs_id_t *id = apr_palloc(pool, data_len);
+  memcpy(id, data, data_len);
+
+  /* fixup of all pointers etc. */
+  svn_fs_fs__id_deserialize(id, &id);
+
+  /* done */
+  *out = id;
+  return SVN_NO_ERROR;
+}
+
+/** Caching node_revision_t objects. **/
+
+/* Implements vn_cache__serialize_fn_t for node_revision_t.
+ */
+svn_error_t *
+svn_fs_fs__serialize_node_revision(char **buffer,
+                                    apr_size_t *buffer_size,
+                                    void *item,
+                                    apr_pool_t *pool)
+{
+  svn_stringbuf_t *serialized;
+  node_revision_t *noderev = item;
+
+  /* create an (empty) serialization context with plenty of buffer space */
+  svn_temp_serializer__context_t *context =
+      svn_temp_serializer__init(NULL, 0, 503, pool);
+
+  /* serialize the noderev */
+  svn_fs_fs__noderev_serialize(context, &noderev);
+
+  /* return serialized data */
+  serialized = svn_temp_serializer__get(context);
+  *buffer = serialized->data;
+  *buffer_size = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__deserialize_fn_t for node_revision_t
+ */
+svn_error_t *
+svn_fs_fs__deserialize_node_revision(void **item,
+                                     const char *buffer,
+                                     apr_size_t buffer_size,
+                                     apr_pool_t *pool)
+{
+  /* Copy the _full_ buffer as it also contains the sub-structures. */
+  node_revision_t *noderev = apr_palloc(pool, buffer_size);
+  memcpy(noderev, buffer, buffer_size);
+
+  /* fixup of all pointers etc. */
+  svn_fs_fs__noderev_deserialize(noderev, &noderev);
+
+  /* done */
+  *item = noderev;
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__serialize_func_t for a directory contents hash.
+ */
+svn_error_t *
+svn_fs_fs__dir_entries_serialize(char **data,
+                                 apr_size_t *data_len,
+                                 void *in,
+                                 apr_pool_t *pool)
+{
+  apr_hash_t *dir = in;
+
+  /* serialize the dir content into a new serialization context */
+  svn_temp_serializer__context_t *context = serialize_dir(dir, pool);
+
+  /* return serialized data */
+  svn_stringbuf_t *serialized = svn_temp_serializer__get(context);
+  *data = serialized->data;
+  *data_len = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__deserialize_func_t for a directory contents hash
+ */
+svn_error_t *
+svn_fs_fs__dir_entries_deserialize(void **out,
+                                   const char *data,
+                                   apr_size_t data_len,
+                                   apr_pool_t *pool)
+{
+  /* Copy the _full_ buffer as it also contains the sub-structures. */
+  hash_data_t *hash_data = apr_palloc(pool, data_len);
+  memcpy(hash_data, data, data_len);
+
+  /* reconstruct the hash from the serialized data */
+  *out = deserialize_dir(hash_data, hash_data, pool);
+
+  return SVN_NO_ERROR;
+}
+
 
