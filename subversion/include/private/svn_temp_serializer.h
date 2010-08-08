@@ -46,6 +46,12 @@ typedef struct svn_temp_serializer__context_t svn_temp_serializer__context_t;
  * of the actual structure. Due to the generic nature of the init function
  * we can't determine the structure size as part of the function.
  *
+ * It is possible to specify a @c NULL source_struct in which case the first
+ * call to @ref svn_temp_serializer__push will provide the root struct.
+ * Alternatively, one may even call @ref svn_temp_serializer__add_string
+ * but there is generally no point in doing so because the result will be
+ * simple string object in a @ref svn_stringbuf_t.
+ *
  * You may suggest a larger initial buffer size in @a suggested_buffer_size
  * to minimize the number of internal buffer re-allocations during the
  * serialization process. All allocations will be made from @a pool.
@@ -69,6 +75,11 @@ svn_temp_serializer__init(const void *source_struct,
  * pointer in the original parent structure so that the correspondence in
  * the serialized structure can be established. @a struct_size must match
  * the result of @c sizeof() of the actual structure.
+ *
+ * Only in case that @ref svn_temp_serializer__init has not been provided
+ * with a root structure and this is the first call after the initialization,
+ * @a source_struct will point to a reference to the root structure instead
+ * of being related to some other. 
  *
  * Sub-structures and strings will be added in a FIFO fashion. If you need
  * add further sub-structures on the same level, you need to call @ref
@@ -95,6 +106,10 @@ svn_temp_serializer__pop(svn_temp_serializer__context_t *context);
  * serialization @a context. @a s must be a reference to the @c char*
  * pointer in the original structure so that the correspondence in the
  * serialized structure can be established.
+ *
+ * Only in case that @ref svn_temp_serializer__init has not been provided
+ * with a root structure and this is the first call after the initialization,
+ * @a s will not be related to some struct.
  */
 void
 svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,

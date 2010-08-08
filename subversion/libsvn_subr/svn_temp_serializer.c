@@ -106,18 +106,28 @@ svn_temp_serializer__init(const void *source_struct,
                        ? struct_size
                        : suggested_buffer_size;
 
-  /* create the serialization context and initialize it, including the
-   * structure stack */
+  /* create the serialization context and initialize it */
   svn_temp_serializer__context_t *context = apr_palloc(pool, sizeof(*context));
   context->pool = pool;
   context->buffer = svn_stringbuf_create_ensure(init_size, pool);
-  context->source = apr_palloc(pool, sizeof(*context->source));
-  context->source->source_struct = source_struct;
-  context->source->target_offset = 0;
-  context->source->upper = NULL;
 
-  /* serialize, i.e. append, the content of the first structure */
-  svn_stringbuf_appendbytes(context->buffer, source_struct, struct_size);
+  /* If a source struct has been given, make it the root struct. */
+  if (source_struct)
+    {
+      context->source = apr_palloc(pool, sizeof(*context->source));
+      context->source->source_struct = source_struct;
+      context->source->target_offset = 0;
+      context->source->upper = NULL;
+
+      /* serialize, i.e. append, the content of the first structure */
+      svn_stringbuf_appendbytes(context->buffer, source_struct, struct_size);
+    }
+    else
+    {
+      /* The root struct will be set with the first push() op, or not at all
+       * (in case of a plain string). */
+      context->source = NULL;
+    }
 
   /* done */
   return context;
@@ -131,10 +141,17 @@ static void
 store_current_end_pointer(svn_temp_serializer__context_t *context,
                           const void * const * source_pointer)
 {
+  apr_size_t offset;
+  
+  /* if *source_pointer is the root struct, there will be no parent structure
+   * to relate it to */
+  if (context->source == NULL)
+    return;
+
   /* relative position of the serialized pointer to the begin of the buffer */
-  apr_size_t offset = (const char *)source_pointer
-                    - (const char *)context->source->source_struct
-                    + context->source->target_offset;
+  offset = (const char *)source_pointer
+         - (const char *)context->source->source_struct
+         + context->source->target_offset;
 
   /* use the serialized pointer as a storage for the offset */
   apr_size_t *target_string_ptr = (apr_size_t*)(context->buffer->data + offset);
