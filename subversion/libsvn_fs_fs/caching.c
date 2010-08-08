@@ -302,15 +302,15 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    * id_private_t + 3 strings for value, and the cache_entry); the
    * default pool size is 8192, so about a hundred should fit
    * comfortably. */
-  if (memcache)
-    SVN_ERR(svn_cache__create_memcache(&(ffd->rev_root_id_cache),
-                                       memcache,
-                                       serialize_id,
-                                       deserialize_id,
-                                       sizeof(svn_revnum_t),
-                                       apr_pstrcat(pool, prefix, "RRI",
-                                                   NULL),
-                                       fs->pool));
+  if (get_global_membuffer_cache())
+    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_root_id_cache),
+                                              get_global_membuffer_cache(),
+                                              svn_fs_fs__serialize_id,
+                                              svn_fs_fs__deserialize_id,
+                                              sizeof(svn_revnum_t),
+                                              apr_pstrcat(pool, prefix, "RRI",
+                                                          NULL),
+                                              fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
                                         dup_id, sizeof(svn_revnum_t),
@@ -322,15 +322,15 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
    * let's put 16 on a page. */
-  if (memcache)
-    SVN_ERR(svn_cache__create_memcache(&(ffd->rev_node_cache),
-                                       memcache,
-                                       svn_fs_fs__dag_serialize,
-                                       svn_fs_fs__dag_deserialize,
-                                       APR_HASH_KEY_STRING,
-                                       apr_pstrcat(pool, prefix, "DAG",
-                                                   NULL),
-                                       fs->pool));
+  if (get_global_membuffer_cache())
+    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_node_cache),
+                                              get_global_membuffer_cache(),
+                                              svn_fs_fs__dag_serialize,
+                                              svn_fs_fs__dag_deserialize,
+                                              APR_HASH_KEY_STRING,
+                                              apr_pstrcat(pool, prefix, "DAG",
+                                                          NULL),
+                                              fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_node_cache),
                                         svn_fs_fs__dag_dup_for_cache,
@@ -342,15 +342,15 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
 
   /* Very rough estimate: 1K per directory. */
-  if (memcache)
-    SVN_ERR(svn_cache__create_memcache(&(ffd->dir_cache),
-                                       memcache,
-                                       svn_fs_fs__dir_entries_serialize,
-                                       svn_fs_fs__dir_entries_deserialize,
-                                       APR_HASH_KEY_STRING,
-                                       apr_pstrcat(pool, prefix, "DIR",
-                                                   NULL),
-                                       fs->pool));
+  if (get_global_membuffer_cache())
+    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->dir_cache),
+                                              get_global_membuffer_cache(),
+                                              svn_fs_fs__dir_entries_serialize,
+                                              svn_fs_fs__dir_entries_deserialize,
+                                              APR_HASH_KEY_STRING,
+                                              apr_pstrcat(pool, prefix, "DIR",
+                                                          NULL),
+                                              fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->dir_cache),
                                         dup_dir_listing, APR_HASH_KEY_STRING,
@@ -362,15 +362,15 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   /* Only 16 bytes per entry (a revision number + the corresponding offset).
      Since we want ~8k pages, that means 512 entries per page. */
-  if (memcache)
-    SVN_ERR(svn_cache__create_memcache(&(ffd->packed_offset_cache),
-                                       memcache,
-                                       manifest_serialize,
-                                       manifest_deserialize,
-                                       sizeof(svn_revnum_t),
-                                       apr_pstrcat(pool, prefix, "PACK-MANIFEST",
-                                                   NULL),
-                                       fs->pool));
+  if (get_global_membuffer_cache())
+    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->packed_offset_cache),
+                                              get_global_membuffer_cache(),
+                                              svn_fs_fs__serialize_manifest,
+                                              svn_fs_fs__deserialize_manifest,
+                                              sizeof(svn_revnum_t),
+                                              apr_pstrcat(pool, prefix, "PACK-MANIFEST",
+                                                          NULL),
+                                              fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->packed_offset_cache),
                                         dup_pack_manifest, sizeof(svn_revnum_t),
