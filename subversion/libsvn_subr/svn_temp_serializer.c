@@ -142,7 +142,7 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
                           const void * const * source_pointer)
 {
   apr_size_t offset;
-  
+
   /* if *source_pointer is the root struct, there will be no parent structure
    * to relate it to */
   if (context->source == NULL)
@@ -229,6 +229,32 @@ svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
   /* append the string data */
   if (*s)
     svn_stringbuf_appendbytes(context->buffer, *s, strlen(*s) + 1);
+}
+
+/* Set the serialized representation of the pointer PTR inside the current
+ * structure within the serialization CONTEXT to NULL. This is particularly
+ * useful if the pointer is not NULL in the source structure.
+ */
+void
+svn_temp_serializer__set_NULL(svn_temp_serializer__context_t *context,
+                              const void * const * ptr)
+{
+  apr_size_t offset;
+
+  /* there must be a parent structure */
+  assert(context->source);
+
+  /* relative position of the serialized pointer to the begin of the buffer */
+  offset = (const char *)ptr
+         - (const char *)context->source->source_struct
+         + context->source->target_offset;
+
+  /* the offset must be within the serialized data. Otherwise, you forgot
+   * to serialize the respective sub-struct. */
+  assert(context->buffer->len > offset);
+
+  /* use the serialized pointer as a storage for the offset */
+  *(apr_size_t*)(context->buffer->data + offset) = 0;
 }
 
 /* Return the the data buffer that receives the serialialized data from

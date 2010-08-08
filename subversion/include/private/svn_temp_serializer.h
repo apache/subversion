@@ -116,6 +116,16 @@ svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
                                 const char * const * s);
 
 /**
+ * Set the serialized representation of the pointer @a ptr inside the
+ * current structure within the serialization @a context to @c NULL.
+ * This is particularly useful if the pointer is not @c NULL in the
+ * source structure.
+ */
+void
+svn_temp_serializer__set_NULL(svn_temp_serializer__context_t *context,
+                              const void * const * ptr);
+
+/**
  * @return a reference to the data buffer containing the data serialialized
  * so far in the given serialization @a context.
  */
