@@ -1065,20 +1065,6 @@ svn_fs_fs__dag_dup(const dag_node_t *node,
 }
 
 svn_error_t *
-svn_fs_fs__dag_dup_for_cache(void **out,
-                             const void *in,
-                             apr_pool_t *pool)
-{
-  const dag_node_t *in_node = in;
-  dag_node_t *out_node;
-
-  out_node = svn_fs_fs__dag_dup(in_node, pool);
-  out_node->fs = NULL;
-  *out = out_node;
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_fs_fs__dag_serialize(char **data,
                          apr_size_t *data_len,
                          void *in,
