@@ -782,9 +782,9 @@ svn_stream_from_aprfile2(apr_file_t *file,
 }
 
 svn_stream_t *
-svn_stream_from_cached_file_handle(svn_file_handle_cache__handle_t *file,
-                                   svn_boolean_t disown,
-                                   apr_pool_t *pool)
+svn_stream__from_cached_file_handle(svn_file_handle_cache__handle_t *file,
+                                    svn_boolean_t disown,
+                                    apr_pool_t *pool)
 {
   struct baton_apr *baton;
 

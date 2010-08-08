@@ -2125,7 +2125,7 @@ get_node_revision_body(node_revision_t **noderev_p,
     }
 
   return svn_fs_fs__read_noderev(noderev_p,
-                                 svn_stream_from_cached_file_handle
+                                 svn_stream__from_cached_file_handle
                                      (revision_file,
                                       FALSE,
                                       pool),
@@ -3150,7 +3150,7 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
     }
 
   /* Read the next window. */
-  stream = svn_stream_from_cached_file_handle(rs->file, TRUE, pool);
+  stream = svn_stream__from_cached_file_handle(rs->file, TRUE, pool);
   SVN_ERR(svn_txdelta_read_svndiff_window(nwin, stream, rs->ver, pool));
   rs->chunk_index++;
   SVN_ERR(get_file_offset(&rs->off, rs->apr_file, pool));
