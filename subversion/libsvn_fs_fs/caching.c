@@ -195,7 +195,7 @@ warn_on_cache_errors(svn_error_t *err,
 static svn_fs_fs__cache_config_t cache_settings =
   {
     /* default configuration:
-      */
+     */
     0x8000000,   /* 128 MB for caches */
     16,          /* up to 16 files kept open */
     FALSE,       /* don't cache fulltexts */
@@ -415,6 +415,28 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   /* initialize file handle cache as configured */
   ffd->file_handle_cache = get_global_file_handle_cache();
+
+  /* if enabled, enable the txdelta window cache */
+  if (get_global_membuffer_cache() &&
+      svn_fs_fs__get_cache_config()->cache_txdeltas)
+    {
+      SVN_ERR(svn_cache__create_membuffer_cache
+                (&(ffd->txdelta_window_cache),
+                 get_global_membuffer_cache(),
+                 svn_fs_fs__serialize_txdelta_window,
+                 svn_fs_fs__deserialize_txdelta_window,
+                 APR_HASH_KEY_STRING,
+                 apr_pstrcat(pool, prefix, "TXDELTA_WINDOW", NULL),
+                 fs->pool));
+    }
+  else
+    {
+      ffd->txdelta_window_cache = NULL;
+    }
+
+  if (ffd->txdelta_window_cache && ! no_handler)
+    SVN_ERR(svn_cache__set_error_handler(ffd->txdelta_window_cache,
+                                         warn_on_cache_errors, fs, pool));
 
   return SVN_NO_ERROR;
 }

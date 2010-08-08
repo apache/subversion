@@ -244,6 +244,9 @@ typedef struct
   /* Reference to the process-global open file handle cache */
   svn_file_handle_cache_t *file_handle_cache;
 
+  /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
+  svn_cache__t *txdelta_window_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 
