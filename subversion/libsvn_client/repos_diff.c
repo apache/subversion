@@ -89,6 +89,17 @@ struct edit_baton {
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 
+  /* TRUE if the operation needs to walk deleted dirs on the "old" side.
+     FALSE otherwise. */
+  svn_boolean_t walk_deleted_repos_dirs;
+
+  /* A callback used to see if the client wishes to cancel the running
+     operation. */
+  svn_cancel_func_t cancel_func;
+
+  /* A baton to pass to the cancellation callback. */
+  void *cancel_baton;
+
   apr_pool_t *pool;
 };
 
@@ -443,6 +454,90 @@ open_root(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+/* Recursively walk tree rooted at DIR (at REVISION) in the repository,
+ * reporting all files as deleted.  Part of a workaround for issue 2333.
+ *
+ * DIR is a repository path relative to the URL in RA_SESSION.  REVISION
+ * may be NULL, in which case it defaults to HEAD.  EDIT_BATON is the
+ * overall crawler editor baton.  If CANCEL_FUNC is not NULL, then it
+ * should refer to a cancellation function (along with CANCEL_BATON).
+ */
+/* ### TODO: Handle depth. */
+static svn_error_t *
+diff_deleted_dir(const char *dir,
+                 svn_revnum_t revision,
+                 svn_ra_session_t *ra_session,
+                 void *edit_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+  apr_hash_t *dirents;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_index_t *hi;
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  SVN_ERR(svn_ra_get_dir2(ra_session,
+                          &dirents,
+                          NULL, NULL,
+                          dir,
+                          revision,
+                          SVN_DIRENT_KIND,
+                          pool));
+  
+  for (hi = apr_hash_first(pool, dirents); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path;
+      const char *name = svn__apr_hash_index_key(hi);
+      svn_dirent_t *dirent = svn__apr_hash_index_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      path = svn_relpath_join(dir, name, iterpool);
+
+      if (dirent->kind == svn_node_file)
+        {
+          struct file_baton *b;
+          const char *mimetype1, *mimetype2;
+          svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
+          svn_boolean_t tree_conflicted = FALSE;
+
+          /* Compare a file being deleted against an empty file */
+          b = make_file_baton(path, FALSE, eb, iterpool);
+          SVN_ERR(get_file_from_ra(b, revision));
+
+          SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
+      
+          get_file_mime_types(&mimetype1, &mimetype2, b);
+
+          SVN_ERR(eb->diff_callbacks->file_deleted
+                  (NULL, &state, &tree_conflicted, b->wcpath,
+                   b->path_start_revision,
+                   b->path_end_revision,
+                   mimetype1, mimetype2,
+                   b->pristine_props,
+                   b->edit_baton->diff_cmd_baton,
+                   pool));
+        }
+ 
+      if (dirent->kind == svn_node_dir)
+        SVN_ERR(diff_deleted_dir(path,
+                                 revision,
+                                 ra_session,
+                                 eb,
+                                 cancel_func,
+                                 cancel_baton,
+                                 iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 /* An editor function.  */
 static svn_error_t *
 delete_entry(const char *path,
@@ -500,6 +595,20 @@ delete_entry(const char *path,
                     (local_dir_abspath, &state, &tree_conflicted,
                      svn_dirent_join(eb->target, path, pool),
                      eb->diff_cmd_baton, pool));
+ 
+            if (eb->walk_deleted_repos_dirs)
+              {
+                /* A workaround for issue 2333.  The "old" dir will be
+                skipped by the repository report.  Crawl it recursively,
+                diffing each file against the empty file. */
+                SVN_ERR(diff_deleted_dir(path,
+                                         eb->revision,
+                                         eb->ra_session,
+                                         eb,
+                                         eb->cancel_func,
+                                         eb->cancel_baton,
+                                         pool));
+              }
             break;
           }
         default:
@@ -1213,6 +1322,9 @@ svn_client__get_diff_editor(const char *target,
   eb->pool = subpool;
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;
+  eb->walk_deleted_repos_dirs = TRUE;
+  eb->cancel_func = cancel_func;
+  eb->cancel_baton = cancel_baton;
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;
