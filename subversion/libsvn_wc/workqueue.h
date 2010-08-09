@@ -200,10 +200,10 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
    the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping
    any WORKING_NODE data.
 
-   ### This is only used from update_editor.c's do_entry_deletion() and
-   ### the current implementation doesn't check if it removes more than
-   ### just this documented behavior. (It is just a copy of the old loggy
-   ### code)
+   This function doesn't check for local modifications of the text files
+   as these would have triggered a tree conflict before.
+
+   ### This is only used from update_editor.c's do_entry_deletion().
  */
 svn_error_t *
 svn_wc__wq_build_base_remove(svn_skel_t **work_item,
