@@ -300,7 +300,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   /* initialize file handle cache as configured */
   ffd->file_handle_cache = get_global_file_handle_cache();
 
-  /* if enabled, enable the txdelta window cache */
+  /* initialize txdelta window cache, if that has been enabled */
   if (get_global_membuffer_cache() &&
       svn_fs_fs__get_cache_config()->cache_txdeltas)
     {
@@ -320,6 +320,29 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   if (ffd->txdelta_window_cache && ! no_handler)
     SVN_ERR(svn_cache__set_error_handler(ffd->txdelta_window_cache,
+                                         warn_on_cache_errors, fs, pool));
+
+  /* initialize node revision cache, if caching has been enabled */
+  if (get_global_membuffer_cache())
+    {
+      SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->node_revision_cache),
+                                                get_global_membuffer_cache(),
+                                                svn_fs_fs__serialize_node_revision,
+                                                svn_fs_fs__deserialize_node_revision,
+                                                APR_HASH_KEY_STRING,
+                                                apr_pstrcat(pool,
+                                                            prefix,
+                                                            "NODEREVS",
+                                                            NULL),
+                                                fs->pool));
+    }
+  else
+    {
+      ffd->node_revision_cache = NULL;
+    }
+
+  if (ffd->node_revision_cache && ! no_handler)
+    SVN_ERR(svn_cache__set_error_handler(ffd->node_revision_cache,
                                          warn_on_cache_errors, fs, pool));
 
   return SVN_NO_ERROR;

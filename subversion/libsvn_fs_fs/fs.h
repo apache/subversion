@@ -247,6 +247,9 @@ typedef struct
   /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
   svn_cache__t *txdelta_window_cache;
 
+  /* Cache for node_revision_t objects; the key is (revision, id offset) */
+  svn_cache__t *node_revision_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 
