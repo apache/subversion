@@ -7041,11 +7041,12 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  * @c SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_file itself
  * if @c SVN_WC_TRANSLATE_FROM_NF is specified.
  *
- * Output files are created in the temp file area belonging to
- * @a versioned_file.  By default they will be deleted at pool cleanup.
- *
- * If @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP is specified, the default
- * pool cleanup handler to remove @a *xlated_path is not registered.
+ * If a new output file is created, it is created in the temp file area
+ * belonging to @a versioned_file.  By default it will be deleted at pool
+ * cleanup.  If @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP is specified, the
+ * default pool cleanup handler to remove @a *xlated_path is not registered.
+ * If the input file is returned as the output, its lifetime is not
+ * specified.
  *
  * If an error is returned, the effect on @a *xlated_path is undefined.
  *
