@@ -360,7 +360,6 @@ void SVNClient::setProgressListener(ProgressListener *listener)
 void SVNClient::remove(Targets &targets, const char *message, bool force,
                        bool keep_local, RevpropTable &revprops)
 {
-    svn_commit_info_t *commit_info = NULL;
     SVN::Pool requestPool;
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
@@ -369,7 +368,7 @@ void SVNClient::remove(Targets &targets, const char *message, bool force,
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_delete3(&commit_info, targets2, force, keep_local,
+    SVN_JNI_ERR(svn_client_delete4(targets2, force, keep_local,
                                    revprops.hash(requestPool), ctx,
                                    requestPool.pool()), );
 }
@@ -494,8 +493,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     if (ctx == NULL)
         return;
 
-    svn_commit_info_t *commit_info;
-    SVN_JNI_ERR(svn_client_copy5(&commit_info, srcs, destinationPath.c_str(),
+    SVN_JNI_ERR(svn_client_copy6(srcs, destinationPath.c_str(),
                                  copyAsChild, makeParents, ignoreExternals,
                                  revprops.hash(requestPool), ctx,
                                  requestPool.pool()), );
@@ -517,8 +515,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     if (ctx == NULL)
         return;
 
-    svn_commit_info_t *commit_info;
-    SVN_JNI_ERR(svn_client_move5(&commit_info, (apr_array_header_t *) srcs,
+    SVN_JNI_ERR(svn_client_move6((apr_array_header_t *) srcs,
                                  destinationPath.c_str(), force, moveAsChild,
                                  makeParents, revprops.hash(requestPool), ctx,
                                  requestPool.pool()), );
@@ -528,7 +525,6 @@ void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents,
                       RevpropTable &revprops)
 {
     SVN::Pool requestPool;
-    svn_commit_info_t *commit_info = NULL;
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
@@ -536,7 +532,7 @@ void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents,
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_mkdir3(&commit_info, targets2, makeParents,
+    SVN_JNI_ERR(svn_client_mkdir4(targets2, makeParents,
                                   revprops.hash(requestPool), ctx,
                                   requestPool.pool()), );
 }
@@ -648,14 +644,12 @@ void SVNClient::doImport(const char *path, const char *url,
     Path intUrl(url);
     SVN_JNI_ERR(intUrl.error_occured(), );
 
-    svn_commit_info_t *commit_info = NULL;
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_import3(&commit_info, intPath.c_str(),
-                                   intUrl.c_str(), depth, noIgnore,
-                                   ignoreUnknownNodeTypes,
+    SVN_JNI_ERR(svn_client_import4(intPath.c_str(), intUrl.c_str(), depth,
+                                   noIgnore, ignoreUnknownNodeTypes,
                                    revprops.hash(requestPool), ctx,
                                    requestPool.pool()), );
 }
@@ -974,7 +968,6 @@ void SVNClient::propertySet(const char *path, const char *name,
     else
       val = svn_string_create(value, requestPool.pool());
 
-    svn_commit_info_t *commit_info = NULL;
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
 
@@ -982,7 +975,7 @@ void SVNClient::propertySet(const char *path, const char *name,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_propset3(&commit_info, name, val, intPath.c_str(),
+    SVN_JNI_ERR(svn_client_propset4(name, val, intPath.c_str(),
                                     depth, force, SVN_INVALID_REVNUM,
                                     changelists.array(requestPool),
                                     revprops.hash(requestPool),
