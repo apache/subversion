@@ -48,7 +48,6 @@
 #include "svn_iter.h"
 
 #include "wc.h"
-#include "log.h"
 #include "adm_files.h"
 #include "entries.h"
 #include "lock.h"
@@ -2219,54 +2218,19 @@ do_entry_deletion(struct edit_baton *eb,
   if (strcmp(local_abspath, eb->target_abspath) != 0)
     {
       /* Delete, and do not leave a not-present node.  */
-      SVN_ERR(svn_wc__loggy_delete_entry(&work_item,
-                                         eb->db, dir_abspath, local_abspath,
-                                         SVN_INVALID_REVNUM,
-                                         svn_wc__db_kind_unknown,
-                                         pool));
+      SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
+                                           eb->db, local_abspath, FALSE,
+                                           pool, pool));
       SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
     }
   else
     {
       /* Delete, leaving a not-present node.  */
-      SVN_ERR(svn_wc__loggy_delete_entry(&work_item,
-                                         eb->db, dir_abspath, local_abspath,
-                                         *eb->target_revision,
-                                         kind,
-                                         pool));
+      SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
+                                           eb->db, local_abspath, TRUE,
+                                           pool, pool));
       SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
       eb->target_deleted = TRUE;
-    }
-
-  if (eb->switch_relpath)
-    {
-      /* The SVN_WC__LOG_DELETE_ENTRY log item will cause
-       * svn_wc_remove_from_revision_control() to be run.  But that
-       * function checks whether the deletion target's URL is child of
-       * its parent directory's URL, and if it's not, then the entry
-       * in parent won't be deleted (because presumably the child
-       * represents a disjoint working copy, i.e., it is a wc_root).
-       *
-       * However, during a switch this works against us, because by
-       * the time we get here, the parent's URL has already been
-       * changed.  So we manually remove the child from revision
-       * control after the delete-entry item has been written in the
-       * parent's log, but before it is run, so the only work left for
-       * the log item is to remove the entry in the parent directory.
-       */
-
-      if (kind == svn_wc__db_kind_dir)
-        {
-          SVN_ERR(leftmod_error_chain(
-                    svn_wc__internal_remove_from_revision_control(
-                      eb->db,
-                      local_abspath,
-                      TRUE, /* destroy */
-                      FALSE, /* instant error */
-                      eb->cancel_func,
-                      eb->cancel_baton,
-                      pool)));
-        }
     }
 
   /* Note: these two lines are duplicated in the tree-conflicts bail out
