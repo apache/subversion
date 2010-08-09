@@ -52,7 +52,6 @@
 #include "svn_sorts.h"
 
 #include "wc.h"
-#include "log.h"
 #include "adm_files.h"
 #include "entries.h"
 #include "lock.h"

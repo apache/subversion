@@ -34,7 +34,6 @@
 #include "svn_path.h"
 
 #include "wc.h"
-#include "log.h"
 #include "workqueue.h"
 #include "adm_files.h"
 #include "props.h"
