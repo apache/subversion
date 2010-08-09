@@ -2135,16 +2135,16 @@ do_entry_deletion(struct edit_baton *eb,
         {
           /* The item exists locally and has some sort of local mod.
            * It no longer exists in the repository at its target URL@REV.
-           * (### If its WC parent was not updated similarly, then it needs to
-           * be marked 'deleted' in its WC parent.)
+           *
            * To prepare the "accept mine" resolution for the tree conflict,
            * we must schedule the existing content for re-addition as a copy
            * of what it was, but with its local modifications preserved. */
 
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
+          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, FALSE,
                                                pool));
 
-          return SVN_NO_ERROR;
+          /* Fall through to remove the BASE_NODEs properly, with potentially
+             keeping a not-present marker */
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
         {
@@ -2159,28 +2159,18 @@ do_entry_deletion(struct edit_baton *eb,
         {
           /* The item was locally replaced with something else. We should
            * remove the BASE node below the new working node, which turns
-           * the replacement in an addition.
-           */
-
-          /* ### This does something similar, but not exactly what is
-             ### required: Copy working to working and then delete
-             ### BASE_NODE. Not exactly right, but not
-             ### completely wrong as the result is the same.
-
-             ### It only misses the explicit target check for adding
-             ### back a not-present node. */
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
-                                               pool));
-
-          return SVN_NO_ERROR;
+           * the replacement in an addition. */
+           
+           /* Fall through to the normal "delete" code path. */
         }
       else
         SVN_ERR_MALFUNCTION();  /* other reasons are not expected here */
     }
 
-  /* Issue a loggy command to delete the entry from version control and to
-     delete it from disk if unmodified, but leave any modified files on disk
-     unversioned.
+  /* Issue a wq operation to delete the BASE_NODE data and to delete actual
+     nodes based on that from disk, but leave any WORKING_NODEs on disk.
+
+     Local modifications are already turned into copies at this point.
 
      If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
@@ -2203,8 +2193,6 @@ do_entry_deletion(struct edit_baton *eb,
       eb->target_deleted = TRUE;
     }
 
-  /* Note: these two lines are duplicated in the tree-conflicts bail out
-   * above. */
   SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          pool));
