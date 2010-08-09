@@ -708,7 +708,12 @@ add_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
   const char *full_path = svn_dirent_join(eb->root_path, path, pool);
-  const char *full_url = svn_uri_join(eb->root_url, path, pool);
+
+  /* path is not canonicalized, i.e. it may still contain spaces etc. */
+  const char *full_url = svn_uri_canonicalize(svn_uri_join(eb->root_url, 
+                                                           path, 
+                                                           pool),
+                                              pool);
 
   fb->edit_baton = eb;
   fb->path = full_path;
