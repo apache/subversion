@@ -87,9 +87,19 @@ class CommitNotifier
       return SVN_NO_ERROR;
     }
 
-    svn_commit_info_t *getInfo()
+    long getRevnum()
     {
-        return info;
+        if (info && SVN_IS_VALID_REVNUM(info->revision))
+            return info->revision;
+
+        return SVN_INVALID_REVNUM;
+    }
+
+    /* Special operator new to allocate this thing in a pool. */
+    void * operator new(size_t sz, SVN::Pool &pool)
+    {
+        void *ptr = apr_pcalloc(pool.pool(), sizeof(CommitNotifier));
+        return ptr;
     }
 
   protected:
@@ -447,15 +457,11 @@ jlong SVNClient::commit(Targets &targets, const char *message,
                         StringArray &changelists, RevpropTable &revprops)
 {
     SVN::Pool requestPool;
-    CommitNotifier commitNotifier(requestPool);
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), -1);
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return SVN_INVALID_REVNUM;
-
-    ctx->commit_callback2 = CommitNotifier::callback;
-    ctx->commit_baton = &commitNotifier;
 
     SVN_JNI_ERR(svn_client_commit5(targets2, depth,
                                    noUnlock, keepChangelist,
@@ -464,11 +470,7 @@ jlong SVNClient::commit(Targets &targets, const char *message,
                                    requestPool.pool()),
                 SVN_INVALID_REVNUM);
 
-    svn_commit_info_t *commit_info = commitNotifier.getInfo();
-    if (commit_info && SVN_IS_VALID_REVNUM(commit_info->revision))
-        return commit_info->revision;
-
-    return SVN_INVALID_REVNUM;
+    return ((CommitNotifier *)ctx->commit_baton)->getRevnum();
 }
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
@@ -1184,7 +1186,8 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
 
 svn_client_ctx_t *SVNClient::getContext(const char *message)
 {
-    apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
+    SVN::Pool *requestPool = JNIUtil::getRequestPool();
+    apr_pool_t *pool = requestPool->pool();
     svn_auth_baton_t *ab;
     svn_client_ctx_t *ctx;
     SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
@@ -1279,6 +1282,9 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
 
     ctx->progress_func = ProgressListener::progress;
     ctx->progress_baton = m_progressListener;
+
+    ctx->commit_callback2 = CommitNotifier::callback;
+    ctx->commit_baton = new (*requestPool) CommitNotifier(*requestPool);
 
     if (m_conflictResolver)
     {
