@@ -45,6 +45,7 @@
 #define OP_REVERT "revert"
 #define OP_KILLME "killme"
 #define OP_LOGGY "loggy"
+#define OP_BASE_REMOVE "base-remove"
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
 /* Arguments of OP_POSTCOMMIT:
  *   (local_abspath, revnum, date, [author], [checksum],
@@ -640,6 +641,177 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 #endif
 
 /* ------------------------------------------------------------------------ */
+/* OP_REMOVE_BASE  */
+
+/* Ben sez:  this log command is (at the moment) only executed by the
+   update editor.  It attempts to forcefully remove working data. */
+/* Delete a node from version control, and from disk if unmodified.
+ * LOCAL_ABSPATH is the name of the file or directory to be deleted.
+ * If it is unversioned,
+ * do nothing and return no error. Otherwise, delete its WC entry and, if
+ * the working version is unmodified, delete it from disk. */
+static svn_error_t *
+basic_delete_entry(svn_wc__db_t *db,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool)
+{
+  svn_wc__db_kind_t kind;
+  svn_boolean_t hidden;
+  svn_error_t *err;
+
+  /* Figure out if 'name' is a dir or a file */
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
+  if (kind == svn_wc__db_kind_unknown)
+    return SVN_NO_ERROR; /* Already gone */
+
+  SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, scratch_pool));
+  if (hidden)
+    return SVN_NO_ERROR;
+
+  /* Remove the object from revision control -- whether it's a
+     single file or recursive directory removal.  Attempt
+     to destroy all working files & dirs too.
+
+     ### We pass NULL, NULL for cancel_func and cancel_baton below.
+     ### If they were available, it would be nice to use them. */
+  if (kind == svn_wc__db_kind_dir)
+    {
+      svn_wc__db_status_t status;
+
+      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                      NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+      if (status == svn_wc__db_status_obstructed ||
+          status == svn_wc__db_status_obstructed_add ||
+          status == svn_wc__db_status_obstructed_delete)
+        {
+          /* Removing a missing wcroot is easy, just remove its parent entry
+             ### BH: I can't tell why we don't use this for adds.
+                     We might want to remove WC obstructions?
+
+             We don't have a missing status in the final version of WC-NG,
+             so why bother researching its history.
+          */
+          if (status != svn_wc__db_status_obstructed_add)
+            {
+              SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                      scratch_pool));
+
+              return SVN_NO_ERROR;
+            }
+        }
+    }
+
+  err = svn_wc__internal_remove_from_revision_control(db,
+                                                      local_abspath,
+                                                      TRUE, /* destroy */
+                                                      FALSE, /* instant_error*/
+                                                      NULL, NULL,
+                                                      scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      return svn_error_return(err);
+    }
+}
+
+/* Process the OP_REMOVE_BASE work item WORK_ITEM.
+ * See svn_wc__wq_build_remove_base() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+
+static svn_error_t *
+run_base_remove(svn_wc__db_t *db,
+                const svn_skel_t *work_item,
+                const char *wri_abspath,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath;
+  svn_boolean_t keep_not_present;
+  svn_revnum_t revision;
+  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  svn_wc__db_kind_t kind;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  keep_not_present = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
+
+  if (keep_not_present)
+    {
+      SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision, &repos_relpath,
+                                       &repos_root_url, &repos_uuid, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      if (!repos_relpath)
+        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                           &repos_uuid,
+                                           db, local_abspath, scratch_pool,
+                                           scratch_pool));
+
+#ifndef SVN_WC__SINGLE_DB
+      /* ### When LOCAL_ABSPATH is obstructed, we might not receive a valid
+         ### revision here. For the small time that is left until Single-DB
+         ### just mark the not-present node as revision 0, as we are not
+         ### interested in the revision of not-present nodes anyway.
+
+         ### Triggered by update_tests.py 15: issue #919, updates that delete
+       */
+      if (!SVN_IS_VALID_REVNUM(revision))
+        revision = 0;
+#endif
+    }
+
+  SVN_ERR(basic_delete_entry(db, local_abspath, scratch_pool));
+
+  if (keep_not_present)
+    {
+      SVN_ERR(svn_wc__db_base_add_absent_node(db, local_abspath,
+                                              repos_relpath,
+                                              repos_root_url,
+                                              repos_uuid,
+                                              revision,
+                                              kind,
+                                              svn_wc__db_status_not_present,
+                                              NULL,
+                                              NULL,
+                                              scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wq_build_base_remove(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t keep_not_present,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  /* If a SOURCE_ABSPATH was provided, then put it into the skel. If this
+     value is not provided, then the file's pristine contents will be used.  */
+
+  svn_skel__prepend_int(keep_not_present, *work_item, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_BASE_REMOVE, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
 
 /* OP_LOGGY  */
 
@@ -2313,6 +2485,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_RECORD_FILEINFO, run_record_fileinfo },
+  { OP_BASE_REMOVE, run_base_remove },
   { OP_TMP_SET_TEXT_CONFLICT_MARKERS, run_set_text_conflict_markers },
   { OP_TMP_SET_PROPERTY_CONFLICT_MARKER, run_set_property_conflict_marker },
   { OP_PRISTINE_GET_TRANSLATED, run_pristine_get_translated },

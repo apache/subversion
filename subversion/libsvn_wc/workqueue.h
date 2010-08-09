@@ -196,6 +196,23 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                       svn_boolean_t use_commit_times,
                       apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that will remove all the data of
+   the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping
+   any WORKING_NODE data.
+
+   ### This is only used from update_editor.c's do_entry_deletion() and
+   ### the current implementation doesn't check if it removes more than
+   ### just this documented behavior. (It is just a copy of the old loggy
+   ### code)
+ */
+svn_error_t *
+svn_wc__wq_build_base_remove(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t keep_not_present,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 #ifndef SVN_WC__SINGLE_DB
 /* Handle the old "KILLME" concept -- perform the actual deletion of a
    subdir (or just its admin area) during post-commit processing of a
