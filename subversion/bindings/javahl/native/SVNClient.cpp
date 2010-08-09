@@ -68,6 +68,42 @@
 #include <iostream>
 #include <sstream>
 
+class CommitNotifier
+{
+  public:
+    CommitNotifier(SVN::Pool &inPool)
+        : pool(inPool), info(NULL)
+    {
+        ;
+    }
+
+    static svn_error_t *callback(const svn_commit_info_t *commit_info,
+                                 void *baton,
+                                 apr_pool_t *pool)
+    {
+      if (baton)
+        return ((CommitNotifier *)baton)->stashInfo(commit_info);
+
+      return SVN_NO_ERROR;
+    }
+
+    svn_commit_info_t *getInfo()
+    {
+        return info;
+    }
+
+  protected:
+    svn_error_t *stashInfo(const svn_commit_info_t *commit_info)
+    {
+        info = svn_commit_info_dup(commit_info, pool.pool());
+        return SVN_NO_ERROR;
+    }
+
+  private:
+    SVN::Pool &pool;
+    svn_commit_info_t *info;
+};
+
 struct log_msg_baton
 {
     const char *message;
@@ -411,20 +447,24 @@ jlong SVNClient::commit(Targets &targets, const char *message,
                         StringArray &changelists, RevpropTable &revprops)
 {
     SVN::Pool requestPool;
-    svn_commit_info_t *commit_info = NULL;
+    CommitNotifier commitNotifier(requestPool);
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), -1);
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return SVN_INVALID_REVNUM;
 
-    SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, depth,
+    ctx->commit_callback2 = CommitNotifier::callback;
+    ctx->commit_baton = &commitNotifier;
+
+    SVN_JNI_ERR(svn_client_commit5(targets2, depth,
                                    noUnlock, keepChangelist,
                                    changelists.array(requestPool),
                                    revprops.hash(requestPool), ctx,
                                    requestPool.pool()),
                 SVN_INVALID_REVNUM);
 
+    svn_commit_info_t *commit_info = commitNotifier.getInfo();
     if (commit_info && SVN_IS_VALID_REVNUM(commit_info->revision))
         return commit_info->revision;
 
