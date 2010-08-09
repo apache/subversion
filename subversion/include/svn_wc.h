@@ -7051,6 +7051,7 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  * If an error is returned, the effect on @a *xlated_path is undefined.
  *
  * @since New in 1.4
+ * @deprecated Provided for compatibility with the 1.6 API
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -7091,6 +7092,7 @@ svn_wc_translated_file(const char **xlated_p,
  * svn_wc_translated_file().
  *
  * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
