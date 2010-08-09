@@ -728,27 +728,17 @@ remove_base_node(svn_wc__db_t *db,
                                     scratch_pool));
 #endif
 
-      if (base_kind == svn_wc__db_kind_file
-          || base_kind == svn_wc__db_kind_symlink)
+      if (wrk_status != svn_wc__db_status_deleted
+          && (base_kind == svn_wc__db_kind_file
+              || base_kind == svn_wc__db_kind_symlink))
         {
-#ifdef HAVE_SYMLINK
-          svn_boolean_t wc_special, local_special;
-          svn_node_kind_t on_disk;
-
-          SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
-                                             &wc_special, db, local_abspath,
-                                             scratch_pool, scratch_pool));
-          SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk,
-                                            &local_special, scratch_pool));
-
-          /* Don't delete a file obstructing a symlink or vice versa */
-          /* ### Shouldn't this be handled as a tree conflict
-             ### in the update editor? */
-          if (wc_special == local_special)
-#endif /* HAVE_SYMLINK */
-            SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
+          SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
         }
-      else
+      else if (base_kind == svn_wc__db_kind_dir
+#ifdef SVN_WC__SINGLE_DB
+               && wrk_status != svn_wc__db_status_deleted
+#endif
+              )
         {
           svn_error_t *err = svn_io_dir_remove_nonrecursive(local_abspath,
                                                             scratch_pool);
