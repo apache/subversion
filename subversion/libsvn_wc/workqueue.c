@@ -641,84 +641,126 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 /* ------------------------------------------------------------------------ */
 /* OP_REMOVE_BASE  */
 
-/* Ben sez:  this log command is (at the moment) only executed by the
-   update editor.  It attempts to forcefully remove working data. */
-/* Delete a node from version control, and from disk if unmodified.
- * LOCAL_ABSPATH is the name of the file or directory to be deleted.
- * If it is unversioned,
- * do nothing and return no error. Otherwise, delete its WC entry and, if
- * the working version is unmodified, delete it from disk. */
+/* Removes a BASE_NODE and all it's data, leaving any adds and copies as is.
+   Do this as a depth first traversal to make sure than any parent still exists
+   on error conditions. 
+   
+   ### This function needs review for 4th tree behavior.*/
 static svn_error_t *
-basic_delete_entry(svn_wc__db_t *db,
-                   const char *local_abspath,
-                   apr_pool_t *scratch_pool)
+remove_base_node(svn_wc__db_t *db,
+                 const char *local_abspath,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
-  svn_boolean_t hidden;
-  svn_error_t *err;
+  svn_wc__db_status_t base_status, wrk_status;
+  svn_wc__db_kind_t base_kind, wrk_kind;
+  svn_boolean_t have_base, have_work;
 
-  /* Figure out if 'name' is a dir or a file */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
-  if (kind == svn_wc__db_kind_unknown)
-    return SVN_NO_ERROR; /* Already gone */
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, scratch_pool));
-  if (hidden)
-    return SVN_NO_ERROR;
+  SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, &have_base,
+                               &have_work, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
 
-  /* Remove the object from revision control -- whether it's a
-     single file or recursive directory removal.  Attempt
-     to destroy all working files & dirs too.
+#ifndef SVN_WC__SINGLE_DB
+  if (!have_base)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Node '%s' not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+#else
+  SVN_ERR_ASSERT(have_base); /* Verified in caller and _base_get_children() */
+#endif
 
-     ### We pass NULL, NULL for cancel_func and cancel_baton below.
-     ### If they were available, it would be nice to use them. */
-  if (kind == svn_wc__db_kind_dir)
+  if (wrk_status == svn_wc__db_status_normal
+      || wrk_status == svn_wc__db_status_not_present
+      || wrk_status == svn_wc__db_status_absent)
     {
-      svn_wc__db_status_t status;
-
-      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
-                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                      NULL, NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-      if (status == svn_wc__db_status_obstructed ||
-          status == svn_wc__db_status_obstructed_add ||
-          status == svn_wc__db_status_obstructed_delete)
-        {
-          /* Removing a missing wcroot is easy, just remove its parent entry
-             ### BH: I can't tell why we don't use this for adds.
-                     We might want to remove WC obstructions?
-
-             We don't have a missing status in the final version of WC-NG,
-             so why bother researching its history.
-          */
-          if (status != svn_wc__db_status_obstructed_add)
-            {
-              SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
-                                                      scratch_pool));
-
-              return SVN_NO_ERROR;
-            }
-        }
-    }
-
-  err = svn_wc__internal_remove_from_revision_control(db,
-                                                      local_abspath,
-                                                      TRUE, /* destroy */
-                                                      FALSE, /* instant_error*/
-                                                      NULL, NULL,
-                                                      scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
+      base_status = wrk_status;
+      base_kind = wrk_kind;
     }
   else
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool));
+
+  /* Children first */
+  if (base_kind == svn_wc__db_kind_dir
+      && base_status == svn_wc__db_status_normal)
     {
-      return svn_error_return(err);
+      const apr_array_header_t *children;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      int i;
+
+      SVN_ERR(svn_wc__db_base_get_children(&children, db, local_abspath,
+                                           scratch_pool, iterpool));
+
+      for (i = 0; i < children->nelts; i++)
+        {
+          const char *child_name = APR_ARRAY_IDX(children, i, const char *);
+          const char *child_abspath;
+
+          svn_pool_clear(iterpool);
+
+          child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
+
+          SVN_ERR(remove_base_node(db, child_abspath, cancel_func, cancel_baton,
+                                   iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
     }
+
+  if (base_status == svn_wc__db_status_normal
+      && wrk_status != svn_wc__db_status_added
+      && wrk_status != svn_wc__db_status_obstructed_add
+      && wrk_status != svn_wc__db_status_excluded)
+    {
+#ifndef SVN_WC__SINGLE_DB
+      if (base_kind == svn_wc__db_kind_dir)
+        SVN_ERR(svn_wc__adm_destroy(db, local_abspath, cancel_func, cancel_baton,
+                                    scratch_pool));
+#endif
+
+      if (base_kind == svn_wc__db_kind_file
+          || base_kind == svn_wc__db_kind_symlink)
+        SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
+      else
+        {
+          svn_error_t *err = svn_io_dir_remove_nonrecursive(local_abspath,
+                                                            scratch_pool);
+
+          if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+                      || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)
+                      || APR_STATUS_IS_ENOTEMPTY(err->apr_err)))
+            svn_error_clear(err);
+          else
+            SVN_ERR(err);
+        }
+
+      /* This should remove just BASE and ACTUAL, but for now also remove
+         not existing WORKING_NODE data. */
+      SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath, scratch_pool));
+    }
+  else if (wrk_status == svn_wc__db_status_added
+           || wrk_status == svn_wc__db_status_obstructed_add
+           || (have_work && wrk_status == svn_wc__db_status_excluded))
+    /* ### deletes of working additions should fall in this case, but
+       ### we can't express these without the 4th tree */
+    {
+      /* Just remove the BASE_NODE data */
+      SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
+    }
+  else
+    SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Process the OP_REMOVE_BASE work item WORK_ITEM.
@@ -771,7 +813,9 @@ run_base_remove(svn_wc__db_t *db,
 #endif
     }
 
-  SVN_ERR(basic_delete_entry(db, local_abspath, scratch_pool));
+  SVN_ERR(remove_base_node(db, local_abspath,
+                           cancel_func, cancel_baton,
+                           scratch_pool));
 
   if (keep_not_present)
     {
