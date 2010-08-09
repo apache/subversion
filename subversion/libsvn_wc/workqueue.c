@@ -35,7 +35,6 @@
 #include "workqueue.h"
 #include "adm_files.h"
 #include "translate.h"
-#include "log.h"
 
 #include "svn_private_config.h"
 #include "private/svn_skel.h"
@@ -44,7 +43,6 @@
 /* Workqueue operation names.  */
 #define OP_REVERT "revert"
 #define OP_KILLME "killme"
-#define OP_LOGGY "loggy"
 #define OP_BASE_REMOVE "base-remove"
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
 /* Arguments of OP_POSTCOMMIT:
@@ -812,57 +810,6 @@ svn_wc__wq_build_base_remove(svn_skel_t **work_item,
 
   return SVN_NO_ERROR;
 }
-
-/* OP_LOGGY  */
-
-/* Process the OP_LOGGY work item WORK_ITEM.
- * See svn_wc__wq_add_loggy() which generates this work item.
- * Implements (struct work_item_dispatch).func. */
-static svn_error_t *
-run_loggy(svn_wc__db_t *db,
-          const svn_skel_t *work_item,
-          const char *wri_abspath,
-          svn_cancel_func_t cancel_func,
-          void *cancel_baton,
-          apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *adm_abspath;
-
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  adm_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-
-  return svn_error_return(svn_wc__run_xml_log(
-                            db, adm_abspath,
-                            arg1->next->data, arg1->next->len,
-                            scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__wq_build_loggy(svn_skel_t **work_item,
-                       svn_wc__db_t *db,
-                       const char *adm_abspath,
-                       const svn_stringbuf_t *log_content,
-                       apr_pool_t *result_pool)
-{
-  if (log_content == NULL || svn_stringbuf_isempty(log_content))
-    {
-      *work_item = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  *work_item = svn_skel__make_empty_list(result_pool);
-
-  /* NOTE: the skel still points at ADM_ABSPATH and LOG_CONTENT, but we
-     require these parameters to be allocated in RESULT_POOL.  */
-  svn_skel__prepend_str(log_content->data, *work_item, result_pool);
-  svn_skel__prepend_str(adm_abspath, *work_item, result_pool);
-  svn_skel__prepend_str(OP_LOGGY, *work_item, result_pool);
-
-  return SVN_NO_ERROR;
-}
-
 
 /* ------------------------------------------------------------------------ */
 
@@ -2475,7 +2422,6 @@ svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
 
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
-  { OP_LOGGY, run_loggy },
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
   { OP_POSTCOMMIT, run_postcommit },
   { OP_FILE_INSTALL, run_file_install },
