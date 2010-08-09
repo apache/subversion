@@ -225,24 +225,6 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 #endif
 
 
-/* ### temporary compat for mapping the old loggy into workqueue space.
-
-   Set *WORK_ITEM to a new work item ...
-
-   LOG_CONTENT may be NULL or reference an empty log.  Set *WORK_ITEM to
-   NULL in this case.
-
-   NOTE: ADM_ABSPATH and LOG_CONTENT must live at least as long as
-   RESULT_POOL (typically, they'll be allocated within RESULT_POOL).
-*/
-svn_error_t *
-svn_wc__wq_build_loggy(svn_skel_t **work_item,
-                       svn_wc__db_t *db,
-                       const char *adm_abspath,
-                       const svn_stringbuf_t *log_content,
-                       apr_pool_t *result_pool);
-
-
 /* ### Temporary helper to store text conflict marker locations as a wq
    ### operation. Eventually the data must be stored in the pristine store+db
    ### before the wq runs (within the operation transaction) and then a wq
