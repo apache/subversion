@@ -1,5 +1,5 @@
 /*
- * log.c:  handle the adm area's log file.
+ * cleanup.c:  handle cleaning up workqueue items
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
