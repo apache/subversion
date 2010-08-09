@@ -25,30 +25,18 @@
 
 #include <string.h>
 
-#include <apr_pools.h>
-#include <apr_strings.h>
-
 #include "svn_wc.h"
 #include "svn_error.h"
-#include "svn_string.h"
-#include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "svn_dirent_uri.h"
-#include "svn_path.h"
-#include "svn_time.h"
-#include "svn_iter.h"
 
 #include "wc.h"
-#include "props.h"
 #include "adm_files.h"
 #include "lock.h"
-#include "translate.h"
-#include "tree_conflicts.h"
 #include "workqueue.h"
 
 #include "private/svn_wc_private.h"
-#include "private/svn_skel.h"
 #include "svn_private_config.h"
 
 
