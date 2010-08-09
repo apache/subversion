@@ -48,6 +48,7 @@ correct error message).
 * TODO: extend ra_dav to transmit more error information over the wire
   plan1:
     - nest a "<S:errcode>42</S:errcode>" tag inside the <D:responsedescription> tag.
+    - mod_dav_svn implementation?  
       (mod_dav doesn't XML-encode dav_error->desc)
     - extend ra_neon/ra_serf's start_207()/start_207_element() parsers
   plan2:
