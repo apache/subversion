@@ -338,8 +338,8 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
     }
 
   return svn_error_createf(APR_EINVAL, NULL,
-                           "Couldn't get lock on destination repos "
-                           "after %d attempts\n", i);
+                           _("Couldn't get lock on destination repos "
+                             "after %d attempts"), i);
 }
 
 
