@@ -55,15 +55,6 @@ svn_wc__path_switched(svn_boolean_t *switched,
                       apr_pool_t *scratch_pool);
 
 
-/* Return the shallowest sufficient @c levels_to_lock value for @a depth;
- * see the @a levels_to_lock parameter of svn_wc_adm_open3() and
- * similar functions for more information.
- */
-#define SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth)              \
-  (((depth) == svn_depth_empty || (depth) == svn_depth_files) \
-   ? 0 : (((depth) == svn_depth_immediates) ? 1 : -1))
-
-
 /* Return TRUE iff CLHASH (a hash whose keys are const char *
    changelist names) is NULL or if LOCAL_ABSPATH is part of a changelist in
    CLHASH. */
