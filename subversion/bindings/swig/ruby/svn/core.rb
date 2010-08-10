@@ -644,16 +644,16 @@ module Svn
 
       def infinity_or_empty_from_recurse(depth_or_recurse)
         case depth_or_recurse
-          when true  : DEPTH_INFINITY
-          when false : DEPTH_EMPTY
+          when true  then DEPTH_INFINITY
+          when false then DEPTH_EMPTY
           else depth_or_recurse
         end
       end
 
       def infinity_or_immediates_from_recurse(depth_or_recurse)
         case depth_or_recurse
-          when true  : DEPTH_INFINITY
-          when false : DEPTH_IMMEDIATES
+          when true  then DEPTH_INFINITY
+          when false then DEPTH_IMMEDIATES
           else depth_or_recurse
         end
       end

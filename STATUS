@@ -319,14 +319,6 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r957507
-   Make the ruby bindings compatible with Ruby 1.9.
-   Justification:
-     Keeping up with the Jones's is a always desirable.
-   Votes:
-     +1: hwright
-     +0: rhuijben
      
  * r948916
    JavaHL: Use the verify API, rather than a dump-load cycle for verification.
