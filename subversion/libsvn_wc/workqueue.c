@@ -2,10 +2,10 @@
  * workqueue.c :  manipulating work queue items
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -27,6 +27,7 @@
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_subst.h"
+#include "svn_hash.h"
 
 #include "wc.h"
 #include "wc_db.h"
@@ -53,6 +54,7 @@
 #define OP_LOGGY "loggy"
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
 #define OP_POSTCOMMIT "postcommit"
+#define OP_INSTALL_PROPERTIES "install-properties"
 
 
 struct work_item_dispatch {
@@ -211,12 +213,17 @@ run_revert(svn_wc__db_t *db,
 
       SVN_ERR(move_if_present(revert_props_path, base_props_path,
                               scratch_pool));
+
+      SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, NULL,
+                                                    TRUE, scratch_pool));
     }
 
   /* The "working" props contain changes. Nuke 'em from orbit.  */
   SVN_ERR(svn_wc__prop_path(&working_props_path, local_abspath,
                             kind, svn_wc__props_working, scratch_pool));
   SVN_ERR(svn_io_remove_file2(working_props_path, TRUE, scratch_pool));
+
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, scratch_pool));
 
   /* Deal with the working file, as needed.  */
   if (kind == svn_wc__db_kind_file)
@@ -528,7 +535,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
       apr_hash_t *working_props;
       apr_array_header_t *prop_diffs;
 
-      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+      SVN_ERR(svn_wc__load_props(&base_props, &working_props,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool));
       SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props,
@@ -662,6 +669,11 @@ run_prepare_revert_files(svn_wc__db_t *db,
       SVN_ERR(svn_io_set_file_read_only(revert_prop_abspath, FALSE,
                                         scratch_pool));
     }
+
+  /* Stop intheriting BASE_NODE properties */
+  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
+                                                apr_hash_make(scratch_pool),
+                                                TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -883,7 +895,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
       const char *repos_relpath;
       const char *repos_root_url;
       const char *repos_uuid;
-      const svn_wc_entry_t *parent_entry;
+      svn_revnum_t parent_revision;
 
       /* If we are suppose to delete "this dir", drop a 'killme' file
          into my own administrative dir as a signal for svn_wc__run_log()
@@ -891,7 +903,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
          processing this logfile.  */
       if (kind == svn_wc__db_kind_dir)
         {
-          const svn_wc_entry_t *orig_entry;
+          svn_boolean_t keep_local;
           svn_wc_entry_t tmp_entry;
 
           /* Bump the revision number of this_dir anyway, so that it
@@ -906,14 +918,14 @@ run_deletion_postcommit(svn_wc__db_t *db,
                                         SVN_WC__ENTRY_MODIFY_REVISION,
                                         scratch_pool));
 
-          SVN_ERR(svn_wc__get_entry(&orig_entry, db, local_abspath, FALSE,
-                                    svn_node_unknown, FALSE,
-                                    scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_temp_determine_keep_local(&keep_local, db,
+                                                       local_abspath,
+                                                       scratch_pool));
 
           /* Ensure the directory is deleted later.  */
           return svn_error_return(svn_wc__wq_add_killme(
                                     db, local_abspath,
-                                    orig_entry->keep_local /* adm_only */,
+                                    keep_local /* adm_only */,
                                     scratch_pool));
         }
 
@@ -930,12 +942,14 @@ run_deletion_postcommit(svn_wc__db_t *db,
                 FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
 
       /* If the parent entry's working rev 'lags' behind new_rev... */
-      SVN_ERR(svn_wc__get_entry(&parent_entry, db,
-                                svn_dirent_dirname(local_abspath,
-                                                   scratch_pool),
-                                FALSE, svn_node_dir, FALSE,
-                                scratch_pool, scratch_pool));
-      if (new_revision > parent_entry->revision)
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, &parent_revision, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   db, svn_dirent_dirname(local_abspath,
+                                                          scratch_pool),
+                                   scratch_pool, scratch_pool));
+      if (new_revision > parent_revision)
         {
           /* ...then the parent's revision is now officially a
              lie;  therefore, it must remember the file as being
@@ -1191,8 +1205,8 @@ log_do_committed(svn_wc__db_t *db,
           const char *child_name = APR_ARRAY_IDX(children, i, const char*);
           const char *child_abspath;
           svn_wc__db_kind_t kind;
+          svn_wc__db_status_t status;
           svn_boolean_t is_file;
-          const svn_wc_entry_t *child_entry;
 
           apr_pool_clear(iterpool);
           child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
@@ -1203,12 +1217,13 @@ log_do_committed(svn_wc__db_t *db,
           is_file = (kind == svn_wc__db_kind_file ||
                      kind == svn_wc__db_kind_symlink);
 
-          SVN_ERR(svn_wc__get_entry(&child_entry, db, child_abspath,
-                                    FALSE,
-                                    is_file ? svn_node_file : svn_node_dir,
-                                    !is_file, iterpool, iterpool));
+          SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       db, child_abspath, iterpool, iterpool));
 
-          if (child_entry->schedule != svn_wc_schedule_delete)
+          if (status != svn_wc__db_status_deleted)
             continue;
 
           /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
@@ -1308,6 +1323,8 @@ log_do_committed(svn_wc__db_t *db,
 
           const char *basef;
           apr_finfo_t basef_finfo;
+          svn_boolean_t modified;
+          const char *base_abspath;
 
           /* If the working file was overwritten (due to re-translation)
              or touched (due to +x / -x), then use *that* textual
@@ -1321,39 +1338,34 @@ log_do_committed(svn_wc__db_t *db,
               (SVN_ERR_WC_BAD_ADM_LOG, err,
                _("Error getting 'affected time' for '%s'"),
                svn_dirent_local_style(basef, pool));
-          else
+
+
+          SVN_ERR(svn_dirent_get_absolute(&base_abspath, basef, pool));
+
+          /* Verify that the working file is the same as the base file
+             by comparing file sizes, then timestamps and the contents
+             after that. */
+
+          /*###FIXME: if the file needs translation, don't compare
+            file-sizes, just compare timestamps and do the rest of the
+            hokey pokey. */
+          modified = finfo.size != basef_finfo.size;
+          if (finfo.mtime != basef_finfo.mtime && ! modified)
             {
-              svn_boolean_t modified;
-              const char *base_abspath;
-
-              SVN_ERR(svn_dirent_get_absolute(&base_abspath, basef, pool));
-
-              /* Verify that the working file is the same as the base file
-                 by comparing file sizes, then timestamps and the contents
-                 after that. */
-
-              /*###FIXME: if the file needs translation, don't compare
-                file-sizes, just compare timestamps and do the rest of the
-                hokey pokey. */
-              modified = finfo.size != basef_finfo.size;
-              if (finfo.mtime != basef_finfo.mtime && ! modified)
-                {
-                  err = svn_wc__internal_versioned_file_modcheck(&modified,
-                                                                 db,
-                                                                 local_abspath,
-                                                                 base_abspath,
-                                                                 FALSE, pool);
-                  if (err)
-                    return svn_error_createf
-                      (SVN_ERR_WC_BAD_ADM_LOG, err,
-                       _("Error comparing '%s' and '%s'"),
-                       svn_dirent_local_style(local_abspath, pool),
-                       svn_dirent_local_style(basef, pool));
-                }
-              /* If they are the same, use the working file's timestamp,
-                 else use the base file's timestamp. */
-              tmp_entry.text_time = modified ? basef_finfo.mtime : finfo.mtime;
+              err = svn_wc__internal_versioned_file_modcheck(&modified,
+                                                             db, local_abspath,
+                                                             base_abspath,
+                                                             FALSE, pool);
+              if (err)
+                return svn_error_createf
+                  (SVN_ERR_WC_BAD_ADM_LOG, err,
+                   _("Error comparing '%s' and '%s'"),
+                   svn_dirent_local_style(local_abspath, pool),
+                   svn_dirent_local_style(basef, pool));
             }
+          /* If they are the same, use the working file's timestamp,
+             else use the base file's timestamp. */
+          tmp_entry.text_time = modified ? basef_finfo.mtime : finfo.mtime;
         }
 
       return svn_error_return(svn_wc__entry_modify2(
@@ -1512,6 +1524,145 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_INSTALL_PROPERTIES */
+
+static svn_error_t *
+run_install_properties(svn_wc__db_t *db,
+                       const svn_skel_t *work_item,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg = work_item->children->next;
+  const char *local_abspath;
+  apr_hash_t *base_props;
+  apr_hash_t *actual_props;
+  svn_wc__db_kind_t kind;
+  const char *prop_abspath;
+  svn_boolean_t force_base_install;
+
+  /* We need a NUL-terminated path, so copy it out of the skel.  */
+  local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
+
+  arg = arg->next;
+  if (arg->is_atom)
+    base_props = NULL;
+  else
+    SVN_ERR(svn_skel__parse_proplist(&base_props, arg, scratch_pool));
+
+  arg = arg->next;
+  if (arg->is_atom)
+    actual_props = NULL;
+  else
+    SVN_ERR(svn_skel__parse_proplist(&actual_props, arg, scratch_pool));
+
+  arg = arg->next;
+  force_base_install = arg && svn_skel__parse_int(arg, scratch_pool);
+
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
+  if (base_props != NULL)
+    {
+      SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
+                                svn_wc__props_base, scratch_pool));
+
+      SVN_ERR(svn_io_remove_file2(prop_abspath, TRUE, scratch_pool));
+
+      if (apr_hash_count(base_props) > 0)
+        {
+          svn_stream_t *propfile;
+
+          SVN_ERR(svn_stream_open_writable(&propfile, prop_abspath,
+                                           scratch_pool, scratch_pool));
+
+          SVN_ERR(svn_hash_write2(base_props, propfile, SVN_HASH_TERMINATOR,
+                                  scratch_pool));
+
+          SVN_ERR(svn_stream_close(propfile));
+
+          SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
+        }
+
+      {
+        svn_boolean_t in_working;
+
+        if (force_base_install)
+          in_working = FALSE;
+        else
+          SVN_ERR(svn_wc__prop_pristine_is_working(&in_working, db,
+                                                   local_abspath, scratch_pool));
+
+        SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
+                                                      base_props, in_working,
+                                                      scratch_pool));
+      }
+    }
+
+
+  SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
+                            svn_wc__props_working, scratch_pool));
+
+  SVN_ERR(svn_io_remove_file2(prop_abspath, TRUE, scratch_pool));
+
+  if (actual_props != NULL)
+    {
+      svn_stream_t *propfile;
+
+      SVN_ERR(svn_stream_open_writable(&propfile, prop_abspath,
+                                       scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_hash_write2(actual_props, propfile, SVN_HASH_TERMINATOR,
+                              scratch_pool));
+
+      SVN_ERR(svn_stream_close(propfile));
+      SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
+    }
+
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
+                                  scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_add_install_properties(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_hash_t *base_props,
+                                  apr_hash_t *actual_props,
+                                  svn_boolean_t force_base_install,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+  svn_skel_t *props;
+
+  svn_skel__prepend_int(force_base_install, work_item, scratch_pool);
+
+  if (actual_props != NULL)
+    {
+      SVN_ERR(svn_skel__unparse_proplist(&props, actual_props, scratch_pool));
+      svn_skel__prepend(props, work_item);
+    }
+  else
+    svn_skel__prepend_str("", work_item, scratch_pool);
+
+  if (base_props != NULL)
+    {
+      SVN_ERR(svn_skel__unparse_proplist(&props, base_props, scratch_pool));
+      svn_skel__prepend(props, work_item);
+    }
+  else
+    svn_skel__prepend_str("", work_item, scratch_pool);
+
+  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
+  svn_skel__prepend_str(OP_INSTALL_PROPERTIES, work_item, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -1522,6 +1673,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_LOGGY, run_loggy },
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
   { OP_POSTCOMMIT, run_postcommit },
+  { OP_INSTALL_PROPERTIES, run_install_properties },
 
   /* Sentinel.  */
   { NULL }

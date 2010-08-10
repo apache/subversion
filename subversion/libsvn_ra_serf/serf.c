@@ -2,10 +2,10 @@
  * serf.c :  entry point for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -86,7 +86,7 @@ static svn_error_t *
 load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
                      const char *server_group,
                      svn_ra_serf__authn_types *authn_types)
-{                   
+{
   const char *http_auth_types = NULL;
   *authn_types = svn_ra_serf__authn_none;
 
@@ -303,9 +303,15 @@ load_config(svn_ra_serf__session_t *session,
   else
     session->using_proxy = FALSE;
 
-  /* Load the list of support authn types. */
-   SVN_ERR(load_http_auth_types(pool, config, server_group,
-           &session->authn_types));
+  /* Setup authentication. */
+  SVN_ERR(load_http_auth_types(pool, config, server_group,
+                               &session->authn_types));
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+  /* TODO: convert string authn types to SERF_AUTHN bitmask.
+     serf_config_authn_types(session->context, session->authn_types);*/
+  serf_config_credentials_callback(session->context,
+                                   svn_ra_serf__credentials_callback);
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -360,14 +366,12 @@ svn_ra_serf__open(svn_ra_session_t *session,
      older, for root paths url.path will be "", where serf requires "/". */
   if (url.path == NULL || url.path[0] == '\0')
     url.path = apr_pstrdup(serf_sess->pool, "/");
-
-  serf_sess->repos_url = url;
-  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
-
   if (!url.port)
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
     }
+  serf_sess->repos_url = url;
+  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
   serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
@@ -430,11 +434,15 @@ svn_ra_serf__open(svn_ra_session_t *session,
     serf_sess->conns[0]->useragent = USER_AGENT;
 
   /* go ahead and tell serf about the connection. */
-  serf_sess->conns[0]->conn =
-      serf_connection_create(serf_sess->context, serf_sess->conns[0]->address,
-                             svn_ra_serf__conn_setup, serf_sess->conns[0],
-                             svn_ra_serf__conn_closed, serf_sess->conns[0],
-                             serf_sess->pool);
+  status =
+    serf_connection_create2(&serf_sess->conns[0]->conn,
+                            serf_sess->context,
+                            url,
+                            svn_ra_serf__conn_setup, serf_sess->conns[0],
+                            svn_ra_serf__conn_closed, serf_sess->conns[0],
+                            serf_sess->pool);
+  if (status)
+    return svn_error_wrap_apr(status, NULL);
 
   /* Set the progress callback. */
   serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,
@@ -509,7 +517,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
   const char *propfind_path;
-  
+
   props = apr_hash_make(pool);
   *ret_props = apr_hash_make(pool);
 
@@ -1014,7 +1022,8 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__replay,
   svn_ra_serf__has_capability,
   svn_ra_serf__replay_range,
-  svn_ra_serf__get_deleted_rev
+  svn_ra_serf__get_deleted_rev,
+  NULL  /* svn_ra_serf__obliterate_node_rev */
 };
 
 svn_error_t *

@@ -2,10 +2,10 @@
  * add.c:  wrappers around wc add/mkdir functionality.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -532,55 +532,38 @@ add(const char *local_abspath,
    add all the intermediate directories.  Otherwise, return
    SVN_ERR_CLIENT_NO_VERSIONED_PARENT. */
 static svn_error_t *
-add_parent_dirs(const char *path,
-                svn_wc_adm_access_t **parent_access,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+add_parent_dirs(svn_client_ctx_t *ctx,
+                const char *local_abspath,
+                apr_pool_t *scratch_pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  svn_error_t *err = NULL;
-  const char *local_abspath;
+  int format;
+  const char *parent_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc_check_wc2(&format, ctx->wc_ctx, local_abspath, scratch_pool));
 
-  err = svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE, 0,
-                                    ctx->cancel_func, ctx->cancel_baton, pool);
+  if (format > 0)
+    return SVN_NO_ERROR;
 
-  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-    {
-      svn_error_clear(err);
-      if (svn_dirent_is_root(path, strlen(path)))
-        {
-          return svn_error_create
-            (SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
-        }
-      else if (svn_wc_is_adm_dir(svn_dirent_basename(path, pool), pool))
-        {
-          return svn_error_createf
-            (SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
-             _("'%s' ends in a reserved name"),
-             svn_dirent_local_style(path, pool));
-        }
-      else
-        {
-          const char *parent_path = svn_dirent_dirname(path, pool);
+  if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+    return svn_error_create(SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
 
-          SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
-          SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
-                                      pool));
-          SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
-                              NULL, SVN_INVALID_REVNUM,
-                              ctx->cancel_func, ctx->cancel_baton,
-                              ctx->notify_func2, ctx->notify_baton2, pool));
-        }
-    }
-  else if (err)
-    {
-      return svn_error_return(err);
-    }
+  if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, scratch_pool),
+                        scratch_pool))
+    return svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED, NULL,
+                             _("'%s' ends in a reserved name"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
-  if (parent_access)
-    *parent_access = adm_access;
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  /* ### Do we need locks here?  Are locks being enforced? 1.6 used to
+         acquire and release locks. */
+  SVN_ERR(add_parent_dirs(ctx, parent_abspath, scratch_pool));
+  SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
+                      NULL, SVN_INVALID_REVNUM,
+                      ctx->cancel_func, ctx->cancel_baton,
+                      ctx->notify_func2, ctx->notify_baton2,
+                      scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -597,41 +580,43 @@ svn_client_add4(const char *path,
                 apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_wc_adm_access_t *adm_access;
-  const char *parent_dir;
+  const char *parent_abspath;
   const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  /* ### this is a hack.
+     ### before we switched to absolute paths, if a user tried to do
+     ### 'svn add .', PATH would be "" and PARENT_PATH would also be "",
+     ### thus emulating the behavior below.  Now that we are using
+     ### absolute paths, svn_dirent_dirname() doesn't behave the same way
+     ### w.r.t. '.', so we need to include the following hack.  This
+     ### behavior is tested in schedule_tests-11. */
+  if (path[0] == 0)
+    parent_abspath = local_abspath;
+  else
+    parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
   if (add_parents)
     {
       apr_pool_t *subpool;
 
-      SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
-      parent_dir = svn_dirent_dirname(path, pool);
-
       subpool = svn_pool_create(pool);
-      SVN_ERR(add_parent_dirs(parent_dir, &adm_access, ctx, subpool));
-      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
+      SVN_ERR(add_parent_dirs(ctx, parent_abspath, subpool));
       svn_pool_destroy(subpool);
     }
-  else
-    {
-      parent_dir = svn_dirent_dirname(path, pool);
-    }
 
-  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, parent_dir,
-                                      TRUE, 0, ctx->cancel_func,
-                                      ctx->cancel_baton, pool));
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, parent_abspath,
+                                     pool, pool));
 
   err = add(local_abspath, depth, force, no_ignore, ctx, pool);
 
-  /* ### Currently we rely on the fact that this close (like all other access
-         baton close operations), closes all batons opened by svn_wc_add4(). */
+  /* ### Currently we rely on the fact that this releases all our write locks
+     ### recursively. */
   return svn_error_return(
             svn_error_compose_create(
-                 err,
-                 svn_wc_adm_close2(adm_access, pool)));
+              err,
+              svn_wc__release_write_lock(ctx->wc_ctx, parent_abspath, pool)));
 }
 
 
@@ -734,7 +719,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
                                    pool, pool));
 
   /* ### BH: This looks unnecessary, because the hash is not used and
-         you can't rely on hash ordering but it fails our tests if I 
+         you can't rely on hash ordering but it fails our tests if I
          remove it. The qsort() below determines the final ordering. */
   SVN_ERR(svn_hash_from_cstring_keys(&targets_hash, targets, pool));
   SVN_ERR(svn_hash_keys(&targets, targets_hash, pool));

@@ -2,10 +2,10 @@
  * checkout-cmd.c -- Subversion checkout command
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -94,7 +94,7 @@ svn_cl__checkout(apr_getopt_t *os,
           /* Discard the peg-revision, if one was provided. */
           SVN_ERR(svn_opt_parse_path(&pegrev, &local_dir, local_dir, pool));
           if (pegrev.kind != svn_opt_revision_unspecified)
-            local_dir = svn_path_canonicalize(local_dir, pool);
+            local_dir = svn_uri_canonicalize(local_dir, pool);
 
           local_dir = svn_uri_basename(local_dir, pool);
           local_dir = svn_path_uri_decode(local_dir, pool);
@@ -113,8 +113,8 @@ svn_cl__checkout(apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, TRUE, FALSE,
-                         FALSE, pool);
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, TRUE,
+                                 FALSE, FALSE, pool));
 
   subpool = svn_pool_create(pool);
   for (i = 0; i < targets->nelts - 1; ++i)
@@ -139,7 +139,7 @@ svn_cl__checkout(apr_getopt_t *os,
       SVN_ERR(svn_opt_parse_path(&peg_revision, &true_url, repos_url,
                                  subpool));
 
-      true_url = svn_path_canonicalize(true_url, subpool);
+      true_url = svn_uri_canonicalize(true_url, subpool);
 
       /* Use sub-directory of destination if checking-out multiple URLs */
       if (targets->nelts == 2)
@@ -150,7 +150,7 @@ svn_cl__checkout(apr_getopt_t *os,
         {
           target_dir = svn_uri_basename(true_url, subpool);
           target_dir = svn_path_uri_decode(target_dir, subpool);
-          target_dir = svn_path_join(local_dir, target_dir, subpool);
+          target_dir = svn_dirent_join(local_dir, target_dir, subpool);
         }
 
       /* Checkout doesn't accept an unspecified revision, so default to

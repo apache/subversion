@@ -2,10 +2,10 @@
  * diff.c: comparing
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -222,7 +222,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
   for (i = 0; i < propchanges->nelts; i++)
     {
-      const char *header_fmt;
+      const char *action;
       const svn_string_t *original_value;
       const svn_prop_t *propchange =
         &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
@@ -246,11 +246,11 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         continue;
 
       if (! original_value)
-        header_fmt = _("Added: %s%s");
+        action = _("Added");
       else if (! propchange->value)
-        header_fmt = _("Deleted: %s%s");
+        action = _("Deleted");
       else
-        header_fmt = _("Modified: %s%s");
+        action = _("Modified");
 
       /* Lazily print the property diff header. */
       if (!header_printed)
@@ -267,7 +267,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
           header_printed = TRUE;
         }
 
-      SVN_ERR(file_printf_from_utf8(file, encoding, header_fmt,
+      SVN_ERR(file_printf_from_utf8(file, encoding, "%s: %s%s", action,
                                     propchange->name, APR_EOL_STR));
 
       if (strcmp(propchange->name, SVN_PROP_MERGEINFO) == 0)
@@ -283,7 +283,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
       {
         svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, pool);
         svn_diff_t *diff;
-        svn_diff_file_options_t options;
+        svn_diff_file_options_t options = { 0 };
         const svn_string_t *tmp;
         const svn_string_t *orig;
         const svn_string_t *val;
@@ -889,7 +889,7 @@ diff_dir_closed(const char *local_dir_abspath,
    associated url in *URL, allocated in RESULT_POOL.  If ABSPATH_OR_URL is
    *already* a URL, that's fine, return ABSPATH_OR_URL allocated in
    RESULT_POOL.
-   
+
    Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 convert_to_url(const char **url,
@@ -1790,13 +1790,6 @@ svn_client_diff_peg5(const apr_array_header_t *options,
 
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks4_t diff_callbacks;
-
-  if (svn_path_is_url(path) &&
-        (start_revision->kind == svn_opt_revision_base
-         || end_revision->kind == svn_opt_revision_base) )
-    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                            _("Revision type requires a working copy "
-                              "path, not a URL"));
 
   /* fill diff_param */
   diff_params.path1 = path;

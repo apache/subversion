@@ -3,10 +3,10 @@
  * commandline client.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -634,6 +634,15 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (strcmp(answer, "l") == 0)
             {
+              if (desc->kind == svn_wc_conflict_kind_property)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; cannot "
+                                                "resolve property conflicts "
+                                                "with an external merge tool."
+                                                "\n\n")));
+                  continue;
+                }
               if (desc->base_file && desc->their_file && desc->my_file
                     && desc->merged_file)
                 {

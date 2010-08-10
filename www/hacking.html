@@ -238,8 +238,10 @@ perusal order:</p>
 </li>
 </ol>
 
-<p>Subversion tries to stay portable by using only ANSI/ISO C and by
-using the Apache Portable Runtime (APR) library.  APR is the
+<p>Subversion tries to stay portable by using
+only <a href="http://en.wikipedia.org/wiki/ANSI_C">ANSI/ISO C</a>
+(a.k.a <a href="http://en.wikipedia.org/wiki/ANSI_C#C90">C90</a>) and
+by using the Apache Portable Runtime (APR) library.  APR is the
 portability layer used by the Apache httpd server, and more
 information can be found at <a href="http://apr.apache.org/"
 >http://apr.apache.org/</a>.</p>
@@ -926,7 +928,7 @@ principles:</p>
 </ol>
 
 <p>Supporting the above rules, we use the following pool names as conventions
-to represent various pool lifetimes:
+to represent various pool lifetimes:</p>
 <ul>
 <li><p><code>result_pool</code> - The pool in which the output of a function
 should be allocated.  A result pool declaration should <strong>always</strong>

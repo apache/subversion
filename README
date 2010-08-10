@@ -23,7 +23,7 @@ I.    A FEW POINTERS
       Once you have a Subversion client you can get the latest version
       of the code with the command:
 
-         $ svn co http://svn.collab.net/repos/svn/trunk subversion
+         $ svn co http://svn.apache.org/repos/asf/subversion/trunk subversion
 
 
 

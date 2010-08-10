@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -153,7 +153,7 @@ svn_path_basename(const char *path, apr_pool_t *pool);
  *
  * The returned dirname will be allocated in @a pool.
  *
- * New code should use either svn_dirent_dirname() (for local paths) or 
+ * New code should use either svn_dirent_dirname() (for local paths) or
  * svn_uri_dirname() (for urls and repository paths).
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.

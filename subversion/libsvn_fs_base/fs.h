@@ -1,10 +1,10 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -78,9 +78,6 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 
 /* Revision at which the repo started using forward deltas. */
 #define SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
-
-/* Next filesystem-global unique identifier value (base36). */
-#define SVN_FS_BASE__MISC_NEXT_FSGUID            "next-fsguid"
 
 
 

@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "my-assertions"
 require "util"
 
@@ -518,8 +537,8 @@ class SvnClientTest < Test::Unit::TestCase
       assert(!File.exist?(path3))
     end
   ensure
-    FileUtils.rm_rf(wc_path3)
-    FileUtils.rm_rf(wc_path2)
+    remove_recursively_with_retry(wc_path3)
+    remove_recursively_with_retry(wc_path2)
   end
 
   def test_update
@@ -997,22 +1016,32 @@ class SvnClientTest < Test::Unit::TestCase
       end
       assert_equal_log_entries([
                                 [
-                                 {branch_path_relative_uri => ["D", nil, -1]},
-                                 rev4,
+                                 {branch_path_relative_uri => ["M", nil, -1]},
+                                 rev2,
                                  {
                                    "svn:author" => @author,
                                    "svn:log" => log,
                                  },
                                  false,
                                 ]
-                               ] * 2, merged_entries)
+                               ], merged_entries)
 
       ctx.propdel("svn:mergeinfo", trunk)
       merged_entries = []
       ctx.log_merged(trunk, rev4, branch_uri, rev4) do |entry|
         merged_entries << entry
       end
-      assert_equal_log_entries([], merged_entries)
+      assert_equal_log_entries([
+                                [
+                                 {branch_path_relative_uri => ["M", nil, -1]},
+                                 rev2,
+                                 {
+                                   "svn:author" => @author,
+                                   "svn:log" => log,
+                                 },
+                                 false,
+                                ]
+                               ], merged_entries)
 
       ctx.revert(trunk)
       File.open(trunk_path, "a") {|f| f.print(src)}
@@ -2292,7 +2321,7 @@ class SvnClientTest < Test::Unit::TestCase
       assert_equal({changelist2=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, changelist2))
       assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)}}, yield(ctx, [changelist1]))
       assert_equal({changelist2=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, [changelist2]))
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)},nil=>[@wc_path].map{|f| File.expand_path(f)}}, 
+      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)},nil=>[@wc_path].map{|f| File.expand_path(f)}},
 		   yield(ctx, nil))
       assert_equal({}, yield(ctx, []))
       assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)}},

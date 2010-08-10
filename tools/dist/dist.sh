@@ -1,4 +1,24 @@
 #!/bin/sh
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 # USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
 #                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|pre PRE_NUM]
@@ -203,7 +223,7 @@ export TZ
 echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 (cd "$DIST_SANDBOX" && \
  ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-     "http://svn.collab.net/repos/svn/$REPOS_PATH" \
+     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH" \
      "$DISTNAME" --username none --password none)
 
 rm -f "$DISTPATH/STATUS"
@@ -214,13 +234,17 @@ rm -f "$DISTPATH/STATUS"
 rm -rf "$DISTPATH/www"
 mkdir "$DISTPATH/www"
 ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-    "http://svn.collab.net/repos/svn/trunk/www/hacking.html" \
+    "http://svn.apache.org/repos/asf/subversion/trunk/www/hacking.html" \
     --username none --password none "$DISTPATH/www/hacking.html"
 
 # Remove contrib/ from our distribution tarball.  Some of it is of
 # unknown license, and usefulness.
 # (See http://svn.haxx.se/dev/archive-2009-04/0166.shtml for discussion.)
 rm -rf "$DISTPATH/contrib"
+
+# Remove packages/ from the tarball.
+# (See http://svn.haxx.se/dev/archive-2009-12/0205.shtml)
+rm -rf "$DISTPATH/packages"
 
 install_dependency()
 {

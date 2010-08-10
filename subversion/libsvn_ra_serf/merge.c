@@ -2,10 +2,10 @@
  * merge.c :  MERGE response parsing functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -329,7 +329,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
               checked_in_str.len = strlen(checked_in);
 
               SVN_ERR(ctx->session->wc_callbacks->push_wc_prop(
-                ctx->session->wc_callback_baton, href, 
+                ctx->session->wc_callback_baton, href,
                 SVN_RA_SERF__WC_CHECKED_IN_URL, &checked_in_str, info->pool));
             }
         }

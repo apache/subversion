@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -4125,21 +4125,145 @@ def path_copy_in_repo_2475(sbox):
 def commit_copy_depth_empty(sbox):
   "copy a wcdir, then commit it with --depth empty"
   sbox.build()
-  
+
   a = os.path.join(sbox.wc_dir, 'A')
   new_a = os.path.join(sbox.wc_dir, 'new_A')
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', a, new_a)
 
-  ### svn: Commit succeeded, but other errors follow:
-  ### svn: Error bumping revisions post-commit (details follow):
-  ### svn: Unable to lock '<snip>\new_A\B'
-  
-  # Then the working copy is locked and can't be unlocked with svn cleanup.
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      new_a, '--depth', 'empty',
                                      '-m', 'Copied directory')
+
+def copy_below_copy(sbox):
+  "copy a dir below a copied dir"
+  sbox.build()
+
+  A = os.path.join(sbox.wc_dir, 'A')
+  new_A = os.path.join(sbox.wc_dir, 'new_A')
+  new_A_D = os.path.join(new_A, 'D')
+  new_A_new_D = os.path.join(new_A, 'new_D')
+  new_A_mu = os.path.join(new_A, 'mu')
+  new_A_new_mu = os.path.join(new_A, 'new_mu')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', A, new_A)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', new_A_D, new_A_new_D)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', new_A_mu, new_A_new_mu)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+      'new_A'             : Item(verb='Adding'),
+      'new_A/new_D'       : Item(verb='Adding'),
+      'new_A/new_mu'      : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  expected_status.add({
+      'new_A'             : Item(status='  ', wc_rev='2'),
+      'new_A/new_D'       : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/gamma' : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/G'     : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/G/pi'  : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/G/rho' : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/G/tau' : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/H'     : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/H/chi' : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/H/omega': Item(status='  ', wc_rev='2'),
+      'new_A/new_D/H/psi' : Item(status='  ', wc_rev='2'),
+      'new_A/D'           : Item(status='  ', wc_rev='2'),
+      'new_A/D/H'         : Item(status='  ', wc_rev='2'),
+      'new_A/D/H/chi'     : Item(status='  ', wc_rev='2'),
+      'new_A/D/H/omega'   : Item(status='  ', wc_rev='2'),
+      'new_A/D/H/psi'     : Item(status='  ', wc_rev='2'),
+      'new_A/D/G'         : Item(status='  ', wc_rev='2'),
+      'new_A/D/G/rho'     : Item(status='  ', wc_rev='2'),
+      'new_A/D/G/pi'      : Item(status='  ', wc_rev='2'),
+      'new_A/D/G/tau'     : Item(status='  ', wc_rev='2'),
+      'new_A/D/gamma'     : Item(status='  ', wc_rev='2'),
+      'new_A/new_mu'      : Item(status='  ', wc_rev='2'),
+      'new_A/B'           : Item(status='  ', wc_rev='2'),
+      'new_A/B/E'         : Item(status='  ', wc_rev='2'),
+      'new_A/B/E/alpha'   : Item(status='  ', wc_rev='2'),
+      'new_A/B/E/beta'    : Item(status='  ', wc_rev='2'),
+      'new_A/B/F'         : Item(status='  ', wc_rev='2'),
+      'new_A/B/lambda'    : Item(status='  ', wc_rev='2'),
+      'new_A/C'           : Item(status='  ', wc_rev='2'),
+      'new_A/mu'          : Item(status='  ', wc_rev='2'),
+    })
+
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, sbox.wc_dir)
+
+def move_below_move(sbox):
+  "move a dir below a moved dir"
+  sbox.build()
+  "copy a dir below a copied dir"
+  sbox.build()
+
+  A = os.path.join(sbox.wc_dir, 'A')
+  new_A = os.path.join(sbox.wc_dir, 'new_A')
+  new_A_D = os.path.join(new_A, 'D')
+  new_A_new_D = os.path.join(new_A, 'new_D')
+  new_A_mu = os.path.join(new_A, 'mu')
+  new_A_new_mu = os.path.join(new_A, 'new_mu')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', A, new_A)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mv', new_A_D, new_A_new_D)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mv', new_A_mu, new_A_new_mu)
+
+  # ### It could be that we miss a Deleting here.
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+      'A'                 : Item(verb='Deleting'),
+      'new_A'             : Item(verb='Adding'),
+      'new_A/new_D'       : Item(verb='Adding'),
+      'new_A/new_mu'      : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  expected_status.add({
+      'new_A'             : Item(status='  ', wc_rev='2'),
+      'new_A/new_D'       : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/gamma' : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/G'     : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/G/pi'  : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/G/rho' : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/G/tau' : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/H'     : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/H/chi' : Item(status='  ', wc_rev='2'),
+      'new_A/new_D/H/omega': Item(status='  ', wc_rev='2'),
+      'new_A/new_D/H/psi' : Item(status='  ', wc_rev='2'),
+      'new_A/new_mu'      : Item(status='  ', wc_rev='2'),
+      'new_A/B'           : Item(status='  ', wc_rev='2'),
+      'new_A/B/E'         : Item(status='  ', wc_rev='2'),
+      'new_A/B/E/alpha'   : Item(status='  ', wc_rev='2'),
+      'new_A/B/E/beta'    : Item(status='  ', wc_rev='2'),
+      'new_A/B/F'         : Item(status='  ', wc_rev='2'),
+      'new_A/B/lambda'    : Item(status='  ', wc_rev='2'),
+      'new_A/C'           : Item(status='  ', wc_rev='2'),
+    })
+
+  # ### This remove block is untested, because the commit fails with an
+  # ### assertion on trunk (BH: 2009-11-01
+  expected_status.remove('A', 'A/D', 'A/D/gamma', 'A/D/G', 'A/D/G/pi',
+                         'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 'A/D/H/chi',
+                         'A/D/H/omega', 'A/D/H/psi', 'A/B', 'A/B/E',
+                         'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda',
+                         'A/C', 'A/mu')
+
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, sbox.wc_dir)
 
 
 ########################################################################
@@ -4226,7 +4350,9 @@ test_list = [ None,
               find_copyfrom_information_upstairs,
               path_move_and_copy_between_wcs_2475,
               path_copy_in_repo_2475,
-              XFail(commit_copy_depth_empty)
+              commit_copy_depth_empty,
+              copy_below_copy,
+              XFail(move_below_move)
              ]
 
 if __name__ == '__main__':

@@ -1,12 +1,11 @@
 ;;; dsvn.el --- Subversion interface
 
-;; Copyright 2006-2008 Virtutech AB
+;; Copyright 2006-2009 Virtutech AB
 
 ;; Author: David Kågedal <david@virtutech.com>
 ;;	Mattias Engdegård <mattias@virtutech.com>
 ;; Maintainer: Mattias Engdegård <mattias@virtutech.com>
 ;; Created: 27 Jan 2006
-;; Version: 1.8
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
@@ -724,14 +723,19 @@ name or revision number)."
 	 " to save changes.\n\n")
 	(mapc (lambda (prop)
 		(let* ((value (cdr prop))
-		       (lines (split-string value "\n")))
-		  ;; split-string ignores single leading and trailing
-		  ;; delimiters, so add them explicitly
-		  (when (not (equal value ""))
-		    (when (equal (substring value 0 1) "\n")
-		      (setq lines (cons "" lines)))
-		    (when (equal (substring value -1) "\n")
-		      (setq lines (append lines (list "")))))
+		       (lines nil)
+		       (len (length value))
+		       (ofs 0))
+		  ;; Split value in lines - we can't use split-string because
+		  ;; its behaviour is not consistent across Emacs versions.
+		  (while (<= ofs len)
+		    (let* ((nl (or (string-match "\n" value ofs) len)))
+		      (setq lines (cons (substring value ofs nl) lines))
+		      (setq ofs (+ nl 1))))
+		  (setq lines (nreverse lines))
+		  ;; The lines list now contains one string per line, and
+		  ;; an empty list at the end if the string finished in a \n.
+
 		  (insert (car prop) ":")
 		  (if (> (length lines) 1)
 		      (progn
@@ -1997,7 +2001,7 @@ files instead."
 
 (defun svn-merge-columns-list (columns fmt)
   (let ((first-lines (mapcar #'car columns)))
-    (and (eval `(or ',@first-lines))
+    (and (eval `(or ,@first-lines))
 	 (cons (mapconcat (lambda (str) (format fmt (or str "")))
 			  first-lines " | ")
 	       (svn-merge-columns-list (mapcar #'cdr columns) fmt)))))
@@ -2008,51 +2012,36 @@ files instead."
 	     "\n"))
 
 (defun svn-status-help ()
-  "Display keyboard help for svn status buffer."
+  "Display keyboard help for the svn-status buffer."
   (interactive)
-  (let* ((buf (get-buffer-create "*svn-keyboard-help*"))
-	 (help-text
-	  (svn-merge-columns
-	   (list (svn-format-help-column
-		  '((svn-commit "commit marked files")
-		    (svn-add-file "add marked files")
-		    (svn-remove-file "remove marked files")
-		    (svn-revert "revert marked files")
-		    (svn-update-current "update working copy")
-		    (svn-resolve "resolve conflicts")
-		    (svn-move "rename/move files")
-		    (svn-switch "switch working tree")
-		    (svn-merge "merge into WC")
-		    (svn-propedit "edit properties")))
-		 (svn-format-help-column
-		  '((svn-mark-forward "mark and go down")
-		    (svn-unmark-backward "go up and unmark")
-		    (svn-unmark-forward  "unmark and go down")
-		    (svn-toggle-mark "toggle mark")
-		    (svn-unmark-all "unmark all")))
-		 (svn-format-help-column
-		  '((svn-find-file "visit file")
-		    (svn-find-file-other-window "visit file other win")
-		    (svn-diff-file "show file diff")
-		    (svn-file-log "show file log")
-		    (svn-refresh "refresh all files")
-		    (svn-refresh-file "refresh marked files")
-		    (svn-refresh-one "refresh named file")
-		    (svn-expunge "expunge unchanged"))))
-	   24)))
-    (with-current-buffer buf
-      (setq buffer-read-only t)
-      (let ((inhibit-read-only t))
-	(erase-buffer)
-	(insert help-text)
-	(goto-char 1))
-      (set-buffer-modified-p nil))
-    (unless (get-buffer-window buf)
-      (let ((nlines (with-current-buffer buf
-		      (count-lines 1 (buffer-size)))))
-	(set-window-buffer
-	 (split-window-vertically (- 0 nlines 1))
-	 buf)))))
+  (message (svn-merge-columns
+	    (list (svn-format-help-column
+		   '((svn-commit "commit marked files")
+		     (svn-add-file "add marked files")
+		     (svn-remove-file "remove marked files")
+		     (svn-revert "revert marked files")
+		     (svn-update-current "update working copy")
+		     (svn-resolve "resolve conflicts")
+		     (svn-move "rename/move files")
+		     (svn-switch "switch working tree")
+		     (svn-merge "merge into WC")
+		     (svn-propedit "edit properties")))
+		  (svn-format-help-column
+		   '((svn-mark-forward "mark and go down")
+		     (svn-unmark-backward "go up and unmark")
+		     (svn-unmark-forward  "unmark and go down")
+		     (svn-toggle-mark "toggle mark")
+		     (svn-unmark-all "unmark all")))
+		  (svn-format-help-column
+		   '((svn-find-file "visit file")
+		     (svn-find-file-other-window "visit file other win")
+		     (svn-diff-file "show file diff")
+		     (svn-file-log "show file log")
+		     (svn-refresh "refresh all files")
+		     (svn-refresh-file "refresh marked files")
+		     (svn-refresh-one "refresh named file")
+		     (svn-expunge "expunge unchanged"))))
+	    24)))
 
 ;;; Hooks
 

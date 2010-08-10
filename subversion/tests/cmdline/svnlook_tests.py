@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -571,12 +571,12 @@ def test_filesize(sbox):
     if len(filesize_output) != 1:
       raise svntest.Failure("'svnlook filesize' printed something other than "
                             "a single line of output.")
-    filesize = int(filesize_output[0].strip())    
+    filesize = int(filesize_output[0].strip())
     if filesize != cat_size:
       raise svntest.Failure("'svnlook filesize' and the counted length of "
                             "'svnlook cat's output differ for the path "
                             "'%s'." % (line))
-  
+
 ########################################################################
 # Run the tests
 

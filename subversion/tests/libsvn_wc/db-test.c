@@ -2,10 +2,10 @@
  * db-test.c :  test the wc_db subsystem
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -306,7 +306,8 @@ static const char * const data_loading_sql[] = {
 
   WC_METADATA_SQL_13,
   WC_METADATA_SQL_14,
-  WC_METADATA_SQL_15
+  WC_METADATA_SQL_15,
+  WC_METADATA_SQL_16
 };
 
 
@@ -613,6 +614,32 @@ validate_node(svn_wc__db_t *db,
                                    scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
 
+  SVN_ERR(svn_wc__db_read_props(&props, db, path,
+                                scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, path,
+                                         scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  /* Now add a property value and read it back (all on actual) */
+  apr_hash_set(props, "p999", APR_HASH_KEY_STRING, value);
+
+  SVN_ERR(svn_wc__db_op_set_props(db, path, props, scratch_pool));
+  SVN_ERR(svn_wc__db_read_props(&props, db, path,
+                                scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p999", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  if (status == svn_wc__db_status_normal)
+    SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, path, props, FALSE,
+                                                  scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -876,7 +903,7 @@ test_pdh(apr_pool_t *pool)
             "sub/A/B/C/D", ROOT_ONE, UUID_ONE, 1,
             svn_wc__db_kind_file, svn_wc__db_status_absent,
             pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1208,7 +1235,7 @@ test_global_relocate(apr_pool_t *pool)
   const char *repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
-  
+
   SVN_ERR(create_open(&db, &local_abspath,
                       "test_global_relocate", SVN_WC__VERSION,
                       svn_wc__db_openmode_readonly, pool));

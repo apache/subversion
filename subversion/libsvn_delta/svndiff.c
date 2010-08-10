@@ -2,10 +2,10 @@
  * svndiff.c -- Encoding and decoding svndiff-format deltas.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -190,7 +190,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   /* Make sure we write the header.  */
   if (eb->header_done == FALSE)
     {
-      char svnver[4] = "SVN\0";
+      char svnver[4] = {'S','V','N','\0'};
       len = 4;
       svnver[3] = eb->version;
       SVN_ERR(svn_stream_write(eb->output, svnver, &len));

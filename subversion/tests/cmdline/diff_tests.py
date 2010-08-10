@@ -7,10 +7,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -1476,7 +1476,7 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
-  # Repos->WC diff of the file ignoring copyfrom
+  # Repos->WC diff of the file showing copies as adds
   exit_code, diff_output, err_output = svntest.main.run_svn(
                                          None, 'diff', '-r', '1',
                                          '--show-copies-as-adds', pi2_path)
@@ -1487,7 +1487,7 @@ def diff_renamed_file(sbox):
 
   svntest.main.file_append(pi2_path, "new pi")
 
-  # Repos->WC of the directory
+  # Repos->WC of the containing directory
   exit_code, diff_output, err_output = svntest.main.run_svn(
     None, 'diff', '-r', '1', os.path.join('A', 'D'))
 
@@ -1501,15 +1501,15 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
-  # Repos->WC of the directory ignoring copyfrom
+  # Repos->WC of the containing directory showing copies as adds
   exit_code, diff_output, err_output = svntest.main.run_svn(
     None, 'diff', '-r', '1', '--show-copies-as-adds', os.path.join('A', 'D'))
-  
+
   if check_diff_output(diff_output,
                        pi_path,
                        'D') :
     raise svntest.Failure
-  
+
   if check_diff_output(diff_output,
                        pi2_path,
                        'A') :
@@ -1523,7 +1523,7 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
-  # WC->WC of the file ignoring copyfrom
+  # WC->WC of the file showing copies as adds
   exit_code, diff_output, err_output = svntest.main.run_svn(
                                          None, 'diff',
                                          '--show-copies-as-adds', pi2_path)

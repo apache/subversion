@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -323,7 +323,7 @@ svn_wc__node_get_children(const apr_array_header_t **children,
                           apr_pool_t *scratch_pool);
 
 
-/** 
+/**
  * Fetch the repository root information for a given @a local_abspath into
  * @a *repos_root_url and @a repos_uuid. Use @wc_ctx to access the working copy
  * for @a local_abspath, @a scratch_pool for all temporary allocations,
@@ -438,10 +438,10 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
  * allocations.
  */
 svn_error_t *
-svn_wc__node_is_status_delete(svn_boolean_t *is_deleted,
-                              svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool);
+svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_deleted to whether @a local_abspath is obstructed, using
@@ -501,6 +501,46 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           svn_wc_context_t *wc_ctx,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool);
+
+/**
+ * Get the lock token of @a local_abspath using @a wc_ctx or NULL
+ * if there is no lock.  If @a local_abspath is not in the working
+*  copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
+ */
+svn_error_t *
+svn_wc__node_get_lock_token(const char **lock_token,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
+/**
+ * Recursively acquire write locks for @a local_abspath if
+ * @a anchor_abspath is NULL.  If @a anchor_abspath is not NULL then
+ * recursively acquire write locks for the anchor of @a local_abspath
+ * and return the anchor path in @a *anchor_abspath.  Use @a wc_ctx
+ * for working copy access.
+ *
+ * ### @a anchor_abspath should be removed when we move to centralised
+ * ### metadata as it will be unnecessary.
+ */
+svn_error_t *
+svn_wc__acquire_write_lock(const char **anchor_abspath,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+
+/**
+ * Recursively release write locks for @a local_abspath, using @a wc_ctx
+ * for working copy access.
+ */
+svn_error_t *
+svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

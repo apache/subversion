@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -24,7 +24,6 @@ package org.tigris.subversion.javahl;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 
 import org.tigris.subversion.javahl.Revision;
 import org.tigris.subversion.javahl.SubversionException;
@@ -78,7 +77,7 @@ public class SVNAdminTests extends SVNTests
         }
         assertEquals("expect rev prop change to take effect", MSG, logMessage);
     }
-    public void testLoadRepo() 
+    public void testLoadRepo()
         throws SubversionException, IOException
     {
         /* Make sure SVNAdmin.load() works, with a repo dump file known
@@ -101,12 +100,11 @@ public class SVNAdminTests extends SVNTests
         assertNotNull("expect info callback", infoHolder[0]);
         assertEquals("expect zero revisions in new repository",
                 0L, infoHolder[0].getLastChangedRev());
-        
+
         // locate dump file in test environment
-        String testRoot = System.getProperty("test.rootdir",
-                "subversion/bindings/javahl/test-work");
-        File javahlRoot = new File(testRoot).getParentFile();
-        File dump = new File(javahlRoot, "tests/data/issue2979.dump");
+        String testSrcdir = System.getProperty("test.srcdir",
+                "subversion/bindings/javahl");
+        File dump = new File(testSrcdir, "tests/data/issue2979.dump");
         InputInterface input = new FileInputer(dump);
         OutputInterface loadLog = new IgnoreOutputer();
         admin.load(thisTest.getRepositoryPath(),
@@ -117,7 +115,7 @@ public class SVNAdminTests extends SVNTests
                      Depth.immediates, null, mycallback);
         assertEquals("expect two revisions after load()",
                      2L, infoHolder[0].getLastChangedRev());
-        // verify that the repos is faithful rep. of the dump file, 
+        // verify that the repos is faithful rep. of the dump file,
         // e.g., correct author
         assertEquals("expect 'svn4ant' as author of r2",
                      "svn4ant", infoHolder[0].getLastChangedAuthor());

@@ -2,10 +2,10 @@
  * Regression tests for the diff/diff3 library -- parsing unidiffs
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -32,7 +32,7 @@
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
-static const char *unidiff = 
+static const char *unidiff =
   "Index: A/mu (deleted)"                                               NL
   "===================================================================" NL
   "Index: A/C/gamma"                                                    NL
@@ -89,7 +89,7 @@ test_parse_unidiff(apr_pool_t *pool)
 
   /* We have two patches with one hunk each.
    * Parse the first patch. */
-  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, NL, pool, pool));
+  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, pool, pool));
   SVN_ERR_ASSERT(patch);
   SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
   SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
@@ -116,9 +116,9 @@ test_parse_unidiff(apr_pool_t *pool)
   SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
   SVN_ERR_ASSERT(eof);
   SVN_ERR_ASSERT(buf->len == 0);
-   
+
   /* Parse the second patch. */
-  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, NL, pool, pool));
+  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, pool, pool));
   SVN_ERR_ASSERT(patch);
   SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
   SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));

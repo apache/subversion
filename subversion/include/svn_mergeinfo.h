@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -156,6 +156,9 @@ typedef apr_hash_t *svn_mergeinfo_catalog_t;
  * placed into @a *mergeinfo.  Overlapping revision ranges of the same
  * inheritability are also allowed, but will be combined into a single
  * range when placed into @a *mergeinfo.
+ *
+ * @a input may contain relative merge source paths, but these are
+ * converted to absolute paths in @a *mergeinfo.
  *
  * @since New in 1.5.
  */
@@ -437,6 +440,9 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *inheritable_mergeinfo,
 /** Take a mergeinfo in @a mergeinput, and convert it to unparsed
  *  mergeinfo. Set @a *output to the result, allocated in @a pool.
  *  If @a input contains no elements, set @a *output to the empty string.
+ *
+ * @a mergeinput may contain relative merge source paths, but these are
+ * converted to absolute paths in @a *output.
  *
  * @since New in 1.5.
 */

@@ -1,10 +1,10 @@
 /* skel.c --- parsing and unparsing skeletons
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -658,7 +658,7 @@ apr_int64_t svn_skel__parse_int(const svn_skel_t *skel,
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
                          const svn_skel_t *skel,
-                         apr_pool_t *pool)
+                         apr_pool_t *pool /* result_pool */)
 {
   apr_hash_t *proplist = NULL;
   svn_skel_t *elt;
@@ -668,8 +668,7 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
     return skel_err("proplist");
 
   /* Create the returned structure */
-  if (skel->children)
-    proplist = apr_hash_make(pool);
+  proplist = apr_hash_make(pool);
   for (elt = skel->children; elt; elt = elt->next->next)
     {
       svn_string_t *value = svn_string_ncreate(elt->next->data,

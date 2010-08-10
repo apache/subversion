@@ -2,10 +2,10 @@
  * win32_crypto.c: win32 providers for SVN_AUTH_*
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -356,14 +356,28 @@ windows_validate_certificate(svn_boolean_t *ok_p,
       chain_para.cbSize = sizeof(chain_para);
 
       if (CertGetCertificateChain(NULL, cert_context, NULL, NULL, &chain_para,
-                                  CERT_CHAIN_CACHE_END_CERT,
+                                  CERT_CHAIN_CACHE_END_CERT |
+                                  CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT,
                                   NULL, &chain_context))
         {
-          if (chain_context->rgpChain[0]->TrustStatus.dwErrorStatus
-              == CERT_TRUST_NO_ERROR)
+          CERT_CHAIN_POLICY_PARA policy_para;
+          CERT_CHAIN_POLICY_STATUS policy_status;
+
+          policy_para.cbSize = sizeof(policy_para);
+          policy_para.dwFlags = 0;
+          policy_para.pvExtraPolicyPara = NULL;
+
+          policy_status.cbSize = sizeof(policy_status);
+
+          if (CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_SSL,
+                                               chain_context, &policy_para,
+                                               &policy_status))
             {
-              /* Windows think the certificate is valid. */
-              *ok_p = TRUE;
+              if (policy_status.dwError == S_OK)
+                {
+                  /* Windows thinks the certificate is valid. */
+                  *ok_p = TRUE;
+                }
             }
 
           CertFreeCertificateChain(chain_context);

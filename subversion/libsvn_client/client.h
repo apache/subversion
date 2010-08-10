@@ -2,10 +2,10 @@
  * client.h :  shared stuff internal to the client library.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -77,9 +77,21 @@ svn_client__derive_location(const char **url,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Get the repository URL and revision number for LOCAL_ABSPATH,
-   which is sometimes the path's copyfrom info rather than its actual
-   URL and revision. */
+/* Get the repository URL and revision number for LOCAL_ABSPATH and put them
+   in *URL and *REVNUM.  REVNUM may be null, in which case it is ignored.
+
+   If PEG_REV_KIND is svn_opt_revision_working, then use the LOCAL_ABSPATH's
+   copyfrom info to populate *URL and *REVNUM.
+
+   If PEG_REV_KIND is svn_opt_revision_date or svn_opt_revision_head then
+   return SVN_ERR_CLIENT_BAD_REVISION.
+
+   If PEG_REV_KIND is svn_opt_revision_committed or svn_opt_revision_previous
+   then set *REVNUM to the last committed or previous revision respectively.
+
+   If PEG_REV_NUM is svn_opt_revision_unspecified, svn_opt_revision_number,
+   svn_opt_revision_base, or svn_opt_revision_working then set *REVNUM
+   to the base revision. */
 svn_error_t *
 svn_client__entry_location(const char **url,
                            svn_revnum_t *revnum,
@@ -262,14 +274,6 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
-
-/* Set *REL_PATH to a relative path which, when URI-encoded and joined
-   with RA_SESSION's session url, will result in a string that matches URL. */
-svn_error_t *
-svn_client__path_relative_to_session(const char **rel_path,
-                                     svn_ra_session_t *ra_session,
-                                     const char *url,
-                                     apr_pool_t *pool);
 
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
    reparenting that session if necessary.  If reparenting occurs,

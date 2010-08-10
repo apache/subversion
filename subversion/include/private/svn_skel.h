@@ -1,10 +1,10 @@
 /* svn_skel.h : interface to `skeleton' functions
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -178,12 +178,11 @@ int svn_skel__list_length(const svn_skel_t *skel);
 
 /* Parse a `PROPLIST' SKEL into a regular hash of properties,
    *PROPLIST_P, which has const char * property names, and
-   svn_string_t * values, or NULL if SKEL contains no properties.  Use
-   POOL for all allocations.  */
+   svn_string_t * values. Use RESULT_POOL for all allocations.  */
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
                          const svn_skel_t *skel,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 /* Unparse a PROPLIST hash (which has const char * property names and
    svn_stringbuf_t * values) into a `PROPLIST' skel *SKEL_P.  Use POOL

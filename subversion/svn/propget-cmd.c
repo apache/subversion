@@ -2,10 +2,10 @@
  * propget-cmd.c -- Print properties and values of files/dirs
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -320,11 +320,11 @@ svn_cl__propget(apr_getopt_t *os,
           like_proplist = opt_state->verbose && !opt_state->strict;
 
           if (opt_state->xml)
-            print_properties_xml(pname_utf8, props, subpool);
+            SVN_ERR(print_properties_xml(pname_utf8, props, subpool));
           else
-            print_properties(out, svn_path_is_url(target), pname_utf8, props,
-                             print_filenames, omit_newline, like_proplist,
-                             subpool);
+            SVN_ERR(print_properties(out, svn_path_is_url(target), pname_utf8,
+                                     props, print_filenames, omit_newline,
+                                     like_proplist, subpool));
         }
 
       if (opt_state->xml)

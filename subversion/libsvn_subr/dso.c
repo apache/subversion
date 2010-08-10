@@ -1,9 +1,9 @@
 /*
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -107,7 +107,7 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
         {
 #ifdef SVN_DEBUG
           char buf[1024];
-          SVN_DBG(("%s\n", apr_dso_error(*dso, buf, 1024)));
+          fprintf(stderr, "%s\n", apr_dso_error(*dso, buf, 1024));
 #endif
           *dso = NULL;
 

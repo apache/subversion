@@ -2,10 +2,10 @@
  * svn_diff_private.h: libsvn_diff related functions
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -36,6 +36,10 @@ extern "C" {
 
 /* A single hunk inside a patch */
 typedef struct svn_hunk_t {
+  /* The hunk's unidiff text as it appeared in the patch file,
+   * without range information. */
+  svn_stream_t *diff_text;
+
   /* The original and modified texts in the hunk range.
    * Derived from the diff text.
    *
@@ -93,23 +97,18 @@ typedef struct svn_patch_t {
   const char *old_filename;
   const char *new_filename;
 
-  /* EOL string used in patch file. */
-  const char *eol_str;
-
   /* An array containing an svn_hunk_t object for each hunk parsed
    * from the patch. */
   apr_array_header_t *hunks;
 } svn_patch_t;
 
-/* Return the next *PATCH in PATCH_FILE. The patch file is assumed to
- * have consistent EOL-markers as specified in EOL_STR.
+/* Return the next *PATCH in PATCH_FILE.
  * If no patch can be found, set *PATCH to NULL.
  * Allocate results in RESULT_POOL.
  * Use SCRATCH_POOL for all other allocations. */
 svn_error_t *
 svn_diff__parse_next_patch(svn_patch_t **patch,
                            apr_file_t *patch_file,
-                           const char *eol_str,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 

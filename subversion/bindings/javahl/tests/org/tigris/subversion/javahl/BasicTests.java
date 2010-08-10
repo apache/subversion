@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -22,12 +22,7 @@
  */
 package org.tigris.subversion.javahl;
 
-import org.tigris.subversion.javahl.*;
-
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -43,7 +38,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.Map;
 
-import junit.framework.Assert;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -2253,7 +2247,9 @@ public class BasicTests extends SVNTests
     private long[] getMergeinfoRevisions(int kind, String pathOrUrl,
                                          Revision pegRevision,
                                          String mergeSourceUrl,
-                                         Revision srcPegRevision) {
+                                         Revision srcPegRevision) 
+        throws SubversionException
+    {
         class Callback implements LogMessageCallback {
 
             List revList = new ArrayList();
@@ -2274,15 +2270,10 @@ public class BasicTests extends SVNTests
                 return revisions;
             }
         }
-        try {
-            Callback callback = new Callback();
-            client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-                                   srcPegRevision, false, null, callback);
-            return callback.getRevisions();
-        } catch (ClientException e) {
-            return null;
-        }
-
+        Callback callback = new Callback();
+        client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                               srcPegRevision, false, null, callback);
+        return callback.getRevisions();
     }
 
     /**

@@ -1,5 +1,25 @@
 #!/bin/sh
 #
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+#
 # mailer-init.sh: create and initialize a repository for the mailer tests
 #
 # USAGE: ./mailer-init.sh
@@ -36,7 +56,7 @@ svn ps svn:new_svn_prop val file2
 svn ps prop1 propval1 file2
 svn ps prop3 propval3 dir1
 echo change C2 >> dir2/file5
-svn commit -m "two file changes"
+svn commit -m "two file changes.  Fixes Blah#123"
 
 # copy a file and a dir and change property
 svn cp file1 dir2/file7
@@ -64,7 +84,7 @@ echo file9 > file9
 svn add file9
 svn mkdir dir4
 echo change C4 >> dir1/file3
-svn commit -m "mixed addition and change"
+svn commit -m "mixed addition and change.  Fixes Blaz#456 Blah#987"
 
 # add a file, add a dir, delete a file, delete a dir, and make a change
 echo file10 > dir1/file10

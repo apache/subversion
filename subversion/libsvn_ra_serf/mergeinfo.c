@@ -2,10 +2,10 @@
  * mergeinfo.c : entry point for mergeinfo RA functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -116,16 +116,17 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
   else if (state == MERGEINFO_ITEM
            && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
-      if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path->len)
+      if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
         {
           svn_mergeinfo_t path_mergeinfo;
+
+          SVN_ERR_ASSERT(mergeinfo_ctx->curr_path->data);
           SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo,
                                       mergeinfo_ctx->curr_info->data,
                                       mergeinfo_ctx->pool));
           apr_hash_set(mergeinfo_ctx->result_catalog,
-                       apr_pstrmemdup(mergeinfo_ctx->pool,
-                                      mergeinfo_ctx->curr_path->data,
-                                      mergeinfo_ctx->curr_path->len),
+                       apr_pstrdup(mergeinfo_ctx->pool,
+                                   mergeinfo_ctx->curr_path->data),
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
       svn_ra_serf__xml_pop_state(parser);

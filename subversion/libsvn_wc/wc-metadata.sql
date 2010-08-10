@@ -2,10 +2,10 @@
  *     This is intended for use with SQLite 3
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -78,7 +78,7 @@ CREATE TABLE BASE_NODE (
   /* specifies the location of this node in the local filesystem. wc_id
      implies an absolute path, and local_relpath is relative to that
      location (meaning it will be "" for the wcroot). */
-  wc_id  INTEGER NOT NULL,
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
   local_relpath  TEXT NOT NULL,
 
   /* the repository this node is part of, and the relative path [to its
@@ -87,7 +87,7 @@ CREATE TABLE BASE_NODE (
      indicates a switched node.
 
      Note: they must both be NULL, or both non-NULL. */
-  repos_id  INTEGER,
+  repos_id  INTEGER REFERENCES REPOSITORY (id),
   repos_relpath  TEXT,
 
   /* parent's local_relpath for aggregating children of a given parent.
@@ -189,7 +189,7 @@ CREATE TABLE PRISTINE (
 
 CREATE TABLE WORKING_NODE (
   /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER NOT NULL,
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
@@ -254,7 +254,7 @@ CREATE TABLE WORKING_NODE (
 
   /* Where this node was copied/moved from. Set only on the root of the
      operation, and implied for all children. */
-  copyfrom_repos_id  INTEGER,
+  copyfrom_repos_id  INTEGER REFERENCES REPOSITORY (id),
   /* ### BH: Should we call this copyfrom_repos_relpath and skip the initial '/'
      ### to match the other repository paths used in sqlite and to make it easier
      ### to join these paths? */
@@ -305,7 +305,7 @@ CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 
 CREATE TABLE ACTUAL_NODE (
   /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER NOT NULL,
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
@@ -360,7 +360,7 @@ CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 CREATE TABLE LOCK (
   /* what repository location is locked */
-  repos_id  INTEGER NOT NULL,
+  repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
   repos_relpath  TEXT NOT NULL,
   /* ### BH: Shouldn't this refer to an working copy location? You can have a
          single relpath checked out multiple times in one (switch) or more
@@ -406,7 +406,7 @@ UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
 /* The existence of a row in this table implies a write lock. */
 CREATE TABLE WC_LOCK (
   /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER NOT NULL,
+  wc_id  INTEGER NOT NULL  REFERENCES WCROOT (id),
   local_dir_relpath  TEXT NOT NULL,
  
   PRIMARY KEY (wc_id, local_dir_relpath)
@@ -456,8 +456,26 @@ WHERE depth = 'exclude';
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 16 introduces new handling for conflict information.  */
+/* Format 16 introduces some new columns for pristines and locks.  */
 -- format: 16
+
+/* An md5 column for the pristine table. */
+ALTER TABLE PRISTINE
+ADD COLUMN md5_checksum  TEXT;
+
+/* Add the locked_levels column to record the depth of a lock. */
+ALTER TABLE WC_LOCK
+ADD COLUMN locked_levels INTEGER NOT NULL DEFAULT -1;;
+
+/* Default the depth of existing locks to 0. */
+UPDATE wc_lock
+SET locked_levels = 0;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 17 introduces new handling for conflict information.  */
+-- format: 17
 
 
 /* ------------------------------------------------------------------------- */
@@ -506,9 +524,9 @@ DROP TABLE BASE_NODE;
 /* Recreate the original table, this time less the temporary columns.
    Column descriptions are same as BASE_NODE in format 12 */
 CREATE TABLE BASE_NODE(
-  wc_id  INTEGER NOT NULL,
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
   local_relpath  TEXT NOT NULL,
-  repos_id  INTEGER,
+  repos_id  INTEGER REFERENCES REPOSITORY (id),
   repos_relpath  TEXT,
   parent_relpath  TEXT,
   presence  TEXT NOT NULL,
@@ -565,7 +583,7 @@ FROM ACTUAL_NODE;
 DROP TABLE ACTUAL_NODE;
 
 CREATE TABLE ACTUAL_NODE (
-  wc_id  INTEGER NOT NULL,
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
   local_relpath  TEXT NOT NULL,
   parent_relpath  TEXT,
   properties  BLOB,

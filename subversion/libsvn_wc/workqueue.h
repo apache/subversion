@@ -2,10 +2,10 @@
  * workqueue.h :  manipulating work queue items
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -99,6 +99,14 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           apr_hash_t *new_dav_cache,
                           svn_boolean_t keep_changelist,
                           apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__wq_add_install_properties(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_hash_t *pristine_props,
+                                  apr_hash_t *actual_props,
+                                  svn_boolean_t force_base_install,
+                                  apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

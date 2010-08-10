@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -1395,31 +1395,31 @@ def lock_funky_comment_chars(sbox):
 # in a working copy, not to the working copy overall.
 def lock_twice_in_one_wc(sbox):
   "try to lock a file twice in one working copy"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   mu2_path = os.path.join(wc_dir, 'A', 'B', 'mu')
-  
+
   # Create a needs-lock file
   svntest.actions.set_prop('svn:needs-lock', '*', mu_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'commit', wc_dir, '-m', '')
-  
+
   # Mark the file readonly
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'update', wc_dir)
-  
+
   # Switch a second location for the same file in the same working copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', sbox.repo_url + '/A',
                                      os.path.join(wc_dir, 'A', 'B'))
-  
+
   # Lock location 1
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'lock', mu_path, '-m', 'Locked here')
-  
+
   # Locking in location 2 should fail ### Currently returns exitcode 0
   svntest.actions.run_and_verify_svn2(None, None, ".*is already locked.*", 0,
                                       'lock', '-m', '', mu2_path)
@@ -1427,11 +1427,50 @@ def lock_twice_in_one_wc(sbox):
   # Change the file anyway
   os.chmod(mu2_path, 0700)
   svntest.main.file_append(mu2_path, "Updated text")
-  
+
   # Commit should fail because it is locked in the other location
   svntest.actions.run_and_verify_svn(None, None,
                                      '.*(([Nn]o)|(Server)).*[lL]ock.*',
                                      'commit', mu2_path, '-m', '')
+
+#----------------------------------------------------------------------
+# Test for issue #3524 'Locking path via ra_serf which doesn't exist in
+# HEAD triggers assert'
+def lock_path_not_in_head(sbox):
+  "lock path that does not exist in HEAD"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  D_path      = os.path.join(wc_dir, 'A', 'D')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+
+  # Commit deletion of A/D and A/B/lambda as r2, then update the WC
+  # back to r1.  Then attempt to lock some paths that no longer exist
+  # in HEAD.  These should fail gracefully.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'delete', lambda_path, D_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Some deletions', wc_dir)  
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
+  expected_lock_fail_err_re = "svn: warning:.*" \
+  "((Path .* doesn't exist in HEAD revision)" \
+  "|(Lock request failed: 405 Method Not Allowed))"
+  # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
+  #
+  # working_copies\lock_tests-37>svn lock A\D
+  # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
+  # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
+  #  assertion failed (ctx->status_code)
+  #
+  # working_copies\lock_tests-37>svn lock A\B\lambda
+  # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
+  # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
+  #  assertion failed (ctx->status_code)
+  svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
+                                      0, 'lock', D_path)
+  svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
+                                      0, 'lock', lambda_path)
 
 ########################################################################
 # Run the tests
@@ -1475,6 +1514,7 @@ test_list = [ None,
                     svntest.main.is_ra_type_dav),
               lock_funky_comment_chars,
               lock_twice_in_one_wc,
+              lock_path_not_in_head,
             ]
 
 if __name__ == '__main__':

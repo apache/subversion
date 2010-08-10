@@ -2,10 +2,10 @@
  * switch-cmd.c -- Bring work tree in sync with a different URL
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -146,8 +146,8 @@ svn_cl__switch(apr_getopt_t *os,
   switch_url = svn_uri_canonicalize(switch_url, scratch_pool);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                         FALSE, FALSE, scratch_pool);
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, FALSE, FALSE, scratch_pool));
 
   /* Deal with depthstuffs. */
   if (opt_state->set_depth != svn_depth_unknown)

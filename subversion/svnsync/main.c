@@ -1,9 +1,9 @@
 /*
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -179,7 +179,7 @@ static const apr_getopt_option_t svnsync_options[] =
                           "                             "
                           "For example:\n"
                           "                             "
-                          "    servers:global:http-library=serf\n")},
+                          "    servers:global:http-library=serf")},
     {"version",        svnsync_opt_version, 0,
                        N_("show program version information")},
     {"help",           'h', 0,
@@ -276,7 +276,8 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
 
   subpool = svn_pool_create(pool);
 
-  for (i = 0; i < 10; ++i)
+#define SVNSYNC_LOCK_RETRIES 10
+  for (i = 0; i < SVNSYNC_LOCK_RETRIES; ++i)
     {
       svn_pool_clear(subpool);
       SVN_ERR(check_cancel(NULL));
@@ -299,8 +300,9 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
               apr_sleep(apr_time_from_sec(1));
             }
         }
-      else
+      else if (i < SVNSYNC_LOCK_RETRIES - 1)
         {
+          /* Except in the very last iteration, try to set the lock. */
           SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK,
                                          mylocktoken, subpool));
         }
@@ -749,7 +751,7 @@ do_initialize(svn_ra_session_t *to_session,
      consistent while allowing folks to see what the latest revision is.  */
   SVN_ERR(copy_revprops(from_session, to_session, latest, FALSE,
                         baton->quiet, &normalized_rev_props_count, pool));
-  
+
   SVN_ERR(log_properties_normalized(normalized_rev_props_count, 0, pool));
 
   /* TODO: It would be nice if we could set the dest repos UUID to be
@@ -1651,7 +1653,7 @@ main(int argc, const char *argv[])
             break;
           case svnsync_opt_config_options:
             if (!config_options)
-              config_options = 
+              config_options =
                     apr_array_make(pool, 1,
                                    sizeof(svn_cmdline__config_argument_t*));
 

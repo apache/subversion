@@ -3,10 +3,10 @@ REM #######################################################################
 REM FILE       mk_htmlhelp.bat
 REM PURPOSE    Making MS HTML help file out of the svn-book sources
 REM ====================================================================
-REM  Licensed to the Subversion Corporation (SVN Corp.) under one
+REM  Licensed to the Apache Software Foundation (ASF) under one
 REM  or more contributor license agreements.  See the NOTICE file
 REM  distributed with this work for additional information
-REM  regarding copyright ownership.  The SVN Corp. licenses this file
+REM  regarding copyright ownership.  The ASF licenses this file
 REM  to you under the Apache License, Version 2.0 (the
 REM  "License"); you may not use this file except in compliance
 REM  with the License.  You may obtain a copy of the License at

@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -661,6 +661,31 @@ svn_ra_get_session_url(svn_ra_session_t *ra_session,
                        apr_pool_t *pool);
 
 
+/** Convert @a url into a path relative to the URL at which @a ra_session
+ * is parented, setting @a *rel_path to that value.  If @a url is not
+ * a child of the session URL, return @c SVN_ERR_RA_ILLEGAL_URL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_ra_get_path_relative_to_session(svn_ra_session_t *ra_session,
+                                    const char **rel_path,
+                                    const char *url,
+                                    apr_pool_t *pool);
+
+/** Convert @a url into a path relative to the repository root URL of
+ * the repository with which @a ra_session is associated, setting @a
+ * *rel_path to that value.  If @a url is not a child of repository
+ * root URL, return @c SVN_ERR_RA_ILLEGAL_URL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_ra_get_path_relative_to_root(svn_ra_session_t *ra_session,
+                                 const char **rel_path,
+                                 const char *url,
+                                 apr_pool_t *pool);
+
 /**
  * Get the latest revision number from the repository of @a session.
  *
@@ -1312,7 +1337,7 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
  *
- * If @a discover_changed_paths, then each call to receiver passes a
+ * If @a discover_changed_paths, then each call to @a receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
  * the hash's keys are all the paths committed in that revision.
  * Otherwise, each call to receiver passes NULL for @a changed_paths.

@@ -1,10 +1,10 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1474,7 +1474,7 @@ svn_fs_base__miscellaneous_get(const char **val,
 
   mga.key = key;
   mga.val = val;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga, 
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga,
                                  FALSE, scratch_pool));
   if (*val)
     *val = apr_pstrdup(pool, *val);
@@ -2773,15 +2773,41 @@ svn_fs_base__commit_txn(const char **conflict_p,
 }
 
 
+/* Commit BATON->txn as a replacement for the existing transaction in
+ * revision BATON->new_rev. BATON is of type (struct commit_args *).
+ *
+ * If the commit succeeds, ARGS->txn is destroyed.
+ */
+static svn_error_t *
+txn_body_commit_obliteration(void *baton, trail_t *trail)
+{
+  struct commit_args *args = baton;
+
+  return svn_fs_base__dag_commit_obliteration_txn(args->new_rev, args->txn,
+                                                  trail, trail->pool);
+}
+
+
+/* ### Under development */
 svn_error_t *
-svn_fs_base__commit_obliteration_txn(svn_revnum_t rev,
+svn_fs_base__commit_obliteration_txn(svn_revnum_t replacing_rev,
                                      svn_fs_txn_t *txn,
                                      apr_pool_t *pool)
 {
-  /* svn_fs_t *fs = txn->fs; */
+  struct commit_args commit_args;
 
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
-  /* return SVN_NO_ERROR; */
+  /* We do not need a re-try loop like the (catch up to head, try to
+   * commit) loop that svn_fs_base__commit_txn() uses, because the only
+   * concurrent changes that can affect this old revision are other
+   * obliterates, and they are presently ...
+   * ### what - not handled, not supported, mutually exclusive? */
+  commit_args.new_rev = replacing_rev;
+  commit_args.txn = txn;
+  SVN_ERR(svn_fs_base__retry_txn(txn->fs, txn_body_commit_obliteration,
+                                 &commit_args, FALSE, pool));
+
+  /* return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL); */
+  return SVN_NO_ERROR;
 }
 
 

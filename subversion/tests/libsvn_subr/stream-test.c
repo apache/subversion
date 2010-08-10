@@ -2,10 +2,10 @@
  * stream-test.c -- test the stream functions
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -385,7 +385,7 @@ test_stream_line_transformer(apr_pool_t *pool)
   stream = svn_stream_from_string(string, pool);
 
   svn_stream_set_line_transformer_callback(stream, line_transformer);
-  
+
   svn_stream_readline(stream, &line, "\n", &eof, pool);
   SVN_ERR_ASSERT(strcmp(line->data, inv_lines[0]) == 0);
 
@@ -426,7 +426,7 @@ test_stream_line_filter_and_transformer(apr_pool_t *pool)
   svn_stream_set_line_filter_callback(stream, line_filter);
 
   svn_stream_set_line_transformer_callback(stream, line_transformer);
-  
+
   /* Line one should be filtered. */
   svn_stream_readline(stream, &line, "\n", &eof, pool);
   SVN_ERR_ASSERT(strcmp(line->data, inv_lines[1]) == 0);
@@ -443,7 +443,117 @@ test_stream_line_filter_and_transformer(apr_pool_t *pool)
 
 }
 
+static svn_error_t *
+test_stream_tee(apr_pool_t *pool)
+{
+  svn_stringbuf_t *test_bytes = generate_test_bytes(100, pool);
+  svn_stringbuf_t *output_buf1 = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *output_buf2 = svn_stringbuf_create("", pool);
+  svn_stream_t *source_stream = svn_stream_from_stringbuf(test_bytes, pool);
+  svn_stream_t *output_stream1 = svn_stream_from_stringbuf(output_buf1, pool);
+  svn_stream_t *output_stream2 = svn_stream_from_stringbuf(output_buf2, pool);
+  svn_stream_t *tee_stream;
 
+  tee_stream = svn_stream_tee(output_stream1, output_stream2, pool);
+  SVN_ERR(svn_stream_copy3(source_stream, tee_stream, NULL, NULL, pool));
+
+  if (!svn_stringbuf_compare(output_buf1, output_buf2))
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Duplicated streams did not match.");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_seek_file(apr_pool_t *pool)
+{
+  static const char *file_data[2] = {"One", "Two"};
+  svn_stream_t *stream;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+  apr_file_t *f;
+  static const char *fname = "test_stream_seek.txt";
+  int j;
+  apr_status_t status;
+  static const char *NL = APR_EOL_STR;
+  svn_stream_mark_t *mark;
+
+  status = apr_file_open(&f, fname, (APR_READ | APR_WRITE | APR_CREATE |
+                         APR_TRUNCATE | APR_DELONCLOSE), APR_OS_DEFAULT, pool);
+  if (status != APR_SUCCESS)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
+                             fname);
+
+  /* Create the file. */
+  for (j = 0; j < 2; j++)
+    {
+      apr_size_t len;
+
+      len = strlen(file_data[j]);
+      status = apr_file_write(f, file_data[j], &len);
+      if (status || len != strlen(file_data[j]))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Cannot write to '%s'", fname);
+      len = strlen(NL);
+      status = apr_file_write(f, NL, &len);
+      if (status || len != strlen(NL))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Cannot write to '%s'", fname);
+    }
+
+  /* Create a stream to read from the file. */
+  stream = svn_stream_from_aprfile2(f, FALSE, pool);
+  SVN_ERR(svn_stream_reset(stream));
+  SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[0]) == 0);
+  /* Set a mark at the beginning of the second line of the file. */
+  SVN_ERR(svn_stream_mark(stream, &mark, pool));
+  /* Read the second line and then seek back to the mark. */
+  SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
+  SVN_ERR(svn_stream_seek(stream, mark));
+  /* The next read should return the second line again. */
+  SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
+  /* The next read should return EOF. */
+  SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
+  SVN_ERR_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_seek_stringbuf(apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+  svn_stringbuf_t *stringbuf;
+  char buf[4];
+  apr_size_t len;
+  svn_stream_mark_t *mark;
+
+  stringbuf = svn_stringbuf_create("OneTwo", pool);
+  stream = svn_stream_from_stringbuf(stringbuf, pool);
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "One") == 0);
+  SVN_ERR(svn_stream_mark(stream, &mark, pool));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "Two") == 0);
+  SVN_ERR(svn_stream_seek(stream, mark));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "Two") == 0);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
@@ -463,5 +573,11 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test stream line transforming"),
     SVN_TEST_PASS2(test_stream_line_filter_and_transformer,
                    "test stream line filtering and transforming"),
+    SVN_TEST_PASS2(test_stream_tee,
+                   "test 'tee' streams"),
+    SVN_TEST_PASS2(test_stream_seek_file,
+                   "test stream seeking for files"),
+    SVN_TEST_PASS2(test_stream_seek_stringbuf,
+                   "test stream seeking for stringbufs"),
     SVN_TEST_NULL
   };

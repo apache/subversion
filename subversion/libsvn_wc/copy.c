@@ -2,10 +2,10 @@
  * copy.c:  wc 'copy' functionality.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -56,7 +56,7 @@ copy_props(svn_wc__db_t *db,
   apr_hash_t *props;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_wc__load_props(NULL, &props, NULL, db, src_abspath,
+  SVN_ERR(svn_wc__load_props(NULL, &props, db, src_abspath,
                              scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
@@ -184,7 +184,7 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_io_get_dirents2(&dirents, src_abspath, scratch_pool));
 
       /* Read src_path's entries one by one. */
-      for (hi = apr_hash_first(scratch_pool, dirents); 
+      for (hi = apr_hash_first(scratch_pool, dirents);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -258,114 +258,85 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
-
-/* Helper function for copy_file_administratively() and
-   copy_dir_administratively().  Determines the COPYFROM_URL and
-   COPYFROM_REV of a file or directory SRC_PATH which is the descendant
-   of an explicitly moved or copied directory that has not been committed.
-*/
-static svn_error_t *
-get_copyfrom_url_rev_via_parent(const char **copyfrom_url,
-                                svn_revnum_t *copyfrom_rev,
-                                svn_wc__db_t *db,
-                                const char *src_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
-{
-  const char *parent_abspath;
-  const char *rest;
-
-  svn_dirent_split(src_abspath, &parent_abspath, &rest, scratch_pool);
-
-  *copyfrom_url = NULL;
-
-  while (! *copyfrom_url)
-    {
-      const svn_wc_entry_t *entry;
-
-      SVN_ERR(svn_wc__get_entry(&entry, db, parent_abspath, FALSE,
-                                svn_node_unknown, FALSE, scratch_pool,
-                                scratch_pool));
-
-      if (entry->copyfrom_url)
-        {
-          *copyfrom_url = svn_uri_join(entry->copyfrom_url, rest, result_pool);
-          *copyfrom_rev = entry->copyfrom_rev;
-        }
-      else
-        {
-          const char *last_parent_abspath = parent_abspath;
-
-          rest = svn_dirent_join(svn_dirent_basename(parent_abspath,
-                                                     scratch_pool),
-                                 rest, scratch_pool);
-          parent_abspath = svn_dirent_dirname(parent_abspath, scratch_pool);
-
-          if (strcmp(parent_abspath, last_parent_abspath) == 0)
-            {
-              /* If this happens, it probably means that parent_path is "".
-                 But there's no reason to limit ourselves to just that case;
-                 given everything else that's going on in this function, a
-                 strcmp() is pretty cheap, and the result we're trying to
-                 prevent is an infinite loop if svn_dirent_dirname() returns
-                 its input unchanged. */
-              return svn_error_createf(
-                 SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
-                 _("no parent with copyfrom information found above '%s'"),
-                 svn_dirent_local_style(src_abspath, scratch_pool));
-            }
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* A helper for copy_file_administratively() which sets *COPYFROM_URL
    and *COPYFROM_REV appropriately (possibly to NULL/SVN_INVALID_REVNUM).
-   DST_ENTRY may be NULL. */
-static APR_INLINE svn_error_t *
+   DST_URL may be NULL, in which case DST_REVISION is ignored. */
+static svn_error_t *
 determine_copyfrom_info(const char **copyfrom_url,
                         svn_revnum_t *copyfrom_rev,
                         svn_wc__db_t *db,
                         const char *src_abspath,
-                        const svn_wc_entry_t *src_entry,
-                        const svn_wc_entry_t *dst_entry,
+                        const char *dst_url,
+                        svn_revnum_t dst_revision,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   const char *url;
-  svn_revnum_t rev;
+  const char *original_root_url;
+  const char *original_repos_relpath;
+  svn_revnum_t original_revision;
+  svn_wc__db_status_t status;
 
-  if (src_entry->copyfrom_url)
+  url = NULL;
+  original_revision = SVN_INVALID_REVNUM;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &original_repos_relpath,
+                               &original_root_url, NULL, &original_revision,
+                               NULL, NULL, NULL, NULL, NULL, db, src_abspath,
+                               scratch_pool, scratch_pool));
+  if (original_root_url && original_repos_relpath)
     {
       /* When copying/moving a file that was already explicitly
          copied/moved then we know the URL it was copied from... */
-      url = src_entry->copyfrom_url;
-      rev = src_entry->copyfrom_rev;
+      url = svn_path_url_add_component2(original_root_url,
+                                        original_repos_relpath, scratch_pool);
     }
-  else
+  else if (status == svn_wc__db_status_added
+           || status == svn_wc__db_status_obstructed_add)
     {
       /* ...But if this file is merely the descendant of an explicitly
          copied/moved directory, we need to do a bit more work to
          determine copyfrom_url and copyfrom_rev. */
-      SVN_ERR(get_copyfrom_url_rev_via_parent(&url, &rev, db, src_abspath,
-                                              scratch_pool, scratch_pool));
+      const char *op_root_abspath;
+
+      SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL, NULL,
+                                       NULL, &original_repos_relpath,
+                                       &original_root_url, NULL,
+                                       &original_revision, db, src_abspath,
+                                       scratch_pool, scratch_pool));
+      if (status == svn_wc__db_status_copied ||
+          status == svn_wc__db_status_moved_here)
+        {
+          const char *src_parent_url;
+          const char *src_relpath;
+
+          src_parent_url = svn_path_url_add_component2(original_root_url,
+                                                       original_repos_relpath,
+                                                       scratch_pool);
+          src_relpath = svn_dirent_is_child(op_root_abspath, src_abspath,
+                                            scratch_pool);
+          if (src_relpath)
+            url = svn_path_url_add_component2(src_parent_url, src_relpath,
+                                              scratch_pool);
+        }
     }
 
-  if (dst_entry && rev == dst_entry->revision &&
-      strcmp(url, dst_entry->url) == 0)
+  if (url && dst_url && strcmp(url, dst_url) == 0 &&
+      original_revision == dst_revision)
     {
       /* Suppress copyfrom info when the copy source is the same as
          for the destination. */
       url = NULL;
-      rev = SVN_INVALID_REVNUM;
+      original_revision = SVN_INVALID_REVNUM;
     }
 
   if (url)
     *copyfrom_url = apr_pstrdup(result_pool, url);
   else
     *copyfrom_url = NULL;
-  *copyfrom_rev = rev;
+  *copyfrom_rev = original_revision;
 
   return SVN_NO_ERROR;
 }
@@ -448,13 +419,19 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
     apr_hash_t *props, *base_props;
     svn_stream_t *base_contents;
     svn_stream_t *contents;
+    svn_boolean_t src_exists;
+
+    src_exists = TRUE;
 
     /* Are we moving or copying a file that is already moved or copied
        but not committed? */
     if (src_entry->copied)
       {
         SVN_ERR(determine_copyfrom_info(&copyfrom_url, &copyfrom_rev, db,
-                                        src_abspath, src_entry, dst_entry,
+                                        src_abspath,
+                                        dst_entry ? dst_entry->url : NULL,
+                                        dst_entry ? dst_entry->revision
+                                                  : SVN_INVALID_REVNUM,
                                         scratch_pool, scratch_pool));
       }
     else
@@ -465,7 +442,7 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
       }
 
     /* Load source base and working props. */
-    SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, db,
+    SVN_ERR(svn_wc__load_props(&base_props, &props, db,
                                src_abspath, scratch_pool, scratch_pool));
 
     /* Copy working copy file to temporary location */
@@ -483,7 +460,7 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
           svn_subst_eol_style_t eol_style;
           const char *eol_str;
           apr_hash_t *keywords;
-          
+
           SVN_ERR(svn_wc__get_keywords(&keywords, db, src_abspath, NULL,
                                        scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, db,
@@ -496,6 +473,8 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
           if (err && APR_STATUS_IS_ENOENT(err->apr_err))
             {
               svn_error_clear(err);
+
+              src_exists = FALSE;
 
               err = svn_wc__get_pristine_contents(&contents, db, src_abspath,
                                                   scratch_pool, scratch_pool);
@@ -542,6 +521,8 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
                                    cancel_func, cancel_baton,
                                    notify_func, notify_baton,
                                    scratch_pool));
+
+    SVN_ERR(svn_io_copy_perms(src_abspath, dst_abspath, scratch_pool));
   }
 
   /* Report the addition to the caller. */
@@ -765,7 +746,10 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
                                   svn_node_dir, TRUE,
                                   scratch_pool, scratch_pool));
         SVN_ERR(determine_copyfrom_info(&copyfrom_url, &copyfrom_rev, db,
-                                        src_abspath, src_entry, dst_entry,
+                                        src_abspath,
+                                        dst_entry ? dst_entry->url : NULL,
+                                        dst_entry ? dst_entry->revision
+                                                  : SVN_INVALID_REVNUM,
                                         scratch_pool, scratch_pool));
 
         /* The URL for a copied dir won't exist in the repository, which

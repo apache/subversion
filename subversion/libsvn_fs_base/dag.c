@@ -1,10 +1,10 @@
 /* dag.c : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -49,6 +49,8 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 #include "bdb/checksum-reps-table.h"
+#include "bdb/changes-table.h"
+#include "bdb/node-origins-table.h"
 
 #include "private/svn_skel.h"
 #include "private/svn_fs_util.h"
@@ -257,7 +259,7 @@ txn_body_dag_init_fs(void *baton,
 svn_error_t *
 svn_fs_base__dag_init_fs(svn_fs_t *fs)
 {
-  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, NULL, 
+  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, NULL,
                                 TRUE, fs->pool);
 }
 
@@ -1623,6 +1625,160 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   date.len = strlen(date.data);
   return svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
                                    &date, trail, pool);
+}
+
+/* Modify all entries in the "node-origins" table that have a txn-id of
+ * OLD_TXN_ID to refer to NEW_TXN_ID instead.
+ *
+ * Work within TRAIL. */
+static svn_error_t *
+node_origins_update(const char *new_txn_id,
+                    const char *old_txn_id,
+                    trail_t *trail,
+                    apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *changes;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+
+  /* To find the nodes that originate in the old txn, we'll look in the
+   * "changes" table. Any change that added a node could have created a new
+   * node id. */
+  SVN_ERR(svn_fs_bdb__changes_fetch_raw(&changes, trail->fs, old_txn_id, trail,
+                                        scratch_pool));
+  for (i = 0; i < changes->nelts; i++)
+    {
+      change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+
+      svn_pool_clear(iterpool);
+
+      if (change->kind == svn_fs_path_change_add
+          || change->kind == svn_fs_path_change_replace)
+        {
+          const svn_fs_id_t *origin_id;
+          const char *node_id, *id_copy_id, *id_txn_id;
+
+          /* Find the destination node id of this change */
+          node_id = svn_fs_base__id_node_id(change->noderev_id);
+
+          /* Fetch the old node-origin */
+          SVN_ERR(svn_fs_bdb__get_node_origin(&origin_id, trail->fs, node_id,
+                                              trail, iterpool));
+          id_copy_id = svn_fs_base__id_copy_id(origin_id);
+          id_txn_id = svn_fs_base__id_txn_id(origin_id);
+
+          if (svn_fs_base__key_compare(id_txn_id, old_txn_id) == 0)
+            {
+              /* Change its txn_id to NEW_TXN_ID */
+              origin_id = svn_fs_base__id_create(node_id, id_copy_id,
+                                                 new_txn_id, iterpool);
+              /* Save the new node-origin */
+              SVN_ERR(svn_fs_bdb__delete_node_origin(trail->fs, node_id, trail,
+                                                     iterpool));
+              SVN_ERR(svn_fs_bdb__set_node_origin(trail->fs, node_id,
+                                                  origin_id, trail,
+                                                  iterpool));
+            }
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+/* Modify each row in the "copies" table that is keyed by a (const char *)
+ * copy-id listed in COPY_IDS, changing the txn-id component of its
+ * "dst_noderev_id" field from OLD_TXN_ID to NEW_TXN_ID.
+ * Each entry in COPY_IDS must match exactly one row in the "copies" table.
+ *
+ * Work within TRAIL. */
+static svn_error_t *
+copies_update(const char *new_txn_id,
+              const char *old_txn_id,
+              apr_array_header_t *copy_ids,
+              trail_t *trail,
+              apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  for (i = 0; i < copy_ids->nelts; i++)
+    {
+      const char *copy_id = APR_ARRAY_IDX(copy_ids, i, const char *);
+      copy_t *copy;
+      const char *id_node_id, *id_copy_id, *id_txn_id;
+
+      svn_pool_clear(iterpool);
+
+      /* Get the old "copy" row from the "copies" table */
+      SVN_ERR(svn_fs_bdb__get_copy(&copy, trail->fs, copy_id, trail,
+                                   iterpool));
+
+      /* Modify it: change dst_noderev_id's txn_id from old to new txn-id */
+      id_node_id = svn_fs_base__id_node_id(copy->dst_noderev_id);
+      id_copy_id = svn_fs_base__id_copy_id(copy->dst_noderev_id);
+      id_txn_id = svn_fs_base__id_txn_id(copy->dst_noderev_id);
+      SVN_ERR_ASSERT(svn_fs_base__key_compare(id_copy_id, copy_id) == 0);
+      SVN_ERR_ASSERT(svn_fs_base__key_compare(id_txn_id, old_txn_id) == 0);
+      copy->dst_noderev_id = svn_fs_base__id_create(id_node_id, id_copy_id,
+                                                    new_txn_id, iterpool);
+
+      /* Write the new "copy" row back under the same key (copy_id) */
+      SVN_ERR(svn_fs_bdb__create_copy(trail->fs, copy_id,
+                                      copy->src_path, copy->src_txn_id,
+                                      copy->dst_noderev_id, copy->kind,
+                                      trail, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
+                                         svn_fs_txn_t *txn,
+                                         trail_t *trail,
+                                         apr_pool_t *scratch_pool)
+{
+  transaction_t *txn_obj;
+  revision_t revision;
+  const char *old_txn_id;
+
+  /* Find the old txn. */
+  SVN_ERR(svn_fs_base__rev_get_txn_id(&old_txn_id, trail->fs, replacing_rev,
+                                      trail, scratch_pool));
+
+  /* Read the new txn so we can access its "copies" list */
+  SVN_ERR(svn_fs_bdb__get_txn(&txn_obj, trail->fs, txn->id, trail,
+                              scratch_pool));
+
+  /* Finish updating the "copies" table, which was started in
+   * svn_fs_base__begin_obliteration_txn().  Change the keys of all the
+   * "copies" table rows that we created back to their original keys.
+   *
+   * This assumes that the old 'replacing_rev' transaction is now obsolete,
+   * so that the old "copies" table rows are no longer referenced.
+   *
+   * ### TODO: See txn_body_begin_obliteration_txn().
+   * ### TODO: Guarantee the old txn is obsolete.
+   */
+  if (txn_obj->copies)
+    SVN_ERR(copies_update(txn->id, old_txn_id, txn_obj->copies, trail,
+                          scratch_pool));
+
+  /* Replace the revision entry in the `revisions' table. */
+  revision.txn_id = txn->id;
+  SVN_ERR(svn_fs_bdb__put_rev(&replacing_rev, txn->fs, &revision, trail,
+                              scratch_pool));
+
+  /* Promote the unfinished transaction to a committed one. */
+  SVN_ERR(svn_fs_base__txn_make_committed(txn->fs, txn->id, replacing_rev,
+                                          trail, scratch_pool));
+
+  /* Update the "node-origins" table. */
+  SVN_ERR(node_origins_update(txn->id, old_txn_id, trail, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 

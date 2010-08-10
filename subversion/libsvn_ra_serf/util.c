@@ -2,10 +2,10 @@
  * util.c : serf utility routines for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -102,7 +102,7 @@ construct_realm(svn_ra_serf__session_t *session,
     {
       port = apr_uri_port_of_scheme(session->repos_url.scheme);
     }
-  
+
   realm = apr_psprintf(pool, "%s://%s:%d",
                        session->repos_url.scheme,
                        session->repos_url.hostname,
@@ -257,7 +257,7 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
 /* This ugly ifdef construction can be cleaned up as soon as serf >= 0.4
    gets the minimum supported serf version! */
 
-/* svn_ra_serf__conn_setup is a callback for serf. This function 
+/* svn_ra_serf__conn_setup is a callback for serf. This function
    creates a read bucket and will wrap the write bucket if SSL
    is needed. */
 apr_status_t
@@ -267,7 +267,6 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool)
 {
-  serf_bucket_t *wb = NULL;
 #else
 /* This is the old API, for compatibility with serf
    versions <= 0.3. */
@@ -288,11 +287,6 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
       /* input stream */
       rb = serf_bucket_ssl_decrypt_create(rb, conn->ssl_context,
                                           conn->bkt_alloc);
-#if SERF_VERSION_AT_LEAST(0, 4, 0)
-      /* output stream */
-      *write_bkt = serf_bucket_ssl_encrypt_create(*write_bkt, conn->ssl_context,
-                                                  conn->bkt_alloc);
-#endif
       if (!conn->ssl_context)
         {
           conn->ssl_context = serf_bucket_ssl_encrypt_context_get(rb);
@@ -326,6 +320,12 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
                 }
             }
         }
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+      /* output stream */
+      *write_bkt = serf_bucket_ssl_encrypt_create(*write_bkt, conn->ssl_context,
+                                                  conn->bkt_alloc);
+#endif
+
     }
 
 #if SERF_VERSION_AT_LEAST(0, 4, 0)
@@ -333,7 +333,7 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
 
   return APR_SUCCESS;
 }
-#else  
+#else
   return rb;
 }
 #endif
@@ -504,11 +504,14 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 {
   serf_bucket_t *hdrs_bkt;
 
-  *req_bkt = serf_bucket_request_create(method, url, body_bkt,
-                                        serf_request_get_alloc(request));
+  *req_bkt =
+    serf_request_bucket_request_create(request, method, url, body_bkt,
+                                       serf_request_get_alloc(request));
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
+#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
   serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
+#endif
   serf_bucket_headers_setn(hdrs_bkt, "User-Agent", conn->useragent);
 
   if (content_type)
@@ -552,15 +555,6 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
         }
     }
 #endif
-
-  /* Set up Proxy settings */
-  if (conn->session->using_proxy)
-    {
-      char *root = apr_uri_unparse(conn->session->pool,
-                                   &conn->session->repos_url,
-                                   APR_URI_UNP_OMITPATHINFO);
-      serf_bucket_request_set_root(*req_bkt, root);
-    }
 
   if (ret_hdrs_bkt)
     {
@@ -783,7 +777,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 
   if (status)
     return svn_error_wrap_apr(status, NULL);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1058,6 +1052,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   apr_status_t status;
   int xml_status;
   svn_ra_serf__xml_parser_t *ctx = baton;
+  svn_error_t *err;
 
   serf_bucket_response_status(response, &sl);
 
@@ -1083,10 +1078,11 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
             }
         }
 
-      SVN_ERR(svn_error_compose_create(
-          svn_ra_serf__handle_server_error(request, response, pool),
-          svn_ra_serf__handle_discard_body(request, response, NULL, pool)));
+      err = svn_ra_serf__handle_server_error(request, response, pool);
 
+      SVN_ERR(svn_error_compose_create(
+        svn_ra_serf__handle_discard_body(request, response, NULL, pool),
+        err));
       return SVN_NO_ERROR;
     }
 
@@ -1177,6 +1173,85 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
   return server_err.error;
 }
 
+apr_status_t
+svn_ra_serf__credentials_callback(char **username, char **password,
+                                  serf_request_t *request, void *baton,
+                                  int code, const char *authn_type,
+                                  const char *realm,
+                                  apr_pool_t *pool)
+{
+  svn_ra_serf__handler_t *ctx = baton;
+  svn_ra_serf__session_t *session = ctx->session;
+  void *creds;
+  svn_auth_cred_simple_t *simple_creds;
+  svn_error_t *err;
+
+  if (code == 401)
+    {
+      /* Use svn_auth_first_credentials if this is the first time we ask for
+         credentials during this session OR if the last time we asked
+         session->auth_state wasn't set (eg. if the credentials provider was
+         cancelled by the user). */
+      if (!session->auth_state)
+        {
+          err = svn_auth_first_credentials(&creds,
+                                           &session->auth_state,
+                                           SVN_AUTH_CRED_SIMPLE,
+                                           realm,
+                                           session->wc_callbacks->auth_baton,
+                                           session->pool);
+        }
+      else
+        {
+          err = svn_auth_next_credentials(&creds,
+                                          session->auth_state,
+                                          session->pool);
+        }
+
+      if (err)
+        {
+          ctx->session->pending_error = err;
+          return err->apr_err;
+        }
+
+      session->auth_attempts++;
+
+      if (!creds || session->auth_attempts > 4)
+        {
+          /* No more credentials. */
+          ctx->session->pending_error =
+            svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                             "No more credentials or we tried too many times.\n"
+                             "Authentication failed");
+          return SVN_ERR_AUTHN_FAILED;
+        }
+
+      simple_creds = creds;
+      *username = apr_pstrdup(pool, simple_creds->username);
+      *password = apr_pstrdup(pool, simple_creds->password);
+    }
+  else
+    {
+      *username = apr_pstrdup(pool, session->proxy_username);
+      *password = apr_pstrdup(pool, session->proxy_password);
+
+      session->proxy_auth_attempts++;
+
+      if (!session->proxy_username || session->proxy_auth_attempts > 4)
+        {
+          /* No more credentials. */
+          ctx->session->pending_error =
+            svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                             "Proxy authentication failed");
+          return SVN_ERR_AUTHN_FAILED;
+        }
+    }
+
+  ctx->conn->last_status_code = code;
+
+  return APR_SUCCESS;
+}
+
 /* Implements the serf_response_handler_t interface.  Wait for HTTP
    response status and headers, and invoke CTX->response_handler() to
    carry out operation-specific processing.  Afterwards, check for
@@ -1245,8 +1320,11 @@ handle_response(serf_request_t *request,
         {
           ctx->session->pending_error =
               svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                                ctx->session->pending_error,
-                               _("Premature EOF seen from server"));
+                                svn_error_compose_create(
+                                           ctx->session->pending_error,
+                                           svn_error_wrap_apr(status, NULL)),
+                                _("Premature EOF seen from server "
+                                  "(http status=%d)"), sl.code);
           /* This discard may be no-op, but let's preserve the algorithm
              used elsewhere in this function for clarity's sake. */
           svn_ra_serf__response_discard_handler(request, response, NULL, pool);
@@ -1304,7 +1382,7 @@ handle_response(serf_request_t *request,
       ctx->session->pending_error = svn_error_compose_create(
                  svn_ra_serf__handle_server_error(request, response, pool),
                  ctx->session->pending_error);
-          
+
       if (!ctx->session->pending_error)
         {
           ctx->session->pending_error =
@@ -1347,7 +1425,7 @@ handle_response(serf_request_t *request,
           status = err->apr_err;
           if (!SERF_BUCKET_READ_ERROR(err->apr_err))
             {
-              /* These errors are special cased in serf 
+              /* These errors are special cased in serf
                  ### We hope no handler returns these by accident. */
               svn_error_clear(err);
             }
@@ -1623,7 +1701,7 @@ svn_ra_serf__get_relative_path(const char **rel_path,
                                apr_pool_t *pool)
 {
   const char *decoded_root, *decoded_orig;
-    
+
   if (! session->repos_root.path)
     {
       const char *vcc_url;
@@ -1635,8 +1713,8 @@ svn_ra_serf__get_relative_path(const char **rel_path,
       /* We don't actually care about the VCC_URL, but this API
          promises to populate the session's root-url cache, and that's
          what we really want. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, 
-                                        conn ? conn : session->conns[0], 
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session,
+                                        conn ? conn : session->conns[0],
                                         pool));
     }
 

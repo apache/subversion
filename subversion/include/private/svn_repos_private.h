@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -40,14 +40,18 @@ extern "C" {
 /**
  * Permanently delete @a path at revision @a revision in @a fs.
  *
- * Do not change the content of other node in the repository, even other nodes
- * that were copied from this one. The only other change in the repository is
- * to "copied from" pointers that were pointing to the now-deleted node. These
- * are removed or made to point to a previous version of the now-deleted node.
+ * Do not change the content of any other node in the repository, even other
+ * nodes that were copied from this one. The only other change in the
+ * repository is to "copied from" pointers that were pointing to the
+ * now-deleted node. These are removed or made to point to a previous
+ * version of the now-deleted node.
  * (### TODO: details.)
  *
+ * @a path is relative to the repository root and must start with "/".
+ *
  * If administratively forbidden, return @c SVN_ERR_RA_NOT_AUTHORIZED. If not
- * implemented by the server, return @c SVN_ERR_RA_NOT_IMPLEMENTED.
+ * implemented by the RA layer or by the server, return
+ * @c SVN_ERR_RA_NOT_IMPLEMENTED.
  *
  * @note This functionality is not implemented in pre-1.7 servers and may not
  * be implemented in all 1.7 and later servers.

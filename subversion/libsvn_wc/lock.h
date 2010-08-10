@@ -2,10 +2,10 @@
  * lock.h:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -52,8 +52,8 @@ apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access);
 
 /* Returns TRUE if LOCAL_ABSPATH is a working copy directory that is obstructed
    or missing such that an access baton is not available for LOCAL_ABSPATH.
-   This means DB must also include the parent of LOCAL_ABSPATH. 
-   
+   This means DB must also include the parent of LOCAL_ABSPATH.
+
    This function falls back to using svn_wc__adm_available() if no access batons
    for LOCAL_ABSPATH are stored in DB. */
 svn_boolean_t svn_wc__adm_missing(svn_wc__db_t *db,

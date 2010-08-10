@@ -700,7 +700,7 @@ II.   INSTALLATION
       a checkout and see an error like:
 
       subversion/libsvn_ra/ra_loader.c:209: (apr_err=170000)
-      svn: Unrecognized URL scheme 'http://svn.collab.net/repos/svn/trunk'
+      svn: Unrecognized URL scheme 'https://svn.apache.org/repos/asf/subversion/trunk'
 
       It probably means that the dynamic loader/linker can't find all
       of the libsvn_* libraries.
@@ -725,7 +725,7 @@ II.   INSTALLATION
       It is possible to configure and build Subversion on Unix in a
       directory other than the working copy. For example
 
-          $ svn co http://svn.collab.net/repos/svn/trunk svn
+          $ svn co https://svn.apache.org/repos/asf/subversion/trunk svn
           $ cd svn
           $ # get neon/apr as required
           $ chmod +x autogen.sh
@@ -793,7 +793,7 @@ II.   INSTALLATION
       "command" from the Start menu's "Run..." menu option), change to
       the directory you installed the executables into, and run:
 
-          C:\test>svn co http://svn.collab.net/repos/svn/trunk svn
+          C:\test>svn co https://svn.apache.org/repos/asf/subversion/trunk svn
 
       This will get the latest Subversion sources and put them into the
       "svn" subdirectory.
@@ -892,7 +892,7 @@ II.   INSTALLATION
       * Make a directory SVN and cd into it.
       * Either checkout Subversion:
 
-          svn co http://svn.collab.net/repos/svn/trunk/ src-trunk
+          svn co https://svn.apache.org/repos/asf/subversion/trunk src-trunk
 
         or unpack the zip file distribution and rename the directory to
         src-trunk.

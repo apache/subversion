@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -34,6 +34,7 @@ from svntest import wc
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = wc.StateItem
 
 ######################################################################
@@ -198,9 +199,9 @@ def basic_update(sbox):
   # path, are skipped and do not raise an error
   xx_path = os.path.join(wc_dir, 'xx', 'xx')
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "update xx/xx", 
-    ["Skipped '"+xx_path+"'\n", 
-    "Summary of conflicts:\n", 
+    "update xx/xx",
+    ["Skipped '"+xx_path+"'\n",
+    "Summary of conflicts:\n",
     "  Skipped paths: 1\n"], [], 'update', xx_path)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "update xx/xx", [], [],
@@ -210,7 +211,7 @@ def basic_update(sbox):
   urls = ('http://localhost/a/b/c', 'http://localhost', 'svn://localhost')
   for url in urls:
     exit_code, out, err = svntest.actions.run_and_verify_svn(
-      "update " + url, 
+      "update " + url,
       ["Skipped '"+url+"'\n",
       "Summary of conflicts:\n",
       "  Skipped paths: 1\n"], [],
@@ -324,6 +325,15 @@ def basic_mkdir_wc_with_parents(sbox):
 
   svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
                                      'mkdir', '--parents', Y_Z_path)
+
+  # Verify the WC status, because there was a regression in which parts of
+  # the WC were left locked.
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'Y'      : Item(status='A ', wc_rev=0),
+    'Y/Z'    : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 #----------------------------------------------------------------------
@@ -1854,17 +1864,17 @@ def delete_keep_local(sbox):
 
 def delete_keep_local_twice(sbox):
   'delete file and directory with --keep-local twice'
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   dir = os.path.join(wc_dir, 'dir')
-  
+
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', dir)
-  
+
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
-  
+
   if not os.path.isdir(dir):
     print('Directory was really deleted')
     raise svntest.Failure

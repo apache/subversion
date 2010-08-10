@@ -5,10 +5,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -104,7 +104,9 @@ class State:
   The primary metaphor here is a dictionary of paths mapping to instances
   of StateItem, which describe each item in a working copy.
 
-  Note: the paths should be *relative* to the root of the working copy.
+  Note: the paths should be *relative* to the root of the working copy,
+  using '/' for the separator (see to_relpath()), and the root of the
+  working copy is identified by the empty path: ''.
   """
 
   def __init__(self, wc_dir, desc):
@@ -297,7 +299,7 @@ class State:
       path = _shortest_path(unique_other)
       default_singleton_handler('expected ' + label, path,
                                 norm_other.desc[path])
-    
+
     raise svntest.tree.SVNTreeUnequal
 
   def tweak_for_entries_compare(self):
@@ -751,12 +753,17 @@ if os.sep == '/':
   to_relpath = to_ospath = lambda path: path
 else:
   def to_relpath(path):
+    """Return PATH but with all native path separators changed to '/'."""
     return path.replace(os.sep, '/')
   def to_ospath(path):
+    """Return PATH but with each '/' changed to the native path separator."""
     return path.replace('/', os.sep)
 
 
 def path_to_key(path, base):
+  """Return the relative path that represents the absolute path PATH under
+  the absolute path BASE.  PATH must be a path under BASE.  The returned
+  path has '/' separators."""
   if path == base:
     return ''
 

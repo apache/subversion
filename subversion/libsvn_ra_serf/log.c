@@ -2,10 +2,10 @@
  * log.c :  entry point for log RA functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -277,7 +277,7 @@ start_log(svn_ra_serf__xml_parser_t *parser,
         {
           info = push_state(parser, log_ctx, DELETED_PATH);
           info->tmp_path->action = 'D';
-          
+
           SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
       else if (strcmp(name.name, "modified-path") == 0)

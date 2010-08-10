@@ -1,10 +1,10 @@
 /* fs_fs.h : interface to the native filesystem layer
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -473,11 +473,14 @@ svn_error_t *svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                   svn_revnum_t rev, apr_uint32_t flags,
                                   apr_pool_t *pool);
 
-/* Begin a new transaction in filesystem FS, to replace an existing
-   revision REV.  The new transaction is returned in *TXN_P.  Allocate
-   the new transaction structure from POOL. */
+/* Begin a new transaction in filesystem FS, intended to replace the
+   existing revision REPLACING_REV.  The new transaction will be based on
+   revision (REPLACING_REV - 1) but will have content identical to revision
+   REPLACING_REV.  Set *TXN_P to the new transaction structure, allocated
+   in POOL. */
 svn_error_t *svn_fs_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
-                                               svn_fs_t *fs, svn_revnum_t rev,
+                                               svn_fs_t *fs,
+                                               svn_revnum_t replacing_rev,
                                                apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.

@@ -2,10 +2,10 @@
  * locking_commands.c:  Implementation of lock and unlock.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -185,7 +185,7 @@ organize_lock_targets(const char **common_parent_url,
 
   /* All targets must be either urls or paths */
 
-  url_mode = ((targets->nelts >= 1) && 
+  url_mode = ((targets->nelts >= 1) &&
               svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)));
 
   /* Get the common parent and all paths */
@@ -291,7 +291,6 @@ organize_lock_targets(const char **common_parent_url,
          store the mapping between relative repository path and WC path. */
       for (i = 0; i < rel_targets->nelts; i++)
         {
-          const svn_wc_entry_t *entry;
           const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
           const char *url = APR_ARRAY_IDX(rel_urls, i, const char *);
           const char *abs_path;
@@ -305,32 +304,34 @@ organize_lock_targets(const char **common_parent_url,
 
           abs_path = svn_dirent_join(*common_parent_url, target, subpool);
 
-          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, abs_path,
-                                              svn_node_unknown, FALSE, FALSE,
-                                              subpool, subpool));
-
           if (do_lock) /* Lock. */
             {
               svn_revnum_t *revnum;
               revnum = apr_palloc(pool, sizeof(* revnum));
-              *revnum = entry->revision;
-
+              SVN_ERR(svn_wc__node_get_base_rev(revnum, ctx->wc_ctx,
+                                                abs_path, subpool));
               apr_hash_set(rel_targets_ret, decoded_url,
                            APR_HASH_KEY_STRING, revnum);
             }
           else /* Unlock. */
             {
-              /* If not force, get the lock token from the WC entry. */
+              /* If not force, get the lock token. */
               if (! force)
                 {
-                  if (! entry->lock_token)
+                  const char *lock_token;
+
+                  SVN_ERR(svn_wc__node_get_lock_token(&lock_token,
+                                                      ctx->wc_ctx,
+                                                      abs_path,
+                                                      pool, subpool));
+                  if (! lock_token)
                     return svn_error_createf
                       (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
                        _("'%s' is not locked in this working copy"), target);
 
                   apr_hash_set(rel_targets_ret, decoded_url,
                                APR_HASH_KEY_STRING,
-                               apr_pstrdup(pool, entry->lock_token));
+                               lock_token);
                 }
               else
                 {

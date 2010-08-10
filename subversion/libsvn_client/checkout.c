@@ -2,10 +2,10 @@
  * checkout.c:  wrappers around wc checkout functionality
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -75,7 +75,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   /* Sanity check.  Without these, the checkout is meaningless. */
   SVN_ERR_ASSERT(path != NULL);
   SVN_ERR_ASSERT(url != NULL);
-  
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Fulfill the docstring promise of svn_client_checkout: */
@@ -174,8 +174,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
             depth = svn_depth_infinity;
 
           /* Make the unversioned directory into a versioned one.  */
-          SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, uuid,
-                                     session_url, repos_root, revnum, depth,
+          SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, session_url,
+                                     repos_root, uuid, revnum, depth,
                                      pool));
           /* Have update fix the incompleteness. */
           err = svn_client__update_internal(result_rev, path, revision,

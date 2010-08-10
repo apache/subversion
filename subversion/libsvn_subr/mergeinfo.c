@@ -2,10 +2,10 @@
  * mergeinfo.c:  Mergeinfo parsing and handling
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -73,8 +73,10 @@ combine_ranges(svn_merge_range_t *output,
 
 /* pathname -> PATHNAME */
 static svn_error_t *
-parse_pathname(const char **input, const char *end,
-               svn_stringbuf_t **pathname, apr_pool_t *pool)
+parse_pathname(const char **input,
+               const char *end,
+               svn_stringbuf_t **pathname,
+               apr_pool_t *pool)
 {
   const char *curr = *input;
   const char *last_colon = NULL;
@@ -96,7 +98,18 @@ parse_pathname(const char **input, const char *end,
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                             _("No pathname preceding ':'"));
 
-  *pathname = svn_stringbuf_ncreate(*input, last_colon - *input, pool);
+  /* Tolerate relative repository paths, but convert them to absolute. */
+  if (**input == '/')
+    {
+      *pathname = svn_stringbuf_ncreate(*input, last_colon - *input, pool);
+    }
+  else
+    {
+      const char *repos_rel_path = apr_pstrndup(pool, *input,
+                                                last_colon - *input);
+      *pathname = svn_stringbuf_createf(pool, "/%s",  repos_rel_path);
+    }
+
   *input = last_colon;
 
   return SVN_NO_ERROR;
@@ -131,12 +144,12 @@ get_type_of_intersection(const svn_merge_range_t *r1,
 {
   SVN_ERR_ASSERT(r1);
   SVN_ERR_ASSERT(r2);
-  
+
   /* Why not use SVN_IS_VALID_REVNUM here?  Because revision 0
      is described START = -1, END = 0.  See svn_merge_range_t. */
   SVN_ERR_ASSERT(r1->start >= -1);
   SVN_ERR_ASSERT(r2->start >= -1);
-  
+
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(r1->end));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(r2->end));
   SVN_ERR_ASSERT(r1->start < r1->end);
@@ -283,10 +296,10 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
              intersect but have differing inheritability.  Check for the
              first case as that is easy to handle. */
           intersection_type_t intersection_type;
-          
+
           SVN_ERR(get_type_of_intersection(new_range, lastrange,
                                            &intersection_type));
-              
+
               switch (intersection_type)
                 {
                   case svn__no_intersection:
@@ -338,7 +351,7 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
                         r2->start = r1->end;
                       else
                         r1->end = r2->start;
-                      
+
                       /* Push everything back onto RANGELIST. */
                       APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
                       APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;
@@ -564,6 +577,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                     apr_pool_t *pool)
 {
   svn_stringbuf_t *pathname;
+  apr_array_header_t *existing_rangelist;
   apr_array_header_t *rangelist = apr_array_make(pool, 1,
                                                  sizeof(svn_merge_range_t *));
 
@@ -634,6 +648,17 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
           lastrange = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
         }
     }
+
+  /* Handle any funky mergeinfo with relative merge source paths that
+     might exist due to issue #3547.  It's possible that this issue allowed
+     the creation of mergeinfo with path keys that differ only by a
+     leading slash, e.g. "trunk:4033\n/trunk:4039-4995".  In the event
+     we encounter this we merge the rangelists together under a single
+     absolute path key. */
+  existing_rangelist = apr_hash_get(hash, pathname->data, APR_HASH_KEY_STRING);
+  if (existing_rangelist)
+    svn_rangelist_merge(&rangelist, existing_rangelist, pool);
+
   apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, rangelist);
 
   return SVN_NO_ERROR;
@@ -1362,7 +1387,9 @@ svn_rangelist_to_string(svn_string_t **output,
 
 /* Converts a mergeinfo INPUT to an unparsed mergeinfo in OUTPUT.  If PREFIX
    is not NULL then prepend PREFIX to each line in OUTPUT.  If INPUT contains
-   no elements, return the empty string.
+   no elements, return the empty string.  If INPUT contains any merge source
+   path keys that are relative then convert these to absolute paths in
+   *OUTPUT.
  */
 static svn_error_t *
 mergeinfo_to_stringbuf(svn_stringbuf_t **output,
@@ -1384,11 +1411,13 @@ mergeinfo_to_stringbuf(svn_stringbuf_t **output,
           svn_string_t *revlist;
 
           SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
-          svn_stringbuf_appendcstr(*output,
-                                   apr_psprintf(pool, "%s%s:%s",
-                                                prefix ? prefix : "",
-                                                (const char *) elt.key,
-                                                revlist->data));
+          svn_stringbuf_appendcstr(
+            *output,
+            apr_psprintf(pool, "%s%s%s:%s",
+                         prefix ? prefix : "",
+                         *((const char *) elt.key) == '/' ? "" : "/",
+                         (const char *) elt.key,
+                         revlist->data));
           if (i < sorted->nelts - 1)
             svn_stringbuf_appendcstr(*output, "\n");
         }
@@ -1972,5 +2001,51 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
             }
         }
     }
+  return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
+                                 apr_pool_t *scratch_pool)
+{
+  if (mergeinfo)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, mergeinfo);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
+          int i;
+
+          for (i = 0; i < rangelist->nelts; i++)
+            {
+              svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                                       svn_merge_range_t *);
+              if (!range->inheritable)
+                return TRUE;
+            }
+        }
+    }
+  return FALSE;
+}
+
+svn_error_t *
+svn_mergeinfo__string_has_noninheritable(svn_boolean_t *is_noninheritable,
+                                         const char *mergeinfo_str,
+                                         apr_pool_t *scratch_pool)
+{
+  *is_noninheritable = FALSE;
+
+  if (mergeinfo_str)
+    {
+      svn_mergeinfo_t mergeinfo;
+
+      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_str, scratch_pool));
+      *is_noninheritable = svn_mergeinfo__is_noninheritable(mergeinfo,
+                                                            scratch_pool);
+    }
+
   return SVN_NO_ERROR;
 }

@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -293,6 +293,11 @@ SVN_ERROR_START
              SVN_ERR_STREAM_CATEGORY_START + 3,
              "Stream doesn't support resetting")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
+             SVN_ERR_STREAM_CATEGORY_START + 4,
+             "Stream doesn't support seeking")
+
   /* node errors */
 
   SVN_ERRDEF(SVN_ERR_NODE_UNKNOWN_KIND,
@@ -372,7 +377,7 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 7,
              "Path is not a working copy directory")
 
-  /* This name is deprecated. Use SVN_ERR_WC_NOT_WORKING_COPY. 
+  /* This name is deprecated. Use SVN_ERR_WC_NOT_WORKING_COPY.
    * @deprecated Provided for backward compatibility with the 1.6 API. */
 #define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
 

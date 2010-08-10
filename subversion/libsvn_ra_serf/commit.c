@@ -2,10 +2,10 @@
  * commit.c :  entry point for commit RA functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -271,8 +271,8 @@ handle_checkout(serf_request_t *request,
   svn_error_t *err = svn_ra_serf__handle_status_only(request, response,
                                                      &ctx->progress, pool);
 
-  /* These handler functions are supposed to return an APR_EOF status 
-     wrapped in a svn_error_t to indicate to serf that the response was 
+  /* These handler functions are supposed to return an APR_EOF status
+     wrapped in a svn_error_t to indicate to serf that the response was
      completely read. While we have to return this status code to our
      caller, we should treat it as the normal case for now. */
   if (err && ! APR_STATUS_IS_EOF(err->apr_err))
@@ -284,14 +284,18 @@ handle_checkout(serf_request_t *request,
       serf_bucket_t *hdrs;
       apr_uri_t uri;
       const char *location;
+      apr_status_t status;
 
       hdrs = serf_bucket_response_get_headers(response);
       location = serf_bucket_headers_get(hdrs, "Location");
       if (!location)
-        {
-          SVN_ERR_MALFUNCTION();
-        }
-      apr_uri_parse(pool, location, &uri);
+        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
+                                _("No Location header received"));
+
+      status = apr_uri_parse(pool, location, &uri);
+
+      if (status)
+        err = svn_error_compose_create(svn_error_wrap_apr(status, NULL), err);
 
       ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
     }
@@ -482,13 +486,33 @@ get_version_url(const char **checked_in_url,
     {
       svn_ra_serf__propfind_context_t *propfind_ctx;
       apr_hash_t *props;
+      const char *propfind_url;
 
       props = apr_hash_make(pool);
 
       propfind_ctx = NULL;
-      svn_ra_serf__deliver_props(&propfind_ctx, props, session,
-                                 conn, session->repos_url.path,
-                                 base_revision, "0",
+      if (SVN_IS_VALID_REVNUM(base_revision))
+        {
+          const char *bc_url, *bc_relpath;
+
+          /* mod_dav_svn can't handle the "Label:" header that
+             svn_ra_serf__deliver_props() is going to try to use for
+             this lookup, so we'll do things the hard(er) way, by
+             looking up the version URL from a resource in the
+             baseline collection. */
+          SVN_ERR(svn_ra_serf__get_baseline_info(&bc_url, &bc_relpath,
+                                                 session, conn,
+                                                 session->repos_url.path,
+                                                 base_revision, NULL, pool));
+          propfind_url = svn_path_url_add_component2(bc_url, bc_relpath, pool);
+        }
+      else
+        {
+          propfind_url = session->repos_url.path;
+        }
+
+      svn_ra_serf__deliver_props(&propfind_ctx, props, session, conn,
+                                 propfind_url, base_revision, "0",
                                  checked_in_props, FALSE, NULL, pool);
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, pool));
@@ -496,7 +520,7 @@ get_version_url(const char **checked_in_url,
       /* We wouldn't get here if the url wasn't found (404), so the checked-in
          property should have been set. */
       root_checkout =
-          svn_ra_serf__get_ver_prop(props, session->repos_url.path,
+          svn_ra_serf__get_ver_prop(props, propfind_url,
                                     base_revision, "DAV:", "checked-in");
 
       if (!root_checkout)
@@ -660,7 +684,7 @@ setup_proppatch_headers(serf_bucket_t *headers,
   if (SVN_IS_VALID_REVNUM(proppatch->base_revision))
     {
       serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
-                              apr_psprintf(pool, "%ld", 
+                              apr_psprintf(pool, "%ld",
                                            proppatch->base_revision));
     }
 
@@ -1081,7 +1105,7 @@ open_root(void *edit_baton,
 
       handler->response_handler = post_response_handler;
       handler->response_baton = prc;
-    
+
       svn_ra_serf__request_create(handler);
 
       SVN_ERR(svn_ra_serf__context_run_wait(&post_ctx->done, ctx->session,
@@ -1145,7 +1169,7 @@ open_root(void *edit_baton,
                                 _("The OPTIONS response did not include the "
                                   "requested activity-collection-set value"));
 
-      ctx->activity_url = 
+      ctx->activity_url =
         svn_path_url_add_component2(activity_str, svn_uuid_generate(ctx->pool),
                                     ctx->pool);
       ctx->activity_url_len = strlen(ctx->activity_url);
@@ -1161,7 +1185,7 @@ open_root(void *edit_baton,
 
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = mkact_ctx;
-    
+
       svn_ra_serf__request_create(handler);
 
       SVN_ERR(svn_ra_serf__context_run_wait(&mkact_ctx->done, ctx->session,
@@ -1178,7 +1202,7 @@ open_root(void *edit_baton,
         }
 
       /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, ctx->session, 
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, ctx->session,
                                         ctx->conn, ctx->pool));
 
       props = apr_hash_make(ctx->pool);
@@ -1212,8 +1236,8 @@ open_root(void *edit_baton,
       dir->changed_props = apr_hash_make(dir->pool);
       dir->removed_props = apr_hash_make(dir->pool);
 
-      SVN_ERR(get_version_url(&dir->url, dir->commit->session, 
-                              dir->commit->conn, dir->name, 
+      SVN_ERR(get_version_url(&dir->url, dir->commit->session,
+                              dir->commit->conn, dir->name,
                               dir->base_revision, ctx->checked_in_url,
                               dir->pool));
       ctx->checked_in_url = dir->url;
@@ -1282,7 +1306,7 @@ delete_entry(const char *path,
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
     {
-      delete_target = svn_path_url_add_component2(dir->commit->txn_root_url, 
+      delete_target = svn_path_url_add_component2(dir->commit->txn_root_url,
                                                   path, dir->pool);
     }
   else
@@ -1392,7 +1416,7 @@ add_directory(const char *path,
     }
   else
     {
-      /* Ensure our parent is checked out. */ 
+      /* Ensure our parent is checked out. */
       SVN_ERR(checkout_dir(parent));
 
       dir->url = svn_path_url_add_component2(parent->commit->checked_in_url,
@@ -1656,7 +1680,7 @@ add_file(const char *path,
 
   while (deleted_parent && deleted_parent[0] != '\0')
     {
-      if (apr_hash_get(dir->commit->deleted_entries, 
+      if (apr_hash_get(dir->commit->deleted_entries,
                        deleted_parent, APR_HASH_KEY_STRING))
         {
           break;
@@ -1750,8 +1774,6 @@ apply_textdelta(void *file_baton,
   file_context_t *ctx = file_baton;
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
-  const char *tempfile_name;
-  svn_checksum_t *checksum;
 
   /* Store the stream in a temporary file; we'll give it to serf when we
    * close this file.
@@ -1764,17 +1786,9 @@ apply_textdelta(void *file_baton,
   wc_callbacks = ctx->commit->session->wc_callbacks;
   wc_callback_baton = ctx->commit->session->wc_callback_baton;
 
-  /* Avoid temp file name collisions by requesting unique temp file name
-     based on the checksum of CTX->NAME. */
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, ctx->name,
-                       strlen(ctx->name), ctx->pool));
-  tempfile_name = apr_psprintf(ctx->pool, "tempfile.%s",
-                               svn_checksum_to_cstring_display(checksum,
-                                                               ctx->pool));
-  SVN_ERR(svn_io_open_uniquely_named(&ctx->svndiff, NULL, NULL,
-                                     tempfile_name, ".tmp",
-                                     svn_io_file_del_on_pool_cleanup,
-                                     ctx->pool, ctx->pool));
+  SVN_ERR(svn_io_open_unique_file3(&ctx->svndiff, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   ctx->pool, ctx->pool));
 
   ctx->stream = svn_stream_create(ctx, pool);
   svn_stream_set_write(ctx->stream, svndiff_stream_write);

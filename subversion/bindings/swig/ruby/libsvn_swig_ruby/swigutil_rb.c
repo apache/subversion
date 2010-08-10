@@ -1,3 +1,24 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ *
+ */
+
 /* -*- c-file-style: "ruby" -*- */
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
@@ -3331,7 +3352,7 @@ wc_entry_callbacks2_found_entry(const char *path,
   svn_error_t *err = SVN_NO_ERROR;
   VALUE callbacks, rb_pool;
 
-  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);;
+  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);
 
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;
@@ -3355,7 +3376,7 @@ wc_entry_callbacks2_handle_error(const char *path,
 {
   VALUE callbacks, rb_pool;
 
-  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);;
+  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);
 
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;

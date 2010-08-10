@@ -2,10 +2,10 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -105,10 +105,15 @@ relegate_dir_external(const char *path,
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, local_abspath, NULL, pool));
   err = svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
                                              TRUE, FALSE,
                                              cancel_func, cancel_baton,
                                              pool);
+
+  /* ### Ugly. Unlock only if not going to return an error. Revisit */
+  if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
+    SVN_ERR(svn_wc__release_write_lock(wc_ctx, local_abspath, pool));
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
@@ -329,7 +334,7 @@ switch_file_external(const char *path,
           svn_error_clear(err);
           close_adm_access = TRUE;
           SVN_ERR(svn_wc__adm_open_in_context(&target_adm_access, ctx->wc_ctx,
-                                              anchor, TRUE, 1,
+                                              anchor, TRUE, -1,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, subpool));
 
@@ -557,7 +562,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
       /* "//schema-relative" and in some cases "///schema-relative".
          This last format is supported on file:// schema relative. */
       url = apr_pstrcat(
-                        pool, 
+                        pool,
                         url[2] == '/' ? "///" : "//",
                         svn_relpath_canonicalize(url+2, pool),
                         NULL);
@@ -889,51 +894,22 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
          just be renamed to a new one. */
 
       svn_error_t *err;
-      svn_wc_adm_access_t *adm_access;
-      svn_boolean_t close_access_baton_when_done;
-
       const char *remove_target_abspath;
+      svn_boolean_t lock_existed; 
 
-      /* Determine if a directory or file external is being removed.
-         Try to handle the case when the user deletes the external by
-         hand or it is missing.  First try to open the directory for a
-         directory external.  If that doesn't work, get the access
-         baton for the parent directory and remove the entry for the
-         external. */
-      err = svn_wc__adm_open_in_context(&adm_access, ib->ctx->wc_ctx, path,
-                                        TRUE, -1, ib->ctx->cancel_func,
-                                        ib->ctx->cancel_baton, ib->iter_pool);
-      if (err)
+      SVN_ERR(svn_dirent_get_absolute(&remove_target_abspath,
+                                      path,
+                                      ib->iter_pool));
+
+      SVN_ERR(svn_wc_locked2(&lock_existed, NULL, ib->ctx->wc_ctx,
+                             remove_target_abspath, ib->iter_pool));
+
+      if (! lock_existed)
         {
-          const char *anchor;
-          const char *target;
-          svn_error_t *err2;
-
-          SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ib->ctx->wc_ctx,
-                                            path, ib->iter_pool,
-                                            ib->iter_pool));
-
-          err2 = svn_wc_adm_retrieve(&adm_access, ib->adm_access, anchor,
-                                     ib->iter_pool);
-          if (err2)
-            {
-              svn_error_clear(err2);
-              return svn_error_return(err);
-            }
-          else
-            {
-              svn_error_clear(err);
-            }
-          close_access_baton_when_done = FALSE;
-          SVN_ERR(svn_dirent_get_absolute(&remove_target_abspath, target,
-                                          ib->iter_pool));
-        }
-      else
-        {
-          close_access_baton_when_done = TRUE;
-          SVN_ERR(svn_dirent_get_absolute(&remove_target_abspath,
-                                          svn_wc_adm_access_path(adm_access),
-                                          ib->iter_pool));
+          SVN_ERR(svn_wc__acquire_write_lock(NULL, ib->ctx->wc_ctx,
+                                             remove_target_abspath, 
+                                             ib->iter_pool,
+                                             ib->iter_pool));
         }
 
       /* We don't use relegate_dir_external() here, because we know that
@@ -947,7 +923,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
       if (ib->ctx->notify_func2)
         {
-          svn_wc_notify_t *notify = 
+          svn_wc_notify_t *notify =
               svn_wc_create_notify(remove_target_abspath,
                                    svn_wc_notify_update_external_removed,
                                    ib->iter_pool);
@@ -960,13 +936,15 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         }
 
       /* ### Ugly. Unlock only if not going to return an error. Revisit */
-      if (close_access_baton_when_done &&
-          (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+      if (! lock_existed
+          && (! err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
         {
-          svn_error_t *err2 = svn_wc_adm_close2(adm_access, ib->iter_pool);
+          svn_error_t *err2 = svn_wc__release_write_lock(ib->ctx->wc_ctx, 
+                                                         remove_target_abspath,
+                                                         ib->iter_pool);
           if (err2)
             {
-              if (!err)
+              if (! err)
                 err = err2;
               else
                 svn_error_clear(err2);

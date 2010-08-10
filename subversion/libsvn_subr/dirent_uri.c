@@ -2,10 +2,10 @@
  * dirent_uri.c:   a library to manipulate URIs and directory entries.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -162,7 +162,7 @@ canonicalize_to_upper(char c)
 }
 #endif
 
-/* Calculates the length of the dirent absolute or non absolute root in 
+/* Calculates the length of the dirent absolute or non absolute root in
    DIRENT, return 0 if dirent is not rooted  */
 static apr_size_t
 dirent_root_length(const char *dirent, apr_size_t len)
@@ -195,7 +195,7 @@ dirent_root_length(const char *dirent, apr_size_t len)
 #endif
   if (len >= 1 && dirent[0] == '/')
     return 1;
-  
+
   return 0;
 }
 
@@ -818,7 +818,7 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
 #if defined(WIN32) || defined(__CYGWIN__)
   /* On Windows and Cygwin, 'H:' or 'H:/' (where 'H' is any letter)
      are also root directories */
-  if ((len == 2 || ((len == 3) && (dirent[2] == '/'))) && 
+  if ((len == 2 || ((len == 3) && (dirent[2] == '/'))) &&
       (dirent[1] == ':') &&
       ((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
        (dirent[0] >= 'a' && dirent[0] <= 'z')))
@@ -1002,7 +1002,7 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
             {
               base = ""; /* Don't add base */
               saved_lengths[0] = 0;
-            }  
+            }
 
           add_separator = 1;
           if (s[len - 1] == '/'
@@ -1540,6 +1540,8 @@ svn_dirent_get_absolute(const char **pabsolute,
   apr_status_t apr_err;
   const char *path_apr;
 
+  SVN_ERR_ASSERT(! svn_path_is_url(relative));
+
   /* Merge the current working directory with the relative dirent. */
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, relative, pool));
 
@@ -1561,19 +1563,19 @@ svn_dirent_get_absolute(const char **pabsolute,
 const char *
 svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
 {
-  return canonicalize(type_uri, uri, pool);;
+  return canonicalize(type_uri, uri, pool);
 }
 
 const char *
 svn_relpath_canonicalize(const char *relpath, apr_pool_t *pool)
 {
-  return canonicalize(type_relpath, relpath, pool);;
+  return canonicalize(type_relpath, relpath, pool);
 }
 
 const char *
 svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 {
-  const char *dst = canonicalize(type_dirent, dirent, pool);;
+  const char *dst = canonicalize(type_dirent, dirent, pool);
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Handle a specific case on Windows where path == "X:/". Here we have to
@@ -1982,7 +1984,7 @@ svn_uri_condense_targets(const char **pcommon,
 
   /* Find the pcommon argument by finding what is common in all of the
      uris. NOTE: This is not as efficient as it could be.  The calculation
-     of the basedir could be done in the loop below, which would 
+     of the basedir could be done in the loop below, which would
      save some calls to svn_uri_get_longest_ancestor.  I decided to do it
      this way because I thought it would be simpler, since this way, we don't
      even do the loop if we don't need to condense the targets. */
@@ -1997,7 +1999,7 @@ svn_uri_condense_targets(const char **pcommon,
   for (i = 1; i < targets->nelts; ++i)
     {
       const char *uri = svn_uri_canonicalize(
-                           APR_ARRAY_IDX(targets, i, const char *), 
+                           APR_ARRAY_IDX(targets, i, const char *),
                            scratch_pool);
       APR_ARRAY_PUSH(uri_targets, const char *) = uri;
 

@@ -2,10 +2,10 @@
  * export-cmd.c -- Subversion export command
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -71,24 +71,31 @@ svn_cl__export(apr_getopt_t *os,
   /* If only one target was given, split off the basename to use as
      the `to' path.  Else, a `to' path was supplied. */
   if (targets->nelts == 1)
-    to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+    {
+      to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+    }
   else
-    to = APR_ARRAY_IDX(targets, 1, const char *);
+    {
+      to = APR_ARRAY_IDX(targets, 1, const char *);
+
+      /* If given the cwd, pretend we weren't given anything. */
+      if (strcmp("", to) == 0)
+        to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+    }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE, TRUE,
-                         FALSE, pool);
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, TRUE, FALSE, pool));
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
 
   /* Do the export. */
-  err = svn_client_export4(NULL, truefrom, to, &peg_revision,
+  err = svn_client_export5(NULL, truefrom, to, &peg_revision,
                            &(opt_state->start_revision),
                            opt_state->force, opt_state->ignore_externals,
-                           opt_state->depth,
-                           opt_state->native_eol, ctx,
-                           pool);
+                           opt_state->ignore_keywords, opt_state->depth,
+                           opt_state->native_eol, ctx, pool);
   if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && !opt_state->force)
     SVN_ERR_W(err,
               _("Destination directory exists; please remove "

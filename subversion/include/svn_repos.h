@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -479,6 +479,8 @@ svn_repos_post_revprop_change_hook(svn_repos_t *repos,
 
 /** Return the path to @a repos's pre-obliterate hook, allocated in
  * @a pool.
+ *
+ * @since New in 1.7.
  */
 const char *
 svn_repos_pre_obliterate_hook(svn_repos_t *repos,
@@ -486,6 +488,8 @@ svn_repos_pre_obliterate_hook(svn_repos_t *repos,
 
 /** Return the path to @a repos's post-obliterate hook, allocated in
  * @a pool.
+ *
+ * @since New in 1.7.
  */
 const char *
 svn_repos_post_obliterate_hook(svn_repos_t *repos,

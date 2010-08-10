@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -473,6 +473,7 @@ setup(cmdclass={'build': build, 'clean': clean},
       author_email='dev@subversion.tigris.org',
       url='http://subversion.tigris.org',
       packages=['csvn', 'csvn.core', 'csvn.ext'],
+      license='Apache License, Version 2.0',
      )
 
 # TODO: We need to create our own bdist_rpm implementation so that we can pass

@@ -1,4 +1,24 @@
 #!/bin/env python
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 # $Id$
 """
@@ -6,24 +26,71 @@ gen_junit_report.py -- The script is to generate the junit report for
 Subversion tests.  The script uses the log file, tests.log created by
 "make check" process. It parses the log file and generate the junit
 files for each test separately in the specified output directory. The
-script can take --log-file and --output-dir arguments.  
+script can take --log-file and --output-dir arguments.
 """
 
 import sys
 import os
 import getopt
 
-def xml_encode(data):
-    """encode the xml characters in the data"""
-    encode = {
+def replace_from_map(data, encode):
+    """replace substrings in DATA with replacements defined in ENCODING"""
+    for pattern, replacement in encode.items():
+        data = data.replace(pattern, replacement)
+    return data
+
+xml_encode_map = {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
-      "'": '&apos;'
+      "'": '&apos;',
+      }
+
+def xml_encode(data):
+    """encode the xml characters in the data"""
+    return replace_from_map(data, xml_encode_map)
+
+special_encode_map = {
+    ']]>': ']]]]><![CDATA[>', # CDATA terminator sequence
+    '\000': '&#9216;',        # U+2400 SYMBOL FOR NULL
+    '\001': '&#9217;',        # U+2401 SYMBOL FOR START OF HEADING
+    '\002': '&#9218;',        # U+2402 SYMBOL FOR START OF TEXT
+    '\003': '&#9219;',        # U+2403 SYMBOL FOR END OF TEXT
+    '\004': '&#9220;',        # U+2404 SYMBOL FOR END OF TRANSMISSION
+    '\005': '&#9221;',        # U+2405 SYMBOL FOR ENQUIRY
+    '\006': '&#9222;',        # U+2406 SYMBOL FOR ACKNOWLEDGE
+    '\007': '&#9223;',        # U+2407 SYMBOL FOR BELL
+    '\010': '&#9224;',        # U+2408 SYMBOL FOR BACKSPACE
+    '\011': '&#9225;',        # U+2409 SYMBOL FOR HORIZONTAL TABULATION
+   #'\012': '&#9226;',        # U+240A SYMBOL FOR LINE FEED
+    '\013': '&#9227;',        # U+240B SYMBOL FOR VERTICAL TABULATION
+    '\014': '&#9228;',        # U+240C SYMBOL FOR FORM FEED
+   #'\015': '&#9229;',        # U+240D SYMBOL FOR CARRIAGE RETURN
+    '\016': '&#9230;',        # U+240E SYMBOL FOR SHIFT OUT
+    '\017': '&#9231;',        # U+240F SYMBOL FOR SHIFT IN
+    '\020': '&#9232;',        # U+2410 SYMBOL FOR DATA LINK ESCAPE
+    '\021': '&#9233;',        # U+2411 SYMBOL FOR DEVICE CONTROL ONE
+    '\022': '&#9234;',        # U+2412 SYMBOL FOR DEVICE CONTROL TWO
+    '\023': '&#9235;',        # U+2413 SYMBOL FOR DEVICE CONTROL THREE
+    '\024': '&#9236;',        # U+2414 SYMBOL FOR DEVICE CONTROL FOUR
+    '\025': '&#9237;',        # U+2415 SYMBOL FOR NEGATIVE ACKNOWLEDGE
+    '\026': '&#9238;',        # U+2416 SYMBOL FOR SYNCHRONOUS IDLE
+    '\027': '&#9239;',        # U+2417 SYMBOL FOR END OF TRAMSNISSION BLOCK
+    '\030': '&#9240;',        # U+2418 SYMBOL FOR CANCEL
+    '\031': '&#9241;',        # U+2419 SYMBOL FOR END OF MEDIUM
+    '\032': '&#9242;',        # U+241A SYMBOL FOR SUBSTITUTE
+    '\033': '&#9243;',        # U+241B SYMBOL FOR ESCAPE
+    '\034': '&#9244;',        # U+241C SYMBOL FOR FILE SEPARATOR
+    '\035': '&#9245;',        # U+241D SYMBOL FOR GROUP SEPARATOR
+    '\036': '&#9246;',        # U+241E SYMBOL FOR RECORD SEPARATOR
+    '\037': '&#9247;',        # U+241F SYMBOL FOR UNIT SEPARATOR
     }
-    for char in encode.keys():
-        data = data.replace(char, encode[char])
+
+def escape_special_characters(data):
+    """remove special characters in test failure reasons"""
+    if data:
+        data = replace_from_map(data, special_encode_map)
     return data
 
 def start_junit():
@@ -35,7 +102,7 @@ def start_testsuite(test_name):
     """start testsuite. The value for the attributes are replaced later
     when the junit file handling is concluded"""
     sub_test_name = test_name.replace('.', '-')
-    start = """<testsuite time="ELAPSED_%s" tests="TOTAL_%s" name="%s" 
+    start = """<testsuite time="ELAPSED_%s" tests="TOTAL_%s" name="%s"
     failures="FAIL_%s" errors="FAIL_%s" skipped="SKIP_%s">""" % \
     (test_name, test_name, sub_test_name, test_name, test_name, test_name)
     return start
@@ -52,6 +119,7 @@ def junit_testcase_fail(test_name, casename, reason=None):
     """mark the test case as FAILED"""
     casename = xml_encode(casename)
     sub_test_name = test_name.replace('.', '-')
+    reason = escape_special_characters(reason)
     case = """<testcase time="ELAPSED_CASE_%s" name="%s" classname="%s">
       <failure type="Failed"><![CDATA[%s]]></failure>
     </testcase>""" % (test_name, casename, sub_test_name, reason)
@@ -61,6 +129,7 @@ def junit_testcase_xfail(test_name, casename, reason=None):
     """mark the test case as XFAILED"""
     casename = xml_encode(casename)
     sub_test_name = test_name.replace('.', '-')
+    reason = escape_special_characters(reason)
     case = """<testcase time="ELAPSED_CASE_%s" name="%s" classname="%s">
       <system-out><![CDATA[%s]]></system-out>
     </testcase>""" % (test_name, casename, sub_test_name, reason)
@@ -163,7 +232,7 @@ def main():
             test_name = line.split(' ')[1]
             # replace '.' in test name with '_' to avoid confusing class
             # name in test result displayed in the CI user interface
-            test_name.replace('.', '_') 
+            test_name.replace('.', '_')
             count[test_name] = {
               'pass' : 0,
               'skip' : 0,
@@ -203,7 +272,7 @@ def main():
             count[test_name]['elapsed'] = secs_taken
 
             junit_str = update_stat(test_name, junit, count)
-            test_junit_file = os.path.join(output_dir, 
+            test_junit_file = os.path.join(output_dir,
                                            "%s.junit.xml" % test_name)
             w_fp = open (test_junit_file, 'w')
             w_fp.writelines(junit_str)

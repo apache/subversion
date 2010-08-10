@@ -2,10 +2,10 @@
  * context.c:  routines for managing a working copy context
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -64,7 +64,7 @@ svn_wc_context_create(svn_wc_context_t **wc_ctx,
                       apr_pool_t *scratch_pool)
 {
   svn_wc_context_t *ctx = apr_pcalloc(result_pool, sizeof(*ctx));
- 
+
   /* Create the state_pool, and open up a wc_db in it. */
   ctx->state_pool = result_pool;
   SVN_ERR(svn_wc__db_open(&ctx->db, svn_wc__db_openmode_readwrite, config,
@@ -108,7 +108,7 @@ svn_error_t *
 svn_wc_context_destroy(svn_wc_context_t *wc_ctx)
 {
   /* We added a cleanup when creating; just run it now to close the context. */
-  apr_pool_cleanup_run(wc_ctx->state_pool, wc_ctx, close_ctx_apr);;
+  apr_pool_cleanup_run(wc_ctx->state_pool, wc_ctx, close_ctx_apr);
 
   return SVN_NO_ERROR;
 }

@@ -2,10 +2,10 @@
 # Makefile.in:  template Makefile for Subversion
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -94,6 +94,7 @@ javahl_javadir = @libdir@/svn-javahl
 javahl_javahdir = @libdir@/svn-javahl/include
 javahl_libdir = @libdir@
 javahl_test_rootdir=$(abs_builddir)/subversion/bindings/javahl/test-work
+javahl_test_srcdir=$(abs_srcdir)/subversion/bindings/javahl
 
 MSGFMT = @MSGFMT@
 MSGFMTFLAGS = @MSGFMTFLAGS@
@@ -151,8 +152,10 @@ JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/inc
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APR_PREFIX = @SVN_APR_PREFIX@
+SVN_APR_CONFIG = @SVN_APR_CONFIG@
 SVN_APRUTIL_INCLUDES = @SVN_APRUTIL_INCLUDES@
 SVN_APRUTIL_PREFIX = @SVN_APRUTIL_PREFIX@
+SVN_APRUTIL_CONFIG = @SVN_APRUTIL_CONFIG@
 
 SVN_APR_MEMCACHE_PREFIX = @SVN_APR_MEMCACHE_PREFIX@
 SVN_APR_MEMCACHE_INCLUDES = @SVN_APR_MEMCACHE_INCLUDES@
@@ -366,10 +369,9 @@ fast-clean: doc-clean
              rm -rf .libs);                                          \
           fi                                                         \
         done
-	rm -f $(CLEAN_FILES)
+	echo $(CLEAN_FILES) | xargs rm -f
 	find $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
-		$(abs_srcdir)/build -name "*.pyc" -exec rm {} ';'
-	find $(abs_srcdir)/subversion/tests/ -mindepth 2 -maxdepth 3 \
+		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline/svntest \
 		-name "*.pyc" -exec rm {} ';'
 
 # clean all but bulky test output, returning to before './configure' was run.
@@ -430,7 +432,7 @@ clean-javahl:
 
 check-javahl: javahl
 	@FIX_JAVAHL_LIB@
-	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
@@ -580,7 +582,7 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-misc-docs doc-api doc-javahl
+doc: doc-api doc-javahl
 
 # Generate API documentation for the C libraries.
 ### This could also generate POD for swig-perl, etc.
@@ -596,24 +598,7 @@ doc-javahl:
 	  -link http://java.sun.com/javase/6/docs/api/ \
 	  org.tigris.subversion.javahl
 
-# Build all types of a certain doc.
-doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
-
-# Build all docs of a certain type.
-doc-all-html: doc-misc-docs-html
-doc-all-pdf: doc-misc-docs-pdf
-doc-all-ps: doc-misc-docs-ps
-
-# Assumes you have {xsltproc, fop, stylesheets} installed.
-doc-misc-docs-html:
-	cd $(top_srcdir)/doc/misc-docs && $(MAKE) all-html
-doc-misc-docs-pdf:
-	cd $(top_srcdir)/doc/misc-docs && $(MAKE) pdf
-doc-misc-docs-ps:
-	cd $(top_srcdir)/doc/misc-docs && $(MAKE) ps
-
 doc-clean:
-	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
 	rm -rf $(top_srcdir)/doc/doxygen
 	rm -rf $(top_srcdir)/doc/javadoc
 
@@ -828,7 +813,7 @@ install-swig-rb-doc:
 
 # ctypes-python make targets
 ctypes-python: local-all
-	$(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_PREFIX)" "$(SVN_APRUTIL_PREFIX)"
+	$(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_CONFIG)" "$(SVN_APRUTIL_CONFIG)"
 
 install-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \

@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -166,9 +166,9 @@ def non_inheritable_mergeinfo(sbox):
   A_COPY_path   = os.path.join(wc_dir, "A_COPY")
   D_COPY_path   = os.path.join(wc_dir, "A_COPY", "D")
   rho_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
-  
+
   # Update the WC, then merge r4 from A to A_COPY and r6 from A to A_COPY
-  # at --depth empty and commit the merges as r7.  
+  # at --depth empty and commit the merges as r7.
   svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=6)
@@ -238,8 +238,8 @@ def recursive_mergeinfo(sbox):
   A2_path         = os.path.join(wc_dir, "A2")
   nu_path         = os.path.join(wc_dir, "A2", "B", "F", "nu")
   nu_COPY_path    = os.path.join(wc_dir, "A_COPY", "B", "F", "nu")
-  nu2_path        = os.path.join(wc_dir, "A2", "C", "nu2") 
-  
+  nu2_path        = os.path.join(wc_dir, "A2", "C", "nu2")
+
   # Rename A to A2 in r7.
   svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -266,7 +266,7 @@ def recursive_mergeinfo(sbox):
                                      [], [], 'merge', '-c4', '--depth', 'empty',
                                      sbox.repo_url + '/A2',
                                      A_COPY_path)
-  
+
   # Merge r6 from A2/D/H to A_COPY/D/H
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[6]], 'U    ' +
@@ -284,12 +284,12 @@ def recursive_mergeinfo(sbox):
                                      [], 'merge', '-c5',
                                      sbox.repo_url + '/A2',
                                      A_COPY_path)
- 
+
   # Reverse merge -r5 from A2/C to A_COPY/C leaving empty mergeinfo on
   # A_COPY/C.
   svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-c-5',
                                      sbox.repo_url + '/A2/C', C_COPY_path)
-  
+
   # Merge r8 from A2/B/F to A_COPY/B/F
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[8]], 'A    ' +
@@ -299,7 +299,7 @@ def recursive_mergeinfo(sbox):
                                      sbox.repo_url + '/A2/B/F',
                                      F_COPY_path)
 
-  # Commit everything this far as r9  
+  # Commit everything this far as r9
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', wc_dir, '-m', 'Many merges')
   svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
@@ -344,7 +344,105 @@ def recursive_mergeinfo(sbox):
                                            A_COPY_path,
                                            '--show-revs', 'merged',
                                            '--depth', 'infinity')
-  
+
+# Test for issue #3180 'svn mergeinfo ignores peg rev for WC target'.
+def mergeinfo_on_pegged_wc_path(sbox):
+  "svn mergeinfo on pegged working copy target"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Some paths we'll care about
+  A_path          = os.path.join(wc_dir, "A")
+  A_COPY_path     = os.path.join(wc_dir, "A_COPY")
+  psi_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
+  omega_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
+  beta_COPY_path  = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+ 
+  # Do a couple merges
+  #
+  # r7 - Merge -c3,6 from A to A_COPY.
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3],[6]],
+                          ['U    ' + psi_COPY_path + '\n',
+                           'U    ' + omega_COPY_path + '\n']),
+    [], 'merge', '-c3,6', sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', wc_dir,
+                                     '-m', 'Merge r3 and r6')
+
+  # r8 - Merge -c5 from A to A_COPY.
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[5]],
+                          'U    ' + beta_COPY_path + '\n'),
+    [], 'merge', '-c5', sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', wc_dir,
+                                     '-m', 'Merge r5')
+
+  # Ask for merged and eligible revisions to A_COPY pegged at various values.
+  # Prior to issue #3180 fix the peg revision was ignored.
+  #
+  # A_COPY pegged to non-existent revision
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version('.*No such revision 99'),
+    [], A_path, A_COPY_path + '@99', '--show-revs', 'merged')
+
+  # A_COPY@BASE
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3','5','6'], A_path, A_COPY_path + '@BASE', '--show-revs', 'merged')
+
+  # A_COPY@HEAD
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3','5','6'], A_path, A_COPY_path + '@HEAD', '--show-revs', 'merged')
+
+  # A_COPY@4 (Prior to any merges)
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    [], A_path, A_COPY_path + '@4', '--show-revs', 'merged')
+
+  # A_COPY@COMMITTED (r8)
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3','5','6'], A_path, A_COPY_path + '@COMMITTED', '--show-revs',
+    'merged')
+
+  # A_COPY@PREV (r7)
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3', '6'], A_path, A_COPY_path + '@PREV', '--show-revs', 'merged')
+
+  # A_COPY@BASE
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4'], A_path, A_COPY_path + '@BASE', '--show-revs', 'eligible')
+
+  # A_COPY@HEAD
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4'], A_path, A_COPY_path + '@HEAD', '--show-revs', 'eligible')
+
+  # A_COPY@4 (Prior to any merges)
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3', '4', '5', '6'], A_path, A_COPY_path + '@4', '--show-revs', 'eligible')
+
+  # A_COPY@COMMITTED (r8)
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4'], A_path, A_COPY_path + '@COMMITTED', '--show-revs',
+    'eligible')
+
+  # A_COPY@PREV (r7)
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4', '5'], A_path, A_COPY_path + '@PREV', '--show-revs', 'eligible')
+
 ########################################################################
 # Run the tests
 
@@ -358,6 +456,8 @@ test_list = [ None,
               mergeinfo_on_unknown_url,
               non_inheritable_mergeinfo,
               SkipUnless(recursive_mergeinfo, server_has_mergeinfo),
+              SkipUnless(mergeinfo_on_pegged_wc_path,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

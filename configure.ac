@@ -1,3 +1,20 @@
+dnl     Licensed to the Apache Software Foundation (ASF) under one
+dnl     or more contributor license agreements.  See the NOTICE file
+dnl     distributed with this work for additional information
+dnl     regarding copyright ownership.  The ASF licenses this file
+dnl     to you under the Apache License, Version 2.0 (the
+dnl     "License"); you may not use this file except in compliance
+dnl     with the License.  You may obtain a copy of the License at
+dnl    
+dnl       http://www.apache.org/licenses/LICENSE-2.0
+dnl    
+dnl     Unless required by applicable law or agreed to in writing,
+dnl     software distributed under the License is distributed on an
+dnl     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+dnl     KIND, either express or implied.  See the License for the
+dnl     specific language governing permissions and limitations
+dnl     under the License.
+
 dnl configure.ac: Autoconfiscation for Subversion
 dnl Process this file with autoconf to produce a configure script.
 
@@ -849,6 +866,9 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
+
+        CFLAGS="-Wdeclaration-after-statement $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])

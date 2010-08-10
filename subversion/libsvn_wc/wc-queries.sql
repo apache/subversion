@@ -3,10 +3,10 @@
  *     This is intended for use with SQLite 3
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -27,18 +27,16 @@
 /* these are used in wc_db.c  */
 
 -- STMT_SELECT_BASE_NODE
-select wc_id, local_relpath, repos_id, repos_relpath,
-  presence, kind, revnum, checksum, translated_size,
-  changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time, properties
+select repos_id, repos_relpath, presence, kind, revnum, checksum,
+  translated_size, changed_rev, changed_date, changed_author, depth,
+  symlink_target, last_mod_time, properties
 from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_SELECT_BASE_NODE_WITH_LOCK
-select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath,
-  presence, kind, revnum, checksum, translated_size,
-  changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time, properties,
+select base_node.repos_id, base_node.repos_relpath, presence, kind,
+  revnum, checksum, translated_size, changed_rev, changed_date,
+  changed_author, depth, symlink_target, last_mod_time, properties,
   lock_token, lock_owner, lock_comment, lock_date
 from base_node
 left outer join lock on base_node.repos_id = lock.repos_id
@@ -107,6 +105,14 @@ where wc_id = ?1 and local_relpath = ?2;
 select properties from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_WORKING_PROPS
+select properties from working_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_PROPS
+select properties from actual_node
+where wc_id = ?1 and local_relpath = ?2;
+
 -- STMT_UPDATE_BASE_PROPS
 update base_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
@@ -119,22 +125,9 @@ where wc_id = ?1 and local_relpath = ?2;
 update actual_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_SELECT_ALL_PROPS
-select actual_node.properties, working_node.properties,
-  base_node.properties
-from base_node
-left outer join working_node on base_node.wc_id = working_node.wc_id
-  and base_node.local_relpath = working_node.local_relpath
-left outer join actual_node on base_node.wc_id = actual_node.wc_id
-  and base_node.local_relpath = actual_node.local_relpath
-where base_node.wc_id = ?1 and base_node.local_relpath = ?2;
-
--- STMT_SELECT_PRISTINE_PROPS
-select working_node.properties, base_node.properties
-from base_node
-left outer join working_node on base_node.wc_id = working_node.wc_id
-  and base_node.local_relpath = working_node.local_relpath
-where base_node.wc_id = ?1 and base_node.local_relpath = ?2;
+-- STMT_INSERT_ACTUAL_PROPS
+insert into actual_node (wc_id, local_relpath, parent_relpath, properties)
+values (?1, ?2, ?3, ?4);
 
 -- STMT_INSERT_LOCK
 insert or replace into lock
@@ -168,6 +161,12 @@ where wc_id = ?1 and local_relpath = ?2;
 -- STMT_DELETE_LOCK
 delete from lock
 where repos_id = ?1 and repos_relpath = ?2;
+
+-- STMT_CLEAR_BASE_RECURSIVE_DAV_CACHE
+update base_node set dav_cache = null
+where dav_cache is not null and wc_id = ?1 and
+  (local_relpath = ?2 or
+   local_relpath like ?3 escape '#');
 
 -- STMT_UPDATE_BASE_RECURSIVE_REPO
 update base_node set repos_id = ?4
@@ -249,8 +248,8 @@ SELECT id, work FROM WORK_QUEUE ORDER BY id LIMIT 1;
 DELETE FROM WORK_QUEUE WHERE id = ?1;
 
 -- STMT_INSERT_PRISTINE
-INSERT OR IGNORE INTO PRISTINE (checksum, size, refcount)
-VALUES (?1, ?2, 1);
+INSERT OR IGNORE INTO PRISTINE (checksum, md5_checksum, size, refcount)
+VALUES (?1, ?2, ?3, 1);
 
 -- STMT_SELECT_ACTUAL_CONFLICT_VICTIMS
 SELECT local_relpath
@@ -282,11 +281,11 @@ UPDATE ACTUAL_NODE SET
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_INSERT_WC_LOCK
-INSERT INTO WC_LOCK (wc_id, local_dir_relpath)
-VALUES (?1, ?2);
+INSERT INTO WC_LOCK (wc_id, local_dir_relpath, locked_levels)
+VALUES (?1, ?2, ?3);
 
 -- STMT_SELECT_WC_LOCK
-SELECT local_dir_relpath FROM WC_LOCK
+SELECT locked_levels FROM WC_LOCK
 WHERE wc_id = ?1 AND local_dir_relpath = ?2;
 
 -- STMT_DELETE_WC_LOCK

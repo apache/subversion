@@ -2,10 +2,10 @@
  * client.c :  Functions for repository access via the Subversion protocol
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -34,6 +34,7 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_error.h"
 #include "svn_time.h"
 #include "svn_path.h"
@@ -213,7 +214,7 @@ static svn_error_t *parse_lock(apr_array_header_t *list, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(list, pool, "ccc(?c)c(?c)", &(*lock)->path,
                                  &(*lock)->token, &(*lock)->owner,
                                  &(*lock)->comment, &cdate, &edate));
-  (*lock)->path = svn_path_canonicalize((*lock)->path, pool);
+  (*lock)->path = svn_uri_canonicalize((*lock)->path, pool);
   SVN_ERR(svn_time_from_cstring(&(*lock)->creation_date, cdate, pool));
   if (edate)
     SVN_ERR(svn_time_from_cstring(&(*lock)->expiration_date, edate, pool));
@@ -488,8 +489,24 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
    * See also the long dicussion in issue #2580 if you really
    * want to know various reasons for these problems and
    * the different opinions on this issue.
+   *
+   * On Win32, APR does not support KILL_ONLY_ONCE. It only has
+   * KILL_ALWAYS and KILL_NEVER. Other modes are converted to 
+   * KILL_ALWAYS, which immediately calls TerminateProcess().
+   * This instantly kills the tunnel, leaving sshd and svnserve
+   * on a remote machine running indefinitely. These processes
+   * accumulate. The problem is most often seen with a fast client
+   * machine and a modest internet connection, as the tunnel
+   * is killed before being able to gracefully complete the 
+   * session. In that case, svn is unusable 100% of the time on
+   * the windows machine. Thus, on Win32, we use KILL_NEVER and
+   * take the lesser of two evils.
    */
+#ifdef WIN32
+  apr_pool_note_subprocess(pool, proc, APR_KILL_NEVER);
+#else
   apr_pool_note_subprocess(pool, proc, APR_KILL_ONLY_ONCE);
+#endif
 
   /* APR pipe objects inherit by default.  But we don't want the
    * tunnel agent's pipes held open by future child processes
@@ -619,7 +636,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 
   if (conn->repos_root)
     {
-      conn->repos_root = svn_path_canonicalize(conn->repos_root, pool);
+      conn->repos_root = svn_uri_canonicalize(conn->repos_root, pool);
       /* We should check that the returned string is a prefix of url, since
          that's the API guarantee, but this isn't true for 1.0 servers.
          Checking the length prevents client crashes. */
@@ -1071,7 +1088,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnbr(?c)(?c)",
                                      &name, &kind, &size, &has_props,
                                      &crev, &cdate, &cauthor));
-      name = svn_path_canonicalize(name, pool);
+      name = svn_uri_canonicalize(name, pool);
       dirent = apr_palloc(pool, sizeof(*dirent));
       dirent->kind = svn_node_kind_from_word(kind);
       dirent->size = size;/* FIXME: svn_filesize_t */
@@ -1384,9 +1401,9 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                              &cpath, &action, &copy_path,
                                              &copy_rev, &kind_str,
                                              &text_mods, &prop_mods));
-              cpath = svn_path_canonicalize(cpath, iterpool);
+              cpath = svn_uri_canonicalize(cpath, iterpool);
               if (copy_path)
-                copy_path = svn_path_canonicalize(copy_path, iterpool);
+                copy_path = svn_uri_canonicalize(copy_path, iterpool);
               change = svn_log_changed_path2_create(iterpool);
               change->action = *action;
               change->copyfrom_path = copy_path;
@@ -1583,7 +1600,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
         {
           SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "rc",
                                          &revision, &ret_path));
-          ret_path = svn_path_canonicalize(ret_path, pool);
+          ret_path = svn_uri_canonicalize(ret_path, pool);
           apr_hash_set(*locations, apr_pmemdup(pool, &revision,
                                                sizeof(revision)),
                        sizeof(revision), ret_path);
@@ -1645,7 +1662,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Expected valid revision range"));
           if (ret_path)
-            ret_path = svn_path_canonicalize(ret_path, iterpool);
+            ret_path = svn_uri_canonicalize(ret_path, iterpool);
           segment->path = ret_path;
           segment->range_start = range_start;
           segment->range_end = range_end;
@@ -1713,7 +1730,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, rev_pool,
                                      "crll?B", &p, &rev, &rev_proplist,
                                      &proplist, &merged_rev_param));
-      p = svn_path_canonicalize(p, rev_pool);
+      p = svn_uri_canonicalize(p, rev_pool);
       SVN_ERR(svn_ra_svn_parse_proplist(rev_proplist, rev_pool, &rev_props));
       SVN_ERR(parse_prop_diffs(proplist, rev_pool, &props));
       if (merged_rev_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
@@ -2398,6 +2415,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_has_capability,
   ra_svn_replay_range,
   ra_svn_get_deleted_rev,
+  NULL  /* ra_svn_obliterate_node_rev */
 };
 
 svn_error_t *

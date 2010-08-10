@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -197,6 +197,10 @@ svn_io_open_uniquely_named(apr_file_t **file,
  * issues.)
  *
  * The file will be deleted according to @a delete_when.
+ * When passing @c svn_io_file_del_none please don't forget to eventually
+ * remove the temporary file to avoid filling up the system temp directory.
+ * It is often appropriate to bind the lifetime of the temporary file to
+ * the lifetime of a pool by using @c svn_io_file_del_on_pool_cleanup.
  *
  * Temporary allocations will be performed in @a scratch_pool.
  *
@@ -698,6 +702,30 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
  */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
+/* An opaque type which represents a mark on a stream.
+ *
+ * @see svn_stream_mark().
+ * @since New in 1.7.
+ */
+typedef struct svn_stream_mark_t svn_stream_mark_t;
+
+/** Mark handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_mark().
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton,
+                                         svn_stream_mark_t **mark,
+                                         apr_pool_t *pool);
+
+/** Seek handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_seek().
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_io_seek_fn_t)(void *baton,
+                                         svn_stream_mark_t *mark);
+
 /** Line-filtering callback function for a generic stream.
  * @a baton is the stream's baton.
  * @see svn_stream_t, svn_stream_set_baton() and svn_stream_readline().
@@ -765,6 +793,22 @@ svn_stream_set_close(svn_stream_t *stream,
 void
 svn_stream_set_reset(svn_stream_t *stream,
                      svn_io_reset_fn_t reset_fn);
+
+/** Set @a stream's mark function to @a mark_fn 
+ *
+ * @since New in 1.7.
+ */
+void
+svn_stream_set_mark(svn_stream_t *stream,
+                    svn_io_mark_fn_t mark_fn);
+
+/** Set @a stream's seek function to @a seek_fn 
+ *
+ * @since New in 1.7.
+ */
+void
+svn_stream_set_seek(svn_stream_t *stream,
+                    svn_io_seek_fn_t seek_fn);
 
 /** Set @a stream's line-filtering callback function to @a line_filter_cb
  *
@@ -1023,14 +1067,52 @@ svn_error_t *
 svn_stream_close(svn_stream_t *stream);
 
 /** Reset a generic stream back to its origin. E.g. On a file this would be
- * implemented as a seek to position 0).  This function returns a 
- * @a SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
+ * implemented as a seek to position 0).  This function returns a
+ * #SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream);
+
+/** Set a @a mark at the current position of a generic @a stream,
+ * which can later be sought back to using svn_stream_seek().
+ * The @a mark is allocated in @a pool.
+ *
+ * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
+ * if the stream doesn't implement seeking.
+ *
+ * @see svn_stream_seek()
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_mark(svn_stream_t *stream,
+                svn_stream_mark_t **mark,
+                apr_pool_t *pool);
+
+/* Seek to a @a mark in a generic @a stream.
+ * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
+ * if the stream doesn't implement seeking.
+ *
+ * @see svn_stream_mark()
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_seek(svn_stream_t *stream, svn_stream_mark_t *mark);
+
+/** Return a writable stream which, when written to, writes to both of the
+ * underlying streams.  Both of these streams will be closed upon closure of
+ * the returned stream; use svn_stream_disown() if this is not the desired
+ * behavior.  One or both of @a out1 and @a out2 may be @c NULL.  If both are
+ * @c NULL, @c NULL is returned.
+ *
+ * @since New in 1.7.
+ */
+svn_stream_t *
+svn_stream_tee(svn_stream_t *out1,
+               svn_stream_t *out2,
+               apr_pool_t *pool);
 
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
@@ -1088,6 +1170,20 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool);
 
+/**
+ * Similar to svn_stream_readline(). The line-terminator is detected
+ * automatically.  If @a eol is not NULL, the detected line-terminator
+ * is returned in @a *eol.  If EOF is reached and the stream does not
+ * end with a newline character, @a *eol will be NULL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_readline_detect_eol(svn_stream_t *stream,
+                               svn_stringbuf_t **stringbuf,
+                               const char **eol,
+                               svn_boolean_t *eof,
+                               apr_pool_t *pool);
 
 /**
  * Read the contents of the readable stream @a from and write them to the
@@ -1820,43 +1916,13 @@ svn_io_file_name_get(const char **filename,
                      apr_file_t *file,
                      apr_pool_t *pool);
 
-/** Open a new file (for reading and writing) with a unique name based on
- * utf-8 encoded @a filename, in the directory @a dirpath.  The file handle is
- * returned in @a *file, and the name is returned in @a *unique_name, also
- * utf8-encoded.  Either @a file or @a unique_name may be @c NULL.
+/** Wrapper for apr_file_perms_set().
  *
- * If @a delete_when is #svn_io_file_del_on_close, then the @c APR_DELONCLOSE
- * flag will be used when opening the file.  The @c APR_BUFFERED flag will
- * always be used.
- *
- * If @a dirpath is NULL, then the directory returned by svn_io_temp_dir()
- * will be used.
- *
- * If @a filename is NULL, a completely random name will be used.
- * Else, a random name based on @a filename will be used.
- *
- * Allocates @a *file and @a *unique_name in @a result_pool. All
- * intermediate allocations will be performed in @a scratch_pool.
- *
- * If @a file is NULL, the file is closed before returning.
- *
- * Claim of Historical Inevitability: this function was written
- * because
- *
- *    - svn_io_open_uniquely_named() creates predictable filenames
- *      and can cause performance problems when many temporary
- *      files are needed in a single directory
- *
- * @since New in 1.7
- */
+ * @since New in 1.7. */
 svn_error_t *
-svn_io_mktemp(apr_file_t **file,
-              const char **unique_name,
-              const char *dirpath,
-              const char *filename,
-              svn_io_file_del_t delete_when,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool);
+svn_io_file_perms_set(const char *fname,
+                      apr_fileperms_t perms,
+                      apr_pool_t *pool);
 
 /** @} */
 

@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -574,7 +574,7 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobjectArray jcopySources, jstring jdestPath,
  jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents,
- jobject jrevpropTable)
+ jboolean jignoreExternals, jobject jrevpropTable)
 {
   JNIEntry(SVNClient, copy);
 
@@ -599,7 +599,8 @@ Java_org_tigris_subversion_javahl_SVNClient_copy
     return;
 
   cl->copy(copySources, destPath, message, jcopyAsChild ? true : false,
-           jmakeParents ? true : false, revprops);
+           jmakeParents ? true : false, jignoreExternals ? true : false,
+           revprops);
 }
 
 JNIEXPORT void JNICALL
@@ -1157,7 +1158,7 @@ Java_org_tigris_subversion_javahl_SVNClient_getMergeinfo
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_getMergeinfoLog
 (JNIEnv *env, jobject jthis, jint jkind, jstring jpathOrUrl,
  jobject jpegRevision, jstring jmergeSourceUrl, jobject jsrcPegRevision,
- jboolean jdiscoverChangedPaths, jobjectArray jrevProps,
+ jboolean jdiscoverChangedPaths, jint jdepth, jobjectArray jrevProps,
  jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, getMergeinfoLog);
@@ -1192,15 +1193,16 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_getMergeinfoL
 
   cl->getMergeinfoLog((int)jkind, pathOrUrl, pegRevision, mergeSourceUrl,
                       srcPegRevision, jdiscoverChangedPaths ? true : false,
-                      revProps, &callback);
+                      (svn_depth_t)jdepth, revProps, &callback);
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2I_3Ljava_lang_String_2ZZZ
+Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2I_3Ljava_lang_String_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
  jstring jtarget2, jobject jrevision2, jstring jrelativeToDir,
  jstring joutfileName, jint jdepth, jobjectArray jchangelists,
- jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce)
+ jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce,
+ jboolean jcopiesAsAdds)
 {
   JNIEntry(SVNClient, diff);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1240,15 +1242,17 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
   cl->diff(target1, revision1, target2, revision2, relativeToDir, outfileName,
            (svn_depth_t)jdepth, changelists,
            jignoreAncestry ? true:false,
-           jnoDiffDeleted ? true:false, jforce ? true:false);
+           jnoDiffDeleted ? true:false, jforce ? true:false,
+           jcopiesAsAdds ? true:false);
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2I_3Ljava_lang_String_2ZZZ
+Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2I_3Ljava_lang_String_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision,
  jobject jstartRevision, jobject jendRevision, jstring jrelativeToDir,
  jstring joutfileName, jint jdepth, jobjectArray jchangelists,
- jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce)
+ jboolean jignoreAncestry, jboolean jnoDiffDeleted, jboolean jforce,
+ jboolean jcopiesAsAdds)
 {
   JNIEntry(SVNClient, diff);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1288,7 +1292,8 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
   cl->diff(target, pegRevision, startRevision, endRevision, relativeToDir,
            outfileName, (svn_depth_t) jdepth, changelists,
            jignoreAncestry ? true:false,
-           jnoDiffDeleted ? true:false, jforce ? true:false);
+           jnoDiffDeleted ? true:false, jforce ? true:false,
+           jcopiesAsAdds ? true:false);
 }
 
 JNIEXPORT void JNICALL
@@ -1446,6 +1451,23 @@ Java_org_tigris_subversion_javahl_SVNClient_getVersionInfo
 
   JNIStringHolder trailUrl(jtrailUrl);
   return cl->getVersionInfo(path, trailUrl, jlastChanged ? true:false);
+}
+
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_upgrade
+  (JNIEnv *env, jobject jthis, jstring jpath)
+{
+  JNIEntry(SVNClient, upgrade);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->upgrade(path);
 }
 
 JNIEXPORT void JNICALL

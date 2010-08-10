@@ -2,10 +2,10 @@
  * util.c :  utility functions for the libsvn_client library
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -180,6 +180,8 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
+  /* ### TODO: Rework this to use svn_ra_get_path_relative_to_root(). */
+
   SVN_ERR_ASSERT(repos_root != NULL || ra_session != NULL);
 
   /* If we have a WC path... */

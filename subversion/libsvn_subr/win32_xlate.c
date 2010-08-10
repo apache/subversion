@@ -2,10 +2,10 @@
  * win32_xlate.c : Windows xlate stuff.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -156,7 +156,7 @@ svn_subr__win32_xlate_open(win32_xlate_t **xlate_p, const char *topage,
   UINT from_page_id, to_page_id;
   apr_status_t apr_err = APR_SUCCESS;
   win32_xlate_t *xlate;
-  
+
   apr_err = get_page_id_from_name(&to_page_id, topage, pool);
   if (apr_err == APR_SUCCESS)
     apr_err = get_page_id_from_name(&from_page_id, frompage, pool);

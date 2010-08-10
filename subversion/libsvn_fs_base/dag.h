@@ -1,10 +1,10 @@
 /* dag.h : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -280,6 +280,16 @@ svn_error_t *svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                                          svn_fs_txn_t *txn,
                                          trail_t *trail,
                                          apr_pool_t *pool);
+
+
+/* Replace the transaction in revision REPLACING_REV with the uncommitted
+ * transaction TXN, and promote TXN to a committed transaction. See also
+ * svn_fs_base__dag_commit_txn(). */
+svn_error_t *
+svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
+                                         svn_fs_txn_t *txn,
+                                         trail_t *trail,
+                                         apr_pool_t *scratch_pool);
 
 
 

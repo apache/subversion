@@ -35,15 +35,16 @@
 # Any sections other than [general], [defaults], [maps] and sections
 # referred to within [maps] are considered to be user-defined groups
 # which override values in the [defaults] section.
-# These groups are selected using the following two options:
+# These groups are selected using the following three options:
 #
 #   for_repos
 #   for_paths
+#   search_logmsg
 #
-# Both options specify a regular expression. The former is matched against
-# the absolute path to the repository the mailer is operating against. The
-# second is matched against *every* path (files and dirs) that was modified
-# during the commit.
+# Each option specifies a regular expression. for_repos is matched
+# against the absolute path to the repository the mailer is operating
+# against. for_paths is matched against *every* path (files and
+# dirs) that was modified during the commit.
 #
 # The options specified in the [defaults] section are always selected. The
 # presence of a non-matching for_repos has no relevance. Note that you may
@@ -61,6 +62,14 @@
 # that one group will match against all paths, while another group matches
 # none of the paths, even though its for_paths would have selected some of
 # the paths in the commit.
+#
+# search_logmsg specifies a regular expression to match against the
+# log message.  If the regular expression does not match the log
+# message, the group is not matched; if the regular expression matches
+# once, the group is used.  If there are multiple matches, each
+# successful match generates another group-match (this is useful if
+# "named groups" are used).  If search_logmsg is not used, no log
+# message filtering is performed.
 #
 # Groups are matched in no particular order. Do not depend upon their
 # order within this configuration file. The values from [defaults] will
@@ -110,6 +119,20 @@
 # The names from the regexes later in the list override the earlier names.
 # If none of the groups match, but a for_paths is present in [defaults],
 # then its extracted names will be available.
+#
+# Further suppose you want to match bug-ids in log messages:
+#
+#   search_logmsg = (?P<bugid>(ProjA|ProjB)#\d)
+#
+# The bugids would be of the form ProjA#123 and ProjB#456.  In this
+# case, each time the regular expression matches, another match group
+# will be generated.  Thus, if you use:
+#
+#   commit_subject_prefix = %(bugid)s:
+#
+# Then, a log message such as "Fixes ProjA#123 and ProjB#234" would
+# match both bug-ids, and two emails would be generated - one with
+# subject "ProjA#123: <...>" and "ProjB#234: <...>".
 #
 # Note that each unique set of names for substitution will generate an
 # email. In the above example, if a commit modified files in all three
@@ -329,3 +352,10 @@ show_nonmatching_paths = yes
 # for_repos = /home/(?P<who>[^/]*)/repos
 # to_addr = %(who)s@example.com
 #
+# [issuetracker]
+# search_logmsg = (?P<bugid>(?P<project>projecta|projectb|projectc)#\d+)
+# # (or, use a mapping if the bug-id to email address is not this trivial)
+# to_addr = %(project)s-tracker@example.com
+# commit_subject_prefix = %(bugid)s:
+# propchange_subject_prefix = %(bugid)s:
+

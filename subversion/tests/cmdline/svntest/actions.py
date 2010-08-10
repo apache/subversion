@@ -5,10 +5,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -105,12 +105,24 @@ def setup_pristine_repository():
 
 
 ######################################################################
+
+def guarantee_empty_repository(path):
+  """Guarantee that a local svn repository exists at PATH, containing
+  nothing."""
+
+  if path == main.pristine_dir:
+    print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
+    sys.exit(1)
+
+  # create an empty repository at PATH.
+  main.safe_rmtree(path)
+  main.create_repos(path)
+
 # Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
 # Note: make sure setup_pristine_repository was called once before
 # using this function.
-
 def guarantee_greek_repository(path):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing but the greek-tree at revision 1."""
@@ -1468,7 +1480,7 @@ def run_and_verify_resolved(expected_paths, *args):
 
 # This allows a test to *quickly* bootstrap itself.
 def make_repo_and_wc(sbox, create_wc = True, read_only = False):
-  """Create a fresh repository and checkout a wc from it.
+  """Create a fresh 'Greek Tree' repository and check out a WC from it.
 
   If read_only is False, a dedicated repository will be created, named
   TEST_NAME. The repository will live in the global dir 'general_repo_dir'.
@@ -1547,8 +1559,9 @@ def lock_admin_dir(wc_dir):
 
   db = svntest.sqlite3.connect(os.path.join(wc_dir, main.get_admin_name(),
                                             'wc.db'))
-  db.execute('insert into wc_lock (wc_id, local_dir_relpath) values (?, ?)',
-             (1, ''))
+  db.execute('insert into wc_lock (wc_id, local_dir_relpath, locked_levels) '
+             + 'values (?, ?, ?)',
+             (1, '', 0))
   db.commit()
   db.close()
 
@@ -1560,26 +1573,50 @@ def get_wc_base_rev(wc_dir):
   "Return the BASE revision of the working copy at WC_DIR."
   return run_and_parse_info(wc_dir)[0]['Revision']
 
+def hook_failure_message(hook_name):
+  """Return the error message that the client prints for failure of the
+  specified hook HOOK_NAME. The wording changed with Subversion 1.5."""
+  if svntest.main.server_minor_version < 5:
+    return "'%s' hook failed with error output:\n" % hook_name
+  else:
+    if hook_name in ["start-commit", "pre-commit"]:
+      action = "Commit"
+    elif hook_name == "pre-revprop-change":
+      action = "Revprop change"
+    elif hook_name == "pre-lock":
+      action = "Lock"
+    elif hook_name == "pre-unlock":
+      action = "Unlock"
+    else:
+      action = None
+    if action is None:
+      message = "%s hook failed (exit code 1)" % (hook_name,)
+    else:
+      message = "%s blocked by %s hook (exit code 1)" % (action, hook_name)
+    return message + " with output:\n"
+
 def create_failing_hook(repo_dir, hook_name, text):
-  """Create a HOOK_NAME hook in REPO_DIR that prints TEXT to stderr and exits
-  with an error."""
+  """Create a HOOK_NAME hook in the repository at REPO_DIR that prints
+  TEXT to stderr and exits with an error."""
 
   hook_path = os.path.join(repo_dir, 'hooks', hook_name)
+  # Embed the text carefully: it might include characters like "%" and "'".
   main.create_python_hook_script(hook_path, 'import sys\n'
-    'sys.stderr.write("""%%s hook failed: %%s""" %% (%s, %s))\n'
-    'sys.exit(1)\n' % (repr(hook_name), repr(text)))
+    'sys.stderr.write(' + repr(text) + ')\n'
+    'sys.exit(1)\n')
 
 def enable_revprop_changes(repo_dir):
-  """Enable revprop changes in a repository REPOS_DIR by creating a
-pre-revprop-change hook script and (if appropriate) making it executable."""
+  """Enable revprop changes in the repository at REPO_DIR by creating a
+  pre-revprop-change hook script and (if appropriate) making it executable."""
 
   hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
   main.create_python_hook_script(hook_path, 'import sys; sys.exit(0)')
 
 def disable_revprop_changes(repo_dir):
-  """Disable revprop changes in a repository REPO_DIR by creating a
-pre-revprop-change hook script like enable_revprop_changes, except that
-the hook prints "pre-revprop-change" followed by sys.argv"""
+  """Disable revprop changes in the repository at REPO_DIR by creating a
+  pre-revprop-change hook script that prints "pre-revprop-change" followed
+  by its arguments, and returns an error."""
+
   hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
   main.create_python_hook_script(hook_path,
                                  'import sys\n'
@@ -1587,8 +1624,8 @@ the hook prints "pre-revprop-change" followed by sys.argv"""
                                  'sys.exit(1)\n')
 
 def create_failing_post_commit_hook(repo_dir):
-  """Disable commits in a repository REPOS_DIR by creating a post-commit hook
-script which always reports errors."""
+  """Create a post-commit hook script in the repository at REPO_DIR that always
+  reports an error."""
 
   hook_path = main.get_post_commit_hook_path(repo_dir)
   main.create_python_hook_script(hook_path, 'import sys\n'

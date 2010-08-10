@@ -2,10 +2,10 @@
  * mergeinfo-test.c -- test the mergeinfo functions
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -154,9 +154,12 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/trunk",
     "/trunk",
     "/branch",
-    "patch-common::netasq-bpf.c",
-    "patch-common_netasq-bpf.c:",
-    ":patch:common:netasq:bpf.c",
+
+    /* svn_mergeinfo_parse converts relative merge soure paths to absolute. */
+    "/patch-common::netasq-bpf.c",
+    "/patch-common_netasq-bpf.c:",
+    "/:patch:common:netasq:bpf.c",
+    
     "/trunk",
     "/trunk",
     "/trunk",
@@ -1080,6 +1083,22 @@ test_mergeinfo_to_string(apr_pool_t *pool)
 
   SVN_ERR(svn_mergeinfo_to_string(&output, info1, pool));
 
+  if (svn_string_compare(expected, output) != TRUE)
+    return fail(pool, "Mergeinfo string not what we expected");
+
+  /* Manually construct some mergeinfo with relative path
+     merge source keys.  These should be tolerated as input
+     to svn_mergeinfo_to_string(), but the resulting svn_string_t
+     should have absolute keys. */
+  info2 = apr_hash_make(pool);
+  apr_hash_set(info2, "fred",
+               APR_HASH_KEY_STRING,
+               apr_hash_get(info1, "/fred", APR_HASH_KEY_STRING));
+  apr_hash_set(info2, "trunk",
+               APR_HASH_KEY_STRING,
+               apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING));
+  SVN_ERR(svn_mergeinfo_to_string(&output, info2, pool));
+  
   if (svn_string_compare(expected, output) != TRUE)
     return fail(pool, "Mergeinfo string not what we expected");
 

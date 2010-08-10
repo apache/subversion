@@ -117,6 +117,11 @@ OPEN ISSUES
     U1 wants to prune old versions of F1 regularly in order to limit server
     disk space usage.
 
+    This use case is not directly what most people consider to be
+    "obliterate". It is really a separate feature that could use the
+    functionality of "obliterate" in its implementation, but could also be
+    implemented in other ways.
+
 
 3. REQUIREMENTS
 

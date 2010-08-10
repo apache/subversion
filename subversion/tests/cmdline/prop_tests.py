@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -715,6 +715,13 @@ def inappropriate_props(sbox):
                                       "an empty revision range\n",
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:', path)
+
+  # ...contain non-inheritable ranges when the target is a file.
+  svntest.actions.run_and_verify_svn('empty ranges', None,
+                                     "svn: Cannot set non-inheritable "
+                                     "mergeinfo on a non-directory*",
+                                     'propset', SVN_PROP_MERGEINFO,
+                                     '/A/D/H/psi:1*', iota_path)
 
 #----------------------------------------------------------------------
 
@@ -1703,6 +1710,30 @@ def delete_nonexistent_property(sbox):
                                      'propdel', 'yellow',
                                      os.path.join(wc_dir, 'A', 'D', 'G'))
 
+#----------------------------------------------------------------------
+def post_revprop_change_hook(sbox):
+  "post-revprop-change hook"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Include a non-XML-safe message to regression-test issue #3553.
+  error_msg = 'Text with <angle brackets> & ampersand'
+
+  svntest.actions.enable_revprop_changes(repo_dir)
+  svntest.actions.create_failing_hook(repo_dir, 'post-revprop-change',
+                                      error_msg)
+
+  expected_error = svntest.verify.ExpectedOutput([
+    "svn: " + svntest.actions.hook_failure_message('post-revprop-change'),
+    error_msg + "\n",
+  ], match_all = False)
+
+  svntest.actions.run_and_verify_svn(None, [], expected_error,
+                                     'ps', '--revprop', '-r0', 'p', 'v',
+                                     wc_dir)
+
 
 ########################################################################
 # Run the tests
@@ -1743,6 +1774,7 @@ test_list = [ None,
               same_replacement_props,
               added_moved_file,
               delete_nonexistent_property,
+              XFail(post_revprop_change_hook, svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':

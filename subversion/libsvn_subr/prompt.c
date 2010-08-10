@@ -2,10 +2,10 @@
  * prompt.c -- ask the user for authentication information.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -49,17 +49,9 @@
 static apr_status_t wait_for_input(apr_file_t *f,
                                    apr_pool_t *pool)
 {
+#ifndef WIN32
   apr_pollfd_t pollset;
   int srv, n;
-
-/* APR specs say things that are unimplemented are supposed to return
- * APR_ENOTIMPL.  But when trying to use APR_POLL_FILE with apr_poll
- * on Windows it returns APR_EBADF instead.  So just return APR_ENOTIMPL
- * ourselves here.
- */
-#ifdef WIN32
-  return APR_ENOTIMPL;
-#endif /* WIN32 */
 
   pollset.desc_type = APR_POLL_FILE;
   pollset.desc.f = f;
@@ -72,6 +64,14 @@ static apr_status_t wait_for_input(apr_file_t *f,
     return APR_SUCCESS;
 
   return srv;
+#else
+  /* APR specs say things that are unimplemented are supposed to return
+   * APR_ENOTIMPL.  But when trying to use APR_POLL_FILE with apr_poll
+   * on Windows it returns APR_EBADF instead.  So just return APR_ENOTIMPL
+   * ourselves here.
+   */
+  return APR_ENOTIMPL;
+#endif  
 }
 
 /* Set @a *result to the result of prompting the user with @a

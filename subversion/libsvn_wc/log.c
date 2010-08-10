@@ -2,10 +2,10 @@
  * log.c:  handle the adm area's log file.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -599,7 +599,7 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
         {
           /* Removing a missing wcroot is easy, just remove its parent entry
              ### BH: I can't tell why we don't use this for adds.
-                     We might want to remove WC obstructions? 
+                     We might want to remove WC obstructions?
 
              We don't have a missing status in the final version of WC-NG,
              so why bother researching its history.
@@ -886,25 +886,27 @@ loggy_path(const char **logy_path,
 }
 
 svn_error_t *
-svn_wc__loggy_append(svn_stringbuf_t **log_accum,
+svn_wc__loggy_append(svn_wc__db_t *db,
                      const char *adm_abspath,
                      const char *src, const char *dst,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   const char *loggy_path1;
   const char *loggy_path2;
+  svn_stringbuf_t *buf = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(adm_abspath));
 
-  SVN_ERR(loggy_path(&loggy_path1, src, adm_abspath, pool));
-  SVN_ERR(loggy_path(&loggy_path2, dst, adm_abspath, pool));
-  svn_xml_make_open_tag(log_accum, pool,
+  SVN_ERR(loggy_path(&loggy_path1, src, adm_abspath, scratch_pool));
+  SVN_ERR(loggy_path(&loggy_path2, dst, adm_abspath, scratch_pool));
+  svn_xml_make_open_tag(&buf, scratch_pool,
                         svn_xml_self_closing, SVN_WC__LOG_APPEND,
                         SVN_WC__LOG_ATTR_NAME, loggy_path1,
                         SVN_WC__LOG_ATTR_DEST, loggy_path2,
                         NULL);
 
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, buf,
+                                               scratch_pool));
 }
 
 
@@ -926,30 +928,30 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
 }
 
 svn_error_t *
-svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
+svn_wc__loggy_translated_file(svn_wc__db_t *db,
                               const char *adm_abspath,
                               const char *dst,
                               const char *src,
                               const char *versioned,
-                              apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
   const char *loggy_path1;
   const char *loggy_path2;
   const char *loggy_path3;
+  svn_stringbuf_t *buf = NULL;
 
   SVN_ERR(loggy_path(&loggy_path1, src, adm_abspath, scratch_pool));
   SVN_ERR(loggy_path(&loggy_path2, dst, adm_abspath, scratch_pool));
   SVN_ERR(loggy_path(&loggy_path3, versioned, adm_abspath, scratch_pool));
-  svn_xml_make_open_tag
-    (log_accum, result_pool, svn_xml_self_closing,
-     SVN_WC__LOG_CP_AND_TRANSLATE,
-     SVN_WC__LOG_ATTR_NAME, loggy_path1,
-     SVN_WC__LOG_ATTR_DEST, loggy_path2,
-     SVN_WC__LOG_ATTR_ARG_2, loggy_path3,
-     NULL);
+  svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_self_closing,
+                        SVN_WC__LOG_CP_AND_TRANSLATE,
+                        SVN_WC__LOG_ATTR_NAME, loggy_path1,
+                        SVN_WC__LOG_ATTR_DEST, loggy_path2,
+                        SVN_WC__LOG_ATTR_ARG_2, loggy_path3,
+                        NULL);
 
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, buf,
+                                               scratch_pool));
 }
 
 svn_error_t *
@@ -1311,7 +1313,7 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
   victim_basename = svn_dirent_basename(conflict->local_abspath, pool);
   SVN_ERR(svn_wc__serialize_conflict(&skel, conflict, pool, pool));
   conflict_data = svn_skel__unparse(skel, pool)->data,
- 
+
   svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
                         SVN_WC__LOG_ADD_TREE_CONFLICT,
                         SVN_WC__LOG_ATTR_NAME,
@@ -1332,14 +1334,14 @@ can_be_cleaned(int *wc_format,
                const char *local_abspath,
                apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__internal_check_wc(wc_format, db, 
+  SVN_ERR(svn_wc__internal_check_wc(wc_format, db,
                                     local_abspath, scratch_pool));
 
   /* a "version" of 0 means a non-wc directory */
   if (*wc_format == 0)
     return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                              _("'%s' is not a working copy directory"),
-                             svn_dirent_local_style(local_abspath, 
+                             svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
   if (*wc_format < SVN_WC__WC_NG_VERSION)
@@ -1372,7 +1374,7 @@ cleanup_internal(svn_wc__db_t *db,
   SVN_ERR(can_be_cleaned(&wc_format, db, adm_abspath, iterpool));
 
   /* Lock this working copy directory, or steal an existing lock */
-  err = svn_wc__db_wclock_set(db, adm_abspath, iterpool);
+  err = svn_wc__db_wclock_set(db, adm_abspath, 0, iterpool);
   if (err && err->apr_err == SVN_ERR_WC_LOCKED)
     svn_error_clear(err);
   else if (err)
@@ -1445,7 +1447,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
                           NULL /* ### config */, TRUE, FALSE,
                           scratch_pool, scratch_pool));
 
-  SVN_ERR(cleanup_internal(db, local_abspath, cancel_func, cancel_baton, 
+  SVN_ERR(cleanup_internal(db, local_abspath, cancel_func, cancel_baton,
                            scratch_pool));
 
   /* We're done with this DB, so proactively close it.  */

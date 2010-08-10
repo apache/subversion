@@ -2,10 +2,10 @@
  * gnome_keyring.c: GNOME Keyring provider for SVN_AUTH_CRED_*
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -391,7 +391,7 @@ simple_gnome_keyring_first_creds(void **credentials,
         }
     }
   else
-    {  
+    {
       if (check_keyring_is_locked(default_keyring))
         {
           return svn_error_create(SVN_ERR_AUTHN_CREDS_UNAVAILABLE, NULL,
@@ -546,7 +546,7 @@ ssl_client_cert_pw_gnome_keyring_first_creds(void **credentials,
                                         default_keyring,
                                         unlock_prompt_baton,
                                         pool));
-            
+
           /* If keyring is locked give up and try the next provider. */
           if (! unlock_gnome_keyring(default_keyring, keyring_password, pool))
             return SVN_NO_ERROR;

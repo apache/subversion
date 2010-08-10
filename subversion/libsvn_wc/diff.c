@@ -3,10 +3,10 @@
  *           repository.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -311,7 +311,7 @@ make_edit_baton(struct edit_baton **edit_baton,
   eb->reverse_order = reverse_order;
   eb->changelist_hash = changelist_hash;
   eb->cancel_func = cancel_func;
-  eb->cancel_baton = cancel_baton;  
+  eb->cancel_baton = cancel_baton;
   eb->pool = pool;
 
   *edit_baton = eb;
@@ -496,7 +496,7 @@ get_working_mimetype(const char **mimetype,
     workingprops = &props;
 
   if (*workingprops == NULL)
-    SVN_ERR(svn_wc__load_props(NULL, workingprops, NULL, db, local_abspath,
+    SVN_ERR(svn_wc__load_props(NULL, workingprops, db, local_abspath,
                                result_pool, scratch_pool));
 
   *mimetype = get_prop_mimetype(*workingprops);
@@ -607,6 +607,20 @@ file_diff(struct dir_baton *db,
     if (kind == svn_node_none)
       SVN_ERR(svn_wc__text_revert_path(&textbase, eb->db, local_abspath,
                                        pool));
+
+    /* If there is no revert base to diff either, don't attempt to diff it.
+     * ### This is a band-aid.
+     * ### In WC-NG, files added within a copied subtree are marked "copied",
+     * ### which will cause the code below to end up calling
+     * ### eb->callbacks->file_changed() with a non-existent text-base.
+     * ### Not sure how to properly tell apart a file added within a copied
+     * ### subtree from a copied file. But eventually we'll have to get the
+     * ### base text from the pristine store anyway and use tempfiles (or
+     * ### streams, hopefully) for diffing, so all this horrible statting
+     * ### the disk for text bases, and this hack, will just go away. */
+    SVN_ERR(svn_io_check_path(textbase, &kind, pool));
+    if (kind == svn_node_none)
+      textbase = NULL;
   }
 
   SVN_ERR(get_empty_file(eb, &empty_file));
@@ -1038,7 +1052,7 @@ report_wc_directory_as_added(struct dir_baton *db,
         SVN_ERR(svn_wc__internal_propdiff(NULL, &wcprops, eb->db, dir_abspath,
                                           pool, pool));
       else
-        SVN_ERR(svn_wc__load_props(NULL, &wcprops, NULL, eb->db, dir_abspath,
+        SVN_ERR(svn_wc__load_props(NULL, &wcprops, eb->db, dir_abspath,
                                    pool, pool));
 
       SVN_ERR(svn_prop_diffs(&propchanges, wcprops, emptyprops, pool));
@@ -1120,7 +1134,7 @@ report_wc_directory_as_added(struct dir_baton *db,
           break;
         }
     }
-  
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -1325,7 +1339,7 @@ close_directory(void *dir_baton,
             {
               apr_hash_t *base_props, *repos_props;
 
-              SVN_ERR(svn_wc__load_props(NULL, &originalprops, NULL,
+              SVN_ERR(svn_wc__load_props(NULL, &originalprops,
                                          eb->db, db->local_abspath, pool, pool));
 
               /* Load the BASE and repository directory properties. */
@@ -1448,17 +1462,24 @@ apply_textdelta(void *file_baton,
   svn_stream_t *source;
   svn_stream_t *temp_stream;
   svn_error_t *err;
+  svn_boolean_t found;
 
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, eb->db, fb->local_abspath, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    svn_error_clear(err);
+    {
+      svn_error_clear(err);
+      found = FALSE;
+    }
   else
-    SVN_ERR(err);
+    {
+      SVN_ERR(err);
+      found = TRUE;
+    }
 
-  if (status == svn_wc__db_status_added)
+  if (found && status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, eb->db,
                                      fb->local_abspath, pool, pool));
@@ -1467,8 +1488,8 @@ apply_textdelta(void *file_baton,
 
   /* If the node is added-with-history, then this is not actually
      an add, but a modification. */
-  if (status == svn_wc__db_status_copied ||
-      status == svn_wc__db_status_moved_here)
+  if (found && (status == svn_wc__db_status_copied ||
+                status == svn_wc__db_status_moved_here))
     fb->added = FALSE;
 
   if (fb->added)
@@ -1540,14 +1561,13 @@ close_file(void *file_baton,
                              NULL, eb->db, fb->local_abspath, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     svn_error_clear(err);
-  else
-    SVN_ERR(err);
-
-  if (status == svn_wc__db_status_added)
+  else if (err)
+    return err;
+  else if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, eb->db,
                                      fb->local_abspath, pool, pool));
-    
+
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* Load the BASE and repository file properties. */
@@ -1618,7 +1638,7 @@ close_file(void *file_baton,
                                      apr_hash_make(pool),
                                      eb->callback_baton,
                                      pool);
-    
+
   /* If we didn't see any content changes between the BASE and repository
      versions (i.e. we only saw property changes), then, if we're diffing
      against WORKING, we also need to check whether there are any local
@@ -1650,7 +1670,7 @@ close_file(void *file_baton,
     }
   else
     {
-      SVN_ERR(svn_wc__load_props(NULL, &originalprops, NULL, eb->db,
+      SVN_ERR(svn_wc__load_props(NULL, &originalprops, eb->db,
                                  fb->local_abspath, pool, pool));
 
       /* We have the repository properties in repos_props, and the
@@ -1863,7 +1883,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
   SVN_ERR(make_edit_baton(&eb,
                           wc_ctx->db,
                           anchor_path,
-                          target, 
+                          target,
                           callbacks, callback_baton,
                           depth, ignore_ancestry, show_copies_as_adds,
                           FALSE, FALSE, changelists,

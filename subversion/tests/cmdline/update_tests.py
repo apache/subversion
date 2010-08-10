@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -3839,6 +3839,9 @@ def eof_in_interactive_conflict_resolver(sbox):
   # Set up a custom config directory which *doesn't* turn off
   # interactive resolution
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 interactive-conflicts = true
 '''
@@ -4796,7 +4799,7 @@ def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
   A_url = sbox.repo_url + "/A"
   other_wc_dir = sbox.add_wc_path("other")
   svntest.actions.run_and_verify_svn(None, None, [], "co", A_url, other_wc_dir)
-  
+
   # Delete 'A' directory from repository
   svntest.actions.run_and_verify_svn(None, None, [], "rm", A_url, "-m", "")
 
@@ -4806,6 +4809,10 @@ def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
                                      "up", other_wc_dir)
 
 #----------------------------------------------------------------------
+# Test for issue #3525 'Locked file which is scheduled for delete causes
+# tree conflict'
+#
+# Marked as XFail until that issue is fixed.
 def update_deleted_locked_files(sbox):
   "verify update of deleted locked files"
 
@@ -4813,13 +4820,12 @@ def update_deleted_locked_files(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-
   iota = os.path.join(wc_dir, 'iota')
   E = os.path.join(wc_dir, 'A', 'B', 'E')
   alpha = os.path.join(E, 'alpha')
 
-  svntest.main.run_svn(None, 'lock', iota, alpha)
-  svntest.main.run_svn(None, 'delete', iota, E)
+  svntest.main.run_svn(None, 'lock', alpha)#iota, alpha)
+  svntest.main.run_svn(None, 'delete', E)#iota, E)
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
@@ -4835,10 +4841,12 @@ def update_deleted_locked_files(sbox):
                         'A/B/E/alpha',
                         'A/B/E/beta',
                         status='D ')
+  # Issue #3525 manifests itself here; the update causes a spurious
+  # tree conflict.
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)  
+                                        expected_status)
 
 
 #######################################################################

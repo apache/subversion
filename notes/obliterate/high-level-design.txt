@@ -42,22 +42,36 @@ OPEN ISSUES
 
     Invocation from:
 
-      * server side only
+      * server side only, or
 
-      * client side
+      * client side?
 
     Ultimately we need client-side invocation because many of the use cases
     (except the disk space reduction) are client-side responsibilities and in
     large installations it is infeasible to push all such tasks on to a
-    server-side administrator. It may be feasible to split the obliteration
-    into data-hiding invoked from the client and space-reduction invoked from
-    the server.
+    server-side administrator.
+
+    It is possible that implementation would be simplified if we split the
+    obliteration into data-hiding invoked from the client and space-reduction
+    invoked as an off-line adminitrative procedure on the server. For example,
+    a dump-load cycle or an svnsync mirror could be employed as a crude (slow)
+    way to achieve the space-reduction part. Such a split has no significant
+    user benefits in itself. The effect on implementation complexity is yet to
+    be determined.
+
+    One behavioural design option is to split the obliteration into a
+    reversible data-hiding invoked from the client, and an administrative
+    "purge" after which the data-hiding is no longer reversible. This option
+    at first glance sounds "safer", but it is a substantially more complex
+    behaviour in that the history of the repository as viewed by a client is
+    subject not only to change with obliteration but also to change again if
+    the hiding is reversed. It also adds complexity to the implementation.
 
     Authorization (if client-side):
 
       * By a new pre-obliterate hook.
 
-    Subversion currently has no appropriate permission system. A hook would
+    Subversion currently has no more suitable permission system. A hook would
     probably be wanted anyway and would probably be the easiest way to achieve
     authorization.
 
@@ -85,7 +99,7 @@ OPEN ISSUES
 
     MORE SOPHISTICATED
 
-      * Client-side; authorization to be defined.
+      * Client-side; authorization by pre-obliterate hook.
 
       * UI: svn obliterate [--obliteration-method=...] OBLIT_SPEC...
 
@@ -136,6 +150,16 @@ OPEN ISSUES
     any information necessary for continuing such propagation after restoring
     from a backup.
 
+    It is not important, according to feedback from admins, to make svnsync
+    automatically propagate obliterations. In fact it can be seen as correct
+    that obliteration must be applied separately to any svnsync mirrors if the
+    obliteration is indeed intended to be propagated, because it is not
+    necessarily the case that obliterations should be propagated.
+
+    The dump file needs no change. It would be perverse to record obliteration
+    history or even metadata in the dump file, as it is intended to represent
+    just the visible history of the repository.
+
     SIMPLE
 
       * No server-side support for propagation of changes.
@@ -151,10 +175,6 @@ OPEN ISSUES
 
       * If there is obliteration history or metadata, it should be included in
         a repository backup, but not in a dump file.
-
-    The dump file needs no change. It would be perverse to record obliteration
-    history or even metadata in the dump file, as it is intended to represent
-    just the visible history of the repository.
 
 
   2.4 Client-side Behaviour

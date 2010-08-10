@@ -2,10 +2,10 @@
  * log.h :  interfaces for running .svn/log files.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -57,7 +57,7 @@ extern "C" {
    current items in LOG_ACCUM to the work queue, and then reinitializes
    LOG_ACCUM to an empty buffer. */
 #define SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool)   \
-  if (!svn_stringbuf_isempty(log_accum))                                    \
+  if ((log_accum) && !svn_stringbuf_isempty(log_accum))                     \
     {                                                                       \
       SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));\
       svn_stringbuf_setempty(log_accum);                                    \
@@ -65,7 +65,7 @@ extern "C" {
   else {}
 
 
-/* Extend **LOG_ACCUM with log instructions to append the contents
+/* Insert into DB a work queue instruction to append the contents
    of SRC to DST.
    SRC and DST are relative to ADM_ABSPATH.
 
@@ -77,10 +77,10 @@ extern "C" {
 */
 SVN_DEPRECATED
 svn_error_t *
-svn_wc__loggy_append(svn_stringbuf_t **log_accum,
+svn_wc__loggy_append(svn_wc__db_t *db,
                      const char *adm_abspath,
                      const char *src, const char *dst,
-                     apr_pool_t *pool);
+                     apr_pool_t *scratch_pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to copy (and translate!) the
@@ -103,7 +103,7 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                    apr_pool_t *scratch_pool);
 
 
-/* Extend **LOG_ACCUM with log instructions to generate a translated
+/* Insert into DB a work queue instruction to generate a translated
    file from SRC to DST with translation settings from VERSIONED.
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
    DST and SRC and VERSIONED are relative to ADM_ABSPATH.
@@ -112,12 +112,11 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
    temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
+svn_wc__loggy_translated_file(svn_wc__db_t *db,
                               const char *adm_abspath,
                               const char *dst,
                               const char *src,
                               const char *versioned,
-                              apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
 /* Insert into DB a work queue instruction to delete the entry

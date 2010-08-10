@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -814,6 +814,9 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
        */
 
       path = svn_path_internal_style(path, pool);
+
+      /* For kicks and giggles, let's absolutize it. */
+      SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
     }
     /* strip any trailing '/' */
     path = svn_path_canonicalize(path, pool);

@@ -2,10 +2,10 @@
  * options.c :  entry point for OPTIONS RA functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -249,7 +249,7 @@ struct options_response_ctx_t {
   svn_ra_serf__xml_parser_t *parser_ctx;
 
   /* Session into which we'll store server capabilities */
-  svn_ra_serf__session_t *session;      
+  svn_ra_serf__session_t *session;
 
   /* For temporary work only. */
   apr_pool_t *pool;

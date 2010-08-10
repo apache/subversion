@@ -5,10 +5,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -360,7 +360,7 @@ def get_fsfs_format_file_path(repo_dir):
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return exit code as int; stdout, stderr
-  as lists of lines.
+  as lists of lines.  See run_command_stdin() for details.
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
   return run_command_stdin(command, error_expected, binary_mode,
@@ -430,10 +430,12 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
   return p.stdin, p.stdout, p.stderr, (p, command_string)
 
 def wait_on_pipe(waiter, binary_mode, stdin=None):
-  """Waits for KID (opened with open_pipe) to finish, dying
-  if it does.  If kid fails create an error message containing
-  any stdout and stderr from the kid.  Returns kid's exit code,
-  stdout and stderr (the latter two as lists)."""
+  """WAITER is (KID, COMMAND_STRING).  Wait for KID (opened with open_pipe)
+  to finish, dying if it does.  If KID fails, create an error message
+  containing any stdout and stderr from the kid.  Show COMMAND_STRING in
+  diagnostic messages.  Normalize Windows line endings of stdout and stderr
+  if not BINARY_MODE.  Return KID's exit code, stdout and stderr (the latter
+  two as lists)."""
   if waiter is None:
     return
 
@@ -474,8 +476,9 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
                        % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
-# Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
+  """Run any binary, supplying input text, logging the command line.
+  Normalize Windows line endings of stdout and stderr if not BINARY_MODE."""
   if stdin_lines and not isinstance(stdin_lines, list):
     raise TypeError("stdin_lines should have list type")
 
@@ -506,6 +509,7 @@ def run_command_stdin(command, error_expected, binary_mode=0,
   should not be very large, as if the program outputs more than the OS
   is willing to buffer, this will deadlock, with both Python and
   COMMAND waiting to write to each other for ever.
+  Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
@@ -983,14 +987,14 @@ def _check_command_line_parsed():
 def is_ra_type_dav():
   _check_command_line_parsed()
   return test_area_url.startswith('http')
-  
+
 def is_ra_type_dav_neon():
   """Return True iff running tests over RA-Neon.
      CAUTION: Result is only valid if svn was built to support both."""
   _check_command_line_parsed()
   return test_area_url.startswith('http') and \
     (preferred_http_library == "neon")
-  
+
 def is_ra_type_dav_serf():
   """Return True iff running tests over RA-Serf.
      CAUTION: Result is only valid if svn was built to support both."""
@@ -1021,6 +1025,9 @@ def is_posix_os():
 
 def is_os_darwin():
   return sys.platform == 'darwin'
+
+def is_fs_case_insensitive():
+  return (is_os_darwin() or is_os_windows())
 
 def server_has_mergeinfo():
   _check_command_line_parsed()

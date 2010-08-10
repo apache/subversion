@@ -5,10 +5,10 @@
  *          specific to working copies.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -504,7 +504,7 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
                   apr_pool_t *result_pool)
 {
   svn_wc_conflict_description_t *new_conflict;
- 
+
   if (conflict == NULL)
     return NULL;
 
@@ -524,23 +524,27 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
 
   switch (conflict->kind)
     {
+
       case svn_wc_conflict_kind_property:
         new_conflict->property_name = apr_pstrdup(result_pool,
                                                   conflict->property_name);
-        break;
+        /* Falling through. */
 
       case svn_wc_conflict_kind_text:
         new_conflict->is_binary = conflict->is_binary;
-        new_conflict->mime_type = apr_pstrdup(result_pool,
-                                              conflict->mime_type);
+        new_conflict->mime_type = conflict->mime_type 
+                              ? apr_pstrdup(result_pool, conflict->mime_type) 
+                              : NULL;
         new_conflict->base_file = apr_pstrdup(result_pool,
                                               conflict->base_file);
         new_conflict->their_file = apr_pstrdup(result_pool,
                                                conflict->their_file);
         new_conflict->my_file = apr_pstrdup(result_pool,
                                             conflict->my_file);
-        new_conflict->merged_file = apr_pstrdup(result_pool,
-                                                conflict->merged_file);
+        new_conflict->merged_file = conflict->merged_file 
+                                    ? apr_pstrdup(result_pool,
+                                                  conflict->merged_file) 
+                                    : NULL;
         break;
 
       case svn_wc_conflict_kind_tree:
@@ -560,7 +564,7 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
                   apr_pool_t *result_pool)
 {
   svn_wc_conflict_description2_t *new_conflict;
- 
+
   if (conflict == NULL)
     return NULL;
 
@@ -585,20 +589,23 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
       case svn_wc_conflict_kind_property:
         new_conflict->property_name = apr_pstrdup(result_pool,
                                                   conflict->property_name);
-        break;
+        /* Falling through. */
 
       case svn_wc_conflict_kind_text:
         new_conflict->is_binary = conflict->is_binary;
-        new_conflict->mime_type = apr_pstrdup(result_pool,
-                                              conflict->mime_type);
+        new_conflict->mime_type = conflict->mime_type 
+                              ? apr_pstrdup(result_pool, conflict->mime_type) 
+                              : NULL;
         new_conflict->base_file = apr_pstrdup(result_pool,
                                               conflict->base_file);
         new_conflict->their_file = apr_pstrdup(result_pool,
                                                conflict->their_file);
         new_conflict->my_file = apr_pstrdup(result_pool,
                                             conflict->my_file);
-        new_conflict->merged_file = apr_pstrdup(result_pool,
-                                                conflict->merged_file);
+        new_conflict->merged_file = conflict->merged_file 
+                                    ? apr_pstrdup(result_pool,
+                                                  conflict->merged_file) 
+                                    : NULL;
         break;
 
       case svn_wc_conflict_kind_tree:

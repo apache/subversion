@@ -2,10 +2,10 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -115,6 +115,7 @@ typedef enum {
   opt_reintegrate,
   opt_trust_server_cert,
   opt_show_copies_as_adds,
+  opt_ignore_keywords,
   opt_ignore_mergeinfo
 } svn_cl__longopt_t;
 
@@ -152,7 +153,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"incremental",   opt_incremental, 0,
                     N_("give output suitable for concatenation")},
   {"encoding",      opt_encoding, 1,
-                    N_("treat value as being in charset encoding ARG")},
+                    N_("treat value as being in charset encoding ARG\n"
+                       "                             "
+                       "[alias: --enc]")},
   {"version",       opt_version, 0, N_("show program version information")},
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
@@ -199,15 +202,21 @@ const apr_getopt_option_t svn_cl__options[] =
   {"set-depth",     opt_set_depth, 1,
                     N_("set new working copy depth to ARG ('exclude',\n"
                        "                            "
-                       "'empty', 'files', 'immediates', or 'infinity')")},
+                       "'empty', 'files', 'immediates', or 'infinity')\n"
+                       "                            "
+                       "[alias: --sd]")},
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
-                    N_("do not cross copies while traversing history")},
+                    N_("do not cross copies while traversing history\n"
+                       "                             "
+                       "[alias: --soc]")},
   {"no-ignore",     opt_no_ignore, 0,
                     N_("disregard default and svn:ignore property ignores")},
   {"no-auth-cache", opt_no_auth_cache, 0,
-                    N_("do not cache authentication tokens")},
+                    N_("do not cache authentication tokens\n"
+                       "                             "
+                       "[alias: --nac]")},
   {"trust-server-cert", opt_trust_server_cert, 0,
                     N_("accept unknown SSL server certificates without\n"
                        "                             "
@@ -215,29 +224,41 @@ const apr_getopt_option_t svn_cl__options[] =
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting")},
   {"dry-run",       opt_dry_run, 0,
-                    N_("try operation but make no changes")},
+                    N_("try operation but make no changes\n"
+                       "                             "
+                       "[alias: --dry]")},
   {"no-diff-deleted", opt_no_diff_deleted, 0,
-                    N_("do not print differences for deleted files")},
+                    N_("do not print differences for deleted files\n"
+                       "                             "
+                       "[alias: --ndd]")},
   {"notice-ancestry", opt_notice_ancestry, 0,
-                    N_("notice ancestry when calculating differences")},
+                    N_("notice ancestry when calculating differences\n"
+                       "                             "
+                       "[alias: --na]")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
-                    N_("ignore ancestry when calculating merges")},
+                    N_("ignore ancestry when calculating merges\n"
+                       "                             "
+                       "[alias: --ia]")},
   {"ignore-externals", opt_ignore_externals, 0,
                     N_("ignore externals definitions\n"
                        "                             "
-                       "[aliases: --ie]")},
+                       "[alias: --ie]")},
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
   {"record-only",   opt_record_only, 0,
-                    N_("merge only mergeinfo differences")},
+                    N_("merge only mergeinfo differences\n"
+                       "                             "
+                       "[alias: --ro]")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
   {"new",           opt_new_cmd, 1, N_("use ARG as the newer target")},
   {"revprop",       opt_revprop, 0,
                     N_("operate on a revision property (use with -r)")},
   {"relocate",      opt_relocate, 0, N_("relocate via URL-rewriting")},
   {"config-dir",    opt_config_dir, 1,
-                    N_("read user configuration files from directory ARG")},
+                    N_("read user configuration files from directory ARG\n"
+                       "                             "
+                       "[alias: --cd]")},
   {"config-option", opt_config_options, 1,
                     N_("set user configuration option in the format:\n"
                        "                             "
@@ -245,7 +266,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "For example:\n"
                        "                             "
-                       "    servers:global:http-library=serf\n")},
+                       "    servers:global:http-library=serf")},
   {"auto-props",    opt_autoprops, 0, N_("enable automatic properties")},
   {"no-auto-props", opt_no_autoprops, 0, N_("disable automatic properties")},
   {"native-eol",    opt_native_eol, 1,
@@ -263,10 +284,12 @@ const apr_getopt_option_t svn_cl__options[] =
   {"changelist",    opt_changelist, 1,
                     N_("operate only on members of changelist ARG\n"
                        "                             "
-                       "[aliases: --cl]")},
+                       "[alias: --cl]")},
   {"keep-changelists", opt_keep_changelists, 0,
                     N_("don't delete changelists after commit")},
-  {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
+  {"keep-local",    opt_keep_local, 0, N_("keep path in working copy\n"
+                       "                             "
+                       "[alias: --kl]")},
   {"with-all-revprops",  opt_with_all_revprops, 0,
                     N_("retrieve all revision properties")},
   {"with-no-revprops",  opt_with_no_revprops, 0,
@@ -291,9 +314,13 @@ const apr_getopt_option_t svn_cl__options[] =
   {"show-revs",     opt_show_revs, 1,
                     N_("specify which collection of revisions to display\n"
                        "                             "
-                       "('merged', 'eligible')")},
+                       "('merged', 'eligible')\n"
+                       "                             "
+                       "[alias: --sr]")},
   {"reintegrate",   opt_reintegrate, 0,
-                    N_("lump-merge all of source URL's unmerged changes")},
+                    N_("lump-merge all of source URL's unmerged changes\n"
+                       "                             "
+                       "[alias: --ri]")},
   {"strip",         'p', 1,
                     N_("number of leading path components to strip\n"
                        "                             "
@@ -307,9 +334,15 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "    fudge/crunchy.html\n"
                        "                             "
-                       "while -p2 would give just crunchy.html\n")},
+                       "while -p2 would give just crunchy.html")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
-                    N_("don't diff copied or moved files with their source")},
+                    N_("don't diff copied or moved files with their source\n"
+                       "                             "
+                       "[alias: --sca]")},
+  {"ignore-keywords", opt_ignore_keywords, 0,
+                    N_("don't expand keywords\n"
+                       "                             "
+                       "[alias: --ik]")},
   {"ignore-mergeinfo",  opt_ignore_mergeinfo, 0,
                     N_("ignore changes to mergeinfo")},
 
@@ -319,8 +352,23 @@ const apr_getopt_option_t svn_cl__options[] =
    * other option (whose description should probably mention its aliases).
   */
 
-  {"cl",            opt_changelist, 1, NULL},
+  {"sd",            opt_set_depth, 1, NULL},
+  {"enc",           opt_encoding, 1, NULL},
+  {"soc",           opt_stop_on_copy, 0, NULL},
+  {"nac",           opt_no_auth_cache, 0, NULL},
+  {"dry",           opt_dry_run, 0, NULL},
+  {"ndd",           opt_no_diff_deleted, 0, NULL},
+  {"na",            opt_notice_ancestry, 0, NULL},
+  {"ia",            opt_ignore_ancestry, 0, NULL},
   {"ie",            opt_ignore_externals, 0, NULL},
+  {"ro",            opt_record_only, 0, NULL},
+  {"cd",            opt_config_dir, 1, NULL},
+  {"cl",            opt_changelist, 1, NULL},
+  {"kl",            opt_keep_local, 0, NULL},
+  {"sr",            opt_show_revs, 1, NULL},
+  {"ri",            opt_reintegrate, 0, NULL},
+  {"sca",           opt_show_copies_as_adds, 0, NULL},
+  {"ik",            opt_ignore_keywords, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -519,7 +567,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  If specified, PEGREV determines in which revision the target is first\n"
      "  looked up.\n"),
-    {'r', 'q', 'N', opt_depth, opt_force, opt_native_eol, opt_ignore_externals} },
+    {'r', 'q', 'N', opt_depth, opt_force, opt_native_eol, opt_ignore_externals,
+     opt_ignore_keywords} },
 
   { "help", svn_cl__help, {"?", "h"}, N_
     ("Describe the usage of this program or its subcommands.\n"
@@ -851,7 +900,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "        foo/bar -r 1234 http://example.com/repos/zag\n"
      "      Subversion 1.5 and greater support the above formats and the\n"
      "      following formats where the URLs may have peg revisions:\n"
-     "                http://example.com/repos/zig foo\n"
+     "                http://example.com/repos/zig@42 foo\n"
      "        -r 1234 http://example.com/repos/zig foo/bar\n"
      "      Relative URLs are supported in Subversion 1.5 and greater for\n"
      "      all above formats and are indicated by starting the URL with one\n"
@@ -862,6 +911,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "        /    to the server root\n"
      "      The ambiguous format 'relative_path relative_path' is taken as\n"
      "      'relative_url relative_path' with peg revision support.\n"
+     "      Lines in externals definitions starting with the '#' character\n"
+     "      are considered comments and are ignored.\n"
      "    svn:needs-lock - If present, indicates that the file should be locked\n"
      "      before it is modified.  Makes the working copy file read-only\n"
      "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
@@ -1016,9 +1067,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     are applied to the obstructing path.\n"
      "\n"
      "     Use the --set-depth option to set a new working copy depth on the\n"
-     "     targets of this operation.  Currently, the depth of a working copy\n"
-     "     directory can only be increased (telescoped more deeply); you cannot\n"
-     "     make a directory more shallow.\n"
+     "     targets of this operation.\n"
      "\n"
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
@@ -1085,9 +1134,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  in the first column with code 'E'.\n"
      "\n"
      "  Use the --set-depth option to set a new working copy depth on the\n"
-     "  targets of this operation.  Currently, the depth of a working copy\n"
-     "  directory can only be increased (telescoped more deeply); you cannot\n"
-     "  make a directory more shallow.\n"),
+     "  targets of this operation.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
 
@@ -1552,7 +1599,7 @@ main(int argc, const char *argv[])
         break;
       case opt_config_options:
         if (!opt_state.config_options)
-          opt_state.config_options = 
+          opt_state.config_options =
                    apr_array_make(pool, 1, sizeof(svn_cmdline__config_argument_t*));
 
         err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
@@ -1666,6 +1713,9 @@ main(int argc, const char *argv[])
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
         }
+        break;
+      case opt_ignore_keywords:
+        opt_state.ignore_keywords = TRUE;
         break;
       case opt_ignore_mergeinfo:
         opt_state.ignore_mergeinfo = TRUE;
@@ -1786,7 +1836,7 @@ main(int argc, const char *argv[])
         }
     }
 
-  /* Only merge supports multiple revisions/revision ranges. */
+  /* Only merge and log support multiple revisions/revision ranges. */
   if (subcommand->cmd_func != svn_cl__merge
       && subcommand->cmd_func != svn_cl__log)
     {
@@ -1798,17 +1848,6 @@ main(int argc, const char *argv[])
                                    "or both -c and -r"));
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
-    }
-
-  /* Merge doesn't support specifying a revision range
-     when using --reintegrate. */
-  if (subcommand->cmd_func == svn_cl__merge
-      && opt_state.revision_ranges->nelts
-      && opt_state.reintegrate)
-    {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("-r and -c can't be used with --reintegrate"));
-      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
   /* Disallow simultaneous use of both --depth and --set-depth. */
@@ -1850,7 +1889,7 @@ main(int argc, const char *argv[])
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
-  /* Ensure that 'revision_ranges' has at least one item, and that
+  /* Ensure that 'revision_ranges' has at least one item, and make
      'start_revision' and 'end_revision' match that item. */
   if (opt_state.revision_ranges->nelts == 0)
     {

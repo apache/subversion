@@ -2,10 +2,10 @@
  * node.c:  routines for getting information about nodes in the working copy.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -53,7 +53,6 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_debug.h"
 
 
 svn_error_t *
@@ -366,7 +365,7 @@ walker_helper(svn_wc__db_t *db,
     {
       const char *child_abspath;
       svn_wc__db_kind_t child_kind;
-      
+
       svn_pool_clear(iterpool);
 
       /* See if someone wants to cancel this operation. */
@@ -485,10 +484,10 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__node_is_status_delete(svn_boolean_t *is_deleted,
-                              svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool)
+svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
 
@@ -621,6 +620,27 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__node_get_lock_token(const char **lock_token,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_lock_t *lock;
+
+  SVN_ERR(svn_wc__db_read_info(NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &lock,
+                               wc_ctx->db, local_abspath,
+                               result_pool, scratch_pool));
+  *lock_token = lock ? lock->token : NULL;
 
   return SVN_NO_ERROR;
 }

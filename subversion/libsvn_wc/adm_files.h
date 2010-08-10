@@ -5,10 +5,10 @@
  *                something via these interfaces, something's wrong.)
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -108,53 +108,11 @@ svn_error_t *svn_wc__prop_path(const char **prop_path,
 
 /*** Opening all kinds of adm files ***/
 
-/* Yo, read this if you open and close files in the adm area:
- *
- * ### obsolete documentation. see implementation for now. this entire
- * ### section is likely to be tossed out "soon".
- *
- * When you open a file for writing with svn_wc__open_foo(), the file
- * is actually opened in the corresponding location in the tmp/
- * directory.  Opening with APR_APPEND is not supported.  You are
- * guaranteed to be the owner of the new file.
- *
- * Somehow, this tmp file must eventually get renamed to its real
- * destination in the adm area.  You can do it either by passing the
- * SYNC flag to svn_wc__close_foo(), or by calling
- * svn_wc__sync_foo() (though of course you should still have
- * called svn_wc__close_foo() first, just without the SYNC flag).
- *
- * In other words, the adm area is only capable of modifying files
- * atomically, but you get some control over when the rename happens.
- */
-
-/* Open `PATH/<adminstrative_subdir>/FNAME'. Note: STREAM and TEMP_FILE_PATH
-   should be passed to svn_wc__close_adm_stream when you're done writing. */
-svn_error_t *svn_wc__open_adm_writable(svn_stream_t **stream,
-                                       const char **temp_file_path,
-                                       const char *path,
-                                       const char *fname,
-                                       apr_pool_t *result_pool,
-                                       apr_pool_t *scratch_pool);
-
-/* Close `PATH/<adminstrative_subdir>/FNAME'. */
-svn_error_t *svn_wc__close_adm_stream(svn_stream_t *stream,
-                                      const char *temp_file_path,
-                                      const char *path,
-                                      const char *fname,
-                                      apr_pool_t *scratch_pool);
-
 /* Open `PATH/<adminstrative_subdir>/FNAME'. */
 svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
-                                     const char *path,
+                                     const char *dir_abspath,
                                      const char *fname,
                                      apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
-
-
-/* Remove `DIR_PATH/<adminstrative_subdir>/FILENAME'. */
-svn_error_t *svn_wc__remove_adm_file(const char *dir_path,
-                                     const char *filename,
                                      apr_pool_t *scratch_pool);
 
 
@@ -172,10 +130,9 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/* Blow away the admistrative directory associated with the access baton
-   ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS
-   again, after calling this function. */
-svn_error_t *svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
+/* Blow away the admistrative directory associated with DIR_ABSPATH */
+svn_error_t *svn_wc__adm_destroy(svn_wc__db_t *db,
+                                 const char *dir_abspath,
                                  apr_pool_t *scratch_pool);
 
 

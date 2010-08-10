@@ -2,10 +2,10 @@
  * parse-diff.c: functions for parsing diff files
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -22,6 +22,7 @@
  */
 
 #include <limits.h>  /* for ULONG_MAX */
+#include <stdlib.h>
 #include <string.h>
 
 #include "svn_types.h"
@@ -45,7 +46,7 @@ static svn_boolean_t
 parse_offset(svn_linenum_t *offset, const char *number)
 {
   apr_int64_t parsed_offset;
-  
+
   errno = 0; /* clear errno for safety */
   parsed_offset = apr_atoi64(number);
   if (errno == ERANGE || parsed_offset < 0)
@@ -109,7 +110,7 @@ parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
   static const char * const atat = "@@";
   const char *p;
   svn_stringbuf_t *range;
-  
+
   p = header + strlen(atat);
   if (*p != ' ')
     /* No. */
@@ -167,21 +168,23 @@ parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
   return TRUE;
 }
 
-/* A stream line-filter which allows only original text from a hunk. */
+/* A stream line-filter which allows only original text from a hunk,
+ * and filters special lines (which start with a backslash). */
 static svn_error_t *
 original_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
                      apr_pool_t *scratch_pool)
 {
-  *filtered = line[0] == '+';
+  *filtered = (line[0] == '+' || line[0] == '\\');
   return SVN_NO_ERROR;
 }
 
-/* A stream line-filter which allows only modified text from a hunk. */
+/* A stream line-filter which allows only modified text from a hunk,
+ * and filters special lines (which start with a backslash). */
 static svn_error_t *
 modified_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
                      apr_pool_t *scratch_pool)
 {
-  *filtered = line[0] == '-';
+  *filtered = (line[0] == '-' || line[0] == '\\');
   return SVN_NO_ERROR;
 }
 
@@ -217,6 +220,7 @@ parse_next_hunk(svn_hunk_t **hunk,
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
   apr_off_t start, end;
+  svn_stream_t *diff_text;
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
   svn_linenum_t original_lines;
@@ -235,7 +239,7 @@ parse_next_hunk(svn_hunk_t **hunk,
 
   /* Get current seek position -- APR has no ftell() :( */
   pos = 0;
-  apr_file_seek(patch->patch_file, APR_CUR, &pos);
+  SVN_ERR(svn_io_file_seek(patch->patch_file, APR_CUR, &pos, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   do
@@ -246,15 +250,21 @@ parse_next_hunk(svn_hunk_t **hunk,
 
       /* Remember the current line's offset, and read the line. */
       last_line = pos;
-      SVN_ERR(svn_stream_readline(stream, &line, patch->eol_str, &eof,
-                                  iterpool));
+      SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
+                                             iterpool));
+
       if (! eof)
         {
           /* Update line offset for next iteration.
            * APR has no ftell() :( */
           pos = 0;
-          apr_file_seek(patch->patch_file, APR_CUR, &pos);
+          SVN_ERR(svn_io_file_seek(patch->patch_file, APR_CUR, &pos, iterpool));
         }
+
+      /* Lines starting with a backslash are comments, such as
+       * "\ No newline at end of file". */
+      if (line->data[0] == '\\')
+        continue;
 
       if (in_hunk)
         {
@@ -266,7 +276,7 @@ parse_next_hunk(svn_hunk_t **hunk,
                * of the line just read is the hunk text's byte offset. */
               start = last_line;
             }
-          
+
           c = line->data[0];
           if (original_lines > 0 && (c == ' ' || c == '-'))
             {
@@ -295,7 +305,7 @@ parse_next_hunk(svn_hunk_t **hunk,
             }
         }
       else
-        { 
+        {
           if (starts_with(line->data, atat))
             {
               /* Looks like we have a hunk header, let's try to rip it apart. */
@@ -315,12 +325,20 @@ parse_next_hunk(svn_hunk_t **hunk,
     /* Rewind to the start of the line just read, so subsequent calls
      * to this function or svn_diff__parse_next_patch() don't end
      * up skipping the line -- it may contain a patch or hunk header. */
-    apr_file_seek(patch->patch_file, APR_SET, &last_line);
+    SVN_ERR(svn_io_file_seek(patch->patch_file, APR_SET, &last_line,
+                             scratch_pool));
 
   if (hunk_seen && start < end)
     {
       apr_file_t *f;
       apr_int32_t flags = APR_READ | APR_BUFFERED;
+
+      /* Create a stream which returns the hunk text itself. */
+      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
+                               result_pool));
+      diff_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
+                                                         start, end,
+                                                         result_pool);
 
       /* Create a stream which returns the original hunk text. */
       SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
@@ -329,7 +347,7 @@ parse_next_hunk(svn_hunk_t **hunk,
                                                              start, end,
                                                              result_pool);
       svn_stream_set_line_filter_callback(original_text, original_line_filter);
-      svn_stream_set_line_transformer_callback(original_text, 
+      svn_stream_set_line_transformer_callback(original_text,
                                                remove_leading_char_transformer);
 
       /* Create a stream which returns the modified hunk text. */
@@ -339,9 +357,10 @@ parse_next_hunk(svn_hunk_t **hunk,
                                                              start, end,
                                                              result_pool);
       svn_stream_set_line_filter_callback(modified_text, modified_line_filter);
-      svn_stream_set_line_transformer_callback(modified_text, 
+      svn_stream_set_line_transformer_callback(modified_text,
                                                remove_leading_char_transformer);
       /* Set the hunk's texts. */
+      (*hunk)->diff_text = diff_text;
       (*hunk)->original_text = original_text;
       (*hunk)->modified_text = modified_text;
     }
@@ -352,7 +371,22 @@ parse_next_hunk(svn_hunk_t **hunk,
   return SVN_NO_ERROR;
 }
 
-/* 
+/* Compare function for sorting hunks after parsing.
+ * We sort hunks by their original line offset. */
+static int
+compare_hunks(const void *a, const void *b)
+{
+  const svn_hunk_t *ha = *((const svn_hunk_t **)a);
+  const svn_hunk_t *hb = *((const svn_hunk_t **)b);
+
+  if (ha->original_start < hb->original_start)
+    return -1;
+  if (ha->original_start > hb->original_start)
+    return 1;
+  return 0;
+}
+
+/*
  * Ensure that all streams which were opened for HUNK are closed.
  */
 static svn_error_t *
@@ -360,13 +394,13 @@ close_hunk(svn_hunk_t *hunk)
 {
   SVN_ERR(svn_stream_close(hunk->original_text));
   SVN_ERR(svn_stream_close(hunk->modified_text));
+  SVN_ERR(svn_stream_close(hunk->diff_text));
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_diff__parse_next_patch(svn_patch_t **patch,
                            apr_file_t *patch_file,
-                           const char *eol_str,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
@@ -375,7 +409,6 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
   const char *indicator;
   const char *fname;
   svn_stream_t *stream;
-  apr_off_t pos;
   svn_boolean_t eof, in_header;
   svn_hunk_t *hunk;
   apr_pool_t *iterpool;
@@ -390,14 +423,9 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
   /* Get the patch's filename. */
   SVN_ERR(svn_io_file_name_get(&fname, patch_file, result_pool));
 
-  /* Get current seek position -- APR has no ftell() :( */
-  pos = 0;
-  apr_file_seek(patch_file, APR_CUR, &pos);
-
   /* Record what we already know about the patch. */
   *patch = apr_pcalloc(result_pool, sizeof(**patch));
   (*patch)->patch_file = patch_file;
-  (*patch)->eol_str = eol_str;
   (*patch)->path = fname;
 
   /* Get a stream to read lines from the patch file.
@@ -415,7 +443,8 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
       svn_pool_clear(iterpool);
 
       /* Read a line from the stream. */
-      SVN_ERR(svn_stream_readline(stream, &line, eol_str, &eof, iterpool));
+      SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
+                                             iterpool));
 
       /* See if we have a diff header. */
       if (line->len > strlen(indicator) && starts_with(line->data, indicator))
@@ -482,6 +511,16 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
 
   svn_pool_destroy(iterpool);
   SVN_ERR(svn_stream_close(stream));
+
+  if (*patch)
+    {
+      /* Usually, hunks appear in the patch sorted by their original line
+       * offset. But just in case they weren't parsed in this order for
+       * some reason, we sort them so that our caller can assume that hunks
+       * are sorted as if parsed from a usual patch. */
+      qsort((*patch)->hunks->elts, (*patch)->hunks->nelts,
+            (*patch)->hunks->elt_size, compare_hunks);
+    }
 
   return SVN_NO_ERROR;
 }

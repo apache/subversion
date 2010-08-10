@@ -2,10 +2,10 @@
  * merge.c:  merging changes into a working file
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -211,8 +211,9 @@ detranslate_wc_file(const char **detranslated_abspath,
 
       /* ### svn_subst_copy_and_translate3() also creates a tempfile
          ### internally.  Anyway to piggyback on that? */
-      SVN_ERR(svn_io_mktemp(NULL, &detranslated, NULL, NULL,
-                            svn_io_file_del_none, scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &detranslated, NULL,
+                                      svn_io_file_del_on_pool_cleanup,
+                                      result_pool, scratch_pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
@@ -262,8 +263,9 @@ maybe_update_target_eols(const char **new_target_abspath,
       const char *tmp_new;
 
       svn_subst_eol_style_from_value(NULL, &eol, prop->value->data);
-      SVN_ERR(svn_io_mktemp(NULL, &tmp_new, NULL, NULL,
-                            svn_io_file_del_none, scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_new, NULL,
+                                       svn_io_file_del_on_pool_cleanup,
+                                       result_pool, scratch_pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
@@ -609,7 +611,8 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   if (! svn_dirent_is_ancestor(dir_abspath, left_abspath))
     {
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_left, temp_dir,
-                                       svn_io_file_del_none, pool, pool));
+                                       svn_io_file_del_on_pool_cleanup,
+                                       pool, pool));
       SVN_ERR(svn_io_copy_file(left_abspath, tmp_left, TRUE, pool));
     }
   else
@@ -618,7 +621,8 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   if (! svn_dirent_is_ancestor(dir_abspath, right_abspath))
     {
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_right, temp_dir,
-                                       svn_io_file_del_none, pool, pool));
+                                       svn_io_file_del_on_pool_cleanup,
+                                       pool, pool));
       SVN_ERR(svn_io_copy_file(right_abspath, tmp_right, TRUE, pool));
     }
   else
@@ -639,14 +643,13 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
   /* Create LEFT and RIGHT backup files, in expanded form.
      We use merge_target's current properties to do the translation. */
   /* Derive the basenames of the 3 backup files. */
-  SVN_ERR(svn_wc__loggy_translated_file(log_accum,
-                                        dir_abspath,
+  SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, *log_accum, pool);
+  SVN_ERR(svn_wc__loggy_translated_file(db, dir_abspath,
                                         left_copy, tmp_left,
-                                        target_abspath, pool, pool));
-  SVN_ERR(svn_wc__loggy_translated_file(log_accum,
-                                        dir_abspath,
+                                        target_abspath, pool));
+  SVN_ERR(svn_wc__loggy_translated_file(db, dir_abspath,
                                         right_copy, tmp_right,
-                                        target_abspath, pool, pool));
+                                        target_abspath, pool));
 
   /* Back up MERGE_TARGET through detranslation/retranslation:
      the new translation properties may not match the current ones */
@@ -654,10 +657,9 @@ preserve_pre_merge_files(svn_stringbuf_t **log_accum,
            &detranslated_target_copy, target_abspath, db, target_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
            pool, pool));
-  SVN_ERR(svn_wc__loggy_translated_file(log_accum,
-                                        dir_abspath,
+  SVN_ERR(svn_wc__loggy_translated_file(db, dir_abspath,
                                         target_copy, detranslated_target_copy,
-                                        target_abspath, pool, pool));
+                                        target_abspath, pool));
 
   tmp_entry.conflict_old = svn_dirent_is_child(dir_abspath, left_copy, pool);
   tmp_entry.conflict_new = svn_dirent_is_child(dir_abspath, right_copy, pool);

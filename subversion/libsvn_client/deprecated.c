@@ -3,10 +3,10 @@
  *                "we can't lose 'em, but we can shun 'em!"
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -169,7 +169,7 @@ svn_client_blame4(const char *target,
                   apr_pool_t *pool)
 {
   struct blame_receiver_wrapper_baton2 baton;
-  
+
   baton.receiver = receiver;
   baton.baton = receiver_baton;
 
@@ -284,10 +284,10 @@ wrapped_receiver(void *baton,
 
 static void
 wrap_pre_blame3_receiver(svn_client_blame_receiver_t *receiver,
-                   void **receiver_baton,
-                   apr_pool_t *pool)
+                         void **receiver_baton,
+                         apr_pool_t *pool)
 {
-  if (strlen(APR_EOL_STR) > 1)
+  if (sizeof(APR_EOL_STR) == 3)
     {
       struct wrapped_receiver_baton_s *b = apr_palloc(pool,sizeof(*b));
 
@@ -898,6 +898,24 @@ svn_client_diff_summarize_peg(const char *path,
 }
 
 /*** From export.c ***/
+svn_error_t *
+svn_client_export4(svn_revnum_t *result_rev,
+                   const char *from,
+                   const char *to,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t overwrite,
+                   svn_boolean_t ignore_externals,
+                   svn_depth_t depth,
+                   const char *native_eol,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_export5(result_rev, from, to, peg_revision, revision,
+                            overwrite, ignore_externals, FALSE, depth,
+                            native_eol, ctx, pool);
+}
+
 svn_error_t *
 svn_client_export3(svn_revnum_t *result_rev,
                    const char *from,
@@ -1825,7 +1843,7 @@ svn_client_url_from_path(const char **url,
                          apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
-  
+
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
   return svn_client_url_from_path2(url, path_or_url, ctx, pool, pool);

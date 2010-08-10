@@ -2,10 +2,10 @@
  * cl.h:  shared stuff in the command line program
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -136,9 +136,9 @@ typedef struct svn_cl__opt_state_t
   /* An array of svn_opt_revision_range_t *'s representing revisions
      ranges indicated on the command-line via the -r and -c options.
      For each range in the list, if only one revision was provided
-     (-rN), its 'end' member remains `svn_opt_revision_unspecified'.
-
-     NOTE: This is currently used only by merge subcommand. */
+     (-rN), its 'end' member remains 'svn_opt_revision_unspecified'.
+     This array always has at least one element, even if that is a
+     null range in which both ends are 'svn_opt_revision_unspecified'. */
   apr_array_header_t *revision_ranges;
 
   /* These are simply a copy of the range start and end values present
@@ -222,6 +222,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
   int strip_count; /* number of leading path components to strip */
+  svn_boolean_t ignore_keywords;  /* do not expand keywords */
   svn_boolean_t ignore_mergeinfo; /* ignore mergeinfo in reporting commands. */
 } svn_cl__opt_state_t;
 
@@ -535,12 +536,13 @@ svn_cl__merge_file_externally(const char *base_path,
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
-void svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
-                          void **notify_baton_p,
-                          svn_boolean_t is_checkout,
-                          svn_boolean_t is_export,
-                          svn_boolean_t suppress_final_line,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
+                     void **notify_baton_p,
+                     svn_boolean_t is_checkout,
+                     svn_boolean_t is_export,
+                     svn_boolean_t suppress_final_line,
+                     apr_pool_t *pool);
 
 /* Print conflict stats accumulated in NOTIFY_BATON.
  * Return any error encountered during printing.
@@ -705,6 +707,18 @@ const char *
 svn_cl__node_description(const svn_wc_conflict_version_t *node,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool);
+
+/* Join a BASE path with a COMPONENT, allocating the result in POOL.
+ * COMPONENT need not be a single single component: it can be any path,
+ * absolute or relative to BASE.
+ *
+ * This function exists to gather the cases when it could not be determined
+ * if BASE is an uri, dirent or relative.
+ */
+const char *
+svn_cl__path_join(const char *base, 
+                  const char *component, 
+                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

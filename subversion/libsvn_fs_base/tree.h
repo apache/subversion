@@ -1,10 +1,10 @@
 /* tree.h : internal interface to tree node functions
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -44,7 +44,7 @@ svn_error_t *svn_fs_base__commit_txn(const char **conflict_p,
                                      svn_revnum_t *new_rev, svn_fs_txn_t *txn,
                                      apr_pool_t *pool);
 
-svn_error_t *svn_fs_base__commit_obliteration_txn(svn_revnum_t rev,
+svn_error_t *svn_fs_base__commit_obliteration_txn(svn_revnum_t replacing_rev,
                                                   svn_fs_txn_t *txn,
                                                   apr_pool_t *pool);
 

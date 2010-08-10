@@ -2,10 +2,10 @@
  * xml.c:  xml helper code shared among the Subversion libraries.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -301,7 +301,8 @@ svn_xml_fuzzy_escape(const char *string, apr_pool_t *pool)
          ### should probably share code, even though they escape
          ### different characters.
       */
-      sprintf(escaped_char, "?\\%03u", (unsigned char) *q);
+      apr_snprintf(escaped_char, sizeof(escaped_char), "?\\%03u",
+                   (unsigned char) *q);
       svn_stringbuf_appendcstr(outstr, escaped_char);
 
       p = q + 1;

@@ -3,10 +3,10 @@
 # svn-backup-dumps.py -- Create dumpfiles to backup a subversion repository.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -247,7 +247,7 @@ class SvnBackupOutputCommand(SvnBackupOutput):
         SvnBackupOutput.__init__(self, abspath, filename + file_extension)
         self.__cmd_path    = cmd_path
         self.__cmd_options = cmd_options
- 
+
     def open(self):
         cmd = [ self.__cmd_path, self.__cmd_options ]
 
@@ -320,7 +320,7 @@ class SvnBackup:
         self.__quiet = options.quiet
         self.__deltas = options.deltas
         self.__relative_incremental = options.relative_incremental
-        
+
         # svnadmin/svnlook path
         self.__svnadmin_path = "svnadmin"
         if options.svnadmin_path:
@@ -455,7 +455,7 @@ class SvnBackup:
                     # determine the latest revision dumped
                     highest_rev = rev_end
 
-        return highest_rev    
+        return highest_rev
 
     def transfer_ftp(self, absfilename, filename):
         rc = False

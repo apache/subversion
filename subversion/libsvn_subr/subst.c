@@ -2,10 +2,10 @@
  * subst.c :  generic eol/keyword substitution routines
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1420,16 +1420,17 @@ svn_subst_copy_and_translate3(const char *src,
               SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
             }
 
-          return create_special_file_from_stream(src_stream, dst, pool);
+          return svn_error_return(create_special_file_from_stream(src_stream,
+                                                                  dst, pool));
         }
       /* else !expand */
 
-      return detranslate_special_file(src, dst, pool);
+      return svn_error_return(detranslate_special_file(src, dst, pool));
     }
 
   /* The easy way out:  no translation needed, just copy. */
   if (! (eol_str || (keywords && (apr_hash_count(keywords) > 0))))
-    return svn_io_copy_file(src, dst, FALSE, pool);
+    return svn_error_return(svn_io_copy_file(src, dst, FALSE, pool));
 
   /* Open source file. */
   SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
@@ -1457,7 +1458,7 @@ svn_subst_copy_and_translate3(const char *src,
     }
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  return svn_io_file_rename(dst_tmp, dst, pool);
+  return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
 
@@ -1613,7 +1614,7 @@ svn_subst_translate_string(svn_string_t **new_value,
                                        NULL,  /* no keywords */
                                        FALSE, /* no expansion */
                                        scratch_pool));
-  
+
   *new_value = svn_string_create(val_utf8_lf, pool);
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;

@@ -152,6 +152,68 @@ Added: file2
 +++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
+Group: bugtracker
+Subject: Fix for Blah#123: r2 -  dir1 dir2
+
+Author: mailer test
+Date: Sun Sep  9 04:33:20 2001
+New Revision: 2
+
+Log:
+two file changes.  Fixes Blah#123
+
+Modified:
+   dir1/   (props changed)
+   dir2/file5
+   file1   (props changed)
+   file2   (contents, props changed)
+
+Modified: dir2/file5
+==============================================================================
+--- dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
++++ dir2/file5	Sun Sep  9 04:33:20 2001	(r2)
+@@ -1 +1,2 @@
+ file5
++change C2
+
+Modified: file2
+==============================================================================
+--- file2	Sun Sep  9 01:46:40 2001	(r1)
++++ file2	Sun Sep  9 04:33:20 2001	(r2)
+@@ -1 +1,2 @@
+ file2
++change C1
+Group: All
+Subject: r2 -  dir1 dir2
+
+Author: mailer test
+Date: Sun Sep  9 04:33:20 2001
+New Revision: 2
+
+Log:
+two file changes.  Fixes Blah#123
+
+Modified:
+   dir1/   (props changed)
+   dir2/file5
+   file1   (props changed)
+   file2   (contents, props changed)
+
+Modified: dir2/file5
+==============================================================================
+--- dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
++++ dir2/file5	Sun Sep  9 04:33:20 2001	(r2)
+@@ -1 +1,2 @@
+ file5
++change C2
+
+Modified: file2
+==============================================================================
+--- file2	Sun Sep  9 01:46:40 2001	(r1)
++++ file2	Sun Sep  9 04:33:20 2001	(r2)
+@@ -1 +1,2 @@
+ file2
++change C1
 Group: file plus other areas
 Subject: r2 -  dir1 dir2
 
@@ -160,7 +222,7 @@ Date: Sun Sep  9 04:33:20 2001
 New Revision: 2
 
 Log:
-two file changes
+two file changes.  Fixes Blah#123
 
 Modified:
    file1   (props changed)
@@ -188,37 +250,6 @@ Modified: dir2/file5
 @@ -1 +1,2 @@
  file5
 +change C2
-Group: All
-Subject: r2 -  dir1 dir2
-
-Author: mailer test
-Date: Sun Sep  9 04:33:20 2001
-New Revision: 2
-
-Log:
-two file changes
-
-Modified:
-   dir1/   (props changed)
-   dir2/file5
-   file1   (props changed)
-   file2   (contents, props changed)
-
-Modified: dir2/file5
-==============================================================================
---- dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
-+++ dir2/file5	Sun Sep  9 04:33:20 2001	(r2)
-@@ -1 +1,2 @@
- file5
-+change C2
-
-Modified: file2
-==============================================================================
---- file2	Sun Sep  9 01:46:40 2001	(r1)
-+++ file2	Sun Sep  9 04:33:20 2001	(r2)
-@@ -1 +1,2 @@
- file2
-+change C1
 Group: file
 Subject: r2 -  dir1 dir2
 
@@ -227,7 +258,7 @@ Date: Sun Sep  9 04:33:20 2001
 New Revision: 2
 
 Log:
-two file changes
+two file changes.  Fixes Blah#123
 
 Modified:
    file1   (props changed)
@@ -326,6 +357,25 @@ changes and deletes of properties
 
 Modified:
    file2   (props changed)
+Group: file
+Subject: r6 -  dir1 dir4
+
+Author: mailer test
+Date: Sun Sep  9 15:40:00 2001
+New Revision: 6
+
+Log:
+mixed addition and change.  Fixes Blaz#456 Blah#987
+
+Added:
+   file9
+
+Added: file9
+==============================================================================
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file9	Sun Sep  9 15:40:00 2001	(r6)
+@@ -0,0 +1 @@
++file9
 Group: file plus other areas
 Subject: r6 -  dir1 dir4
 
@@ -334,7 +384,7 @@ Date: Sun Sep  9 15:40:00 2001
 New Revision: 6
 
 Log:
-mixed addition and change
+mixed addition and change.  Fixes Blaz#456 Blah#987
 
 Added:
    file9
@@ -369,7 +419,7 @@ Date: Sun Sep  9 15:40:00 2001
 New Revision: 6
 
 Log:
-mixed addition and change
+mixed addition and change.  Fixes Blaz#456 Blah#987
 
 Added:
    dir4/
@@ -391,18 +441,59 @@ Added: file9
 +++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
-Group: file
-Subject: r6 -  dir1 dir4
+Group: bugtracker
+Subject: Fix for Blah#987: r6 -  dir1 dir4
 
 Author: mailer test
 Date: Sun Sep  9 15:40:00 2001
 New Revision: 6
 
 Log:
-mixed addition and change
+mixed addition and change.  Fixes Blaz#456 Blah#987
 
 Added:
+   dir4/
    file9
+Modified:
+   dir1/file3
+
+Modified: dir1/file3
+==============================================================================
+--- dir1/file3	Sun Sep  9 12:53:20 2001	(r5)
++++ dir1/file3	Sun Sep  9 15:40:00 2001	(r6)
+@@ -1 +1,2 @@
+ file3
++change C4
+
+Added: file9
+==============================================================================
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file9	Sun Sep  9 15:40:00 2001	(r6)
+@@ -0,0 +1 @@
++file9
+Group: bugtracker
+Subject: Fix for Blaz#456: r6 -  dir1 dir4
+
+Author: mailer test
+Date: Sun Sep  9 15:40:00 2001
+New Revision: 6
+
+Log:
+mixed addition and change.  Fixes Blaz#456 Blah#987
+
+Added:
+   dir4/
+   file9
+Modified:
+   dir1/file3
+
+Modified: dir1/file3
+==============================================================================
+--- dir1/file3	Sun Sep  9 12:53:20 2001	(r5)
++++ dir1/file3	Sun Sep  9 15:40:00 2001	(r6)
+@@ -1 +1,2 @@
+ file3
++change C4
 
 Added: file9
 ==============================================================================

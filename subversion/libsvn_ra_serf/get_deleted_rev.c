@@ -2,10 +2,10 @@
  * get_deleted_rev.c :  ra_serf get_deleted_rev API implementation.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -136,24 +136,21 @@ cdata_getdrev(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-#define GETDREV_HEADER "<S:get-deleted-rev-report xmlns:S=\"" \
-        SVN_XML_NAMESPACE "\" xmlns:D=\"DAV:\">"
-#define GETDREV_FOOTER "</S:get-deleted-rev-report>"
-
 static serf_bucket_t*
 create_getdrev_body(void *baton,
                     serf_bucket_alloc_t *alloc,
                     apr_pool_t *pool)
 {
-  serf_bucket_t *buckets, *tmp;
+  serf_bucket_t *buckets;
   drev_context_t *drev_ctx = baton;
 
   buckets = serf_bucket_aggregate_create(alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(GETDREV_HEADER,
-                                      sizeof(GETDREV_HEADER) - 1,
-                                      alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc,
+                                    "S:get-deleted-rev-report",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    "xmlns:D", "DAV:",
+                                    NULL, NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", drev_ctx->path,
@@ -169,10 +166,8 @@ create_getdrev_body(void *baton,
                                apr_ltoa(pool, drev_ctx->end_revision),
                                alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(GETDREV_FOOTER,
-                                      sizeof(GETDREV_FOOTER)-1,
-                                      alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc,
+                                     "S:get-deleted-rev-report");
 
   return buckets;
 }

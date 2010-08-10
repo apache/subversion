@@ -2,10 +2,10 @@
  * commit_util.c:  Driver for the WC commit process.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -430,6 +430,9 @@ harvest_committables(apr_hash_t *committables,
          svn_dirent_local_style(path, scratch_pool));
     }
 
+  if (entry->file_external_path && copy_mode)
+    return SVN_NO_ERROR;
+
   if (entry->kind == svn_node_dir)
     {
       /* Read the dir's own entries for use when recursing. */
@@ -796,7 +799,7 @@ harvest_committables(apr_hash_t *committables,
                                                             ctx->wc_ctx,
                                                             this_abspath,
                                                             iterpool));
-                  
+
                   if (obstructed)
                     {
                       /* A missing, schedule-delete child dir is
@@ -1021,18 +1024,21 @@ svn_client__harvest_committables(apr_hash_t **committables,
         {
           const char *parent_abspath = svn_dirent_dirname(target_abspath,
                                                           subpool);
-          const svn_wc_entry_t *p_entry;
+          svn_boolean_t is_added;
 
-          SVN_ERR(svn_wc__maybe_get_entry(&p_entry, ctx->wc_ctx,
-                                          parent_abspath, svn_node_dir,
-                                          FALSE, FALSE, subpool, subpool));
-          if (! p_entry)
-            return svn_error_createf
-              (SVN_ERR_WC_CORRUPT, NULL,
-               _("'%s' is scheduled for addition within unversioned parent"),
-               svn_dirent_local_style(target, pool));
-          if ((p_entry->schedule == svn_wc_schedule_add)
-              || (p_entry->schedule == svn_wc_schedule_replace))
+          err = svn_wc__node_is_status_added(&is_added, ctx->wc_ctx,
+                                             parent_abspath, subpool);
+          if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              return svn_error_createf(
+                SVN_ERR_WC_CORRUPT, NULL,
+                _("'%s' is scheduled for addition within unversioned parent"),
+                svn_dirent_local_style(target, pool));
+            }
+          SVN_ERR(err);
+
+          if (is_added)
             {
               /* Copy the parent and target into pool; subpool
                  lasts only for this loop iteration, and we check
@@ -1363,7 +1369,7 @@ do_item_commit(void **dir_baton,
 
               SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
                                        SVN_PROP_MIME_TYPE, pool, pool));
-            
+
               if (propval)
                 notify->mime_type = propval->data;
             }

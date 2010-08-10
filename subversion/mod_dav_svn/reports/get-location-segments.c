@@ -3,10 +3,10 @@
  *                          for Subversion's get-location-segments RA API.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -60,7 +60,7 @@ maybe_send_opener(struct location_segment_baton *b)
     {
       SVN_ERR(dav_svn__brigade_puts(b->bb, b->output, DAV_XML_HEADER DEBUG_CR
                                     "<S:get-location-segments-report "
-                                    "xmlns:S=\"" SVN_XML_NAMESPACE 
+                                    "xmlns:S=\"" SVN_XML_NAMESPACE
                                     "\" xmlns:D=\"DAV:\">" DEBUG_CR));
       b->sent_opener = TRUE;
     }

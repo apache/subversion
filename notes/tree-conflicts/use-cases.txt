@@ -245,7 +245,7 @@ Current Behavior
 
    Developer B moves Foo.c to Bar.c and commits it to the repository.
    
-   Developer merges A's new revision into his working copy. The merge
+   Developer B merges A's new revision into his working copy. The merge
    will apply A's modification to Foo.c to the Foo.c in B's working
    copy.
 
@@ -320,11 +320,11 @@ Description
 
 Current Behavior
 
-   Developer A  moves Foo.c to Bar.c and commits it to the repository.
+   Developer A moves Foo.c to Bar.c and commits it to the repository.
 
-   Developer B modifies Foo.cand commits it to the repository.
+   Developer B modifies Foo.c and commits it to the repository.
    
-   Developer merges A's new revision into his working copy.  The merge
+   Developer B merges A's new revision into his working copy.  The merge
    will add Bar.c (with the same content as the original Foo.c) and
    will delete B's Foo.c.
 
@@ -398,7 +398,7 @@ Current Behavior
 
    Developer B moves Foo.c to Bix.c and commits it to the repository.
    
-   Developer merges A's new revision into his working copy.  The merge
+   Developer B merges A's new revision into his working copy.  The merge
    will add Bar.c with history in B's working copy.
 
 Problems With Current Behavior

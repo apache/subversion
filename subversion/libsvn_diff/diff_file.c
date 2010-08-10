@@ -2,10 +2,10 @@
  * diff_file.c :  routines for doing diffs on files
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -363,7 +363,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
                                  curp, file_baton->options);
 
       file_token->norm_offset = file_token->offset;
-      if (file_token->length == 0) 
+      if (file_token->length == 0)
         /* move past leading ignored characters */
         file_token->norm_offset += (c - curp);
 
@@ -889,10 +889,9 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
           const char *out_str;
           SVN_ERR(svn_utf_cstring_from_utf8_ex2
                   (&out_str,
-                   /* The string below is intentionally not marked for
-                      translation: it's vital to correct operation of
-                      the diff(1)/patch(1) program pair. */
-                   APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR,
+                   apr_psprintf(baton->pool,
+                                APR_EOL_STR "\\ %s" APR_EOL_STR,
+                                _("No newline at end of file")),
                    baton->header_encoding, baton->pool));
           svn_stringbuf_appendcstr(baton->hunk, out_str);
         }

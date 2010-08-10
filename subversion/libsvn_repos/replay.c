@@ -3,10 +3,10 @@
  *             or transaction
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -669,6 +669,14 @@ svn_repos_replay2(svn_fs_root_t *root,
   apr_array_header_t *paths;
   struct path_driver_cb_baton cb_baton;
   size_t base_path_len;
+
+  /* Special-case r0, which we know is an empty revision; if we don't
+     special-case it we might end up trying to compare it to "r-1". */
+  if (svn_fs_is_revision_root(root) && svn_fs_revision_root_revision(root) == 0)
+    {
+      SVN_ERR(editor->set_target_revision(edit_baton, 0, pool));
+      return SVN_NO_ERROR;
+    }
 
   /* Fetch the paths changed under ROOT. */
   SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, pool));

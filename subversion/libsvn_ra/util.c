@@ -2,10 +2,10 @@
  * util.c:  Repository access utility routines.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -64,7 +64,7 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
         }
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("Retrieval of mergeinfo unsupported by '%s'"),
-                               svn_path_is_url(path_or_url) 
+                               svn_path_is_url(path_or_url)
                                   ? path_or_url
                                   : svn_dirent_local_style(path_or_url, pool));
     }
