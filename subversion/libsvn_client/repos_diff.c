@@ -302,9 +302,11 @@ get_file_mime_types(const char **mimetype1,
 }
 
 
-/* Get the repository version of a file. This makes an RA request to
- * retrieve the file contents. A pool cleanup handler is installed to
- * delete this file.
+/* Get revision REVISION of the file described by B from the repository.
+ * Set B->path_start_revision to the path of a new temporary file containing
+ * the file's text.  Set B->pristine_props to a new hash containing the
+ * file's properties.  Install a pool cleanup handler on B->pool to delete
+ * the file.
  */
 static svn_error_t *
 get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
