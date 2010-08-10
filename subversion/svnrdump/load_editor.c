@@ -114,7 +114,9 @@ new_node_record(void **node_baton,
   void *child_baton;
   void *commit_edit_baton;
   char *ancestor_path;
-  apr_array_header_t *residual_path;
+  apr_array_header_t *residual_open_path;
+  const char *nb_dirname;
+  apr_size_t residual_close_count;
   int i;
 
   rb = revision_baton;
@@ -157,8 +159,8 @@ new_node_record(void **node_baton,
       child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
       child_db->baton = child_baton;
       child_db->depth = 0;
-      child_db->parent = NULL;
       child_db->relpath = svn_relpath_canonicalize("/", rb->pool);
+      child_db->parent = NULL;
       rb->db = child_db;
   }
 
@@ -189,32 +191,37 @@ new_node_record(void **node_baton,
           if (strcmp(hval, "replace") == 0)
             nb->action = svn_node_action_replace;
         }
+      if (strcmp(hname, SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5) == 0)
+        nb->base_checksum = apr_pstrdup(rb->pool, hval);
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV) == 0)
         nb->copyfrom_rev = atoi(hval);
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH) == 0)
-          nb->copyfrom_path =
-            svn_path_url_add_component2(rb->pb->root_url,
-                                        apr_pstrdup(rb->pool, hval),
-                                        rb->pool);
+        nb->copyfrom_path =
+          svn_path_url_add_component2(rb->pb->root_url,
+                                      apr_pstrdup(rb->pool, hval),
+                                      rb->pool);
     }
 
-  if (svn_path_compare_paths(svn_relpath_dirname(nb->path, pool),
-                             rb->db->baton) != 0)
+  nb_dirname = svn_relpath_dirname(nb->path, pool);
+  if (svn_path_compare_paths(nb_dirname,
+                             rb->db->relpath) != 0)
     {
       /* Before attempting to handle the action, call open_directory
          for all the path components and set the directory baton
          accordingly */
       ancestor_path =
-        svn_relpath_get_longest_ancestor(nb->path,
+        svn_relpath_get_longest_ancestor(nb_dirname,
                                          rb->db->relpath, pool);
-      residual_path =
-        svn_path_decompose(svn_relpath_skip_ancestor(nb->path,
-                                                     ancestor_path),
-                           rb->pool);
+      residual_close_count =
+        svn_path_component_count(svn_relpath_skip_ancestor(ancestor_path,
+                                                           rb->db->relpath));
+      residual_open_path =
+        svn_path_decompose(svn_relpath_skip_ancestor(ancestor_path,
+                                                     nb_dirname), pool);
 
       /* First close all as many directories as there are after
          skip_ancestor, and then open fresh directories */
-      for (i = 0; i < residual_path->nelts; i ++)
+      for (i = 0; i < residual_close_count; i ++)
         {
           /* Don't worry about destroying the actual rb->db object,
              since the pool we're using has the lifetime of one
@@ -224,9 +231,10 @@ new_node_record(void **node_baton,
           rb->db = rb->db->parent;
         }
         
-      for (i = 0; i < residual_path->nelts; i ++)
+      for (i = 0; i < residual_open_path->nelts; i ++)
         {
-          SVN_ERR(commit_editor->open_directory(residual_path->elts + i,
+          SVN_ERR(commit_editor->open_directory(APR_ARRAY_IDX(residual_open_path,
+                                                              i, const char *),
                                                 rb->db->baton,
                                                 rb->rev - 1,
                                                 rb->pool, &child_baton));
@@ -235,11 +243,12 @@ new_node_record(void **node_baton,
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
           child_db->relpath = svn_relpath_join(rb->db->relpath,
-                                               residual_path->elts + i,
+                                               APR_ARRAY_IDX(residual_open_path,
+                                                             i, const char *),
                                                rb->pool);
+          child_db->parent = rb->db;
           rb->db = child_db;
         }
-
     }
 
   switch (nb->action)
@@ -252,20 +261,19 @@ new_node_record(void **node_baton,
                                           nb->copyfrom_path,
                                           nb->copyfrom_rev,
                                           rb->pool, &(nb->file_baton)));
-          LDR_DBG(("Adding file %s to dir %p as %p\n", nb->path, rb->db->baton, nb->file_baton));
+          LDR_DBG(("Added file %s to dir %p as %p\n", nb->path, rb->db->baton, nb->file_baton));
           break;
         case svn_node_dir:
           SVN_ERR(commit_editor->add_directory(nb->path, rb->db->baton,
                                                nb->copyfrom_path,
                                                nb->copyfrom_rev,
                                                rb->pool, &child_baton));
-          LDR_DBG(("Adding dir %s to dir %p as %p\n", nb->path, rb->db->baton, child_baton));
+          LDR_DBG(("Added dir %s to dir %p as %p\n", nb->path, rb->db->baton, child_baton));
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
-          child_db->relpath = svn_relpath_join(rb->db->relpath,
-                                               residual_path->elts + i,
-                                               rb->pool);
+          child_db->relpath = apr_pstrdup(rb->pool, nb->path);
+          child_db->parent = rb->db;
           rb->db = child_db;
           break;
         default:
@@ -288,21 +296,9 @@ new_node_record(void **node_baton,
         }
       break;
     case svn_node_action_delete:
-      switch (nb->kind)
-        {
-        case svn_node_file:
-          LDR_DBG(("Deleting file %s in %p\n", nb->path, rb->db->baton));
-          SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
-                                              rb->db->baton, rb->pool));
-          break;
-        case svn_node_dir:
-          LDR_DBG(("Deleting dir %s in %p\n", nb->path, rb->db->baton));
-          SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
-                                              rb->db->baton, rb->pool));
-          break;
-        default:
-          break;
-        }
+      LDR_DBG(("Deleting entry %s in %p\n", nb->path, rb->db->baton));
+      SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
+                                          rb->db->baton, rb->pool));
       break;
     case svn_node_action_replace:
       /* Absent in dumpstream; represented as a delete + add */
@@ -327,8 +323,8 @@ set_revision_property(void *baton,
   else
     /* Special handling for revision 0; this is safe because the
        commit_editor hasn't been created yet. */
-    svn_ra_change_rev_prop(rb->pb->session, rb->rev, name, value,
-                           rb->pool);
+    SVN_ERR(svn_ra_change_rev_prop(rb->pb->session, rb->rev, name, value,
+                                   rb->pool));
 
   /* Remember any datestamp/ author that passes through (see comment
      in close_revision). */
@@ -411,9 +407,9 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
   nb = node_baton;
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pool;
-  SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, NULL /* base_checksum */, 
-                                         pool, handler, handler_baton));
   LDR_DBG(("Applying textdelta to %p\n", nb->file_baton));
+  SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, nb->base_checksum,
+                                         pool, handler, handler_baton));
 
   return SVN_NO_ERROR;
 }
@@ -429,8 +425,8 @@ close_node(void *baton)
 
   if (nb->kind == svn_node_file)
     {
-      SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, nb->rb->pool));
       LDR_DBG(("Closing file %p\n", nb->file_baton));
+      SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, nb->rb->pool));
     }
 
   /* The svn_node_dir case is handled in close_revision */
@@ -444,26 +440,43 @@ close_revision(void *baton)
   struct revision_baton *rb;
   const svn_delta_editor_t *commit_editor;
   void *commit_edit_baton;
+  void *child_baton;
   rb = baton;
 
   commit_editor = rb->pb->commit_editor;
   commit_edit_baton = rb->pb->commit_edit_baton;
 
-  /* r0 doesn't have a corresponding commit_editor; we fake it */
+  /* Fake revision 0 */
   if (rb->rev == 0)
     SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0\n"));
-  else {
-    /* Close all pending open directories, and then close the edit
-       session itself */
-    while (rb->db && rb->db->parent)
-      {
-        LDR_DBG(("Closing dir %p\n", rb->db->baton));
-        SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
-        rb->db = rb->db->parent;
-      }
-    LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
-    SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
-  }
+  else if (commit_editor)
+    {
+      /* Close all pending open directories, and then close the edit
+         session itself */
+      while (rb->db && rb->db->parent)
+        {
+          LDR_DBG(("Closing dir %p\n", rb->db->baton));
+          SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
+          rb->db = rb->db->parent;
+        }
+      LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
+      SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
+    }
+  else
+    {
+      /* Legitimate revision with no node information */
+      SVN_ERR(svn_ra_get_commit_editor3(rb->pb->session, &commit_editor,
+                                        &commit_edit_baton, rb->revprop_table,
+                                        commit_callback, NULL, NULL, FALSE,
+                                        rb->pool));
+
+      SVN_ERR(commit_editor->open_root(commit_edit_baton, rb->rev - 1,
+                                       rb->pool, &child_baton));
+
+      LDR_DBG(("Opened root %p\n", child_baton));
+      LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
+      SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
+    }
 
   /* svn_fs_commit_txn rewrites the datestamp/ author property-
      rewrite it by hand after closing the commit_editor. */

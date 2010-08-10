@@ -35,7 +35,6 @@
 #include "adm_files.h"
 #include "lock.h"
 #include "props.h"
-#include "log.h"
 #include "wc_db.h"
 
 #include "svn_private_config.h"
@@ -147,7 +146,6 @@ svn_wc__internal_check_wc(int *wc_format,
 #ifdef SVN_WC__SINGLE_DB
     if (*wc_format >= SVN_WC__WC_NG_VERSION)
       {
-        svn_error_t *err;
         svn_wc__db_status_t db_status;
         svn_wc__db_kind_t db_kind;
 
@@ -631,22 +629,35 @@ close_single(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__adm_available(svn_boolean_t *available,
-                      svn_wc__db_kind_t *kind,
-                      svn_boolean_t *obstructed,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool)
+/* Retrieves the KIND of LOCAL_ABSPATH and whether its administrative data is
+   available in the working copy.
+
+   *AVAILABLE is set to TRUE when the node and its metadata are available,
+   otherwise to FALSE (due to obstruction, missing, absence, exclusion,
+   or a "not-present" child).
+
+   *OBSTRUCTED is set to TRUE when the node is not available because
+   it is obstructed/missing, otherwise to FALSE.
+
+   KIND and OBSTRUCTED can be NULL.
+
+   ### note: this function should go away when we move to a single
+   ### adminstrative area.  */
+static svn_error_t *
+adm_available(svn_boolean_t *available,
+              svn_wc__db_kind_t *kind,
+              svn_boolean_t *obstructed,
+              svn_wc__db_t *db,
+              const char *local_abspath,
+              apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_depth_t depth;
 
   if (kind)
     *kind = svn_wc__db_kind_unknown;
 
   SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
@@ -661,8 +672,7 @@ svn_wc__adm_available(svn_boolean_t *available,
                  status == svn_wc__db_status_obstructed_delete ||
                  status == svn_wc__db_status_absent ||
                  status == svn_wc__db_status_excluded ||
-                 status == svn_wc__db_status_not_present ||
-                 depth == svn_depth_exclude);
+                 status == svn_wc__db_status_not_present);
 
   return SVN_NO_ERROR;
 }
@@ -722,12 +732,12 @@ do_open(svn_wc_adm_access_t **adm_access,
 
           node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-          SVN_ERR(svn_wc__adm_available(&available,
-                                        &kind,
-                                        &obstructed,
-                                        db,
-                                        node_abspath,
-                                        scratch_pool));
+          SVN_ERR(adm_available(&available,
+                                &kind,
+                                &obstructed,
+                                db,
+                                node_abspath,
+                                scratch_pool));
 
           if (kind != svn_wc__db_kind_dir)
             continue;
@@ -1340,8 +1350,8 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
           svn_boolean_t available, obstructed;
           svn_wc__db_kind_t kind;
 
-          err = svn_wc__adm_available(&available, &kind, &obstructed,
-                                      db, local_abspath, pool);
+          err = adm_available(&available, &kind, &obstructed,
+                              db, local_abspath, pool);
 
           if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
             svn_error_clear(err);
@@ -1564,36 +1574,6 @@ svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access)
   return adm_access->db;
 }
 
-
-svn_boolean_t
-svn_wc__adm_missing(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    apr_pool_t *scratch_pool)
-{
-  const svn_wc_adm_access_t *look;
-  svn_boolean_t available, obstructed;
-  svn_wc__db_kind_t kind;
-
-  look = get_from_shared(local_abspath, db, scratch_pool);
-
-  if (look != NULL)
-    return IS_MISSING(look);
-
-  /* When we switch to a single database an access baton can't be
-     missing, but until then it can. But if there are no access batons we
-     would always return FALSE.
-     For this case we check if an access baton could be opened
-
-*/
-
-  /* This check must match the check in do_open() */
-  svn_error_clear(svn_wc__adm_available(&available, &kind, &obstructed,
-                                        db, local_abspath,
-                                        scratch_pool));
-
-  return (kind == svn_wc__db_kind_dir) && !available && obstructed;
-}
-
 #ifndef SVN_WC__SINGLE_DB
 static svn_error_t *
 acquire_locks_recursively(svn_wc_context_t *wc_ctx,
@@ -1776,13 +1756,14 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
                            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
-  apr_pool_t *iterpool;
-  const apr_array_header_t *children;
   apr_uint64_t id;
   svn_skel_t *work_item;
+#ifndef SVN_WC__SINGLE_DB
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
   svn_boolean_t locked_here;
   int i;
+#endif
 
 #ifndef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__db_wclock_owns_lock(&locked_here, wc_ctx->db, local_abspath,
@@ -1819,6 +1800,7 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
     {
       const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
+      svn_wc__db_kind_t kind;
 
       svn_pool_clear(iterpool);
       child_abspath = svn_dirent_join(local_abspath, child_relpath, iterpool);

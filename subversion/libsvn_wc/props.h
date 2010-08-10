@@ -49,15 +49,6 @@ extern "C" {
 */
 #undef SVN__SUPPORT_BASE_MERGE
 
-
-typedef enum svn_wc__props_kind_t
-{
-  svn_wc__props_base = 0,
-  svn_wc__props_revert,
-  svn_wc__props_working
-} svn_wc__props_kind_t;
-
-
 /* Internal function for diffing props. See svn_wc_get_prop_diffs2(). */
 svn_error_t *
 svn_wc__internal_propdiff(apr_array_header_t **propchanges,
@@ -154,13 +145,6 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool);
-
-/* Install LOCAL_ABSPATHs working props as base props. */
-svn_error_t *
-svn_wc__working_props_committed(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool);
-
 
 /* Internal version of svn_wc_get_pristine_props().  */
 svn_error_t *

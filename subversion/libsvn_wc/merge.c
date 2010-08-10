@@ -30,8 +30,6 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "translate.h"
-#include "log.h"
-#include "lock.h"
 #include "workqueue.h"
 
 #include "private/svn_skel.h"

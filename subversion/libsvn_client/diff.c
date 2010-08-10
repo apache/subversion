@@ -617,7 +617,7 @@ diff_props_changed(const char *local_dir_abspath,
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, subpool));
 
   if (apr_hash_get(diff_cmd_baton->visited_paths, path, APR_HASH_KEY_STRING))
-      show_diff_header = FALSE;
+    show_diff_header = FALSE;
   else
     show_diff_header = TRUE;
 

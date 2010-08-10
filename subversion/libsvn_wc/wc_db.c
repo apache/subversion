@@ -3773,6 +3773,7 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                                          scratch_pool));
 }
 
+#ifdef SVN__SUPPORT_BASE_MERGE
 
 /* Set properties in a given table. The row must exist.  */
 static svn_error_t *
@@ -3804,7 +3805,6 @@ set_properties(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN__SUPPORT_BASE_MERGE
 
 svn_error_t *
 svn_wc__db_temp_base_set_props(svn_wc__db_t *db,
@@ -8912,9 +8912,6 @@ make_copy_txn(void *baton,
   /* Remove the BASE_NODE if the caller asked us to do that */
   if (mcb->remove_base)
     {
-      const char *local_relpath;
-      svn_wc__db_pdh_t *pdh;
-
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_DELETE_BASE_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
@@ -8935,6 +8932,9 @@ make_copy_txn(void *baton,
       /* Remove BASE_NODE_STUB */
       if (*mcb->local_relpath == '\0')
         {
+          const char *local_relpath;
+          svn_wc__db_pdh_t *pdh;
+
           SVN_ERR(navigate_to_parent(&pdh, mcb->db, mcb->pdh,
                                      svn_sqlite__mode_readwrite,
                                      FALSE, iterpool));
@@ -9426,9 +9426,11 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
   const char *parent_abspath, *base;
+#ifndef SINGLE_DB
+  svn_sqlite__stmt_t *stmt;
   int affected_rows;
+#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath)
                  && !svn_dirent_is_root(local_abspath, strlen(local_abspath)));
