@@ -246,11 +246,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
 {
   svn_wc__db_kind_t kind;
 
-  SVN_ERR_ASSERT((md5_checksum == NULL && sha1_checksum == NULL)
-                 || (md5_checksum != NULL && sha1_checksum != NULL
-                     && md5_checksum->kind == svn_checksum_md5
-                     && sha1_checksum->kind == svn_checksum_sha1));
-
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
 
   SVN_ERR(process_committed_leaf(db, local_abspath, !top_of_recurse,
@@ -415,10 +410,6 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   committed_queue_item_t *cqi;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT((md5_checksum == NULL && sha1_checksum == NULL)
-                 || (md5_checksum != NULL && sha1_checksum != NULL
-                     && md5_checksum->kind == svn_checksum_md5
-                     && sha1_checksum->kind == svn_checksum_sha1));
 
   queue->have_recursive |= recurse;
 
