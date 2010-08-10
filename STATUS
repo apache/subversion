@@ -145,13 +145,6 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r957507
-   Make the ruby bindings compatible with Ruby 1.9.
-   Justification:
-     Keeping up with the Jones's is a always desirable.
-   Votes:
-     +1: hwright
-
  * r958024, r961055, r964167
    Fix issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo for
    merge target'.
@@ -219,7 +212,7 @@ Candidate changes:
    Backport branch:
      ^/subversion/branches/1.6.x-r980811
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r981921
    fsfs: make rev files read-only.
@@ -239,7 +232,7 @@ Candidate changes:
      This ensures that the output received through JavaHL and that received
      when running 'svnadmin verify' are identical.  (Eliminates user confusion.)
    Votes:
-     +1: hwright
+     +1: hwright, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -334,3 +327,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r957507
+   Make the ruby bindings compatible with Ruby 1.9.
+   Justification:
+     Keeping up with the Jones's is a always desirable.
+   Votes:
+     +1: hwright
+     +0: rhuijben
+     
