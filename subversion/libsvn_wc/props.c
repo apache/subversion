@@ -163,78 +163,6 @@ svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
   return SVN_NO_ERROR;
 }
 
-
-/* See props.h  */
-#ifdef SVN__SUPPORT_BASE_MERGE
-
-/* Add a working queue item to install PROPS and, if INSTALL_PRISTINE_PROPS is
-   TRUE, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the node to reflect
-   the changes.  PRISTINE_PROPS must be supplied even if INSTALL_PRISTINE_PROPS
-   is FALSE.
-
-   Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-queue_install_props(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_wc__db_kind_t kind,
-                    apr_hash_t *pristine_props,
-                    apr_hash_t *props,
-                    svn_boolean_t install_pristine_props,
-                    apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *prop_diffs;
-  const char *prop_abspath;
-  svn_skel_t *work_item;
-
-  SVN_ERR_ASSERT(pristine_props != NULL);
-
-  /* Check if the props are modified. */
-  SVN_ERR(svn_prop_diffs(&prop_diffs, props, pristine_props, scratch_pool));
-
-  /* Save the actual properties file if it differs from base. */
-  if (prop_diffs->nelts == 0)
-    props = NULL; /* Remove actual properties*/
-
-  if (install_pristine_props)
-    {
-      /* Write out a new set of pristine properties.  */
-      SVN_ERR(sv
-      SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
-                                svn_wc__props_base, scratch_pool));
-      SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
-                                               prop_abspath,
-                                               pristine_props,
-                                               scratch_pool));
-      SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-    }
-
-  /* For the old school: write the properties into the "working" (aka ACTUAL)
-     location. Note that PROPS may be NULL, indicating a removal of the
-     props file.  */
-  SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
-                            svn_wc__props_working, scratch_pool));
-  SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
-                                           prop_abspath,
-                                           props,
-                                           scratch_pool));
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-
-  /* ### this is disappearing. for now, it is a delayed call to put
-     ### properties into wc_db.  */
-  if (!install_pristine_props)
-    pristine_props = NULL; /* Don't change the pristine properties */
-  SVN_ERR(svn_wc__wq_add_install_properties(db,
-                                            local_abspath,
-                                            pristine_props,
-                                            props,
-                                            scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-#endif /* SVN__SUPPORT_BASE_MERGE  */
-
-
 /* */
 static svn_error_t *
 immediate_install_props(svn_wc__db_t *db,
@@ -447,9 +375,35 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 
 /* See props.h  */
 #ifdef SVN__SUPPORT_BASE_MERGE
-      SVN_ERR(queue_install_props(db, local_abspath, kind,
-                                  new_base_props, new_actual_props,
-                                  base_merge, pool));
+      {
+        svn_wc__db_status_t status;
+        svn_boolean_t have_base;
+        apr_array_header_t *prop_diffs;
+
+        SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     &have_base, NULL, NULL, NULL,
+                                     db, local_abspath, pool, pool));
+
+        if (status == svn_wc__db_status_added)
+          SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
+                                                    new_base_props, pool));
+        else
+          SVN_ERR(svn_wc__db_temp_base_set_props(db, local_abspath,
+                                                 new_base_props, pool));
+
+        /* Check if the props are modified. */
+        SVN_ERR(svn_prop_diffs(&prop_diffs, actual_props, new_base_props, pool));
+
+        /* Save the actual properties file if it differs from base. */
+        if (prop_diffs->nelts == 0)
+          SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, NULL, NULL,
+                                          pool));
+        else
+          SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
+                                          NULL, NULL, pool));
+      }
 #else
       if (base_merge)
         return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
