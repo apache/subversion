@@ -513,14 +513,14 @@ diff_deleted_dir(const char *dir,
       
           get_file_mime_types(&mimetype1, &mimetype2, b);
 
-          SVN_ERR(eb->diff_callbacks->file_deleted
-                  (NULL, NULL, NULL, b->wcpath,
-                   b->path_start_revision,
-                   b->path_end_revision,
-                   mimetype1, mimetype2,
-                   b->pristine_props,
-                   b->edit_baton->diff_cmd_baton,
-                   pool));
+          SVN_ERR(eb->diff_callbacks->file_deleted(
+                                NULL, NULL, NULL, b->wcpath,
+                                b->path_start_revision,
+                                b->path_end_revision,
+                                mimetype1, mimetype2,
+                                b->pristine_props,
+                                b->edit_baton->diff_cmd_baton,
+                                pool));
         }
  
       if (dirent->kind == svn_node_dir)
