@@ -49,39 +49,6 @@ void svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
    be NULL.  */
 apr_hash_t *svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access);
 
-
-/* Returns TRUE if LOCAL_ABSPATH is a working copy directory that is obstructed
-   or missing such that an access baton is not available for LOCAL_ABSPATH.
-   This means DB must also include the parent of LOCAL_ABSPATH.
-
-   This function falls back to using svn_wc__adm_available() if no access batons
-   for LOCAL_ABSPATH are stored in DB. */
-svn_boolean_t svn_wc__adm_missing(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool);
-
-/* Retrieves the KIND of LOCAL_ABSPATH and whether its administrative data is
-   available in the working copy.
-
-   *AVAILABLE is set to TRUE when the node and its metadata are available,
-   otherwise to FALSE (due to obstruction, missing, absence, exclusion,
-   or a "not-present" child).
-
-   *OBSTRUCTED is set to TRUE when the node is not available because
-   it is obstructed/missing, otherwise to FALSE.
-
-   KIND and OBSTRUCTED can be NULL.
-
-   ### note: this function should go away when we move to a single
-   ### adminstrative area.  */
-svn_error_t *
-svn_wc__adm_available(svn_boolean_t *available,
-                      svn_wc__db_kind_t *kind,
-                      svn_boolean_t *obstructed,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool);
-
 /* Same as svn_wc__adm_retrieve_internal, but takes a DB and an absolute
    directory path.  */
 svn_wc_adm_access_t *
