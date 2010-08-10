@@ -1783,6 +1783,7 @@ main(int argc, const char *argv[])
         break;
       case opt_use_git_diff_format:
         opt_state.use_git_diff_format = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
