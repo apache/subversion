@@ -1941,58 +1941,55 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
   while (TRUE)
     {
-      svn_wc__db_kind_t kind;
-      svn_boolean_t hidden;
-      svn_boolean_t is_wc_root;
+      svn_wc__db_status_t status;
+      svn_boolean_t is_wc_root, has_conflict;
       svn_error_t *err;
       const svn_wc_conflict_description2_t *conflict;
 
       svn_pool_clear(iterpool);
 
-      err = svn_wc__db_read_kind(&kind, db, ancestor_abspath, TRUE,
-                                 iterpool);
+      err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, &has_conflict, NULL,
+                                 db, ancestor_abspath, iterpool, iterpool);
 
       if (err)
         {
-          if (! SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+              && !SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
             return svn_error_return(err);
 
           svn_error_clear(err);
           break;
         }
 
-      if (kind == svn_wc__db_kind_unknown)
+      if (status == svn_wc__db_status_not_present
+          || status == svn_wc__db_status_absent
+          || status == svn_wc__db_status_excluded)
         break;
 
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, ancestor_abspath, iterpool));
-
-      if (hidden)
-        break;
-
-      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, ancestor_abspath,
-                                               iterpool, iterpool));
-
-      if (conflict != NULL)
+      if (has_conflict)
         {
-          *conflicted = TRUE;
-          break;
+          SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db,
+                                                   ancestor_abspath,
+                                                   iterpool, iterpool));
+
+          if (conflict != NULL)
+            {
+              *conflicted = TRUE;
+              break;
+            }
         }
 
       if (svn_dirent_is_root(ancestor_abspath, strlen(ancestor_abspath)))
         break;
 
-      err = svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
-                                  db, ancestor_abspath, iterpool);
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, ancestor_abspath,
+                                   iterpool));
 
-      if (err
-          && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-              || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
-        {
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      else
-        SVN_ERR(err);
+      if (is_wc_root)
+        break;
 
       ancestor_abspath = svn_dirent_dirname(ancestor_abspath, scratch_pool);
     }
