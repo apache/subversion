@@ -146,6 +146,8 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
                                  _("The node '%s' can not be restored."),
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
+      default:
+        break;
     }
 
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)

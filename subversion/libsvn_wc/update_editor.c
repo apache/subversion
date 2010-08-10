@@ -48,7 +48,6 @@
 #include "svn_iter.h"
 
 #include "wc.h"
-#include "log.h"
 #include "adm_files.h"
 #include "entries.h"
 #include "lock.h"
@@ -1390,36 +1389,6 @@ open_root(void *edit_baton,
 }
 
 
-/* Helper for delete_entry() and do_entry_deletion().
-
-   If the error chain ERR contains evidence that a local mod was left
-   (an SVN_ERR_WC_LEFT_LOCAL_MOD error), clear ERR.  Otherwise, return ERR.
-*/
-static svn_error_t *
-leftmod_error_chain(svn_error_t *err)
-{
-  svn_error_t *tmp_err;
-
-  if (! err)
-    return SVN_NO_ERROR;
-
-  /* Advance TMP_ERR to the part of the error chain that reveals that
-     a local mod was left, or to the NULL end of the chain. */
-  for (tmp_err = err; tmp_err; tmp_err = tmp_err->child)
-    if (tmp_err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-      {
-        /* We just found a "left a local mod" error, so tolerate it
-           and clear the whole error. In that case we continue with
-           modified files left on the disk. */
-        svn_error_clear(err);
-        return SVN_NO_ERROR;
-      }
-
-  /* Otherwise, we just return our top-most error. */
-  return err;
-}
-
-
 /* ===================================================================== */
 /* Checking for local modifications. */
 
@@ -2166,16 +2135,16 @@ do_entry_deletion(struct edit_baton *eb,
         {
           /* The item exists locally and has some sort of local mod.
            * It no longer exists in the repository at its target URL@REV.
-           * (### If its WC parent was not updated similarly, then it needs to
-           * be marked 'deleted' in its WC parent.)
+           *
            * To prepare the "accept mine" resolution for the tree conflict,
            * we must schedule the existing content for re-addition as a copy
            * of what it was, but with its local modifications preserved. */
 
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
+          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, FALSE,
                                                pool));
 
-          return SVN_NO_ERROR;
+          /* Fall through to remove the BASE_NODEs properly, with potentially
+             keeping a not-present marker */
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
         {
@@ -2190,28 +2159,18 @@ do_entry_deletion(struct edit_baton *eb,
         {
           /* The item was locally replaced with something else. We should
            * remove the BASE node below the new working node, which turns
-           * the replacement in an addition.
-           */
-
-          /* ### This does something similar, but not exactly what is
-             ### required: Copy working to working and then delete
-             ### BASE_NODE. Not exactly right, but not
-             ### completely wrong as the result is the same.
-
-             ### It only misses the explicit target check for adding
-             ### back a not-present node. */
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
-                                               pool));
-
-          return SVN_NO_ERROR;
+           * the replacement in an addition. */
+           
+           /* Fall through to the normal "delete" code path. */
         }
       else
         SVN_ERR_MALFUNCTION();  /* other reasons are not expected here */
     }
 
-  /* Issue a loggy command to delete the entry from version control and to
-     delete it from disk if unmodified, but leave any modified files on disk
-     unversioned.
+  /* Issue a wq operation to delete the BASE_NODE data and to delete actual
+     nodes based on that from disk, but leave any WORKING_NODEs on disk.
+
+     Local modifications are already turned into copies at this point.
 
      If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
@@ -2219,58 +2178,21 @@ do_entry_deletion(struct edit_baton *eb,
   if (strcmp(local_abspath, eb->target_abspath) != 0)
     {
       /* Delete, and do not leave a not-present node.  */
-      SVN_ERR(svn_wc__loggy_delete_entry(&work_item,
-                                         eb->db, dir_abspath, local_abspath,
-                                         SVN_INVALID_REVNUM,
-                                         svn_wc__db_kind_unknown,
-                                         pool));
+      SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
+                                           eb->db, local_abspath, FALSE,
+                                           pool, pool));
       SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
     }
   else
     {
       /* Delete, leaving a not-present node.  */
-      SVN_ERR(svn_wc__loggy_delete_entry(&work_item,
-                                         eb->db, dir_abspath, local_abspath,
-                                         *eb->target_revision,
-                                         kind,
-                                         pool));
+      SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
+                                           eb->db, local_abspath, TRUE,
+                                           pool, pool));
       SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
       eb->target_deleted = TRUE;
     }
 
-  if (eb->switch_relpath)
-    {
-      /* The SVN_WC__LOG_DELETE_ENTRY log item will cause
-       * svn_wc_remove_from_revision_control() to be run.  But that
-       * function checks whether the deletion target's URL is child of
-       * its parent directory's URL, and if it's not, then the entry
-       * in parent won't be deleted (because presumably the child
-       * represents a disjoint working copy, i.e., it is a wc_root).
-       *
-       * However, during a switch this works against us, because by
-       * the time we get here, the parent's URL has already been
-       * changed.  So we manually remove the child from revision
-       * control after the delete-entry item has been written in the
-       * parent's log, but before it is run, so the only work left for
-       * the log item is to remove the entry in the parent directory.
-       */
-
-      if (kind == svn_wc__db_kind_dir)
-        {
-          SVN_ERR(leftmod_error_chain(
-                    svn_wc__internal_remove_from_revision_control(
-                      eb->db,
-                      local_abspath,
-                      TRUE, /* destroy */
-                      FALSE, /* instant error */
-                      eb->cancel_func,
-                      eb->cancel_baton,
-                      pool)));
-        }
-    }
-
-  /* Note: these two lines are duplicated in the tree-conflicts bail out
-   * above. */
   SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          pool));

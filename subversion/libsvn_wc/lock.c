@@ -35,7 +35,6 @@
 #include "adm_files.h"
 #include "lock.h"
 #include "props.h"
-#include "log.h"
 #include "wc_db.h"
 
 #include "svn_private_config.h"
@@ -1775,13 +1774,14 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
                            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
-  apr_pool_t *iterpool;
-  const apr_array_header_t *children;
   apr_uint64_t id;
   svn_skel_t *work_item;
+#ifndef SVN_WC__SINGLE_DB
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
   svn_boolean_t locked_here;
   int i;
+#endif
 
 #ifndef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__db_wclock_owns_lock(&locked_here, wc_ctx->db, local_abspath,
@@ -1818,6 +1818,7 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
     {
       const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
+      svn_wc__db_kind_t kind;
 
       svn_pool_clear(iterpool);
       child_abspath = svn_dirent_join(local_abspath, child_relpath, iterpool);

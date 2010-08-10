@@ -176,6 +176,9 @@ ambient_read_info(svn_boolean_t *hidden,
         case svn_wc__db_status_absent:
         case svn_wc__db_status_excluded:
           *hidden = TRUE;
+          break;
+        default:
+          break;
       }
 
   return SVN_NO_ERROR;
