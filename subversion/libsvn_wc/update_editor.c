@@ -496,7 +496,7 @@ cleanup_dir_baton(void *dir_baton)
   apr_pool_t *pool = apr_pool_parent_get(db->pool);
 
   err = svn_wc__wq_run(eb->db, db->local_abspath,
-                       eb->cancel_func, eb->cancel_baton,
+                       NULL /* cancel_func */, NULL /* cancel_baton */,
                        pool);
 
   if (err)
