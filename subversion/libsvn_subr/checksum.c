@@ -29,6 +29,7 @@
 
 #include "svn_checksum.h"
 #include "svn_error.h"
+#include "svn_ctype.h"
 
 #include "sha1.h"
 #include "md5.h"
@@ -206,12 +207,15 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 
   for (i = 0; i < len; i++)
     {
-      if ((! isxdigit(hex[i * 2])) || (! isxdigit(hex[i * 2 + 1])))
+      if ((! svn_ctype_isxdigit(hex[i * 2])) ||
+          (! svn_ctype_isxdigit(hex[i * 2 + 1])))
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
       ((unsigned char *)(*checksum)->digest)[i] =
-        (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
-        ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
+        ((svn_ctype_isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10
+                                      : hex[i*2] - '0') << 4) |
+        (svn_ctype_isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10
+                                       : hex[i*2+1] - '0');
       is_zeros |= (*checksum)->digest[i];
     }
 

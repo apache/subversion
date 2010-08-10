@@ -29,6 +29,8 @@
 #include "svn_dirent_uri.h"
 #include "svn_checksum.h"
 
+#include "internal_statements.h"
+
 #include "private/svn_sqlite.h"
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
@@ -48,6 +50,9 @@
   #include <sqlite3.h>
 #endif
 
+INTERNAL_STATEMENTS_SQL_DECLARE_STATEMENTS(internal_statements);
+
+
 #ifdef SQLITE3_DEBUG
 /* An sqlite query execution callback. */
 static void
@@ -65,7 +70,7 @@ struct svn_sqlite__db_t
   const char * const *statement_strings;
   int nbr_statements;
   svn_sqlite__stmt_t **prepared_stmts;
-  apr_pool_t *result_pool;
+  apr_pool_t *state_pool;
 };
 
 struct svn_sqlite__stmt_t
@@ -136,11 +141,11 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
   if (db->prepared_stmts[stmt_idx] == NULL)
     SVN_ERR(svn_sqlite__prepare(&db->prepared_stmts[stmt_idx], db,
                                 db->statement_strings[stmt_idx],
-                                db->result_pool));
+                                db->state_pool));
 
   *stmt = db->prepared_stmts[stmt_idx];
 
-  if ((*stmt)->needs_reset);
+  if ((*stmt)->needs_reset)
     return svn_error_return(svn_sqlite__reset(*stmt));
 
   return SVN_NO_ERROR;
@@ -668,7 +673,7 @@ static volatile svn_atomic_t sqlite_init_state;
    manner. */
 /* Don't call this function directly!  Use svn_atomic__init_once(). */
 static svn_error_t *
-init_sqlite(apr_pool_t *pool)
+init_sqlite(void *baton, apr_pool_t *pool)
 {
   if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
     {
@@ -819,7 +824,8 @@ svn_sqlite__get_schema_version(int *version,
 {
   svn_sqlite__db_t db;
 
-  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state,
+                                init_sqlite, NULL, scratch_pool));
   SVN_ERR(internal_open(&db.db3, path, svn_sqlite__mode_readonly,
                         scratch_pool));
   SVN_ERR(svn_sqlite__read_schema_version(version, &db, scratch_pool));
@@ -874,7 +880,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state,
+                                init_sqlite, NULL, scratch_pool));
 
   *db = apr_pcalloc(result_pool, sizeof(**db));
 
@@ -927,7 +934,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   else
     (*db)->nbr_statements = 0;
 
-  (*db)->result_pool = result_pool;
+  (*db)->state_pool = result_pool;
   apr_pool_cleanup_register(result_pool, *db, close_apr, apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
@@ -936,7 +943,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db)
 {
-  apr_status_t result = apr_pool_cleanup_run(db->result_pool, db, close_apr);
+  apr_status_t result = apr_pool_cleanup_run(db->state_pool, db, close_apr);
 
   if (result == APR_SUCCESS)
     return SVN_NO_ERROR;
@@ -963,4 +970,69 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
     }
 
   return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));
+}
+
+svn_error_t *
+svn_sqlite__hotcopy(const char *src_path,
+                    const char *dst_path,
+                    apr_pool_t *scratch_pool)
+{
+  svn_sqlite__db_t *src_db;
+
+  SVN_ERR(svn_sqlite__open(&src_db, src_path, svn_sqlite__mode_readonly,
+                           internal_statements, 0, NULL,
+                           scratch_pool, scratch_pool));
+
+#if SQLITE_VERSION_AT_LEAST(3,6,11)
+  {
+    svn_sqlite__db_t *dst_db;
+    sqlite3_backup *backup;
+    int rc1, rc2;
+
+    SVN_ERR(svn_sqlite__open(&dst_db, dst_path, svn_sqlite__mode_rwcreate,
+                             NULL, 0, NULL, scratch_pool, scratch_pool));
+    backup = sqlite3_backup_init(dst_db->db3, "main", src_db->db3, "main");
+    if (!backup)
+      return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
+                               _("SQLite hotcopy failed for %s"), src_path);
+    do
+      {
+        /* Pages are usually 1024 byte (SQLite docs). On my laptop
+           copying gets faster as the number of pages is increased up
+           to about 64, beyond that speed levels off.  Lets put the
+           number of pages an order of magnitude higher, this is still
+           likely to be a fraction of large databases. */
+        rc1 = sqlite3_backup_step(backup, 1024);
+
+        /* Should we sleep on SQLITE_OK?  That would make copying a
+           large database take much longer.  When we do sleep how,
+           long should we sleep?  Should the sleep get longer if we
+           keep getting BUSY/LOCKED?  I have no real reason for
+           choosing 25. */
+        if (rc1 == SQLITE_BUSY || rc1 == SQLITE_LOCKED)
+          sqlite3_sleep(25);
+      }
+    while (rc1 == SQLITE_OK || rc1 == SQLITE_BUSY || rc1 == SQLITE_LOCKED);
+    rc2 = sqlite3_backup_finish(backup);
+    if (rc1 != SQLITE_DONE)
+      SQLITE_ERR(rc1, dst_db);
+    SQLITE_ERR(rc2, dst_db);
+    SVN_ERR(svn_sqlite__close(dst_db));
+  }
+#else
+  {
+    svn_sqlite__stmt_t *stmt;
+    /* The SELECT takes a shared lock in the source database which
+       blocks writers and so ensures that the database won't change
+       during the copy. */
+    SVN_ERR(svn_sqlite__get_statement(&stmt, src_db,
+                                      STMT_DUMMY_SELECT_FOR_BACKUP));
+    SVN_ERR(svn_sqlite__step_row(stmt));
+    SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, scratch_pool));
+  }
+#endif
+
+  SVN_ERR(svn_sqlite__close(src_db));
+
+  return SVN_NO_ERROR;
 }

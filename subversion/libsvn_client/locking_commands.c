@@ -320,10 +320,9 @@ organize_lock_targets(const char **common_parent_url,
                 {
                   const char *lock_token;
 
-                  SVN_ERR(svn_wc__node_get_lock_token(&lock_token,
-                                                      ctx->wc_ctx,
-                                                      abs_path,
-                                                      pool, subpool));
+                  SVN_ERR(svn_wc__node_get_lock_info(&lock_token, NULL, NULL,
+                                                     NULL, ctx->wc_ctx,
+                                                     abs_path, pool, subpool));
                   if (! lock_token)
                     return svn_error_createf
                       (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
@@ -391,6 +390,7 @@ svn_client_lock(const apr_array_header_t *targets,
                 apr_pool_t *pool)
 {
   const char *base_dir;
+  const char *base_dir_abspath = NULL;
   const char *common_parent_url;
   svn_ra_session_t *ra_session;
   apr_hash_t *path_revs, *urls_to_paths;
@@ -413,6 +413,8 @@ svn_client_lock(const apr_array_header_t *targets,
                                 ctx, pool));
 
   /* Open an RA session to the common parent of TARGETS. */
+  if (base_dir)
+    SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common_parent_url,
                         base_dir, NULL, FALSE, FALSE, ctx, pool));
 
@@ -435,6 +437,7 @@ svn_client_unlock(const apr_array_header_t *targets,
                   apr_pool_t *pool)
 {
   const char *base_dir;
+  const char *base_dir_abspath = NULL;
   const char *common_parent_url;
   svn_ra_session_t *ra_session;
   apr_hash_t *path_tokens, *urls_to_paths;
@@ -448,8 +451,10 @@ svn_client_unlock(const apr_array_header_t *targets,
                                 ctx, pool));
 
   /* Open an RA session. */
+  if (base_dir)
+    SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common_parent_url,
-                        base_dir, NULL, FALSE, FALSE, ctx, pool));
+                        base_dir_abspath, NULL, FALSE, FALSE, ctx, pool));
 
   /* If break_lock is not set, lock tokens are required by the server.
      If the targets were all URLs, ensure that we provide lock tokens,

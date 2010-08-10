@@ -1,5 +1,5 @@
 /*
- * update.c: handle the update-report request and response
+ * update.c: mod_dav_svn REPORT handler for transmitting tree deltas
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -924,6 +924,7 @@ dav_svn__update_report(const dav_resource *resource,
   void *rbaton = NULL;
   update_ctx_t uc = { 0 };
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
+  svn_boolean_t revnum_is_head = FALSE;
   svn_revnum_t from_revnum = SVN_INVALID_REVNUM;
   int ns;
   /* entry_counter and entry_is_empty are for operational logging. */
@@ -1131,6 +1132,7 @@ dav_svn__update_report(const dav_resource *resource,
                                     "Could not determine the youngest "
                                     "revision for the update process.",
                                     resource->pool);
+      revnum_is_head = TRUE;
     }
 
   uc.svndiff_version = resource->info->svndiff_version;
@@ -1246,6 +1248,21 @@ dav_svn__update_report(const dav_resource *resource,
                   {
                     rev = SVN_STR_TO_REV(this_attr->value);
                     saw_rev = TRUE;
+                    if (revnum_is_head && rev > revnum)
+                      {
+                        /* ### This error could be improved with more details
+                           ### if we know  that this repository is a slave
+                           ### repository in a master-slave setup. */
+                        return dav_svn__new_error_tag(
+                                            resource->pool,
+                                            HTTP_INTERNAL_SERVER_ERROR,
+                                            0,
+                                            "A reported revision is higher"
+                                            " than the current HEAD revision"
+                                            " of the repository.",
+                                            SVN_DAV_ERROR_NAMESPACE,
+                                            SVN_DAV_ERROR_TAG);
+                      }
                   }
                 else if (strcmp(this_attr->name, "depth") == 0)
                   depth = svn_depth_from_word(this_attr->value);
@@ -1327,13 +1344,7 @@ dav_svn__update_report(const dav_resource *resource,
   /* Try to deduce what sort of client command is being run, then
      make this guess available to apache's logging subsystem. */
   {
-    const char *action, *spath, *log_depth;
-
-    if (requested_depth == svn_depth_unknown)
-      log_depth = "";
-    else
-      log_depth = apr_pstrcat(resource->pool, " depth=",
-                              svn_depth_to_word(requested_depth), NULL);
+    const char *action, *spath;
 
     if (target)
       spath = svn_path_join(src_path, target, resource->pool);

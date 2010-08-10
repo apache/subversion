@@ -19,27 +19,35 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
+ *
+ * @file InputStream.h
+ * @brief Interface of the class InputStream
  */
 
-package org.apache.subversion.javahl;
+#ifndef INPUT_STREAM_H
+#define INPUT_STREAM_H
 
-import java.io.IOException;
+#include <jni.h>
+#include "svn_io.h"
+#include "Pool.h"
 
 /**
- * Interface to send data to subversion used by SVNAdmin.load.
+ * This class contains a Java objects implementing the interface InputStream and
+ * implements the functions read & close of svn_stream_t.
  */
-public interface IOutput
+class InputStream
 {
-    /**
-     * write the bytes in data to java
-     * @param data          the data to be writtem
-     * @throws IOException  throw in case of problems.
-     */
-    public int write(byte[] data) throws IOException;
+ private:
+  /**
+   * A local reference to the Java object.
+   */
+  jobject m_jthis;
+  static svn_error_t *read(void *baton, char *buffer, apr_size_t *len);
+  static svn_error_t *close(void *baton);
+ public:
+  InputStream(jobject jthis);
+  ~InputStream();
+  svn_stream_t *getStream(const SVN::Pool &pool);
+};
 
-    /**
-     * close the output
-     * @throws IOException throw in case of problems.
-     */
-    public void close() throws IOException;
-}
+#endif // INPUT_STREAM_H

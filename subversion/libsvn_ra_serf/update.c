@@ -2185,15 +2185,12 @@ finish_report(void *report_baton,
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_ra_serf__list_t *done_list;
   const char *report_target;
-  apr_hash_t *props;
   apr_status_t status;
   svn_boolean_t closed_root;
   int status_code, i;
 
   svn_ra_serf__add_close_tag_buckets(report->buckets, report->sess->bkt_alloc,
                                      "S:update-report");
-
-  props = apr_hash_make(pool);
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL, pool));
 

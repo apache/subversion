@@ -1,5 +1,6 @@
 /*
- * deleted-rev :  routine for getting the revision a path was deleted.
+ * deleted-rev.c: mod_dav_svn REPORT handler for getting the rev in
+ *                which a path was deleted
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

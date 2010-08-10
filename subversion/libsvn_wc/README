@@ -1,5 +1,13 @@
      Oh Most High and Fragrant Emacs, please be in -*- text -*- mode!
 
+##############################################################################
+### The vast majority of this file is completely out-of-date as a result   ###
+### of the ongoing work known as WC-NG.  Please consult that documentation ###
+### for a more relevant and complete reference.                            ###
+### (See the files in notes/wc-ng )                                        ###
+##############################################################################
+
+
 This is the library described in the section "The working copy
 management library" of svn-design.texi.  It performs local operations
 in the working copy, tweaking administrative files and versioned data.

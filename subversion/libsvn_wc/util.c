@@ -543,3 +543,54 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
 
   return new_conflict;
 }
+
+svn_error_t *
+svn_wc__status2_from_3(svn_wc_status2_t **status,
+                       const svn_wc_status3_t *old_status, 
+                       svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  const svn_wc_entry_t *entry;
+  const svn_wc_conflict_description2_t *tree_conflict;
+  svn_wc_conflict_description_t *old_tree_conflict;
+
+  if (old_status == NULL)
+    {
+      *status = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  *status = apr_pcalloc(result_pool, sizeof(**status));
+
+  SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
+                            svn_node_unknown, FALSE, result_pool,
+                            scratch_pool));
+
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, wc_ctx->db,
+                                           local_abspath, scratch_pool,
+                                           scratch_pool));
+  old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
+
+  (*status)->entry = entry;
+  (*status)->text_status = old_status->text_status;
+  (*status)->prop_status = old_status->prop_status;
+  (*status)->locked = old_status->locked;
+  (*status)->copied = old_status->copied;
+  (*status)->switched = old_status->switched;
+  (*status)->repos_text_status = old_status->repos_text_status;
+  (*status)->repos_prop_status = old_status->repos_prop_status;
+  (*status)->repos_lock = svn_lock_dup(old_status->repos_lock, result_pool);
+  (*status)->url = apr_pstrdup(result_pool, old_status->url);
+  (*status)->ood_last_cmt_rev = old_status->ood_last_cmt_rev;
+  (*status)->ood_last_cmt_date = old_status->ood_last_cmt_date;
+  (*status)->ood_kind = old_status->ood_kind;
+  (*status)->ood_last_cmt_author = old_status->ood_last_cmt_author;
+  (*status)->tree_conflict = old_tree_conflict;
+  (*status)->file_external = old_status->file_external;
+  (*status)->pristine_text_status = old_status->pristine_text_status;
+  (*status)->pristine_prop_status = old_status->pristine_prop_status;
+
+  return SVN_NO_ERROR;
+}

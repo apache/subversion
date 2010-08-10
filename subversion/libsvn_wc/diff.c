@@ -125,6 +125,103 @@ reverse_propchanges(apr_hash_t *baseprops,
 }
 
 
+/* Set *RESULT_ABSPATH to the absolute path to a readable file containing
+   the pristine text of LOCAL_ABSPATH in DB, or to NULL if it does not have
+   any pristine text.  If the node has more than one pristine text, get the
+   one that is "nearest" to the working version.  That means the pristine
+   text of the copied file if this node is copied or moved here, else of the
+   replaced file if it is an add that replaces a file, else of its base
+   node, or NULL if it is a simple add or an add that replaces a non-file.
+
+   Rationale:
+
+   Which text-base do we want to use for the diff?  If the node is replaced
+   by a new file, then the base of the replaced file is called (in WC-1) the
+   "revert base".  If the replacement is a copy or move, then there is also
+   the base of the copied file to consider.
+
+   One could argue that we should never diff against the revert
+   base, and instead diff against the empty-file for both types of
+   replacement.  After all, there is no ancestry relationship
+   between the working file and the base file.  But my guess is that
+   in practice, users want to see the diff between their working
+   file and "the nearest versioned thing", whatever that is.  I'm
+   not 100% sure this is the right decision, but it at least seems
+   to match our test suite's expectations. */
+static svn_error_t *
+get_nearest_pristine_text_as_file(const char **result_abspath,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  const svn_checksum_t *checksum;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &checksum,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+  if (checksum == NULL)
+    {
+      svn_error_t *err;
+
+      err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, &checksum,
+                                     NULL, NULL, NULL,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          checksum = NULL;
+        }
+      else if (err)
+        return svn_error_return(err);
+    }
+
+  if (checksum != NULL)
+    {
+      SVN_ERR(svn_wc__db_pristine_get_path(result_abspath, db, local_abspath,
+                                           checksum,
+                                           result_pool, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+#else
+  svn_error_t *err;
+
+  err = svn_wc__text_base_path_to_read(result_abspath, db, local_abspath,
+                                       result_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+    svn_error_clear(err);
+  else
+    return svn_error_return(err);
+
+  err = svn_wc__text_revert_path_to_read(result_abspath, db, local_abspath,
+                                         result_pool);
+
+  /* If there is no revert base to diff either, don't attempt to diff it.
+     ### This is a band-aid.
+     ### In WC-NG, files added within a copied subtree are marked "copied",
+     ### which will cause the code below to end up calling
+     ### eb->callbacks->file_changed() with a non-existent text-base.
+     ### Not sure how to properly tell apart a file added within a copied
+     ### subtree from a copied file. But eventually we'll have to get the
+     ### base text from the pristine store anyway and use tempfiles (or
+     ### streams, hopefully) for diffing, so this hack will just go away. */
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+    svn_error_clear(err);
+  else
+    return svn_error_return(err);
+#endif
+
+  *result_abspath = NULL;
+  return SVN_NO_ERROR;
+}
+
+
 /*-------------------------------------------------------------------------*/
 
 
@@ -444,66 +541,6 @@ get_prop_mimetype(apr_hash_t *props)
 }
 
 
-/* Set *MIMETYPE to the BASE version of the svn:mime-type property of
-   file LOCAL_ABSPATH, using DB, or to NULL if no such property exists.
-   BASEPROPS is optional: if present, use it to cache the BASE properties
-   of the file.
-
-   Return the property value and property hash allocated in RESULT_POOL,
-   use SCRATCH_POOL for temporary accesses.
-*/
-static svn_error_t *
-get_base_mimetype(const char **mimetype,
-                  apr_hash_t **baseprops,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props = NULL;
-
-  if (baseprops == NULL)
-    baseprops = &props;
-
-  if (*baseprops == NULL)
-    SVN_ERR(svn_wc__internal_propdiff(NULL, baseprops, db, local_abspath,
-                                      result_pool, scratch_pool));
-
-  *mimetype = get_prop_mimetype(*baseprops);
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Set *MIMETYPE to the WORKING version of the svn:mime-type property
-   of file LOCAL_ABSPATH, using DB, or to NULL if no such property exists.
-   WORKINGPROPS is optional: if present, use it to cache the WORKING
-   properties of the file.
-
-   Return the property value and property hash allocated in POOL.
-*/
-static svn_error_t *
-get_working_mimetype(const char **mimetype,
-                     apr_hash_t **workingprops,
-                     const char *local_abspath,
-                     svn_wc__db_t *db,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props = NULL;
-
-  if (workingprops == NULL)
-    workingprops = &props;
-
-  if (*workingprops == NULL)
-    SVN_ERR(svn_wc__load_props(NULL, workingprops, db, local_abspath,
-                               result_pool, scratch_pool));
-
-  *mimetype = get_prop_mimetype(*workingprops);
-
-  return SVN_NO_ERROR;
-}
-
 /* Return the property hash resulting from combining PROPS and PROPCHANGES.
  *
  * A note on pool usage: The returned hash and hash keys are allocated in
@@ -529,7 +566,7 @@ apply_propchanges(apr_hash_t *props,
 }
 
 
-/* Called by directory_elements_diff when a file is to be compared. At this
+/* Diff the file PATH against its text base.  At this
  * stage we are dealing with a file that does exist in the working copy.
  *
  * DIR_BATON is the parent directory baton, PATH is the path to the file to
@@ -551,8 +588,9 @@ file_diff(struct dir_baton *db,
   svn_boolean_t replaced;
   svn_wc__db_status_t status;
   svn_revnum_t revision;
-  apr_array_header_t *propchanges = NULL;
-  apr_hash_t *baseprops = NULL;
+  svn_revnum_t revert_base_revnum;
+  svn_boolean_t base_shadowed;
+  svn_wc__db_status_t base_status;
   const char *local_abspath;
 
   SVN_ERR_ASSERT(! eb->use_text_base);
@@ -570,82 +608,46 @@ file_diff(struct dir_baton *db,
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, eb->db, local_abspath,
-                               pool, pool));
+                               &base_shadowed, NULL, NULL,
+                               eb->db, local_abspath, pool, pool));
+  if (base_shadowed)
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     eb->db, local_abspath, pool, pool));
 
+  replaced = ((status == svn_wc__db_status_added
+               || status == svn_wc__db_status_obstructed_add)
+              && base_shadowed
+              && base_status != svn_wc__db_status_not_present);
+
+  /* Now refine ADDED to one of: ADDED, COPIED, MOVED_HERE. Note that only
+     the latter two have corresponding pristine info to diff against.  */
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, eb->db, local_abspath,
                                      pool, pool));
 
-  /* Prep these two paths early. */
-  SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath, FALSE,
-                                 pool));
+  /* A wc-wc diff of replaced files actually shows a diff against the
+   * revert-base, showing all previous lines as removed and adding all new
+   * lines. This does not happen for copied/moved-here files, not even with
+   * show_copies_as_adds == TRUE (in which case copy/move is really shown as
+   * an add, diffing against the empty file).
+   * So show the revert-base revision for plain replaces. */
+  if (replaced
+      && ! (status == svn_wc__db_status_copied
+            || status == svn_wc__db_status_moved_here))
+    revision = revert_base_revnum;
 
-  /* If the regular text base is not there, we fall back to the revert
-     text base (if that's not present either, we'll error later).  But
-     the logic here is subtler than one might at first expect.
+  /* Set TEXTBASE to the path to the text-base file that we want to diff
+     against.
 
-     When the file has some non-replacement scheduling, then it can be
-     expected to still have its regular text base.  But what about
-     when it's replaced or replaced-with-history?  In both cases, a
-     revert text-base will be present; in the latter case only, a
-     regular text-base be present as well.  So which text-base do we
-     want to use for the diff?
-
-     One could argue that we should never diff against the revert
-     base, and instead diff against the empty-file for both types of
-     replacement.  After all, there is no ancestry relationship
-     between the working file and the base file.  But my guess is that
-     in practice, users want to see the diff between their working
-     file and "the nearest versioned thing", whatever that is.  I'm
-     not 100% sure this is the right decision, but it at least seems
-     to match our test suite's expectations. */
-  {
-    svn_node_kind_t kind;
-    SVN_ERR(svn_io_check_path(textbase, &kind, pool));
-    if (kind == svn_node_none)
-      SVN_ERR(svn_wc__text_revert_path(&textbase, eb->db, local_abspath,
-                                       pool));
-
-    /* If there is no revert base to diff either, don't attempt to diff it.
-     * ### This is a band-aid.
-     * ### In WC-NG, files added within a copied subtree are marked "copied",
-     * ### which will cause the code below to end up calling
-     * ### eb->callbacks->file_changed() with a non-existent text-base.
-     * ### Not sure how to properly tell apart a file added within a copied
-     * ### subtree from a copied file. But eventually we'll have to get the
-     * ### base text from the pristine store anyway and use tempfiles (or
-     * ### streams, hopefully) for diffing, so all this horrible statting
-     * ### the disk for text bases, and this hack, will just go away. */
-    SVN_ERR(svn_io_check_path(textbase, &kind, pool));
-    if (kind == svn_node_none)
-      textbase = NULL;
-  }
+     ### There shouldn't be cases where the result is NULL, but at present
+     there might be - see get_nearest_pristine_text_as_file(). */
+  SVN_ERR(get_nearest_pristine_text_as_file(&textbase, eb->db, local_abspath,
+                                            pool, pool));
 
   SVN_ERR(get_empty_file(eb, &empty_file));
-
-  /* Get property diffs if this is not schedule delete. */
-  if (status != svn_wc__db_status_deleted)
-    {
-      svn_boolean_t modified;
-
-      SVN_ERR(svn_wc__props_modified(&modified, eb->db, local_abspath,
-                                     pool));
-      if (modified)
-        SVN_ERR(svn_wc__internal_propdiff(&propchanges, &baseprops, eb->db,
-                                          local_abspath, pool, pool));
-      else
-        propchanges = apr_array_make(pool, 1, sizeof(svn_prop_t));
-    }
-  else
-    {
-      SVN_ERR(svn_wc__internal_propdiff(NULL, &baseprops, eb->db,
-                                        local_abspath, pool, pool));
-    }
-
-  SVN_ERR(svn_wc__internal_is_replaced(&replaced, eb->db, local_abspath,
-                                       pool));
 
   /* Delete compares text-base against empty file, modifications to the
    * working-copy version of the deleted file are not wanted.
@@ -657,10 +659,12 @@ file_diff(struct dir_baton *db,
       (replaced && ! eb->ignore_ancestry))
     {
       const char *base_mimetype;
+      apr_hash_t *baseprops;
 
-      /* Get svn:mime-type from BASE props of PATH. */
-      SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
-                                local_abspath, pool, pool));
+      /* Get svn:mime-type from pristine props (in BASE or WORKING) of PATH. */
+      SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
+                                         pool, pool));
+      base_mimetype = get_prop_mimetype(baseprops);
 
       SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, NULL, path,
                                           textbase,
@@ -690,14 +694,24 @@ file_diff(struct dir_baton *db,
     {
       const char *translated = NULL;
       const char *working_mimetype;
+      apr_hash_t *baseprops;
+      apr_hash_t *workingprops;
+      apr_array_header_t *propchanges;
 
-      /* Get svn:mime-type from working props of PATH. */
-      SVN_ERR(get_working_mimetype(&working_mimetype, NULL, local_abspath,
-                                   eb->db, pool, pool));
+      /* Get svn:mime-type from ACTUAL props of PATH. */
+      SVN_ERR(svn_wc__get_actual_props(&workingprops, eb->db, local_abspath,
+                                       pool, pool));
+      working_mimetype = get_prop_mimetype(workingprops);
+
+      /* Set the original properties to empty, then compute "changes" from
+         that. Essentially, all ACTUAL props will be "added".  */
+      baseprops = apr_hash_make(pool);
+      SVN_ERR(svn_prop_diffs(&propchanges, workingprops, baseprops, pool));
 
       SVN_ERR(svn_wc__internal_translated_file(
               &translated, local_abspath, eb->db, local_abspath,
               SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+              eb->cancel_func, eb->cancel_baton,
               pool, pool));
 
       SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL, NULL, path,
@@ -715,6 +729,11 @@ file_diff(struct dir_baton *db,
     {
       svn_boolean_t modified;
       const char *translated = NULL;
+      apr_hash_t *baseprops;
+      const char *base_mimetype;
+      const char *working_mimetype;
+      apr_hash_t *workingprops;
+      apr_array_header_t *propchanges;
 
       /* Here we deal with showing pure modifications. */
 
@@ -729,22 +748,45 @@ file_diff(struct dir_baton *db,
              already expensive, translating twice for the sake of code
              modularity is liveable. */
           SVN_ERR(svn_wc__internal_translated_file(
-                   &translated, local_abspath, eb->db, local_abspath,
-                   SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
-                   pool, pool));
+                    &translated, local_abspath, eb->db, local_abspath,
+                    SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+                    eb->cancel_func, eb->cancel_baton,
+                    pool, pool));
         }
+
+      /* Get the properties, the svn:mime-type values, and compute the
+         differences between the two.  */
+      if (replaced
+          && eb->ignore_ancestry)
+        {
+          /* We don't want the normal pristine properties (which are
+             from the WORKING tree). We want the pristines associated
+             with the BASE tree, which are saved as "revert" props.  */
+          SVN_ERR(svn_wc__get_revert_props(&baseprops,
+                                           eb->db, local_abspath,
+                                           pool, pool));
+        }
+      else
+        {
+          /* We can only fetch the pristine props (from BASE or WORKING) if
+             the node has not been replaced, or it was copied/moved here.  */
+          SVN_ERR_ASSERT(!replaced
+                         || status == svn_wc__db_status_copied
+                         || status == svn_wc__db_status_moved_here);
+
+          SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
+                                             pool, pool));
+        }
+      base_mimetype = get_prop_mimetype(baseprops);
+
+      SVN_ERR(svn_wc__get_actual_props(&workingprops, eb->db, local_abspath,
+                                       pool, pool));
+      working_mimetype = get_prop_mimetype(workingprops);
+
+      SVN_ERR(svn_prop_diffs(&propchanges, workingprops, baseprops, pool));
 
       if (modified || propchanges->nelts > 0)
         {
-          const char *base_mimetype;
-          const char *working_mimetype;
-
-          /* Get svn:mime-type for both base and working file. */
-          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
-                                    local_abspath, pool, pool));
-          SVN_ERR(get_working_mimetype(&working_mimetype, NULL, local_abspath,
-                                       eb->db, pool, pool));
-
           SVN_ERR(eb->callbacks->file_changed(NULL, NULL, NULL, NULL,
                                               path,
                                               modified ? textbase : NULL,
@@ -982,25 +1024,28 @@ report_wc_file_as_added(struct dir_baton *db,
   emptyprops = apr_hash_make(pool);
 
   if (eb->use_text_base)
-    SVN_ERR(get_base_mimetype(&mimetype, &wcprops, eb->db, local_abspath,
-                              pool, pool));
+    SVN_ERR(svn_wc__get_pristine_props(&wcprops, eb->db, local_abspath,
+                                       pool, pool));
   else
-    SVN_ERR(get_working_mimetype(&mimetype, &wcprops, local_abspath,
-                                 eb->db, pool, pool));
+    SVN_ERR(svn_wc__get_actual_props(&wcprops, eb->db, local_abspath,
+                                     pool, pool));
+  mimetype = get_prop_mimetype(wcprops);
 
   SVN_ERR(svn_prop_diffs(&propchanges,
                          wcprops, emptyprops, pool));
 
 
   if (eb->use_text_base)
-    SVN_ERR(svn_wc__text_base_path(&source_file, eb->db, local_abspath, FALSE,
-                                   pool));
+    SVN_ERR(svn_wc__text_base_path_to_read(&source_file,
+                                           eb->db, local_abspath,
+                                           pool, pool));
   else
     source_file = path;
 
   SVN_ERR(svn_wc__internal_translated_file(
            &translated_file, source_file, eb->db, local_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+           eb->cancel_func, eb->cancel_baton,
            pool, pool));
 
   SVN_ERR(eb->callbacks->file_added(db->local_abspath,
@@ -1049,11 +1094,11 @@ report_wc_directory_as_added(struct dir_baton *db,
                                         eb->changelist_hash, pool))
     {
       if (eb->use_text_base)
-        SVN_ERR(svn_wc__internal_propdiff(NULL, &wcprops, eb->db, dir_abspath,
-                                          pool, pool));
+        SVN_ERR(svn_wc__get_pristine_props(&wcprops, eb->db, dir_abspath,
+                                           pool, pool));
       else
-        SVN_ERR(svn_wc__load_props(NULL, &wcprops, eb->db, dir_abspath,
-                                   pool, pool));
+        SVN_ERR(svn_wc__get_actual_props(&wcprops, eb->db, dir_abspath,
+                                         pool, pool));
 
       SVN_ERR(svn_prop_diffs(&propchanges, wcprops, emptyprops, pool));
 
@@ -1221,11 +1266,13 @@ delete_entry(const char *path,
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
 
-          SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath,
-                                         FALSE, pool));
+          SVN_ERR(svn_wc__text_base_path_to_read(&textbase,
+                                                 eb->db, local_abspath,
+                                                 pool, pool));
 
-          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
-                                    local_abspath, pool, pool));
+          SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
+                                             pool, pool));
+          base_mimetype = get_prop_mimetype(baseprops);
 
           SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, NULL, full_path,
                                               textbase,
@@ -1332,19 +1379,22 @@ close_directory(void *dir_baton,
         {
           if (db->eb->use_text_base)
             {
-              SVN_ERR(svn_wc__internal_propdiff(NULL, &originalprops, eb->db,
-                                                db->local_abspath, pool, pool));
+              SVN_ERR(svn_wc__get_pristine_props(&originalprops,
+                                                 eb->db, db->local_abspath,
+                                                 pool, pool));
             }
           else
             {
               apr_hash_t *base_props, *repos_props;
 
-              SVN_ERR(svn_wc__load_props(NULL, &originalprops,
-                                         eb->db, db->local_abspath, pool, pool));
+              SVN_ERR(svn_wc__get_actual_props(&originalprops,
+                                               eb->db, db->local_abspath,
+                                               pool, pool));
 
               /* Load the BASE and repository directory properties. */
-              SVN_ERR(svn_wc__internal_propdiff(NULL, &base_props, eb->db,
-                                                db->local_abspath, pool, pool));
+              SVN_ERR(svn_wc__get_pristine_props(&base_props,
+                                                 eb->db, db->local_abspath,
+                                                 pool, pool));
 
               repos_props = apply_propchanges(base_props, db->propchanges);
 
@@ -1575,8 +1625,8 @@ close_file(void *file_baton,
   if (fb->added)
     base_props = apr_hash_make(pool);
   else
-    SVN_ERR(svn_wc__internal_propdiff(NULL, &base_props, eb->db,
-                                      fb->local_abspath, pool, pool));
+    SVN_ERR(svn_wc__get_pristine_props(&base_props, eb->db,
+                                       fb->local_abspath, pool, pool));
 
   repos_props = apply_propchanges(base_props, fb->propchanges);
 
@@ -1587,8 +1637,9 @@ close_file(void *file_baton,
      the same as BASE. */
   temp_file_path = fb->temp_file_path;
   if (!temp_file_path)
-    SVN_ERR(svn_wc__text_base_path(&temp_file_path, eb->db, fb->local_abspath,
-                                   FALSE, fb->pool));
+    SVN_ERR(svn_wc__text_base_path_to_read(&temp_file_path,
+                                           eb->db, fb->local_abspath,
+                                           fb->pool, pool));
 
   /* If the file isn't in the working copy (either because it was added
      in the BASE->repos diff or because we're diffing against WORKING
@@ -1651,13 +1702,15 @@ close_file(void *file_baton,
   if (modified)
     {
       if (eb->use_text_base)
-        SVN_ERR(svn_wc__text_base_path(&localfile, eb->db, fb->local_abspath,
-                                       FALSE, fb->pool));
+        SVN_ERR(svn_wc__text_base_path_to_read(&localfile,
+                                               eb->db, fb->local_abspath,
+                                               fb->pool, pool));
       else
         /* a detranslated version of the working file */
         SVN_ERR(svn_wc__internal_translated_file(
                  &localfile, fb->local_abspath, eb->db, fb->local_abspath,
                  SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+                 eb->cancel_func, eb->cancel_baton,
                  pool, pool));
     }
   else
@@ -1669,8 +1722,9 @@ close_file(void *file_baton,
     }
   else
     {
-      SVN_ERR(svn_wc__load_props(NULL, &originalprops, eb->db,
-                                 fb->local_abspath, pool, pool));
+      SVN_ERR(svn_wc__get_actual_props(&originalprops,
+                                       eb->db, fb->local_abspath,
+                                       pool, pool));
 
       /* We have the repository properties in repos_props, and the
          WORKING properties in originalprops.  Recalculate
@@ -1797,6 +1851,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   void *inner_baton;
   svn_delta_editor_t *tree_editor;
   const svn_delta_editor_t *inner_editor;
+  const char *anchor_abspath;
 
   SVN_ERR(make_edit_baton(&eb,
                           wc_ctx->db,
@@ -1826,12 +1881,14 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   inner_editor = tree_editor;
   inner_baton = eb;
 
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor_path, result_pool));
+
   if (depth == svn_depth_unknown)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
                                                 inner_editor,
                                                 inner_baton,
-                                                anchor_path,
+                                                anchor_abspath,
                                                 target,
                                                 wc_ctx->db,
                                                 result_pool));

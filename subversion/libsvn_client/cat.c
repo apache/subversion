@@ -68,8 +68,7 @@ cat_local_file(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
-  SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE,
-                                scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
 
   if (kind == svn_node_unknown || kind == svn_node_none)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -86,18 +85,17 @@ cat_local_file(svn_wc_context_t *wc_ctx,
     {
       SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
                                             scratch_pool, scratch_pool));
-
       if (input == NULL)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                  _("'%s' has no base revision until it is committed"),
                  svn_dirent_local_style(local_abspath, scratch_pool));
 
-      SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, local_abspath,
-                                     scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc_get_pristine_props(&props, wc_ctx, local_abspath,
+                                        scratch_pool, scratch_pool));
     }
   else
     {
-      svn_wc_status2_t *status;
+      svn_wc_status3_t *status;
 
       SVN_ERR(svn_stream_open_readonly(&input, local_abspath, scratch_pool,
                                        scratch_pool));

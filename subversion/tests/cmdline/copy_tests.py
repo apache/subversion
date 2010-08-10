@@ -980,7 +980,7 @@ def repos_to_wc(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
-    'pi' : Item(status='A ',  wc_rev='1'),
+    'pi' : Item(status='A ',  wc_rev='0', entry_rev='1'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
@@ -1735,7 +1735,13 @@ def mixed_wc_to_url(sbox):
 
   wc_dir = sbox.wc_dir
   Z_url = sbox.repo_url + '/A/D/Z'
+  Z2_url = sbox.repo_url + '/A/D/Z2'
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  X_path = os.path.join(wc_dir, 'A', 'D', 'G', 'X')
+  Y_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Y')
+  E_path = os.path.join(wc_dir, 'A', 'D', 'G', 'X', 'E')
+  alpha_path = os.path.join(wc_dir, 'A', 'D', 'G', 'X', 'E', 'alpha')
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
 
@@ -1752,10 +1758,46 @@ def mixed_wc_to_url(sbox):
   # Make another modification to A/D/G/rho, but don't commit it.
   svntest.main.file_append(rho_path, "Second modification to rho.\n")
 
+  # Copy into the source, delete part of the copy, add a non-copied directory
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', B_path, X_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', Y_path)
+
   # Now copy local A/D/G to create new directory A/D/Z the repository.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', '-m', "Make a copy.",
                                      G_path, Z_url)
+  expected_output = svntest.verify.UnorderedOutput([
+    'A + A/D/Z/\n',
+    '    (from A/D/G/:r1)\n',
+    'A + A/D/Z/X/\n',
+    '    (from A/B/:r1)\n',
+    'D   A/D/Z/X/E/alpha\n',
+    'A   A/D/Z/Y/\n',
+    'D   A/D/Z/pi\n',
+    'D   A/D/Z/rho\n',
+    'A + A/D/Z/rho\n',
+    '    (from A/D/G/rho:r3)\n',
+    ])
+  svntest.actions.run_and_verify_svnlook(None, expected_output, [],
+                                         'changed', sbox.repo_dir,
+                                         '--copy-info')
+
+  # Copy from copied source
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', "Make a copy.",
+                                     E_path, Z2_url)
+  expected_output = svntest.verify.UnorderedOutput([
+    'A + A/D/Z2/\n',
+    '    (from A/B/E/:r1)\n',
+    'D   A/D/Z2/alpha\n',
+    ])
+  svntest.actions.run_and_verify_svnlook(None, expected_output, [],
+                                         'changed', sbox.repo_dir,
+                                         '--copy-info')
 
   # Check out A/D/Z.  If it has pi, that's a bug; or if its rho does
   # not have the second local mod, that's also a bug.
@@ -1764,7 +1806,7 @@ def mixed_wc_to_url(sbox):
                                      'co', Z_url, wc_dir)
 
   if os.path.exists(os.path.join(wc_dir, 'pi')):
-    raise svntest.Failure
+    raise svntest.Failure("Path 'pi' exists but should be gone.")
 
   fp = open(os.path.join(wc_dir, 'rho'), 'r')
   found_it = 0
@@ -1772,7 +1814,7 @@ def mixed_wc_to_url(sbox):
     if re.match("^Second modification to rho.", line):
       found_it = 1
   if not found_it:
-    raise svntest.Failure
+    raise svntest.Failure("The second modification to rho didn't make it.")
 
 
 #----------------------------------------------------------------------
@@ -4389,6 +4431,36 @@ def nonrecursive_commit_of_copy(sbox):
                                         None,
                                         wc_dir, '--depth', 'immediates')
 
+def copy_added_dir_with_copy(sbox):
+  """copy of new dir with copied file keeps history"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  new_dir = os.path.join(wc_dir, 'NewDir');
+  new_dir2 = os.path.join(wc_dir, 'NewDir2');
+
+  # Alias for svntest.actions.run_and_verify_svn
+  rav_svn = svntest.actions.run_and_verify_svn
+
+  rav_svn(None, None, [], 'mkdir', new_dir)
+  rav_svn(None, None, [], 'cp', os.path.join(wc_dir, 'A', 'mu'), new_dir)
+  rav_svn(None, None, [], 'cp', new_dir, new_dir2)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  expected_status.add(
+    {
+      'NewDir'            : Item(status='A ', wc_rev='0'),
+      'NewDir/mu'         : Item(status='A ', copied='+', wc_rev='-'),
+      'NewDir2'           : Item(status='A ', wc_rev='0'),
+      'NewDir2/mu'        : Item(status='A ', copied='+', wc_rev='-'),
+    })
+
+  # Currently this fails because NewDir2/mu loses its history in the copy
+  # from NewDir to NewDir2
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -4479,6 +4551,7 @@ test_list = [ None,
               XFail(move_below_move),
               reverse_merge_move,
               XFail(nonrecursive_commit_of_copy),
+              XFail(copy_added_dir_with_copy),
              ]
 
 if __name__ == '__main__':

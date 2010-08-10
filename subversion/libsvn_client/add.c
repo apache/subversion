@@ -515,12 +515,16 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
     }
   else if (kind == svn_node_file)
     err = add_file(b->local_abspath, b->ctx, scratch_pool);
+  else if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' not found"),
+                             svn_dirent_local_style(b->local_abspath,
+                                                    scratch_pool));
   else
-    err = svn_wc_add4(b->ctx->wc_ctx, b->local_abspath, b->depth, NULL,
-                      SVN_INVALID_REVNUM,
-                      b->ctx->cancel_func, b->ctx->cancel_baton,
-                      b->ctx->notify_func2, b->ctx->notify_baton2,
-                      scratch_pool);
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Unsupported node kind for path '%s'"),
+                             svn_dirent_local_style(b->local_abspath,
+                                                    scratch_pool));
 
   /* Ignore SVN_ERR_ENTRY_EXISTS when FORCE is set.  */
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && b->force)
@@ -560,14 +564,16 @@ add_parent_dirs(svn_client_ctx_t *ctx,
 
   parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  /* ### Do we need locks here?  Are locks being enforced? 1.6 used to
-         acquire and release locks. */
   SVN_ERR(add_parent_dirs(ctx, parent_abspath, scratch_pool));
   SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
                       NULL, SVN_INVALID_REVNUM,
                       ctx->cancel_func, ctx->cancel_baton,
                       ctx->notify_func2, ctx->notify_baton2,
                       scratch_pool));
+  /* ### New dir gets added with its own per-directory lock which we
+     must release.  This code should be redundant when we move to a
+     single db. */
+  SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }

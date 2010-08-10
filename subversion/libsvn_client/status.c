@@ -73,7 +73,7 @@ struct status_baton
 static svn_error_t *
 tweak_status(void *baton,
              const char *local_abspath,
-             const svn_wc_status2_t *status,
+             const svn_wc_status3_t *status,
              apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
@@ -84,7 +84,7 @@ tweak_status(void *baton,
      through here. */
   if (sb->deleted_in_repos)
     {
-      svn_wc_status2_t *new_status = svn_wc_dup_status2(status, scratch_pool);
+      svn_wc_status3_t *new_status = svn_wc_dup_status3(status, scratch_pool);
       new_status->repos_text_status = svn_wc_status_deleted;
       status = new_status;
     }
@@ -324,8 +324,7 @@ svn_client_status5(svn_revnum_t *result_rev,
     svn_node_kind_t kind, disk_kind;
 
     SVN_ERR(svn_io_check_path(target_abspath, &disk_kind, pool));
-    err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
-                                pool);
+    err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool);
 
     if (err && ((err->apr_err == SVN_ERR_WC_MISSING) ||
                 (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)))
@@ -354,8 +353,8 @@ svn_client_status5(svn_revnum_t *result_rev,
 
         if (kind != svn_node_file)
           {
-            err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, dir_abspath,
-                                        FALSE, pool);
+            err = svn_wc_read_kind(&kind, ctx->wc_ctx, dir_abspath, FALSE,
+                                   pool);
 
             svn_error_clear(err);
 
@@ -448,17 +447,29 @@ svn_client_status5(svn_revnum_t *result_rev,
                                 &kind, pool));
       if (kind == svn_node_none)
         {
-          const svn_wc_entry_t *entry;
-          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
-                                              dir_abspath, svn_node_dir,
-                                              FALSE, FALSE,
-                                              pool, pool));
+          svn_boolean_t added;
 
-          /* Our status target does not exist in HEAD of the
-             repository.  If we're just adding this thing, that's
-             fine.  But if it was previously versioned, then it must
-             have been deleted from the repository. */
-          if (entry->schedule != svn_wc_schedule_add)
+          /* Our status target does not exist in HEAD.  If we've got
+             it localled added, that's okay.  But if it was previously
+             versioned, then it must have since been deleted from the
+             repository.  (Note that "locally replaced" doesn't count
+             as "added" in this case.)  */
+
+          /* ### FIXME:  WC-1 code here was just (! added).  Not sure
+             ### if this WC-NG approach matches semantically.  */
+          SVN_ERR(svn_wc__node_is_added(&added, ctx->wc_ctx,
+                                        dir_abspath, pool));
+          if (added)
+            {
+              svn_boolean_t replaced;
+
+              SVN_ERR(svn_wc__node_is_replaced(&replaced, ctx->wc_ctx,
+                                               dir_abspath, pool));
+              if (replaced)
+                added = FALSE;
+            }
+
+          if (! added)
             sb.deleted_in_repos = TRUE;
 
           /* And now close the edit. */
@@ -526,7 +537,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   else
     {
       err = svn_wc_walk_status(ctx->wc_ctx, target_abspath,
-                               depth, get_all, no_ignore, FALSE, ignores,
+                               depth, get_all, no_ignore, ignores,
                                tweak_status, &sb,
                                ignore_externals ? NULL
                                                 : svn_cl__store_externals,

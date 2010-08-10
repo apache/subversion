@@ -381,7 +381,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   *mergeinfo_cat = NULL;
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL,
-                                      ctx->wc_ctx, local_abspath, TRUE,
+                                      ctx->wc_ctx, local_abspath, TRUE, FALSE,
                                       scratch_pool, scratch_pool));
   if (!repos_root)
     {
@@ -417,8 +417,8 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
   /* If LOCAL_ABSPATH is a directory and we want the subtree mergeinfo too,
      then get it. */
-  SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                                scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
   if (kind == svn_node_dir && include_descendants)
     {
       wb.target_abspath = local_abspath;
@@ -560,10 +560,10 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, target_wcpath,
                                   scratch_pool));
-  SVN_ERR(svn_wc__node_is_status_added(&is_added, ctx->wc_ctx,
-                                       local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, local_abspath,
+                                scratch_pool));
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL,
-                                      ctx->wc_ctx, local_abspath, FALSE,
+                                      ctx->wc_ctx, local_abspath, FALSE, FALSE,
                                       scratch_pool, scratch_pool));
 
   /* We may get an entry with abbreviated information from TARGET_WCPATH's
@@ -597,10 +597,10 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 
           /* Check to see if we have local modifications which removed all of
              TARGET_WCPATH's pristine mergeinfo.  If that is the case then
-             TARGET_WCPATH effetively has no mergeinfo. */
-          SVN_ERR(svn_wc_get_prop_diffs2(NULL, &original_props, ctx->wc_ctx,
-                                         local_abspath, result_pool,
-                                         scratch_pool));
+             TARGET_WCPATH effectively has no mergeinfo. */
+          SVN_ERR(svn_wc_get_pristine_props(&original_props,
+                                            ctx->wc_ctx, local_abspath,
+                                            result_pool, scratch_pool));
           if (!apr_hash_get(original_props, SVN_PROP_MERGEINFO,
                             APR_HASH_KEY_STRING))
             {
@@ -787,10 +787,7 @@ should_elide_mergeinfo(svn_boolean_t *elides,
       /* Empty mergeinfo elides to empty mergeinfo or to "nothing",
          i.e. it isn't overriding any parent. Otherwise it doesn't
          elide. */
-      if (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0)
-        *elides = TRUE;
-      else
-        *elides = FALSE;
+      *elides = (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0);
     }
   else if (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0)
     {
@@ -947,12 +944,11 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 }
 
 
-/* If the server does not support Merge Tracking then return an error with
-   the code SVN_ERR_UNSUPPORTED_FEATURE.  Otherwise, if INCLUDE_DESCENDANTS
-   is false then get the explicit or inherited mergeinfo for PATH_OR_URL
-   @PEG_REVISION and put it in *TARGET_MERGEINFO, keyed to the repository
-   root-relative path of PATH_OR_URL.  If INCLUDE_DESCENDANTS is true then
-   also get the explicit mergeinfo on any subtrees under PATH_OR_URL.
+/* Set *MERGEINFO_CATALOG to the explicit or inherited mergeinfo for
+   PATH_OR_URL@PEG_REVISION.  If INCLUDE_DESCENDANTS is true, also
+   store in *MERGEINFO_CATALOG the explicit mergeinfo on any subtrees
+   under PATH_OR_URL.  Key all mergeinfo in *MERGEINFO_CATALOG on
+   repository relpaths.
 
    If no mergeinfo is found then set *MERGEINFO_CATALOG to NULL.
 
@@ -960,7 +956,10 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
    PATH_OR_URL.
 
    Allocate *MERGEINFO_CATALOG and all its contents in RESULT_POOL.  Use
-   SCRATCH_POOL for all temporary allocations.  */
+   SCRATCH_POOL for all temporary allocations.
+
+   Return SVN_ERR_UNSUPPORTED_FEATURE if the server does not support
+   Merge Tracking.  */
 static svn_error_t *
 get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
               const char **repos_root,
@@ -1029,8 +1028,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
 
   if (is_url)
     {
-      const char *repos_rel_path;
-      const char *old_session_url;
+      svn_mergeinfo_catalog_t tmp_catalog;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", scratch_pool));
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, path_or_url,
@@ -1040,21 +1038,43 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
                                               local_abspath, ra_session,
                                               &peg_rev, scratch_pool));
       SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, scratch_pool));
-      SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, ctx->wc_ctx,
-                                                path_or_url, *repos_root,
-                                                FALSE, NULL,
-                                                scratch_pool,
-                                                scratch_pool));
-      SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
-                                                *repos_root, scratch_pool));
-      SVN_ERR(svn_client__get_repos_mergeinfo_catalog(mergeinfo_catalog,
+      SVN_ERR(svn_client__get_repos_mergeinfo_catalog(&tmp_catalog,
                                                       ra_session,
-                                                      repos_rel_path, rev,
+                                                      "", rev,
                                                       svn_mergeinfo_inherited,
                                                       FALSE,
                                                       include_descendants,
                                                       result_pool,
                                                       scratch_pool));
+
+      /* If we're not querying the root of the repository, the catalog
+         we fetched will be keyed on paths relative to the session
+         URL.  But our caller is expecting repository relpaths.  So we
+         do a little dance...  */
+      if (tmp_catalog && (strcmp(path_or_url, *repos_root) != 0))
+        {
+          apr_hash_index_t *hi;
+
+          *mergeinfo_catalog = apr_hash_make(result_pool);
+
+          for (hi = apr_hash_first(scratch_pool, tmp_catalog);
+               hi; hi = apr_hash_next(hi))
+            {
+              /* session-relpath -> repos-url -> repos-relpath */
+              const char *path =
+                svn_path_url_add_component2(path_or_url,
+                                            svn__apr_hash_index_key(hi),
+                                            scratch_pool);
+              SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &path, path,
+                                                       result_pool));
+              apr_hash_set(*mergeinfo_catalog, path, APR_HASH_KEY_STRING,
+                           svn__apr_hash_index_val(hi));
+            }
+        }
+      else
+        {
+          *mergeinfo_catalog = tmp_catalog;
+        }
     }
   else /* ! svn_path_is_url() */
     {
@@ -1577,12 +1597,13 @@ location_from_path_and_rev(const char **url,
   svn_ra_session_t *ra_session;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_revnum_t rev;
+  const char *local_abspath = NULL;
+
+  if (!svn_path_is_url(path_or_url))
+    SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, subpool));
 
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev, url,
-                                           path_or_url,
-                                           !svn_path_is_url(path_or_url)
-                                             ? path_or_url
-                                             : NULL,
+                                           path_or_url, local_abspath,
                                            peg_revision, peg_revision,
                                            ctx, subpool));
   *url = apr_pstrdup(pool, *url);

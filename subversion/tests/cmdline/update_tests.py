@@ -83,7 +83,7 @@ def detect_extra_files(node, extra_files):
                                 len(os.sep) :]
         real_path = os.path.join(wc_dir, real_path)
 
-        real_contents = svntest.main.file_read(real_path)
+        real_contents = open(real_path).read()
         if real_contents == contents:
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
@@ -100,8 +100,7 @@ def update_binary_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project.
-  theta_contents = svntest.main.file_read(
-    os.path.join(sys.path[0], "theta.bin"), 'rb')
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
   # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
   svntest.main.file_write(theta_path, theta_contents, 'wb')
@@ -207,8 +206,7 @@ def update_binary_file_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Suck up contents of a test .png file.
-  theta_contents = svntest.main.file_read(
-    os.path.join(sys.path[0], "theta.bin"), 'rb')
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
 
   # 102400 is svn_txdelta_window_size.  We're going to make sure we
   # have at least 102401 bytes of data in our second binary file (for
@@ -4544,6 +4542,11 @@ def tree_conflicts_on_update_2_1(sbox):
     },
   }
 
+  ### D/D1/delta is locally-added during leaf_edit. when tree_del executes,
+  ### it will delete D/D1, and the update reschedules local D/D1 for
+  ### local-copy from its original revision. however, right now, we cannot
+  ### denote that delta is a local-add rather than a child of that D/D1 copy.
+  ### thus, it appears in the status output as a (M)odified child.
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
@@ -4948,13 +4951,12 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
   """
 
   A = os.path.join(wc_dir, 'A')
-  A_url = sbox.repo_url + '/A'
 
   def modify_dir(dir):
     """Make some set of local modifications to an existing tree:
     A prop change, add a child, delete a child, change a child."""
-    run_and_verify_svn(None, AnyOutput, [],
-                       'propset', 'p', 'v', dir)
+    run_and_verify_svn(None, AnyOutput, [], 'propset', 'p', 'v', dir)
+
     path = os.path.join(dir, 'new_file')
     svntest.main.file_write(path, "This is the file 'new_file'.\n")
     svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
@@ -5152,6 +5154,10 @@ def tree_conflict_uc2_schedule_re_add(sbox):
 
   # The status of the new and old scenarios should be identical...
   expected_status = get_status(wc2)
+  ### The following fails, as of Apr 6, 2010. The problem is that A/new_file
+  ### has been *added* within a copy, yet the wc_db datastore cannot
+  ### differentiate this from a copied-child. As a result, new_file is
+  ### reported as a (M)odified node, rather than (A)dded.
   svntest.actions.run_and_verify_status(wc2, expected_status)
 
   # ...except for the revision of the root of the WC and iota, because
@@ -5516,13 +5522,13 @@ test_list = [ None,
               restarted_update_should_delete_dir_prop,
               tree_conflicts_on_update_1_1,
               tree_conflicts_on_update_1_2,
-              tree_conflicts_on_update_2_1,
+              XFail(tree_conflicts_on_update_2_1),
               tree_conflicts_on_update_2_2,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
               update_moves_and_modifies_an_edited_file,
               tree_conflict_uc1_update_deleted_tree,
-              tree_conflict_uc2_schedule_re_add,
+              XFail(tree_conflict_uc2_schedule_re_add),
               set_deep_depth_on_target_with_shallow_children,
               update_wc_of_dir_to_rev_not_containing_this_dir,
               XFail(update_deleted_locked_files),

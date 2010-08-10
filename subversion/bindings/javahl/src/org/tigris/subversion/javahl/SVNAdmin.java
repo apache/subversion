@@ -24,6 +24,9 @@
 package org.tigris.subversion.javahl;
 
 import java.util.Set;
+import java.io.OutputStream;
+import java.io.InputStream;
+import java.io.IOException;
 
 /**
  * This class offers the same commands as the svnadmin commandline
@@ -164,7 +167,8 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.dump(path, dataOut, errorOut,
+            aSVNAdmin.dump(path, new OutputWrapper(dataOut),
+                           new OutputWrapper(errorOut),
                            start == null ? null : start.toApache(),
                            end == null ? null : end.toApache(),
                            incremental, useDeltas);
@@ -286,9 +290,10 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.load(path, dataInput, messageOutput, ignoreUUID,
-                           forceUUID, usePreCommitHook, usePostCommitHook,
-                           relativePath);
+            aSVNAdmin.load(path, new InputWrapper(dataInput),
+                           new OutputWrapper(messageOutput),
+                           ignoreUUID, forceUUID, usePreCommitHook,
+                           usePostCommitHook, relativePath);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -367,13 +372,14 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.setLog(path,
-                             rev == null ? null : rev.toApache(),
-                             message, bypassHooks);
+            aSVNAdmin.setRevProp(path,
+                                 rev == null ? null : rev.toApache(),
+                                 "svn:log", message,
+                                 !bypassHooks, !bypassHooks);
         }
-        catch (org.apache.subversion.javahl.ClientException ex)
+        catch (org.apache.subversion.javahl.SubversionException ex)
         {
-            throw new ClientException(ex);
+            throw ClientException.fromException(ex);
         }
     }
 
@@ -428,7 +434,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.verify(path, messageOut,
+            aSVNAdmin.verify(path, new OutputWrapper(messageOut),
                              start == null ? null : start.toApache(),
                              end == null ? null : end.toApache());
         }
@@ -485,6 +491,60 @@ public class SVNAdmin
         catch (org.apache.subversion.javahl.ClientException ex)
         {
             throw new ClientException(ex);
+        }
+    }
+
+    private class OutputWrapper extends OutputStream
+    {
+        private OutputInterface outputer;
+
+        OutputWrapper(OutputInterface outputer)
+        {
+            this.outputer = outputer;
+        }
+
+        public void write(int b) throws IOException
+        {
+            outputer.write(new byte[]{ (byte) ( b & 0xFF) });
+        }
+
+        public void write(byte[] b) throws IOException
+        {
+            outputer.write(b);
+        }
+
+        public void close() throws IOException
+        {
+            outputer.close();
+        }
+    }
+
+    private class InputWrapper extends InputStream
+    {
+        private InputInterface inputer;
+
+        InputWrapper(InputInterface inputer)
+        {
+            this.inputer = inputer;
+        }
+
+        public int read() throws IOException
+        {
+            byte[] b = new byte[1];
+            if (inputer.read(b) > 0)
+                return b[0];
+            else
+                return -1;
+        }
+
+        public int read(byte[] b) throws IOException
+        {
+            return inputer.read(b);
+        }
+
+        public void close() throws IOException
+        {
+            inputer.close();
         }
     }
 }

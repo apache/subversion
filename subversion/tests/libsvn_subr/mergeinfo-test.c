@@ -1559,6 +1559,99 @@ test_rangelist_diff(apr_pool_t *pool)
     }
   return err;
 }
+
+
+/* Test data structure for test_remove_prefix_from_catalog(). */
+struct catalog_bits
+{
+  const char *orig_path;
+  const char *new_path;
+  const char *mergeinfo;
+};
+
+
+/* Helper for test_remove_prefix_from_catalog(). */
+static svn_error_t *
+remove_prefix_helper(struct catalog_bits *test_data,
+                     const char *prefix_path,
+                     apr_pool_t *pool)
+{
+  svn_mergeinfo_catalog_t in_catalog, out_catalog, exp_out_catalog;
+  apr_hash_index_t *hi;
+  int i = 0;
+  
+  in_catalog = apr_hash_make(pool);
+  exp_out_catalog = apr_hash_make(pool);
+  while (test_data[i].orig_path)
+    {
+      struct catalog_bits data = test_data[i];
+      const char *orig_path = apr_pstrdup(pool, data.orig_path);
+      const char *new_path = apr_pstrdup(pool, data.new_path);
+      svn_mergeinfo_t mergeinfo;
+      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, data.mergeinfo, pool));
+      apr_hash_set(in_catalog, orig_path, APR_HASH_KEY_STRING, mergeinfo);
+      apr_hash_set(exp_out_catalog, new_path, APR_HASH_KEY_STRING, mergeinfo);
+      i++;
+    }
+  SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(&out_catalog, in_catalog,
+                                                    prefix_path, pool));
+  if (apr_hash_count(exp_out_catalog) != apr_hash_count(out_catalog))
+    return svn_error_create(SVN_ERR_TEST_FAILED, 0,
+                            "Got unexpected number of catalog entries");
+  for (hi = apr_hash_first(pool, out_catalog); hi; hi = apr_hash_next(hi))
+    {
+      const void *path;
+      apr_ssize_t path_len;
+      void *out_mergeinfo, *exp_out_mergeinfo;
+      apr_hash_this(hi, &path, &path_len, &out_mergeinfo);
+      exp_out_mergeinfo = apr_hash_get(exp_out_catalog, path, path_len);
+      if (! exp_out_mergeinfo)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, 0,
+                                 "Found unexpected key '%s' in catalog",
+                                 (const char *)path);
+      if (exp_out_mergeinfo != out_mergeinfo)
+        return svn_error_create(SVN_ERR_TEST_FAILED, 0,
+                                "Detected value tampering in catalog");
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_remove_prefix_from_catalog(apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* For testing the remove of the prefix "/trunk"  */
+  struct catalog_bits test_data_1[] =
+    {
+      { "/trunk",           "",          "/A:1" },
+      { "/trunk/foo",       "foo",       "/A/foo:1,3*" },
+      { "/trunk/foo/bar",   "foo/bar",   "/A/foo:1-4" },
+      { "/trunk/baz",       "baz",       "/A/baz:2" },
+      { NULL, NULL, NULL }
+    };
+
+  /* For testing the remove of the prefix "/"  */
+  struct catalog_bits test_data_2[] =
+    {
+      { "/",                "",                "/:2" },
+      { "/trunk",           "trunk",           "/A:1" },
+      { "/trunk/foo",       "trunk/foo",       "/A/foo:1,3*" },
+      { "/trunk/foo/bar",   "trunk/foo/bar",   "/A/foo:1-4" },
+      { "/trunk/baz",       "trunk/baz",       "/A/baz:2" },
+      { NULL, NULL, NULL }
+    };
+
+  svn_pool_clear(subpool);
+  SVN_ERR(remove_prefix_helper(test_data_1, "/trunk", subpool));
+
+  svn_pool_clear(subpool);
+  SVN_ERR(remove_prefix_helper(test_data_2, "/", subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1599,5 +1692,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "merge of rangelists"),
     SVN_TEST_PASS2(test_rangelist_diff,
                    "diff of rangelists"),
+    SVN_TEST_PASS2(test_remove_prefix_from_catalog,
+                   "removal of prefix paths from catalog keys"),
     SVN_TEST_NULL
   };

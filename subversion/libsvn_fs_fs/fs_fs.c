@@ -1498,6 +1498,14 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* Copy the config. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_CONFIG, pool));
 
+  /* Copy the rep cache before copying the rev files to make sure all
+     cached references will be present in the copy. */
+  src_subdir = svn_dirent_join(src_path, REP_CACHE_DB_NAME, pool);
+  dst_subdir = svn_dirent_join(dst_path, REP_CACHE_DB_NAME, pool);
+  SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
+
   /* Copy the min unpacked rev, and read its value. */
   if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     {
@@ -1597,8 +1605,11 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* Copy the packed revprop db. */
   if (format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     {
-      SVN_ERR(svn_io_dir_file_copy(src_subdir, dst_subdir, PATH_REVPROPS_DB,
-                                   pool));
+      const char *src_file = svn_dirent_join(src_subdir, PATH_REVPROPS_DB,
+                                             pool);
+      const char *dst_file = svn_dirent_join(dst_subdir, PATH_REVPROPS_DB,
+                                             pool);
+      SVN_ERR(svn_sqlite__hotcopy(src_file, dst_file, pool));
     }
 
   for (rev = min_unpacked_revprop; rev <= youngest; rev++)
@@ -1657,12 +1668,6 @@ svn_fs_fs__hotcopy(const char *src_path,
     SVN_ERR(svn_io_copy_dir_recursively(src_subdir, dst_path,
                                         PATH_NODE_ORIGINS_DIR, TRUE, NULL,
                                         NULL, pool));
-
-  /* Now copy the rep cache. */
-  src_subdir = svn_dirent_join(src_path, REP_CACHE_DB_NAME, pool);
-  SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
-  if (kind == svn_node_file)
-    SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, REP_CACHE_DB_NAME, pool));
 
   /* Copy the txn-current file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
@@ -3823,16 +3828,13 @@ fold_change(apr_hash_t *changes,
 {
   apr_pool_t *pool = apr_hash_pool_get(changes);
   svn_fs_path_change2_t *old_change, *new_change;
-  const char *path = NULL;
+  const char *path;
 
   if ((old_change = apr_hash_get(changes, change->path, APR_HASH_KEY_STRING)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
 
-      /* Since the path already exists in the hash, we don't have to
-         dup the allocation for the path itself. */
-      path = change->path;
       /* Sanity check:  only allow NULL node revision ID in the
          `reset' case. */
       if ((! change->noderev_id) && (change->kind != svn_fs_path_change_reset))
@@ -3955,13 +3957,18 @@ fold_change(apr_hash_t *changes,
           new_change->copyfrom_rev = SVN_INVALID_REVNUM;
           new_change->copyfrom_path = NULL;
         }
-      path = apr_pstrdup(pool, change->path);
     }
 
   if (new_change)
     new_change->node_kind = change->node_kind;
 
-  /* Add (or update) this path. */
+  /* Add (or update) this path.
+
+     Note: this key might already be present, and it would be nice to
+     re-use its value, but there is no way to fetch it. The API makes no
+     guarantees that this (new) key will not be retained. Thus, we (again)
+     copy the key into the target pool to ensure a proper lifetime.  */
+  path = apr_pstrdup(pool, change->path);
   apr_hash_set(changes, path, APR_HASH_KEY_STRING, new_change);
 
   /* Update the copyfrom cache, if any. */
@@ -6329,7 +6336,7 @@ svn_fs_fs__create(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   fs->path = apr_pstrdup(pool, path);
-  /* See if we had an explicitly requested pre-1.4- or pre-1.5-compatible.  */
+  /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
       if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
@@ -6341,6 +6348,9 @@ svn_fs_fs__create(svn_fs_t *fs,
       else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                                         APR_HASH_KEY_STRING))
         format = 3;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_7_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 4;
     }
   ffd->format = format;
 

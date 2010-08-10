@@ -165,10 +165,12 @@ create_offset_index(const svn_txdelta_window_t *window, apr_pool_t *pool)
    as hint because most lookups come as a sequence of decreasing values
    for OFFSET and they concentrate on the lower end of the array. */
 
-static int
-search_offset_index(const offset_index_t *ndx, apr_size_t offset, int hint)
+static apr_size_t
+search_offset_index(const offset_index_t *ndx,
+                    apr_size_t offset,
+                    apr_size_t hint)
 {
-  int lo, hi, op;
+  apr_size_t lo, hi, op;
 
   assert(offset < ndx->offs[ndx->length]);
 
@@ -635,13 +637,13 @@ build_range_list(apr_size_t offset, apr_size_t limit, range_index_t *ndx)
 static void
 copy_source_ops(apr_size_t offset, apr_size_t limit,  
                 apr_size_t target_offset,
-                int hint,
+                apr_size_t hint,
                 svn_txdelta__ops_baton_t *build_baton,
                 const svn_txdelta_window_t *window,
                 const offset_index_t *ndx,
                 apr_pool_t *pool)
 {
-  int op_ndx = search_offset_index(ndx, offset, hint);
+  apr_size_t op_ndx = search_offset_index(ndx, offset, hint);
   for (;; ++op_ndx)
     {
       const svn_txdelta_op_t *const op = &window->ops[op_ndx];

@@ -169,6 +169,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
         return;
+    callback->setWcCtx(ctx->wc_ctx);
 
     Path checkedPath(path);
     SVN_JNI_ERR(checkedPath.error_occured(), );
@@ -806,16 +807,10 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
         env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 
         env->DeleteLocalRef(jranges);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
         env->DeleteLocalRef(jpath);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
     }
 
     env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
 
     return jmergeinfo;
 }
@@ -1693,7 +1688,7 @@ cancel(void *baton)
 static svn_error_t *
 analyze_status(void *baton,
                const char *local_abspath,
-               const svn_wc_status2_t *status,
+               const svn_wc_status3_t *status,
                apr_pool_t *pool)
 {
     struct version_status_baton *sb = (version_status_baton *)baton;

@@ -53,8 +53,8 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
    in locking and unlocking it. */
 
 /* XXX TODO: Define mutex here #if APR_HAS_THREADS */
-static const char *error_file = NULL;
-static long error_line = -1;
+static const char * volatile error_file = NULL;
+static long volatile error_line = -1;
 
 void
 svn_error__locate(const char *file, long line)

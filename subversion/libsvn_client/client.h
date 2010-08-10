@@ -250,8 +250,8 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
    that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   BASE_DIR is the working copy path the ra_session corresponds to, should
-   only be used if PATH_OR_URL is a url.
+   BASE_DIR_ABSPATH is the working copy path the ra_session corresponds to,
+   should only be used if PATH_OR_URL is a url.
 
    If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
    interpreted as "head" for a URL or "working" for a working-copy path.
@@ -269,7 +269,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_revnum_t *rev_p,
                                  const char **url_p,
                                  const char *path_or_url,
-                                 const char *base_dir,
+                                 const char *base_dir_abspath,
                                  const svn_opt_revision_t *peg_revision,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
@@ -376,7 +376,7 @@ svn_client__default_walker_error_handler(const char *path,
       - READ_ONLY_WC indicates that the RA layer should not attempt to
         modify the WC props directly.
 
-   BASE_DIR may be NULL if the RA operation does not correspond to a
+   BASE_DIR_ABSPATH may be NULL if the RA operation does not correspond to a
    working copy (in which case, USE_ADMIN should be FALSE).
 
    The calling application's authentication baton is provided in CTX,
@@ -387,7 +387,7 @@ svn_client__default_walker_error_handler(const char *path,
 svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
-                                     const char *base_dir,
+                                     const char *base_dir_abspath,
                                      const apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
@@ -483,23 +483,24 @@ svn_client__make_local_parents(const char *path,
 
 /*** Checkout, update and switch ***/
 
-/* Update a working copy PATH to REVISION, and (if not NULL) set
+/* Update a working copy LOCAL_ABSPATH to REVISION, and (if not NULL) set
    RESULT_REV to the update revision.
 
    If DEPTH is svn_depth_unknown, then use whatever depth is already
-   set for PATH, or @c svn_depth_infinity if PATH does not exist.
+   set for LOCAL_ABSPATH, or @c svn_depth_infinity if LOCAL_ABSPATH does
+   not exist.
 
    Else if DEPTH is svn_depth_infinity, then update fully recursively
    (resetting the existing depth of the working copy if necessary).
-   Else if DEPTH is svn_depth_files, update all files under PATH (if
+   Else if DEPTH is svn_depth_files, update all files under LOCAL_ABSPATH (if
    any), but exclude any subdirectories.  Else if DEPTH is
    svn_depth_immediates, update all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
-   svn_depth_empty, just update PATH; if PATH is a directory, that
-   means touching only its properties not its entries.
+   svn_depth_empty, just update LOCAL_ABSPATH; if LOCAL_ABSPATH is a
+   directory, that means touching only its properties not its entries.
 
    If DEPTH_IS_STICKY is set and DEPTH is not svn_depth_unknown, then
-   in addition to updating PATH, also set its sticky ambient depth
+   in addition to updating LOCAL_ABSPATH, also set its sticky ambient depth
    value to DEPTH.
 
    If IGNORE_EXTERNALS is true, do no externals processing.
@@ -510,7 +511,7 @@ svn_client__make_local_parents(const char *path,
    to TRUE if a sleep is required, and will not change
    *TIMESTAMP_SLEEP if no sleep is required.
 
-   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
+   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of LOCAL_ABSPATH
    that obstruct items added from the repos are tolerated; if FALSE,
    these obstructions cause the update to fail.
 
@@ -524,7 +525,7 @@ svn_client__make_local_parents(const char *path,
 */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
-                            const char *path,
+                            const char *local_abspath,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
@@ -569,15 +570,15 @@ typedef struct
   svn_node_kind_t *kind_p;
 } svn_client__ra_session_from_path_results;
 
-/* Checkout into PATH a working copy of URL at REVISION, and (if not
+/* Checkout into LOCAL_ABSPATH a working copy of URL at REVISION, and (if not
    NULL) set RESULT_REV to the checked out revision.
 
    If DEPTH is svn_depth_infinity, then check out fully recursively.
-   Else if DEPTH is svn_depth_files, checkout all files under PATH (if
+   Else if DEPTH is svn_depth_files, checkout all files under LOCAL_ABSPATH (if
    any), but not subdirectories.  Else if DEPTH is
    svn_depth_immediates, check out all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
-   svn_depth_empty, just check out PATH, with none of its entries.
+   svn_depth_empty, just check out LOCAL_ABSPATH, with none of its entries.
 
    DEPTH must be a definite depth, not (e.g.) svn_depth_unknown.
 
@@ -591,18 +592,18 @@ typedef struct
    If TIMESTAMP_SLEEP is NULL this function will sleep before
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
-   to TRUE if a sleep is required, and will not change
-   *TIMESTAMP_SLEEP if no sleep is required.  If
-   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
-   obstruct items added from the repos are tolerated; if FALSE, these
-   obstructions cause the checkout to fail.
+   to TRUE if a sleep is required, and will not change *TIMESTAMP_SLEEP
+   if no sleep is required.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE,
+   unversioned children of LOCAL_ABSPATH that obstruct items added from
+   the repos are tolerated; if FALSE, these obstructions cause the checkout
+   to fail.
 
    If INNERCHECKOUT is true, no anchor check is performed on the target.
    */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *URL,
-                              const char *path,
+                              const char *local_abspath,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
                               const svn_client__ra_session_from_path_results *ra_cache,
@@ -732,7 +733,7 @@ svn_client__get_diff_summarize_editor(const char *target,
 typedef struct
 {
     /* The absolute source path or url. */
-    const char *src;
+    const char *src_abspath_or_url;
 
     /* The base name of the object.  It should be the same for both src
        and dst. */
@@ -755,7 +756,7 @@ typedef struct
     svn_revnum_t src_revnum;
 
     /* The absolute destination path or url */
-    const char *dst;
+    const char *dst_abspath_or_url;
 
     /* The absolute source path or url of the destination's parent. */
     const char *dst_parent_abspath;
@@ -924,10 +925,13 @@ svn_client__condense_commit_items(const char **base_url,
    *NEW_TEXT_BASE_ABSPATHS to a hash that maps (const char *) paths (from
    the items' paths) to the (const char *) abspaths of these files.
 
-   MD5 checksums, if available,  for the new text bases of committed
-   files are stored in *CHECKSUMS, which maps const char* paths (from the
-   items' paths) to const svn_checksum_t * digests.  CHECKSUMS may be
-   null.  */
+   If MD5_CHECKSUMS is not NULL, set *MD5_CHECKSUMS to a hash containing,
+   for each file transmitted, a mapping from the commit-item's (const
+   char *) path to the (const svn_checksum_t *) MD5 checksum of its new text
+   base.  Similarly for SHA1_CHECKSUMS.
+
+   Use POOL for all allocations.
+   */
 svn_error_t *
 svn_client__do_commit(const char *base_url,
                       const apr_array_header_t *commit_items,
@@ -935,7 +939,8 @@ svn_client__do_commit(const char *base_url,
                       void *edit_baton,
                       const char *notify_path_prefix,
                       apr_hash_t **new_text_base_abspaths,
-                      apr_hash_t **checksums,
+                      apr_hash_t **md5_checksums,
+                      apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);
 
@@ -946,7 +951,7 @@ svn_client__do_commit(const char *base_url,
 /* Handle changes to the svn:externals property described by EXTERNALS_OLD,
 
    EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level directory
-   is at TO_PATH and corresponds to FROM_URL URL in the repository,
+   is at TO_ABSPATH and corresponds to FROM_URL URL in the repository,
    which has a root URL of REPOS_ROOT_URL.  A write lock should be
    held.
 
@@ -982,7 +987,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *externals_new,
                              apr_hash_t *ambient_depths,
                              const char *from_url,
-                             const char *to_path,
+                             const char *to_abspath,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
                              svn_boolean_t *timestamp_sleep,
@@ -996,7 +1001,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
    checked out -- they will have no administrative subdirectories.
 
    The checked out or exported tree's top level directory is at
-   TO_PATH and corresponds to FROM_URL URL in the repository, which
+   TO_ABSPATH and corresponds to FROM_URL URL in the repository, which
    has a root URL of REPOS_ROOT_URL.
 
    REQUESTED_DEPTH is the requested_depth of the driving operation; it
@@ -1011,7 +1016,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
 svn_error_t *
 svn_client__fetch_externals(apr_hash_t *externals,
                             const char *from_url,
-                            const char *to_path,
+                            const char *to_abspath,
                             const char *repos_root_url,
                             svn_depth_t requested_depth,
                             svn_boolean_t is_export,

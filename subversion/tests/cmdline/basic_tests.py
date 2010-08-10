@@ -378,9 +378,8 @@ def basic_corruption(sbox):
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to commit.
-  tb_dir_path = os.path.join(wc_dir, 'A',
-                             svntest.main.get_admin_name(), 'text-base')
-  mu_tb_path = os.path.join(tb_dir_path, 'mu.svn-base')
+  mu_tb_path = svntest.wc.text_base_path(mu_path)
+  tb_dir_path = os.path.dirname(mu_tb_path)
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
@@ -424,9 +423,9 @@ def basic_corruption(sbox):
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to update.
-  tb_dir_path = os.path.join(other_wc, 'A',
-                             svntest.main.get_admin_name(), 'text-base')
-  mu_tb_path = os.path.join(tb_dir_path, 'mu.svn-base')
+  other_mu_path = os.path.join(other_wc, 'A', 'mu')
+  mu_tb_path = svntest.wc.text_base_path(other_mu_path)
+  tb_dir_path = os.path.dirname(mu_tb_path)
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
@@ -2455,7 +2454,7 @@ def basic_add_svn_format_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  entries_path = os.path.join(wc_dir, '.svn', 'format')
+  entries_path = os.path.join(wc_dir, svntest.main.get_admin_name(), 'format')
 
   output = svntest.actions.get_virginal_state(wc_dir, 1)
 
@@ -2477,6 +2476,26 @@ def basic_mkdir_mix_targets(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'mkdir', '-m', 'log_msg', Y_url, 'subdir')
+
+def delete_from_url_with_spaces(sbox):
+  "delete a directory with ' ' using its url"
+  
+  sbox.build()
+  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With Spaces'))
+  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With'))
+  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With/Spaces'))
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'ci', sbox.wc_dir, '-m', 'Added dir')
+  
+  # This fails on 1.6.11 with an escaping error.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'rm', sbox.repo_url + '/Dir%20With%20Spaces',
+                                      '-m', 'Deleted')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'rm', sbox.repo_url + '/Dir%20With/Spaces',
+                                      '-m', 'Deleted')
 
 #----------------------------------------------------------------------
 
@@ -2534,6 +2553,7 @@ test_list = [ None,
               basic_auth_test,
               basic_add_svn_format_file,
               basic_mkdir_mix_targets,
+              delete_from_url_with_spaces,
              ]
 
 if __name__ == '__main__':

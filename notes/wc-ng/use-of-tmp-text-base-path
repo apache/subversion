@@ -1,5 +1,5 @@
 
-Call graphs of the use of the WC-1 temporary text base path, as of r927056.
+Call graphs of the use of the WC-1 temporary text base path.
 
 This is to help us eliminate the use of this path and replace it with a more
 encapsulated way of referring to the new text base, as part of migration to a
@@ -52,12 +52,12 @@ path is obtained, and the extent to which it is propagated, within a commit.
         |^                |^                log_do_committed()
         |^                |^                      |v
         |^                |^                install_committed_file()
-        |^                |^                      |v
-        |^                |^                      |v
-  svn_wc__text_base_path(tmp=TRUE)          svn_wc__sync_text_base()
-            |^                                    |v
-            |^    [initialization]          svn_io_rename()
-            |^      |                         + svn_io_set_file_read_only()
+        |^                |^                        |v
+        |^                |^                        |v
+  svn_wc__text_base_deterministic_tmp_path()  svn_wc__sync_text_base()
+            |^                                      |v
+            |^    [initialization]            svn_io_rename()
+            |^      |                           + svn_io_set_file_read_only()
             |^    make_adm_subdir()
             |^      |^
           extend_with_adm_name(tmp=TRUE)

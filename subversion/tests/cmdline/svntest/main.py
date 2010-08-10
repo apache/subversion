@@ -137,7 +137,10 @@ def pathname2url(path):
   """Convert the pathname PATH from the local syntax for a path to the form
   used in the path component of a URL. This does not produce a complete URL.
   The return value will already be quoted using the quote() function."""
-  return urllib_parse_quote(path.replace('\\', '/'))
+
+  # Don't leave ':' in file://C%3A/ escaped as our canonicalization
+  # rules will replace this with a ':' on input.
+  return urllib_parse_quote(path.replace('\\', '/')).replace('%3A', ':')
 
 # This function mimics the Python 2.3 urllib function of the same name.
 def url2pathname(path):
@@ -184,9 +187,8 @@ enable_sasl = False
 use_jsvn = False
 
 # Global variable indicating which DAV library to use if both are available
-# ('neon', 'serf'). The default is neon for backward compatibility of the
-# test suite.
-preferred_http_library = 'neon'
+# ('neon', 'serf').
+preferred_http_library = 'serf'
 
 # Global variable: Number of shards to use in FSFS
 # 'None' means "use FSFS's default"
@@ -362,7 +364,7 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
   as lists of lines (including line terminators).  See run_command_stdin()
   for details.  If ERROR_EXPECTED is None, any stderr also will be printed."""
 
-  return run_command_stdin(command, error_expected, binary_mode,
+  return run_command_stdin(command, error_expected, 0, binary_mode,
                            None, *varargs)
 
 # A regular expression that matches arguments that are trivially safe
@@ -391,9 +393,10 @@ def _quote_arg(arg):
       arg = arg.replace('$', '\$')
     return '"%s"' % (arg,)
 
-def open_pipe(command, stdin=None, stdout=None, stderr=None):
+def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   """Opens a subprocess.Popen pipe to COMMAND using STDIN,
-  STDOUT, and STDERR.
+  STDOUT, and STDERR.  BUFSIZE is passed to subprocess.Popen's
+  argument of the same name.
 
   Returns (infile, outfile, errfile, waiter); waiter
   should be passed to wait_on_pipe."""
@@ -422,6 +425,7 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
     stderr = subprocess.PIPE
 
   p = subprocess.Popen(command,
+                       bufsize,
                        stdin=stdin,
                        stdout=stdout,
                        stderr=stderr,
@@ -475,8 +479,14 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
                        % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
-def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
+def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
+                  *varargs):
   """Run any binary, supplying input text, logging the command line.
+  BUFSIZE dictates the pipe buffer size used in communication with the
+  subprocess: 0 means unbuffered, 1 means line buffered, any other
+  positive value means use a buffer of (approximately) that size.
+  A negative bufsize means to use the system default, which usually
+  means fully buffered. The default value for bufsize is 0 (unbuffered).
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines (including
   line terminators)."""
@@ -489,7 +499,7 @@ def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
                                       ' '.join([_quote_arg(x) for x in varargs])))
     sys.stdout.flush()
 
-  infile, outfile, errfile, kid = open_pipe([command] + list(varargs))
+  infile, outfile, errfile, kid = open_pipe([command] + list(varargs), bufsize)
 
   if stdin_lines:
     for x in stdin_lines:
@@ -503,13 +513,15 @@ def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
 
   return exit_code, stdout_lines, stderr_lines
 
-def run_command_stdin(command, error_expected, binary_mode=0,
+def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this
   should not be very large, as if the program outputs more than the OS
   is willing to buffer, this will deadlock, with both Python and
-  COMMAND waiting to write to each other for ever.
+  COMMAND waiting to write to each other for ever.  For tests where this
+  is a problem, setting BUFSIZE to a sufficiently large value will prevent
+  the deadlock, see spawn_process().
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines (including
   line terminators).
@@ -519,6 +531,7 @@ def run_command_stdin(command, error_expected, binary_mode=0,
     start = time.time()
 
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
+                                                        bufsize,
                                                         binary_mode,
                                                         stdin_lines,
                                                         *varargs)
@@ -631,7 +644,7 @@ def run_entriesdump(path):
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-                                                        0, None, path)
+                                                        0, 0, None, path)
   if verbose_mode:
     ### finish the CMD output
     print
@@ -693,25 +706,11 @@ def file_write(path, contents, mode='w'):
   which is (w)rite by default."""
   open(path, mode).write(contents)
 
-# For reading the contents of a file
-def file_read(path, mode = 'r'):
-  """Return the contents of the file at PATH, opening file using MODE,
-  which is (r)ead by default."""
-  fp = open(path, mode)
-  contents = fp.read()
-  fp.close()
-  return contents
-
 # For replacing parts of contents in an existing file, with new content.
 def file_substitute(path, contents, new_contents):
   """Replace the CONTENTS in the file at PATH using the NEW_CONTENTS"""
-  fp = open(path, 'r')
-  fcontent = fp.read()
-  fp.close()
-  fcontent = fcontent.replace(contents, new_contents)
-  fp = open(path, 'w')
-  fp.write(fcontent)
-  fp.close()
+  fcontent = open(path, 'r').read().replace(contents, new_contents)
+  open(path, 'w').write(fcontent)
 
 # For creating blank new repositories
 def create_repos(path):
@@ -726,6 +725,8 @@ def create_repos(path):
     opts += ("--pre-1.5-compatible",)
   elif server_minor_version < 6:
     opts += ("--pre-1.6-compatible",)
+  elif server_minor_version < 7:
+    opts += ("--pre-1.7-compatible",)
   if fs_type is not None:
     opts += ("--fs-type=" + fs_type,)
   exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
@@ -768,7 +769,7 @@ def create_repos(path):
 
       # read it
       format_file_path = get_fsfs_format_file_path(path)
-      contents = file_read(format_file_path, 'rb')
+      contents = open(format_file_path, 'rb').read()
 
       # tweak it
       new_contents = "".join([transform_line(line) + "\n"
@@ -801,9 +802,12 @@ def create_repos(path):
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
+  # Save any previous value of SVN_DBG_QUIET
+  saved_quiet = os.environ.get('SVN_DBG_QUIET')
+  os.environ['SVN_DBG_QUIET'] = 'y'
+
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
   # the displayed CMDs can be run by hand
-  os.environ['SVN_DBG_QUIET'] = 'y'
   create_repos(dst_path)
   dump_args = ['dump', src_path]
   load_args = ['load', dst_path]
@@ -837,7 +841,10 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   load_out.close()
   load_err.close()
 
-  del os.environ['SVN_DBG_QUIET']
+  if saved_quiet is None:
+    del os.environ['SVN_DBG_QUIET']
+  else:
+    os.environ['SVN_DBG_QUIET'] = saved_quiet
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
@@ -876,7 +883,7 @@ def canonicalize_url(input):
     return input
 
 
-def create_python_hook_script (hook_path, hook_script_code):
+def create_python_hook_script(hook_path, hook_script_code):
   """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
@@ -884,14 +891,14 @@ def create_python_hook_script (hook_path, hook_script_code):
     # Use an absolute path since the working directory is not guaranteed
     hook_path = os.path.abspath(hook_path)
     # Fill the python file.
-    file_write ("%s.py" % hook_path, hook_script_code)
+    file_write("%s.py" % hook_path, hook_script_code)
     # Fill the batch wrapper file.
-    file_append ("%s.bat" % hook_path,
-                 "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
+    file_append("%s.bat" % hook_path,
+                "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
   else:
     # For all other platforms
-    file_write (hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
-    os.chmod (hook_path, 0755)
+    file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
+    os.chmod(hook_path, 0755)
 
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
@@ -991,6 +998,34 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
     else:
       return "--- Merging %sr%ld through r%ld into '.+':\n" \
              % (from_foreign_phrase, revstart, revend)
+
+
+def make_log_msg():
+  "Conjure up a log message based on the calling test."
+
+  for idx in range(1, 100):
+    frame = sys._getframe(idx)
+
+    # If this frame isn't from a function in *_tests.py, then skip it.
+    filename = frame.f_code.co_filename
+    if not filename.endswith('_tests.py'):
+      continue
+
+    # There should be a test_list in this module.
+    test_list = frame.f_globals.get('test_list')
+    if test_list is None:
+      continue
+
+    # If the function is not in the test_list, then skip it.
+    func_name = frame.f_code.co_name
+    func_ob = frame.f_globals.get(func_name)
+    if func_ob not in test_list:
+      continue
+
+    # Make the log message look like a line from a traceback.
+    # Well...close. We use single quotes to avoid interfering with the
+    # double-quote quoting performed on Windows
+    return "File '%s', line %d, in %s" % (filename, frame.f_lineno, func_name)
 
 
 ######################################################################
@@ -1118,7 +1153,8 @@ class TestSpawningThread(threading.Thread):
     if server_minor_version:
       args.append('--server-minor-version=' + str(server_minor_version))
 
-    result, stdout_lines, stderr_lines = spawn_process(command, 0, None, *args)
+    result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
+                                                       *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
 
     if result != 1:
@@ -1345,8 +1381,8 @@ def usage():
         "                 output and ignores all exceptions in the \n"
         "                 run_and_verify* functions. This option is only \n"
         "                 useful during test development!")
-  print(" --server-minor-version  Set the minor version for the server.\n"
-        "                 Supports version 4 or 5.")
+  print(" --server-minor-version  Set the minor version for the server ('4',\n"
+        "                 '5', or '6').")
   print(" --fsfs-sharding Default shard size (for fsfs)\n"
         " --fsfs-packing  Run 'svnadmin pack' automatically")
   print(" --config-file   Configuration file for tests.")
@@ -1584,11 +1620,12 @@ def run_tests(test_list, serial_only = False):
   if serial_only or len(testnums) < 2:
     parallel = 0
 
-  # Build out the default configuration directory
-  create_config_dir(default_config_dir)
+  if not is_child_process:
+    # Build out the default configuration directory
+    create_config_dir(default_config_dir)
 
-  # Setup the pristine repository
-  svntest.actions.setup_pristine_repository()
+    # Setup the pristine repository
+    svntest.actions.setup_pristine_repository()
 
   # Run the tests.
   exit_code = _internal_run_tests(test_list, testnums, parallel)

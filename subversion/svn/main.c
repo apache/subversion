@@ -114,11 +114,13 @@ typedef enum {
   opt_show_revs,
   opt_reintegrate,
   opt_trust_server_cert,
+  opt_strip_count,
   opt_show_copies_as_adds,
   opt_ignore_keywords,
   opt_reverse_diff,
-  opt_include_pattern,
-  opt_exclude_pattern,
+  opt_ignore_whitespace,
+  opt_show_diff,
+  opt_internal_diff,
   opt_ignore_mergeinfo
 } svn_cl__longopt_t;
 
@@ -324,20 +326,24 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("lump-merge all of source URL's unmerged changes\n"
                        "                             "
                        "[alias: --ri]")},
-  {"strip",         'p', 1,
-                    N_("number of leading path components to strip\n"
+  {"strip-count",   opt_strip_count, 1,
+                    N_("number of leading path components to strip from\n"
                        "                             "
-                       "from pathnames. Specifying -p0 gives the entire\n"
+                       "paths parsed from the patch file. --strip-count 0\n"
                        "                             "
-                       "path unmodified. Specifying -p1 causes the path\n"
+                       "is the default and leaves paths unmodified.\n"
                        "                             "
-                       "    doc/fudge/crunchy.html\n"
+                       "--strip-count 1 would change the path\n"
                        "                             "
-                       "to be interpreted as\n"
+                       "'doc/fudge/crunchy.html' to 'fudge/crunchy.html'.\n"
                        "                             "
-                       "    fudge/crunchy.html\n"
+                       "--strip-count 2 would leave just 'crunchy.html'\n"
                        "                             "
-                       "while -p2 would give just crunchy.html")},
+                       "The expected component separator is '/' on all\n"
+                       "                             "
+                       "platforms. A leading '/' counts as one component.\n"
+                       "                             "
+                       "[alias: --strip]")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
                     N_("don't diff copied or moved files with their source\n"
                        "                             "
@@ -350,36 +356,18 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("apply the unidiff in reverse\n"
                        "                             "
                        "[alias: --rd]")},
-  {"include-pattern", opt_include_pattern, 1,
-                    N_("operate only on targets matching ARG,\n"
+  {"ignore-whitespace", opt_ignore_whitespace, 0,
+                       N_("ignore whitespace during pattern matching\n"
                        "                             "
-                       "which may be a glob pattern such as '*.txt'.\n"
+                       "[alias: --iw]")},
+  {"show-diff", opt_show_diff, 0,
+                       N_("produce diff output\n"
                        "                             "
-                       "If this option is specified multiple times,\n"
+                       "[alias: --diff]")},
+  {"internal-diff", opt_internal_diff, 0,
+                       N_("override diff-cmd specified in config file\n"
                        "                             "
-                       "all patterns are matched in turn.\n"
-                       "                             "
-                       "If both --include-pattern and --exclude-pattern\n"
-                       "                             "
-                       "options are specified include patterns are applied\n"
-                       "                             "
-                       "first, i.e. exclude patterns are applied to all\n"
-                       "                             "
-                       "targets which match an include pattern.\n"
-                       "                             "
-                       "[alias: --ip]")},
-  {"exclude-pattern", opt_exclude_pattern, 1,
-                    N_("do not operate on targets matching ARG,\n"
-                       "                             "
-                       "which may be a glob pattern such as '*.txt'.\n"
-                       "                             "
-                       "If this option is specified multiple times,\n"
-                       "                             "
-                       "all patterns are matched in turn.\n"
-                       "                             "
-                       "See also the --include-pattern option.\n"
-                       "                             "
-                       "[alias: --ep]")},
+                       "[alias: --idiff]")},
   {"ignore-mergeinfo",  opt_ignore_mergeinfo, 0,
                     N_("ignore changes to mergeinfo")},
 
@@ -405,10 +393,12 @@ const apr_getopt_option_t svn_cl__options[] =
   {"kl",            opt_keep_local, 0, NULL},
   {"sr",            opt_show_revs, 1, NULL},
   {"ri",            opt_reintegrate, 0, NULL},
+  {"strip",         opt_strip_count, 1, NULL},
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
-  {"ip",            opt_include_pattern, 1, NULL},
-  {"ep",            opt_exclude_pattern, 1, NULL},
+  {"iw",            opt_ignore_whitespace, 0, NULL},
+  {"diff",          opt_show_diff, 0, NULL},
+  {"idiff",         opt_internal_diff, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -583,11 +573,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
-    {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd, 'x',
-     opt_no_diff_deleted, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_no_diff_deleted, opt_show_copies_as_adds, opt_notice_ancestry,
-     opt_ignore_mergeinfo, opt_summarize, opt_changelist, opt_force,
-     opt_xml} },
+    {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
+     opt_internal_diff, 'x', opt_no_diff_deleted, opt_show_copies_as_adds,
+     opt_notice_ancestry, opt_ignore_mergeinfo, opt_summarize, opt_changelist,
+     opt_force, opt_xml} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -705,7 +694,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project/foo.c\n"
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
-     opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop},
+     opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
+     opt_show_diff, opt_diff_cmd, opt_internal_diff, 'x'},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -852,8 +842,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run, 'p', opt_reverse_diff, opt_include_pattern,
-     opt_exclude_pattern} },
+    {'q', opt_dry_run, opt_strip_count, opt_reverse_diff,
+     opt_ignore_whitespace} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1744,20 +1734,22 @@ main(int argc, const char *argv[])
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
         break;
-      case 'p':
+      case opt_strip_count:
         {
           char *end;
           opt_state.strip_count = (int) strtol(opt_arg, &end, 10);
           if (end == opt_arg || *end != '\0')
             {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Non-numeric strip argument given"));
+              err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Invalid strip count '%s'"), opt_arg);
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
           if (opt_state.strip_count < 0)
             {
-              err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                    _("Argument to --strip must be positive"));
+              err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                      _("Negative strip count '%i' "
+                                        "(strip count must be positive)"),
+                                      opt_state.strip_count);
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
         }
@@ -1768,17 +1760,14 @@ main(int argc, const char *argv[])
       case opt_reverse_diff:
         opt_state.reverse_diff = TRUE;
         break;
-      case opt_include_pattern:
-        if (opt_state.include_patterns == NULL)
-          opt_state.include_patterns = apr_array_make(pool, 1,
-                                                      sizeof (const char *));
-        APR_ARRAY_PUSH(opt_state.include_patterns, const char *) = opt_arg;
-        break;
-      case opt_exclude_pattern:
-        if (opt_state.exclude_patterns == NULL)
-          opt_state.exclude_patterns = apr_array_make(pool, 1,
-                                                      sizeof (const char *));
-        APR_ARRAY_PUSH(opt_state.exclude_patterns, const char *) = opt_arg;
+      case opt_ignore_whitespace:
+          opt_state.ignore_whitespace = TRUE;
+          break;
+      case opt_show_diff:
+          opt_state.show_diff = TRUE;
+          break;
+      case opt_internal_diff:
+        opt_state.internal_diff = TRUE;
         break;
       case opt_ignore_mergeinfo:
         opt_state.ignore_mergeinfo = TRUE;
@@ -1952,6 +1941,16 @@ main(int argc, const char *argv[])
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
+  /* Disallow simultaneous use of both --diff-cmd and
+     --internal-diff.  */
+  if (opt_state.diff_cmd && opt_state.internal_diff)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--diff-cmd and --internal-diff "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
   /* Ensure that 'revision_ranges' has at least one item, and make
      'start_revision' and 'end_revision' match that item. */
   if (opt_state.revision_ranges->nelts == 0)
@@ -1998,8 +1997,8 @@ main(int argc, const char *argv[])
 
           if (!err)
             {
-              err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath,
-                                          FALSE, pool);
+              err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+                                     pool);
 
               if (!err && kind != svn_node_none && kind != svn_node_unknown)
                 {
@@ -2128,6 +2127,9 @@ main(int argc, const char *argv[])
   if (opt_state.merge_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+  if (opt_state.internal_diff)
+    svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
+                   SVN_CONFIG_OPTION_DIFF_CMD, NULL);
 
   /* Check for mutually exclusive args --auto-props and --no-auto-props */
   if (opt_state.autoprops && opt_state.no_autoprops)

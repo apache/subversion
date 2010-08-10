@@ -116,12 +116,16 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
       if (mb->curr_info && mb->curr_path)
         {
           svn_mergeinfo_t path_mergeinfo;
+          const char *path;
 
           SVN_ERR_ASSERT(mb->curr_path->data);
+          path = apr_pstrdup(mb->pool, mb->curr_path->data);
           SVN_ERR((mb->err = svn_mergeinfo_parse(&path_mergeinfo,
                                                  mb->curr_info->data,
                                                  mb->pool)));
-          apr_hash_set(mb->catalog, apr_pstrdup(mb->pool, mb->curr_path->data),
+          /* Correct for naughty servers that send "relative" paths
+             with leading slashes! */
+          apr_hash_set(mb->catalog, path[0] == '/' ? path + 1 : path,
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
     }

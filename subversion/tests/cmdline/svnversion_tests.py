@@ -237,6 +237,36 @@ def svnversion_with_excluded_subtrees(sbox):
                                             D_path, repo_url + '/A/D',
                                             [ "1P\n" ], [])
 
+def svnversion_with_structural_changes(sbox):
+  "test 'svnversion' with structural changes"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  iota_copy_path = os.path.join(wc_dir, 'iota_copy')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', iota_path, iota_copy_path)
+
+  svntest.actions.run_and_verify_svnversion("Copied file",
+                                            iota_copy_path, repo_url +
+                                            '/iota_copy',
+                                            [ "Uncommitted local addition, "
+                                            "copy or move\n" ], 
+                                            [])
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  C_copy_path = os.path.join(wc_dir, 'C_copy')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', C_path, C_copy_path)
+
+  svntest.actions.run_and_verify_svnversion("Copied dir",
+                                            C_copy_path, repo_url +
+                                            '/C_copy',
+                                            [ "Uncommitted local addition, "
+                                            "copy or move\n" ], 
+                                            [])
+
 ########################################################################
 # Run the tests
 
@@ -246,6 +276,7 @@ test_list = [ None,
               svnversion_test,
               ignore_externals,
               svnversion_with_excluded_subtrees,
+              svnversion_with_structural_changes,
              ]
 
 if __name__ == '__main__':

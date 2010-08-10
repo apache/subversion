@@ -33,6 +33,8 @@
 #include "CreateJ.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
 
+#include "private/svn_wc_private.h"
+
 jobject
 CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
 {
@@ -431,7 +433,8 @@ CreateJ::Lock(const svn_lock_t *lock)
 }
 
 jobject
-CreateJ::Status(const char *local_abspath, const svn_wc_status2_t *status)
+CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
+                const svn_wc_status3_t *status, apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -516,12 +519,39 @@ CreateJ::Status(const char *local_abspath, const svn_wc_status2_t *status)
       jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
       jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
       jIsFileExternal = (status->file_external == 1) ? JNI_TRUE: JNI_FALSE;
-      jConflictDescription = CreateJ::ConflictDescriptor(status->tree_conflict);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
 
-      jIsTreeConflicted = (status->tree_conflict != NULL)
-                             ? JNI_TRUE: JNI_FALSE;
+      /* Unparse the meaning of the conflicted flag. */
+      if (status->conflicted)
+        {
+          svn_error_t *err;
+          svn_boolean_t text_conflicted = FALSE;
+          svn_boolean_t prop_conflicted = FALSE;
+          svn_boolean_t tree_conflicted = FALSE;
+
+          SVN_JNI_ERR(svn_wc__node_check_conflicts(&prop_conflicted,
+                                                   &text_conflicted,
+                                                   &tree_conflicted, wc_ctx,
+                                                   local_abspath, pool, pool),
+                      NULL);
+
+          if (tree_conflicted)
+            {
+              jIsTreeConflicted = JNI_TRUE;
+
+              const svn_wc_conflict_description2_t *tree_conflict;
+              SVN_JNI_ERR(svn_wc__get_tree_conflict(&tree_conflict, wc_ctx,
+                                                    local_abspath, pool, pool),
+                          NULL);
+
+              svn_wc_conflict_description_t *old_tree_conflict =
+                                    svn_wc__cd2_to_cd(tree_conflict, pool);
+              jConflictDescription = CreateJ::ConflictDescriptor
+                                                            (old_tree_conflict);
+              if (JNIUtil::isJavaExceptionThrown())
+                POP_AND_RETURN_NULL;
+            }
+        }
+
       jLock = CreateJ::Lock(status->repos_lock);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -741,13 +771,11 @@ CreateJ::RevisionRangeList(apr_array_header_t *ranges)
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      env->CallObjectMethod(jranges, add_mid, jrange);
+      env->CallBooleanMethod(jranges, add_mid, jrange);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
       env->DeleteLocalRef(jrange);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
     }
 
   return env->PopLocalFrame(jranges);
@@ -830,12 +858,7 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
         POP_AND_RETURN_NULL;
 
       env->DeleteLocalRef(jpropName);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
       env->DeleteLocalRef(jpropVal);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
     }
 
   return env->PopLocalFrame(map);
@@ -879,13 +902,11 @@ jobject CreateJ::Set(std::vector<jobject> &objects)
     {
       jobject jthing = *it;
 
-      env->CallObjectMethod(set, add_mid, jthing);
+      env->CallBooleanMethod(set, add_mid, jthing);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
       env->DeleteLocalRef(jthing);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
     }
 
   return env->PopLocalFrame(set);

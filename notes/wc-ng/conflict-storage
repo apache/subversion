@@ -10,7 +10,10 @@ are inside), or NULL (meaning no conflict is present).
 
 The conflict skel has the form:
 
-  ((KIND OPERATION KIND-SPECIFIC) (KIND OPERATION KIND-SPECIFIC) ...)
+  (OPERATION (KIND KIND-SPECIFIC) (KIND KIND-SPECIFIC) ...)
+
+OPERATION indicates the operation which caused the conflict(s) and is
+detailed below.
 
 KIND indicates the kind of conflict description that follows and is one
 of:
@@ -21,28 +24,17 @@ of:
   "prop" - meaning a "normal" property conflict, with left/right/mine full
     values saved;
   "tree" - meaning a tree conflict;
-  "reject" - meaning a text conflict for a single hunk of text, with the source
-    being a patch file (rather than left/right full texts), and with a
-    "reject" file being saved (?);
+  "reject" - meaning a text conflict for a single hunk of unidiff text,
+    with the source being a patch file (rather than left/right full texts),
+    and with a "reject" file being saved containing the unidiff text;
   "obstructed" - meaning ### TODO
-
-OPERATION indicates the operation which caused the conflict and is
-detailed below.
 
 KIND-SPECIFIC is specific to each KIND, and is detailed below.
 
 There are restrictions on what mixture of conflicts can meaningfully be
 recorded - e.g. there must not be two "text" nor one "text" and one
-"reject".  These restrictions are implied but not spelled out here.
-
-
-### stsp: need conflict data format version info inside skel, too?
-###   or do we bump the entire wc.db format number if we need to tweak
-###   this?
-###
-### gstein sez: the KIND can become "text-2" or somesuch if we need to
-###   radically alter the kind-specific data. but we can easily append
-###   information to the skel without much problem.
+"reject".  These restrictions are implied by the nature of operations
+creating the conflicts but not spelled out here.
 
 If the 'conflict_data' column is not NULL, then at least one
 KIND of conflict skel must exist, describing the conflict(s).
@@ -62,8 +54,8 @@ Operation skel
 
 Meaning:  The Operation skel indicates what kind of operation was being
 performed that resulted in a conflict, including the format and content
-(or reference to content) of the diff that was being applied to this
-node.
+(or reference to content) of the conflicting change that was being
+applied to this node.
 
 The OPERATION skel has the following form:
 
@@ -74,7 +66,7 @@ NAME is one of:
   "update" - meaning a 3-way merge as in "svn update";
   "switch" - meaning a 3-way merge as in "svn switch";
   "merge" - meaning a 3(4?)-way merge as in "svn merge";
-  "patch" - meaning application of a context-diff, as in "svn patch".
+  "patch" - meaning application of a unidiff patch, as in "svn patch".
 
 OPERATION-SPECIFIC is as follows:
 
@@ -85,6 +77,14 @@ To record an "update" operation, the skel has the form:
   BASE_REV is the base revision prior to the update.
   TARGET_REV is the revision being updated to.
 
+### sbutler: What about mixed-revision working copies?  Let's record
+### the equivalent of svn_wc_revision_status_t, plus the target rev: 
+###
+###   ("update" MIN_REV MAX_REV SWITCHED MODIFIED TARGET_REV)
+###
+### Otherwise, the user may get the mistaken impression that the local
+### tree is entirely at the URL and revision of the victim dir.
+
 For "switch", the skel has the form:
 
   ("switch" BASE_REV TARGET_REV REPOS_RELPATH)
@@ -94,47 +94,28 @@ For "switch", the skel has the form:
 
 For "merge", the skel has the form:
 
-  ("merge" LEFT_REV RIGHT_REV
-   (LEFT_REPOS_UUID LEFT_REPOS_ROOT_URL LEFT_REPOS_RELPATH LEFT_PEG_REV)
-   (RIGHT_REPOS_UUID RIGHT_REPOS_ROOT_URL RIGHT_REPOS_RELPATH RIGHT_PEG_REV) )
+  ("merge" LEFT_REV RIGHT_REV REPOS_UUID REPOS_ROOT_URL
+   (LEFT_REPOS_RELPATH LEFT_PEG_REV)
+   (RIGHT_REPOS_RELPATH RIGHT_PEG_REV) )
 
   LEFT_REV is the merge-left revision, and RIGHT_REV is the merge-right
     revision of a continuous revision range which was merged (merge tracking
     might split a merge up into multiple merges of continuous revision ranges).
 
-  {LEFT,RIGHT}_REPOS_UUID is the UUID of the repository the {left,right}
-    version of the item comes from, in order to recognize merges from foreign
-    repositories.
+  REPOS_UUID is the UUID of the repository being merged from, in order to
+    recognize merges from foreign repositories.
 
-  {LEFT,RIGHT}_REPOS_ROOT_URL is the repository root URL the {left,right}
-    version of the item comes from.
+  REPOS_ROOT_URL is the repository root URL the repository being merged from.
 
   {LEFT,RIGHT}_REPOS_RELPATH is the path in the repository of the {left,right}
     version of the item.
 
-  {LEFT,RIGHT}_PEG_REV is the peg revision of the {left,right} version
-    of the item.
-
-### JAF: Don't want both "rev" and "peg-rev" separately: that's recording too
-###   much UI.  Just have the revision in which to find the repos-relpath.
-### stsp: Peg revs aren't just UI. You need them to uniquely identify an item
-###   in the repository history. Here's an example for why we need them:
-###   Say I'm doing a merge of range rA-rB, and within this range,
-###   file foo.c is replaced in rN, and later renamed to bar.c in rM.
-###   Of course, A < N < M < B.
-###   (Note: The following highly depends on how editorv2 drivers will be
-###    implemented, so I may be off-track here.)
-###   During the merge with editorv2, the replace and rename result in the
-###   addition of foo.c@N (replacing foo.c@A), and the move of foo.c@N
-###   to bar.c. Let's say foo.c@A has edits local to the merge target.
-###   I'd like flag a edit/replaced tree conflict, and record foo.c@rA as
-###   the 'left' version of the conflicting item, and foo.c@rN as the 'right'
-###   version. Recording foo.c@B is wrong because foo.c does not exist at
-###   that revision, so being able to record just two revisions won't work.
-###   We could also record bar.c@B as the 'right' version, but this doesn't
-###   feel right since the rename does not really conflict with the edits.
-###   The item which is being renamed is not the one which was edited -- it
-###   just happened to live at the same path at a different time.
+  {LEFT,RIGHT}_CONFLICT_REV is the revision in which to find the
+    {left,right} version of the item which caused the conflict.
+    These are usually LEFT_REV or RIGHT_REV, but in some cases they
+    may differ (a simple example is if a file was replaced in revision rX
+    somewhere between LEFT_REV and RIGHT_REV, and the conflict is due to
+    events which happened between LEFT_REV and rX).
 
 For "patch", the skel has the form:
 
@@ -151,11 +132,15 @@ Text conflicts
 Text conflicts only exist on files. The following skel represents the
 "text" KIND of conflict:
 
-  ("text" OPERATION LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
+  ("text" ORIGINAL_SHA1 MINE_SHA1 INCOMING_SHA1)
 
-{LEFT,RIGHT,MINE}_SHA1 are sha1 checksums of the full texts of
-the {left,right,mine} version of the file. File version's content
-can be obtained from the pristine store.
+{ORIGINAL,MINE}_SHA1 are SHA1 checksums of the full texts of
+the {original (BASE), mine (WORKING)} version of the file.
+
+INCOMING_SHA1 is the SHA1 checksum of the incoming version of the file.
+### Need INCOMING_{LEFT,RIGHT}_SHA1 for 4-way merge?
+
+File version's content can be obtained from the pristine store.
 
 ### BH: We need some marker here, but these values must also be stored
 ###     in the older_checksum, left_checksum, right_checksum colums of ACTUAL
@@ -175,14 +160,28 @@ There can be one or more property conflicts on the node, represented
 by one or more "prop" KIND conflicts. Each "prop" conflict has the
 following form:
 
-  ("prop" OPERATION
-   PROPERTY_NAME ([LEFT_VALUE]) ([RIGHT_VALUE]) ([MINE_VALUE]))
+  ("prop" PROPERTY_NAME
+          ([ORIGINAL_VALUE])
+          ([MINE_VALUE])
+          ([INCOMING_VALUE])
+          ([INCOMING_BASE_VALUE]))
 
 PROPERTY_NAME is the name of the property, such as "svn:eol-style".
 
-Each property value ({LEFT,RIGHT,MINE}_VALUE) is represented as an
-empty list indicating the property did not exist in that version, or a
-1-item list containing the particular value.
+Each property value ({ORIGINAL,MINE,INCOMING,INCOMING_BASE}_VALUE) is
+represented as an empty list indicating the property did not exist in
+that version, or a 1-item list containing the particular value.
+
+ORIGINAL_VALUE is the property that was checked out
+MINE_VALUE is the current/ACTUAL value in the working copy
+INCOMING_VALUE is the new/target value from an update/merge/etc
+INCOMING_BASE_VALUE is used during merges, as an incoming property
+  change is expressed as "change from INCOMING_BASE to INCOMING"
+
+### stsp: What's the size limit of a prop value?
+### HKW: In theory, there isn't one.  In practice, we used to caution people
+###   against having too large of props, but I don't know if that is
+###   true anymore.
 
 
 Tree conflicts
@@ -191,26 +190,40 @@ Tree conflicts
 Tree conflicts exist on files or directories.
 
 ### JAF: And symlinks, I presume - or, if not, why not?
+### stsp: Symlinks are resolved before retreiving conflict information.,
 
 The following information is stored if there is a tree conflict on the node:
 
-  ("tree" OPERATION
-    INCOMING_CHANGE LOCAL_CHANGE
-    LEFT_NODE_KIND RIGHT_NODE_KIND
-    LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
+  ("tree" LOCAL_STATE INCOMING_STATE)
+
+  LOCAL_STATE := (LOCAL_CHANGE ORIGINAL_NODE_KIND MINE_NODE_KIND
+                  [ORIGINAL_SHA1 MINE_SHA1])
+  INCOMING_STATE := (INCOMING_CHANGE INCOMING_NODE_KIND [INCOMING_SHA1])
+
+LOCAL_CHANGE is the local change which conflicted with the
+incoming change during the operation. Possible values are "edit", "add",
+"delete", "rename", "replace", "obstructed", "missing", and "unversioned"
+(### possibly collapse "unversioned" with "obstructed"?).
+
+ORIGINAL_NODE_KIND is the kind of the node in the BASE tree.
+MINE_NODE_KIND is the kind of the node from the WORKING tree at the
+time the conflict was flagged.
 
 INCOMING_CHANGE is the incoming change which conflicted with the
 local change during the operation. Possible values are "edit", "add",
 "delete", "rename", and "replace".
 
-LOCAL_CHANGE is the local change which conflicted with the
-incoming change during the operation. Possible values are "edit", "add",
-"delete", "rename", "replace", "obstructed", and "missing".
+The *_SHA1 sum fields are only present if {ORIGINAL,MINE,INCOMING}_NODE_KIND
+is "file".
 
-If the {left,right,mine} version of the item is a file and the content
-of that file is known, {LEFT,RIGHT,MINE}_SHA1 is the sha1 checksum of the
-full text of the {left,right,mine} version of the file. The file version's
-content can be obtained from the pristine store.
+ORIGINAL_SHA1 is the SHA1 of the BASE version of the tree conflict victim
+file in the working copy. MINE_SHA1 is the SHA1 of the WORKING version
+of the tree conflict victim file as of the time the conflict was flagged.
+
+If INCOMING_KIND is "file", INCOMING_SHA1 is the SHA1 of the file
+which the operation was attempting to install in the working copy.
+
+The file version's content can be obtained from the pristine store.
 
 ### BH: We need to duplicate the sha1 values in the older_checksum,
 ###     left_checksum, right_checksum columns of ACTUAL
@@ -220,16 +233,6 @@ content can be obtained from the pristine store.
 ###     allow resolving this in the same way?
 ###     (We should keep the history of the node valid via replace vs update)
 ### stsp: I don't really understand your question. Can you be more specific?
-
-### gstein suggests:
-###
-###   ("tree" OPERATION LOCAL_STATE INCOMING_STATE)
-###
-###   LOCAL_STATE := (LOCAL_CHANGE NODE_KIND [ORIGINAL_SHA1 MINE_SHA1])
-###   INCOMING_STATE := (INCOMING_CHANGE NODE_KIND [INCOMING_SHA1])
-###
-### this groups the data better, and has nice (optional) placeholders
-### for the SHA1 values when NODE_KIND is "file"
 
 
 (Unversioned) Obstructions
@@ -242,7 +245,7 @@ the BASE_NODE table.
 There is no particular data which needs to be recorded for an
 obstruction. Thus, the "obstructed" conflict skel has the form:
 
-  ("obstructed" OPERATION)
+  ("obstructed")
 
 
 Reject conflicts
@@ -253,8 +256,7 @@ is the failure to find a match for a hunk's context in the patch target.
 There can be one or more reject conflicts on a node. Each "reject" conflict
 has the following form:
 
-  ("reject" OPERATION
-    HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LEN
+  ("reject" HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LEN
     HUNK_MODIFIED_OFFSET HUNK_MODIFIED_LENGTH
     REJECT_DIFF_SHA1)
 

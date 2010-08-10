@@ -73,7 +73,7 @@ import svntest
 # Working revision, last-changed revision, and last author are whitespace
 # only if the item is missing.
 #
-_re_parse_status = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])'
+_re_parse_status = re.compile('^([?!MACDRUGI_~ ][MACDRUG_ ])'
                               '([L ])'
                               '([+ ])'
                               '([SX ])'
@@ -272,7 +272,7 @@ class State:
     between the two states. LABEL will be used in the display. SELF is the
     "expected" state, and OTHER is the "actual" state.
 
-    If any changes are detected/diplayed, then SVNTreeUnequal is raised.
+    If any changes are detected/displayed, then SVNTreeUnequal is raised.
     """
     norm_self = self.normalize()
     norm_other = other.normalize()
@@ -312,11 +312,17 @@ class State:
         else:
           # when reading the entry structures, we don't examine for text or
           # property mods, so clear those flags. we also do not examine the
-          # filesystem, so we cannot detect missing files.
-          if item.status[0] in 'M!':
+          # filesystem, so we cannot detect missing or obstructed files.
+          if item.status[0] in 'M!~':
             item.status = ' ' + item.status[1]
           if item.status[1] == 'M':
             item.status = item.status[0] + ' '
+          # under wc-ng terms, we may report a different revision than the
+          # backwards-compatible code should report. if there is a special
+          # value for compatibility, then use it.
+          if item.entry_rev is not None:
+            item.wc_rev = item.entry_rev
+            item.entry_rev = None
       if item.writelocked:
         # we don't contact the repository, so our only information is what
         # is in the working copy. 'K' means we have one and it matches the
@@ -615,7 +621,7 @@ class StateItem:
   """
 
   def __init__(self, contents=None, props=None,
-               status=None, verb=None, wc_rev=None,
+               status=None, verb=None, wc_rev=None, entry_rev=None,
                locked=None, copied=None, switched=None, writelocked=None,
                treeconflict=None):
     # provide an empty prop dict if it wasn't provided
@@ -638,6 +644,9 @@ class StateItem:
     self.verb = verb
     # The base revision number of the node in the WC, as a string.
     self.wc_rev = wc_rev
+    # This one will be set when we expect the wc_rev to differ from the one
+    # found ni the entries code.
+    self.entry_rev = entry_rev
     # For the following attributes, the value is the status character of that
     # field from 'svn status', except using value None instead of status ' '.
     self.locked = locked
@@ -803,6 +812,16 @@ def svn_url_quote(url):
   # svn defines a different set of "safe" characters than Python does, so
   # we need to avoid escaping them. see subr/path.c:uri_char_validity[]
   return urllib.quote(url, "!$&'()*+,-./:=@_~")
+
+
+# ------------
+
+def text_base_path(file_path):
+  """Return the path to the text-base file for the versioned file
+     FILE_PATH."""
+  dot_svn = svntest.main.get_admin_name()
+  return os.path.join(os.path.dirname(file_path), dot_svn, 'text-base',
+                      os.path.basename(file_path) + '.svn-base')
 
 
 # ------------

@@ -79,7 +79,7 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
     case svn_opt_revision_working:
     case svn_opt_revision_base:
       {
-        const svn_wc_entry_t *ent;
+        svn_error_t *err;
 
         /* Sanity check. */
         if (local_abspath == NULL)
@@ -91,19 +91,33 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
         if (svn_path_is_url(local_abspath))
           goto invalid_rev_arg;
 
-        SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
-                                            svn_node_unknown, FALSE, FALSE,
-                                            scratch_pool, scratch_pool));
+        err = svn_wc__node_get_commit_base_rev(revnum, wc_ctx,
+                                               local_abspath,
+                                               scratch_pool);
 
-        *revnum = ent->revision;
+        /* Return the same error as older code did (before and at r935091).
+           At least svn_client_proplist3 promises SVN_ERR_ENTRY_NOT_FOUND. */
+        if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+          {
+            svn_error_clear(err);
+            return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                                     _("'%s' is not under version control"),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
+          }
+        else
+          SVN_ERR(err);
+
+        if (! SVN_IS_VALID_REVNUM(*revnum))
+          return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                                   _("Path '%s' has no committed "
+                                     "revision"), local_abspath);
       }
       break;
 
     case svn_opt_revision_committed:
     case svn_opt_revision_previous:
       {
-        const svn_wc_entry_t *ent;
-
         /* Sanity check. */
         if (local_abspath == NULL)
           return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
@@ -114,15 +128,14 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
         if (svn_path_is_url(local_abspath))
           goto invalid_rev_arg;
 
-        SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
-                                            svn_node_unknown, FALSE, FALSE,
-                                            scratch_pool, scratch_pool));
-
-        if (! SVN_IS_VALID_REVNUM(ent->cmt_rev))
+        SVN_ERR(svn_wc__node_get_changed_info(revnum, NULL, NULL,
+                                              wc_ctx, local_abspath,
+                                              scratch_pool, scratch_pool));
+        if (! SVN_IS_VALID_REVNUM(*revnum))
           return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                    _("Path '%s' has no committed "
                                      "revision"), local_abspath);
-        *revnum = ent->cmt_rev;
+
         if (revision->kind == svn_opt_revision_previous)
           (*revnum)--;
       }

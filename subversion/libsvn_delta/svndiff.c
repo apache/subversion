@@ -90,9 +90,8 @@ struct encoder_baton {
          129 encodes as [1 0000001] [0 0000001]
         2000 encodes as [1 0001111] [0 1010000]
 */
-
-static char *
-encode_int(char *p, svn_filesize_t val)
+static unsigned char *
+encode_int(unsigned char *p, svn_filesize_t val)
 {
   int n;
   svn_filesize_t v;
@@ -116,7 +115,7 @@ encode_int(char *p, svn_filesize_t val)
   while (--n >= 0)
     {
       cont = ((n > 0) ? 0x1 : 0x0) << 7;
-      *p++ = (char)(((val >> (n * 7)) & 0x7f) | cont);
+      *p++ = (unsigned char)(((val >> (n * 7)) & 0x7f) | cont);
     }
 
   return p;
@@ -127,10 +126,10 @@ encode_int(char *p, svn_filesize_t val)
 static void
 append_encoded_int(svn_stringbuf_t *header, svn_filesize_t val)
 {
-  char buf[MAX_ENCODED_INT_LEN], *p;
+  unsigned char buf[MAX_ENCODED_INT_LEN], *p;
 
   p = encode_int(buf, val);
-  svn_stringbuf_appendbytes(header, buf, p - buf);
+  svn_stringbuf_appendbytes(header, (const char *)buf, p - buf);
 }
 
 /* If IN is a string that is >= MIN_COMPRESS_SIZE, zlib compress it and
@@ -183,7 +182,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   svn_stringbuf_t *i1 = svn_stringbuf_create("", pool);
   svn_stringbuf_t *header = svn_stringbuf_create("", pool);
   const svn_string_t *newdata;
-  char ibuf[MAX_INSTRUCTION_LEN], *ip;
+  unsigned char ibuf[MAX_INSTRUCTION_LEN], *ip;
   const svn_txdelta_op_t *op;
   apr_size_t len;
 
@@ -225,9 +224,9 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       ip = ibuf;
       switch (op->action_code)
         {
-        case svn_txdelta_source: *ip = (char)0; break;
-        case svn_txdelta_target: *ip = (char)(0x1 << 6); break;
-        case svn_txdelta_new:    *ip = (char)(0x2 << 6); break;
+        case svn_txdelta_source: *ip = 0; break;
+        case svn_txdelta_target: *ip = (0x1 << 6); break;
+        case svn_txdelta_new:    *ip = (0x2 << 6); break;
         }
       if (op->length >> 6 == 0)
         *ip++ |= op->length;
@@ -235,7 +234,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
         ip = encode_int(ip + 1, op->length);
       if (op->action_code != svn_txdelta_new)
         ip = encode_int(ip, op->offset);
-      svn_stringbuf_appendbytes(instructions, ibuf, ip - ibuf);
+      svn_stringbuf_appendbytes(instructions, (const char *)ibuf, ip - ibuf);
     }
 
   /* Encode the header.  */
@@ -355,43 +354,60 @@ struct decode_baton
    the byte after the integer.  The bytes to be decoded live in the
    range [P..END-1].  See the comment for encode_int earlier in this
    file for more detail on the encoding format.  */
-
 static const unsigned char *
 decode_file_offset(svn_filesize_t *val,
                    const unsigned char *p,
                    const unsigned char *end)
 {
+  svn_filesize_t temp = 0;
+
   if (p + MAX_ENCODED_INT_LEN < end)
     end = p + MAX_ENCODED_INT_LEN;
   /* Decode bytes until we're done.  */
-  *val = 0;
   while (p < end)
     {
-      *val = (*val << 7) | (*p & 0x7f);
-      if (((*p++ >> 7) & 0x1) == 0)
+      /* Don't use svn_filesize_t here, because this might be 64 bits
+       * on 32 bit targets. Optimizing compilers may or may not be
+       * able to reduce that to the effective code below. */
+      unsigned int c = *p++;
+
+      temp = (temp << 7) | (c & 0x7f);
+      if (c < 0x80)
+      {
+        *val = temp;
         return p;
+      }
     }
+
+  *val = temp;
   return NULL;
 }
 
 
-/* Same as above, only decide into a size variable. */
-
+/* Same as above, only decode into a size variable. */
 static const unsigned char *
 decode_size(apr_size_t *val,
             const unsigned char *p,
             const unsigned char *end)
 {
+  apr_size_t temp = 0;
+
   if (p + MAX_ENCODED_INT_LEN < end)
     end = p + MAX_ENCODED_INT_LEN;
   /* Decode bytes until we're done.  */
-  *val = 0;
   while (p < end)
     {
-      *val = (*val << 7) | (*p & 0x7f);
-      if (((*p++ >> 7) & 0x1) == 0)
+      apr_size_t c = *p++;
+
+      temp = (temp << 7) | (c & 0x7f);
+      if (c < 0x80)
+      {
+        *val = temp;
         return p;
+      }
     }
+
+  *val = temp;
   return NULL;
 }
 
@@ -399,7 +415,6 @@ decode_size(apr_size_t *val,
    We expect an integer is prepended to IN that specifies the original
    size, and that if encoded size == original size, that the remaining
    data is not compressed.  */
-
 static svn_error_t *
 zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out, apr_size_t limit)
 {
@@ -452,33 +467,38 @@ zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out, apr_size_t limit)
 /* Decode an instruction into OP, returning a pointer to the text
    after the instruction.  Note that if the action code is
    svn_txdelta_new, the offset field of *OP will not be set.  */
-
 static const unsigned char *
 decode_instruction(svn_txdelta_op_t *op,
                    const unsigned char *p,
                    const unsigned char *end)
 {
+  apr_size_t c;
+  apr_size_t action;
+
   if (p == end)
     return NULL;
 
+  /* We need this more than once */
+  c = *p++;
+
   /* Decode the instruction selector.  */
-  switch ((*p >> 6) & 0x3)
-    {
-    case 0x0: op->action_code = svn_txdelta_source; break;
-    case 0x1: op->action_code = svn_txdelta_target; break;
-    case 0x2: op->action_code = svn_txdelta_new; break;
-    case 0x3: return NULL;
-    }
+  action = (c >> 6) & 0x3;
+  if (action >= 0x3)
+      return NULL;
+
+  /* This relies on enum svn_delta_action values to match and never to be
+     redefined. */
+  op->action_code = (enum svn_delta_action)(action);
 
   /* Decode the length and offset.  */
-  op->length = *p++ & 0x3f;
+  op->length = c & 0x3f;
   if (op->length == 0)
     {
       p = decode_size(&op->length, p, end);
       if (p == NULL)
         return NULL;
     }
-  if (op->action_code != svn_txdelta_new)
+  if (action != svn_txdelta_new)
     {
       p = decode_size(&op->offset, p, end);
       if (p == NULL)

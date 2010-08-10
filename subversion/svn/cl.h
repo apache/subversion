@@ -224,8 +224,10 @@ typedef struct svn_cl__opt_state_t
   int strip_count; /* number of leading path components to strip */
   svn_boolean_t ignore_keywords;  /* do not expand keywords */
   svn_boolean_t reverse_diff;     /* reverse a diff (e.g. when patching) */
-  apr_array_header_t *include_patterns; /* targets to include in operation */
-  apr_array_header_t *exclude_patterns; /* targets to exclude from operation */
+  svn_boolean_t ignore_whitespace; /* don't account for whitespace when
+                                      patching */
+  svn_boolean_t show_diff;        /* produce diff output */
+  svn_boolean_t internal_diff;    /* override diff_cmd in config file */
   svn_boolean_t ignore_mergeinfo; /* ignore mergeinfo in reporting commands. */
 } svn_cl__opt_state_t;
 
@@ -389,7 +391,7 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
    */
 svn_error_t *
 svn_cl__print_status(const char *path,
-                     const svn_wc_status2_t *status,
+                     const svn_wc_status3_t *status,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
@@ -397,6 +399,7 @@ svn_cl__print_status(const char *path,
                      unsigned int *text_conflicts,
                      unsigned int *prop_conflicts,
                      unsigned int *tree_conflicts,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 
@@ -404,7 +407,8 @@ svn_cl__print_status(const char *path,
    allocations. */
 svn_error_t *
 svn_cl__print_status_xml(const char *path,
-                         const svn_wc_status2_t *status,
+                         const svn_wc_status3_t *status,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
 
 

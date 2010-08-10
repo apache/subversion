@@ -73,6 +73,12 @@ typedef struct svn_client__merge_path_t
                                            explicit or inherited. */
   svn_boolean_t scheduled_for_deletion; /* ABSPATH is scheduled for
                                            deletion. */
+  svn_boolean_t immediate_child_dir;    /* ABSPATH is an immediate child
+                                           directory of the merge target,
+                                           has no explicit mergeinfo prior
+                                           to the merge, and the operational
+                                           depth of the merge is
+                                           svn_depth_immediates. */
 } svn_client__merge_path_t;
 
 /* Return a deep copy of the merge-path structure OLD, allocated in POOL. */

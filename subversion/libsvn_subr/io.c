@@ -224,6 +224,9 @@ io_check_path(const char *path,
     *kind = svn_node_none;
   else if (APR_STATUS_IS_ENOTDIR(apr_err)
 #ifdef WIN32
+           /* On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
+            * invalid-pathname error but not this one, so we include it. */
+           /* ### This fix should go into APR. */
            || (APR_TO_OS_ERROR(apr_err) == ERROR_INVALID_NAME)
 #endif
            )
@@ -625,7 +628,7 @@ static const char *temp_dir;
 
 /* Helper function to initialize temp dir. Passed to svn_atomic__init_once */
 static svn_error_t *
-init_temp_dir(apr_pool_t *scratch_pool)
+init_temp_dir(void *baton, apr_pool_t *scratch_pool)
 {
   /* Global pool for the temp path */
   apr_pool_t *global_pool = svn_pool_create(NULL);
@@ -650,7 +653,8 @@ svn_error_t *
 svn_io_temp_dir(const char **dir,
                 apr_pool_t *pool)
 {
-  SVN_ERR(svn_atomic__init_once(&temp_dir_init_state, init_temp_dir, pool));
+  SVN_ERR(svn_atomic__init_once(&temp_dir_init_state,
+                                init_temp_dir, NULL, pool));
 
   *dir = apr_pstrdup(pool, temp_dir);
 
@@ -782,6 +786,23 @@ svn_io_copy_file(const char *src,
   return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
+/* Wrapper for apr_file_perms_set(). */
+static svn_error_t *
+file_perms_set(const char *fname, apr_fileperms_t perms,
+               apr_pool_t *pool)
+{
+  const char *fname_apr;
+  apr_status_t status;
+
+  SVN_ERR(cstring_from_utf8(&fname_apr, fname, pool));
+
+  status = apr_file_perms_set(fname_apr, perms);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
+                              fname);
+  else
+    return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_copy_perms(const char *src,
@@ -811,7 +832,7 @@ svn_io_copy_perms(const char *src,
     SVN_ERR(svn_io_file_open(&src_file, src, APR_READ, APR_OS_DEFAULT, pool));
     SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file, pool));
     SVN_ERR(svn_io_file_close(src_file, pool));
-    err = svn_io_file_perms_set(dst, finfo.protection, pool);
+    err = file_perms_set(dst, finfo.protection, pool);
     if (err)
       {
         /* We shouldn't be able to get APR_INCOMPLETE or APR_ENOTIMPL
@@ -1125,7 +1146,7 @@ svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
       now = apr_time_now(); /* Extract the time used for the path stat */
 
       if (now >= then)
-        return; /* Passing negative values may suspend indefinately (Windows) */
+        return; /* Passing negative values may suspend indefinitely (Windows) */
     }
 
   apr_sleep(then - now);
@@ -1807,27 +1828,6 @@ svn_stringbuf_from_file(svn_stringbuf_t **result,
          _("Reading from stdin is disallowed"));
   return svn_stringbuf_from_file2(result, filename, pool);
 }
-
-
-/* Get the name of FILE, or NULL if FILE is an unnamed stream. */
-static svn_error_t *
-file_name_get(const char **fname_utf8, apr_file_t *file, apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  const char *fname;
-
-  apr_err = apr_file_name_get(&fname, file);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
-
-  if (fname)
-    SVN_ERR(svn_path_cstring_to_utf8(fname_utf8, fname, pool));
-  else
-    *fname_utf8 = NULL;
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
@@ -2553,8 +2553,10 @@ svn_io_parse_mimetypes_file(apr_hash_t **type_map,
           type = APR_ARRAY_IDX(tokens, 0, const char *);
           for (i = 1; i < tokens->nelts; i++)
             {
-              const char *ext = APR_ARRAY_IDX(tokens, i, const char *);
-              fileext_tolower((char *)ext);
+              /* We can safely address 'ext' as a non-const string because
+               * we know svn_cstring_split() allocated it in 'pool' for us. */
+              char *ext = APR_ARRAY_IDX(tokens, i, char *);
+              fileext_tolower(ext);
               apr_hash_set(types, ext, APR_HASH_KEY_STRING, type);
             }
         }
@@ -2711,7 +2713,7 @@ do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
   if (! status)
     return SVN_NO_ERROR;
 
-  err = file_name_get(&name, file, pool);
+  err = svn_io_file_name_get(&name, file, pool);
   if (err)
     name = NULL;
   svn_error_clear(err);
@@ -2898,7 +2900,7 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
         }
     }
 
-  err = file_name_get(&name, file, pool);
+  err = svn_io_file_name_get(&name, file, pool);
   if (err)
     name = NULL;
   svn_error_clear(err);
@@ -3523,29 +3525,142 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
   return SVN_NO_ERROR;
 }
 
-/* Wrapper for apr_file_mktemp(). */
-svn_error_t *
-svn_io_file_mktemp(apr_file_t **new_file, const char *templ,
-                  apr_int32_t flags, apr_pool_t *pool)
+#ifdef WIN32
+/* Counter value of file_mktemp request (used in a threadsafe way), to make
+   sure that a single process normally never generates the same tempname
+   twice */
+static volatile apr_uint32_t tempname_counter = 0;
+#endif
+
+/* Creates a new temporary file in DIRECTORY with apr flags FLAGS.
+   Set *NEW_FILE to the file handle and *NEW_FILE_NAME to its name.
+   Perform temporary allocations in SCRATCH_POOL and the result in
+   RESULT_POOL. */
+static svn_error_t *
+temp_file_create(apr_file_t **new_file,
+                 const char **new_file_name,
+                 const char *directory,
+                 apr_int32_t flags,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
+#ifndef WIN32
+  const char *templ = svn_dirent_join(directory, "svn-XXXXXX", scratch_pool);
   const char *templ_apr;
   apr_status_t status;
 
-  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr, templ, pool));
+  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr, templ, scratch_pool));
 
   /* ### svn_path_cstring_from_utf8() guarantees to make a copy of the
          data available in POOL and we need a non-const pointer here,
-         as apr changes the template to return the new filename. 
-
-         But we can't provide the filename to our caller as that might need
-         more bytes then there are XXXXs after converting it back to utf-8. */
-  status = apr_file_mktemp(new_file, (char *)templ_apr, flags, pool);
+         as apr changes the template to return the new filename. */
+  status = apr_file_mktemp(new_file, (char *)templ_apr, flags, result_pool);
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't create temporary file from "
                               "template '%s'"), templ);
-  else
-    return SVN_NO_ERROR;
+  
+  /* Translate the returned path back to utf-8 before returning it */
+  return svn_error_return(svn_path_cstring_to_utf8(new_file_name,
+                                                   templ_apr,
+                                                   result_pool));
+#else
+  /* The Windows implementation of apr_file_mktemp doesn't handle access
+     denied errors correctly. Therefore we implement our own temp file
+     creation function here. */
+
+  /* ### Most of this is borrowed from the svn_io_open_uniquely_named(),
+     ### the function we used before. But we try to guess a more unique
+     ### name before trying if it exists. */
+
+  /* Offset by some time value and a unique request nr to make the number
+     +- unique for both this process and on the computer */
+  int baseNr = (GetTickCount() << 11) + 7 * svn_atomic_inc(&tempname_counter) 
+               + GetCurrentProcessId();
+  int i;
+
+  /* ### Maybe use an iterpool? */
+  for (i = 0; i <= 99999; i++)
+    {
+      apr_uint32_t unique_nr;
+      const char *unique_name;
+      const char *unique_name_apr;
+      apr_file_t *try_file;
+      apr_status_t apr_err;
+
+      /* Generate a number that should be unique for this application and
+         usually for the entire computer to reduce the number of cycles
+         through this loop. (A bit of calculation is much cheaper then
+         disk io) */
+      unique_nr = baseNr + 3 * i;
+
+      unique_name = apr_psprintf(scratch_pool, "%s/svn-%X", directory,
+                                 unique_nr);
+
+      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, scratch_pool));
+
+      apr_err = file_open(&try_file, unique_name_apr, flags,
+                          APR_OS_DEFAULT, FALSE, scratch_pool);
+
+      if (APR_STATUS_IS_EEXIST(apr_err))
+          continue;
+      else if (apr_err)
+        {
+          /* On Win32, CreateFile fails with an "Access Denied" error
+             code, rather than "File Already Exists", if the colliding
+             name belongs to a directory. */
+
+          if (APR_STATUS_IS_EACCES(apr_err))
+            {
+              apr_finfo_t finfo;
+              apr_status_t apr_err_2 = apr_stat(&finfo, unique_name_apr,
+                                                APR_FINFO_TYPE, scratch_pool);
+
+              if (!apr_err_2 && finfo.filetype == APR_DIR)
+                continue;
+
+#ifdef WIN32
+              apr_err_2 = APR_TO_OS_ERROR(apr_err);
+
+              if (apr_err_2 == ERROR_ACCESS_DENIED ||
+                  apr_err_2 == ERROR_SHARING_VIOLATION)
+                {
+                  /* The file is in use by another process or is hidden;
+                     create a new name, but don't do this 99999 times in
+                     case the folder is not writable */
+                  i += 797;
+                  continue;
+                }
+#endif
+
+              /* Else fall through and return the original error. */
+            }
+
+          return svn_error_wrap_apr(apr_err, _("Can't open '%s'"),
+                                    svn_dirent_local_style(unique_name,
+                                                           scratch_pool));
+        }
+      else
+        {
+          /* Move file to the right pool */
+          apr_err = apr_file_setaside(new_file, try_file, result_pool);
+
+          if (apr_err)
+            return svn_error_wrap_apr(apr_err, _("Can't set aside '%s'"),
+                                      svn_dirent_local_style(unique_name,
+                                                             scratch_pool));
+
+          *new_file_name = apr_pstrdup(result_pool, unique_name);
+
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return svn_error_createf(SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
+                           NULL,
+                           _("Unable to make name in '%s'"),
+                           svn_dirent_local_style(directory, scratch_pool));
+#endif
 }
 
 /* Wrapper for apr_file_name_get(). */
@@ -3561,26 +3676,14 @@ svn_io_file_name_get(const char **filename,
   if (status)
     return svn_error_wrap_apr(status, _("Can't get file name"));
 
-  return svn_error_return(cstring_to_utf8(filename, fname_apr, pool));
-}
-
-/* Wrapper for apr_file_perms_set(). */
-svn_error_t *
-svn_io_file_perms_set(const char *fname, apr_fileperms_t perms,
-                      apr_pool_t *pool)
-{
-  const char *fname_apr;
-  apr_status_t status;
-
-  SVN_ERR(cstring_from_utf8(&fname_apr, fname, pool));
-
-  status = apr_file_perms_set(fname_apr, perms);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
-                              fname);
+  if (fname_apr)
+    SVN_ERR(svn_path_cstring_to_utf8(filename, fname_apr, pool));
   else
-    return SVN_NO_ERROR;
+    *filename = NULL;
+
+  return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_io_open_unique_file3(apr_file_t **file,
@@ -3592,7 +3695,6 @@ svn_io_open_unique_file3(apr_file_t **file,
 {
   apr_file_t *tempfile;
   const char *tempname;
-  char *path;
   struct temp_file_cleanup_s *baton = NULL;
   apr_int32_t flags = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL |
                        APR_BUFFERED | APR_BINARY);
@@ -3608,8 +3710,6 @@ svn_io_open_unique_file3(apr_file_t **file,
 
   if (dirpath == NULL)
     SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
-
-  path = svn_dirent_join(dirpath, "svn-XXXXXX", scratch_pool);
 
   switch (delete_when)
     {
@@ -3635,11 +3735,11 @@ svn_io_open_unique_file3(apr_file_t **file,
         break;
     }
 
-  SVN_ERR(svn_io_file_mktemp(&tempfile, path, flags, result_pool));
-  SVN_ERR(svn_io_file_name_get(&tempname, tempfile, scratch_pool));
+  SVN_ERR(temp_file_create(&tempfile, &tempname, dirpath, flags,
+                           result_pool, scratch_pool));
 
 #ifndef WIN32
-  /* ### svn_io_file_mktemp() creates files with mode 0600.
+  /* ### file_mktemp() creates files with mode 0600.
    * ### As of r40264, tempfiles created by svn_io_open_unique_file3()
    * ### often end up being copied or renamed into the working copy.
    * ### This will cause working files having mode 0600 while users might
@@ -3649,7 +3749,7 @@ svn_io_open_unique_file3(apr_file_t **file,
    * ### So we tweak perms of the tempfile here, but only if the umask
    * ### allows it. */
   SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-  SVN_ERR(svn_io_file_perms_set(tempname, perms, scratch_pool));
+  SVN_ERR(file_perms_set(tempname, perms, scratch_pool));
 #endif
 
   if (file)
@@ -3658,14 +3758,14 @@ svn_io_open_unique_file3(apr_file_t **file,
     SVN_ERR(svn_io_file_close(tempfile, scratch_pool));
 
   if (unique_path)
-    *unique_path = apr_pstrdup(result_pool, tempname);
+    *unique_path = tempname; /* Was allocated in result_pool */
 
   if (baton)
     {
       if (unique_path)
         baton->name = *unique_path;
       else
-        baton->name = apr_pstrdup(result_pool, tempname);
+        baton->name = tempname; /* Was allocated in result_pool */
     }
 
   return SVN_NO_ERROR;

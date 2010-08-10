@@ -74,6 +74,51 @@ A lot of the Concerns are actually somewhat-valid feature requests.  We should
 attempt to vet them, and if found justifiable, implement them.
 
 
+User 3
+======
+
+Background
+----------
+Large multinational corporate, many regions each with relatively few developers
+(10-20 per region say), couple of hundred in HQ. Beginning to work with
+outsourced development centres. Moved from VSS to SVN 18 months ago (but
+planning longer).
+
+
+Concerns
+--------
+* Performance. Base product is 20,000 files in a few hundred Mb Data, plus
+  smaller modules. Initial checkin of the base often fails and has to be
+  performed piecemeal. Some log commands take a while, TortoiseSVN's revision
+  graph is unusable.
+* Server-based configuration. It's not nice when a user forgets to set his
+  global-excludes for example.
+* Obliterate support would be nice to clean up the repo.
+* Archiving support also - ie to delete revisions over 2 years old, for
+  example, whilst keeping newer revisions.
+* Better admin tools in general, our repo is 12Gb now, so svnadmin
+  dump/filter/load is almost impractical.
+* Tags are useless (almost), we'd want revnum aliases too. Especially would
+  like to create a single tag, but then use that to hold all releases - eg,
+  1 tag branch where each revision is a release. Merging makes this slightly
+  difficult and not suitable as we just want to 'merge' onto the tag by copying
+  the current file over, not by merging revisions, not by doing a checkout and
+  commit.
+* Search - there's no good ability that can index a repo for searching, nor to
+  search log comments.
+
+Places Subversions stands out
+-----------------------------
+* Simple and easy to use.
+* Good repository view - the directory structure is easy to understand and has
+  good visibility.
+* Excellent integration with other tools. "right thing done right" when
+  combined with other best-of-breed tools can be beautiful (eg bugtracker,
+  requirements/project management, document repositories), plus other utilities
+  such as TortoiseSVN and Apache views.
+* Svnsync.
+
+
 Other Users
 ===========
 I talked to one user who had actually written a custom client, which allowed

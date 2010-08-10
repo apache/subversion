@@ -127,7 +127,8 @@ svn_subst_translate_stream3(svn_stream_t *src_stream,
   dst_stream = svn_subst_stream_translated(dst_stream, eol_str, repair,
                                            keywords, expand, pool);
 
-  return svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool);
+  return svn_error_return(svn_stream_copy3(src_stream, dst_stream,
+                                           NULL, NULL, pool));
 }
 
 svn_error_t *
@@ -141,7 +142,8 @@ svn_subst_translate_stream2(svn_stream_t *s, /* src stream */
 {
   apr_hash_t *kh = kwstruct_to_kwhash(keywords, pool);
 
-  return svn_subst_translate_stream3(s, d, eol_str, repair, kh, expand, pool);
+  return svn_error_return(svn_subst_translate_stream3(s, d, eol_str, repair,
+                                                      kh, expand, pool));
 }
 
 svn_error_t *
@@ -156,7 +158,7 @@ svn_subst_translate_stream(svn_stream_t *s, /* src stream */
   svn_error_t *err = svn_subst_translate_stream2(s, d, eol_str, repair,
                                                  keywords, expand, pool);
   svn_pool_destroy(pool);
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
@@ -170,8 +172,9 @@ svn_subst_translate_cstring(const char *src,
 {
   apr_hash_t *kh = kwstruct_to_kwhash(keywords, pool);
 
-  return svn_subst_translate_cstring2(src, dst, eol_str, repair,
-                                      kh, expand, pool);
+  return svn_error_return(svn_subst_translate_cstring2(src, dst, eol_str,
+                                                       repair, kh, expand,
+                                                       pool));
 }
 
 svn_error_t *
@@ -183,8 +186,9 @@ svn_subst_copy_and_translate(const char *src,
                              svn_boolean_t expand,
                              apr_pool_t *pool)
 {
-  return svn_subst_copy_and_translate2(src, dst, eol_str, repair, keywords,
-                                       expand, FALSE, pool);
+  return svn_error_return(svn_subst_copy_and_translate2(src, dst, eol_str,
+                                                        repair, keywords,
+                                                        expand, FALSE, pool));
 }
 
 svn_error_t *
@@ -199,10 +203,28 @@ svn_subst_copy_and_translate2(const char *src,
 {
   apr_hash_t *kh = kwstruct_to_kwhash(keywords, pool);
 
-  return svn_subst_copy_and_translate3(src, dst, eol_str,
-                                       repair, kh, expand, special,
-                                       pool);
+  return svn_error_return(svn_subst_copy_and_translate3(src, dst, eol_str,
+                                                        repair, kh, expand,
+                                                        special, pool));
 }
+
+svn_error_t *
+svn_subst_copy_and_translate3(const char *src,
+                              const char *dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              apr_hash_t *keywords,
+                              svn_boolean_t expand,
+                              svn_boolean_t special,
+                              apr_pool_t *pool)
+{
+  return svn_error_return(svn_subst_copy_and_translate4(src, dst, eol_str,
+                                                        repair, keywords,
+                                                        expand, special,
+                                                        NULL, NULL,
+                                                        pool));
+}
+
 
 svn_error_t *
 svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
@@ -246,10 +268,11 @@ svn_subst_stream_detranslated(svn_stream_t **stream_p,
      when the returned stream is closed. */
   SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
 
-  return svn_subst_stream_translated_to_normal_form(stream_p, src_stream,
-                                                    eol_style, eol_str,
-                                                    always_repair_eols,
-                                                    keywords, pool);
+  return svn_error_return(svn_subst_stream_translated_to_normal_form(
+                            stream_p, src_stream,
+                            eol_style, eol_str,
+                            always_repair_eols,
+                            keywords, pool));
 }
 
 svn_error_t *
@@ -269,13 +292,14 @@ svn_subst_translate_to_normal_form(const char *src,
               || eol_style == svn_subst_eol_style_none))
     return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
-  return svn_subst_copy_and_translate3(src, dst, eol_str,
-                                       eol_style == svn_subst_eol_style_fixed
-                                       || always_repair_eols,
-                                       keywords,
-                                       FALSE /* contract keywords */,
-                                       special,
-                                       pool);
+  return svn_error_return(svn_subst_copy_and_translate3(
+                            src, dst, eol_str,
+                            eol_style == svn_subst_eol_style_fixed
+                              || always_repair_eols,
+                            keywords,
+                            FALSE /* contract keywords */,
+                            special,
+                            pool));
 }
 
 
@@ -418,7 +442,8 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               const apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
-  return svn_opt__args_to_target_array(targets_p, os,known_targets, pool);
+  return svn_error_return(svn_opt__args_to_target_array(targets_p, os,
+                                                        known_targets, pool));
 }
 
 svn_error_t *
@@ -498,17 +523,17 @@ svn_opt_print_help2(apr_getopt_t *os,
                     const char *footer,
                     apr_pool_t *pool)
 {
-  return svn_opt_print_help3(os,
-                             pgm_name,
-                             print_version,
-                             quiet,
-                             version_footer,
-                             header,
-                             cmd_table,
-                             option_table,
-                             NULL,
-                             footer,
-                             pool);
+  return svn_error_return(svn_opt_print_help3(os,
+                                              pgm_name,
+                                              print_version,
+                                              quiet,
+                                              version_footer,
+                                              header,
+                                              cmd_table,
+                                              option_table,
+                                              NULL,
+                                              footer,
+                                              pool));
 }
 
 svn_error_t *
@@ -603,10 +628,10 @@ svn_io_open_unique_file2(apr_file_t **file,
   const char *filename;
 
   svn_path_split(path, &dirpath, &filename, pool);
-  return svn_io_open_uniquely_named(file, temp_path,
-                                    dirpath, filename, suffix,
-                                    delete_when,
-                                    pool, pool);
+  return svn_error_return(svn_io_open_uniquely_named(file, temp_path,
+                                                     dirpath, filename, suffix,
+                                                     delete_when,
+                                                     pool, pool));
 }
 
 svn_error_t *
@@ -617,12 +642,12 @@ svn_io_open_unique_file(apr_file_t **file,
                         svn_boolean_t delete_on_close,
                         apr_pool_t *pool)
 {
-  return svn_io_open_unique_file2(file, temp_path,
-                                  path, suffix,
-                                  delete_on_close
-                                    ? svn_io_file_del_on_close
-                                    : svn_io_file_del_none,
-                                  pool);
+  return svn_error_return(svn_io_open_unique_file2(file, temp_path,
+                                                   path, suffix,
+                                                   delete_on_close
+                                                     ? svn_io_file_del_on_close
+                                                     : svn_io_file_del_none,
+                                                   pool));
 }
 
 svn_error_t *
@@ -641,9 +666,11 @@ svn_io_run_diff(const char *dir,
 {
   SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd, diff_cmd, pool));
 
-  return svn_io_run_diff2(dir, user_args, num_user_args, label1, label2,
-                          from, to, pexitcode, outfile, errfile, diff_cmd,
-                          pool);
+  return svn_error_return(svn_io_run_diff2(dir, user_args, num_user_args,
+                                           label1, label2,
+                                           from, to, pexitcode,
+                                           outfile, errfile, diff_cmd,
+                                           pool));
 }
 
 svn_error_t *
@@ -662,9 +689,11 @@ svn_io_run_diff3_2(int *exitcode,
 {
   SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
 
-  return svn_io_run_diff3_3(exitcode, dir, mine, older, yours, mine_label,
-                            older_label, yours_label, merged, diff3_cmd,
-                            user_args, pool);
+  return svn_error_return(svn_io_run_diff3_3(exitcode, dir,
+                                             mine, older, yours,
+                                             mine_label, older_label,
+                                             yours_label, merged,
+                                             diff3_cmd, user_args, pool));
 }
 
 svn_error_t *
@@ -680,16 +709,17 @@ svn_io_run_diff3(const char *dir,
                  const char *diff3_cmd,
                  apr_pool_t *pool)
 {
-  return svn_io_run_diff3_2(exitcode, dir, mine, older, yours,
-                            mine_label, older_label, yours_label,
-                            merged, diff3_cmd, NULL, pool);
+  return svn_error_return(svn_io_run_diff3_2(exitcode, dir, mine, older, yours,
+                                             mine_label, older_label,
+                                             yours_label,
+                                             merged, diff3_cmd, NULL, pool));
 }
 
 svn_error_t *
 svn_io_remove_file(const char *path,
                    apr_pool_t *scratch_pool)
 {
-  return svn_io_remove_file2(path, FALSE, scratch_pool);
+  return svn_error_return(svn_io_remove_file2(path, FALSE, scratch_pool));
 }
 
 /*** From constructors.c ***/
@@ -715,7 +745,8 @@ svn_cmdline_prompt_user(const char **result,
                         const char *prompt_str,
                         apr_pool_t *pool)
 {
-  return svn_cmdline_prompt_user2(result, prompt_str, NULL, pool);
+  return svn_error_return(svn_cmdline_prompt_user2(result, prompt_str, NULL,
+                                                   pool));
 }
 
 svn_error_t *
@@ -730,10 +761,11 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              void *cancel_baton,
                              apr_pool_t *pool)
 {
-  return svn_cmdline_create_auth_baton(ab, non_interactive,
-                                       auth_username, auth_password,
-                                       config_dir, no_auth_cache, FALSE,
-                                       cfg, cancel_func, cancel_baton, pool);
+  return svn_error_return(svn_cmdline_create_auth_baton(
+                            ab, non_interactive,
+                            auth_username, auth_password,
+                            config_dir, no_auth_cache, FALSE,
+                            cfg, cancel_func, cancel_baton, pool));
 }
 
 /*** From dso.c ***/
@@ -837,17 +869,19 @@ svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool)
 {
-  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
-                          svn_stream_disown(to, scratch_pool),
-                          cancel_func, cancel_baton, scratch_pool);
+  return svn_error_return(svn_stream_copy3(
+                            svn_stream_disown(from, scratch_pool),
+                            svn_stream_disown(to, scratch_pool),
+                            cancel_func, cancel_baton, scratch_pool));
 }
 
 svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
                              apr_pool_t *scratch_pool)
 {
-  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
-                          svn_stream_disown(to, scratch_pool),
-                          NULL, NULL, scratch_pool);
+  return svn_error_return(svn_stream_copy3(
+                            svn_stream_disown(from, scratch_pool),
+                            svn_stream_disown(to, scratch_pool),
+                            NULL, NULL, scratch_pool));
 }
 
 svn_stream_t *
@@ -918,8 +952,9 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
                           svn_revnum_t end,
                           apr_pool_t *pool)
 {
-  return svn_mergeinfo_inheritable2(output, mergeinfo, path, start, end,
-                                    TRUE, pool, pool);
+  return svn_error_return(svn_mergeinfo_inheritable2(output, mergeinfo, path,
+                                                     start, end,
+                                                     TRUE, pool, pool));
 }
 
 svn_error_t *
@@ -929,7 +964,8 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           svn_revnum_t end,
                           apr_pool_t *pool)
 {
-  return svn_rangelist_inheritable2(inheritable_rangelist, rangelist,
-                                    start, end, TRUE, pool, pool);
+  return svn_error_return(svn_rangelist_inheritable2(inheritable_rangelist,
+                                                     rangelist,
+                                                     start, end, TRUE,
+                                                     pool, pool));
 }
-

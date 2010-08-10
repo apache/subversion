@@ -1,5 +1,5 @@
 /*
- * mergeinfo.c :  routines for getting mergeinfo
+ * mergeinfo.c: mod_dav_svn REPORT handler for querying mergeinfo
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -56,7 +56,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   int ns;
   apr_bucket_brigade *bb;
   apr_hash_index_t *hi;
-  svn_boolean_t sent_anything = FALSE;
 
   /* These get determined from the request document. */
   svn_revnum_t rev = SVN_INVALID_REVNUM;
@@ -145,7 +144,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
      we are condemned to live in another universe, so we must keep
      track ourselves of whether we've sent anything or not.  See the
      long comment after the 'cleanup' label for more details. */
-  sent_anything = TRUE;
   serr = dav_svn__brigade_puts(bb, output,
                                DAV_XML_HEADER DEBUG_CR
                                "<S:" SVN_DAV__MERGEINFO_REPORT " "

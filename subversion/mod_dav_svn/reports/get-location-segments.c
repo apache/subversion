@@ -1,6 +1,7 @@
 /*
- * get-location-segments.c: mod_dav_svn versioning provider functions
- *                          for Subversion's get-location-segments RA API.
+ * get-location-segments.c: mod_dav_svn REPORT handler for mapping
+ *                          revision ranges to path locations along
+ *                          the history of an object
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

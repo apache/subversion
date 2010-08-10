@@ -620,20 +620,48 @@ def update_obstructing_symlink(sbox):
 def warn_on_reserved_name(sbox):
   "warn when attempt operation on a reserved name"
   sbox.build()
-  wc_dir = sbox.wc_dir
-  if os.path.exists(os.path.join(wc_dir, ".svn")):
-    reserved_path = os.path.join(wc_dir, ".svn")
-  elif os.path.exists(os.path.join(wc_dir, "_svn")):
-    reserved_path = os.path.join(wc_dir, "_svn")
-  else:
-    # We don't know how to test this, but have no reason to believe
-    # it would fail.  (TODO: any way to return 'Skip', though?)
-    return
+  reserved_path = os.path.join(sbox.wc_dir, svntest.main.get_admin_name())
   svntest.actions.run_and_verify_svn(
     "Locking a file with a reserved name failed to result in an error",
     None,
     ".*Skipping argument: '.+' ends in a reserved name.*",
     'lock', reserved_path)
+
+
+def propvalue_normalized(sbox):
+  "'ps svn:special' should normalize to '*'"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a "symlink"
+  iota2_path = sbox.ospath('iota2')
+  svntest.main.file_write(iota2_path, "This is the file 'iota2'.\n")
+  svntest.main.run_svn(None, 'add', iota2_path)
+  svntest.main.run_svn(None, 'propset', 'svn:special', 'yes', iota2_path)
+
+  # Property value should be SVN_PROP_BOOLEAN_TRUE
+  expected_propval = ['*']
+  svntest.actions.run_and_verify_svn(None, expected_propval, [],
+                                     'propget', '--strict', 'svn:special',
+                                     iota2_path)
+
+  # Commit and check again.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota2' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota2' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        wc_dir)
+
+  svntest.main.run_svn(None, 'update')
+  svntest.actions.run_and_verify_svn(None, expected_propval, [],
+                                     'propget', '--strict', 'svn:special',
+                                     iota2_path)
 
 
 ########################################################################
@@ -658,6 +686,7 @@ test_list = [ None,
               replace_symlink_with_dir,
               SkipUnless(update_obstructing_symlink, svntest.main.is_posix_os),
               warn_on_reserved_name,
+              Skip(propvalue_normalized, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':

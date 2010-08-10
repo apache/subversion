@@ -147,6 +147,58 @@ class Sandbox:
     "Returns True when build() has been called on this instance."
     return self._is_built
 
+  def ospath(self, relpath, wc_dir=None):
+    if wc_dir is None:
+      wc_dir = self.wc_dir
+    return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
+
+  def simple_commit(self, target=None):
+    assert not self.read_only
+    if target is None:
+      target = self.wc_dir
+    svntest.main.run_svn(False, 'commit',
+                         '-m', svntest.main.make_log_msg(),
+                         target)
+
+  def simple_rm(self, *targets):
+    assert len(targets) > 0
+    if len(targets) == 1 and is_url(targets[0]):
+      assert not self.read_only
+      targets = ('-m', svntests.main.make_log_msg(), targets[0])
+    svntest.main.run_svn(False, 'rm', *targets)
+
+  def simple_mkdir(self, *targets):
+    assert len(targets) > 0
+    if len(targets) == 1 and is_url(targets[0]):
+      assert not self.read_only
+      targets = ('-m', svntests.main.make_log_msg(), targets[0])
+    svntest.main.run_svn(False, 'mkdir', *targets)
+
+  def simple_add(self, *targets):
+    assert len(targets) > 0
+    svntest.main.run_svn(False, 'add', *targets)
+
+  def simple_revert(self, *targets):
+    assert len(targets) > 0
+    svntest.main.run_svn(False, 'revert', *targets)
+
+  def simple_propset(self, name, value, *targets):
+    assert len(targets) > 0
+    svntest.main.run_svn(False, 'propset', name, value, *targets)
+
+  def simple_propdel(self, name, *targets):
+    assert len(targets) > 0
+    svntest.main.run_svn(False, 'propdel', name, *targets)
+
+
+def is_url(target):
+  return (target.startswith('^/')
+          or target.startswith('file://')
+          or target.startswith('http://')
+          or target.startswith('https://')
+          or target.startswith('svn://')
+          or target.startswith('svn+ssh://'))
+
 
 _deferred_test_paths = []
 

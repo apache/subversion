@@ -88,12 +88,13 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
   const char *old_repos_root;
   const char *old_url;
   const char *new_repos_root;
+  const char *uuid;
 
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, &repos_relpath,
-                               &old_repos_root,
+                               &old_repos_root, &uuid,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 
@@ -111,7 +112,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
     return svn_error_createf(SVN_ERR_WC_INVALID_RELOCATION, NULL,
                              _("Given destination URL invalid: '%s'"), to);
 
-  SVN_ERR(validator(validator_baton, NULL, to, new_repos_root, scratch_pool));
+  SVN_ERR(validator(validator_baton, uuid, to, new_repos_root, scratch_pool));
 
   /* ### FIXME: This will ultimately cause the DAV cache to be
      recursively cleared, which is great in the recursive case, but

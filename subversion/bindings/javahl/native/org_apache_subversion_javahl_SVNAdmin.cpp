@@ -31,8 +31,8 @@
 #include "JNIByteArray.h"
 #include "SVNAdmin.h"
 #include "Revision.h"
-#include "Inputer.h"
-#include "Outputer.h"
+#include "InputStream.h"
+#include "OutputStream.h"
 #include "MessageReceiver.h"
 #include "svn_props.h"
 #include "svn_private_config.h"
@@ -145,11 +145,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_dump
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Outputer dataOut(jdataout);
+  OutputStream dataOut(jdataout);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Outputer messageOut(jmessageout);
+  OutputStream messageOut(jmessageout);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -253,12 +253,12 @@ Java_org_apache_subversion_javahl_SVNAdmin_load
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Inputer inputData(jinputData);
+  InputStream inputData(jinputData);
   if (JNIUtil::isExceptionThrown())
     return;
 
 
-  Outputer outputMsg(joutputMsg);
+  OutputStream outputMsg(joutputMsg);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -336,13 +336,13 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmtxns
   cl->rmtxns(path, transactions);
 }
 
-/* A helper function for setRevProp() and setLog(). */
-static void
-setRevProp(jobject jthis, jstring jpath, jobject jrevision,
-           jstring jpropName, jstring jpropValue,
-           jboolean jusePreRevPropChangeHook,
-           jboolean jusePostRevPropChangeHook)
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
+ jstring jpropName, jstring jpropValue, jboolean jusePreRevPropChangeHook,
+ jboolean jusePostRevPropChangeHook)
 {
+  JNIEntry(SVNAdmin, setRevProp);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -372,30 +372,6 @@ setRevProp(jobject jthis, jstring jpath, jobject jrevision,
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_setLog
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jstring jmessage, jboolean jbypassHooks)
-{
-  JNIEntry(SVNAdmin, setLog);
-  jstring jlogPropName = env->NewStringUTF(SVN_PROP_REVISION_LOG);
-  setRevProp(jthis, jpath, jrevision, jlogPropName, jmessage,
-             !jbypassHooks, !jbypassHooks);
-  env->DeleteLocalRef(jlogPropName);
-  // No need to check for an exception here, because we return anyway
-}
-
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jstring jpropName, jstring jpropValue, jboolean jusePreRevPropChangeHook,
- jboolean jusePostRevPropChangeHook)
-{
-  JNIEntry(SVNAdmin, setRevProp);
-  setRevProp(jthis, jpath, jrevision, jpropName, jpropValue,
-             jusePreRevPropChangeHook, jusePostRevPropChangeHook);
-}
-
-JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_verify
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jmessageout,
  jobject jrevisionStart, jobject jrevisionEnd)
@@ -412,7 +388,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_verify
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Outputer messageOut(jmessageout);
+  OutputStream messageOut(jmessageout);
   if (JNIUtil::isExceptionThrown())
     return;
 

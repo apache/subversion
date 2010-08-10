@@ -111,9 +111,12 @@ struct dir_baton {
   svn_boolean_t tree_conflicted;
 
   /* If TRUE, this node is skipped entirely.
-   * This is currently used to skip all children of a tree-conflicted
+   * This is used to skip all children of a tree-conflicted
    * directory without setting TREE_CONFLICTED to TRUE everywhere. */
   svn_boolean_t skip;
+
+  /* If TRUE, all children of this directory are skipped. */
+  svn_boolean_t skip_children;
 
   /* The path of the directory within the repository */
   const char *path;
@@ -210,6 +213,7 @@ make_dir_baton(const char *path,
   dir_baton->added = added;
   dir_baton->tree_conflicted = FALSE;
   dir_baton->skip = FALSE;
+  dir_baton->skip_children = FALSE;
   dir_baton->pool = pool;
   dir_baton->path = apr_pstrdup(pool, path);
   dir_baton->wcpath = svn_dirent_join(edit_baton->target, path, pool);
@@ -346,7 +350,7 @@ get_dir_abspath(const char **local_dir_abspath,
       svn_error_t *err;
       const char *local_abspath;
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-      err = svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE, pool);
+      err = svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, pool);
       if (err)
         {
           if (lenient)
@@ -454,8 +458,9 @@ delete_entry(const char *path,
   svn_wc_notify_action_t action = svn_wc_notify_skip;
   svn_boolean_t tree_conflicted = FALSE;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
-  if (pb->skip || pb->tree_conflicted)
+  /* Skip *everything* within a newly tree-conflicted directory,
+   * and directories the children of which should be skipped. */
+  if (pb->skip || pb->tree_conflicted || pb->skip_children)
     return SVN_NO_ERROR;
 
   /* We need to know if this is a directory or a file */
@@ -556,8 +561,9 @@ add_directory(const char *path,
   b->pristine_props = eb->empty_hash;
   *child_baton = b;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
-  if (pb->skip || pb->tree_conflicted)
+  /* Skip *everything* within a newly tree-conflicted directory,
+   * and directories the children of which should be skipped. */
+  if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
       b->skip = TRUE;
       return SVN_NO_ERROR;
@@ -643,8 +649,9 @@ open_directory(const char *path,
   b = make_dir_baton(path, pb, pb->edit_baton, FALSE, pool);
   *child_baton = b;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
-  if (pb->skip || pb->tree_conflicted)
+  /* Skip *everything* within a newly tree-conflicted directory
+   * and directories the children of which should be skipped. */
+  if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
       b->skip = TRUE;
       return SVN_NO_ERROR;
@@ -656,8 +663,8 @@ open_directory(const char *path,
                           pool));
 
   SVN_ERR(eb->diff_callbacks->dir_opened
-          (local_dir_abspath, &b->tree_conflicted, b->wcpath, base_revision,
-           b->edit_baton->diff_cmd_baton, pool));
+          (local_dir_abspath, &b->tree_conflicted, &b->skip_children,
+           b->wcpath, base_revision, b->edit_baton->diff_cmd_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -680,8 +687,9 @@ add_file(const char *path,
   b = make_file_baton(path, TRUE, pb->edit_baton, pool);
   *file_baton = b;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
-  if (pb->skip || pb->tree_conflicted)
+  /* Skip *everything* within a newly tree-conflicted directory.
+   * and directories the children of which should be skipped. */
+  if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
       b->skip = TRUE;
       return SVN_NO_ERROR;
@@ -706,8 +714,9 @@ open_file(const char *path,
   b = make_file_baton(path, FALSE, pb->edit_baton, pool);
   *file_baton = b;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
-  if (pb->skip || pb->tree_conflicted)
+  /* Skip *everything* within a newly tree-conflicted directory
+   * and directories the children of which should be skipped. */
+  if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
       b->skip = TRUE;
       return SVN_NO_ERROR;
@@ -945,7 +954,7 @@ close_directory(void *dir_baton,
     svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton), pool);
 
   err = get_dir_abspath(&local_dir_abspath, eb->wc_ctx, b->wcpath,
-                        eb->dry_run, b->pool);
+                        FALSE, b->pool);
 
   if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
     {

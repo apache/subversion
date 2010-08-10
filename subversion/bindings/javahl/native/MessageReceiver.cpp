@@ -68,8 +68,6 @@ void MessageReceiver::receiveMessage(const char *message)
         return;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return;
     }
 
   // Convert the message to a Java string.
@@ -84,6 +82,4 @@ void MessageReceiver::receiveMessage(const char *message)
 
   // Delete the Java string.
   env->DeleteLocalRef(jmsg);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
 }

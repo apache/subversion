@@ -1084,13 +1084,10 @@ wrapper_endelm_cb(void *baton,
   return 0;
 }
 
-/* If XML_PARSER found an XML parse error, then return a Subversion error
- * saying that the error was found in the response to the DAV request METHOD
- * for the URL URL. Otherwise, return SVN_NO_ERROR. */
-static svn_error_t *
-check_parse_error(const char *method,
-                  ne_xml_parser *xml_parser,
-                  const char *url)
+svn_error_t *
+svn_ra_neon__check_parse_error(const char *method,
+                               ne_xml_parser *xml_parser,
+                               const char *url)
 {
   const char *msg = ne_xml_get_error(xml_parser);
   if (msg != NULL && *msg != '\0')
@@ -1124,8 +1121,9 @@ wrapper_reader_cb(void *baton, const char *data, size_t len)
     {
       /* Pass XML parser error. */
       SVN_RA_NEON__REQ_ERR(pwb->req,
-                           check_parse_error(pwb->req->method, pwb->parser,
-                                             pwb->req->url));
+                           svn_ra_neon__check_parse_error(pwb->req->method,
+                                                          pwb->parser,
+                                                          pwb->req->url));
     }
 
   return parser_status;
@@ -1287,7 +1285,7 @@ parsed_request(svn_ra_neon__request_t *req,
         }
     }
 
-  SVN_ERR(check_parse_error(method, success_parser, url));
+  SVN_ERR(svn_ra_neon__check_parse_error(method, success_parser, url));
 
   return SVN_NO_ERROR;
 }
@@ -1498,6 +1496,8 @@ svn_ra_neon__request_dispatch(int *code_p,
 
   /* Any other errors? Report them */
   SVN_ERR(req->err);
+
+  SVN_ERR(svn_ra_neon__check_parse_error(req->method, error_parser, req->url));
 
   /* We either have a neon error, or some other error
      that we didn't expect. */

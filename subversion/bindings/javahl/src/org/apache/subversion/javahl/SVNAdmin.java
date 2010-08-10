@@ -24,6 +24,8 @@
 package org.apache.subversion.javahl;
 
 import java.util.Set;
+import java.io.OutputStream;
+import java.io.InputStream;
 
 /**
  * This class offers the same commands as the svnadmin commandline
@@ -118,30 +120,12 @@ public class SVNAdmin implements ISVNAdmin
      * @param start             the first revision to be dumped
      * @param end               the last revision to be dumped
      * @param incremental       the dump will be incremantal
-     * @throws ClientException  throw in case of problem
-     */
-    public void dump(String path, IOutput dataOut,
-                     IOutput errorOut, Revision start,
-                     Revision end, boolean incremental)
-            throws ClientException
-    {
-        dump(path, dataOut, errorOut, start, end, incremental, false);
-    }
-
-    /**
-     * dump the data in a repository
-     * @param path              the path to the repository
-     * @param dataOut           the data will be outputed here
-     * @param errorOut          the messages will be outputed here
-     * @param start             the first revision to be dumped
-     * @param end               the last revision to be dumped
-     * @param incremental       the dump will be incremantal
      * @param useDeltas         the dump will contain deltas between nodes
      * @throws ClientException  throw in case of problem
      * @since 1.5
      */
-    public native void dump(String path, IOutput dataOut,
-                            IOutput errorOut, Revision start,
+    public native void dump(String path, OutputStream dataOut,
+                            OutputStream errorOut, Revision start,
                             Revision end, boolean incremental,
                             boolean useDeltas)
             throws ClientException;
@@ -195,27 +179,6 @@ public class SVNAdmin implements ISVNAdmin
      * @param ignoreUUID        ignore any UUID found in the input stream
      * @param forceUUID         set the repository UUID to any found in the
      *                          stream
-     * @param relativePath      the directory in the repository, where the data
-     *                          in put optional.
-     * @throws ClientException  throw in case of problem
-     */
-    public void load(String path, IInput dataInput,
-                     IOutput messageOutput, boolean ignoreUUID,
-                     boolean forceUUID, String relativePath)
-            throws ClientException
-    {
-        load(path, dataInput, messageOutput, ignoreUUID, forceUUID,
-             false, false, relativePath);
-    }
-
-    /**
-     * load the data of a dump into a repository,
-     * @param path              the path to the repository
-     * @param dataInput         the data input source
-     * @param messageOutput     the target for processing messages
-     * @param ignoreUUID        ignore any UUID found in the input stream
-     * @param forceUUID         set the repository UUID to any found in the
-     *                          stream
      * @param usePreCommitHook  use the pre-commit hook when processing commits
      * @param usePostCommitHook use the post-commit hook when processing commits
      * @param relativePath      the directory in the repository, where the data
@@ -223,8 +186,8 @@ public class SVNAdmin implements ISVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.5
      */
-    public native void load(String path, IInput dataInput,
-                            IOutput messageOutput, boolean ignoreUUID,
+    public native void load(String path, InputStream dataInput,
+                            OutputStream messageOutput, boolean ignoreUUID,
                             boolean forceUUID, boolean usePreCommitHook,
                             boolean usePostCommitHook, String relativePath)
             throws ClientException;
@@ -252,19 +215,6 @@ public class SVNAdmin implements ISVNAdmin
      * @throws ClientException  throw in case of problem
      */
     public native void rmtxns(String path, String [] transactions)
-            throws ClientException;
-
-    /**
-     * set the log message of a revision
-     * @param path              the path to the repository
-     * @param rev               the revision to be changed
-     * @param message           the message to be set
-     * @param bypassHooks       if to bypass all repository hooks
-     * @throws ClientException  throw in case of problem
-     * @deprecated Use setRevProp() instead.
-     */
-    public native void setLog(String path, Revision rev, String message,
-                              boolean bypassHooks)
             throws ClientException;
 
     /**
@@ -299,7 +249,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param end               the last revision
      * @throws ClientException If an error occurred.
      */
-    public native void verify(String path,  IOutput messageOut,
+    public native void verify(String path, OutputStream messageOut,
                               Revision start, Revision end)
             throws ClientException;
 

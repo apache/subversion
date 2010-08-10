@@ -30,6 +30,7 @@
 
 #include "svn_fs.h"
 #include "svn_config.h"
+#include "private/svn_atomic.h"
 #include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
@@ -118,11 +119,11 @@ extern "C" {
 /* The minimum format number that supports packed shards. */
 #define SVN_FS_FS__MIN_PACKED_FORMAT 4
 
-  /* The minimum format number that supports packed revprop shards. */
-#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 5
-
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
+
+/* The minimum format number that supports packed revprop shards. */
+#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 5
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -244,6 +245,9 @@ typedef struct
 
   /* The sqlite database used for rep caching. */
   svn_sqlite__db_t *rep_cache_db;
+
+  /* Thread-safe boolean */
+  svn_atomic_t rep_cache_db_opened;
 
    /* The sqlite database used for revprops. */
    svn_sqlite__db_t *revprop_db;

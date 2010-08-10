@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, os, weakref, tempfile, setup_path
+import unittest, os, weakref, setup_path, utils
 
 from svn import core, client, wc
 
@@ -70,19 +70,13 @@ class SubversionClientTestCase(unittest.TestCase):
 
     self.client_ctx.auth_baton = core.svn_auth_open(providers)
 
-    self.cleanup_dirs = []
+    self.temper = utils.Temper()
 
   def tearDown(self):
     # We have to free client_ctx first, since it may be holding handles
     # to WC DBs
     del self.client_ctx
-    for directory in self.cleanup_dirs:
-      core.svn_io_remove_dir(directory)
-
-  def allocate_temp_dir(self, suffix = ""):
-    temp_dir_name = core.svn_dirent_internal_style(tempfile.mkdtemp(suffix))
-    self.cleanup_dirs.append(temp_dir_name)
-    return temp_dir_name
+    self.temper.cleanup()
 
   def testBatonPlay(self):
     """Test playing with C batons"""
@@ -165,7 +159,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = self.allocate_temp_dir('-checkout')
+    path = self.temper.alloc_empty_dir('-checkout')
 
     self.assertRaises(ValueError, client.checkout2,
                       REPOS_URL, path, None, None, True, True,
@@ -257,7 +251,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = self.allocate_temp_dir('-url_from_path')
+    path = self.temper.alloc_empty_dir('-url_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
@@ -269,7 +263,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = self.allocate_temp_dir('-uuid_from_path')
+    path = self.temper.alloc_empty_dir('-uuid_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
@@ -294,7 +288,7 @@ class SubversionClientTestCase(unittest.TestCase):
     # in the repository.
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
-    wc_path = self.allocate_temp_dir('-info_file')
+    wc_path = self.temper.alloc_empty_dir('-info_file')
 
     client.checkout2(REPOS_URL, wc_path, rev, rev, True, True,
                      self.client_ctx)
@@ -344,7 +338,7 @@ class SubversionClientTestCase(unittest.TestCase):
     """Test svn_client_merge_peg3."""
     head = core.svn_opt_revision_t()
     head.kind = core.svn_opt_revision_head
-    wc_path = self.allocate_temp_dir('-merge_peg3')
+    wc_path = self.temper.alloc_empty_dir('-merge_peg3')
 
     client.checkout3(REPOS_URL, wc_path, head, head, core.svn_depth_infinity,
                      True, False, self.client_ctx)

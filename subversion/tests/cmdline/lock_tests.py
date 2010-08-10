@@ -1472,6 +1472,43 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
                                       0, 'lock', lambda_path)
 
+def verify_path_escaping(sbox):
+  "verify escaping of lock paths"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add test paths using two characters that need escaping in a url, but
+  # are within the normal ascii range
+  file1 = os.path.join(wc_dir, 'file #1')
+  file2 = os.path.join(wc_dir, 'file #2')
+  file3 = os.path.join(wc_dir, 'file #3')
+
+  svntest.main.file_write(file1, 'File 1')
+  svntest.main.file_write(file2, 'File 2')
+  svntest.main.file_write(file3, 'File 3')
+
+  svntest.main.run_svn(None, 'add', file1, file2, file3)
+
+  svntest.main.run_svn(None, 'ci', '-m', 'commit', wc_dir)
+
+  svntest.main.run_svn(None, 'lock', '-m', 'lock 1', file1)
+  svntest.main.run_svn(None, 'lock', '-m', 'lock 2', sbox.repo_url + '/file%20%232')
+  svntest.main.run_svn(None, 'lock', '-m', 'lock 3', file3)
+  svntest.main.run_svn(None, 'unlock', sbox.repo_url + '/file%20%233')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add(
+    {
+      'file #1'           : Item(status='  ', writelocked='K', wc_rev='2'),
+      'file #2'           : Item(status='  ', writelocked='O', wc_rev='2'),
+      'file #3'           : Item(status='  ', writelocked='B', wc_rev='2')
+    });
+
+  # Make sure the file locking is reported correctly
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -1515,6 +1552,7 @@ test_list = [ None,
               lock_funky_comment_chars,
               lock_twice_in_one_wc,
               lock_path_not_in_head,
+              verify_path_escaping,
             ]
 
 if __name__ == '__main__':

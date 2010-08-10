@@ -50,7 +50,7 @@
 static svn_error_t *
 find_undeletables(void *baton,
                   const char *path,
-                  const svn_wc_status2_t *status,
+                  const svn_wc_status3_t *status,
                   apr_pool_t *pool)
 {
   /* Check for error-ful states. */
@@ -59,7 +59,7 @@ find_undeletables(void *baton,
                              _("'%s' is in the way of the resource "
                                "actually under version control"),
                              svn_dirent_local_style(path, pool));
-  else if (! status->entry)
+  else if (! status->versioned)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"),
                              svn_dirent_local_style(path, pool));
@@ -85,7 +85,7 @@ svn_client__can_delete(const char *path,
                        apr_pool_t *pool)
 {
   svn_opt_revision_t revision;
-  const svn_wc_entry_t *entry;
+  svn_boolean_t file_external;
   const char* local_abspath;
 
   revision.kind = svn_opt_revision_unspecified;
@@ -96,10 +96,10 @@ svn_client__can_delete(const char *path,
      implemented as a switched file and it would delete the file the
      file external is switched to, which is not the behavior the user
      would probably want. */
-  SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
-                                  svn_node_unknown, FALSE, FALSE, pool, pool));
+  SVN_ERR(svn_wc__node_is_file_external(&file_external, ctx->wc_ctx,
+                                        local_abspath, pool));
 
-  if (entry != NULL && entry->file_external_path)
+  if (file_external)
     return svn_error_createf(SVN_ERR_WC_CANNOT_DELETE_FILE_EXTERNAL, NULL,
                              _("Cannot remove the file external at '%s'; "
                                "please propedit or propdel the svn:externals "
@@ -160,7 +160,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
     {
       const char *bname;
       svn_uri_split(common, &common, &bname, pool);
-      APR_ARRAY_PUSH(targets, const char *) = bname;
+      APR_ARRAY_PUSH(targets, const char *) = svn_path_uri_decode(bname, pool);
     }
 
   /* Create new commit items and add them to the array. */
@@ -227,8 +227,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
                                 &kind, subpool));
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 "URL '%s' does not exist",
-                                 svn_dirent_local_style(item_url, pool));
+                                 "URL '%s' does not exist", item_url);
     }
   svn_pool_destroy(subpool);
 

@@ -49,7 +49,7 @@
 struct ff_baton
 {
   svn_client_ctx_t *ctx;       /* client context used to open ra session */
-  const char *repos_root;      /* the root of the ra session */
+  const char *repos_root;      /* repository root URL */
   svn_ra_session_t *session;   /* the secondary ra session itself */
   apr_pool_t *pool;            /* the pool where the ra session is allocated */
 };
@@ -68,20 +68,27 @@ file_fetcher(void *baton,
              apr_pool_t *pool)
 {
   struct ff_baton *ffb = (struct ff_baton *)baton;
+  const char *dirpath, *base_name, *session_url, *old_session_url;
 
-  if (! ffb->session)
-    SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session),
-                                                 ffb->repos_root,
+  svn_relpath_split(path, &dirpath, &base_name, pool);
+  session_url = svn_path_url_add_component2(ffb->repos_root, 
+                                            dirpath, pool);
+
+  if (ffb->session)
+    SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ffb->session,
+                                              session_url, ffb->pool));
+  else
+    SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session), session_url,
                                                  NULL, NULL, FALSE, TRUE,
                                                  ffb->ctx, ffb->pool));
-  return svn_ra_get_file(ffb->session, path, revision, stream,
+
+  return svn_ra_get_file(ffb->session, base_name, revision, stream,
                          fetched_rev, props, pool);
 }
 
 
 static svn_error_t *
 update_internal(svn_revnum_t *result_rev,
-                const char *path,
                 const char *local_abspath,
                 const char *anchor_abspath,
                 const svn_opt_revision_t *revision,
@@ -100,7 +107,7 @@ update_internal(svn_revnum_t *result_rev,
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const char *anchor_url;
-  const char *anchor, *target;
+  const char *target;
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
@@ -123,15 +130,9 @@ update_internal(svn_revnum_t *result_rev,
     depth_is_sticky = FALSE;
 
   if (strcmp(local_abspath, anchor_abspath))
-    {
-      target = svn_dirent_basename(local_abspath, pool);
-      anchor = svn_dirent_basename(path, pool);
-    }
+    target = svn_dirent_basename(local_abspath, pool);
   else
-    {
-      target = "";
-      anchor = path;
-    }
+    target = "";
 
   /* Get full URL from the ANCHOR. */
   SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
@@ -161,8 +162,8 @@ update_internal(svn_revnum_t *result_rev,
           return SVN_NO_ERROR;
         }
 
-      SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
-                                    local_abspath, TRUE, pool));
+      SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, local_abspath, TRUE,
+                               pool));
       if (target_kind == svn_node_dir)
         {
           SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,
@@ -191,7 +192,7 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, anchor_url,
-                                               anchor, NULL, TRUE, TRUE,
+                                               anchor_abspath, NULL, TRUE, TRUE,
                                                ctx, pool));
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
@@ -260,7 +261,7 @@ update_internal(svn_revnum_t *result_rev,
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
-      svn_io_sleep_for_timestamps(path, pool);
+      svn_io_sleep_for_timestamps(local_abspath, pool);
       return svn_error_return(err);
     }
   *use_sleep = TRUE;
@@ -273,13 +274,13 @@ update_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_client__handle_externals(efb.externals_old,
                                            efb.externals_new,
                                            efb.ambient_depths,
-                                           anchor_url, anchor,
+                                           anchor_url, anchor_abspath,
                                            repos_root,
                                            depth, use_sleep, ctx, pool));
     }
 
   if (sleep_here)
-    svn_io_sleep_for_timestamps(path, pool);
+    svn_io_sleep_for_timestamps(local_abspath, pool);
 
   SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool));
 
@@ -287,7 +288,8 @@ update_internal(svn_revnum_t *result_rev,
   if (ctx->notify_func2)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(path, svn_wc_notify_update_completed, pool);
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_update_completed,
+                               pool);
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
@@ -305,7 +307,7 @@ update_internal(svn_revnum_t *result_rev,
 
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
-                            const char *path,
+                            const char *local_abspath,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
@@ -317,17 +319,10 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
-  const char *local_abspath, *anchor_abspath;
+  const char *anchor_abspath;
   svn_error_t *err1, *err2;
 
-  SVN_ERR_ASSERT(path);
-
-  if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                             _("Path '%s' is not a directory"),
-                             path);
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (!innerupdate)
     {
@@ -341,7 +336,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       anchor_abspath = local_abspath;
     }
 
-  err1 = update_internal(result_rev, path, local_abspath, anchor_abspath,
+  err1 = update_internal(result_rev, local_abspath, anchor_abspath,
                          revision, depth, depth_is_sticky,
                          ignore_externals, allow_unver_obstructions,
                          timestamp_sleep, send_copyfrom_args,
@@ -365,7 +360,6 @@ svn_client_update3(apr_array_header_t **result_revs,
                    apr_pool_t *pool)
 {
   int i;
-  svn_error_t *err = SVN_NO_ERROR;
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *path = NULL;
 
@@ -375,6 +369,8 @@ svn_client_update3(apr_array_header_t **result_revs,
   for (i = 0; i < paths->nelts; ++i)
     {
       svn_boolean_t sleep;
+      svn_boolean_t skipped = FALSE;
+      svn_error_t *err = SVN_NO_ERROR;
       svn_revnum_t result_rev;
       path = APR_ARRAY_IDX(paths, i, const char *);
 
@@ -383,19 +379,36 @@ svn_client_update3(apr_array_header_t **result_revs,
       if (ctx->cancel_func && (err = ctx->cancel_func(ctx->cancel_baton)))
         break;
 
-      err = svn_client__update_internal(&result_rev, path, revision, depth,
-                                        depth_is_sticky, ignore_externals,
-                                        allow_unver_obstructions,
-                                        &sleep, TRUE, FALSE, ctx, subpool);
-      if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+      if (svn_path_is_url(path))
         {
-          return svn_error_return(err);
+          skipped = TRUE;
         }
-      else if (err)
+      else
         {
-          /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
+          const char *local_abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+          err = svn_client__update_internal(&result_rev, local_abspath,
+                                            revision, depth, depth_is_sticky,
+                                            ignore_externals,
+                                            allow_unver_obstructions,
+                                            &sleep, TRUE, FALSE, ctx, subpool);
+
+          if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+            {
+              return svn_error_return(err);
+            }
+
+          if (err)
+            {
+              /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
+              svn_error_clear(err);
+              skipped = TRUE;
+            }
+        }
+
+      if (skipped)
+        {
           result_rev = SVN_INVALID_REVNUM;
           if (ctx->notify_func2)
             {
@@ -426,5 +439,5 @@ svn_client_update3(apr_array_header_t **result_revs,
   svn_pool_destroy(subpool);
   svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
-  return svn_error_return(err);
+  return SVN_NO_ERROR;
 }

@@ -55,6 +55,14 @@ extern "C" {
 #endif /* APR_VERSION_AT_LEAST */
 
 /**
+ * If we don't have a recent enough APR, emulate the behavior of the
+ * apr_array_clear() API.
+ */
+#if !APR_VERSION_AT_LEAST(1,3,0)
+#define apr_array_clear(arr)         (arr)->nelts = 0
+#endif
+
+/**
  * Check at compile time if the Serf version is at least a certain
  * level.
  * @param major The major version component of the version checked

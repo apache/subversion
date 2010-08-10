@@ -20,34 +20,34 @@
  * ====================================================================
  * @endcopyright
  *
- * @file Inputer.h
- * @brief Interface of the class Inputer
+ * @file OutputStream.h
+ * @brief Interface of the class OutputStream
  */
 
-#ifndef INPUTER_H
-#define INPUTER_H
+#ifndef OUTPUT_STREAM_H
+#define OUTPUT_STREAM_H
 
 #include <jni.h>
 #include "svn_io.h"
 #include "Pool.h"
 
 /**
- * This class contains a Java objects implementing the interface Inputer and
- * implements the functions read & close of svn_stream_t.
+ * This class contains a Java objects implementing the interface OutputStream
+ * and implements the functions write & close of svn_stream_t
  */
-class Inputer
+class OutputStream
 {
- private:
   /**
    * A local reference to the Java object.
    */
   jobject m_jthis;
-  static svn_error_t *read(void *baton, char *buffer, apr_size_t *len);
+  static svn_error_t *write(void *baton,
+                            const char *buffer, apr_size_t *len);
   static svn_error_t *close(void *baton);
  public:
-  Inputer(jobject jthis);
-  ~Inputer();
+  OutputStream(jobject jthis);
+  ~OutputStream();
   svn_stream_t *getStream(const SVN::Pool &pool);
 };
 
-#endif // INPUTER_H
+#endif // OUTPUT_STREAM_H

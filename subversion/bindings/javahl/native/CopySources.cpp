@@ -116,16 +116,15 @@ CopySources::array(SVN::Pool &pool)
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-      JNIStringHolder path(jpath);
+      const char *path = env->GetStringUTFChars(jpath, NULL);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-      src->path = apr_pstrdup(p, (const char *) path);
+      src->path = apr_pstrdup(p, path);
+      env->ReleaseStringUTFChars(jpath, path);
       SVN_JNI_ERR(JNIUtil::preprocessPath(src->path, pool.pool()),
                   NULL);
       env->DeleteLocalRef(jpath);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
 
       // Extract source revision from the copy source.
       static jmethodID getRevision = 0;
@@ -147,8 +146,6 @@ CopySources::array(SVN::Pool &pool)
       memcpy((void *) src->revision, rev.revision(),
              sizeof(*src->revision));
       env->DeleteLocalRef(jrev);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
 
       // Extract pegRevision from the copy source.
       static jmethodID getPegRevision = 0;
@@ -169,15 +166,11 @@ CopySources::array(SVN::Pool &pool)
       memcpy((void *) src->peg_revision, pegRev.revision(),
              sizeof(*src->peg_revision));
       env->DeleteLocalRef(jPegRev);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
 
       APR_ARRAY_PUSH(copySources, svn_client_copy_source_t *) = src;
     }
 
   env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   return copySources;
 }

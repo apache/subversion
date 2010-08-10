@@ -91,7 +91,8 @@ crop_children(svn_wc__db_t *db,
   /* Update the depth of target first, if needed. */
   if (dir_depth > depth)
     {
-      SVN_ERR(svn_wc__set_depth(db, local_abspath, depth, iterpool));
+      SVN_ERR(svn_wc__db_temp_op_set_dir_depth(db, local_abspath, depth,
+                                               iterpool));
     }
 
   /* Looping over current directory's SVN entries: */
@@ -126,7 +127,8 @@ crop_children(svn_wc__db_t *db,
                                             ? svn_depth_immediates
                                             : svn_depth_files;
           if (depth < remove_below)
-            SVN_ERR(svn_wc__entry_remove(db, local_abspath, iterpool));
+            SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                    iterpool));
 
           continue;
         }
@@ -301,6 +303,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
                                           revision,
                                           kind,
                                           svn_wc__db_status_excluded,
+                                          NULL, NULL,
                                           scratch_pool));
 
   if (notify_func)

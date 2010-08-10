@@ -94,6 +94,9 @@ svn_delta_version(void);
 
 /** Action codes for text delta instructions. */
 enum svn_delta_action {
+    /* Note: The svndiff implementation relies on the values assigned in
+     * this enumeration matching the instruction encoding values. */
+
     /** Append the @a length bytes at @a offset in the source view to the
      * target.
      *

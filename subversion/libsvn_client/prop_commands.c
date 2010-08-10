@@ -368,8 +368,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
 
-      err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
-                                  pool);
+      err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool);
 
       if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || kind == svn_node_unknown || kind == svn_node_none)
@@ -518,11 +517,30 @@ pristine_or_working_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool)
 {
   if (pristine)
-    return svn_wc_get_prop_diffs2(NULL, props, wc_ctx, local_abspath,
-                                  result_pool, scratch_pool);
-  else
-    return svn_wc_prop_list2(props, wc_ctx, local_abspath, result_pool,
-                             scratch_pool);
+    {
+      return svn_error_return(svn_wc_get_pristine_props(props,
+                                                        wc_ctx,
+                                                        local_abspath,
+                                                        result_pool,
+                                                        scratch_pool));
+    }
+
+  /* ### until svn_wc_prop_list2() returns a NULL value for locally-deleted
+     ### nodes, then let's check manually.  */
+  {
+    svn_boolean_t deleted;
+
+    SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wc_ctx, local_abspath,
+                                           scratch_pool));
+    if (deleted)
+      {
+        *props = NULL;
+        return SVN_NO_ERROR;
+      }
+  }
+
+  return svn_error_return(svn_wc_prop_list2(props, wc_ctx, local_abspath,
+                                            result_pool, scratch_pool));
 }
 
 
@@ -539,19 +557,21 @@ pristine_or_working_propval(const svn_string_t **propval,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  if (pristine)
-    {
-      apr_hash_t *pristine_props;
+  apr_hash_t *props;
 
-      SVN_ERR(svn_wc_get_prop_diffs2(NULL, &pristine_props, wc_ctx,
-                                    local_abspath, result_pool, scratch_pool));
-      *propval = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
-    }
-  else  /* get the working revision */
+  *propval = NULL;
+
+  SVN_ERR(pristine_or_working_props(&props, wc_ctx, local_abspath, pristine,
+                                    scratch_pool, scratch_pool));
+  if (props != NULL)
     {
-      SVN_ERR(svn_wc_prop_get2(propval, wc_ctx, local_abspath, propname,
-                               result_pool, scratch_pool));
+      const svn_string_t *value = apr_hash_get(props,
+                                               propname, APR_HASH_KEY_STRING);
+      if (value)
+        *propval = svn_string_dup(value, result_pool);
     }
+  /* ### should we throw an error if this node is defined to have
+     ### no properties? (ie. props==NULL)  */
 
   return SVN_NO_ERROR;
 }
@@ -588,23 +608,10 @@ propget_walk_cb(const char *local_abspath,
 {
   struct propget_walk_baton *wb = walk_baton;
   const svn_string_t *propval;
-  const svn_wc_entry_t *entry;
 
   /* If our entry doesn't pass changelist filtering, get outta here. */
   if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
                                  wb->changelist_hash, pool))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__maybe_get_entry(&entry, wb->wc_ctx, local_abspath,
-                                  svn_node_unknown, FALSE, FALSE,
-                                  pool, pool));
-
-  if (!entry)
-    return SVN_NO_ERROR;
-
-  /* Ignore the entry if it does not exist at the time of interest. */
-  if (entry->schedule
-      == (wb->pristine ? svn_wc_schedule_add : svn_wc_schedule_delete))
     return SVN_NO_ERROR;
 
   SVN_ERR(pristine_or_working_propval(&propval, wb->wc_ctx, local_abspath,
@@ -849,11 +856,11 @@ svn_client_propget3(apr_hash_t **props,
       svn_boolean_t pristine;
       const char *local_abspath;
       svn_error_t *err;
+      svn_boolean_t added;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
-      err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                                  pool);
+      err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE, pool);
 
       if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || kind == svn_node_unknown || kind == svn_node_none)
@@ -868,9 +875,16 @@ svn_client_propget3(apr_hash_t **props,
       else
         SVN_ERR(err);
 
-      SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
-                                              local_abspath, NULL, revision,
-                                              pool));
+      /* Get the actual_revnum; added nodes have no revision yet, and we
+       * return the mock-up revision of 0.
+       * ### TODO: get rid of this 0. */
+      SVN_ERR(svn_wc__node_is_added(&added, ctx->wc_ctx, local_abspath, pool));
+      if (added)
+        revnum = 0;
+      else
+        SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
+                                                local_abspath, NULL, revision,
+                                                pool));
 
       /* If FALSE, we must want the working revision. */
       pristine = (revision->kind == svn_opt_revision_committed
@@ -1100,36 +1114,20 @@ proplist_walk_cb(const char *local_abspath,
                  apr_pool_t *scratch_pool)
 {
   struct proplist_walk_baton *wb = walk_baton;
-  apr_hash_t *hash;
+  apr_hash_t *props;
   const char *path;
-
-  /* Ignore the entry if it does not exist at the time of interest. */
-  if (wb->pristine)
-    {
-      svn_boolean_t added;
-
-      SVN_ERR(svn_wc__node_is_status_added(&added, wb->wc_ctx, local_abspath,
-                                           scratch_pool));
-      if (added)
-        return SVN_NO_ERROR;
-    }
-  else
-    {
-      svn_boolean_t deleted;
-
-      SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wb->wc_ctx,
-                                             local_abspath, scratch_pool));
-      if (deleted)
-        return SVN_NO_ERROR;
-    }
 
   /* If our entry doesn't pass changelist filtering, get outta here. */
   if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
                                  wb->changelist_hash, scratch_pool))
     return SVN_NO_ERROR;
 
-  SVN_ERR(pristine_or_working_props(&hash, wb->wc_ctx, local_abspath,
+  SVN_ERR(pristine_or_working_props(&props, wb->wc_ctx, local_abspath,
                                     wb->pristine, scratch_pool, scratch_pool));
+
+  /* Bail if this node is defined to have no properties.  */
+  if (props == NULL)
+    return SVN_NO_ERROR;
 
   if (wb->anchor && wb->anchor_abspath)
     {
@@ -1141,7 +1139,7 @@ proplist_walk_cb(const char *local_abspath,
   else
     path = local_abspath;
 
-  return call_receiver(path, hash, wb->receiver, wb->receiver_baton,
+  return call_receiver(path, props, wb->receiver, wb->receiver_baton,
                        scratch_pool);
 }
 
@@ -1179,8 +1177,7 @@ svn_client_proplist3(const char *path_or_url,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
-      err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                                  pool);
+      err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE, pool);
 
       if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || kind == svn_node_unknown || kind == svn_node_none)
@@ -1195,15 +1192,8 @@ svn_client_proplist3(const char *path_or_url,
       else
         SVN_ERR(err);
 
-      if ((revision->kind == svn_opt_revision_committed)
-          || (revision->kind == svn_opt_revision_base))
-        {
-          pristine = TRUE;
-        }
-      else  /* must be the working revision */
-        {
-          pristine = FALSE;
-        }
+      pristine = ((revision->kind == svn_opt_revision_committed)
+                    || (revision->kind == svn_opt_revision_base));
 
       if (changelists && changelists->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,

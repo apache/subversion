@@ -260,14 +260,16 @@ reverse_diff_transformer(svn_stringbuf_t **buf,
 
 /* Return the next *HUNK from a PATCH, using STREAM to read data
  * from the patch file. If no hunk can be found, set *HUNK to NULL.
- * If REVERSE is TRUE, invert the hunk while parsing it.
- * Allocate results in RESULT_POOL.
- * Use SCRATCH_POOL for all other allocations. */
+ * If REVERSE is TRUE, invert the hunk while parsing it. If
+ * IGNORE_WHiTESPACES is TRUE, let lines without leading spaces be
+ * recognized as context lines.  Allocate results in RESULT_POOL.  Use
+ * SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 parse_next_hunk(svn_hunk_t **hunk,
                 svn_patch_t *patch,
                 svn_stream_t *stream,
                 svn_boolean_t reverse,
+                svn_boolean_t ignore_whitespace,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -281,6 +283,7 @@ parse_next_hunk(svn_hunk_t **hunk,
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
   svn_linenum_t original_lines;
+  svn_linenum_t modified_lines;
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
   svn_boolean_t changed_line_seen;
@@ -354,27 +357,42 @@ parse_next_hunk(svn_hunk_t **hunk,
 
           c = line->data[0];
           /* Tolerate chopped leading spaces on empty lines. */
-          if (original_lines > 0 && (c == ' ' || (! eof && line->len == 0)))
+          if (original_lines > 0 && modified_lines > 0 
+              && ((c == ' ')
+              || (! eof && line->len == 0)
+              || (ignore_whitespace && c != del && c != add)))
             {
               hunk_seen = TRUE;
               original_lines--;
+              modified_lines--;
               if (changed_line_seen)
                 trailing_context++;
               else
                 leading_context++;
             }
-          else if (c == add || c == del)
+          else if (original_lines > 0 && c == del)
             {
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
 
-              /* A hunk may have context in the middle. We only want the
-                 last lines of context. */
+              /* A hunk may have context in the middle. We only want
+                 trailing lines of context. */
               if (trailing_context > 0)
                 trailing_context = 0;
 
-              if (original_lines > 0 && c == del)
-                original_lines--;
+              original_lines--;
+            }
+          else if (modified_lines > 0 && c == add)
+            {
+              hunk_seen = TRUE;
+              changed_line_seen = TRUE;
+
+              /* A hunk may have context in the middle. We only want
+                 trailing lines of context. */
+              if (trailing_context > 0)
+                trailing_context = 0;
+
+              modified_lines--;
             }
           else
             {
@@ -395,7 +413,10 @@ parse_next_hunk(svn_hunk_t **hunk,
               in_hunk = parse_hunk_header(line->data, *hunk, reverse,
                                           iterpool);
               if (in_hunk)
-                original_lines = (*hunk)->original_length;
+                {
+                  original_lines = (*hunk)->original_length;
+                  modified_lines = (*hunk)->modified_length;
+                }
             }
           else if (starts_with(line->data, minus))
             /* This could be a header of another patch. Bail out. */
@@ -500,6 +521,7 @@ svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
                           apr_file_t *patch_file,
                           svn_boolean_t reverse,
+                          svn_boolean_t ignore_whitespace,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -607,7 +629,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
           svn_pool_clear(iterpool);
 
           SVN_ERR(parse_next_hunk(&hunk, *patch, stream, reverse,
-                                  result_pool, iterpool));
+                                  ignore_whitespace, result_pool, iterpool));
           if (hunk)
             APR_ARRAY_PUSH((*patch)->hunks, svn_hunk_t *) = hunk;
         }

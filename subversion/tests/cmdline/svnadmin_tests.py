@@ -96,7 +96,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
     dump = [ dump ]
 
   exit_code, output, errput = svntest.main.run_command_stdin(
-    svntest.main.svnadmin_binary, expected_stderr, 1, dump,
+    svntest.main.svnadmin_binary, expected_stderr, 0, 1, dump,
     'load', '--quiet', sbox.repo_dir, *varargs)
 
   if expected_stdout:
@@ -625,7 +625,7 @@ def recover_fsfs(sbox):
   svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
 
   # Remember the contents of the db/current file.
-  expected_current_contents = svntest.main.file_read(current_path)
+  expected_current_contents = open(current_path).read()
 
   # Move aside the current file for r3.
   os.rename(os.path.join(sbox.repo_dir, 'db','current'),
@@ -637,7 +637,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = svntest.main.file_read(current_path)
+  actual_current_contents = open(current_path).read()
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -651,7 +651,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = svntest.main.file_read(current_path)
+  actual_current_contents = open(current_path).read()
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -665,7 +665,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = svntest.main.file_read(current_path)
+  actual_current_contents = open(current_path).read()
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -684,7 +684,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = svntest.main.file_read(current_path)
+  actual_current_contents = open(current_path).read()
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -700,7 +700,7 @@ def load_with_parent_dir(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'mergeinfo_included.dump')
-  dumpfile = svntest.main.file_read(dumpfile_location)
+  dumpfile = open(dumpfile_location).read()
 
   # Create 'sample' dir in sbox.repo_url, and load the dump stream there.
   svntest.actions.run_and_verify_svn(None,
@@ -798,7 +798,7 @@ def reflect_dropped_renumbered_revs(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = svntest.main.file_read(dumpfile_location)
+  dumpfile = open(dumpfile_location).read()
 
   # Create 'toplevel' dir in sbox.repo_url
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 1.\n'],
@@ -813,24 +813,14 @@ def reflect_dropped_renumbered_revs(sbox):
                              '/toplevel')
 
   # Verify the svn:mergeinfo properties
-  svntest.actions.run_and_verify_svn(None, ["/trunk:2-4\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/branch2')
-  svntest.actions.run_and_verify_svn(None, ["/branch1:5-9\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/trunk')
-  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:11-13\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/toplevel/branch2')
-  svntest.actions.run_and_verify_svn(None, ["/toplevel/branch1:14-18\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/toplevel/trunk')
-  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:11-12\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/toplevel/branch1')
-  svntest.actions.run_and_verify_svn(None, ["/trunk:2-3\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/branch1')
+  url = sbox.repo_url
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "/trunk - /branch1:5-9\n",
+    url + "/toplevel/trunk - /toplevel/branch1:14-18\n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
 
 #----------------------------------------------------------------------
 
@@ -960,34 +950,34 @@ def verify_with_invalid_revprops(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
-# More testing for issue #3020 'Reflect dropped/renumbered revisions in
-# svn:mergeinfo data during svnadmin load'
+# Even *more* testing for issue #3020 'Reflect dropped/renumbered
+# revisions in svn:mergeinfo data during svnadmin load'
 #
-# Specifically, test that loading a partial dump file filters out
-# mergeinfo that refers to revisions that are older than the oldest
-# loaded revisions -- See
-# http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc10.
-def drop_mergeinfo_outside_of_dump_stream(sbox):
-  "filter mergeinfo revs outside of dump stream"
+# Full or incremental dump-load cycles should result in the same
+# mergeinfo in the loaded repository.
+#
+# Given a repository 'SOURCE-REPOS' with mergeinfo, and a repository
+# 'TARGET-REPOS' (which may or may not be empty), either of the following
+# methods to move 'SOURCE-REPOS' to 'TARGET-REPOS' should result in
+# the same mergeinfo on 'TARGET-REPOS':
+#
+#   1) Dump -r1:HEAD from 'SOURCE-REPOS' and load it in one shot to
+#      'TARGET-REPOS'.
+#
+#   2) Dump 'SOURCE-REPOS' in a series of incremental dumps and load
+#      each of them to 'TARGET-REPOS'.
+#
+# See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc13
+def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
+  "don't filter mergeinfo revs from incremental dump"
 
+  # Create an empty repos.
   test_create(sbox)
 
-  # Load a partial dump into an existing repository.
+  # PART 1: Load a full dump to an empty repository.
   #
-  # Picture == 1k words:
-  #
-  # The existing repos loaded from skeleton_repos.dump looks like this:
-  #
-  # Projects/       (Added r1)
-  #   README        (Added r2)
-  #   Project-X     (Added r3)
-  #   Project-Y     (Added r4)
-  #   Project-Z     (Added r5)
-  #   docs/         (Added r6)
-  #     README      (Added r6)
-  #
-  # The dump file 'mergeinfo_included_partial.dump' is a dump of r6:HEAD of
-  # the following repos:
+  # The test repository used here, 'mergeinfo_included_full.dump', is
+  # this repos:
   #                       __________________________________________
   #                      |                                         |
   #                      |             ____________________________|_____
@@ -1016,7 +1006,7 @@ def drop_mergeinfo_outside_of_dump_stream(sbox):
   #                  branches/B1/B/E------------------------------r14---r15->
   #                  
   #
-  # The mergeinfo on the complete repos in the preceeding repos looks like:
+  # The mergeinfo on this repos@15 is:
   #
   #   Properties on 'branches/B1':
   #     svn:mergeinfo
@@ -1029,113 +1019,10 @@ def drop_mergeinfo_outside_of_dump_stream(sbox):
   #   Properties on 'branches/B2':
   #     svn:mergeinfo
   #       /trunk:9
-  #
-  # If we were to load the dump of r6:HEAD into an empty repository, we'd
-  # expect any references to revisions <r6 to be removed entirely (since
-  # that history no longer exists) and the the remaining mergeinfo should
-  # have its revisions offset by -5.  The resulting mergeinfo should look
-  # like this:
-  #
-  #   Properties on 'branches/B1':
-  #     svn:mergeinfo
-  #       /branches/B2:6-7
-  #       /trunk:1,4
-  #   Properties on 'branches/B1/B/E':
-  #     svn:mergeinfo
-  #       /branches/B2/B/E:6-7
-  #       /trunk/B/E:1,3-4
-  #   Properties on 'branches/B2':
-  #     svn:mergeinfo
-  #       /trunk:4
-  #
-  # But here we will load it into the existing skeleton repository in the
-  # Projects/Project-X directory.  Since we are loading the dump into a
-  # subtree, all the merge sources should be prefixed with the path to
-  # that subtree, i.e. 'Projects/Project-X', compared to the mergeinfo above.
-  # In addition, since the skeleton repos already has 6 revisions, we expect
-  # all the remaining revisions to be offset +6 from the above.  That should
-  # result in this mergeinfo:
-  #
-  #   Properties on 'Projects/Project-X/branches/B1':
-  #     svn:mergeinfo
-  #       /Projects/Project-X/branches/B2:12-13
-  #       /Projects/Project-X/trunk:7,10
-  #   Properties on 'Projects/Project-X/branches/B1/B/E':
-  #     svn:mergeinfo
-  #       /Projects/Project-X/branches/B2/B/E:12-13
-  #       /Projects/Project-X/trunk/B/E:7,9-10
-  #   Properties on 'Projects/Project-X/branches/B2':
-  #     svn:mergeinfo
-  #       /Projects/Project-X/trunk:10
-
-  # Load the skeleton dump:
-  dumpfile1 = svntest.main.file_read(
-    os.path.join(os.path.dirname(sys.argv[0]),
-                 'svnadmin_tests_data',
-                 'skeleton_repos.dump'))
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile1, '--ignore-uuid')
-
-  # Load the partial repository with mergeinfo dump:
-  dumpfile2 = svntest.main.file_read(
-    os.path.join(os.path.dirname(sys.argv[0]),
-                 'svnadmin_tests_data',
-                 'mergeinfo_included_partial.dump'))
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile2, '--ignore-uuid',
-                             '--parent-dir', '/Projects/Project-X')
-
-  # Check the resulting mergeinfo.
-  #
-  # TODO: Use pg -vR, which would make the expected output easier on the eyes.
-  #       Not using it because pg -vR on windows is outputting <CR><CR><LF>
-  #       after the first line of multiline mergeinfo, which breaks the
-  #       comparison, e.g.:
-  #
-  #   Properties on 'Projects/Project-X/branches/B1/B/E':<CR><LF>
-  #     svn:mergeinfo<CR><LF>
-  #       /Projects/Project-X/branches/B2:12-13<CR><CR><LF>
-  #                                            ^^^
-  #       /Projects/Project-X/trunk:7,10<CR><LF>
-  url = sbox.repo_url + '/Projects/Project-X/branches/'
-  expected_output = svntest.verify.UnorderedOutput([
-    url + "B1 - /Projects/Project-X/branches/B2:12-13\n",
-    "/Projects/Project-X/trunk:7,10\n",
-    url + "B2 - /Projects/Project-X/trunk:10\n",
-    url + "B1/B/E - /Projects/Project-X/branches/B2/B/E:12-13\n",
-    "/Projects/Project-X/trunk/B/E:7,9-10\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)
-
-#----------------------------------------------------------------------
-# Even *more* testing for issue #3020 'Reflect dropped/renumbered
-# revisions in svn:mergeinfo data during svnadmin load'
-#
-# Filtering revsions from mergeinfo in a load stream that refers to
-# history outside of the stream is all well and good if the load
-# is a partial dump loaded in one shot...but if a repository's full
-# history is dumped incrementally and each incremental dump is loaded,
-# well then, *any* filtering done then is removing valid mergeinfo...
-#
-# ...and currently we do exactly that, as this test demonstrates.
-#
-# Note: If a repository is *partially* dumped in a sequence of incremental
-# dumps then possibly some mergeinfo should be filtered on the load, but
-# not *all* mergeinfo, which is what we are doing in that case too.
-def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
-  "don't filter mergeinfo revs from incremental dump"
-
-  # Create an empty repos.
-  test_create(sbox)
-
-  # Load the test repository to the first repos in a single load.
-  #
-  # Note: The test repository 'mergeinfo_included_full.dump' is the full
-  # repos diagramed in the test drop_mergeinfo_outside_of_dump_stream.
-  dumpfile1 = svntest.main.file_read(
-    os.path.join(os.path.dirname(sys.argv[0]),
-                 'svnadmin_tests_data',
-                 'mergeinfo_included_full.dump'))
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile1, '--ignore-uuid')
+  dumpfile_full = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                    'svnadmin_tests_data',
+                                    'mergeinfo_included_full.dump')).read()
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full, '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.
   url = sbox.repo_url + '/branches/'
@@ -1149,7 +1036,9 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)  
 
-  # Now incrementally dump that repository into three dump files:
+  # PART 2: Load a a series of incremental dumps to an empty repository.
+  #
+  # Incrementally dump the repository into three dump files:
   dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.dump"
   exit_code, output, errput = svntest.main.run_svnadmin(
     'dump', sbox.repo_dir, '-r1:10')
@@ -1176,21 +1065,125 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
 
   # Load the three incremental dump files in sequence.
   load_and_verify_dumpstream(sbox, [], [], None,
-                             svntest.main.file_read(dump_file_r1_10),
+                             open(dump_file_r1_10).read(),
                              '--ignore-uuid')
   load_and_verify_dumpstream(sbox, [], [], None,
-                             svntest.main.file_read(dump_file_r11_13),
+                             open(dump_file_r11_13).read(),
                              '--ignore-uuid')
   load_and_verify_dumpstream(sbox, [], [], None,
-                             svntest.main.file_read(dump_file_r14_15),
+                             open(dump_file_r14_15).read(),
                              '--ignore-uuid')
 
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
   # repos in one shot.
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
+
+  # Now repeat the above two scenarios, but with an initially non-empty target
+  # repository.  First, try the full dump-load in one shot.
   #
-  # Currently this test is set as XFail, because the mergeinfo filtering
-  # logic in load is removing valid mergeinfo.
+  # PART 3: Load a full dump to an non-empty repository.
+  #  
+  # Reset our sandbox.
+  test_create(sbox)
+
+  # Load this skeleton repos into the empty target:
+  #
+  #   Projects/       (Added r1)
+  #     README        (Added r2)
+  #     Project-X     (Added r3)
+  #     Project-Y     (Added r4)
+  #     Project-Z     (Added r5)
+  #     docs/         (Added r6)
+  #       README      (Added r6)
+  dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                        'svnadmin_tests_data',
+                                        'skeleton_repos.dump')).read()
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
+                             '--ignore-uuid')
+
+  # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full,
+                             '--parent-dir', 'Projects/Project-X',
+                             '--ignore-uuid')
+
+  # Check that the mergeinfo is as expected.  This is exactly the
+  # same expected mergeinfo we previously checked, except that the
+  # revisions are all offset +6 to reflect the revions already in
+  # the skeleton target before we began loading and the leading source
+  # paths are adjusted by the --parent-dir:
+  #
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /Projects/Project-X/branches/B2:17-18
+  #       /Projects/Project-X/trunk:12,15
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /Projects/Project-X/branches/B2/B/E:17-18
+  #       /Projects/Project-X/trunk/B/E:11-12,14-15
+  #   Properties on 'branches/B2':
+  #     svn:mergeinfo
+  #       /Projects/Project-X/trunk:15
+  url = sbox.repo_url + '/Projects/Project-X/branches/'
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "B1 - /Projects/Project-X/branches/B2:17-18\n",
+    "/Projects/Project-X/trunk:12,15\n",
+    url + "B2 - /Projects/Project-X/trunk:15\n",
+    url + "B1/B/E - /Projects/Project-X/branches/B2/B/E:17-18\n",
+    "/Projects/Project-X/trunk/B/E:11-12,14-15\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
+
+  # PART 4: Load a a series of incremental dumps to an non-empty repository.
+  #
+  # Reset our sandbox.
+  test_create(sbox)
+
+  # Load this skeleton repos into the empty target:
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
+                             '--ignore-uuid')
+  
+  # Load the three incremental dump files in sequence.
+  load_and_verify_dumpstream(sbox, [], [], None,
+                             open(dump_file_r1_10).read(),
+                             '--parent-dir', 'Projects/Project-X',
+                             '--ignore-uuid')
+  load_and_verify_dumpstream(sbox, [], [], None,
+                             open(dump_file_r11_13).read(),
+                             '--parent-dir', 'Projects/Project-X',
+                             '--ignore-uuid')
+  load_and_verify_dumpstream(sbox, [], [], None,
+                             open(dump_file_r14_15).read(),
+                             '--parent-dir', 'Projects/Project-X',
+                             '--ignore-uuid')
+
+  # Check the resulting mergeinfo.  We expect the exact same results
+  # as Part 3.
+  #
+  # Currently this fails because our current logic mapping mergeinfo revs
+  # in the load stream to their new values based on the offset of the
+  # target repository is quite flawed.  Right now this is the resulting
+  # mergeinfo:
+  #
+  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B1\B
+  #      svn:mergeinfo
+  #        /Projects/Project-X/branches/B2/B/E:11-12
+  #        /Projects/Project-X/trunk/B/E:5-6,8-9
+  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B1':
+  #      svn:mergeinfo
+  #        /Projects/Project-X/branches/B2:11-18
+  #                                           ^^
+  #                                 The *only* correct rev here!
+  #        /Projects/Project-X/trunk:6,9
+  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B2':
+  #      svn:mergeinfo
+  #        /Projects/Project-X/trunk:9
+  #
+  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16 for
+  # more info.
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
@@ -1222,7 +1215,6 @@ test_list = [ None,
               create_in_repo_subdir,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
-              drop_mergeinfo_outside_of_dump_stream,
               XFail(dont_drop_valid_mergeinfo_during_incremental_loads),
              ]
 

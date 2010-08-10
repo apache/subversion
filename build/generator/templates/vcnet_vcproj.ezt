@@ -76,7 +76,7 @@
 [else]				LinkIncremental="1"
 [end]				AdditionalLibraryDirectories="..\..\..\db4-win32\lib;[for configs.libdirs][configs.libdirs];[end]"
 				TargetMachine="[is platforms "Win32"]1[end][is platforms "x64"]17[end]"
-				IgnoreDefaultLibraryNames="libc.lib"
+				IgnoreDefaultLibraryNames="libc.lib[is configs.name "debug"];msvcrt.lib[end]"
 [if-any def_file]				ModuleDefinitionFile="[def_file]"
 [end]				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)\$(TargetName).pdb"[is configs.name "Debug"]
@@ -89,7 +89,8 @@
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalOptions="[is platforms "win32"]/MACHINE:X86[end][is platforms "x64"]/MACHINE:X64[end]"
-				OutputFile="$(OutDir)\[target.output_name]"/>
+				OutputFile="$(OutDir)\[target.output_name]"[is configs.name "debug"]
+				IgnoreDefaultLibraryNames="msvcrt.lib"[end]/>
 [end]			<Tool
 				Name="VCMIDLTool"/>
 			<Tool

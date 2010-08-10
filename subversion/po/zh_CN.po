@@ -36,6 +36,7 @@
 # checkout          检出
 # default           默认
 # HEAD revision     最新版本
+# Obliteration      灭迹
 # overlay           重载
 # remove            删除
 # rename            改名
@@ -52,11 +53,11 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
-"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-12-07 10:09+0800\n"
-"PO-Revision-Date: 2009-12-07 11:22+0800\n"
-"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
-"Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
+"Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
+"POT-Creation-Date: 2010-04-13 23:07+0800\n"
+"PO-Revision-Date: 2010-04-13 23:07+0800\n"
+"Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
+"Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -220,6 +221,9 @@ msgstr "无法识别的流数据"
 
 msgid "Stream doesn't support resetting"
 msgstr "流不支持重置操作"
+
+msgid "Stream doesn't support seeking"
+msgstr "流不支持定位操作"
 
 msgid "Unknown svn_node_kind"
 msgstr "未知的 svn_node_kind"
@@ -933,6 +937,10 @@ msgstr "“%s” 尚未纳入版本控制"
 msgid "'%s' refers to a directory"
 msgstr "“%s” 引用一个目录"
 
+#, c-format
+msgid "'%s' has no base revision until it is committed"
+msgstr "在提交之前，“%s”没有基础版本"
+
 msgid "(local)"
 msgstr "(本地)"
 
@@ -1004,7 +1012,7 @@ msgstr "执行 post-commit 出错 (细节如下): "
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "清理 post-commit 出错 (细节如下): "
 
-msgid "Are all the targets part of the same working copy?"
+msgid "Are all targets part of the same working copy?"
 msgstr "是否所有目标都属于同一工作副本？"
 
 msgid ""
@@ -1095,10 +1103,9 @@ msgstr "路径 “%s” 不是目录"
 msgid "Path '%s' already exists, but is not a directory"
 msgstr "路径 “%s” 已经存在，但不是目录"
 
-#, c-format
 msgid ""
-"Source and dest appear not to be in the same repository (src: '%s'; dst: '%s')"
-msgstr "来源与目标似乎不在同一版本库 (来源: “%s”；目的: “%s”)"
+"Source and destination URLs appear not to all point to the same repository."
+msgstr "来源与目标似乎不在同一版本库。"
 
 #, c-format
 msgid "Cannot move URL '%s' into itself"
@@ -1113,20 +1120,20 @@ msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr "源 URL “%s” 来自其它版本库；把它当作脱离的工作副本"
 
 #, c-format
-msgid "Path '%s' not found in revision %ld"
-msgstr "路径 “%s” 不在版本 %ld 中"
-
-#, c-format
-msgid "Path '%s' not found in head revision"
-msgstr "HEAD 版本中找不到路径 “%s”"
-
-#, c-format
 msgid "'%s' is already under version control"
 msgstr "“%s”已纳入版本控制"
 
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "“%s” 的入口存在(尽管丢失了工作文件)"
+
+#, c-format
+msgid "Path '%s' not found in revision %ld"
+msgstr "路径 “%s” 不在版本 %ld 中"
+
+#, c-format
+msgid "Path '%s' not found in head revision"
+msgstr "HEAD 版本中找不到路径 “%s”"
 
 msgid "Cannot mix repository and working copy sources"
 msgstr "不能在源中混合版本库和工作副本"
@@ -1425,10 +1432,6 @@ msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "不能复兴到有混合版本的工作副本；请先更新"
 
 #, c-format
-msgid "At least one revision (r%ld) not yet merged from '%s'"
-msgstr "至少有一个版本(r%ld)没有自“%s”合并"
-
-#, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "“%s@%ld”必须与“%s@%ld”有祖先关系"
 
@@ -1721,10 +1724,13 @@ msgid "Missing required node revision ID"
 msgstr "缺少必须的节点版本 ID"
 
 msgid "Invalid change ordering: new node revision ID without delete"
-msgstr "无效的改变顺序: 有新的节点版本 ID 而没删除"
+msgstr "无效的改变顺序: 没有删除新节点版本 ID"
 
 msgid "Invalid change ordering: non-add change on deleted path"
-msgstr "无效的改变顺序: 对删除路径进行非增加的改变"
+msgstr "无效的改变顺序: 在已经删除的路径执行非增加修改"
+
+msgid "Invalid change ordering: add change on preexisting path"
+msgstr "无效的改变顺序: 在已有路径增加修改"
 
 msgid "creating cursor for reading changes"
 msgstr "正在为读取修改创建指针"
@@ -1750,16 +1756,19 @@ msgid "storing checksum-reps record"
 msgstr "正在存储校验和展现记录"
 
 msgid "allocating new representation reuse ID (getting 'next-key')"
-msgstr "正在分配新展现的复用 ID(正在获取 “next-key”)"
+msgstr "正在分配新展现的复用 ID (正在获取 “next-key”)"
 
-msgid "bumping next copy key"
-msgstr "正在提取下一个副本键"
+msgid "bumping next representation reuse ID"
+msgstr "跳到下个展现复用 ID"
 
 msgid "storing copy record"
 msgstr "正在存储副本记录"
 
 msgid "allocating new copy ID (getting 'next-key')"
 msgstr "正在分配新副本 ID(正在获取 “next-key”)"
+
+msgid "bumping next copy key"
+msgstr "正在提取下一个副本键"
 
 msgid "deleting entry from 'copies' table"
 msgstr "正在从 “copies” 表中删除条目"
@@ -1845,12 +1854,15 @@ msgstr "损坏的数据库: 初始的副本编号在文件系统“%s”中不�
 msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
 msgstr "损坏的数据库: 初始的版本号在文件系统“%s”中不是“0”"
 
-msgid "Attempted to create entry in non-directory parent"
-msgstr "试图在非目录的父节点创建条目"
+msgid "Attempted to get entries of a non-directory node"
+msgstr "试图从非目录节点中获取条目"
 
 #, c-format
 msgid "Attempted to create a node with an illegal name '%s'"
 msgstr "试图用非法的名字“%s”创建节点"
+
+msgid "Attempted to create entry in non-directory parent"
+msgstr "试图在非目录的父节点创建条目"
 
 #, c-format
 msgid "Attempted to clone child of non-mutable node"
@@ -2130,6 +2142,10 @@ msgid "Failed to calculate MD5 digest for '%s'"
 msgstr "计算“%s”的MD5摘要失败"
 
 #, c-format
+msgid "Attempt to obliterate '%s' using itself "
+msgstr "试图用自己灭迹“%s”"
+
+#, c-format
 msgid "Transaction is not dead: '%s'"
 msgstr "事务未结束: “%s”"
 
@@ -2172,6 +2188,10 @@ msgstr "事务 “%s” 过时，对于版本 “%s” "
 #, c-format
 msgid "Cannot deltify revisions prior to r%ld"
 msgstr "不能在 r%ld 之前计算增量变化"
+
+#, c-format
+msgid "Cannot obliterate '%s' as it is not a file"
+msgstr "“%s”不是文件，所以不能灭迹"
 
 msgid "The root directory cannot be deleted"
 msgstr "不能删除根目录"
@@ -2465,6 +2485,9 @@ msgstr "无法修改“%s”的存取权限"
 msgid "Transaction out of date"
 msgstr "事务过时"
 
+msgid "Obliteration of already-packed revision is not supported"
+msgstr "不支持对已经打包的版本执行灭迹"
+
 msgid "Recovery encountered a non-directory node"
 msgstr "修复时遇到非目录节点"
 
@@ -2586,6 +2609,9 @@ msgstr "“%s” 不是会话 URL “%s” 的子节点"
 msgid "'%s' isn't a child of repository root URL '%s'"
 msgstr "“%s” 不是版本库根 URL “%s” 的子节点"
 
+msgid "Obliterate is not supported by this Repository Access method"
+msgstr "此版本库存取方法不支持灭迹"
+
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - 处理“%s”方案\n"
@@ -2669,6 +2695,9 @@ msgstr "无法保存文件"
 
 msgid "Server response missing the expected deadprop-count property"
 msgstr "服务器响应丢失了期望的 deadprop-count 属性"
+
+msgid "The OPTIONS response did not include the youngest revision"
+msgstr "OPTIONS 响应中没有包含最新的版本"
 
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
@@ -3064,9 +3093,6 @@ msgid ""
 "value"
 msgstr "OPTIONS 响应中没有包含请求的 activity-collection-set 值。"
 
-msgid "The OPTIONS response did not include the requested checked-in value"
-msgstr "OPTIONS 响应中没有包含请求的 checked-in 值。"
-
 #, c-format
 msgid "Adding a directory failed: %s on %s (%d %s)"
 msgstr "增加目录失败: “%s” 于 “%s”(%d %s)"
@@ -3082,8 +3108,8 @@ msgstr "版本库的 URL 非法"
 msgid "Unlock request failed: %d %s"
 msgstr "解锁请求失败: %d %s"
 
-msgid "The OPTIONS response did not include the youngest revision"
-msgstr "OPTIONS 响应中没有包含最新的版本"
+msgid "The OPTIONS response did not include the requested checked-in value"
+msgstr "OPTIONS 响应中没有包含请求的 checked-in 值。"
 
 msgid ""
 "The OPTIONS response did not include the requested baseline-collection value"
@@ -3191,6 +3217,13 @@ msgstr "子进程错误: %s"
 #, c-format
 msgid "Can't create tunnel"
 msgstr "无法创建隧道"
+
+msgid ""
+"To better debug SSH connection problems, remove the -q option from 'ssh' in "
+"the [tunnels] section of your Subversion configuration file."
+msgstr ""
+"为了更好的诊断 SSH 连接问题，请在你的 Subversion 配置文件中的 [tunnels] 段，"
+"从 'ssh' 行删除选项 '-q'。"
 
 #, c-format
 msgid "Illegal svn repository URL '%s'"
@@ -3427,6 +3460,14 @@ msgid ""
 msgstr "无效编辑器定位；至少一个输入路径不是目录，并且没有源入口"
 
 #, c-format
+msgid "* Dumped revision %ld.\n"
+msgstr "* 已转存版本 %ld。\n"
+
+#, c-format
+msgid "* Verified revision %ld.\n"
+msgstr "* 已校验版本 %ld。\n"
+
+#, c-format
 msgid ""
 "WARNING: Referencing data in revision %ld, which is older than the oldest\n"
 "WARNING: dumped revision (%ld).  Loading this dump into an empty repository\n"
@@ -3443,14 +3484,6 @@ msgstr "起始版本 %ld 大于结束版本 %ld"
 #, c-format
 msgid "End revision %ld is invalid (youngest revision is %ld)"
 msgstr "结束版本 %ld 无效 (最新版本是 %ld)"
-
-#, c-format
-msgid "* Dumped revision %ld.\n"
-msgstr "* 已转存版本 %ld。\n"
-
-#, c-format
-msgid "* Verified revision %ld.\n"
-msgstr "* 已校验版本 %ld。\n"
 
 #, c-format
 msgid "Unexpected node kind %d for '%s'"
@@ -4080,16 +4113,8 @@ msgid "Can't remove file '%s'"
 msgstr "不能移动文件“%s”"
 
 #, c-format
-msgid "Can't open directory '%s'"
-msgstr "无法打开目录“%s”"
-
-#, c-format
 msgid "Can't remove '%s'"
 msgstr "无法删除“%s”"
-
-#, c-format
-msgid "Can't rewind directory '%s'"
-msgstr "无法重绕目录“%s”"
 
 #, c-format
 msgid "Can't create process '%s' attributes"
@@ -4233,6 +4258,10 @@ msgid "Can't hide directory '%s'"
 msgstr "无法隐藏目录 “%s”"
 
 #, c-format
+msgid "Can't open directory '%s'"
+msgstr "无法打开目录“%s”"
+
+#, c-format
 msgid "Can't remove directory '%s'"
 msgstr "无法删除目录 “%s”"
 
@@ -4281,6 +4310,10 @@ msgstr "“%s” 的合并信息映射到空的版本范围"
 #, c-format
 msgid "Invalid character '%c' found in revision list"
 msgstr "在版本列表中发现无效字符 “%c”"
+
+#, c-format
+msgid "Invalid revision number '0' found in range list"
+msgstr "在范围列表中发现无效的版本号　“0”"
 
 #, c-format
 msgid "Unable to parse reversed revision range '%ld-%ld'"
@@ -4383,13 +4416,13 @@ msgstr ""
 "\n"
 
 msgid ""
-"Copyright (C) 2009 The Apache Software Foundation.\n"
+"Copyright (C) 2010 The Apache Software Foundation.\n"
 "This software consists of contributions made by many people;\n"
 "see the NOTICE file for more information.\n"
 "Subversion is open source software, see http://subversion.apache.org/\n"
 "\n"
 msgstr ""
-"版权所有 (C) 2009 Apache 软件基金会。\n"
+"版权所有 (C) 2010 Apache 软件基金会。\n"
 "此软件包含了许多人的贡献；请查看文件 NOTICE 以获得更多信息。\n"
 "Subversion 是开放源代码软件，请参阅 http://subversion.apache.org/ 站点。\n"
 "\n"
@@ -4678,11 +4711,6 @@ msgstr "当为提交操作准备“%s”时"
 msgid "'%s' is not a valid administrative directory name"
 msgstr "“%s”不是一个有效的管理目录名"
 
-msgid ""
-"Your .svn/tmp directory may be missing or corrupt; run 'svn cleanup' and try "
-"again"
-msgstr "你的 .svn/tmp 目录可能丢失或损坏；请执行“svn cleanup”，然后重试"
-
 #, c-format
 msgid "Revision %ld doesn't match existing revision %ld in '%s'"
 msgstr "版本 %ld 不匹配现有版本 %ld 于 “%s”"
@@ -4752,6 +4780,21 @@ msgid "Cannot revert '%s': unsupported node kind in working copy"
 msgstr "无法恢复“%s”: 工作副本中有不支持的节点种类"
 
 #, c-format
+msgid "Can only get the pristine contents of files; '%s' is not a file"
+msgstr "只能取得文件的原始内容；“%s”不是文件"
+
+#, c-format
+msgid ""
+"Cannot get the pristine contents of '%s' because its delete is already "
+"committed"
+msgstr "不能取得“%s”的原始内容，因为其删除操作已经提交"
+
+#, c-format
+msgid ""
+"Cannot get the pristine contents of '%s' because it has an unexpected status"
+msgstr "不能取得“%s”的原始内容，因为其状态未知"
+
+#, c-format
 msgid "File '%s' has local modifications"
 msgstr "文件“%s”有本地修改"
 
@@ -4819,12 +4862,12 @@ msgstr "不能排除 '%s': 它将要从版本库中删除。请先提交"
 msgid "Can only crop a working copy with a restrictive depth"
 msgstr "只能修剪工作副本到有限深度"
 
+msgid "Can only crop directories"
+msgstr "只能修剪目录"
+
 #, c-format
 msgid "The node '%s' was not found."
 msgstr "找不到节点 '%s'。"
-
-msgid "Can only crop directories"
-msgstr "只能修剪目录"
 
 #, c-format
 msgid ""
@@ -4923,9 +4966,8 @@ msgstr "工作副本“%s”未被锁定"
 msgid "No write-lock in '%s'"
 msgstr "“%s”没有写入锁定"
 
-msgid "Can't move source to dest"
-msgstr "无法移动源至目的"
-
+#. For log debugging. Generates output about its operation.
+#. #define DEBUG_LOG
 #. Helper macro for erroring out while running a logfile.
 #.
 #. This is implemented as a macro so that the error created has a useful
@@ -4934,9 +4976,8 @@ msgstr "无法移动源至目的"
 msgid "In directory '%s'"
 msgstr "在目录“%s”中"
 
-#, c-format
-msgid "Missing 'dest' attribute in '%s'"
-msgstr "“%s”丢失了“dest”属性"
+msgid "Can't move source to dest"
+msgstr "无法移动源至目的"
 
 #, c-format
 msgid "Missing 'timestamp' attribute in '%s'"
@@ -4961,10 +5002,6 @@ msgstr "删除条目“%s”的锁出错"
 #, c-format
 msgid "Error recording tree conflict on '%s'"
 msgstr "在 '%s' 中记录树冲突出错"
-
-#, c-format
-msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
-msgstr "日志项丢失 “name” 属性 (入口 “%s” 对应目录 “%s”)"
 
 #, c-format
 msgid "Unrecognized logfile element '%s' in '%s'"
@@ -5163,6 +5200,10 @@ msgid "Unrecognized line ending style for '%s'"
 msgstr "“%s” 含有无法识别的行结束样式"
 
 #, c-format
+msgid "Cannot set non-inheritable mergeinfo on a non-directory ('%s')"
+msgstr "无法在非目录对象(“%s”)设定不可继承的合并信息"
+
+#, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "解析 %s 属性于“%s”出错: “%s”"
 
@@ -5192,11 +5233,11 @@ msgstr "无效属性 %s 位于 “%s”: 目标 “%s” 包含 “..” 或是�
 
 #, c-format
 msgid ""
-"Checksum mismatch indicates corrupt text base: '%s':\n"
+"Checksum mismatch indicates corrupt text base for file: '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"校验和不一致，指示文件参考基础损坏: '%s':\n"
+"校验和不一致，指示文件“%s”的参考基础损坏:\n"
 "       期望:  %s\n"
 "       实际:  %s\n"
 
@@ -5247,6 +5288,10 @@ msgid "Path '%s' is not in the working copy"
 msgstr "路径 “%s” 不在工作副本中"
 
 #, c-format
+msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
+msgstr "无法增加目录“%s”:尚不支持 copyfrom 参数"
+
+#, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name as the administrative "
 "directory"
@@ -5273,10 +5318,6 @@ msgstr "增加目录 '%s' 失败: 同名且独立的工作副本已存在"
 #, c-format
 msgid "Switched directory '%s' does not match expected URL '%s'"
 msgstr "已经切换的目录 '%s' 与期望的 URL '%s' 不匹配"
-
-#, c-format
-msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
-msgstr "无法增加目录“%s”:尚不支持 copyfrom 参数"
 
 msgid "Couldn't do property merge"
 msgstr "无法进行属性合并"
@@ -5332,7 +5373,23 @@ msgstr "Copyfrom-url“%s”与“%s”的版本库根目录不相同"
 
 #, c-format
 msgid "Missing end of line in wcprops file for '%s'"
-msgstr "wcprops文件“%s”丢失了行结束符"
+msgstr "“%s”的 wcprops 文件丢失了行结束符"
+
+#, c-format
+msgid ""
+"Working copy '%s' can't be upgraded because the repository root is not "
+"available and can't be retrieved"
+msgstr "由于版本库的根不可用，并且不能找回，所以工作副本“%s”不能被升级"
+
+#, c-format
+msgid ""
+"Working copy '%s' can't be upgraded because the repository uuid is not "
+"available and can't be retrieved"
+msgstr "由于版本库的 UUID 不可用，并且不能找回，所以工作副本“%s”不能被升级"
+
+#, c-format
+msgid "Working copy '%s' can't be upgraded because it doesn't have a url"
+msgstr "由于没有 URL，所以工作副本“%s”不能被升级"
 
 msgid ""
 "Cannot upgrade with existing logs; please run 'svn cleanup' with Subversion "
@@ -5348,10 +5405,6 @@ msgstr "“%s”不是目录"
 
 msgid "Unable to make any directories"
 msgstr "无法创建任何目录"
-
-#, c-format
-msgid "Cannot find a URL for '%s'"
-msgstr "不能为“%s”找到 URL"
 
 #. Verify the checksum kind for pristine storage.
 msgid "Only SHA1 checksums can be used as keys in the pristine file storage.\n"
@@ -5408,6 +5461,10 @@ msgid "Corrupt data for '%s'"
 msgstr "'%s' 的数据损坏"
 
 #, c-format
+msgid "Could not find node '%s' for recording file information."
+msgstr "不能为记录文件信息找到节点“%s”"
+
+#, c-format
 msgid "Expected node '%s' to be added."
 msgstr "期望节点“%s”被增加。"
 
@@ -5422,6 +5479,18 @@ msgstr "在数据库中找不到版本库“%s”"
 #, c-format
 msgid "There is no work queue for '%s'."
 msgstr "没有 '%s' 的工作队列。"
+
+#, c-format
+msgid "'%s' has no WORKING_NODE"
+msgstr "“%s” 没有 WORKING_NODE"
+
+#, c-format
+msgid "'%s' has no BASE_NODE"
+msgstr "“%s” 没有 BASE_NODE"
+
+#, c-format
+msgid "The pristine text with checksum '%s' was not found"
+msgstr "找不到校验和为“%s”的原始内容"
 
 #, c-format
 msgid "Error restoring text for '%s'"
@@ -5739,10 +5808,10 @@ msgstr ""
 
 msgid ""
 "Subversion is a tool for version control.\n"
-"For additional information, see http://subversion.tigris.org/\n"
+"For additional information, see http://subversion.apache.org/\n"
 msgstr ""
 "Subversion 是版本控制工具。\n"
-"欲取得详细资料，请参阅 http://subversion.tigris.org/\n"
+"欲取得详细资料，请参阅 http://subversion.apache.org/\n"
 
 msgid ""
 "The following repository access (RA) modules are available:\n"
@@ -6038,8 +6107,12 @@ msgstr "从文件ARG读取日志信息"
 msgid "give output suitable for concatenation"
 msgstr "给予适合串联的输出"
 
-msgid "treat value as being in charset encoding ARG"
-msgstr "将ARG的值视为字符编码"
+msgid ""
+"treat value as being in charset encoding ARG\n"
+"                             [alias: --enc]"
+msgstr ""
+"认为取值使用字符集编码 ARG\n"
+"                             [alias: --enc]"
 
 msgid "show program version information"
 msgstr "显示程序版本信息"
@@ -6101,10 +6174,12 @@ msgstr "受深度参数 ARG(“empty”，“files”，“immediates”，或�
 
 msgid ""
 "set new working copy depth to ARG ('exclude',\n"
-"                            'empty', 'files', 'immediates', or 'infinity')"
+"                            'empty', 'files', 'immediates', or 'infinity')\n"
+"                            [alias: --sd]"
 msgstr ""
-"设置工作副本的新深度为 ARG(“exclude”，“empty”，“files”，“immediates”，\n"
-"                            或“infinity”)"
+"设置工作副本的新深度为 ARG(“exclude”，\n"
+"                            “empty”，“files”，“immediates” 或“infinity”)\n"
+"                            [alias: --sd]"
 
 msgid "output in XML"
 msgstr "输出为 XML"
@@ -6112,14 +6187,22 @@ msgstr "输出为 XML"
 msgid "use strict semantics"
 msgstr "使用严格的语法"
 
-msgid "do not cross copies while traversing history"
-msgstr "查看历史不要跨越不同的副本"
+msgid ""
+"do not cross copies while traversing history\n"
+"                             [alias: --soc]"
+msgstr ""
+"在复制时停止遍历历史\n"
+"                             [alias: --soc]"
 
 msgid "disregard default and svn:ignore property ignores"
 msgstr "忽略默认值和 svn:ignore 属性"
 
-msgid "do not cache authentication tokens"
-msgstr "不要缓存用户认证令牌"
+msgid ""
+"do not cache authentication tokens\n"
+"                             [alias: --nac]"
+msgstr ""
+"不要缓存认证令牌\n"
+"                             [alias: --nac]"
 
 msgid ""
 "accept unknown SSL server certificates without\n"
@@ -6129,24 +6212,40 @@ msgstr "不提示的接受未知的 SSL 服务器证书(只用于选项 “--non
 msgid "do no interactive prompting"
 msgstr "不要交互提示"
 
-msgid "try operation but make no changes"
-msgstr "尝试操作但没有修改"
+msgid ""
+"try operation but make no changes\n"
+"                             [alias: --dry]"
+msgstr ""
+"尝试操作，但是不要执行改变\n"
+"                             [alias: --dry]"
 
-msgid "do not print differences for deleted files"
-msgstr "不要输出删除文件造成的差异"
+msgid ""
+"do not print differences for deleted files\n"
+"                             [alias: --ndd]"
+msgstr ""
+"对于已经删除的文件，不要显示差异\n"
+"                             [alias: --ndd]"
 
-msgid "notice ancestry when calculating differences"
-msgstr "比较差异时提示原始信息"
+msgid ""
+"notice ancestry when calculating differences\n"
+"                             [alias: --na]"
+msgstr ""
+"计算差异时关注祖先\n"
+"                             [alias: --na]"
 
-msgid "ignore ancestry when calculating merges"
-msgstr "合并时忽略原始信息"
+msgid ""
+"ignore ancestry when calculating merges\n"
+"                             [alias: --ia]"
+msgstr ""
+"计算合并时忽略祖先\n"
+"                             [alias: --ia]"
 
 msgid ""
 "ignore externals definitions\n"
-"                             [aliases: --ie]"
+"                             [alias: --ie]"
 msgstr ""
 "忽略外部定义\n"
-"                             [aliases: --ie]"
+"                             [alias: --ie]"
 
 msgid "use ARG as diff command"
 msgstr "使用 ARG 作为比较命令"
@@ -6157,8 +6256,12 @@ msgstr "使用 ARG 作为合并命令"
 msgid "use ARG as external editor"
 msgstr "使用 ARG 作为外部编辑器"
 
-msgid "merge only mergeinfo differences"
-msgstr "只合并 mergeinfo 的差异"
+msgid ""
+"merge only mergeinfo differences\n"
+"                             [alias: --ro]"
+msgstr ""
+"只合并修改信息的差异\n"
+"                             [alias: --ro]"
 
 msgid "use ARG as the older target"
 msgstr "使用 ARG 作为旧目标"
@@ -6172,8 +6275,12 @@ msgstr "在版本属性上操作(使用-r参数)"
 msgid "relocate via URL-rewriting"
 msgstr "通过URL改写重新定位"
 
-msgid "read user configuration files from directory ARG"
-msgstr "从目录 ARG 读取用户配置文件"
+msgid ""
+"read user configuration files from directory ARG\n"
+"                             [alias: --cd]"
+msgstr ""
+"从目录 ARG 读取用户配置文件\n"
+"                             [alias: --cd]"
 
 msgid ""
 "set user configuration option in the format:\n"
@@ -6214,9 +6321,10 @@ msgstr "显示结果的概要"
 msgid "remove changelist association"
 msgstr "删除修改列表耦合"
 
+#, fuzzy
 msgid ""
 "operate only on members of changelist ARG\n"
-"                             [aliases: --cl]"
+"                             [alias: --cl]"
 msgstr ""
 "只能对修改列表 ARG 成员操作\n"
 "                             [aliases: --cl]"
@@ -6224,8 +6332,13 @@ msgstr ""
 msgid "don't delete changelists after commit"
 msgstr "不要在提交后删除修改列表"
 
-msgid "keep path in working copy"
-msgstr "在工作副本中保留路径"
+#, fuzzy
+msgid ""
+"keep path in working copy\n"
+"                             [alias: --kl]"
+msgstr ""
+"忽略外部定义\n"
+"                             [aliases: --ie]"
 
 msgid "retrieve all revision properties"
 msgstr "获取所有版本属性"
@@ -6259,15 +6372,22 @@ msgstr ""
 "                             'theirs-conflict', 'mine-full', 'theirs-full',\n"
 "                             'edit', 'launch')"
 
+#, fuzzy
 msgid ""
 "specify which collection of revisions to display\n"
-"                             ('merged', 'eligible')"
+"                             ('merged', 'eligible')\n"
+"                             [alias: --sr]"
 msgstr ""
 "指定显示哪个版本集合\n"
 "                             ('merged', 'eligible')"
 
-msgid "lump-merge all of source URL's unmerged changes"
-msgstr "批量合并所有源 URL 中未合并的修改"
+#, fuzzy
+msgid ""
+"lump-merge all of source URL's unmerged changes\n"
+"                             [alias: --ri]"
+msgstr ""
+"只能对修改列表 ARG 成员操作\n"
+"                             [aliases: --cl]"
 
 msgid ""
 "number of leading path components to strip\n"
@@ -6283,8 +6403,49 @@ msgstr ""
 "html\n"
 "                被转换为 fudge/crunchy.html。指定 -p2 会得到 crunchy.html 。"
 
-msgid "don't diff copied or moved files with their source"
+#, fuzzy
+msgid ""
+"don't diff copied or moved files with their source\n"
+"                             [alias: --sca]"
 msgstr "请不要将复制或移动的文件与其源文件比较"
+
+#, fuzzy
+msgid ""
+"don't expand keywords\n"
+"                             [alias: --ik]"
+msgstr ""
+"忽略外部定义\n"
+"                             [aliases: --ie]"
+
+#, fuzzy
+msgid ""
+"apply the unidiff in reverse\n"
+"                             [alias: --rd]"
+msgstr ""
+"忽略外部定义\n"
+"                             [aliases: --ie]"
+
+msgid ""
+"operate only on targets matching ARG,\n"
+"                             which may be a glob pattern such as '*.txt'.\n"
+"                             If this option is specified multiple times,\n"
+"                             all patterns are matched in turn.\n"
+"                             If both --include-pattern and --exclude-pattern\n"
+"                             options are specified include patterns are "
+"applied\n"
+"                             first, i.e. exclude patterns are applied to all\n"
+"                             targets which match an include pattern.\n"
+"                             [alias: --ip]"
+msgstr ""
+
+msgid ""
+"do not operate on targets matching ARG,\n"
+"                             which may be a glob pattern such as '*.txt'.\n"
+"                             If this option is specified multiple times,\n"
+"                             all patterns are matched in turn.\n"
+"                             See also the --include-pattern option.\n"
+"                             [alias: --ep]"
+msgstr ""
 
 msgid ""
 "Put files and directories under version control, scheduling\n"
@@ -6885,17 +7046,21 @@ msgid ""
 "Apply a patch to a working copy.\n"
 "usage: patch PATCHFILE [WCPATH]\n"
 "\n"
-"  Apply unidiff content in PATCHFILE to the working copy WCPATH.\n"
+"  Apply a unidiff patch in PATCHFILE to the working copy WCPATH.\n"
 "  If WCPATH is omitted, '.' is assumed.\n"
-"  A unidiff file suitable for application to a working copy can be\n"
+"\n"
+"  A unidiff patch suitable for application to a working copy can be\n"
 "  produced with the 'svn diff' command or third-party diffing tools.\n"
 "  Any non-unidiff content of PATCHFILE is ignored.\n"
 "\n"
+"  Changes listed in the patch will either be applied or rejected.\n"
 "  If a change does not match at its exact line offset, it may be applied\n"
 "  earlier or later in the file if a match is found elsewhere for the\n"
-"  surrounding lines of context provided in the unidiff.\n"
-"  If no matching context can be found for a change, the change will\n"
-"  produce a text conflict at its exact line offset.\n"
+"  surrounding lines of context provided by the patch.\n"
+"  A change may also be applied with fuzz, which means that one\n"
+"  or more lines of context are ignored when matching the change.\n"
+"  If no matching context can be found for a change, the change conflicts\n"
+"  and will be written to a reject file with the extension .svnpatch.rej.\n"
 "\n"
 "  For each patched file a line will be printed with characters reporting\n"
 "  the action taken. These characters have the following meaning:\n"
@@ -6904,10 +7069,13 @@ msgid ""
 "    D  Deleted\n"
 "    U  Updated\n"
 "    C  Conflict\n"
-"    G  Merged\n"
+"    G  Merged (with local uncommitted changes)\n"
 "\n"
-"  If a unidiff removes all content from a file, that file is scheduled\n"
-"  for deletion. If a unidiff creates a new file, that file is scheduled\n"
+"  Changes applied with an offset or fuzz are reported on lines starting\n"
+"  with the '>' symbol. You should review such changes carefully.\n"
+"\n"
+"  If the patch removes all content from a file, that file is scheduled\n"
+"  for deletion. If the patch creates a new file, that file is scheduled\n"
 "  for addition. Use 'svn revert' to undo deletions and additions you\n"
 "  do not agree with.\n"
 msgstr ""
@@ -7575,9 +7743,6 @@ msgid ""
 "and -r"
 msgstr "遇到了多个版本参数；不能指定 -c 两次或者同时使用 -c 和 -r"
 
-msgid "-r and -c can't be used with --reintegrate"
-msgstr "-r 和 -c 不能与 --reintegrate 共存"
-
 msgid "--depth and --set-depth are mutually exclusive"
 msgstr "--depth 与 --set-depth 是互斥的"
 
@@ -7633,6 +7798,9 @@ msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn: 运行“svn cleanup”删除锁定 (输入“svn help cleanup”得到用法)\n"
 
+msgid "-r and -c can't be used with --reintegrate"
+msgstr "-r 和 -c 不能与 --reintegrate 共存"
+
 msgid "Merge source required"
 msgstr "需要合并源"
 
@@ -7662,9 +7830,6 @@ msgstr "尝试用 “svn add”或 “svn add --non-recursive”代替？"
 
 msgid "Try 'svn mkdir --parents' instead?"
 msgstr "尝试 “svn mkdir --parents”？"
-
-msgid "Summary of conflicts in external item:\n"
-msgstr "外部条目冲突概要：\n"
 
 msgid "Summary of conflicts:\n"
 msgstr "冲突概要：\n"
@@ -7712,6 +7877,18 @@ msgstr "无法恢复“%s”-- 请改用更新试试。\n"
 #, c-format
 msgid "Resolved conflicted state of '%s'\n"
 msgstr "“%s”的冲突状态已解决\n"
+
+#, c-format
+msgid ">         applied hunk @@ -%lu,%lu +%lu,%lu @@ with offset %s"
+msgstr ">         应用的块 @@ -%lu,%lu +%lu,%lu @@ 偏移 %s"
+
+#, c-format
+msgid ">         applied hunk @@ -%lu,%lu +%lu,%lu @@ with fuzz %d\n"
+msgstr ">         应用的块 @@ -%lu,%lu +%lu,%lu @@ 模糊 %d\n"
+
+#, c-format
+msgid ">         rejected hunk @@ -%lu,%lu +%lu,%lu @@\n"
+msgstr ">         拒绝的块 @@ -%lu,%lu +%lu,%lu @@\n"
 
 #, c-format
 msgid ""
@@ -7853,6 +8030,31 @@ msgstr "--- 正在合并 r%ld，经由 r%ld，到 “%s”:\n"
 msgid "--- Reverse-merging r%ld through r%ld into '%s':\n"
 msgstr "--- 正在反向合并 r%ld，经由 r%ld，到 “%s”:\n"
 
+#, fuzzy, c-format
+msgid "--- Recording mergeinfo for merge between repository URLs into '%s':\n"
+msgstr "--- 正在合并版本库 URL 之间的差异到 “%s”：\n"
+
+#, fuzzy, c-format
+msgid "--- Recording mergeinfo for merge of r%ld into '%s':\n"
+msgstr "--- 正在反向合并 r%ld 到 “%s”:\n"
+
+#, fuzzy, c-format
+msgid "--- Recording mergeinfo for reverse merge of r%ld into '%s':\n"
+msgstr "--- 正在反向合并(从外部版本库) r%ld 到 “%s”:\n"
+
+#, fuzzy, c-format
+msgid "--- Recording mergeinfo for merge of r%ld through r%ld into '%s':\n"
+msgstr "--- 正在反向合并 r%ld，经由 r%ld，到 “%s”:\n"
+
+#, fuzzy, c-format
+msgid ""
+"--- Recording mergeinfo for reverse merge of r%ld through r%ld into '%s':\n"
+msgstr "--- 正在反向合并 r%ld，经由 r%ld，到 “%s”:\n"
+
+#, fuzzy, c-format
+msgid "--- Eliding mergeinfo from '%s':\n"
+msgstr "--- 正在合并 r%ld 到 “%s”:\n"
+
 #, c-format
 msgid "--- Merging differences between foreign repository URLs into '%s':\n"
 msgstr "--- 正在合并外部版本库 URL 之间的差异到 “%s”：\n"
@@ -7893,6 +8095,10 @@ msgstr "删除属性 “%s” 于版本库版本 %ld\n"
 #, c-format
 msgid "Upgraded '%s'.\n"
 msgstr "已升级的“%s”。\n"
+
+#, c-format
+msgid "Obliterate %8ld %s\n"
+msgstr "灭迹 %8ld %s\n"
 
 msgid "Wrong number of arguments"
 msgstr "参数数目错误"
@@ -8205,6 +8411,9 @@ msgstr "在提交事务时禁用fsync [BDB]"
 msgid "disable automatic log file removal [Berkeley DB]"
 msgstr "禁用自动删除日志文件 [BDB]"
 
+msgid "read user configuration files from directory ARG"
+msgstr "从目录 ARG 读取用户配置文件"
+
 msgid ""
 "remove redundant Berkeley DB log files\n"
 "                             from source repository [Berkeley DB]"
@@ -8241,6 +8450,12 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.6"
 msgstr "使用与 1.6 之前版本兼容的格式"
+
+#, fuzzy
+msgid ""
+"use format compatible with Subversion versions\n"
+"                             earlier than 1.7"
+msgstr "使用与1.4之前版本兼容的格式"
 
 msgid ""
 "usage: svnadmin crashtest REPOS_PATH\n"
@@ -8779,7 +8994,7 @@ msgstr "排除前缀: \n"
 
 #, c-format
 msgid "Including (and dropping empty revisions for) prefixes:\n"
-msgstr "包含(以及丢弃空版本)的前缀: \n"
+msgstr "包含 (以及丢弃空版本) 的前缀: \n"
 
 #, c-format
 msgid "Including prefixes:\n"
@@ -8857,6 +9072,9 @@ msgstr "历史项最大数量"
 
 msgid "do not print differences for added files"
 msgstr "不要输出增加文件造成的差异"
+
+msgid "do not print differences for deleted files"
+msgstr "不要输出删除文件造成的差异"
 
 msgid "operate on single directory only"
 msgstr "只在单个目录操作"
@@ -9278,6 +9496,15 @@ msgstr ""
 "监听主机名称或IP地址\n"
 "                             [方式: daemon, listen-once]"
 
+msgid ""
+"prefer IPv6 when resolving the listen hostname\n"
+"                             [IPv4 is preferred by default. Using IPv4 and "
+"IPv6\n"
+"                             at the same time is not supported in daemon "
+"mode.\n"
+"                             Use inetd mode or tunnel mode if you need this.]"
+msgstr ""
+
 #. ### Making the assumption here that WIN32 never has fork and so
 #. * ### this option never exists when --service exists.
 msgid "use threads instead of fork [mode: daemon]"
@@ -9524,6 +9751,9 @@ msgstr "尽可能少打印"
 msgid "allow a non-empty destination repository"
 msgstr "允许非空目标版本库"
 
+msgid "do not cache authentication tokens"
+msgstr "不要缓存用户认证令牌"
+
 msgid ""
 "specify a username ARG (deprecated;\n"
 "                             see --source-username and --sync-username)"
@@ -9549,6 +9779,13 @@ msgstr "使用用户名称 ARG 连接目的版本库"
 
 msgid "connect to sync repository with password ARG"
 msgstr "使用密码 ARG 连接目的版本库"
+
+msgid ""
+"Disable built-in locking. Use of this option can\n"
+"                             corrupt the mirror unless you ensure that no "
+"other\n"
+"                             instance of svnsync is running concurrently."
+msgstr ""
 
 #, c-format
 msgid "Can't get local hostname"

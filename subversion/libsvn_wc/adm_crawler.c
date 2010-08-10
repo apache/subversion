@@ -48,6 +48,7 @@
 #include "entries.h"
 #include "lock.h"
 #include "workqueue.h"
+#include "conflicts.h"
 
 #include "svn_private_config.h"
 
@@ -69,7 +70,7 @@ restore_file(svn_wc__db_t *db,
              svn_boolean_t use_commit_times,
              apr_pool_t *scratch_pool)
 {
-  const svn_skel_t *work_item;
+  svn_skel_t *work_item;
 
   SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                         db, local_abspath,
@@ -88,12 +89,8 @@ restore_file(svn_wc__db_t *db,
                          scratch_pool));
 
   /* Remove any text conflict */
-  SVN_ERR(svn_wc__internal_resolved_conflict(
-                    db, local_abspath, svn_depth_empty, TRUE, NULL, FALSE,
-                    svn_wc_conflict_choose_merged, NULL, NULL, NULL, NULL,
-                    scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__resolve_text_conflict(db, local_abspath,
+                                                        scratch_pool));
 }
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
@@ -137,8 +134,6 @@ restore_node(svn_boolean_t *restored,
           notify->kind = svn_node_file;
           (*notify_func)(notify_baton, notify, scratch_pool);
         }
-
-      /* Keep missing = FALSE */
     }
 
   return SVN_NO_ERROR;
@@ -148,7 +143,7 @@ restore_node(svn_boolean_t *restored,
    using DB.  In that case send the externals definition and DEPTH to
    EXTERNAL_FUNC.  Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-read_traversal_info(svn_wc__db_t *db,
+read_externals_info(svn_wc__db_t *db,
                     const char *local_abspath,
                     svn_wc_external_update_t external_func,
                     void *external_baton,
@@ -207,16 +202,8 @@ read_traversal_info(svn_wc__db_t *db,
    DEPTH_COMPATIBILITY_TRICK means the same thing here as it does
    in svn_wc_crawl_revisions3().
 
-   If TRAVERSAL_INFO is non-null, record this directory's
-   value of svn:externals in both TRAVERSAL_INFO->externals_old and
-   TRAVERSAL_INFO->externals_new, using wc_path + dir_path as the key,
-   and the raw (unparsed) value of the property as the value; store
-   this directory's depth in TRAVERSAL_INFO->depths, using the same
-   key and svn_depth_to_word(depth) as the value.  (Note: We set the
-   property value in both places, because its absence in just one or
-   the other place signals that the property was added or deleted;
-   thus, storing it in both places signals that it is present and, by
-   default, unchanged.)
+   If EXTERNAL_FUNC is non-NULL, then send externals information with
+   the help of EXTERNAL_BATON
 
    If RESTORE_FILES is set, then unexpectedly missing working files
    will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
@@ -242,7 +229,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool)
 {
   const char *dir_abspath;
-  const apr_array_header_t *children;
+  const apr_array_header_t *base_children;
   apr_hash_t *dirents;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
@@ -254,7 +241,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
      notice that we're picking up hidden entries too (read_children never
      hides children). */
   dir_abspath = svn_dirent_join(anchor_abspath, dir_path, scratch_pool);
-  SVN_ERR(svn_wc__db_base_get_children(&children, db, dir_abspath,
+  SVN_ERR(svn_wc__db_base_get_children(&base_children, db, dir_abspath,
                                        scratch_pool, iterpool));
   SVN_ERR(svn_io_get_dir_filenames(&dirents, dir_abspath, scratch_pool));
 
@@ -275,18 +262,52 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                        NULL, db, dir_abspath,
                                        scratch_pool, iterpool));
 
-  /* If "this dir" has "svn:externals" property set on it, store its name
-     and depth in traversal_info. */
+  /* If "this dir" has "svn:externals" property set on it,
+   * call the external_func callback. */
   if (external_func)
     {
-      SVN_ERR(read_traversal_info(db, dir_abspath, external_func,
+      const apr_array_header_t *all_children;
+
+      SVN_ERR(read_externals_info(db, dir_abspath, external_func,
                                   external_baton, dir_depth, iterpool));
+
+      /* Also do this for added children. They aren't part of the base
+       * tree so we don't recurse into them. But our caller might still
+       * want to pull externals into them as part of the update operation. */
+      SVN_ERR(svn_wc__db_read_children(&all_children, db, dir_abspath,
+                                       scratch_pool, iterpool));
+      for (i = 0; i < all_children->nelts; ++i)
+        {
+          const char *child = APR_ARRAY_IDX(all_children, i, const char *);
+          const char *this_abspath;
+          svn_wc__db_status_t this_status;
+          svn_wc__db_kind_t this_kind;
+          svn_depth_t this_depth;
+
+          svn_pool_clear(iterpool);
+
+          this_abspath = svn_dirent_join(dir_abspath, child, iterpool);
+          SVN_ERR(svn_wc__db_read_info(&this_status, &this_kind, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       &this_depth, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       db, this_abspath, iterpool, iterpool));
+          if (this_kind == svn_wc__db_kind_dir &&
+              this_status == svn_wc__db_status_added)
+            {
+              SVN_ERR(read_externals_info(db, this_abspath, external_func,
+                                          external_baton, this_depth,
+                                          iterpool));
+            }
+        }
     }
 
-  /* Looping over current directory's SVN entries: */
-  for (i = 0; i < children->nelts; ++i)
+
+  /* Looping over current directory's BASE children: */
+  for (i = 0; i < base_children->nelts; ++i)
     {
-      const char *child = APR_ARRAY_IDX(children, i, const char *);
+      const char *child = APR_ARRAY_IDX(base_children, i, const char *);
       const char *this_path, *this_abspath;
       const char *this_repos_root_url, *this_repos_relpath;
       svn_wc__db_status_t this_status;
@@ -310,31 +331,40 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                      NULL, NULL, NULL, NULL, NULL, &this_depth,
                                      NULL, NULL, NULL, &this_lock,
                                      db, this_abspath, iterpool, iterpool);
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_return(err);
 
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        svn_error_clear(err);
-      else
-        SVN_ERR(err);
+          /* THIS_ABSPATH was listed as a BASE child of DIR_ABSPATH. Yet,
+             we just got an error trying to read it. What gives? :-P
 
-      /* ### While still using parent stubs: Fetch info from the stub.
-             Handles the error case above */
-      {
-        svn_boolean_t not_present;
+             This happens when THIS_ABSPATH is a subdirectory that is
+             marked in the parent stub as "not-present". The subdir is
+             then removed. Later, an addition is scheduled, putting the
+             subdirectory back, but ONLY containing WORKING nodes.
 
-        SVN_ERR(svn_wc__db_temp_is_dir_deleted(&not_present, &this_rev, db,
-                                               this_abspath, iterpool));
+             Thus, the BASE fetch comes out of the subdir, and fails.
 
-        if (not_present || err)
+             For this case, we go ahead and treat this as a simple
+             not-present, and ignore whatever is in the subdirectory.  */
+          svn_error_clear(err);
+
           this_status = svn_wc__db_status_not_present;
 
-        if (!SVN_IS_VALID_REVNUM(this_rev))
-          this_rev = dir_rev; /* Obstructed node */
-      } /* /Stub handling */
+          /* Note: the other THIS_* local variables pass to base_get_info
+             are NOT set at this point. But we don't need them...  */
+        }
 
-      if (this_depth == svn_depth_unknown)
-        this_depth = svn_depth_infinity;
+      /* Note: some older code would attempt to check the parent stub
+         of subdirectories for the not-present state. That check was
+         redundant since a not-present directory has no BASE nodes
+         within it which may report another status.
 
-      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(this_rev));
+         There might be NO BASE node (per the condition above), but the
+         typical case is that base_get_info() reads the parent stub
+         because there is no subdir (with administrative data). Thus, we
+         already have all the information we need. No further testing.  */
 
       /* First check for exclusion */
       if (this_status == svn_wc__db_status_excluded)
@@ -360,8 +390,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
             }
           else
             {
-              /* We want to pull in the excluded target. So, report it as deleted,
-                 and server will respond properly. */
+              /* We want to pull in the excluded target. So, report it as
+                 deleted, and server will respond properly. */
               if (! report_everything)
                 SVN_ERR(reporter->delete_path(report_baton,
                                               this_path, iterpool));
@@ -370,20 +400,23 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
 
       /*** The Big Tests: ***/
-      if (this_status == svn_wc__db_status_absent ||
-          this_status == svn_wc__db_status_excluded ||
-          this_status == svn_wc__db_status_not_present)
+      if (this_status == svn_wc__db_status_absent
+          || this_status == svn_wc__db_status_not_present)
         {
-          /* If the entry is 'deleted' or 'absent', make sure the server
+          /* If the entry is 'absent' or 'not-present', make sure the server
              knows it's gone...
              ...unless we're reporting everything, in which case we're
-             going to report it missing later anyway. */
+             going to report it missing later anyway.
+
+             This instructs the server to send it back to us, if it is
+             now available (an addition after a not-present state), or if
+             it is now authorized (change in authz for the absent item).  */
           if (! report_everything)
             SVN_ERR(reporter->delete_path(report_baton, this_path, iterpool));
           continue;
         }
 
-      /* Is the entry on disk? */
+      /* Is the entry NOT on the disk? We may be able to restore it.  */
       if (apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
         {
           svn_boolean_t missing = FALSE;
@@ -413,10 +446,10 @@ report_revisions_and_depths(svn_wc__db_t *db,
               if (dirent_kind == svn_node_none)
                 {
                   svn_boolean_t restored;
+
                   SVN_ERR(restore_node(&restored, db, this_abspath, wrk_kind,
                                        use_commit_times, notify_func,
                                        notify_baton, iterpool));
-
                   if (!restored)
                     missing = TRUE;
                 }
@@ -424,10 +457,10 @@ report_revisions_and_depths(svn_wc__db_t *db,
           else
             missing = TRUE;
 
-          /* If a node is still missing from disk here, we have no way to recreate
-             it locally, so report as missing and move along.  Again, don't bother
-             if we're reporting everything, because the dir is already missing on
-             the server. */
+          /* If a node is still missing from disk here, we have no way to
+             recreate it locally, so report as missing and move along.
+             Again, don't bother if we're reporting everything, because the
+             dir is already missing on the server. */
           if (missing && wrk_kind == svn_wc__db_kind_dir
                && (depth > svn_depth_files || depth == svn_depth_unknown))
             {
@@ -447,14 +480,27 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
       else
         {
-          const char *childname = svn_uri_is_child(dir_repos_relpath,
-                                                   this_repos_relpath, NULL);
+          const char *childname = svn_relpath_is_child(dir_repos_relpath,
+                                                       this_repos_relpath,
+                                                       NULL);
 
-          if (!childname || strcmp(childname, child) != 0)
+          if (childname == NULL || strcmp(childname, child) != 0)
             this_switched = TRUE;
           else
             this_switched = FALSE;
         }
+
+      /* Tweak THIS_DEPTH to a useful value.  */
+      if (this_depth == svn_depth_unknown)
+        this_depth = svn_depth_infinity;
+
+      /* Obstructed nodes might report SVN_INVALID_REVNUM. Tweak it.
+
+         ### it seems that obstructed nodes should be handled quite a
+         ### bit differently. maybe reported as missing, like not-present
+         ### or absent nodes?  */
+      if (!SVN_IS_VALID_REVNUM(this_rev))
+        this_rev = dir_rev;
 
       /*** Files ***/
       if (this_kind == svn_wc__db_kind_file ||
@@ -515,8 +561,26 @@ report_revisions_and_depths(svn_wc__db_t *db,
                && (depth > svn_depth_files
                    || depth == svn_depth_unknown))
         {
-          svn_boolean_t is_incomplete = (this_status == svn_wc__db_status_incomplete);
-          svn_boolean_t start_empty = is_incomplete;
+          svn_boolean_t is_incomplete;
+          svn_boolean_t start_empty;
+
+          /* If the subdir and its administrative area are not present,
+             then do NOT bother to report this node, much less recurse
+             into the thing.
+
+             Note: if the there is nothing on the disk, then we may have
+             reported it missing further above.
+
+             ### hmm. but what if we have a *file* obstructing the dir?
+             ### the code above will not report it, and we'll simply
+             ### skip it right here. I guess with an obstruction, we
+             ### can't really do anything with info the server might
+             ### send, so maybe this is just fine.  */
+          if (this_status == svn_wc__db_status_obstructed)
+            continue;
+
+          is_incomplete = (this_status == svn_wc__db_status_incomplete);
+          start_empty = is_incomplete;
 
           if (depth_compatibility_trick
               && this_depth <= svn_depth_files
@@ -831,6 +895,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   SVN_ERR(reporter->set_path(report_baton, "", target_rev, target_depth,
                              start_empty, NULL, scratch_pool));
 
+  /* ### status can NEVER be deleted. should examine why this was
+     ### ever here. we may have remapped into wc-ng incorrectly.  */
   if (status != svn_wc__db_status_deleted)
     {
       apr_finfo_t info;
@@ -1043,7 +1109,8 @@ copying_stream(svn_stream_t *source,
 
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(const char **tempfile,
-                                      unsigned char digest[],
+                                      const svn_checksum_t **new_text_base_md5_checksum,
+                                      const svn_checksum_t **new_text_base_sha1_checksum,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
                                       svn_boolean_t fulltext,
@@ -1054,13 +1121,14 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 {
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
-  const char *base_digest_hex;
-  const svn_checksum_t *expected_checksum = NULL;
-  svn_checksum_t *verify_checksum = NULL;
-  svn_checksum_t *local_checksum;
+  const svn_checksum_t *expected_md5_checksum;
+  svn_checksum_t *verify_checksum = NULL;  /* calc'd MD5 of BASE_STREAM */
+  svn_checksum_t *local_md5_checksum;  /* calc'd MD5 of LOCAL_STREAM */
+  svn_checksum_t *local_sha1_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
+  const char *new_pristine_tmp_abspath;
   svn_error_t *err;
-  svn_stream_t *base_stream;
-  svn_stream_t *local_stream;
+  svn_stream_t *base_stream;  /* delta source */
+  svn_stream_t *local_stream;  /* delta target: LOCAL_ABSPATH transl. to NF */
 
   /* Translated input */
   SVN_ERR(svn_wc__internal_translated_stream(&local_stream, db,
@@ -1073,33 +1141,42 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
    * *TEMPFILE to the path to it. */
   if (tempfile)
     {
-      const char *tmp_base;
-      apr_file_t *tempbasefile;
+      svn_stream_t *tempstream;
 
-      SVN_ERR(svn_wc__text_base_path(&tmp_base, db, local_abspath, TRUE,
-                                     scratch_pool));
-
-      *tempfile = tmp_base;
+      SVN_ERR(svn_wc__text_base_deterministic_tmp_path(tempfile,
+                                                       db, local_abspath,
+                                                       result_pool));
 
       /* Make an untranslated copy of the working file in the
          administrative tmp area because a) we need to detranslate eol
          and keywords anyway, and b) after the commit, we're going to
          copy the tmp file to become the new text base anyway. */
-      SVN_ERR(svn_io_file_open(&tempbasefile, tmp_base,
-                               APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                               result_pool));
+      SVN_ERR(svn_stream_open_writable(&tempstream, *tempfile,
+                                       scratch_pool, scratch_pool));
 
       /* Wrap the translated stream with a new stream that writes the
          translated contents into the new text base file as we read from it.
          Note that the new text base file will be closed when the new stream
          is closed. */
-      local_stream
-        = copying_stream(local_stream,
-                         svn_stream_from_aprfile2(tempbasefile, FALSE,
-                                                  scratch_pool),
-                         scratch_pool);
+      local_stream = copying_stream(local_stream, tempstream, scratch_pool);
+    }
+  if (new_text_base_sha1_checksum)
+    {
+      svn_stream_t *new_pristine_stream;
+
+      SVN_ERR(svn_wc__open_writable_base(&new_pristine_stream,
+                                         &new_pristine_tmp_abspath,
+                                         NULL, &local_sha1_checksum,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+      local_stream = copying_stream(local_stream, new_pristine_stream,
+                                    scratch_pool);
     }
 
+  /* Set BASE_STREAM to a stream providing the base (source) content for the
+   * delta, which may be an empty stream;
+   * set EXPECTED_CHECKSUM to its stored (or possibly calculated) MD5 checksum;
+   * and (usually) arrange for its VERIFY_CHECKSUM to be calculated later. */
   if (! fulltext)
     {
       /* Compute delta against the pristine contents */
@@ -1112,20 +1189,37 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                    NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, NULL,
-                                   &expected_checksum, NULL,
+                                   &expected_md5_checksum, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
+      /* SVN_EXPERIMENTAL_PRISTINE:
+         If we got a SHA-1, get the corresponding MD-5. */
+      if (expected_md5_checksum
+          && expected_md5_checksum->kind != svn_checksum_md5)
+        SVN_ERR(svn_wc__db_pristine_get_md5(&expected_md5_checksum,
+                                            db, local_abspath,
+                                            expected_md5_checksum,
+                                            scratch_pool, scratch_pool));
 
-      /* ### We want expected_checksum to ALWAYS be present, but on old
-         ### working copies maybe it won't be (unclear?). If it is there,
-         ### then we can use it as an expected value. If it is NOT there,
-         ### then we must compute it for the apply_textdelta() call. */
-      if (expected_checksum)
+      /* ### We want expected_md5_checksum to ALWAYS be present, but on old
+         working copies maybe it won't be (unclear?).  If it is there,
+         then we can pass it to apply_textdelta() as required, and later on
+         we can use it as an expected value to verify against.  Therefore
+         we prepare now to calculate (during the later reading of the base
+         stream) the actual checksum of the base stream as VERIFY_CHECKSUM.
+
+         If the base checksum was NOT recorded, then we must compute it NOW
+         for the apply_textdelta() call.  In this case, we won't bother to
+         calculate it a second time during the later reading of the stream
+         for the purpose of verification, and will leave VERIFY_CHECKSUM as
+         NULL. */
+      if (expected_md5_checksum)
         {
-          /* Compute a checksum for what is *actually* found */
+          /* Arrange to set VERIFY_CHECKSUM to the MD5 of what is *actually*
+             found when the base stream is read. */
           base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
                                                 NULL, svn_checksum_md5, TRUE,
                                                 scratch_pool);
@@ -1135,6 +1229,8 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
           svn_stream_t *p_stream;
           svn_checksum_t *p_checksum;
 
+          /* Set EXPECTED_CHECKSUM to the MD5 checksum of the existing
+           * pristine text, by reading the text and calculating it. */
           /* ### we should ALREADY have the checksum for pristine. */
           SVN_ERR(svn_wc__get_pristine_contents(&p_stream, db, local_abspath,
                                                 scratch_pool, scratch_pool));
@@ -1148,29 +1244,37 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
           /* Closing this will cause a full read/checksum. */
           SVN_ERR(svn_stream_close(p_stream));
 
-          expected_checksum = p_checksum;
+          expected_md5_checksum = p_checksum;
         }
-
-      /* apply_textdelta() is working against a base with this checksum */
-      base_digest_hex = svn_checksum_to_cstring_display(expected_checksum,
-                                                        scratch_pool);
     }
   else
     {
       /* Send a fulltext. */
       base_stream = svn_stream_empty(scratch_pool);
-      base_digest_hex = NULL;
+      expected_md5_checksum = NULL;
     }
 
   /* Tell the editor that we're about to apply a textdelta to the
      file baton; the editor returns to us a window consumer and baton.  */
-  SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, scratch_pool,
-                                  &handler, &wh_baton));
+  {
+    /* apply_textdelta() is working against a base with this checksum */
+    const char *base_digest_hex = NULL;
+
+    if (expected_md5_checksum)
+      /* ### Why '..._display()'?  expected_md5_checksum should never be all-
+       * zero, but if it is, we would want to pass NULL not an all-zero
+       * digest to apply_textdelta(), wouldn't we? */
+      base_digest_hex = svn_checksum_to_cstring_display(expected_md5_checksum,
+                                                        scratch_pool);
+
+    SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, scratch_pool,
+                                    &handler, &wh_baton));
+  }
 
   /* Run diff processing, throwing windows at the handler. */
   err = svn_txdelta_run(base_stream, local_stream,
                         handler, wh_baton,
-                        svn_checksum_md5, &local_checksum,
+                        svn_checksum_md5, &local_md5_checksum,
                         NULL, NULL,
                         scratch_pool, scratch_pool);
 
@@ -1189,8 +1293,8 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
   /* If we have an error, it may be caused by a corrupt text base.
      Check the checksum and discard `err' if they don't match. */
-  if (expected_checksum && verify_checksum
-      && !svn_checksum_match(expected_checksum, verify_checksum))
+  if (expected_md5_checksum && verify_checksum
+      && !svn_checksum_match(expected_md5_checksum, verify_checksum))
     {
       /* The entry checksum does not match the actual text
          base checksum.  Extreme badness. Of course,
@@ -1210,22 +1314,16 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
       if (tempfile)
         svn_error_clear(svn_io_remove_file2(*tempfile, TRUE, scratch_pool));
 
-      {
-        const char *text_base;
-
-        SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
-                                       scratch_pool));
-
-        return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                      _("Checksum mismatch for '%s':\n"
-                        "   expected:  %s\n"
-                        "     actual:  %s\n"),
-                      svn_dirent_local_style(text_base, scratch_pool),
-                      svn_checksum_to_cstring_display(expected_checksum,
+      return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+                               _("Checksum mismatch for text base of '%s':\n"
+                                 "   expected:  %s\n"
+                                 "     actual:  %s\n"),
+                               svn_dirent_local_style(local_abspath,
                                                       scratch_pool),
-                      svn_checksum_to_cstring_display(verify_checksum,
-                                                      scratch_pool));
-      }
+                               svn_checksum_to_cstring_display(
+                                 expected_md5_checksum, scratch_pool),
+                               svn_checksum_to_cstring_display(
+                                 verify_checksum, scratch_pool));
     }
 
   /* Now, handle that delta transmission error if any, so we can stop
@@ -1235,19 +1333,32 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                               svn_dirent_local_style(local_abspath,
                                                      scratch_pool)));
 
-  if (digest)
-    memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));
+  if (new_text_base_md5_checksum)
+    *new_text_base_md5_checksum = svn_checksum_dup(local_md5_checksum,
+                                                   result_pool);
+  if (new_text_base_sha1_checksum)
+    {
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+      SVN_ERR(svn_wc__db_pristine_install(db, new_pristine_tmp_abspath,
+                                          local_sha1_checksum,
+                                          local_md5_checksum,
+                                          scratch_pool));
+#endif
+      *new_text_base_sha1_checksum = svn_checksum_dup(local_sha1_checksum,
+                                                      result_pool);
+    }
 
   /* Close the file baton, and get outta here. */
   return editor->close_file(file_baton,
-                            svn_checksum_to_cstring(local_checksum,
+                            svn_checksum_to_cstring(local_md5_checksum,
                                                     scratch_pool),
                             scratch_pool);
 }
 
 svn_error_t *
 svn_wc_transmit_text_deltas3(const char **tempfile,
-                             unsigned char digest[],
+                             const svn_checksum_t **new_text_base_md5_checksum,
+                             const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
                              svn_boolean_t fulltext,
@@ -1256,8 +1367,11 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  return svn_wc__internal_transmit_text_deltas(tempfile, digest, wc_ctx->db,
-                                               local_abspath, fulltext, editor,
+  return svn_wc__internal_transmit_text_deltas(tempfile,
+                                               new_text_base_md5_checksum,
+                                               new_text_base_sha1_checksum,
+                                               wc_ctx->db, local_abspath,
+                                               fulltext, editor,
                                                file_baton, result_pool,
                                                scratch_pool);
 }
@@ -1269,28 +1383,33 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
                                      void *baton,
                                      apr_pool_t *scratch_pool)
 {
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   apr_array_header_t *propmods;
   svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, iterpool));
 
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,
-                                    scratch_pool, scratch_pool));
+                                    scratch_pool, iterpool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)
     {
       const svn_prop_t *p = &APR_ARRAY_IDX(propmods, i, svn_prop_t);
+
+      svn_pool_clear(iterpool);
+
       if (kind == svn_wc__db_kind_file)
         SVN_ERR(editor->change_file_prop(baton, p->name, p->value,
-                                         scratch_pool));
+                                         iterpool));
       else
         SVN_ERR(editor->change_dir_prop(baton, p->name, p->value,
-                                        scratch_pool));
+                                        iterpool));
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

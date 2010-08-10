@@ -46,6 +46,11 @@ SkipUnless = svntest.testcase.SkipUnless
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 
+def make_patch_path(sbox, name='my.patch'):
+  dir = sbox.add_wc_path('patches')
+  os.mkdir(dir)
+  return os.path.abspath(os.path.join(dir, name))
+
 ########################################################################
 #Tests
 
@@ -55,7 +60,7 @@ def patch(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -225,8 +230,7 @@ def patch_absolute_paths(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  dir = os.path.abspath(svntest.main.temp_dir)
-  patch_file_path = tempfile.mkstemp(dir=dir)[1]
+  patch_file_path = make_patch_path(sbox)
 
   os.chdir(wc_dir)
 
@@ -257,7 +261,7 @@ def patch_absolute_paths(sbox):
   lambda_path = os.path.join(os.path.sep, 'A', 'B', 'lambda')
   expected_output = [
     'U         %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
-    'Skipped \'%s\'\n' % lambda_path,
+    'Skipped missing target: \'%s\'\n' % lambda_path,
     'Summary of conflicts:\n',
     '  Skipped paths: 1\n'
   ]
@@ -289,7 +293,7 @@ def patch_offset(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   iota_path = os.path.join(wc_dir, 'iota')
 
@@ -502,7 +506,7 @@ def patch_chopped_leading_spaces(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -667,12 +671,12 @@ def patch_chopped_leading_spaces(sbox):
 
 
 def patch_strip1(sbox):
-  "patch with -p1"
+  "patch with --strip-count 1"
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -834,7 +838,93 @@ def patch_strip1(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '-p1')
+                                       '--strip-count', '1')
+
+def patch_no_index_line(sbox):
+  "patch with no index lines"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  gamma_contents = [
+    "\n",
+    "Another line before\n",
+    "A third line before\n",
+    "This is the file 'gamma'.\n",
+    "A line after\n",
+    "Another line after\n",
+    "A third line after\n",
+  ]
+
+  svntest.main.file_write(gamma_path, ''.join(gamma_contents))
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma'  : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  unidiff_patch = [
+    "--- A/D/gamma\t(revision 1)\n",
+    "+++ A/D/gamma\t(working copy)\n",
+    "@@ -1,7 +1,7 @@\n",
+    " \n",
+    " Another line before\n",
+    " A third line before\n",
+    "-This is the file 'gamma'.\n",
+    "+It is the file 'gamma'.\n",
+    " A line after\n",
+    " Another line after\n",
+    " A third line after\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Some more bytes\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  gamma_contents = [
+    "\n",
+    "Another line before\n",
+    "A third line before\n",
+    "It is the file 'gamma'.\n",
+    "A line after\n",
+    "Another line after\n",
+    "A third line after\n",
+  ]
+  iota_contents = [
+    "This is the file 'iota'.\n",
+    "Some more bytes\n",
+  ]
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/gamma', contents=''.join(gamma_contents))
+  expected_disk.tweak('iota', contents=''.join(iota_contents))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', status='M ', wc_rev=2)
+  expected_status.tweak('iota', status='M ', wc_rev=1)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
 
 def patch_add_new_dir(sbox):
   "patch with missing dirs"
@@ -842,7 +932,7 @@ def patch_add_new_dir(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
 
   # The first diff is adding 'new' with two missing dirs. The second is
   # adding 'new' with one missing dir to a 'A' that is locally deleted
@@ -880,8 +970,8 @@ def patch_add_new_dir(sbox):
     'A         %s\n' % os.path.join(wc_dir, 'X'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
-    'Skipped \'%s\'\n' % A_C_Y_new_path,
-    'Skipped \'%s\'\n' % A_Z_new_path,
+    'Skipped missing target: \'%s\'\n' % A_C_Y_new_path,
+    'Skipped missing target: \'%s\'\n' % A_Z_new_path,
     'Summary of conflicts:\n',
     '  Skipped paths: 2\n',
   ]
@@ -911,6 +1001,110 @@ def patch_add_new_dir(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1) # dry-run
+def patch_remove_empty_dirs(sbox):
+  "patch deleting all children of a directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  patch_file_path = make_patch_path(sbox)
+
+  # Contents of B:
+  # A/B/lamba
+  # A/B/F
+  # A/B/E/{alpha,beta}
+  # Before patching we've deleted F, which means that B is empty after patching and 
+  # should be removed.
+  #
+  # Contents of H:
+  # A/D/H/{chi,psi,omega}
+  # Before patching, chi has been removed by a non-svn operation which means it has
+  # status missing. The patch deletes the other two files but should not delete H.
+
+  unidiff_patch = [
+    "Index: psi\n",
+    "===================================================================\n",
+    "--- A/D/H/psi\t(revision 0)\n",
+    "+++ A/D/H/psi\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'psi'.\n",
+    "Index: omega\n",
+    "===================================================================\n",
+    "--- A/D/H/omega\t(revision 0)\n",
+    "+++ A/D/H/omega\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'omega'.\n",
+    "Index: lambda\n",
+    "===================================================================\n",
+    "--- A/B/lambda\t(revision 0)\n",
+    "+++ A/B/lambda\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'lambda'.\n",
+    "Index: alpha\n",
+    "===================================================================\n",
+    "--- A/B/E/alpha\t(revision 0)\n",
+    "+++ A/B/E/alpha\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'alpha'.\n",
+    "Index: beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta\t(revision 0)\n",
+    "+++ A/B/E/beta\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  svntest.actions.run_and_verify_svn("Deleting F failed", None, [],
+                                     'rm', F_path)
+  svntest.actions.run_and_verify_svn("Update failed", None, [],
+                                     'up', wc_dir)
+
+  # We should be able to handle one path beeing missing.
+  os.remove(os.path.join(wc_dir, 'A', 'D', 'H', 'chi'))
+
+  expected_output = [
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'psi'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'omega'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'lambda'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'alpha'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/H/chi')
+  expected_disk.remove('A/D/H/psi')
+  expected_disk.remove('A/D/H/omega')
+  expected_disk.remove('A/B/lambda')
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.remove('A/B/E/beta')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'A/D/H/chi' : Item(status='! ', wc_rev=1)})
+  expected_status.add({'A/D/H/omega' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/D/H/psi' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/E' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/E/beta' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/E/alpha' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/lambda' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/F' : Item(status='D ', wc_rev=1)})
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, 
+                                       os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 
 def patch_reject(sbox):
   "patch which is rejected"
@@ -930,7 +1124,7 @@ def patch_reject(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
 
   # Apply patch
 
@@ -1003,7 +1197,7 @@ def patch_keywords(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
 
   # Apply patch
 
@@ -1048,7 +1242,7 @@ def patch_with_fuzz(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
@@ -1188,7 +1382,7 @@ def patch_reverse(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -1358,7 +1552,7 @@ def patch_no_svn_eol_style(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   if os.name == 'nt':
@@ -1461,7 +1655,7 @@ def patch_with_svn_eol_style(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
 
@@ -1575,7 +1769,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
 
@@ -1677,13 +1871,13 @@ def patch_with_svn_eol_style_uncommitted(sbox):
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
 
-def patch_with_include_patterns(sbox):
-  "patch with include-patterns"
+def patch_with_ignore_whitespace(sbox):
+  "ignore whitespace when patching"
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -1692,9 +1886,9 @@ def patch_with_include_patterns(sbox):
     "We wish to congratulate you over your email success in our computer\n",
     "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
     "in which email addresses were used. All participants were selected\n",
-    "through a computer ballot system drawn from over 100,000 company\n",
-    "and 50,000,000 individual email addresses from all over the world.\n",
-    "\n",
+    "through a computer ballot system drawn from over 100,000 company \n",
+    "and 50,000,000\t\tindividual email addresses from all over the world. \n",
+    " \n",
     "Your email address drew and have won the sum of  750,000 Euros\n",
     "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
     "file with\n",
@@ -1723,62 +1917,38 @@ def patch_with_include_patterns(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Apply patch
+  # Apply patch with leading and trailing spaces removed and tabs transformed 
+  # to spaces. The patch should match and the hunks should be written to the
+  # target as-is.
 
   unidiff_patch = [
-    "Index: A/D/gamma\n",
+    "Index: A/mu\n",
     "===================================================================\n",
-    "--- A/D/gamma\t(revision 1)\n",
-    "+++ A/D/gamma\t(working copy)\n",
-    "@@ -1 +1 @@\n",
-    "-This is the file 'gamma'.\n",
-    "+It is the file 'gamma'.\n",
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(revision 1)\n",
-    "+++ iota\t(working copy)\n",
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'iota'.\n",
-    "+Some more bytes\n",
-    "\n",
-    "Index: new\n",
-    "===================================================================\n",
-    "--- new	(revision 0)\n",
-    "+++ new	(revision 0)\n",
-    "@@ -0,0 +1 @@\n",
-    "+new\n",
-    "\n",
     "--- A/mu.orig	2009-06-24 15:23:55.000000000 +0100\n",
     "+++ A/mu	2009-06-24 15:21:23.000000000 +0100\n",
     "@@ -6,6 +6,9 @@\n",
-    " through a computer ballot system drawn from over 100,000 company\n",
-    " and 50,000,000 individual email addresses from all over the world.\n",
-    " \n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
     "+It is a promotional program aimed at encouraging internet users;\n",
     "+therefore you do not need to buy ticket to enter for it.\n",
     "+\n",
-    " Your email address drew and have won the sum of  750,000 Euros\n",
-    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
-    " file with\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
     "@@ -14,11 +17,8 @@\n",
-    "     BATCH NUMBERS :\n",
-    "     EULO/1007/444/606/08;\n",
-    "     SERIAL NUMBER: 45327\n",
+    "BATCH NUMBERS :\n",
+    "EULO/1007/444/606/08;\n",
+    "SERIAL NUMBER: 45327\n",
     "-and PROMOTION DATE: 13th June. 2009\n",
     "+and PROMOTION DATE: 14th June. 2009\n",
-    " \n",
-    " To claim your winning prize, you are to contact the appointed\n",
-    " agent below as soon as possible for the immediate release of your\n",
-    " winnings with the below details.\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
     "-\n",
     "-Again, we wish to congratulate you over your email success in our\n",
     "-computer Balloting.\n",
-    "Index: A/B/E/beta\n",
-    "===================================================================\n",
-    "--- A/B/E/beta	(revision 1)\n",
-    "+++ A/B/E/beta	(working copy)\n",
-    "@@ -1 +0,0 @@\n",
-    "-This is the file 'beta'.\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
@@ -1803,9 +1973,9 @@ def patch_with_include_patterns(sbox):
     "file with\n",
     "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
     "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
-    "    BATCH NUMBERS :\n",
-    "    EULO/1007/444/606/08;\n",
-    "    SERIAL NUMBER: 45327\n",
+    "BATCH NUMBERS :\n",
+    "EULO/1007/444/606/08;\n",
+    "SERIAL NUMBER: 45327\n",
     "and PROMOTION DATE: 14th June. 2009\n",
     "\n",
     "To claim your winning prize, you are to contact the appointed\n",
@@ -1833,15 +2003,15 @@ def patch_with_include_patterns(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       "--include-pattern", "A/mu")
+                                       "--ignore-whitespace",)
 
-def patch_with_exclude_patterns(sbox):
-  "patch with exclude-patterns"
+def patch_replace_locally_deleted_file(sbox):
+  "patch that replaces a locally deleted file"
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -1881,105 +2051,32 @@ def patch_with_exclude_patterns(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Apply patch
+  # Locally delete mu
+  svntest.main.run_svn(None, 'rm', mu_path)
+
+  # Apply patch that re-creates mu
 
   unidiff_patch = [
-    "Index: A/D/gamma\n",
     "===================================================================\n",
-    "--- A/D/gamma\t(revision 1)\n",
-    "+++ A/D/gamma\t(working copy)\n",
-    "@@ -1 +1 @@\n",
-    "-This is the file 'gamma'.\n",
-    "+It is the file 'gamma'.\n",
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(revision 1)\n",
-    "+++ iota\t(working copy)\n",
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'iota'.\n",
-    "+Some more bytes\n",
-    "\n",
-    "Index: new\n",
-    "===================================================================\n",
-    "--- new	(revision 0)\n",
-    "+++ new	(revision 0)\n",
-    "@@ -0,0 +1 @@\n",
-    "+new\n",
-    "\n",
     "--- A/mu.orig	2009-06-24 15:23:55.000000000 +0100\n",
     "+++ A/mu	2009-06-24 15:21:23.000000000 +0100\n",
-    "@@ -6,6 +6,9 @@\n",
-    " through a computer ballot system drawn from over 100,000 company\n",
-    " and 50,000,000 individual email addresses from all over the world.\n",
-    " \n",
-    "+It is a promotional program aimed at encouraging internet users;\n",
-    "+therefore you do not need to buy ticket to enter for it.\n",
-    "+\n",
-    " Your email address drew and have won the sum of  750,000 Euros\n",
-    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
-    " file with\n",
-    "@@ -14,11 +17,8 @@\n",
-    "     BATCH NUMBERS :\n",
-    "     EULO/1007/444/606/08;\n",
-    "     SERIAL NUMBER: 45327\n",
-    "-and PROMOTION DATE: 13th June. 2009\n",
-    "+and PROMOTION DATE: 14th June. 2009\n",
-    " \n",
-    " To claim your winning prize, you are to contact the appointed\n",
-    " agent below as soon as possible for the immediate release of your\n",
-    " winnings with the below details.\n",
-    "-\n",
-    "-Again, we wish to congratulate you over your email success in our\n",
-    "-computer Balloting.\n",
-    "Index: A/B/E/beta\n",
-    "===================================================================\n",
-    "--- A/B/E/beta	(revision 1)\n",
-    "+++ A/B/E/beta	(working copy)\n",
-    "@@ -1 +0,0 @@\n",
-    "-This is the file 'beta'.\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  gamma_contents = "It is the file 'gamma'.\n"
-  iota_contents = "This is the file 'iota'.\nSome more bytes\n"
-  new_contents = "new\n"
-  mu_contents = [
-    "Dear internet user,\n",
-    "\n",
-    "We wish to congratulate you over your email success in our computer\n",
-    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
-    "in which email addresses were used. All participants were selected\n",
-    "through a computer ballot system drawn from over 100,000 company\n",
-    "and 50,000,000 individual email addresses from all over the world.\n",
-    "\n",
-    "It is a promotional program aimed at encouraging internet users;\n",
-    "therefore you do not need to buy ticket to enter for it.\n",
-    "\n",
-    "Your email address drew and have won the sum of  750,000 Euros\n",
-    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
-    "file with\n",
-    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
-    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
-    "    BATCH NUMBERS :\n",
-    "    EULO/1007/444/606/08;\n",
-    "    SERIAL NUMBER: 45327\n",
-    "and PROMOTION DATE: 14th June. 2009\n",
-    "\n",
-    "To claim your winning prize, you are to contact the appointed\n",
-    "agent below as soon as possible for the immediate release of your\n",
-    "winnings with the below details.\n",
-  ]
+  mu_contents = "new\n"
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'A         %s\n' % mu_path,
   ]
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents=''.join(mu_contents))
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_status.tweak('A/mu', status='R ', wc_rev=2)
 
   expected_skip = wc.State('', { })
 
@@ -1990,162 +2087,69 @@ def patch_with_exclude_patterns(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       1, # dry-run
-                                       "--exclude-pattern", "A/*/gamma",
-                                       "--exclude-pattern", "new",
-                                       "--exclude-pattern", "*a")
-
-def patch_with_include_exclude_patterns(sbox):
-  "patch with include-patterns and exclude-patterns"
+                                       1) # dry-run
+# Regression test for #3643
+def patch_no_eol_at_eof(sbox):
+  "patch with no eol at eof"
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
 
-  mu_contents = [
-    "Dear internet user,\n",
-    "\n",
-    "We wish to congratulate you over your email success in our computer\n",
-    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
-    "in which email addresses were used. All participants were selected\n",
-    "through a computer ballot system drawn from over 100,000 company\n",
-    "and 50,000,000 individual email addresses from all over the world.\n",
-    "\n",
-    "Your email address drew and have won the sum of  750,000 Euros\n",
-    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
-    "file with\n",
-    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
-    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
-    "    BATCH NUMBERS :\n",
-    "    EULO/1007/444/606/08;\n",
-    "    SERIAL NUMBER: 45327\n",
-    "and PROMOTION DATE: 13th June. 2009\n",
-    "\n",
-    "To claim your winning prize, you are to contact the appointed\n",
-    "agent below as soon as possible for the immediate release of your\n",
-    "winnings with the below details.\n",
-    "\n",
-    "Again, we wish to congratulate you over your email success in our\n"
-    "computer Balloting.\n"
+  iota_contents = [
+    "One line\n",
+    "Another line\n",
+    "A third line \n",
+    "This is the file 'iota'.\n",
+    "A line after\n",
+    "Another line after\n",
+    "The last line with missing eol",
   ]
 
-  # Set mu contents
-  svntest.main.file_write(mu_path, ''.join(mu_contents))
+  svntest.main.file_write(iota_path, ''.join(iota_contents))
   expected_output = svntest.wc.State(wc_dir, {
-    'A/mu'       : Item(verb='Sending'),
+    'iota'  : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/mu', wc_rev=2)
+  expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
-
-  # Apply patch
-
   unidiff_patch = [
-    "Index: A/D/gamma\n",
-    "===================================================================\n",
-    "--- A/D/gamma\t(revision 1)\n",
-    "+++ A/D/gamma\t(working copy)\n",
-    "@@ -1 +1 @@\n",
-    "-This is the file 'gamma'.\n",
-    "+It is the file 'gamma'.\n",
-    "Index: iota\n",
-    "===================================================================\n",
     "--- iota\t(revision 1)\n",
     "+++ iota\t(working copy)\n",
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'iota'.\n",
-    "+Some more bytes\n",
-    "\n",
-    "Index: new\n",
-    "===================================================================\n",
-    "--- new	(revision 0)\n",
-    "+++ new	(revision 0)\n",
-    "@@ -0,0 +1 @@\n",
-    "+new\n",
-    "\n",
-    "--- A/mu.orig	2009-06-24 15:23:55.000000000 +0100\n",
-    "+++ A/mu	2009-06-24 15:21:23.000000000 +0100\n",
-    "@@ -6,6 +6,9 @@\n",
-    " through a computer ballot system drawn from over 100,000 company\n",
-    " and 50,000,000 individual email addresses from all over the world.\n",
-    " \n",
-    "+It is a promotional program aimed at encouraging internet users;\n",
-    "+therefore you do not need to buy ticket to enter for it.\n",
-    "+\n",
-    " Your email address drew and have won the sum of  750,000 Euros\n",
-    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
-    " file with\n",
-    "@@ -14,11 +17,8 @@\n",
-    "     BATCH NUMBERS :\n",
-    "     EULO/1007/444/606/08;\n",
-    "     SERIAL NUMBER: 45327\n",
-    "-and PROMOTION DATE: 13th June. 2009\n",
-    "+and PROMOTION DATE: 14th June. 2009\n",
-    " \n",
-    " To claim your winning prize, you are to contact the appointed\n",
-    " agent below as soon as possible for the immediate release of your\n",
-    " winnings with the below details.\n",
-    "-\n",
-    "-Again, we wish to congratulate you over your email success in our\n",
-    "-computer Balloting.\n",
-    "Index: A/B/E/beta\n",
-    "===================================================================\n",
-    "--- A/B/E/beta	(revision 1)\n",
-    "+++ A/B/E/beta	(working copy)\n",
-    "@@ -1 +0,0 @@\n",
-    "-This is the file 'beta'.\n",
+    "@@ -1,7 +1,7 @@\n",
+    " One line\n",
+    " Another line\n",
+    " A third line \n",
+    "-This is the file 'iota'.\n",
+    "+It is the file 'iota'.\n",
+    " A line after\n",
+    " Another line after\n",
+    " The last line with missing eol\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  gamma_contents = "It is the file 'gamma'.\n"
-  iota_contents = "This is the file 'iota'.\nSome more bytes\n"
-  new_contents = "new\n"
-  mu_contents = [
-    "Dear internet user,\n",
-    "\n",
-    "We wish to congratulate you over your email success in our computer\n",
-    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
-    "in which email addresses were used. All participants were selected\n",
-    "through a computer ballot system drawn from over 100,000 company\n",
-    "and 50,000,000 individual email addresses from all over the world.\n",
-    "\n",
-    "It is a promotional program aimed at encouraging internet users;\n",
-    "therefore you do not need to buy ticket to enter for it.\n",
-    "\n",
-    "Your email address drew and have won the sum of  750,000 Euros\n",
-    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
-    "file with\n",
-    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
-    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
-    "    BATCH NUMBERS :\n",
-    "    EULO/1007/444/606/08;\n",
-    "    SERIAL NUMBER: 45327\n",
-    "and PROMOTION DATE: 14th June. 2009\n",
-    "\n",
-    "To claim your winning prize, you are to contact the appointed\n",
-    "agent below as soon as possible for the immediate release of your\n",
-    "winnings with the below details.\n",
+  iota_contents = [
+    "One line\n",
+    "Another line\n",
+    "A third line \n",
+    "It is the file 'iota'.\n",
+    "A line after\n",
+    "Another line after\n",
+    "The last line with missing eol\n",
   ]
-
   expected_output = [
     'U         %s\n' % os.path.join(wc_dir, 'iota'),
-    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu', contents=''.join(mu_contents))
   expected_disk.tweak('iota', contents=''.join(iota_contents))
-  expected_disk.remove('A/B/E/beta')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/mu', status='M ', wc_rev=2)
-  expected_status.tweak('iota', status='M ')
-  expected_status.tweak('A/B/E/beta', status='D ')
+  expected_status.tweak('iota', status='M ', wc_rev=2)
 
   expected_skip = wc.State('', { })
 
@@ -2156,10 +2160,7 @@ def patch_with_include_exclude_patterns(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
-                                       1, # dry-run
-                                       "--include-pattern", "A/mu",
-                                       "--include-pattern", "*a",
-                                       "--exclude-pattern", "A/*/gamma")
+                                       1) # dry-run
 
 ########################################################################
 #Run the tests
@@ -2171,7 +2172,9 @@ test_list = [ None,
               patch_offset,
               patch_chopped_leading_spaces,
               patch_strip1,
+              patch_no_index_line,
               patch_add_new_dir,
+              patch_remove_empty_dirs,
               patch_reject,
               patch_keywords,
               patch_with_fuzz,
@@ -2179,9 +2182,9 @@ test_list = [ None,
               patch_no_svn_eol_style,
               patch_with_svn_eol_style,
               patch_with_svn_eol_style_uncommitted,
-              patch_with_include_patterns,
-              patch_with_exclude_patterns,
-              patch_with_include_exclude_patterns,
+              patch_with_ignore_whitespace,
+              patch_replace_locally_deleted_file,
+              patch_no_eol_at_eof,
             ]
 
 if __name__ == '__main__':

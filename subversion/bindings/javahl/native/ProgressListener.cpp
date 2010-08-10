@@ -61,8 +61,6 @@ ProgressListener::makeCProgressListener(jobject jprogressListener)
       return NULL;
     }
   env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   // Retain a global reference to our Java peer.
   jobject myListener = env->NewGlobalRef(jprogressListener);

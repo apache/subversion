@@ -69,8 +69,6 @@ CommitMessage *CommitMessage::makeCCommitMessage(jobject jcommitMessage)
       return NULL;
     }
   env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   // Since the reference is longer needed then the duration of the
   // SVNClient.commtMessage, the local reference has to be converted
@@ -127,8 +125,6 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
         return NULL;
 
       env->DeleteLocalRef(clazz2);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
     }
 
   // create a Java CommitItem for each of the passed in commit items
@@ -181,28 +177,15 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
 
       // release the tempory Java objects
       env->DeleteLocalRef(jpath);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
       env->DeleteLocalRef(jnodeKind);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
       env->DeleteLocalRef(jurl);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
       env->DeleteLocalRef(jcopyUrl);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
 
       // store the Java object into the array
       jitems.push_back(jitem);
     }
 
   env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   // call the Java callback method
   jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage,

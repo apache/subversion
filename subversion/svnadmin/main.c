@@ -230,7 +230,8 @@ enum
     svnadmin__wait,
     svnadmin__pre_1_4_compatible,
     svnadmin__pre_1_5_compatible,
-    svnadmin__pre_1_6_compatible
+    svnadmin__pre_1_6_compatible,
+    svnadmin__pre_1_7_compatible
   };
 
 /* Option codes and descriptions.
@@ -316,6 +317,10 @@ static const apr_getopt_option_t options_table[] =
      N_("use format compatible with Subversion versions\n"
         "                             earlier than 1.6")},
 
+    {"pre-1.7-compatible",     svnadmin__pre_1_7_compatible, 0,
+     N_("use format compatible with Subversion versions\n"
+        "                             earlier than 1.7")},
+
     {NULL}
   };
 
@@ -336,7 +341,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
     svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible,
-    svnadmin__pre_1_5_compatible, svnadmin__pre_1_6_compatible } },
+    svnadmin__pre_1_5_compatible, svnadmin__pre_1_6_compatible,
+    svnadmin__pre_1_7_compatible} },
 
   {"deltify", subcommand_deltify, {0}, N_
    ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -488,6 +494,7 @@ struct svnadmin_opt_state
   svn_boolean_t pre_1_4_compatible;                 /* --pre-1.4-compatible */
   svn_boolean_t pre_1_5_compatible;                 /* --pre-1.5-compatible */
   svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
+  svn_boolean_t pre_1_7_compatible;                 /* --pre-1.7-compatible */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -578,6 +585,11 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                  APR_HASH_KEY_STRING,
                  "1");
 
+  if (opt_state->pre_1_7_compatible)
+    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_7_COMPATIBLE,
+                 APR_HASH_KEY_STRING,
+                 "1");
+
   SVN_ERR(svn_config_get_config(&config, opt_state->config_dir, pool));
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
                            NULL, NULL,
@@ -638,6 +650,38 @@ subcommand_deltify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
+/* Baton for repos_progress_handler */
+struct progress_baton
+{
+  svn_boolean_t dumping;
+  svn_stream_t *progress_stream;
+};
+
+/* Implementation of svn_repos_progress_func_t to wrap the output to a
+   response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
+static svn_error_t *
+repos_progress_handler(void * baton,
+                       svn_revnum_t revision,
+                       const char *warning_text,
+                       apr_pool_t *scratch_pool)
+{
+  struct progress_baton *pb = baton;
+
+  if (warning_text != NULL)
+    {
+      apr_size_t len = strlen(warning_text);
+      return svn_error_return(svn_stream_write(pb->progress_stream,
+                                               warning_text, &len));
+    }
+
+  return svn_error_return(svn_stream_printf(pb->progress_stream, scratch_pool,
+                              pb->dumping
+                              ? _("* Dumped revision %ld.\n")
+                              : _("* Verified revision %ld.\n"),
+                              revision));
+}
+
+
 /* Baton for recode_write(). */
 struct recode_write_baton
 {
@@ -685,9 +729,10 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_fs_t *fs;
-  svn_stream_t *stdout_stream, *stderr_stream = NULL;
+  svn_stream_t *stdout_stream;
   svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   svn_revnum_t youngest;
+  struct progress_baton pb = { 0 };
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
@@ -719,12 +764,14 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
-    stderr_stream = recode_stream_create(stderr, pool);
+    pb.progress_stream = recode_stream_create(stderr, pool);
 
-  SVN_ERR(svn_repos_dump_fs2(repos, stdout_stream, stderr_stream,
-                             lower, upper, opt_state->incremental,
-                             opt_state->use_deltas, check_cancel, NULL,
-                             pool));
+  pb.dumping = TRUE;
+  SVN_ERR(svn_repos_dump_fs3(repos, stdout_stream, lower, upper,
+                             opt_state->incremental, opt_state->use_deltas,
+                             !opt_state->quiet ? repos_progress_handler : NULL,
+                             !opt_state->quiet ? &pb : NULL,
+                             check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1173,10 +1220,10 @@ static svn_error_t *
 subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
-  svn_stream_t *stderr_stream;
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_revnum_t youngest, lower, upper;
+  struct progress_baton pb = { 0 };
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
@@ -1193,14 +1240,14 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       upper = lower;
     }
 
-  if (opt_state->quiet)
-    stderr_stream = NULL;
-  else
-    stderr_stream = recode_stream_create(stderr, pool);
+  if (! opt_state->quiet)
+    pb.progress_stream = recode_stream_create(stderr, pool);
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
-  return svn_repos_verify_fs(repos, stderr_stream, lower, upper,
-                             check_cancel, NULL, pool);
+  return svn_repos_verify_fs2(repos, lower, upper,
+                              !opt_state->quiet
+                                ? repos_progress_handler : NULL,
+                              !opt_state->quiet ? &pb : NULL,
+                              check_cancel, NULL, pool);
 }
 
 
@@ -1226,7 +1273,6 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_array_header_t *targets;
   svn_repos_t *repos;
   const char *fs_path = "/";
-  svn_fs_t *fs;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
 
@@ -1240,7 +1286,6 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     fs_path = APR_ARRAY_IDX(targets, 0, const char *);
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs(repos);
 
   /* Fetch all locks on or below the root directory. */
   SVN_ERR(svn_repos_fs_get_locks(&locks, repos, fs_path, NULL, NULL, pool));
@@ -1443,7 +1488,7 @@ main(int argc, const char *argv[])
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
-  struct svnadmin_opt_state opt_state;
+  struct svnadmin_opt_state opt_state = { 0 };
   apr_getopt_t *os;
   int opt_id;
   apr_array_header_t *received_opts;
@@ -1484,7 +1529,6 @@ main(int argc, const char *argv[])
     }
 
   /* Initialize opt_state. */
-  memset(&opt_state, 0, sizeof(opt_state));
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
 
@@ -1571,6 +1615,9 @@ main(int argc, const char *argv[])
         break;
       case svnadmin__pre_1_6_compatible:
         opt_state.pre_1_6_compatible = TRUE;
+        break;
+      case svnadmin__pre_1_7_compatible:
+        opt_state.pre_1_7_compatible = TRUE;
         break;
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool);

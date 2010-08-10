@@ -198,15 +198,16 @@ svn_subst_keywords_differ(const svn_subst_keywords_t *a,
 
 
 /**
- * Copy and translate the data in stream @a src into stream @a dst.  It is
- * assumed that @a src is a readable stream and @a dst is a writable stream.
+ * Copy and translate the data in @a src_stream into @a dst_stream.  It is
+ * assumed that @a src_stream is a readable stream and @a dst_stream is a
+ * writable stream.
  *
- * If @a eol_str is non-@c NULL, replace whatever bytestring @a src uses to
- * denote line endings with @a eol_str in the output.  If @a src has an
- * inconsistent line ending style, then: if @a repair is @c FALSE, return
- * @c SVN_ERR_IO_INCONSISTENT_EOL, else if @a repair is @c TRUE, convert any
- * line ending in @a src to @a eol_str in @a dst.  Recognized line endings are:
- * "\n", "\r", and "\r\n".
+ * If @a eol_str is non-@c NULL, replace whatever bytestring @a src_stream
+ * uses to denote line endings with @a eol_str in the output.  If
+ * @a src_stream has an inconsistent line ending style, then: if @a repair
+ * is @c FALSE, return @c SVN_ERR_IO_INCONSISTENT_EOL, else if @a repair is
+ * @c TRUE, convert any line ending in @a src_stream to @a eol_str in
+ * @a dst_stream.  Recognized line endings are: "\n", "\r", and "\r\n".
  *
  * Expand and contract keywords using the contents of @a keywords as the
  * new values.  If @a expand is @c TRUE, expand contracted keywords and
@@ -293,13 +294,14 @@ svn_subst_translate_stream(svn_stream_t *src_stream,
  * operations.  Reads and writes may be mixed.
  *
  * If @a eol_str is non-@c NULL, replace whatever bytestring the input uses
- * to denote line endings with @a eol_str in the output.  If the input has an
- * inconsistent line ending style, then: if @a repair is @c FALSE, return
- * @c SVN_ERR_IO_INCONSISTENT_EOL, else if @a repair is @c TRUE, convert any
- * line ending to @a eol_str in @a .  Recognized line endings are:
- * "\n", "\r", and "\r\n".
+ * to denote line endings with @a eol_str in the output.  If the input has
+ * an inconsistent line ending style, then: if @a repair is @c FALSE, then a
+ * subsequent read, write or other operation on the stream will return
+ * @c SVN_ERR_IO_INCONSISTENT_EOL when the inconsistency is detected, else
+ * if @a repair is @c TRUE, convert any line ending to @a eol_str.
+ * Recognized line endings are: "\n", "\r", and "\r\n".
  *
- * The stream returned is allocated in @a pool.
+ * The stream returned is allocated in @a result_pool.
  *
  * If the inner stream implements resetting via svn_stream_reset(),
  * or marking and seeking via svn_stream_mark() and svn_stream_seek(),
@@ -313,7 +315,7 @@ svn_subst_stream_translated(svn_stream_t *stream,
                             svn_boolean_t repair,
                             apr_hash_t *keywords,
                             svn_boolean_t expand,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool);
 
 
 /** Return a stream which performs eol translation and keyword
@@ -411,8 +413,32 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
  * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
  * copy.
  *
- * @since New in 1.3.
+ * @a cancel_func and @a cancel_baton will be called (if not NULL)
+ * periodically to check for cancellation.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_subst_copy_and_translate4(const char *src,
+                              const char *dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              apr_hash_t *keywords,
+                              svn_boolean_t expand,
+                              svn_boolean_t special,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_subst_copy_and_translate4() but without a cancellation
+ * function and baton.
+ *
+ * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_copy_and_translate3(const char *src,
                               const char *dst,
@@ -422,6 +448,7 @@ svn_subst_copy_and_translate3(const char *src,
                               svn_boolean_t expand,
                               svn_boolean_t special,
                               apr_pool_t *pool);
+
 
 /**
  * Similar to svn_subst_copy_and_translate3() except that @a keywords is a

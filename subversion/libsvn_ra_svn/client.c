@@ -453,6 +453,7 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
+  svn_error_clear(err);
   svn_error_clear(svn_ra_svn_flush(conn, pool));
 }
 
@@ -1156,7 +1157,10 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cc",
                                          &path, &to_parse));
           SVN_ERR(svn_mergeinfo_parse(&for_path, to_parse, pool));
-          apr_hash_set(*catalog, path, APR_HASH_KEY_STRING, for_path);
+          /* Correct for naughty servers that send "relative" paths
+             with leading slashes! */
+          apr_hash_set(*catalog, path[0] == '/' ? path + 1 : path,
+                       APR_HASH_KEY_STRING, for_path);
         }
     }
 

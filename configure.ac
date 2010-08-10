@@ -907,6 +907,17 @@ elif test "$enable_debugging" = "no" ; then
 #   # do nothing
 fi
 
+AC_ARG_ENABLE(full-version-match,
+AS_HELP_STRING([--disable-full-version-match],
+               [Disable the full version match rules when checking
+                Subversion library compatibility.]),
+[
+    if test "$enableval" = "no" ; then
+      AC_MSG_NOTICE([Disabling svn full version matching])
+      AC_DEFINE(SVN_DISABLE_FULL_VERSION_MATCH, 1,
+                [Defined if the full version matching rules are disabled])
+    fi
+])
 
 AC_ARG_WITH(editor,
 AS_HELP_STRING([--with-editor=PATH],

@@ -32,104 +32,47 @@
 #include "svn_wc.h"
 
 #include "wc_db.h"
+#include "private/svn_skel.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-
-
-/* OVERVIEW OF THE LOGGY API
- *
- * NOTES
- *
- *  * When a doc string says "Extend **LOG_ACCUM", it means: "if *LOG_ACCUM is
- *    NULL then set *LOG_ACCUM to a new stringbuf allocated in RESULT_POOL,
- *    else append to the existing stringbuf there."
- */
 
 /* Each path argument to the svn_wc__loggy_* functions in this section can
    be either absolute or relative to the adm_abspath argument.
 */
 
 
-/* A macro to flush LOG_ACCUM using DB and ADM_ABSPATH.  This writes all
-   current items in LOG_ACCUM to the work queue, and then reinitializes
-   LOG_ACCUM to an empty buffer. */
-#define SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, scratch_pool)   \
-  if ((log_accum) && !svn_stringbuf_isempty(log_accum))                     \
-    {                                                                       \
-      SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));\
-      svn_stringbuf_setempty(log_accum);                                    \
-    }                                                                       \
-  else {}
-
-
-/* Insert into DB a work queue instruction to append the contents
-   of SRC to DST.
-   SRC and DST are relative to ADM_ABSPATH.
-
-   This command fails to be idempotent or atomic: there's no way to
-   tell if you should re-run this!  This function is deprecated; new
-   uses should not be added, and the single current use (constructing
-   human-readable non-parsed property conflict files) should be
-   rewritten.  See Issue #3015.
-*/
-SVN_DEPRECATED
-svn_error_t *
-svn_wc__loggy_append(svn_wc__db_t *db,
-                     const char *adm_abspath,
-                     const char *src, const char *dst,
-                     apr_pool_t *scratch_pool);
-
-
-/* Extend **LOG_ACCUM with log instructions to copy (and translate!) the
-   file SRC_PATH to DST_PATH, if it exists. If it doesn't and
-   REMOVE_DST_IF_NO_SRC is TRUE the file at DST_PATH will be deleted if any.
-
-   The test for existence is made during this call, not at log running time.
-
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-   SRC_PATH and DST_PATH are relative to ADM_ABSPATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
-                   const char *adm_abspath,
-                   const char *src_path, const char *dst_path,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool);
-
-
 /* Insert into DB a work queue instruction to generate a translated
    file from SRC to DST with translation settings from VERSIONED.
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
-   DST and SRC and VERSIONED are relative to ADM_ABSPATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
+   DST and SRC and VERSIONED are relative to ADM_ABSPATH.  */
 svn_error_t *
-svn_wc__loggy_translated_file(svn_wc__db_t *db,
+svn_wc__loggy_translated_file(svn_skel_t **work_item,
+                              svn_wc__db_t *db,
                               const char *adm_abspath,
-                              const char *dst,
-                              const char *src,
-                              const char *versioned,
-                              apr_pool_t *scratch_pool);
+                              const char *dst_abspath,
+                              const char *src_abspath,
+                              const char *versioned_abspath,
+                              apr_pool_t *result_pool);
 
 /* Insert into DB a work queue instruction to delete the entry
    associated with PATH from the entries file.
    ADM_ABSPATH is the absolute path for the access baton for PATH.
 
+   ### REVISION and KIND
+
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_delete_entry(svn_wc__db_t *db,
+svn_wc__loggy_delete_entry(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
                            const char *adm_abspath,
-                           const char *path,
-                           apr_pool_t *scratch_pool);
+                           const char *local_abspath,
+                           svn_revnum_t revision,
+                           svn_wc__db_kind_t kind,
+                           apr_pool_t *result_pool);
 
 
 /* Insert into DB a work queue instruction to delete lock related
@@ -139,37 +82,35 @@ svn_wc__loggy_delete_entry(svn_wc__db_t *db,
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_delete_lock(svn_wc__db_t *db,
+svn_wc__loggy_delete_lock(svn_skel_t **work_item,
+                          svn_wc__db_t *db,
                           const char *adm_abspath,
-                          const char *path,
-                          apr_pool_t *scratch_pool);
+                          const char *local_abspath,
+                          apr_pool_t *result_pool);
 
 
-/* Extend **LOG_ACCUM with commands to modify the entry associated with PATH
+/* Queue operations to modify the entry associated with PATH
    in ADM_ABSPATH according to the flags specified in MODIFY_FLAGS, based on
    the values supplied in *ENTRY.
+
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
 
    The flags in MODIFY_FLAGS are to be taken from the svn_wc__entry_modify()
    parameter by the same name.
 
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
+   Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
+svn_wc__loggy_entry_modify(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
                            const char *adm_abspath,
-                           const char *path,
+                           const char *local_abspath,
                            const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+                           apr_pool_t *result_pool);
 
 
-/* Extend **LOG_ACCUM with log instructions to move the file SRC_PATH to
-   DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
-   the file at DST_PATH will be deleted if any.
-   TODO ### There is no 'REMOVE_DST_IF_NO_SRC' arg; what will happen?
+/* Queue instructions to move the file SRC_PATH to DST_PATH.
 
    The test for existence is made now, not at log run time.
 
@@ -179,143 +120,36 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
    Set *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate whether the
    destination path will have been modified after running the log: if either
    the move or the remove will have been carried out.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_move(svn_stringbuf_t **log_accum,
+svn_wc__loggy_move(svn_skel_t **work_item,
+                   svn_wc__db_t *db,
                    const char *adm_abspath,
-                   const char *src_path, const char *dst_path,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool);
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   apr_pool_t *result_pool);
 
 
-
-/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
-   to 'executable' if it has the 'executable' property set.
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   The property is tested at log run time, within this log instruction.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
-                                   const char *adm_abspath,
-                                   const char *path,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
-
-/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
-   to 'readonly' if it has the 'needs-lock' property set and there is
-   no lock for the file in the working copy.
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   The tests are made at log run time, within this log instruction.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
-                                 const char *adm_abspath,
-                                 const char *path,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
-
-/* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH
-   in the entry field with name TIME_PROP.
-   TODO ### Huh? There is no 'TIME_PROP' argument.
-
-   Use one of the SVN_WC__ENTRY_ATTR_* values for TIME_PROP.
-
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
-                                          const char *adm_abspath,
-                                          const char *path,
-                                          apr_pool_t *result_pool,
-                                          apr_pool_t *scratch_pool);
-
-
-/* Extend **LOG_ACCUM with log instructions to set the file size of PATH
-   in the entries' WORKING_SIZE field.
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
-                                             const char *adm_abspath,
-                                             const char *path,
-                                             apr_pool_t *result_pool,
-                                             apr_pool_t *scratch_pool);
-
-
-/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
-   to 'readonly'.
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_set_readonly(svn_stringbuf_t **log_accum,
-                           const char *adm_abspath,
-                           const char *path,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
-/* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH to
+/* Queue instructions to set the timestamp of PATH to
    the time TIMESTR.
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
 
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
+   ADM_ABSPATH is the absolute path for the admin directory for PATH.
 */
 svn_error_t *
-svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
+svn_wc__loggy_set_timestamp(svn_skel_t **work_item,
+                            svn_wc__db_t *db,
                             const char *adm_abspath,
-                            const char *path,
+                            const char *local_abspath,
                             const char *timestr,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+                            apr_pool_t *result_pool);
 
-/* Like svn_wc__add_tree_conflict(), but append to the log accumulator
- * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
- * This function is meant to be used in the working copy library where
- * log accumulators are usually readily available.
- *
- * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
- * POOL, else append to the existing stringbuf there.
- */
+/* */
 svn_error_t *
-svn_wc__loggy_add_tree_conflict(svn_wc__db_t *db,
+svn_wc__loggy_add_tree_conflict(svn_skel_t **work_item,
+                                svn_wc__db_t *db,
                                 const char *adm_abspath,
                                 const svn_wc_conflict_description2_t *conflict,
-                                apr_pool_t *scratch_pool);
-
-
-/* Extend LOG_ACCUM with log entries to save the current baseprops of PATH
-   as revert props.
-
-   Makes sure the baseprops are destroyed if DESTROY_BASEPROPS is TRUE,
-   the baseprops are preserved otherwise.
-*/
-svn_error_t *
-svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  const char *adm_abspath,
-                                  apr_pool_t *pool);
+                                apr_pool_t *result_pool);
 
 
 /* TODO ###

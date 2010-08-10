@@ -1,5 +1,6 @@
-/**
- * @copyright
+/* sqlite.sql -- queries used by the Subversion SQLite interface
+ *     This is intended for use with SQLite 3
+ *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,29 +19,7 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
-package org.apache.subversion.javahl;
-
-import java.io.IOException;
-
-/**
- * Interface for data to be received from subversion
- * used for SVNAdmin.load and SVNAdmin.dump
- */
-public interface IInput
-{
-    /**
-     * read the number of data.length bytes from input.
-     * @param data          array to store the read bytes.
-     * @throws IOException  throw in case of problems.
-     */
-    public int read(byte [] data) throws IOException;
-
-    /**
-     * close the input
-     * @throws IOException throw in case of problems.
-     */
-    public void close() throws IOException;
-}
+-- STMT_DUMMY_SELECT_FOR_BACKUP
+SELECT * FROM SQLITE_MASTER;

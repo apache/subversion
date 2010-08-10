@@ -78,9 +78,9 @@ build_info_from_dirent(svn_info_t **info,
 }
 
 
-/* Helper: build an svn_info_t *INFO struct from svn_wc_entry_t ENTRY,
-   allocated in POOL.  Pointer fields are copied by reference, not dup'd.
-   PATH is the path of the WC node that ENTRY represents. */
+/* Helper: build an svn_info_t *INFO struct from WC metadata,
+   allocated in POOL.  Pointer fields are copied by reference, not
+   dup'd.  PATH is the path of the WC node that ENTRY represents. */
 static svn_error_t *
 build_info_for_entry(svn_info_t **info,
                      svn_wc_context_t *wc_ctx,
@@ -88,58 +88,105 @@ build_info_for_entry(svn_info_t **info,
                      apr_pool_t *pool)
 {
   svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  const char *copyfrom_url;
+  svn_revnum_t copyfrom_rev;
+  svn_boolean_t is_copy_target;
   const svn_wc_entry_t *entry;
+  const char *lock_token, *lock_owner, *lock_comment;
+  apr_time_t lock_date;
+  const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
                                       svn_node_unknown, TRUE, FALSE,
                                       pool, pool));
 
-  SVN_ERR(svn_wc__node_get_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE,
-                                pool));
+  SVN_ERR(svn_wc_read_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE, pool));
+  SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
+                               pool, pool));
 
-  tmpinfo->URL                  = entry->url;
-  tmpinfo->rev                  = entry->revision;
-  tmpinfo->kind                 = entry->kind;
-  tmpinfo->repos_UUID           = entry->uuid;
-  tmpinfo->repos_root_URL       = entry->repos;
+  /* WC-1 returned repos UUID's and root URLs for schedule-deleted
+     stuff, too. */
+  SVN_ERR(svn_wc__node_get_repos_info(&tmpinfo->repos_root_URL,
+                                      &tmpinfo->repos_UUID,
+                                      wc_ctx, local_abspath, TRUE, TRUE,
+                                      pool, pool));
+
   SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
                                         &tmpinfo->last_changed_date,
                                         &tmpinfo->last_changed_author,
                                         wc_ctx, local_abspath, pool, pool));
+  SVN_ERR(svn_wc__node_get_commit_base_rev(&tmpinfo->rev, wc_ctx,
+                                           local_abspath, pool));
+  /* ### FIXME: For now, we'll tweak an SVN_INVALID_REVNUM and make it
+     ### 0.  In WC-1, files scheduled for addition were assigned
+     ### revision=0.  This is wrong, and we're trying to remedy that,
+     ### but for the sake of test suite and code sanity now in WC-NG,
+     ### we'll just maintain the old behavior.
+     ###
+     ### We should also just be fetching the true BASE revision
+     ### above, which means copied items would also not have a
+     ### revision to display.  But WC-1 wants to show the revision of
+     ### copy targets as the copyfrom-rev.  *sigh*
+  */
+  if (! SVN_IS_VALID_REVNUM(tmpinfo->rev))
+    tmpinfo->rev = 0;
+
+  SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
+                                         &is_copy_target, wc_ctx,
+                                         local_abspath, pool, pool));
+  if (is_copy_target)
+    {
+      tmpinfo->copyfrom_url = copyfrom_url;
+      tmpinfo->copyfrom_rev = copyfrom_rev;
+    }
+  else
+    {
+      tmpinfo->copyfrom_url = NULL;
+      tmpinfo->copyfrom_rev = SVN_INVALID_REVNUM;
+    }
+
+  SVN_ERR(svn_wc__node_get_changelist(&tmpinfo->changelist, wc_ctx,
+                                      local_abspath, pool, pool));
+
+  SVN_ERR(svn_wc__node_get_base_checksum(&checksum, wc_ctx, local_abspath,
+                                         pool, pool));
+  if (checksum)
+    tmpinfo->checksum = svn_checksum_to_cstring(checksum, pool);
+
+  SVN_ERR(svn_wc__node_get_depth(&tmpinfo->depth, wc_ctx,
+                                 local_abspath, pool));
+  if (tmpinfo->depth == svn_depth_unknown)
+    tmpinfo->depth = svn_depth_infinity;
 
   /* entry-specific stuff */
   tmpinfo->has_wc_info          = TRUE;
   tmpinfo->schedule             = entry->schedule;
-  tmpinfo->depth                = entry->depth;
-  tmpinfo->copyfrom_url         = entry->copyfrom_url;
-  tmpinfo->copyfrom_rev         = entry->copyfrom_rev;
   tmpinfo->text_time            = entry->text_time;
-  tmpinfo->checksum             = entry->checksum;
   tmpinfo->conflict_old         = entry->conflict_old;
   tmpinfo->conflict_new         = entry->conflict_new;
   tmpinfo->conflict_wrk         = entry->conflict_wrk;
   tmpinfo->prejfile             = entry->prejfile;
-  tmpinfo->changelist           = entry->changelist;
-
-  if (((apr_size_t)entry->working_size) == entry->working_size)
-    tmpinfo->working_size       = (apr_size_t)entry->working_size;
-  else /* >= 4GB */
-    tmpinfo->working_size       = SVN_INFO_SIZE_UNKNOWN;
-
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size64               = SVN_INVALID_FILESIZE;
 
-  tmpinfo->working_size64       = entry->working_size;
+  SVN_ERR(svn_wc__node_get_translated_size(&tmpinfo->working_size64, wc_ctx,
+                                           local_abspath, pool));
+  if (((apr_size_t)tmpinfo->working_size64) == tmpinfo->working_size64)
+    tmpinfo->working_size       = (apr_size_t)tmpinfo->working_size64;
+  else /* >= 4GB */
+    tmpinfo->working_size       = SVN_INFO_SIZE_UNKNOWN;
 
   /* lock stuff */
-  if (entry->lock_token)  /* the token is the critical bit. */
+  SVN_ERR(svn_wc__node_get_lock_info(&lock_token, &lock_owner,
+                                     &lock_comment, &lock_date,
+                                     wc_ctx, local_abspath, pool, pool));
+  if (lock_token)  /* the token is the critical bit. */
     {
       tmpinfo->lock = apr_pcalloc(pool, sizeof(*(tmpinfo->lock)));
-
-      tmpinfo->lock->token      = entry->lock_token;
-      tmpinfo->lock->owner      = entry->lock_owner;
-      tmpinfo->lock->comment    = entry->lock_comment;
-      tmpinfo->lock->creation_date = entry->lock_creation_date;
+      tmpinfo->lock->token         = lock_token;
+      tmpinfo->lock->owner         = lock_owner;
+      tmpinfo->lock->comment       = lock_comment;
+      tmpinfo->lock->creation_date = lock_date;
     }
 
   *info = tmpinfo;
@@ -304,7 +351,7 @@ info_found_node_callback(const char *local_abspath,
               SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
                                                   NULL,
                                                   fe_baton->wc_ctx,
-                                                  local_abspath, FALSE,
+                                                  local_abspath, FALSE, FALSE,
                                                   pool, pool));
             }
           else
@@ -324,8 +371,9 @@ info_found_node_callback(const char *local_abspath,
 }
 
 
-/* Helper function:  push the svn_wc_entry_t for WCPATH at
-   RECEIVER/BATON, and possibly recurse over more entries. */
+/* Walk the children of LOCAL_ABSPATH to push svn_info_t's through
+   RECEIVER/RECEIVER_BATON.  Honor DEPTH while crawling children, and
+   filter the pushed items against CHANGELIST_HASH.  */
 static svn_error_t *
 crawl_entries(const char *local_abspath,
               svn_info_receiver_t receiver,
@@ -367,7 +415,7 @@ crawl_entries(const char *local_abspath,
           SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
                                               NULL,
                                               ctx->wc_ctx,
-                                              local_abspath, FALSE,
+                                              local_abspath, FALSE, FALSE,
                                               pool, pool));
 
           SVN_ERR(receiver(receiver_baton, local_abspath, info, pool));

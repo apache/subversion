@@ -64,10 +64,6 @@ extern "C" {
    or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
 
-   If REMOVE_MISSING_DIRS is TRUE, then delete the entries for any
-   missing directories.  If NOTIFY_FUNC is non-null, invoke it with
-   NOTIFY_BATON for each missing entry deleted.
-
    EXCLUDE_PATHS is a hash containing const char * pathnames.  Entries
    for pathnames contained in EXCLUDE_PATHS are not touched by this
    function.  These pathnames should be absolute paths.
@@ -80,7 +76,6 @@ svn_error_t *svn_wc__do_update_cleanup(svn_wc__db_t *db,
                                        svn_revnum_t new_revision,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
-                                       svn_boolean_t remove_missing_dirs,
                                        apr_hash_t *exclude_paths,
                                        apr_pool_t *pool);
 

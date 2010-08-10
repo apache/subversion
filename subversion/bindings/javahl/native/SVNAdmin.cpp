@@ -151,7 +151,8 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
   return;
 }
 
-void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
+void SVNAdmin::dump(const char *path, OutputStream &dataOut,
+                    OutputStream &messageOut,
                     Revision &revsionStart, Revision &revisionEnd,
                     bool incremental, bool useDeltas)
 {
@@ -262,8 +263,8 @@ void SVNAdmin::listUnusedDBLogs(const char *path,
 }
 
 void SVNAdmin::load(const char *path,
-                    Inputer &dataIn,
-                    Outputer &messageOut,
+                    InputStream &dataIn,
+                    OutputStream &messageOut,
                     bool ignoreUUID,
                     bool forceUUID,
                     bool usePreCommitHook,
@@ -452,7 +453,7 @@ SVNAdmin::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
   return SVN_NO_ERROR;
 }
 
-void SVNAdmin::verify(const char *path, Outputer &messageOut,
+void SVNAdmin::verify(const char *path, OutputStream &messageOut,
                       Revision &revisionStart, Revision &revisionEnd)
 {
   SVN::Pool requestPool;
@@ -490,12 +491,10 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
       (SVN_ERR_INCORRECT_PARAMS, NULL,
        _("Start revision cannot be higher than end revision")), );
 
-  SVN_JNI_ERR(svn_repos_dump_fs2(repos, NULL,
-                                 messageOut.getStream(requestPool),
-                                 lower, upper, FALSE /* incremental */,
-                                 TRUE /* use deltas */,
-                                 NULL, NULL /* cancel callback/baton */,
-                                 requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_verify_fs(repos, messageOut.getStream(requestPool),
+                                  lower, upper,
+                                  NULL, NULL /* cancel callback/baton */,
+                                  requestPool.pool()), );
 }
 
 jobject SVNAdmin::lslocks(const char *path)
@@ -535,8 +534,6 @@ jobject SVNAdmin::lslocks(const char *path)
     }
 
   env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   return CreateJ::Set(jlocks);
 }

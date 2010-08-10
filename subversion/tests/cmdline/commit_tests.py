@@ -1126,7 +1126,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "unversioned",
+                                        "not under version control",
                                         mu_path)
 
   Q_path = os.path.join(wc_dir, 'Q')
@@ -1961,7 +1961,7 @@ def mods_in_schedule_delete(sbox):
                                         None, wc_dir)
 
   # Unversioned file still exists
-  actual_contents = svntest.main.file_read(foo_path)
+  actual_contents = open(foo_path).read()
   if actual_contents != foo_contents:
     raise svntest.Failure
 

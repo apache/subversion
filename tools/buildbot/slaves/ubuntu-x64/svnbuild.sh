@@ -30,7 +30,7 @@ echo "========= autogen.sh"
 echo "========= configure"
 ./configure --enable-javahl --enable-maintainer-mode \
             --without-berkeley-db \
-            --with-jdk=/usr/lib/jvm/java-6-sun-1.6.0.16 \
+            --with-jdk=/usr/lib/jvm/java-6-openjdk/ \
             --with-junit=/usr/share/java/junit.jar || exit $?
 
 echo "========= make"

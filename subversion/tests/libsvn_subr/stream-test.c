@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "svn_pools.h"
 #include "svn_io.h"
+#include "svn_subst.h"
 #include <apr_general.h>
 
 #include "../svn_test.h"
@@ -228,7 +229,7 @@ static svn_error_t *
 test_stream_range(apr_pool_t *pool)
 {
   static const char *file_data[3] = {"Before", "Now", "After"};
-  const char *before, *now, *after;
+  const char *before, *now;
   char buf[14 + 1] = {0}; /* Enough to hold file data + '\0' */
   static const char *fname = "test_stream_range.txt";
   apr_off_t start, end;
@@ -257,7 +258,6 @@ test_stream_range(apr_pool_t *pool)
     /* Create a stream to read from a range of the file. */
     before = file_data[0];
     now = file_data[1];
-    after = file_data[2];
 
     start = strlen(before);
     end = start + strlen(now);
@@ -296,11 +296,11 @@ test_stream_range(apr_pool_t *pool)
     stream = svn_stream_from_aprfile_range_readonly(f, TRUE, 0, -1, pool);
     len = 42;
     SVN_ERR(svn_stream_read(stream, buf, &len));
-    SVN_ERR_ASSERT(len == 0);
+    SVN_TEST_ASSERT(len == 0);
     stream = svn_stream_from_aprfile_range_readonly(f, TRUE, -1, 0, pool);
     len = 42;
     SVN_ERR(svn_stream_read(stream, buf, &len));
-    SVN_ERR_ASSERT(len == 0);
+    SVN_TEST_ASSERT(len == 0);
 
     SVN_ERR(svn_stream_close(stream));
     apr_file_close(f);
@@ -333,15 +333,15 @@ test_stream_line_filter(apr_pool_t *pool)
   svn_stream_set_line_filter_callback(stream, line_filter);
 
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(strcmp(line->data, lines[0]) == 0);
+  SVN_TEST_STRING_ASSERT(line->data, lines[0]);
   /* line[1] should be filtered */
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(strcmp(line->data, lines[2]) == 0);
+  SVN_TEST_STRING_ASSERT(line->data, lines[2]);
 
   /* The last line should also be filtered, and the resulting
    * stringbuf should be empty. */
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(eof && svn_stringbuf_isempty(line));
+  SVN_TEST_ASSERT(eof && svn_stringbuf_isempty(line));
 
   return SVN_NO_ERROR;
 }
@@ -387,20 +387,20 @@ test_stream_line_transformer(apr_pool_t *pool)
   svn_stream_set_line_transformer_callback(stream, line_transformer);
 
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[0]) == 0);
+  SVN_TEST_STRING_ASSERT(line->data, inv_lines[0]);
 
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[1]) == 0);
+  SVN_TEST_STRING_ASSERT(line->data, inv_lines[1]);
 
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[2]) == 0);
+  SVN_TEST_STRING_ASSERT(line->data, inv_lines[2]);
 
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[3]) == 0);
+  SVN_TEST_STRING_ASSERT(line->data, inv_lines[3]);
 
   /* We should have reached eof and the stringbuf should be emtpy. */
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(eof && svn_stringbuf_isempty(line));
+  SVN_TEST_ASSERT(eof && svn_stringbuf_isempty(line));
 
   return SVN_NO_ERROR;
 }
@@ -429,15 +429,15 @@ test_stream_line_filter_and_transformer(apr_pool_t *pool)
 
   /* Line one should be filtered. */
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[1]) == 0);
+  SVN_TEST_STRING_ASSERT(line->data, inv_lines[1]);
 
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(strcmp(line->data, inv_lines[2]) == 0);
+  SVN_TEST_STRING_ASSERT(line->data, inv_lines[2]);
 
   /* The last line should also be filtered, and the resulting
    * stringbuf should be empty. */
   svn_stream_readline(stream, &line, "\n", &eof, pool);
-  SVN_ERR_ASSERT(eof && svn_stringbuf_isempty(line));
+  SVN_TEST_ASSERT(eof && svn_stringbuf_isempty(line));
 
   return SVN_NO_ERROR;
 
@@ -505,19 +505,19 @@ test_stream_seek_file(apr_pool_t *pool)
   stream = svn_stream_from_aprfile2(f, FALSE, pool);
   SVN_ERR(svn_stream_reset(stream));
   SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[0]) == 0);
+  SVN_TEST_ASSERT(! eof && strcmp(line->data, file_data[0]) == 0);
   /* Set a mark at the beginning of the second line of the file. */
   SVN_ERR(svn_stream_mark(stream, &mark, pool));
   /* Read the second line and then seek back to the mark. */
   SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
+  SVN_TEST_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
   SVN_ERR(svn_stream_seek(stream, mark));
   /* The next read should return the second line again. */
   SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
+  SVN_TEST_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
   /* The next read should return EOF. */
   SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
-  SVN_ERR_ASSERT(eof);
+  SVN_TEST_ASSERT(eof);
 
   SVN_ERR(svn_stream_close(stream));
 
@@ -538,22 +538,102 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
   len = 3;
   SVN_ERR(svn_stream_read(stream, buf, &len));
   buf[3] = '\0';
-  SVN_ERR_ASSERT(strcmp(buf, "One") == 0);
+  SVN_TEST_STRING_ASSERT(buf, "One");
   SVN_ERR(svn_stream_mark(stream, &mark, pool));
   len = 3;
   SVN_ERR(svn_stream_read(stream, buf, &len));
   buf[3] = '\0';
-  SVN_ERR_ASSERT(strcmp(buf, "Two") == 0);
+  SVN_TEST_STRING_ASSERT(buf, "Two");
   SVN_ERR(svn_stream_seek(stream, mark));
   len = 3;
   SVN_ERR(svn_stream_read(stream, buf, &len));
   buf[3] = '\0';
-  SVN_ERR_ASSERT(strcmp(buf, "Two") == 0);
+  SVN_TEST_STRING_ASSERT(buf, "Two");
 
   SVN_ERR(svn_stream_close(stream));
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_stream_seek_translated(apr_pool_t *pool)
+{
+  svn_stream_t *stream, *translated_stream;
+  svn_stringbuf_t *stringbuf;
+  char buf[23];
+  apr_size_t len;
+  svn_stream_mark_t *mark, *mark2;
+  apr_hash_t *keywords;
+  svn_string_t *keyword_val;
+  
+  keywords = apr_hash_make(pool);
+  keyword_val = svn_string_create("my key word was expanded", pool);
+  apr_hash_set(keywords, "MyKeyword", APR_HASH_KEY_STRING, keyword_val);
+  stringbuf = svn_stringbuf_create("One$MyKeyword$Two", pool);
+  stream = svn_stream_from_stringbuf(stringbuf, pool);
+  translated_stream = svn_subst_stream_translated(stream, APR_EOL_STR,
+                                                  FALSE, keywords, TRUE, pool);
+  len = 3;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_TEST_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, "One");
+
+  /* Seek from outside of keyword to inside of keyword. */
+  SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
+  len = 3;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_TEST_ASSERT(len == 3);
+  buf[3] = '\0';
+  /* ### The test currently fails here because the keyword isn't
+   * ### expanded correctly. buf contains "$My\0" */
+  SVN_TEST_STRING_ASSERT(buf, "my ");
+  SVN_ERR(svn_stream_seek(stream, mark));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_TEST_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, "my ");
+
+  /* Seek from inside of keyword to inside of keyword. */
+  SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
+  len = 3;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_TEST_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, "key");
+  SVN_ERR(svn_stream_seek(stream, mark));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_TEST_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, "my ");
+
+  /* Seek from inside of keyword to outside of keyword. */
+  len = 22;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_TEST_ASSERT(len == 22);
+  buf[22] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, "keyword was expandedTw");
+  SVN_ERR(svn_stream_mark(translated_stream, &mark2, pool));
+  SVN_ERR(svn_stream_seek(stream, mark));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_TEST_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, "my ");
+  SVN_ERR(svn_stream_seek(stream, mark2));
+  len = 1;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_TEST_ASSERT(len == 1);
+  buf[1] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, "o");
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
@@ -579,5 +659,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test stream seeking for files"),
     SVN_TEST_PASS2(test_stream_seek_stringbuf,
                    "test stream seeking for stringbufs"),
+    SVN_TEST_XFAIL2(test_stream_seek_translated,
+                    "test stream seeking for translated streams"),
     SVN_TEST_NULL
   };

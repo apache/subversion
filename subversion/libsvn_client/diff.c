@@ -818,6 +818,7 @@ diff_dir_deleted(const char *local_dir_abspath,
 static svn_error_t *
 diff_dir_opened(const char *local_dir_abspath,
                 svn_boolean_t *tree_conflicted,
+                svn_boolean_t *skip_children,
                 const char *path,
                 svn_revnum_t rev,
                 void *diff_baton,
@@ -825,6 +826,8 @@ diff_dir_opened(const char *local_dir_abspath,
 {
   if (tree_conflicted)
     *tree_conflicted = FALSE;
+  if (skip_children)
+    *skip_children = FALSE;
 
   /* Do nothing. */
 
@@ -898,22 +901,19 @@ convert_to_url(const char **url,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
-
   if (svn_path_is_url(abspath_or_url))
     {
       *url = apr_pstrdup(result_pool, abspath_or_url);
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, abspath_or_url,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
-
-  if (entry->url)
-    *url = apr_pstrdup(result_pool, entry->url);
-  else
-    *url = apr_pstrdup(result_pool, entry->copyfrom_url);
+  SVN_ERR(svn_wc__node_get_url(url, wc_ctx, abspath_or_url,
+                               result_pool, scratch_pool));
+  if (! *url)
+    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                             _("Path '%s' has no URL"),
+                             svn_dirent_local_style(abspath_or_url,
+                                                    scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1215,6 +1215,7 @@ diff_wc_wc(const char *path1,
            apr_pool_t *pool)
 {
   const char *abspath1;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
@@ -1233,9 +1234,22 @@ diff_wc_wc(const char *path1,
           "and its working files are supported at this time")));
 
   /* Resolve named revisions to real numbers. */
-  SVN_ERR(svn_client__get_revision_number(&callback_baton->revnum1, NULL,
-                                          ctx->wc_ctx, abspath1, NULL,
-                                          revision1, pool));
+  err = svn_client__get_revision_number(&callback_baton->revnum1, NULL,
+                                        ctx->wc_ctx, abspath1, NULL,
+                                        revision1, pool);
+
+  /* In case of an added node, we have no base rev, and we show a revision
+   * number of 0. Note that this code is currently always asking for
+   * svn_opt_revision_base.
+   * ### TODO: get rid of this 0 for added nodes. */
+  if (err && (err->apr_err == SVN_ERR_CLIENT_BAD_REVISION))
+    {
+      svn_error_clear(err);
+      callback_baton->revnum1 = 0;
+    }
+  else
+    SVN_ERR(err);
+
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff6(ctx->wc_ctx,
@@ -1607,7 +1621,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
                             apr_hash_t *config, apr_pool_t *pool)
 {
   const char *diff_cmd = NULL;
-
+ 
   /* See if there is a command. */
   if (config)
     {
@@ -1616,7 +1630,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
       svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
     }
-
+ 
   if (diff_cmd)
     SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, diff_cmd,
                                      pool));
@@ -1817,7 +1831,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.orig_path_1 = path;
   diff_cmd_baton.orig_path_2 = path;
 
-  SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options,
+  SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options, 
                                       ctx->config, pool));
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;

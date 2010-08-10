@@ -152,10 +152,10 @@ $ctx->log_msg(
            "kind() shows the node as a file");
         is($commit_item->url(),"$reposurl/dir1/new",
            'URL matches our repos url');
-        # revision is 0 because the commit has not happened yet
+        # revision is INVALID because the commit has not happened yet
         # and this is not a copy
-        is($commit_item->revision(),0,
-           'Revision is 0 since commit has not happened yet');
+        is($commit_item->revision(),$SVN::Core::INVALID_REVNUM,
+           'Revision is INVALID since commit has not happened yet');
         is($commit_item->copyfrom_url(),undef,
            'copyfrom_url is undef since file is not a copy');
         is($commit_item->state_flags(),$SVN::Client::COMMIT_ITEM_ADD |

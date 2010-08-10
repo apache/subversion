@@ -40,20 +40,25 @@ class StatusCallback
   StatusCallback(jobject jcallback);
   ~StatusCallback();
 
+  void setWcCtx(svn_wc_context_t *);
+
   static svn_error_t* callback(void *baton,
                                const char *local_abspath,
-                               const svn_wc_status2_t *status,
+                               const svn_wc_status3_t *status,
                                apr_pool_t *pool);
 
  protected:
   svn_error_t *doStatus(const char *local_abspath,
-                        const svn_wc_status2_t *status);
+                        const svn_wc_status3_t *status,
+                        apr_pool_t *pool);
 
  private:
   /**
    * This a local reference to the Java object.
    */
   jobject m_callback;
+
+  svn_wc_context_t *wc_ctx;
 };
 
 #endif // STATUSCALLBACK_H

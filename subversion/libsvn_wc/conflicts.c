@@ -30,8 +30,6 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
-#include <apr_file_io.h>
-#include <apr_time.h>
 #include <apr_errno.h>
 
 #include "svn_types.h"
@@ -44,14 +42,13 @@
 #include "svn_diff.h"
 
 #include "wc.h"
-#include "log.h"
-#include "adm_ops.h"
-#include "props.h"
-#include "tree_conflicts.h"
-#include "workqueue.h"
+#include "wc_db.h"
+#include "conflicts.h"
+
+#include "private/svn_wc_private.h"
+#include "private/svn_skel.h"
 
 #include "svn_private_config.h"
-#include "private/svn_wc_private.h"
 
 struct svn_wc_conflict_t
 {
@@ -198,6 +195,69 @@ svn_wc_get_property_conflict_data(const svn_string_t **older_value,
   SVN_ERR_MALFUNCTION(); /* ### Not implemented yet */
 }
 
+
+svn_skel_t *
+svn_wc__conflict_skel_new(apr_pool_t *result_pool)
+{
+  svn_skel_t *operation = svn_skel__make_empty_list(result_pool);
+  svn_skel_t *result = svn_skel__make_empty_list(result_pool);
+
+  svn_skel__prepend(operation, result);
+  return result;
+}
+
+
+static void
+prepend_prop_value(const svn_string_t *value,
+                   svn_skel_t *skel,
+                   apr_pool_t *result_pool)
+{
+  svn_skel_t *value_skel = svn_skel__make_empty_list(result_pool);
+
+  if (value != NULL)
+    {
+      const void *dup = apr_pmemdup(result_pool, value->data, value->len);
+
+      svn_skel__prepend(svn_skel__mem_atom(dup, value->len, result_pool),
+                        value_skel);
+    }
+
+  svn_skel__prepend(value_skel, skel);
+}
+
+
+svn_error_t *
+svn_wc__conflict_skel_add_prop_conflict(
+  svn_skel_t *skel,
+  const char *prop_name,
+  const svn_string_t *original_value,
+  const svn_string_t *mine_value,
+  const svn_string_t *incoming_value,
+  const svn_string_t *incoming_base_value,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  svn_skel_t *prop_skel = svn_skel__make_empty_list(result_pool);
+
+  /* ### check that OPERATION has been filled in.  */
+
+  /* See notes/wc-ng/conflict-storage  */
+  prepend_prop_value(incoming_base_value, prop_skel, result_pool);
+  prepend_prop_value(incoming_value, prop_skel, result_pool);
+  prepend_prop_value(mine_value, prop_skel, result_pool);
+  prepend_prop_value(original_value, prop_skel, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, prop_name), prop_skel,
+                        result_pool);
+  svn_skel__prepend_str(SVN_WC__CONFLICT_KIND_PROP, prop_skel, result_pool);
+
+  /* Now we append PROP_SKEL to the end of the provided conflict SKEL.  */
+  svn_skel__append(skel, prop_skel);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /*** Resolving a conflict automatically ***/
 
@@ -269,8 +329,10 @@ resolve_conflict_on_node(svn_wc__db_t *db,
   const char *prop_reject_file = NULL;
   svn_wc__db_kind_t kind;
   int i;
-  const apr_array_header_t *conflicts = NULL;
+  const apr_array_header_t *conflicts;
   const char *conflict_dir_abspath;
+
+  *did_resolve = FALSE;
 
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -428,6 +490,24 @@ resolve_conflict_on_node(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc__resolve_text_conflict(svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
+{
+  svn_boolean_t ignored_result;
+
+  return svn_error_return(resolve_conflict_on_node(
+                            db, local_abspath,
+                            TRUE /* resolve_text */,
+                            FALSE /* resolve_props */,
+                            svn_wc_conflict_choose_merged,
+                            &ignored_result,
+                            scratch_pool));
+}
+
+
 /* */
 static svn_error_t *
 resolve_one_conflict(svn_wc__db_t *db,
@@ -436,8 +516,6 @@ resolve_one_conflict(svn_wc__db_t *db,
                      const char *resolve_prop,
                      svn_boolean_t resolve_tree,
                      svn_wc_conflict_choice_t conflict_choice,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      apr_pool_t *scratch_pool)
@@ -458,9 +536,6 @@ resolve_one_conflict(svn_wc__db_t *db,
       cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
 
       svn_pool_clear(iterpool);
-
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
 
       switch (cd->kind)
         {
@@ -495,8 +570,8 @@ resolve_one_conflict(svn_wc__db_t *db,
 
             SVN_ERR(resolve_conflict_on_node(db,
                                              local_abspath,
-                                             TRUE,
-                                             FALSE,
+                                             TRUE /* resolve_text */,
+                                             FALSE /* resolve_props */,
                                              conflict_choice,
                                              &did_resolve,
                                              iterpool));
@@ -509,6 +584,8 @@ resolve_one_conflict(svn_wc__db_t *db,
             if (!resolve_prop)
               break;
 
+            /* ### this is bogus. resolve_conflict_on_node() does not handle
+               ### individual property resolution.  */
             if (*resolve_prop != '\0' &&
                 strcmp(resolve_prop, cd->property_name) != 0)
               {
@@ -519,8 +596,8 @@ resolve_one_conflict(svn_wc__db_t *db,
             /* We don't have property name handling here yet :( */
             SVN_ERR(resolve_conflict_on_node(db,
                                              local_abspath,
-                                             FALSE,
-                                             TRUE,
+                                             FALSE /* resolve_text */,
+                                             TRUE /* resolve_props */,
                                              conflict_choice,
                                              &did_resolve,
                                              iterpool));
@@ -597,7 +674,6 @@ recursive_resolve_conflict(svn_wc__db_t *db,
                                    resolve_prop,
                                    resolve_tree,
                                    conflict_choice,
-                                   cancel_func, cancel_baton,
                                    notify_func, notify_baton,
                                    iterpool));
     }
@@ -623,10 +699,9 @@ recursive_resolve_conflict(svn_wc__db_t *db,
 
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE, iterpool));
-
       apr_hash_set(visited, name, APR_HASH_KEY_STRING, name);
 
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE, iterpool));
       if (kind == svn_wc__db_kind_dir && depth < svn_depth_immediates)
         continue;
 
@@ -663,12 +738,10 @@ recursive_resolve_conflict(svn_wc__db_t *db,
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
       SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
-
       if (hidden)
         continue;
 
       SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE, iterpool));
-
       if (kind == svn_wc__db_kind_dir && depth < svn_depth_immediates)
         continue;
 
@@ -689,39 +762,7 @@ recursive_resolve_conflict(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_depth_t depth,
-                                   svn_boolean_t resolve_text,
-                                   const char *resolve_prop,
-                                   svn_boolean_t resolve_tree,
-                                   svn_wc_conflict_choice_t conflict_choice,
-                                   svn_cancel_func_t cancel_func,
-                                   void *cancel_baton,
-                                   svn_wc_notify_func2_t notify_func,
-                                   void *notify_baton,
-                                   apr_pool_t *scratch_pool)
-{
-  /* When the implementation still used the entry walker, depth
-     unknown was translated to infinity. */
-  if (depth == svn_depth_unknown)
-    depth = svn_depth_infinity;
 
-  return svn_error_return(
-    recursive_resolve_conflict(db,
-                               local_abspath,
-                               depth,
-                               resolve_text,
-                               resolve_prop,
-                               resolve_tree,
-                               conflict_choice,
-                               cancel_func, cancel_baton,
-                               notify_func, notify_baton,
-                               scratch_pool));
-}
-
-/* The public function */
 svn_error_t *
 svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           const char *local_abspath,
@@ -736,15 +777,27 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
-    svn_wc__internal_resolved_conflict(wc_ctx->db,
-                                       local_abspath,
-                                       depth,
-                                       resolve_text,
-                                       resolve_prop,
-                                       resolve_tree,
-                                       conflict_choice,
-                                       cancel_func, cancel_baton,
-                                       notify_func, notify_baton,
-                                       scratch_pool));
+  /* ### the underlying code does NOT support resolving individual
+     ### properties. bail out if the caller tries it.  */
+  if (resolve_prop != NULL && *resolve_prop != '\0')
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            U_("Resolving a single property is not (yet) "
+                               "supported."));
+
+  /* When the implementation still used the entry walker, depth
+     unknown was translated to infinity. */
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
+  return svn_error_return(recursive_resolve_conflict(
+                            wc_ctx->db,
+                            local_abspath,
+                            depth,
+                            resolve_text,
+                            resolve_prop,
+                            resolve_tree,
+                            conflict_choice,
+                            cancel_func, cancel_baton,
+                            notify_func, notify_baton,
+                            scratch_pool));
 }

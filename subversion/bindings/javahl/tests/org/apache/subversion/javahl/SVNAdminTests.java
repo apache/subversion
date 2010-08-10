@@ -25,6 +25,9 @@ package org.apache.subversion.javahl;
 import org.apache.subversion.javahl.callback.*;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.OutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.util.Map;
 
@@ -97,10 +100,10 @@ public class SVNAdminTests extends SVNTests
         String testSrcdir = System.getProperty("test.srcdir",
                 "subversion/bindings/javahl");
         File dump = new File(testSrcdir, "tests/data/issue2979.dump");
-        IInput input = new FileInputer(dump);
-        IOutput loadLog = new IgnoreOutputer();
+        InputStream input = new FileInputStream(dump);
+        OutputStream loadLog = new IgnoreOutputer();
         admin.load(thisTest.getRepositoryPath(),
-                   input, loadLog, true, true, null);
+                   input, loadLog, true, true, false, false, null);
         // should have two revs after the load
         infoHolder[0] = null;
         client.info2(repoUrl, Revision.HEAD, Revision.HEAD,

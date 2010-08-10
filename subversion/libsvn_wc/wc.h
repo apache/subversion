@@ -31,8 +31,10 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_wc.h"
+
 #include "private/svn_sqlite.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_skel.h"
 
 #include "wc_db.h"
 
@@ -40,8 +42,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-#define SVN_WC__TMP_EXT       ".tmp"
+
 #define SVN_WC__PROP_REJ_EXT  ".prej"
 #define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
 #define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
@@ -60,7 +61,7 @@ extern "C" {
  * For example, ".svn/props/foo" became ".svn/props/foo.svn-work".
  *
  * The change from 2 to 3 was the introduction of the entry attribute
- * SVN_WC__ENTRY_ATTR_ABSENT.
+ * old-and-busted.c::ENTRIES_ATTR_ABSENT.
  *
  * The change from 3 to 4 was the renaming of the magic "svn:this_dir"
  * entry name to "".
@@ -114,6 +115,9 @@ extern "C" {
  * any existing locks to a level of 0. The 'md5_checksum' column was
  * added to PRISTINE for future use.
  *
+ * The change from 16 to 17 added a '.svn/pristine' dir and ...
+ * ### IN PROGRESS
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
@@ -121,6 +125,9 @@ extern "C" {
 
 #define SVN_WC__VERSION 16
 
+
+/* Formats <= this have no concept of "revert text-base/props".  */
+#define SVN_WC__NO_REVERT_FILES 4
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
@@ -148,6 +155,9 @@ extern "C" {
 /* A version < this has wcprops located in files OR in wc.db. Versions using
    this format or later will only have wcprops in BASE_NODE.dav_cache.  */
 #define SVN_WC__USES_DAV_CACHE 13
+
+/* A version < this does not store properties in wc.db.  */
+#define SVN_WC__PROPS_IN_DB 17
 
 
 
@@ -212,13 +222,17 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
  * If @a no_unlock is set, don't release any user locks on @a
  * local_abspath; otherwise release them as part of this processing.
  *
- * If @keep_changelist is set, don't remove any changeset assignments
+ * If @a keep_changelist is set, don't remove any changeset assignments
  * from @a local_abspath; otherwise, clear it of such assignments.
  *
- * If @a local_abspath is a file and @a checksum is non-NULL, use @a checksum
- * as the checksum for the new text base. Otherwise, calculate the checksum
- * if needed.
+ * If @a local_abspath is a file and @a md5_checksum is non-NULL, use
+ * @a md5_checksum as the checksum for the new text base. Otherwise,
+ * calculate the checksum if needed.
  *   ### [JAF]  No, it doesn't calculate the checksum, it stores null in wc.db.
+ *
+ * If @a sha1_checksum is non-NULL, use it instead of @a md5_checksum to
+ * identify the node's pristine text.
+ * ### NOT YET IMPLEMENTED.
  */
 svn_error_t *
 svn_wc__process_committed_internal(svn_wc__db_t *db,
@@ -230,7 +244,8 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    apr_hash_t *new_dav_cache,
                                    svn_boolean_t no_unlock,
                                    svn_boolean_t keep_changelist,
-                                   const svn_checksum_t *checksum,
+                                   const svn_checksum_t *md5_checksum,
+                                   const svn_checksum_t *sha1_checksum,
                                    const svn_wc_committed_queue_t *queue,
                                    apr_pool_t *scratch_pool);
 
@@ -260,35 +275,11 @@ struct svn_wc_traversal_info_t
 };
 
 
-
-/*** Timestamps. ***/
-
-/* A special timestamp value which means "use the timestamp from the
-   working copy".  This is sometimes used in a log entry like:
-
-   <modify-entry name="foo.c" revision="5" timestamp="working"/>
- */
-#define SVN_WC__TIMESTAMP_WC   "working"
-
-
-
-/*** Filesizes. ***/
-
-/* A special filesize value which means "use the filesize from the
-   working copy".  This is sometimes used in a log entry like:
-
-   <modify-entry name="foo.c" revision="5" working-size="working"/>
- */
-#define SVN_WC__WORKING_SIZE_WC   "working"
-
-
-
 /*** Names and file/dir operations in the administrative area. ***/
 
 /** The files within the administrative subdir. **/
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_ENTRIES             "entries"
-#define SVN_WC__ADM_LOCK                "lock"
 #define SVN_WC__ADM_TMP                 "tmp"
 #define SVN_WC__ADM_TEXT_BASE           "text-base"
 #define SVN_WC__ADM_PROPS               "props"
@@ -296,18 +287,13 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROPS           "dir-props"
 #define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
 #define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
-#define SVN_WC__ADM_LOG                 "log"
-#define SVN_WC__ADM_KILLME              "KILLME"
 #define SVN_WC__ADM_PRISTINE            "pristine"
+#define SVN_WC__ADM_NONEXISTENT_PATH    "nonexistent-path"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
    directory.  */
 #define SVN_WC__THIS_DIR_PREJ           "dir_conflicts"
-
-/* Possible contents of the killme file.  If present, signals that the
-   administrative area only should be deleted. */
-#define SVN_WC__KILL_ADM_ONLY           "adm-only"
 
 
 /* A few declarations for stuff in util.c.
@@ -361,9 +347,12 @@ void svn_wc__compat_call_notify_func(void *baton,
  * the text base is much longer than the working file, every byte of
  * the text base will still be examined.)
  *
- * If COMPARE_TEXTBASES is true, the comparison will be between a
- * detranslated version of *LOCAL_ABSPATH and the text base, otherwise, a
- * translated version of the text base and *LOCAL_ABSPATH will be compared.
+ * If COMPARE_TEXTBASES is true, translate LOCAL_ABSPATH's EOL
+ * style and keywords to repository-normal form according to its properties,
+ * and compare the result with the text base.  If COMPARE_TEXTBASES is
+ * false, translate the text base's EOL style and keywords to working-copy
+ * form according to LOCAL_ABSPATH's properties, and compare the
+ * result with LOCAL_ABSPATH.
  *
  * If LOCAL_ABSPATH does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
@@ -380,8 +369,8 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
 
 
 /* Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
-   TARGET_ABSPATH, accumulating instructions to update the working
-   copy into LOG_ACCUM.
+   TARGET_ABSPATH, return the appropriate work queue operations in
+   *WORK_ITEMS.
 
    Note that, in the case of updating, the update can have sent new
    properties, which could affect the way the wc target is
@@ -419,9 +408,12 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
 
    For a complete description, see svn_wc_merge3() for which this is
    the (loggy) implementation.
+
+   *WORK_ITEMS will be allocated in RESULT_POOL. All temporary allocations
+   will be performed in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__internal_merge(svn_stringbuf_t **log_accum,
+svn_wc__internal_merge(svn_skel_t **work_items,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
@@ -441,7 +433,8 @@ svn_wc__internal_merge(svn_stringbuf_t **log_accum,
                        void *conflict_baton,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* A default error handler for svn_wc_walk_entries3().  Returns ERR in
    all cases. */
@@ -471,7 +464,7 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void **edit_baton,
                                     const svn_delta_editor_t *wrapped_editor,
                                     void *wrapped_edit_baton,
-                                    const char *anchor,
+                                    const char *anchor_abspath,
                                     const char *target,
                                     svn_wc__db_t *db,
                                     apr_pool_t *pool);
@@ -489,7 +482,15 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
 
 
 /* Similar to svn_wc__versioned_file_modcheck(), but with a wc_db parameter
- * instead of a wc_context. */
+ * instead of a wc_context.
+ *
+ * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
+ * style and keywords to repository-normal form according to its properties,
+ * and compare the result with BASE_FILE_ABSPATH.  If COMPARE_TEXTBASES is
+ * false, translate BASE_FILE_ABSPATH's EOL style and keywords to working-copy
+ * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
+ * result with VERSIONED_FILE_ABSPATH.
+ */
 svn_error_t *
 svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                          svn_wc__db_t *db,
@@ -501,7 +502,8 @@ svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
 /* Internal version of svn_wc_transmit_text_deltas3(). */
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(const char **tempfile,
-                                      unsigned char digest[],
+                                      const svn_checksum_t **new_text_base_md5_checksum,
+                                      const svn_checksum_t **new_text_base_sha1_checksum,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
                                       svn_boolean_t fulltext,
@@ -518,7 +520,7 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc_get_ancestry2(). */
+/* Internal version of svn_wc_get_ancestry(). */
 svn_error_t *
 svn_wc__internal_get_ancestry(const char **url,
                               svn_revnum_t *rev,
@@ -571,22 +573,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               apr_pool_t *scratch_pool);
 
 
-/* Library-internal version of svn_wc__resolved_conflict5(). */
-svn_error_t *
-svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_depth_t depth,
-                                   svn_boolean_t resolve_text,
-                                   const char *resolve_prop,
-                                   svn_boolean_t resolve_tree,
-                                   svn_wc_conflict_choice_t conflict_choice,
-                                   svn_cancel_func_t cancel_func,
-                                   void *cancel_baton,
-                                   svn_wc_notify_func2_t notify_func,
-                                   void *notify_baton,
-                                   apr_pool_t *scratch_pool);
-
-
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              svn_wc__db_t *db,
@@ -602,6 +588,13 @@ svn_wc__internal_node_get_url(const char **url,
                               apr_pool_t *scratch_pool);
 
 
+svn_error_t *
+svn_wc__internal_is_file_external(svn_boolean_t *file_external,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *scratch_pool);
+
+
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will
@@ -615,16 +608,16 @@ svn_wc__upgrade_sdb(int *result_format,
                     apr_pool_t *scratch_pool);
 
 
-/* Checks whether a node is a working copy root or switched.
+/* Check whether a node is a working copy root or switched.
  *
- * If LOCAL_ABSPATH is the root of a working copy set WC_ROOT to TRUE,
+ * If LOCAL_ABSPATH is the root of a working copy, set *WC_ROOT to TRUE,
  * otherwise to FALSE.
  *
- * If LOCAL_ABSPATH is switched against its parent in the same working copy
- * set *SWITCHED to TRUE, otherwise to FALSE. SWITCHED can be set to NULL
- * if the result is not important.
+ * If KIND is not null, set *KIND to the node type of LOCAL_ABSPATH.
  *
- * If KIND is not null *KIND is set to the node type of LOCAL_ABSPATH
+ * If LOCAL_ABSPATH is switched against its parent in the same working copy
+ * set *SWITCHED to TRUE, otherwise to FALSE.  SWITCHED can be NULL
+ * if the result is not important.
  *
  * Use SCRATCH_POOL for temporary allocations.
  */
@@ -635,21 +628,6 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
-
-/* Gets the relative path REL_PATH as used by the access batons in WC_CTX,
- * by looking at open access batons of LOCAL_ABSPATH and its parents.
- * Perform temporary allocations in SCRATCH_POOL and return the result in
- * RESULT_POOL.
- *
- * Sets REL_PATH to a copy of LOCAL_ABSPATH when no access batons for this
- * node or any of its parents are found
- */
-svn_error_t *
-svn_wc__temp_get_relpath(const char **rel_path,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

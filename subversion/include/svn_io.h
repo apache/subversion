@@ -93,8 +93,9 @@ typedef struct svn_io_dirent_t {
  * If @a path exists but is none of the above, set @a *kind to
  * #svn_node_unknown.
  *
- * If unable to determine @a path's kind, return an error, with @a *kind's
- * value undefined.
+ * If @a path is not a valid pathname, set @a *kind to #svn_node_none.  If
+ * unable to determine @a path's kind for any other reason, return an error,
+ * with @a *kind's value undefined.
  *
  * Use @a pool for temporary allocations.
  *
@@ -1918,15 +1919,6 @@ svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
 
-/** Wrapper for apr_file_mktemp().
- *
- * @since New in 1.7. */
-svn_error_t *
-svn_io_file_mktemp(apr_file_t **new_file,
-                   const char *templ,
-                   apr_int32_t flags,
-                   apr_pool_t *pool);
-
 /** Wrapper for apr_file_name_get().
  *
  * @since New in 1.7. */
@@ -1934,14 +1926,6 @@ svn_error_t *
 svn_io_file_name_get(const char **filename,
                      apr_file_t *file,
                      apr_pool_t *pool);
-
-/** Wrapper for apr_file_perms_set().
- *
- * @since New in 1.7. */
-svn_error_t *
-svn_io_file_perms_set(const char *fname,
-                      apr_fileperms_t perms,
-                      apr_pool_t *pool);
 
 /** @} */
 

@@ -147,16 +147,8 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
           jcps.push_back(cp);
 
           env->DeleteLocalRef(jnodeKind);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN(SVN_NO_ERROR);
-
           env->DeleteLocalRef(jpath);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN(SVN_NO_ERROR);
-
           env->DeleteLocalRef(jcopyFromPath);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN(SVN_NO_ERROR);
         }
 
       jChangedPaths = CreateJ::Set(jcps);

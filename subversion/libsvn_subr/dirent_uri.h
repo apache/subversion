@@ -1,5 +1,6 @@
-/**
- * @copyright
+/*
+ * dirent_uri.h :  private header for the dirent, uri, relpath implementation.
+ *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,36 +19,22 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
- *
- * @file Outputer.h
- * @brief Interface of the class Outputer
  */
 
-#ifndef OUTPUTER_H
-#define OUTPUTER_H
 
-#include <jni.h>
-#include "svn_io.h"
-#include "Pool.h"
+#ifndef SVN_LIBSVN_SUBR_DIRENT_URI_H
+#define SVN_LIBSVN_SUBR_DIRENT_URI_H
 
-/**
- * This class contains a Java objects implementing the interface Outputer and
- * implements the functions write & close of svn_stream_t
- */
-class Outputer
-{
-  /**
-   * A local reference to the Java object.
-   */
-  jobject m_jthis;
-  static svn_error_t *write(void *baton,
-                            const char *buffer, apr_size_t *len);
-  static svn_error_t *close(void *baton);
- public:
-  Outputer(jobject jthis);
-  ~Outputer();
-  svn_stream_t *getStream(const SVN::Pool &pool);
-};
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-#endif // OUTPUTER_H
+/* Character map used to check which characters need escaping when
+   used in a uri. See path.c for more details */
+extern const char svn_uri__char_validity[256];
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_SUBR_DIRENT_URI_H */

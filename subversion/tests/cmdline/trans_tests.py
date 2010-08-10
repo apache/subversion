@@ -387,8 +387,7 @@ def keywords_from_birth(sbox):
     '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
     ]
 
-  fp = open(os.path.join(wc_dir, svntest.main.get_admin_name(),
-                         'text-base', 'fixed_length_keywords.svn-base'), 'r')
+  fp = open(svntest.wc.text_base_path(fixed_length_keywords_path), 'r')
   actual_textbase_kw = fp.readlines()
   fp.close()
   check_keywords(actual_textbase_kw, kw_textbase, "text base")
@@ -573,7 +572,7 @@ def eol_change_is_text_mod(sbox):
                                      'ci', '-m', 'log msg', foo_path)
 
   # check 2: do the files have the right contents now?
-  contents = svntest.main.file_read(foo_path, 'rb')
+  contents = open(foo_path, 'rb').read()
   if svntest.main.windows:
     if contents != "1\n2\n3\n4\n5\n6\n7\n8\n9\n":
       raise svntest.Failure
@@ -581,9 +580,8 @@ def eol_change_is_text_mod(sbox):
     if contents != "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       raise svntest.Failure
 
-  foo_base_path = os.path.join(wc_dir, svntest.main.get_admin_name(),
-                               'text-base', 'foo.svn-base')
-  base_contents = svntest.main.file_read(foo_base_path, 'rb')
+  foo_base_path = svntest.wc.text_base_path(foo_path)
+  base_contents = open(foo_base_path, 'rb').read()
   if contents != base_contents:
     raise svntest.Failure
 
@@ -759,7 +757,7 @@ def propset_commit_checkout_nocrash(sbox):
                                      sbox.repo_url,
                                      other_wc_dir)
 
-  mu_other_contents = svntest.main.file_read(mu_other_path)
+  mu_other_contents = open(mu_other_path).read()
   if mu_other_contents != "This is the file 'mu'.\n$Rev: 3 $":
     print("'%s' does not have the expected contents" % mu_other_path)
     raise svntest.Failure
@@ -790,6 +788,94 @@ def propset_revert_noerror(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def props_only_file_update(sbox):
+  "retranslation occurs on a props-only update"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  content = ["This is the file 'iota'.\n",
+             "$Author$\n",
+             ]
+  content_expanded = ["This is the file 'iota'.\n",
+                      "$Author: jrandom $\n",
+                      ]
+
+  # Create r2 with iota's contents and svn:keywords modified
+  open(iota_path, 'w').writelines(content)
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Author', iota_path)
+
+  expected_output = wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Create r3 that drops svn:keywords
+
+  # put the content back to its untranslated form
+  open(iota_path, 'w').writelines(content)
+
+  svntest.main.run_svn(None, 'propdel', 'svn:keywords', iota_path)
+
+  expected_status.tweak('iota', wc_rev=3)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Now, go back to r2. iota should have the Author keyword expanded.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=''.join(content_expanded))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, None, expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        False,
+                                        wc_dir, '-r', '2')
+
+  if open(iota_path).read() != ''.join(content_expanded):
+    raise svntest.Failure("$Author$ is not expanded in 'iota'")
+
+  # Update to r3. this should retranslate iota, dropping the keyword expansion
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=''.join(content))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, expected_disk, expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        False,
+                                        wc_dir)
+
+  if open(iota_path).read() != ''.join(content):
+    raise svntest.Failure("$Author$ is not contracted in 'iota'")
+
+  # We used to leave some temporary files around. Make sure that we don't.
+  temps = os.listdir(os.path.join(wc_dir, svntest.main.get_admin_name(), 'tmp'))
+  temps.remove('prop-base')
+  temps.remove('props')
+  temps.remove('text-base')
+  if temps:
+    print('Temporary files leftover: %s' % (', '.join(temps),))
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -807,6 +893,7 @@ test_list = [ None,
               copy_propset_commit,
               propset_commit_checkout_nocrash,
               propset_revert_noerror,
+              props_only_file_update,
              ]
 
 if __name__ == '__main__':

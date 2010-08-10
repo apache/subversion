@@ -89,7 +89,7 @@ sspi_get_credentials(char *token, apr_size_t token_len,
  * Accepted by svn_atomic__init_once()
  */
 static svn_error_t *
-initialize_sspi(apr_pool_t* pool)
+initialize_sspi(void *baton, apr_pool_t* pool)
 {
   sspi = InitSecurityInterface();
 
@@ -135,7 +135,8 @@ svn_ra_serf__init_sspi_connection(svn_ra_serf__session_t *session,
   apr_size_t tmp_len;
   serf_sspi_context_t *sspi_context;
 
-  SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
+  SVN_ERR(svn_atomic__init_once(&sspi_initialized,
+                                initialize_sspi, NULL, pool));
 
   sspi_context = apr_palloc(pool, sizeof(*sspi_context));
   sspi_context->ctx.dwLower = 0;
@@ -348,7 +349,8 @@ svn_ra_serf__init_proxy_sspi_connection(svn_ra_serf__session_t *session,
   apr_size_t tmp_len;
   serf_sspi_context_t *sspi_context;
 
-  SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
+  SVN_ERR(svn_atomic__init_once(&sspi_initialized,
+                                initialize_sspi, NULL, pool));
 
   sspi_context = apr_palloc(pool, sizeof(*sspi_context));
   sspi_context->ctx.dwLower = 0;
