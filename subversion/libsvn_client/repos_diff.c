@@ -458,7 +458,7 @@ open_root(void *edit_baton,
  * reporting all files as deleted.  Part of a workaround for issue 2333.
  *
  * DIR is a repository path relative to the URL in RA_SESSION.  REVISION
- * may be NULL, in which case it defaults to HEAD.  EDIT_BATON is the
+ * may be NULL, in which case it defaults to HEAD.  EB is the
  * overall crawler editor baton.  If CANCEL_FUNC is not NULL, then it
  * should refer to a cancellation function (along with CANCEL_BATON).
  */
@@ -467,12 +467,11 @@ static svn_error_t *
 diff_deleted_dir(const char *dir,
                  svn_revnum_t revision,
                  svn_ra_session_t *ra_session,
-                 void *edit_baton,
+                 struct edit_baton *eb,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *pool)
 {
-  struct edit_baton *eb = edit_baton;
   apr_hash_t *dirents;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
