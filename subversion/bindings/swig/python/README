@@ -37,3 +37,14 @@ TRANSLATING PARAMETER LISTS
               foo(function)
           except:
               # handle it
+
+
+RUNNING THE TESTS
+
+   $ cd subversion/bindings/swig/python
+   $ python ./tests/run_all.py --help
+   $ python ./tests/run_all.py [TEST...]
+
+   where TEST can be the name of a test suite ('core', 'mergeinfo',
+   'client', etc.), or see '--help' for other options.  The default is to
+   run the tests in all modules.
