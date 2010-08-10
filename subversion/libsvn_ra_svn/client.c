@@ -181,7 +181,7 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
 
 /* Set *DIFFS to an array of svn_prop_t, allocated in POOL, based on the
    property diffs in LIST, received from the server. */
-static svn_error_t *parse_prop_diffs(apr_array_header_t *list,
+static svn_error_t *parse_prop_diffs(const apr_array_header_t *list,
                                      apr_pool_t *pool,
                                      apr_array_header_t **diffs)
 {
@@ -206,7 +206,7 @@ static svn_error_t *parse_prop_diffs(apr_array_header_t *list,
 
 /* Parse a lockdesc, provided in LIST as specified by the protocol into
    LOCK, allocated in POOL. */
-static svn_error_t *parse_lock(apr_array_header_t *list, apr_pool_t *pool,
+static svn_error_t *parse_lock(const apr_array_header_t *list, apr_pool_t *pool,
                                svn_lock_t **lock)
 {
   const char *cdate, *edate;
@@ -463,6 +463,7 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   apr_status_t status;
   apr_proc_t *proc;
   apr_procattr_t *attr;
+  svn_error_t *err;
 
   status = apr_procattr_create(&attr, pool);
   if (status == APR_SUCCESS)
@@ -491,13 +492,13 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
    * the different opinions on this issue.
    *
    * On Win32, APR does not support KILL_ONLY_ONCE. It only has
-   * KILL_ALWAYS and KILL_NEVER. Other modes are converted to 
+   * KILL_ALWAYS and KILL_NEVER. Other modes are converted to
    * KILL_ALWAYS, which immediately calls TerminateProcess().
    * This instantly kills the tunnel, leaving sshd and svnserve
    * on a remote machine running indefinitely. These processes
    * accumulate. The problem is most often seen with a fast client
    * machine and a modest internet connection, as the tunnel
-   * is killed before being able to gracefully complete the 
+   * is killed before being able to gracefully complete the
    * session. In that case, svn is unusable 100% of the time on
    * the windows machine. Thus, on Win32, we use KILL_NEVER and
    * take the lesser of two evils.
@@ -516,7 +517,14 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
 
   /* Guard against dotfile output to stdout on the server. */
   *conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
-  SVN_ERR(svn_ra_svn_skip_leading_garbage(*conn, pool));
+  err = svn_ra_svn_skip_leading_garbage(*conn, pool);
+  if (err)
+    return svn_error_quick_wrap(
+             err,
+             _("To better debug SSH connection problems, remove the -q "
+               "option from 'ssh' in the [tunnels] section of your "
+               "Subversion configuration file."));
+
   return SVN_NO_ERROR;
 }
 
@@ -1558,7 +1566,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
                                          apr_hash_t **locations,
                                          const char *path,
                                          svn_revnum_t peg_revision,
-                                         apr_array_header_t *location_revisions,
+                                         const apr_array_header_t *location_revisions,
                                          apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
@@ -2415,7 +2423,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_has_capability,
   ra_svn_replay_range,
   ra_svn_get_deleted_rev,
-  NULL  /* ra_svn_obliterate_node_rev */
+  NULL  /* ra_svn_obliterate_path_rev */
 };
 
 svn_error_t *

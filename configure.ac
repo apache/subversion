@@ -24,7 +24,7 @@ dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
 AC_INIT([subversion],
      [esyscmd(python build/getversion.py SVN subversion/include/svn_version.h)],
-     [http://subversion.tigris.org/])
+     [http://subversion.apache.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR([build])
@@ -985,7 +985,7 @@ fi
 AC_PATH_PROGS(PYTHON, "$PYTHON", none)
 
 # The minimum version for the JVM runtime for our Java bytecode.
-JAVA_OLDEST_WORKING_VER='1.2'
+JAVA_OLDEST_WORKING_VER='1.5'
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH
 SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
@@ -1114,6 +1114,7 @@ JAVAHL_OBJDIR=""
 INSTALL_EXTRA_JAVAHL_LIB=""
 FIX_JAVAHL_LIB=""
 JAVAHL_TESTS_TARGET=""
+JAVAHL_COMPAT_TESTS_TARGET=""
 LT_CXX_LIBADD=""
 if test "$do_javahl_build" = "yes"; then
   dnl Check for suitable JDK
@@ -1160,10 +1161,12 @@ AS_HELP_STRING([--with-junit=PATH],
         JAVA_CLASSPATH="$withval"
       fi
       JAVAHL_TESTS_TARGET="javahl-tests"
+      JAVAHL_COMPAT_TESTS_TARGET="javahl-compat-tests"
     fi
 ])
 AC_SUBST(JAVA_CLASSPATH)
 AC_SUBST(JAVAHL_TESTS_TARGET)
+AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 
 # ==== Miscellaneous bits ====================================================
 

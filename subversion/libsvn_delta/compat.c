@@ -33,7 +33,7 @@ struct file_rev_handler_wrapper_baton {
   svn_file_rev_handler_old_t handler;
 };
 
-/* This implements svn_repos_file_rev_handler2_t. */
+/* This implements svn_file_rev_handler_t. */
 static svn_error_t *
 file_rev_handler_wrapper(void *baton,
                          const char *path,

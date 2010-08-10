@@ -87,6 +87,16 @@ public class CommitItem implements java.io.Serializable
     }
 
     /**
+     * A backward-compat constructor.
+     */
+    public CommitItem(org.apache.subversion.javahl.CommitItem aItem)
+    {
+        this(aItem.getPath(), NodeKind.fromApache(aItem.getNodeKind()),
+             aItem.getStateFlags(), aItem.getUrl(), aItem.getCopyUrl(),
+             aItem.getRevision());
+    }
+
+    /**
      *  retrieve the path of the commit item
      * @return the path
      */

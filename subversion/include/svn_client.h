@@ -1365,8 +1365,14 @@ svn_client_switch(svn_revnum_t *result_rev,
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the
  * added item.
  *
- * If @a no_ignore is FALSE, don't add files or directories that match
- * ignore patterns.
+ * If @a no_ignore is FALSE, don't add any file or directory (or recurse
+ * into any directory) that is unversioned and found by recursion (as
+ * opposed to being the explicit target @a path) and whose name matches the
+ * svn:ignore property on its parent directory or the global-ignores list in
+ * @a ctx->config. If @a no_ignore is TRUE, do include such files and
+ * directories. (Note that an svn:ignore property can influence this
+ * behaviour only when recursing into an already versioned directory with @a
+ * force.)
  *
  * If @a add_parents is TRUE, recurse up @a path's directory and look for
  * a versioned directory.  If found, add all intermediate paths between it
@@ -1608,6 +1614,11 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * commit, allocated in @a pool.  If some components of @a url do not exist
  * then create parent directories as necessary.
  *
+ * This function reads an unversioned tree from disk and skips any ".svn"
+ * directories. Even if a file or directory being imported is part of an
+ * existing WC, this function sees it as unversioned and does not notice any
+ * existing Subversion properties in it.
+ *
  * If @a path is a directory, the contents of that directory are
  * imported directly into the directory identified by @a url.  Note that the
  * directory @a path itself is not imported -- that is, the basename of
@@ -1640,8 +1651,14 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * underneath those subdirectories).  If #svn_depth_infinity, import
  * @a path and everything under it fully recursively.
  *
- * If @a no_ignore is @c FALSE, don't add files or directories that match
- * ignore patterns.
+ * If @a no_ignore is @c FALSE, don't import any file or directory (or
+ * recurse into any directory) that is found by recursion (as opposed to
+ * being the explicit target @a path) and whose name matches the
+ * global-ignores list in @a ctx->config. If @a no_ignore is @c TRUE, do
+ * include such files and directories. (Note that svn:ignore properties are
+ * not involved, as auto-props cannot set properties on directories and even
+ * if the target is part of a WC the import ignores any existing
+ * properties.)
  *
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
@@ -1840,6 +1857,13 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  *      set @a *result_rev to the actual revision against which the
  *      working copy was compared (@a *result_rev is not meaningful unless
  *      @a update is set).
+ *
+ * If @a no_ignore is @c FALSE, don't report any file or directory (or
+ * recurse into any directory) that is found by recursion (as opposed to
+ * being the explicit target @a path) and whose name matches the
+ * svn:ignore property on its parent directory or the global-ignores
+ * list in @a ctx->config. If @a no_ignore is @c TRUE, report each such
+ * file or directory with the status code #svn_wc_status_ignored.
  *
  * If @a ignore_externals is not set, then recurse into externals
  * definitions (if any exist) after handling the main target.  This
@@ -3056,7 +3080,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * requested then return a #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @a discover_changed_paths and @a revprops are the same as for
- * svn_client_log4().  Use @a scratch_pool for all temporary allocations.
+ * svn_client_log5().  Use @a scratch_pool for all temporary allocations.
  *
  * @a ctx is a context used for authentication.
  *
@@ -3066,8 +3090,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_mergeinfo_log(const char *path_or_url,
-                         svn_boolean_t finding_merged,
+svn_client_mergeinfo_log(svn_boolean_t finding_merged,
+                         const char *path_or_url,
                          const svn_opt_revision_t *peg_revision,
                          const char *merge_source_path_or_url,
                          const svn_opt_revision_t *src_peg_revision,
@@ -3144,7 +3168,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
 svn_error_t *
 svn_client_cleanup(const char *dir,
                    svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+                   apr_pool_t *scratch_pool);
 
 
 /** @} */
@@ -3411,7 +3435,7 @@ typedef struct svn_client_copy_source_t
  */
 svn_error_t *
 svn_client_copy5(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *sources,
+                 const apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
@@ -3430,7 +3454,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
 SVN_DEPRECATED
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *sources,
+                 const apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
@@ -3579,7 +3603,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  */
 svn_error_t *
 svn_client_move5(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *src_paths,
+                 const apr_array_header_t *src_paths,
                  const char *dst_path,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
@@ -4871,15 +4895,58 @@ svn_client_info(const char *path_or_url,
  */
 
 /**
- * Apply a unidiff patch that's located at @a patch_path against a
- * working copy pointed to by @a target.
+ * Apply a unidiff patch that's located at absolute path
+ * @a abs_patch_path to the working copy at @a local_abspath.
+ *
+ * This function makes a best-effort attempt at applying the patch.
+ * It might skip patch targets which cannot be patched (e.g. targets
+ * that are outside of the working copy). It will also reject hunks
+ * which cannot be applied to a target in case the hunk's context
+ * does not match anywhere in the patch target.
  *
  * If @a dry_run is TRUE, the patching process is carried out, and full
  * notification feedback is provided, but the working copy is not modified.
  *
  * @a strip_count specifies how many leading path components should be
- * stripped from paths obtained from the patch. It is an error is a
+ * stripped from paths obtained from the patch. It is an error if a
  * negative strip count is passed.
+ *
+ * If @a reverse is @c TRUE, apply patches in reverse, deleting lines
+ * the patch would add and adding lines the patch would delete.
+ * This is useful when applying a unidiff which was created with the
+ * original and modified files swapped due to human error.
+ *
+ * Excluding patch targets from the patching process is possible by passing
+ * @a include_patterns and/or @a exclude_patterns arrays containing
+ * elements of type const char *.
+ * If @a include_patterns is not NULL, patch targets not matching any glob
+ * pattern in @a include_patterns will not be patched.
+ * If @a exclude_patterns is not NULL, patch targets matching any glob pattern
+ * in @a exclude_patterns will not be patched
+ * The match is performed on the target path as parsed from the patch file,
+ * after canonicalization.
+ * If both @a include_patterns and @a exclude_patterns are specified,
+ * the @a include_patterns are applied first, i.e. the @a exclude_patterns
+ * are applied to all targets which matched one of the @a include_patterns.
+ *
+ * If @a patched_tempfiles is not NULL, return in @a *patched_tempfiles
+ * a mapping {target path -> path to temporary file containing patched result}
+ * for all patched targets which were neither skipped nor excluded via
+ * @ignore_patterns or @a exlude_patterns.
+ * Note that if all hunks were rejected, the patched result will look just
+ * like the target file, unmodified.
+ * If @a reject_tempfiles is not NULL, return in @a *reject_tempfiles
+ * a mapping {target path -> path to temporary file containing rejected hunks}
+ * Both @a *patched_tempfiles and @a *reject_tempfiles are allocated in
+ * @a result_pool, and the key (target path) used is the path as parsed
+ * from the patch, but in canonicalized form. The value (path to temporary
+ * file) is an absolute path, also in canonicalized form.
+ * The temporary files are closed, and it is the caller's responsibility
+ * to remove them when they are no longer needed.
+ * Using @a patched_tempfiles and @a reject_tempfiles in combination with
+ * @a dry_run = TRUE makes it possible to generate a preview of the result
+ * of the patching process, e.g. for display purposes, without actually
+ * modifying the working copy.
  *
  * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as patching progresses.
@@ -4887,15 +4954,23 @@ svn_client_info(const char *path_or_url,
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
+ * Use @a scratch_pool for temporary allocations.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_patch(const char *patch_path,
-                 const char *target,
+svn_client_patch(const char *abs_patch_path,
+                 const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
+                 svn_boolean_t reverse,
+                 const apr_array_header_t *include_patterns,
+                 const apr_array_header_t *exclude_patterns,
+                 apr_hash_t **patched_tempfiles,
+                 apr_hash_t **reject_tempfiles,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
 
 /** @} */
 

@@ -29,6 +29,9 @@
 
 #include <jni.h>
 #include "svn_wc.h"
+#include "svn_client.h"
+
+#include <vector>
 
 /**
  * This class passes centralizes the creating of Java objects from
@@ -45,18 +48,37 @@ class CreateJ
   Info(const svn_wc_entry_t *entry);
 
   static jobject
+  Info2(const char *path, const svn_info_t *info);
+
+  static jobject
   Lock(const svn_lock_t *lock);
 
   static jobject
-  Property(jobject jthis, const char *path, const char *name,
-           svn_string_t *value);
+  Status(const char *local_abspath, const svn_wc_status2_t *status);
 
-  static jobjectArray
-  RevisionRangeArray(apr_array_header_t *ranges);
+  static jobject
+  NotifyInformation(const svn_wc_notify_t *notify);
+
+  static jobject
+  RevisionRangeList(apr_array_header_t *ranges);
+
+  static jobject
+  StringSet(apr_array_header_t *strings);
+
+  static jobject
+  PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool);
+
+  /* This creates a set of Objects.  It derefs the members of the vector
+   * after putting them in the set, so they caller doesn't need to. */
+  static jobject
+  Set(std::vector<jobject> &objects);
 
  protected:
   static jobject
   ConflictVersion(const svn_wc_conflict_version_t *version);
+
+  static jobject
+  Collection(std::vector<jobject> &object, const char *className);
 };
 
 #endif  // CREATEJ_H

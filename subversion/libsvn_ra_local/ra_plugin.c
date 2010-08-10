@@ -66,7 +66,7 @@ cleanup_access(void *data)
 }
 
 
-/* Fetch a username for use with SESS. */
+/* Fetch a username for use with SESS, and store it in SESS->username. */
 static svn_error_t *
 get_username(svn_ra_session_t *session,
              apr_pool_t *pool)
@@ -1160,7 +1160,7 @@ svn_ra_local__get_locations(svn_ra_session_t *session,
                             apr_hash_t **locations,
                             const char *path,
                             svn_revnum_t peg_revision,
-                            apr_array_header_t *location_revisions,
+                            const apr_array_header_t *location_revisions,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
@@ -1424,6 +1424,7 @@ svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra__vtable_t.obliterate_path_rev. */
 static svn_error_t *
 svn_ra_local__obliterate_path_rev(svn_ra_session_t *session,
                                   svn_revnum_t revision,
@@ -1432,8 +1433,12 @@ svn_ra_local__obliterate_path_rev(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
 
+  /* A username is absolutely required to obliterate anything. */
+  SVN_ERR(get_username(session, pool));
+
   path = svn_path_join(sess->fs_path->data, path, pool);
   SVN_ERR(svn_repos__obliterate_path_rev(sess->repos,
+                                         sess->username,
                                          revision,
                                          path,
                                          pool));

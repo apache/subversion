@@ -3,7 +3,7 @@
 #  info_tests.py:  testing the svn info command
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -292,7 +292,7 @@ def info_on_mkdir(sbox):
 test_list = [ None,
               info_with_tree_conflicts,
               info_on_added_file,
-              info_on_mkdir
+              info_on_mkdir,
              ]
 
 if __name__ == '__main__':

@@ -141,6 +141,7 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
   return OK;
 }
 
+/* Implements the #create_server_config method of Apache's #module vtable. */
 static void *
 create_server_config(apr_pool_t *p, server_rec *s)
 {
@@ -148,6 +149,7 @@ create_server_config(apr_pool_t *p, server_rec *s)
 }
 
 
+/* Implements the #merge_server_config method of Apache's #module vtable. */
 static void *
 merge_server_config(apr_pool_t *p, void *base, void *overrides)
 {
@@ -163,13 +165,17 @@ merge_server_config(apr_pool_t *p, void *base, void *overrides)
 }
 
 
+/* Implements the #create_dir_config method of Apache's #module vtable. */
 static void *
 create_dir_config(apr_pool_t *p, char *dir)
 {
   /* NOTE: dir==NULL creates the default per-dir config */
   dir_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
-  conf->root_dir = dir;
+  /*In subversion context dir is always considered to be coming from
+   <Location /blah> directive. So we treat it as URI. */
+  if (dir)
+    conf->root_dir = svn_uri_canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
 
@@ -177,6 +183,7 @@ create_dir_config(apr_pool_t *p, char *dir)
 }
 
 
+/* Implements the #merge_dir_config method of Apache's #module vtable. */
 static void *
 merge_dir_config(apr_pool_t *p, void *base, void *overrides)
 {
@@ -766,6 +773,7 @@ static int dav_svn__handler(request_rec *r)
 
 /** Module framework stuff **/
 
+/* Implements the #cmds member of Apache's #module vtable. */
 static const command_rec cmds[] =
 {
   /* per directory/location */
@@ -844,6 +852,7 @@ static dav_provider provider =
 };
 
 
+/* Implements the #register_hooks method of Apache's #module vtable. */
 static void
 register_hooks(apr_pool_t *pconf)
 {
@@ -877,7 +886,7 @@ register_hooks(apr_pool_t *pconf)
                             NULL, AP_FTYPE_CONTENT_SET);
   ap_register_input_filter("IncomingRewrite", dav_svn__location_in_filter,
                            NULL, AP_FTYPE_CONTENT_SET);
-  ap_hook_fixups(dav_svn__proxy_merge_fixup, NULL, NULL, APR_HOOK_MIDDLE);
+  ap_hook_fixups(dav_svn__proxy_request_fixup, NULL, NULL, APR_HOOK_MIDDLE);
 }
 
 

@@ -87,9 +87,15 @@
   apr_array_header_t *src_paths
 }
 
+#if defined(SWIGRUBY) || defined(SWIGPERL)
 %apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
   apr_array_header_t *changelists
 }
+#else
+%apply const apr_array_header_t *STRINGLIST {
+  apr_array_header_t *changelists
+}
+#endif
 
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
   apr_array_header_t **paths,

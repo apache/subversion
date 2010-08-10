@@ -61,6 +61,7 @@
 #define ENTRIES_ATTR_LOCK_CREATION_DATE "lock-creation-date"
 
 
+/* */
 static svn_wc_entry_t *
 alloc_entry(apr_pool_t *pool)
 {
@@ -193,11 +194,10 @@ read_url(const char **result,
     {
       if (wc_format < SVN_WC__CHANGED_CANONICAL_URLS)
         *result = svn_uri_canonicalize(*result, pool);
-      else
-        if (! svn_uri_is_canonical(*result, pool))
-          return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                   _("Entry contains non-canonical path '%s'"),
-                                   *result);
+      else if (! svn_uri_is_canonical(*result, pool))
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("Entry contains non-canonical path '%s'"),
+                                 *result);
     }
   return SVN_NO_ERROR;
 }
@@ -716,6 +716,7 @@ do_bool_attr(svn_boolean_t *entry_flag,
 }
 
 
+/* */
 static const char *
 extract_string(apr_uint64_t *result_flags,
                apr_hash_t *atts,
@@ -946,7 +947,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     if (cmt_datestr)
       {
         SVN_ERR(svn_time_from_cstring(&entry->cmt_date, cmt_datestr, pool));
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
       }
     else
       entry->cmt_date = 0;
@@ -956,15 +956,13 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     if (cmt_revstr)
       {
         entry->cmt_rev = SVN_STR_TO_REV(cmt_revstr);
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV;
       }
     else
       entry->cmt_rev = SVN_INVALID_REVNUM;
 
     entry->cmt_author = extract_string(modify_flags, atts,
                                        SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
-                                       SVN_WC__ENTRY_MODIFY_CMT_AUTHOR,
-                                       FALSE, pool);
+                                       0, FALSE, pool);
   }
 
   /* NOTE: we do not set modify_flags values since the lock attributes only
@@ -1172,7 +1170,7 @@ resolve_to_defaults(apr_hash_t *entries,
   /* Then use it to fill in missing information in other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
+      svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
 
       if (this_entry == default_entry)
         /* THIS_DIR already has all the information it can possibly

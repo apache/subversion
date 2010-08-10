@@ -88,9 +88,6 @@
    the DEST. */
 #define SVN_WC__LOG_CP_AND_TRANSLATE    "cp-and-translate"
 
-/* Remove file SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_RM                  "rm"
-
 /* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_APPEND              "append"
 
@@ -119,11 +116,7 @@
 
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_DEST           "dest"
-#define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
-#define SVN_WC__LOG_ATTR_PROPNAME       "propname"
-#define SVN_WC__LOG_ATTR_PROPVAL        "propval"
-#define SVN_WC__LOG_ATTR_FORMAT         "format"
 #define SVN_WC__LOG_ATTR_FORCE          "force"
 #define SVN_WC__LOG_ATTR_DATA           "data"
 
@@ -278,6 +271,7 @@ file_xfer_under_path(svn_wc__db_t *db,
 
 /*** Dispatch on the xml opening tag. ***/
 
+/* */
 static svn_error_t *
 log_do_file_xfer(struct log_runner *loggy,
                  const char *name,
@@ -387,18 +381,7 @@ log_do_file_timestamp(struct log_runner *loggy,
 }
 
 
-/* Remove file NAME in log's CWD. */
-static svn_error_t *
-log_do_rm(struct log_runner *loggy, const char *name)
-{
-  const char *local_abspath
-    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
-  return svn_error_return(
-    svn_io_remove_file2(local_abspath, TRUE, loggy->pool));
-}
-
-
+/* */
 static svn_error_t *
 log_do_modify_entry(struct log_runner *loggy,
                     const char *name,
@@ -475,40 +458,6 @@ log_do_modify_entry(struct log_runner *loggy,
   if (valuestr && strcmp(valuestr, "true") == 0)
     modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
 
-  /* It is possible that we will find a log that has a misordered sequence
-     of entry modifications and wcprop modifications. The entry must be
-     "not hidden" before wcprops can be installed. The sequence of actions
-     will look like:
-
-       1. modify_entry
-       2. modify_wcprops
-       3. modify_entry(DELETED=FALSE)
-
-     Step 2 will fail if the current node is marked DELETED. r36697 fixes
-     the ordering, moving step 3 to the beginning of the sequence. However,
-     old logs may still contain the above sequence. To compensate, we will
-     attempt to detect the pattern used by step 1, and preemptively clear
-     the DELETED flag.
-
-     The misordered entry is written by accumulate_entry_props() in
-     update_editor.c. That may modify the CMT_* values and/or the UUID.
-     If we see any of those, then we've detected a modify_entry constructed
-     by that function. And that means we *just* ran a step 3 (new code)
-     or we *will* run a step 3 (too late; old code). In both situations,
-     we can safely clear the DELETED flag.
-
-     The UUID modification is *only* performed by that function. The CMT_*
-     changes are also performed by process_committed_leaf() in adm_ops.c.
-     A just-committed node setting these values will NEVER be DELETED,
-     so it is safe to clear the value.  */
-  if (modify_flags & (SVN_WC__ENTRY_MODIFY_CMT_REV
-                      | SVN_WC__ENTRY_MODIFY_CMT_DATE
-                      | SVN_WC__ENTRY_MODIFY_CMT_AUTHOR))
-    {
-      entry->deleted = FALSE;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_DELETED;
-    }
-
   /* Now write the new entry out. Note that we want to always operate
      on the stub if name is not THIS_DIR. This loggy function is intended
      to operate on the data in ADM_ABSPATH, so we do NOT want to reach
@@ -528,6 +477,7 @@ log_do_modify_entry(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 log_do_delete_lock(struct log_runner *loggy,
                    const char *name)
@@ -612,14 +562,6 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
               return SVN_NO_ERROR;
             }
         }
-      else
-        {
-          /* Deleting full_path requires that any children it has are
-             also locked (issue #3039). */
-            SVN_ERR(svn_wc__adm_extend_lock_to_tree(loggy->db,
-                                                    local_abspath,
-                                                    loggy->pool));
-        }
     }
 
   err = svn_wc__internal_remove_from_revision_control(loggy->db,
@@ -641,6 +583,7 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
 }
 
 
+/* */
 static svn_error_t *
 log_do_add_tree_conflict(struct log_runner *loggy,
                          const char *victim_basename,
@@ -671,6 +614,7 @@ log_do_add_tree_conflict(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+/* */
 static void
 start_handler(void *userData, const char *eltname, const char **atts)
 {
@@ -706,9 +650,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
     err = log_do_delete_entry(loggy, name);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_RM) == 0) {
-    err = log_do_rm(loggy, name);
   }
   else if (strcmp(eltname, SVN_WC__LOG_MV) == 0) {
     err = log_do_file_xfer(loggy, name, svn_wc__xfer_mv, atts);
@@ -797,23 +738,6 @@ svn_wc__run_xml_log(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__run_log2(svn_wc__db_t *db,
-                 const char *adm_abspath,
-                 apr_pool_t *scratch_pool)
-{
-  /* Verify that we're holding this directory's write lock.  */
-  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
-
-  return svn_error_return(svn_wc__wq_run(
-                            db, adm_abspath,
-                            NULL, NULL,
-                            scratch_pool));
-}
-
-
-
-
 /*** Log file generation helpers ***/
 
 /* Extend LOG_ACCUM with log operations to do MOVE_COPY_OP to SRC_PATH and
@@ -1086,17 +1010,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_CHECKSUM,
                  entry->checksum);
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CMT_REV,
-                 SVN_WC__ENTRY_ATTR_CMT_REV,
-                 apr_psprintf(scratch_pool, "%ld", entry->cmt_rev));
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CMT_DATE,
-                 SVN_WC__ENTRY_ATTR_CMT_DATE,
-                 svn_time_to_cstring(entry->cmt_date, scratch_pool));
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CMT_AUTHOR,
-                 SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
-                 entry->cmt_author);
+  /* Note: Last-commit flags are no longer passed to this function. */
 
   /* Note: LOCK flags are no longer passed to this function.  */
 
@@ -1279,42 +1193,24 @@ svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
-                     const char *adm_abspath,
-                     const char *path,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  const char *loggy_path1;
-
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
-  /* No need to check whether BASE_NAME exists: ENOENT is ignored
-     by the log-runner */
-  svn_xml_make_open_tag(log_accum, result_pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_RM,
-                        SVN_WC__LOG_ATTR_NAME,
-                        loggy_path1,
-                        NULL);
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
-svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
+svn_wc__loggy_add_tree_conflict(svn_wc__db_t *db,
+                                const char *adm_abspath,
                                 const svn_wc_conflict_description2_t *conflict,
-                                apr_pool_t *pool)
+                                apr_pool_t *scratch_pool)
 {
+  svn_stringbuf_t *log_accum = NULL;
   const char *victim_basename;
   svn_skel_t *skel;
   const char *conflict_data;
 
-  victim_basename = svn_dirent_basename(conflict->local_abspath, pool);
-  SVN_ERR(svn_wc__serialize_conflict(&skel, conflict, pool, pool));
-  conflict_data = svn_skel__unparse(skel, pool)->data,
+  victim_basename = svn_dirent_basename(conflict->local_abspath, scratch_pool);
+  SVN_ERR(svn_wc__serialize_conflict(&skel, conflict,
+                                     scratch_pool, scratch_pool));
+  conflict_data = svn_skel__unparse(skel, scratch_pool)->data,
 
-  svn_xml_make_open_tag(log_accum, pool, svn_xml_self_closing,
+  svn_xml_make_open_tag(&log_accum, scratch_pool, svn_xml_self_closing,
                         SVN_WC__LOG_ADD_TREE_CONFLICT,
                         SVN_WC__LOG_ATTR_NAME,
                         victim_basename,
@@ -1322,12 +1218,14 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
                         conflict_data,
                         NULL);
 
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
+                                               scratch_pool));
 }
 
 
 /*** Recursively do log things. ***/
 
+/* */
 static svn_error_t *
 can_be_cleaned(int *wc_format,
                svn_wc__db_t *db,
@@ -1353,6 +1251,7 @@ can_be_cleaned(int *wc_format,
 }
 
 
+/* */
 static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
                  const char *adm_abspath,

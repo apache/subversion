@@ -44,10 +44,10 @@ extern "C" {
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client__obliterate(const char *url,
-                       svn_revnum_t rev,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *pool);
+svn_client__obliterate_path_rev(const char *url,
+                                svn_revnum_t rev,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
 
 
 #ifdef __cplusplus

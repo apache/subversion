@@ -3,7 +3,7 @@
 #  switch_tests.py:  testing `svn switch'.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -1612,6 +1612,11 @@ def mergeinfo_switch_elision(sbox):
     'E/alpha' : Item(status='U '),
     'E/beta'  : Item(status='U '),
     })
+  expected_mergeinfo_output = svntest.wc.State(B_COPY_1_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = svntest.wc.State(B_COPY_1_path, {
+    })
   expected_merge_status = svntest.wc.State(B_COPY_1_path, {
     ''        : Item(status=' M', wc_rev=2),
     'lambda'  : Item(status='  ', wc_rev=2),
@@ -1632,9 +1637,10 @@ def mergeinfo_switch_elision(sbox):
   saved_cwd = os.getcwd()
 
   svntest.actions.run_and_verify_merge(B_COPY_1_path, '2', '4',
-                                       sbox.repo_url + \
-                                       '/A/B',
+                                       sbox.repo_url + '/A/B', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
@@ -1660,6 +1666,11 @@ def mergeinfo_switch_elision(sbox):
     'alpha' : Item(status='U '),
     'beta'  : Item(status='U '),
     })
+  expected_mergeinfo_output = svntest.wc.State(E_COPY_2_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = svntest.wc.State(E_COPY_2_path, {
+    })
   expected_merge_status = svntest.wc.State(E_COPY_2_path, {
     ''      : Item(status=' M', wc_rev=2),
     'alpha' : Item(status='M ', wc_rev=2),
@@ -1674,9 +1685,10 @@ def mergeinfo_switch_elision(sbox):
   saved_cwd = os.getcwd()
 
   svntest.actions.run_and_verify_merge(E_COPY_2_path, '2', '4',
-                                       sbox.repo_url + \
-                                       '/A/B/E',
+                                       sbox.repo_url + '/A/B/E', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
@@ -2320,13 +2332,53 @@ def tree_conflicts_on_switch_1_1(sbox):
   # Update to the target rev.
   expected_status.tweak(wc_rev=3)
 
+  expected_info = {
+    'F/alpha' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .file.*/F/alpha@2'
+        + ' Source right: .file.*/F/alpha@3$',
+    },
+    'DF/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .dir.*/DF/D1@2'
+        + ' Source right: .dir.*/DF/D1@3$',
+    },
+    'DDF/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .dir.*/DDF/D1@2'
+        + ' Source right: .dir.*/DDF/D1@3$',
+    },
+    'D/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .dir.*/D/D1@2'
+        + ' Source right: .dir.*/D/D1@3$',
+    },
+    'DD/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .dir.*/DD/D1@2'
+        + ' Source right: .dir.*/DD/D1@3$',
+    },
+    'DDD/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .dir.*/DDD/D1@2'
+        + ' Source right: .dir.*/DDD/D1@3$',
+    },
+  }
+
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
                         tree_del,
                         leaf_edit,
                         expected_output,
                         expected_disk,
-                        expected_status) ] )
+                        expected_status,
+                        expected_info = expected_info) ] )
 
 
 def tree_conflicts_on_switch_1_2(sbox):
@@ -2372,13 +2424,53 @@ def tree_conflicts_on_switch_1_2(sbox):
                        'DD/D1/D2',
                        'DDD/D1/D2/D3')
 
+  expected_info = {
+    'F/alpha' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .file.*/F/alpha@2'
+        + ' Source right: .none.*/F/alpha@3$',
+    },
+    'DF/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .dir.*/DF/D1@2'
+        + ' Source right: .dir.*/DF/D1@3$',
+    },
+    'DDF/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .dir.*/DDF/D1@2'
+        + ' Source right: .dir.*/DDF/D1@3$',
+    },
+    'D/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/D/D1@2'
+        + ' Source right: .none.*/D/D1@3$',
+    },
+    'DD/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .dir.*/DD/D1@2'
+        + ' Source right: .dir.*/DD/D1@3$',
+    },
+    'DDD/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming edit upon switch'
+        + ' Source  left: .dir.*/DDD/D1@2'
+        + ' Source right: .dir.*/DDD/D1@3$',
+    },
+  }
+
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
                         tree_del,
                         leaf_del,
                         expected_output,
                         expected_disk,
-                        expected_status) ] )
+                        expected_status,
+                        expected_info = expected_info) ] )
 
 
 def tree_conflicts_on_switch_2_1(sbox):
@@ -2413,13 +2505,54 @@ def tree_conflicts_on_switch_2_1(sbox):
     'DDF/D1/D2/gamma',
     copied='+', wc_rev='-')
   expected_status.tweak('', switched='S')
+
+  expected_info = {
+    'F/alpha' : {
+      'Tree conflict' :
+        '^local edit, incoming delete upon switch'
+        + ' Source  left: .file.*/F/alpha@2'
+        + ' Source right: .none.*/F/alpha@3$',
+    },
+    'DF/D1' : {
+      'Tree conflict' :
+        '^local edit, incoming delete upon switch'
+        + ' Source  left: .dir.*/DF/D1@2'
+        + ' Source right: .none.*/DF/D1@3$',
+    },
+    'DDF/D1' : {
+      'Tree conflict' :
+        '^local edit, incoming delete upon switch'
+        + ' Source  left: .dir.*/DDF/D1@2'
+        + ' Source right: .none.*/DDF/D1@3$',
+    },
+    'D/D1' : {
+      'Tree conflict' :
+        '^local edit, incoming delete upon switch'
+        + ' Source  left: .dir.*/D/D1@2'
+        + ' Source right: .none.*/D/D1@3$',
+    },
+    'DD/D1' : {
+      'Tree conflict' :
+        '^local edit, incoming delete upon switch'
+        + ' Source  left: .dir.*/DD/D1@2'
+        + ' Source right: .none.*/DD/D1@3$',
+    },
+    'DDD/D1' : {
+      'Tree conflict' :
+        '^local edit, incoming delete upon switch'
+        + ' Source  left: .dir.*/DDD/D1@2'
+        + ' Source right: .none.*/DDD/D1@3$',
+    },
+  }
+
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
                         tree_del,
                         expected_output,
                         expected_disk,
-                        expected_status) ] )
+                        expected_status,
+                        expected_info = expected_info) ] )
 
 
 def tree_conflicts_on_switch_2_2(sbox):
@@ -2467,13 +2600,53 @@ def tree_conflicts_on_switch_2_2(sbox):
                        'DDF/D1',
                        'DDF/D1/D2',)
 
+  expected_info = {
+    'F/alpha' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .file.*/F/alpha@2'
+        + ' Source right: .none.*/F/alpha@3$',
+    },
+    'DF/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/DF/D1@2'
+        + ' Source right: .none.*/DF/D1@3$',
+    },
+    'DDF/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/DDF/D1@2'
+        + ' Source right: .none.*/DDF/D1@3$',
+    },
+    'D/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/D/D1@2'
+        + ' Source right: .none.*/D/D1@3$',
+    },
+    'DD/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/DD/D1@2'
+        + ' Source right: .none.*/DD/D1@3$',
+    },
+    'DDD/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/DDD/D1@2'
+        + ' Source right: .none.*/DDD/D1@3$',
+    },
+  }
+
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
                         leaf_del,
                         tree_del,
                         expected_output,
                         expected_disk,
-                        expected_status) ] )
+                        expected_status,
+                        expected_info = expected_info) ] )
 
 
 def tree_conflicts_on_switch_3(sbox):
@@ -2516,13 +2689,53 @@ def tree_conflicts_on_switch_3(sbox):
                        'DDF/D1',
                        'DDF/D1/D2',)
 
+  expected_info = {
+    'F/alpha' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .file.*/F/alpha@2'
+        + ' Source right: .none.*/F/alpha@3$',
+    },
+    'DF/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/DF/D1@2'
+        + ' Source right: .none.*/DF/D1@3$',
+    },
+    'DDF/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/DDF/D1@2'
+        + ' Source right: .none.*/DDF/D1@3$',
+    },
+    'D/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/D/D1@2'
+        + ' Source right: .none.*/D/D1@3$',
+    },
+    'DD/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/DD/D1@2'
+        + ' Source right: .none.*/DD/D1@3$',
+    },
+    'DDD/D1' : {
+      'Tree conflict' :
+        '^local delete, incoming delete upon switch'
+        + ' Source  left: .dir.*/DDD/D1@2'
+        + ' Source right: .none.*/DDD/D1@3$',
+    },
+  }
+
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
                         tree_del,
                         tree_del,
                         expected_output,
                         expected_disk,
-                        expected_status) ] )
+                        expected_status,
+                        expected_info = expected_info) ] )
 
 
 def single_file_relocate(sbox):

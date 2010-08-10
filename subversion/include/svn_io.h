@@ -702,7 +702,7 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
  */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
-/* An opaque type which represents a mark on a stream.
+/** An opaque type which represents a mark on a stream.
  *
  * @see svn_stream_mark().
  * @since New in 1.7.
@@ -794,7 +794,7 @@ void
 svn_stream_set_reset(svn_stream_t *stream,
                      svn_io_reset_fn_t reset_fn);
 
-/** Set @a stream's mark function to @a mark_fn 
+/** Set @a stream's mark function to @a mark_fn
  *
  * @since New in 1.7.
  */
@@ -802,7 +802,7 @@ void
 svn_stream_set_mark(svn_stream_t *stream,
                     svn_io_mark_fn_t mark_fn);
 
-/** Set @a stream's seek function to @a seek_fn 
+/** Set @a stream's seek function to @a seek_fn
  *
  * @since New in 1.7.
  */
@@ -1091,7 +1091,7 @@ svn_stream_mark(svn_stream_t *stream,
                 svn_stream_mark_t **mark,
                 apr_pool_t *pool);
 
-/* Seek to a @a mark in a generic @a stream.
+/** Seek to a @a mark in a generic @a stream.
  * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
  * if the stream doesn't implement seeking.
  *
@@ -1235,10 +1235,29 @@ svn_stream_copy(svn_stream_t *from,
 
 
 /** Set @a *same to TRUE if @a stream1 and @a stream2 have the same
- * contents, else set it to FALSE.  Use @a pool for temporary allocations.
+ * contents, else set it to FALSE.
+ *
+ * Both streams will be closed before this function returns (regardless of
+ * the result, or any possible error).
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_contents_same2(svn_boolean_t *same,
+                          svn_stream_t *stream1,
+                          svn_stream_t *stream2,
+                          apr_pool_t *pool);
+
+
+/**
+ * Same as svn_stream_contents_same2(), but the streams will not be closed.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream1,
@@ -1461,15 +1480,15 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
  * Wait for the process @a *cmd_proc to complete and optionally retrieve
  * its exit code.  @a cmd is used only in error messages.
  *
- * If @a exitcode is not NULL, and SVN_NO_ERROR is returned, @a *exitcode
- * will contain the exit code of the process.  If @a exitcode is NULL and
- * the exit code is non-zero, then an #SVN_ERR_EXTERNAL_PROGRAM error
- * will be returned.
+ * If @a exitcode is not NULL, set @a *exitcode to the exit code of the
+ * process and do not consider any exit code to be an error.  If @a exitcode
+ * is NULL, then if the exit code of the process is non-zero then return an
+ * #SVN_ERR_EXTERNAL_PROGRAM error.
  *
- * If @a exitwhy is not NULL, and SVN_NO_ERROR is returned, @a *exitwhy
- * will indicate why the process terminated.  If @a exitwhy is NULL,
- * and the exit reason is not @c APR_PROC_CHECK_EXIT(), then an
- * #SVN_ERR_EXTERNAL_PROGRAM error will be returned.
+ * If @a exitwhy is not NULL, set @a *exitwhy to indicate why the process
+ * terminated and do not consider any reason to be an error.  If @a exitwhy
+ * is NULL, then if the termination reason is not @c APR_PROC_CHECK_EXIT()
+ * then return an #SVN_ERR_EXTERNAL_PROGRAM error.
  *
  * @since New in 1.3.
  */
@@ -1904,7 +1923,7 @@ svn_io_write_version_file(const char *path,
  * @since New in 1.7. */
 svn_error_t *
 svn_io_file_mktemp(apr_file_t **new_file,
-                   char *templ,
+                   const char *templ,
                    apr_int32_t flags,
                    apr_pool_t *pool);
 

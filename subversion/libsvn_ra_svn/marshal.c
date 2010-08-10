@@ -84,7 +84,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
 }
 
 svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
-                                         apr_array_header_t *list)
+                                         const apr_array_header_t *list)
 {
   int i;
   svn_ra_svn_item_t *item;
@@ -679,7 +679,7 @@ svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
 
 /* Parse a tuple of svn_ra_svn_item_t *'s.  Advance *FMT to the end of the
  * tuple specification and advance AP by the corresponding arguments. */
-static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
+static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *pool,
                                  const char **fmt, va_list *ap)
 {
   int count, nesting_level;
@@ -775,7 +775,7 @@ static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
+svn_error_t *svn_ra_svn_parse_tuple(const apr_array_header_t *list,
                                     apr_pool_t *pool,
                                     const char *fmt, ...)
 {
@@ -805,7 +805,7 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return err;
 }
 
-svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
+svn_error_t *svn_ra_svn_parse_proplist(const apr_array_header_t *list,
                                        apr_pool_t *pool,
                                        apr_hash_t **props)
 {
@@ -831,7 +831,7 @@ svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
 
 /* --- READING AND WRITING COMMANDS AND RESPONSES --- */
 
-svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
+svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
                                                apr_pool_t *pool)
 {
   const char *message, *file;

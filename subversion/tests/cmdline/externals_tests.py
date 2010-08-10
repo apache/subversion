@@ -3,7 +3,7 @@
 #  module_tests.py:  testing modules / external sources.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -1348,7 +1348,7 @@ def switch_relative_external(sbox):
                                      '--quiet', wc_dir)
 
   # Okay.  We now want to switch A to A_copy, which *should* cause
-  # A/D/ext to point to the URL for A_copy/D/ext.
+  # A/D/ext to point to the URL for A_copy/B (instead of A/B).
   svntest.actions.run_and_verify_svn(None, None, [], 'sw',
                                      '--quiet', A_copy_url, A_path)
 
@@ -1583,7 +1583,7 @@ test_list = [ None,
               external_into_path_with_spaces,
               binary_file_externals,
               XFail(update_lose_file_external),
-              XFail(switch_relative_external),
+              switch_relative_external,
               export_sparse_wc_with_externals,
               relegate_external,
               wc_repos_file_externals,

@@ -219,8 +219,8 @@ push_dir_info(svn_ra_session_t *ra_session,
     {
       const char *path, *URL, *fs_path;
       svn_lock_t *lock;
-      const char *name = svn_apr_hash_index_key(hi);
-      svn_dirent_t *the_ent = svn_apr_hash_index_val(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      svn_dirent_t *the_ent = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
 

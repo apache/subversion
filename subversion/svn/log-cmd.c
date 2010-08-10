@@ -367,8 +367,8 @@ log_entry_receiver_xml(void *baton,
            hi != NULL;
            hi = apr_hash_next(hi))
         {
-          const char *path = svn_apr_hash_index_key(hi);
-          svn_log_changed_path2_t *log_item = svn_apr_hash_index_val(hi);
+          const char *path = svn__apr_hash_index_key(hi);
+          svn_log_changed_path2_t *log_item = svn__apr_hash_index_val(hi);
           char action[2];
 
           action[0] = log_item->action;
@@ -545,8 +545,8 @@ svn_cl__log(apr_getopt_t *os,
                hi != NULL;
                hi = apr_hash_next(hi))
             {
-              const char *property = svn_apr_hash_index_key(hi);
-              svn_string_t *value = svn_apr_hash_index_val(hi);
+              const char *property = svn__apr_hash_index_key(hi);
+              svn_string_t *value = svn__apr_hash_index_val(hi);
 
               if (value && value->data[0] != '\0')
                 return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,

@@ -199,19 +199,19 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
 
   /* Establish a security context to the server. */
   maj_stat = gss_init_sec_context
-    (&min_stat,		        /* minor_status */
-     GSS_C_NO_CREDENTIAL,	/* XXXXX claimant_cred_handle */
-     &gss_api_ctx->gss_ctx,    	/* gssapi context handle */
-     host_gss_name,    		/* HTTP@server name */
-     gss_api_ctx->mech,	        /* mech_type (0 ininitially */
+    (&min_stat,                 /* minor_status */
+     GSS_C_NO_CREDENTIAL,       /* XXXXX claimant_cred_handle */
+     &gss_api_ctx->gss_ctx,     /* gssapi context handle */
+     host_gss_name,             /* HTTP@server name */
+     gss_api_ctx->mech,         /* mech_type (0 ininitially */
      GSS_C_MUTUAL_FLAG,         /* ensure the peer authenticates itself */
-     0,       	                /* default validity period */
+     0,                         /* default validity period */
      GSS_C_NO_CHANNEL_BINDINGS, /* do not use channel bindings */
      &input_buf,                /* server token, initially empty */
      &gss_api_ctx->mech,        /* actual mech type */
-     &output_buf,		/* output_token */
-     NULL,         		/* ret_flags */
-     NULL		        /* not interested in remaining validity */
+     &output_buf,               /* output_token */
+     NULL,                      /* ret_flags */
+     NULL                       /* not interested in remaining validity */
      );
 
   if(GSS_ERROR(maj_stat))

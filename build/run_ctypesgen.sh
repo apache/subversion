@@ -61,7 +61,7 @@ cpp="`$apr_config --cpp`"
 ### end
 
 cppflags="$apr_cppflags $apu_cppflags -I$svn_includes"
-ldflags="$apr_ldflags $apu_ldflags -L$svn_libdir $EXTRA_CTYPES_LDFLAGS"
+ldflags="-L$svn_libdir $apr_ldflags $apu_ldflags $EXTRA_CTYPES_LDFLAGS"
 
 
 # This order is important. The resulting stubs will load libraries in
@@ -84,6 +84,6 @@ echo $LT_EXECUTE $PYTHON $CTYPESGEN --cpp "$cpp $CPPFLAGS $cppflags" $ldflags $i
 $LT_EXECUTE $PYTHON $CTYPESGEN --cpp "$cpp $CPPFLAGS $cppflags" $ldflags $includes -o $output --no-macro-warnings --strip-build-path=$abs_srcdir
 
 (cat $abs_srcdir/$cp_relpath/csvn/core/functions.py.in; \
- sed -e '/^FILE =/d' \
-     -e 's/restype = POINTER(svn_error_t)/restype = SVN_ERR/' $output \
+ sed -e '/^FILE =/d' $output | \
+ perl -pe 's{(\s+\w+)\.restype = POINTER\(svn_error_t\)}{\1.restype = POINTER(svn_error_t)\n\1.errcheck = _svn_errcheck}' \
  ) > $abs_builddir/$cp_relpath/csvn/core/functions.py

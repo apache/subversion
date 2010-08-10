@@ -27,6 +27,7 @@
 #include "RevpropTable.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
+#include "Array.h"
 #include <apr_tables.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
@@ -93,21 +94,6 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
       if (JNIUtil::isExceptionThrown())
         return;
 
-      jclass setClazz = env->FindClass("java/util/Set");
-
-      if (toArray == 0)
-        {
-          toArray = env->GetMethodID(setClazz, "toArray",
-                                    "()[Ljava/lang/Object;");
-          if (JNIUtil::isExceptionThrown())
-            return;
-        }
-
-      jobjectArray jkeyArray = (jobjectArray) env->CallObjectMethod(jkeySet,
-                                                                    toArray);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
       if (get == 0)
         {
           get = env->GetMethodID(mapClazz, "get",
@@ -116,22 +102,17 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
             return;
         }
 
-      jint arraySize = env->GetArrayLength(jkeyArray);
-      if (JNIUtil::isExceptionThrown())
-        return;
+      Array keyArray(jkeySet);
+      std::vector<jobject> keys = keyArray.vector();
 
-      for (int i = 0; i < arraySize; ++i)
+      for (std::vector<jobject>::const_iterator it = keys.begin();
+            it < keys.end(); ++it)
         {
-          jobject jpropname = env->GetObjectArrayElement(jkeyArray, i);
+          JNIStringHolder propname((jstring)*it);
           if (JNIUtil::isExceptionThrown())
             return;
 
-          JNIStringHolder propname((jstring)jpropname);
-          if (JNIUtil::isExceptionThrown())
-            return;
-
-          jobject jpropval = env->CallObjectMethod(jrevpropTable, get,
-                                                   jpropname);
+          jobject jpropval = env->CallObjectMethod(jrevpropTable, get, *it);
           if (JNIUtil::isExceptionThrown())
             return;
 
@@ -142,20 +123,12 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
           m_revprops[std::string((const char *)propname)]
             = std::string((const char *)propval);
 
-          JNIUtil::getEnv()->DeleteLocalRef(jpropname);
-          if (JNIUtil::isExceptionThrown())
-            return;
-
           JNIUtil::getEnv()->DeleteLocalRef(jpropval);
           if (JNIUtil::isExceptionThrown())
             return;
         }
 
       JNIUtil::getEnv()->DeleteLocalRef(jkeySet);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      JNIUtil::getEnv()->DeleteLocalRef(jkeyArray);
       if (JNIUtil::isExceptionThrown())
         return;
     }

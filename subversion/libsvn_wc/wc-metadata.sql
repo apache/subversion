@@ -22,24 +22,26 @@
  */
 
 /*
- * the KIND column in these tables has one of the following values:
+ * the KIND column in these tables has one of the following values
+ * (documented in the corresponding C type #svn_wc__db_kind_t):
  *   "file"
  *   "dir"
  *   "symlink"
  *   "unknown"
  *   "subdir"
  *
- * the PRESENCE column in these tables has one of the following values:
+ * the PRESENCE column in these tables has one of the following values
+ * (see also the C type #svn_wc__db_status_t):
  *   "normal"
  *   "absent" -- server has declared it "absent" (ie. authz failure)
- *   "excluded" -- administratively excluded
+ *   "excluded" -- administratively excluded (ie. sparse WC)
  *   "not-present" -- node not present at this REV
  *   "incomplete" -- state hasn't been filled in
  *   "base-deleted" -- node represents a delete of a BASE node
  */
 
-/* All the SQL below is for format 12: SVN_WC__WC_NG_VERSION  */
--- format: 12
+/* One big list of statements to create our (current) schema.  */
+-- STMT_CREATE_SCHEMA
 
 /* ------------------------------------------------------------------------- */
 
@@ -82,9 +84,9 @@ CREATE TABLE BASE_NODE (
   local_relpath  TEXT NOT NULL,
 
   /* the repository this node is part of, and the relative path [to its
-     root] within that repository.  these may be NULL, implying it should
-     be derived from the parent and local_relpath.  non-NULL typically
-     indicates a switched node.
+     root] within revision "revnum" of that repository.  These may be NULL,
+     implying they should be derived from the parent and local_relpath.
+     Non-NULL typically indicates a switched node.
 
      Note: they must both be NULL, or both non-NULL. */
   repos_id  INTEGER REFERENCES REPOSITORY (id),
@@ -99,25 +101,32 @@ CREATE TABLE BASE_NODE (
      The "base-deleted" presence value is not allowed.  */
   presence  TEXT NOT NULL,
 
-  /* what kind of node is this? may be "unknown" if the node is not present */
+  /* The node kind: "file", "dir", or "symlink", or "unknown" if the node is
+     not present. */
   kind  TEXT NOT NULL,
 
-  /* this could be NULL for non-present nodes -- no info. */
+  /* The revision number in which "repos_relpath" applies in "repos_id".
+     this could be NULL for non-present nodes -- no info. */
   revnum  INTEGER,
 
-  /* if this node is a file, then the checksum and its translated size
-     (given the properties on this file) are specified by the following
-     two fields. translated_size may be NULL if the size has not (yet)
-     been computed. The kind of checksum (e.g. SHA-1, MD5) is stored in the
-     value */
+  /* If this node is a file, then the SHA-1 checksum of the pristine text. */
   checksum  TEXT,
+
+  /* The size in bytes of the working file when it had no local text
+     modifications. This means the size of the text when translated from
+     repository-normal format to working copy format with EOL style
+     translated and keywords expanded according to the properties in the
+     "properties" column of this row.
+
+     NULL if this node is not a file or if the size has not (yet) been
+     computed. */
   translated_size  INTEGER,
 
   /* Information about the last change to this node. changed_rev must be
      not-null if this node has presence=="normal". changed_date and
      changed_author may be null if the corresponding revprops are missing.
 
-     All three values may be null for non-present nodes.  */
+     All three values are null for a not-present node.  */
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
@@ -163,38 +172,72 @@ CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
-/* ### BH: Will CHECKSUM be the same key as used for indexing a file in the
-           Pristine store? If that key is SHA-1 we might need an alternative
-           MD5 checksum column on this table to use with the current delta
-           editors that don't understand SHA-1. */
+
+/* The PRISTINE table keeps track of pristine texts. Each pristine text is
+   stored in a file which may be compressed. Each pristine text is
+   referenced by any number of rows in the BASE_NODE and WORKING_NODE
+   and ACTUAL_NODE tables.
+ */
 CREATE TABLE PRISTINE (
-  /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
+  /* The SHA-1 checksum of the pristine text. This is a unique key. The
+     SHA-1 checksum of a pristine text is assumed to be unique among all
+     pristine texts referenced from this database. */
   checksum  TEXT NOT NULL PRIMARY KEY,
 
   /* ### enumerated values specifying type of compression. NULL implies
      ### that no compression has been applied. */
   compression  INTEGER,
 
+  /* The size in bytes of the file in which the pristine text is stored. */
   /* ### used to verify the pristine file is "proper". NULL if unknown,
      ### and (thus) the pristine copy is incomplete/unusable. */
   size  INTEGER,
 
   /* ### this will probably go away, in favor of counting references
      ### that exist in BASE_NODE and WORKING_NODE. */
-  refcount  INTEGER NOT NULL
+  refcount  INTEGER NOT NULL,
+
+  /* Alternative MD5 checksum used for communicating with older
+     repositories. Not guaranteed to be unique among table rows.
+     NULL if not (yet) calculated. */
+  md5_checksum  TEXT
   );
 
 
 /* ------------------------------------------------------------------------- */
 
+/* The WORKING_NODE table describes tree changes in the WC relative to the
+   BASE_NODE table.
+
+   The WORKING_NODE row for a given path exists iff a node at this path
+   is itself one of:
+
+     - deleted
+     - moved away [1]
+
+   and/or one of:
+
+     - added
+     - copied here [1]
+     - moved here [1]
+
+   or if this path is a child (or grandchild, etc.) under any such node.
+   (### Exact meaning of "child" when mixed-revision, switched, etc.?)
+
+   [1] The WC-NG "move" operation requires that both the source and
+   destination paths are represented in the BASE_NODE and WORKING_NODE
+   tables. The "copy" operation takes as its source a repository node,
+   regardless whether that node is also represented in the WC.
+ */
 CREATE TABLE WORKING_NODE (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot. NULL if this is the
-     wcroot node. */
+     this will be "" if the parent is the wcroot.  Since a wcroot will
+     never have a WORKING node the parent_relpath will never be null. */
+  /* ### would be nice to make this column NOT NULL.  */
   parent_relpath  TEXT,
 
   /* Is this node "present" or has it been excluded for some reason?
@@ -208,7 +251,7 @@ CREATE TABLE WORKING_NODE (
 
      not-present: the node (or parent) was originally copied or moved-here.
        A subtree of that source has since been deleted. There may be
-       underlying BASE node to replace. For an add-without-history, the
+       underlying BASE node to replace. For a move-here or copy-here, the
        records are simply removed rather than switched to not-present.
        Note this reflects a deletion only. It is not possible move-away
        nodes from the WORKING tree. The purported destination would receive
@@ -219,25 +262,33 @@ CREATE TABLE WORKING_NODE (
      incomplete: nodes are being added into the WORKING tree, and the full
        information about this node is not (yet) present.
 
-     base-delete: the underlying BASE node has been marked for deletion due
-       to a delete or a move-away (see the moved_to column to determine).  */
+     base-deleted: the underlying BASE node has been marked for deletion due
+       to a delete or a move-away (see the moved_to column to determine
+       which), and has not been replaced.  */
   presence  TEXT NOT NULL,
 
   /* the kind of the new node. may be "unknown" if the node is not present. */
   kind  TEXT NOT NULL,
 
-  /* if this node was added-with-history AND is a file, then the checksum
-     and its translated size (given the properties on this file) are
-     specified by the following two fields. translated_size may be NULL
-     if the size has not (yet) been computed. */
+  /* The SHA-1 checksum of the pristine text, if this node is a file and was
+     moved here or copied here, else NULL. */
   checksum  TEXT,
+
+  /* The size in bytes of the working file when it had no local text
+     modifications. This means the size of the text when translated from
+     repository-normal format to working copy format with EOL style
+     translated and keywords expanded according to the properties in the
+     "properties" column of this row.
+
+     NULL if this node is not a file, or is not moved here or copied here,
+     or if the size has not (yet) been computed. */
   translated_size  INTEGER,
 
-  /* If this node was added-with-history, then the following fields may
+  /* If this node was moved here or copied here, then the following fields may
      have information about their source node. See BASE_NODE.changed_* for
      more information.
 
-     For added or not-present nodes, these may be null.  */
+     For an added or not-present node, these are null.  */
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
@@ -252,23 +303,25 @@ CREATE TABLE WORKING_NODE (
   /* for kind==symlink, this specifies the target. */
   symlink_target  TEXT,
 
-  /* Where this node was copied/moved from. Set only on the root of the
-     operation, and implied for all children. */
+  /* Where this node was copied/moved from. All copyfrom_* fields are set
+     only on the root of the operation, and are NULL for all children. */
   copyfrom_repos_id  INTEGER REFERENCES REPOSITORY (id),
-  /* ### BH: Should we call this copyfrom_repos_relpath and skip the initial '/'
-     ### to match the other repository paths used in sqlite and to make it easier
-     ### to join these paths? */
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
+
+  /* ### JF: For an old-style move, "copyfrom" info stores its source, but a
+     new WC-NG "move" is intended to be a "true rename" so its copyfrom
+     revision is implicit, being in effect (new head - 1) at commit time.
+     For a (new) move, we need to store or deduce the copyfrom local-relpath;
+     perhaps add a column called "moved_from". */
 
   /* Boolean value, specifying if this node was moved here (rather than just
      copied). The source of the move is specified in copyfrom_*.  */
   moved_here  INTEGER,
 
-  /* If the underlying node was moved (rather than just deleted), this
+  /* If the underlying node was moved away (rather than just deleted), this
      specifies the local_relpath of where the BASE node was moved to.
-     This is set only on the root of a move, and implied for all children.
-     The whole moved subtree is marked with presence=base-deleted
+     This is set only on the root of a move, and is NULL for all children.
 
      Note that moved_to never refers to *this* node. It always refers
      to the "underlying" node, whether that is BASE or a child node
@@ -280,7 +333,7 @@ CREATE TABLE WORKING_NODE (
      ### question which is better answered some other way. */
   last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
-  /* serialized skel of this node's properties. could be NULL if we
+  /* serialized skel of this node's properties. NULL if we
      have no information about the properties (a non-present node). */
   properties  BLOB,
 
@@ -303,6 +356,22 @@ CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 
 /* ------------------------------------------------------------------------- */
 
+/* The ACTUAL_NODE table describes text changes and property changes on each
+   node in the WC, relative to the WORKING_NODE table row for the same path
+   (if present) or else to the BASE_NODE row for the same path.  (Either a
+   WORKING_NODE row or a BASE_NODE row must exist if this node exists, but
+   an ACTUAL_NODE row can exist on its own if it is just recording info on
+   a non-present node - a tree conflict or a changelist, for example.)
+
+   The ACTUAL_NODE table row for a given path exists if the node at that
+   path is known to have text or property changes relative to its
+   WORKING_NODE row. ("Is known" because a text change on disk may not yet
+   have been discovered and recorded here.)
+
+   The ACTUAL_NODE table row for a given path may also exist in other cases,
+   including if the "changelist" or any of the conflict columns have a
+   non-null value.
+ */
 CREATE TABLE ACTUAL_NODE (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
@@ -318,20 +387,7 @@ CREATE TABLE ACTUAL_NODE (
   properties  BLOB,
 
   /* basenames of the conflict files. */
-  /* ### do we want to record the revnums which caused this?  
-     ### BH: Yes, probably urls too if it is caused by a merge. Preferably
-     ###     the same info as currently passed to the interactive conflict
-     ###     handler. I would like url@rev for left, right and original, but
-     ###     some of those are available in other ways. Refer to repository
-     ###     table instead of full urls? .*/
-  /* ### also, shouldn't these be local_relpaths too?
-     ### they aren't currently, but that would be more consistent with other
-     ### columns. (though it would require a format bump). */
-  /* ### BH: Shouldn't we move all these into the new CONFLICT_VICTIM table? */
-  /* ### HKW: I think so.  These columns pre-date that table, and are just
-     ###      a mapping from svn_wc_entry_t.  I haven't thought about how the
-     ###      CONFLICT_VICTIM table would need to be extended for this, though.
-     ###      (may want do to that before the f13 bump, if possible) */
+  /* ### These columns will eventually be merged into conflict_data below. */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
@@ -346,8 +402,23 @@ CREATE TABLE ACTUAL_NODE (
   text_mod  TEXT,
 
   /* if a directory, serialized data for all of tree conflicts therein.
-     removed in format 13, in favor of the CONFLICT_VICTIM table*/
+     ### This column will eventually be merged into the conflict_data column,
+     ### but within the ACTUAL node of the tree conflict victim itself, rather
+     ### than the node of the tree conflict victim's parent directory. */
   tree_conflict_data  TEXT,
+
+  /* A skel containing the conflict details.  */
+  conflict_data  BLOB,
+
+  /* Three columns containing the checksums of older, left and right conflict
+     texts.  Stored in a column to allow storing them in the pristine store  */
+  /* stsp: This is meant for text conflicts, right? What about property
+           conflicts? Why do we need these in a column to refer to the
+           pristine store? Can't we just parse the checksums from
+           conflict_data as well? */
+  older_checksum  TEXT,
+  left_checksum  TEXT,
+  right_checksum  TEXT,
 
   PRIMARY KEY (wc_id, local_relpath)
   );
@@ -382,9 +453,37 @@ CREATE TABLE LOCK (
 
 /* ------------------------------------------------------------------------- */
 
+CREATE TABLE WORK_QUEUE (
+  /* Work items are identified by this value.  */
+  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  /* A serialized skel specifying the work item.  */
+  work  BLOB NOT NULL
+  );
+
+
+/* ------------------------------------------------------------------------- */
+
+CREATE TABLE WC_LOCK (
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER NOT NULL  REFERENCES WCROOT (id),
+  local_dir_relpath  TEXT NOT NULL,
+
+  locked_levels  INTEGER NOT NULL DEFAULT -1,
+
+  PRIMARY KEY (wc_id, local_dir_relpath)
+ );
+
+
+PRAGMA user_version = 16;
+
+
+/* ------------------------------------------------------------------------- */
+
 /* Format 13 introduces the work queue, and erases a few columns from the
    original schema.  */
--- format: 13
+-- STMT_UPGRADE_TO_13
+
 CREATE TABLE WORK_QUEUE (
   /* Work items are identified by this value.  */
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -397,11 +496,14 @@ CREATE TABLE WORK_QUEUE (
    erase anything there.  */
 UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
 
+PRAGMA user_version = 13;
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Format 14 introduces a table for storing wc locks, and additional columns
    for storing conflict data in ACTUAL. */
--- format: 14
+-- STMT_UPGRADE_TO_14
 
 /* The existence of a row in this table implies a write lock. */
 CREATE TABLE WC_LOCK (
@@ -427,10 +529,13 @@ ADD COLUMN left_checksum  TEXT;
 ALTER TABLE ACTUAL_NODE
 ADD COLUMN right_checksum  TEXT;
 
+PRAGMA user_version = 14;
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Format 15 introduces new handling for excluded nodes.  */
--- format: 15
+-- STMT_UPGRADE_TO_15
 
 UPDATE base_node
 SET
@@ -454,10 +559,13 @@ SET
   last_mod_time = NULL, properties = NULL, keep_local = NULL
 WHERE depth = 'exclude';
 
+PRAGMA user_version = 15;
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Format 16 introduces some new columns for pristines and locks.  */
--- format: 16
+-- STMT_UPGRADE_TO_16
 
 /* An md5 column for the pristine table. */
 ALTER TABLE PRISTINE
@@ -465,11 +573,13 @@ ADD COLUMN md5_checksum  TEXT;
 
 /* Add the locked_levels column to record the depth of a lock. */
 ALTER TABLE WC_LOCK
-ADD COLUMN locked_levels INTEGER NOT NULL DEFAULT -1;;
+ADD COLUMN locked_levels  INTEGER NOT NULL DEFAULT -1;
 
 /* Default the depth of existing locks to 0. */
 UPDATE wc_lock
 SET locked_levels = 0;
+
+PRAGMA user_version = 16;
 
 
 /* ------------------------------------------------------------------------- */

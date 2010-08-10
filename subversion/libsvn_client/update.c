@@ -79,19 +79,21 @@ file_fetcher(void *baton,
 }
 
 
-svn_error_t *
-svn_client__update_internal(svn_revnum_t *result_rev,
-                            const char *path,
-                            const svn_opt_revision_t *revision,
-                            svn_depth_t depth,
-                            svn_boolean_t depth_is_sticky,
-                            svn_boolean_t ignore_externals,
-                            svn_boolean_t allow_unver_obstructions,
-                            svn_boolean_t *timestamp_sleep,
-                            svn_boolean_t send_copyfrom_args,
-                            svn_boolean_t innerupdate,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool)
+static svn_error_t *
+update_internal(svn_revnum_t *result_rev,
+                const char *path,
+                const char *local_abspath,
+                const char *anchor_abspath,
+                const svn_opt_revision_t *revision,
+                svn_depth_t depth,
+                svn_boolean_t depth_is_sticky,
+                svn_boolean_t ignore_externals,
+                svn_boolean_t allow_unver_obstructions,
+                svn_boolean_t *timestamp_sleep,
+                svn_boolean_t send_copyfrom_args,
+                svn_boolean_t innerupdate,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
@@ -102,19 +104,15 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
-  svn_wc_adm_access_t *adm_access;
   svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *diff3_cmd;
   svn_ra_session_t *ra_session;
-  svn_wc_adm_access_t *dir_access;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct ff_baton *ffb;
-  const char *local_abspath;
-  const char *anchor_abspath;
+  svn_client__external_func_baton_t efb;
   svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
@@ -124,44 +122,18 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
 
-  /* Sanity check.  Without this, the update is meaningless. */
-  SVN_ERR_ASSERT(path);
-
-  if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                             _("Path '%s' is not a directory"),
-                             path);
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  if (!innerupdate)
+  if (strcmp(local_abspath, anchor_abspath))
     {
-      /* Use PATH to get the update's anchor and targets and get a write lock.
-       */
-      SVN_ERR(svn_wc__adm_open_anchor_in_context(&adm_access, &dir_access,
-                                                 &target, ctx->wc_ctx, path,
-                                                 TRUE,
-                                                 -1, /* recursive lock */
-                                                 ctx->cancel_func,
-                                                 ctx->cancel_baton, pool));
+      target = svn_dirent_basename(local_abspath, pool);
+      anchor = svn_dirent_basename(path, pool);
     }
   else
     {
-      /* Assume the exact root is specified (required for externals to work,
-         as these would otherwise try to open the parent working copy again) */
-      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE,
-                                          -1, /* recursive lock */
-                                          ctx->cancel_func, ctx->cancel_baton,
-                                          pool));
-      dir_access = adm_access;
       target = "";
+      anchor = path;
     }
 
-  anchor = svn_wc_adm_access_path(adm_access);
-  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
-
   /* Get full URL from the ANCHOR. */
-
   SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
                                pool, pool));
   if (! anchor_url)
@@ -183,7 +155,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                  pool));
 
           /* Target excluded, we are done now */
-          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+          SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath,
+                                             pool));
 
           return SVN_NO_ERROR;
         }
@@ -239,19 +212,25 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   ffb->repos_root = repos_root;
   ffb->pool = pool;
 
+  /* Build a baton for the externals-info-gatherer callback. */
+  efb.externals_new = apr_hash_make(pool);
+  efb.externals_old = apr_hash_make(pool);
+  efb.ambient_depths = apr_hash_make(pool);
+  efb.result_pool = pool;
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
-  SVN_ERR(svn_wc_get_update_editor3(&revnum, adm_access, target,
-                                    use_commit_times, depth, depth_is_sticky,
-                                    allow_unver_obstructions,
-                                    ctx->notify_func2, ctx->notify_baton2,
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    ctx->conflict_func, ctx->conflict_baton,
-                                    file_fetcher, ffb,
+  SVN_ERR(svn_wc_get_update_editor4(&update_editor, &update_edit_baton,
+                                    &revnum, ctx->wc_ctx, anchor_abspath,
+                                    target, use_commit_times, depth,
+                                    depth_is_sticky, allow_unver_obstructions,
                                     diff3_cmd, preserved_exts,
-                                    &update_editor, &update_edit_baton,
-                                    traversal_info,
-                                    pool));
+                                    file_fetcher, ffb,
+                                    ctx->conflict_func, ctx->conflict_baton,
+                                    svn_client__external_info_gatherer, &efb,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    pool, pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
@@ -269,12 +248,13 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
-  err = svn_wc_crawl_revisions4(path, dir_access, reporter, report_baton,
-                                TRUE, depth, (! depth_is_sticky),
+  err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
+                                report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
                                 use_commit_times,
-                                ctx->notify_func2, ctx->notify_baton2,
-                                traversal_info, pool);
+                                svn_client__external_info_gatherer,
+                                &efb, ctx->notify_func2, ctx->notify_baton2,
+                                pool);
 
   if (err)
     {
@@ -290,21 +270,18 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
-      apr_hash_t *externals_old, *externals_new, *ambient_depths;
-
-      svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
-      svn_wc_traversed_depths(&ambient_depths, traversal_info);
-
-      SVN_ERR(svn_client__handle_externals(adm_access, externals_old,
-                                           externals_new, ambient_depths,
-                                           anchor_url, anchor, repos_root,
+      SVN_ERR(svn_client__handle_externals(efb.externals_old,
+                                           efb.externals_new,
+                                           efb.ambient_depths,
+                                           anchor_url, anchor,
+                                           repos_root,
                                            depth, use_sleep, ctx, pool));
     }
 
   if (sleep_here)
     svn_io_sleep_for_timestamps(path, pool);
 
-  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+  SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
@@ -325,6 +302,56 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_client__update_internal(svn_revnum_t *result_rev,
+                            const char *path,
+                            const svn_opt_revision_t *revision,
+                            svn_depth_t depth,
+                            svn_boolean_t depth_is_sticky,
+                            svn_boolean_t ignore_externals,
+                            svn_boolean_t allow_unver_obstructions,
+                            svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t innerupdate,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
+{
+  const char *local_abspath, *anchor_abspath;
+  svn_error_t *err1, *err2;
+
+  SVN_ERR_ASSERT(path);
+
+  if (svn_path_is_url(path))
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                             _("Path '%s' is not a directory"),
+                             path);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  if (!innerupdate)
+    {
+      SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath, ctx->wc_ctx,
+                                         local_abspath, pool, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx,
+                                         local_abspath, pool, pool));
+      anchor_abspath = local_abspath;
+    }
+
+  err1 = update_internal(result_rev, path, local_abspath, anchor_abspath,
+                         revision, depth, depth_is_sticky,
+                         ignore_externals, allow_unver_obstructions,
+                         timestamp_sleep, send_copyfrom_args,
+                         innerupdate, ctx, pool);
+
+  err2 = svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool);
+
+  return svn_error_compose_create(err1, err2);
+}
+
 
 svn_error_t *
 svn_client_update3(apr_array_header_t **result_revs,
@@ -366,7 +393,7 @@ svn_client_update3(apr_array_header_t **result_revs,
         }
       else if (err)
         {
-          /* SVN_ERR_WC_NOT_DIRECTORY: it's not versioned */
+          /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
           svn_error_clear(err);
           err = SVN_NO_ERROR;
           result_rev = SVN_INVALID_REVNUM;

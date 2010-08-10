@@ -207,7 +207,7 @@ svn_error_t *svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
 /* Change transaction properties in transaction TXN based on PROPS.
    Perform temporary allocations from POOL. */
 svn_error_t *svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
-                                         apr_array_header_t *props,
+                                         const apr_array_header_t *props,
                                          apr_pool_t *pool);
 
 /* Return whether or not the given FS supports mergeinfo metadata. */

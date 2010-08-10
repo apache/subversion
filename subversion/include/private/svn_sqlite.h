@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_checksum.h"
 #include "svn_error.h"
 
 #include "private/svn_token.h"  /* for svn_token_map_t  */
@@ -70,7 +71,8 @@ svn_error_t *
 svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 
 /* Perform an an update/delete an then return the number of affected rows.
-   *AFFECTED_ROWS will be set to the number of rows changed.
+   If AFFECTED_ROWS is not NULL, then *AFFECTED_ROWS will be set to the
+   number of rows changed.
    STMT will be reset prior to returning. */
 svn_error_t *
 svn_sqlite__update(int *affected_rows, svn_sqlite__stmt_t *stmt);
@@ -120,6 +122,10 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db);
 
+/* Execute the (multiple) statements in the STATEMENTS[STMT_IDX] string.  */
+svn_error_t *
+svn_sqlite__exec_statements(svn_sqlite__db_t *db, int stmt_idx);
+
 /* Returns the statement in *STMT which has been prepared from the
    STATEMENTS[STMT_IDX] string.  This statement is allocated in the same
    pool as the DB, and will be cleaned up with DB is closed. */
@@ -145,7 +151,7 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
    Spec  Argument type       Item type
    ----  -----------------   ---------
    i     apr_int64_t         Number
-   s     const char **       String
+   s     const char *        String
    b     const void *        Blob data
          apr_size_t          Blob length
    t     const svn_token_t * Token mapping table

@@ -57,7 +57,7 @@ typedef struct
 
   /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
-  apr_array_header_t *commit_items;
+  const apr_array_header_t *commit_items;
 
   /* A client context. */
   svn_client_ctx_t *ctx;
@@ -290,7 +290,7 @@ svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir,
-                                     apr_array_header_t *commit_items,
+                                     const apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
                                      svn_client_ctx_t *ctx,
@@ -322,11 +322,22 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   if (base_dir)
     {
       const char *base_dir_abspath;
+      svn_error_t *err;
 
       SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
-      SVN_ERR(svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
-                                          base_dir_abspath, FALSE,
-                                          pool, pool));
+      err = svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
+                                        base_dir_abspath, FALSE,
+                                        pool, pool);
+
+      if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
+                  || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                  || err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
+        {
+          svn_error_clear(err);
+          uuid = NULL;
+        }
+      else
+        SVN_ERR(err);
     }
 
   return svn_error_return(svn_ra_open3(ra_session, base_url, uuid, cbtable, cb,
@@ -383,6 +394,17 @@ svn_client_uuid_from_path2(const char **uuid,
 
 
 
+
+/* Convert a path or URL for display: if it is a local path, convert it to
+ * the local path style; if it is a URL, return it unchanged. */
+static const char *
+path_or_url_local_style(const char *path_or_url,
+                        apr_pool_t *pool)
+{
+  if (svn_path_is_url(path_or_url))
+    return path_or_url;
+  return svn_dirent_local_style(path_or_url, pool);
+}
 
 svn_error_t *
 svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
@@ -664,7 +686,7 @@ svn_client__repos_locations(const char **start_url,
     return svn_error_createf
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("Unable to find repository location for '%s' in revision %ld"),
-       svn_dirent_local_style(path, pool), start_revnum);
+       path_or_url_local_style(path, pool), start_revnum);
 
   end_path = apr_hash_get(rev_locs, &end_revnum, sizeof(svn_revnum_t));
   if (! end_path)
@@ -672,7 +694,7 @@ svn_client__repos_locations(const char **start_url,
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("The location for '%s' for revision %ld does not exist in the "
          "repository or refers to an unrelated object"),
-       svn_dirent_local_style(path, pool), end_revnum);
+       path_or_url_local_style(path, pool), end_revnum);
 
   /* Repository paths might be absolute, but we want to treat them as
      relative.
@@ -732,9 +754,9 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
      remembering the youngest matching location. */
   for (hi = apr_hash_first(pool, history1); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn_apr_hash_index_key(hi);
-      apr_ssize_t path_len = svn_apr_hash_index_klen(hi);
-      apr_array_header_t *ranges1 = svn_apr_hash_index_val(hi);
+      const char *path = svn__apr_hash_index_key(hi);
+      apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
+      apr_array_header_t *ranges1 = svn__apr_hash_index_val(hi);
       apr_array_header_t *ranges2, *common;
 
       ranges2 = apr_hash_get(history2, path, path_len);

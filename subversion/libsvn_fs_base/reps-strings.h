@@ -38,14 +38,14 @@ extern "C" {
 
 
 
-/* Get or create a mutable representation in FS, store the new rep's
-   key in *NEW_REP_KEY.
+/* Get or create a mutable representation in FS, and set *NEW_REP_KEY to its
+   key.
 
    TXN_ID is the id of the Subversion transaction under which this occurs.
 
-   If REP_KEY is already a mutable representation, set *NEW_REP_KEY to
-   REP_KEY, else set *NEW_REP_KEY to a brand new rep key allocated in
-   POOL. */
+   If REP_KEY is not null and is already a mutable representation, set
+   *NEW_REP_KEY to REP_KEY, else create a brand new rep and set *NEW_REP_KEY
+   to its key, allocated in POOL. */
 svn_error_t *svn_fs_base__get_mutable_rep(const char **new_rep_key,
                                           const char *rep_key,
                                           svn_fs_t *fs,
@@ -168,6 +168,18 @@ svn_error_t *svn_fs_base__rep_deltify(svn_fs_t *fs,
                                       trail_t *trail,
                                       apr_pool_t *pool);
 
+/* Obliterate KEY's data by creating a new rep that consists of a
+   no-change delta from PRED_KEY's data.  If PRED_KEY is null then
+   construct an empty fulltext instead of a delta.  KEY's old data
+   remains in the database in case some other key's data is derived
+   from it. */
+/* ### TODO: clarify.  What kind of objects are KEY and PRED_KEY, and what
+   does it do with the new rep? */
+svn_error_t *svn_fs_base__rep_obliterate(svn_fs_t *fs,
+                                         const char *key,
+                                         const char *pred_key,
+                                         trail_t *trail,
+                                         apr_pool_t *pool);
 
 
 #ifdef __cplusplus

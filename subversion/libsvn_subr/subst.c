@@ -769,9 +769,9 @@ struct translation_baton
   apr_hash_t *keywords;
   svn_boolean_t expand;
 
-  /* Characters (excluding the terminating NUL character) which
+  /* 'short boolean' array that encodes what character values
      may trigger a translation action, hence are 'interesting' */
-  const char *interesting;
+  char interesting[256];
 
   /* Length of the string EOL_STR points to. */
   apr_size_t eol_str_len;
@@ -821,10 +821,20 @@ create_translation_baton(const char *eol_str,
   b->repair = repair;
   b->keywords = keywords;
   b->expand = expand;
-  b->interesting = (eol_str && keywords) ? "$\r\n" : eol_str ? "\r\n" : "$";
   b->newline_off = 0;
   b->keyword_off = 0;
   b->src_format_len = 0;
+
+  /* Most characters don't start translation actions.
+   * Mark those that do depending on the parameters we got. */
+  memset(b->interesting, FALSE, sizeof(b->interesting));
+  if (keywords)
+    b->interesting['$'] = TRUE;
+  if (eol_str)
+    {
+      b->interesting['\r'] = TRUE;
+      b->interesting['\n'] = TRUE;
+    }
 
   return b;
 }
@@ -938,14 +948,9 @@ translate_chunk(svn_stream_t *dst,
           len = 0;
 
           /* We wanted memcspn(), but lacking that, the loop below has
-             the same effect.
-
-             Also, skip NUL characters explicitly, since strchr()
-             considers them part of the string argument,
-             but we don't consider them interesting
+             the same effect. Also, skip NUL characters.
           */
-          while ((p + len) < end
-                 && (! p[len] || ! strchr(interesting, p[len])))
+          while ((p + len) < end && !interesting[(unsigned char)p[len]])
             len++;
 
           if (len)
@@ -1033,6 +1038,7 @@ struct translated_stream_baton
 };
 
 
+/* Implements svn_read_fn_t. */
 static svn_error_t *
 translated_stream_read(void *baton,
                        char *buffer,
@@ -1044,6 +1050,25 @@ translated_stream_read(void *baton,
   apr_size_t off = 0;
   apr_pool_t *iterpool;
 
+  /* Optimization for a frequent special case. The configuration parser (and
+     a few others) reads the stream one byte at a time. All the memcpy, pool
+     clearing etc. imposes a huge overhead in that case. In most cases, we
+     can just take that single byte directly from the read buffer.
+
+     Since *len > 1 requires lots of code to be run anyways, we can afford
+     the extra overhead of checking for *len == 1.
+
+     See <http://mail-archives.apache.org/mod_mbox/subversion-dev/201003.mbox/%3C4B94011E.1070207@alice-dsl.de%3E>.
+  */
+  if (unsatisfied == 1 && b->readbuf_off < b->readbuf->len)
+    {
+      /* Just take it from the read buffer */
+      *buffer = b->readbuf->data[b->readbuf_off++];
+
+      return SVN_NO_ERROR;
+    }
+
+  /* Standard code path. */
   iterpool = b->iterpool;
   while (readlen == SVN__STREAM_CHUNK_SIZE && unsatisfied > 0)
     {
@@ -1086,6 +1111,7 @@ translated_stream_read(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_write_fn_t. */
 static svn_error_t *
 translated_stream_write(void *baton,
                         const char *buffer,
@@ -1098,6 +1124,7 @@ translated_stream_write(void *baton,
   return translate_chunk(b->stream, b->out_baton, buffer, *len, b->iterpool);
 }
 
+/* Implements svn_close_fn_t. */
 static svn_error_t *
 translated_stream_close(void *baton)
 {
@@ -1112,6 +1139,7 @@ translated_stream_close(void *baton)
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_io_reset_fn_t. */
 static svn_error_t *
 translated_stream_reset(void *baton)
 {
@@ -1136,6 +1164,45 @@ translated_stream_reset(void *baton)
   return svn_error_return(err);
 }
 
+/* Implements svn_io_mark_fn_t. */
+static svn_error_t *
+translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
+{
+  struct translated_stream_baton *b = baton;
+
+  return svn_error_return(svn_stream_mark(b->stream, mark, pool));
+}
+
+/* Implements svn_io_seek_fn_t. */
+static svn_error_t *
+translated_stream_seek(void *baton, svn_stream_mark_t *mark)
+{
+  struct translated_stream_baton *b = baton;
+  svn_error_t *err;
+
+  /* Flush output buffer if necessary. */
+  if (b->written)
+    SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool));
+
+  err = svn_stream_seek(b->stream, mark);
+  if (err == NULL)
+    {
+      /* Force into boring state. */
+      b->in_baton->newline_off = 0;
+      b->in_baton->keyword_off = 0;
+      b->out_baton->newline_off = 0;
+      b->out_baton->keyword_off = 0;
+
+      /* Output buffer has been flushed. */
+      b->written = FALSE;
+
+      /* Reset read buffer. */
+      svn_stringbuf_setempty(b->readbuf);
+      b->readbuf_off = 0;
+    }
+
+  return svn_error_return(err);
+}
 
 svn_error_t *
 svn_subst_read_specialfile(svn_stream_t **stream,
@@ -1235,6 +1302,8 @@ svn_subst_stream_translated(svn_stream_t *stream,
   svn_stream_set_write(s, translated_stream_write);
   svn_stream_set_close(s, translated_stream_close);
   svn_stream_set_reset(s, translated_stream_reset);
+  svn_stream_set_mark(s, translated_stream_mark);
+  svn_stream_set_seek(s, translated_stream_seek);
 
   return s;
 }

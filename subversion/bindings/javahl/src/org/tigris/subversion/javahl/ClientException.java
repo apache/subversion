@@ -52,6 +52,14 @@ public class ClientException extends NativeException
     }
 
     /**
+     * This constructor is for backward compat.
+     */
+    ClientException(org.apache.subversion.javahl.ClientException ex)
+    {
+        super(ex.getMessage(), ex.getSource(), ex.getAprError());
+    }
+
+    /**
      * A conversion routine for maintaining backwards compatibility.
      * @param t The exception to (potentially) convert.
      * @return <code>t</code> coerced or converted into a

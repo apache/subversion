@@ -33,15 +33,24 @@ import java.util.Map;
  */
 public class ProplistCallbackImpl implements ProplistCallback
 {
-    Map propMap = new HashMap();
+    Map<String, Map<String, byte[]>> propMap =
+                                new HashMap<String, Map<String, byte[]>>();
 
-    public void singlePath(String path, Map props)
+    public void singlePath(String path, Map<String, byte[]> props)
     {
         propMap.put(path, props);
     }
 
-    public Map getProperties(String path)
+    public Map<String, String> getProperties(String path)
     {
-        return (Map) propMap.get(path);
+        Map<String, String> props = new HashMap<String, String>();
+        Map<String, byte[]> pdata = propMap.get(path);
+
+        for (String key : pdata.keySet())
+        {
+            props.put(key, new String(pdata.get(key)));
+        }
+
+        return props;
     }
 }

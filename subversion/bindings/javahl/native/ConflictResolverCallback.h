@@ -91,12 +91,6 @@ class ConflictResolverCallback
    */
   static svn_wc_conflict_result_t * javaResultToC(jobject result,
                                                   apr_pool_t *pool);
-
-  /**
-   * Convert the Java conflict resolution @a choice into the
-   * appropriate C enum value.
-   */
-  static svn_wc_conflict_choice_t javaChoiceToC(jint choice);
 };
 
 #endif  // CONFLICTRESOLVERCALLBACK_H

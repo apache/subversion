@@ -34,20 +34,20 @@
 #include "Outputer.h"
 #include "Inputer.h"
 #include "MessageReceiver.h"
-#include "Targets.h"
+#include "StringArray.h"
 
 class SVNAdmin : public SVNBase
 {
  public:
-  void rmlocks(const char *path, Targets &locks);
-  jobjectArray lslocks(const char *path);
+  void rmlocks(const char *path, StringArray &locks);
+  jobject lslocks(const char *path);
   void verify(const char *path, Outputer &messageOut,
               Revision &revisionStart, Revision &revisionEnd);
   void setRevProp(const char *path, Revision &revision,
                   const char *propName, const char *propValue,
                   bool usePreRevPropChangeHook,
                   bool usePostRevPropChangeHook);
-  void rmtxns(const char *path, Targets &transactions);
+  void rmtxns(const char *path, StringArray &transactions);
   jlong recover(const char *path);
   void lstxns(const char *path, MessageReceiver &messageReceiver);
   void load(const char *path, Inputer &dataIn, Outputer &messageOut,

@@ -157,6 +157,10 @@
   svn_wc_status_t **,
   svn_wc_status2_t **,
   svn_wc_committed_queue_t **,
+#ifdef SWIGRUBY
+  /* Only tested for Ruby */
+  svn_wc_context_t **,
+#endif
   void **set_locks_baton
 };
 
@@ -592,7 +596,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
     apr_pool_t *node_pool,
-    apr_pool_t *result_pool
+    apr_pool_t *result_pool,
+    apr_pool_t *scratch_pool
 };
 #endif
 

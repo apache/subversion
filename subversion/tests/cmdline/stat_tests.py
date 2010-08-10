@@ -3,7 +3,7 @@
 #  stat_tests.py:  testing the svn stat command
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -981,6 +981,8 @@ def status_add_plus_conflict(sbox):
     "?       " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
     "?       " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
     "C  +    " + os.path.join(wc_dir, "trunk", "file") + "\n",
+    "Summary of conflicts:\n",
+    "  Text conflicts: 1\n",
   ]
   if svntest.main.server_has_mergeinfo():
     lines.append(" M      " + os.path.join(wc_dir, "trunk") + "\n")
@@ -1625,6 +1627,8 @@ def status_with_tree_conflicts(sbox):
           "      >   local edit, incoming delete upon update\n",
           "!     C %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
+          "Summary of conflicts:\n",
+          "  Tree conflicts: 3\n",
           ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1641,6 +1645,8 @@ def status_with_tree_conflicts(sbox):
           "      >   local edit, incoming delete upon update\n",
           "!     C                                  %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
+          "Summary of conflicts:\n",
+          "  Tree conflicts: 3\n",
           ])
 
 

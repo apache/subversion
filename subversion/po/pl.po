@@ -6761,12 +6761,12 @@ msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
-"  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
 msgstr ""
 "Ten klient jest zbyt stary, by obsługiwać kopię roboczą\n"
 "'%s' (format %d).\n"
 "Musisz zainstalować nowszy klient Subversion. Zobacz szczegóły na stronie:\n"
-"  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
 
 #: ../libsvn_wc/wc_db.c:532
 #, c-format

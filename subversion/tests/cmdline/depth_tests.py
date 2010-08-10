@@ -5,7 +5,7 @@
 #                   depth-immediates, depth-infinity).
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -104,8 +104,10 @@ def verify_depth(msg, depth, path="."):
       if line.startswith("Depth:"):
         raise svntest.failure(msg)
   else:
-    svntest.actions.run_and_verify_svn_match_any(
-      msg, "^Depth: %s\n$" % depth, [], "info", path)
+    expected_stdout = svntest.verify.ExpectedOutput("Depth: %s\n" % depth,
+                                                    match_all=False)
+    svntest.actions.run_and_verify_svn(
+      msg, expected_stdout, [], "info", path)
 
 #----------------------------------------------------------------------
 # Ensure that 'checkout --depth=empty' results in a depth-empty working copy.
@@ -2226,8 +2228,8 @@ def excluded_path_misc_operation(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-					None,
-					wc_dir)
+                                        None,
+                                        wc_dir)
 
   # Relocate wc, with excluded items in it.
   repo_dir = sbox.repo_dir

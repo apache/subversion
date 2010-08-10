@@ -37,6 +37,7 @@
 #include "svn_private_config.h"
 
 
+/* */
 static const char *
 uri_remove_components(const char *uri,
                       const char *component,

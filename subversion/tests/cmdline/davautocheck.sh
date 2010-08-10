@@ -144,12 +144,15 @@ unset HTTPS_PROXY
 
 say "Using '$APXS'..."
 
+# Find the source and build directories. The build dir can be found if it is
+# the current working dir or the source dir.
+pushd ${SCRIPTDIR}/../../../ > /dev/null
+ABS_SRCDIR=$(pwd)
+popd > /dev/null
 if [ -x subversion/svn/svn ]; then
   ABS_BUILDDIR=$(pwd)
-elif [ -x $SCRIPTDIR/../../svn/svn ]; then
-  pushd $SCRIPTDIR/../../../ >/dev/null
-  ABS_BUILDDIR=$(pwd)
-  popd >/dev/null
+elif [ -x $ABS_SRCDIR/subversion/svn/svn ]; then
+  ABS_BUILDDIR=$ABS_SRCDIR
 else
   fail "Run this script from the root of Subversion's build tree!"
 fi
@@ -269,7 +272,7 @@ LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 LockFile            lock
 User                $(id -un)
 Group               $(id -gn)
-Listen              localhost:$HTTPD_PORT
+Listen              $HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
 LogFormat           "%h %l %u %t \"%r\" %>s %b" common
@@ -355,6 +358,12 @@ rm "$HTTPD_CFG-copy"
 
 say "HTTPD is good"
 
+if [ "$HTTP_LIBRARY" = "" ]; then
+  say "Using default dav library"
+else
+  say "Using dav library '$HTTP_LIBRARY'"
+fi
+
 if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   exit
 fi
@@ -368,7 +377,7 @@ else
   pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
   TEST="$1"
   shift
-  time "./${TEST}_tests.py" "--url=$BASE_URL" "$@"
+  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "$@"
   r=$?
   popd >/dev/null
 fi

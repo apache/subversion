@@ -37,6 +37,7 @@
 
 svn_error_t *
 svn_repos__obliterate_path_rev(svn_repos_t *repos,
+                               const char *username,
                                svn_revnum_t revision,
                                const char *path,
                                apr_pool_t *pool)
@@ -45,6 +46,7 @@ svn_repos__obliterate_path_rev(svn_repos_t *repos,
   svn_fs_root_t *rev_root, *txn_root;
   svn_fs_txn_t *txn;
   const svn_fs_id_t *node_id;
+  svn_string_t *obliteration_set;
 
   SVN_ERR_ASSERT(path[0] == '/' && svn_relpath_is_canonical(path + 1, pool));
 
@@ -53,6 +55,12 @@ svn_repos__obliterate_path_rev(svn_repos_t *repos,
    * ### This is an error for now to help catch wrong-node-reached bugs. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revision, pool));
   SVN_ERR(svn_fs_node_id(&node_id, rev_root, path, pool));
+
+  /* Run the pre-obliterate hook. Fail if it doesn't exist or if it rejects
+   * access. */
+  obliteration_set = svn_string_createf(pool, "%s@%ld\n", path, revision);
+  SVN_ERR(svn_repos__hooks_pre_obliterate(repos, revision, username,
+                                          obliteration_set, pool));
 
   /* Check the node kind of PATH in our transaction.  */
   /* SVN_ERR(svn_fs_check_path(&kind, rev_root, path, pool));

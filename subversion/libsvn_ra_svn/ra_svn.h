@@ -126,7 +126,7 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * command response indicating failure).  The error chain will be
  * in the same order as the errors indicated in @a params.  Use
  * @a pool for temporary allocations. */
-svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
+svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
                                                apr_pool_t *pool);
 
 /* Returns a stream that reads/writes from/to SOCK. */
@@ -172,7 +172,7 @@ svn_boolean_t svn_ra_svn__stream_pending(svn_ra_svn__stream_t *stream);
  * tokens. */
 svn_error_t *
 svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
-                          apr_array_header_t *mechlist,
+                          const apr_array_header_t *mechlist,
                           const char *realm, apr_pool_t *pool);
 
 /* Same as svn_ra_svn__do_cyrus_auth, but uses the built-in implementation of
@@ -181,7 +181,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
  * mechanism with the server. */
 svn_error_t *
 svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
-                             apr_array_header_t *mechlist,
+                             const apr_array_header_t *mechlist,
                              const char *realm, apr_pool_t *pool);
 
 /* Having picked a mechanism, start authentication by writing out an
@@ -192,7 +192,7 @@ svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn,
                                        const char *mech, const char *mech_arg);
 
 /* Looks for MECH as a word in MECHLIST (an array of svn_ra_svn_item_t). */
-svn_boolean_t svn_ra_svn__find_mech(apr_array_header_t *mechlist,
+svn_boolean_t svn_ra_svn__find_mech(const apr_array_header_t *mechlist,
                                     const char *mech);
 
 /* Initialize the SASL library. */

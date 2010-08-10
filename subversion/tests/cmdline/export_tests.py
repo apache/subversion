@@ -3,7 +3,7 @@
 #  export_tests.py:  testing export cases.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -409,12 +409,12 @@ def export_to_explicit_cwd(sbox):
   sbox.build(create_wc = False, read_only = True)
 
   svntest.main.safe_rmtree(sbox.wc_dir)
-  expected_output = svntest.tree.build_generic_tree([
-      Item(status='A ').as_node_tuple('iota'),
-    ]).as_state()
-  expected_disk = svntest.tree.build_generic_tree([
-      Item(contents="This is the file 'iota'.\n").as_node_tuple('iota'),
-    ]).as_state()
+  expected_output = svntest.wc.State('', {
+      'iota': Item(status='A '),
+      })
+  expected_disk = svntest.wc.State('', {
+      'iota': Item(contents="This is the file 'iota'.\n"),
+      })
 
   os.mkdir(sbox.wc_dir)
   os.chdir(sbox.wc_dir)

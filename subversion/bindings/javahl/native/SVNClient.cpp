@@ -26,8 +26,7 @@
 
 #include "SVNClient.h"
 #include "JNIUtil.h"
-#include "Notify.h"
-#include "Notify2.h"
+#include "NotifyCallback.h"
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
 #include "ConflictResolverCallback.h"
@@ -62,9 +61,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_utf.h"
 #include "svn_private_config.h"
-#include "../include/org_tigris_subversion_javahl_Revision.h"
-#include "../include/org_tigris_subversion_javahl_NodeKind.h"
-#include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "JNIStringHolder.h"
 #include <vector>
 #include <iostream>
@@ -78,7 +74,6 @@ struct log_msg_baton
 
 SVNClient::SVNClient()
 {
-    m_notify = NULL;
     m_notify2 = NULL;
     m_progressListener = NULL;
     m_prompter = NULL;
@@ -88,7 +83,6 @@ SVNClient::SVNClient()
 
 SVNClient::~SVNClient()
 {
-    delete m_notify;
     delete m_notify2;
     delete m_progressListener;
     delete m_prompter;
@@ -296,13 +290,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     return rev;
 }
 
-void SVNClient::notification(Notify *notify)
-{
-    delete m_notify;
-    m_notify = notify;
-}
-
-void SVNClient::notification2(Notify2 *notify2)
+void SVNClient::notification2(NotifyCallback *notify2)
 {
     delete m_notify2;
     m_notify2 = notify2;
@@ -627,7 +615,7 @@ void SVNClient::doImport(const char *path, const char *url,
                                    requestPool.pool()), );
 }
 
-jobjectArray
+jobject
 SVNClient::suggestMergeSources(const char *path, Revision &pegRevision)
 {
     SVN::Pool requestPool;
@@ -641,26 +629,7 @@ SVNClient::suggestMergeSources(const char *path, Revision &pegRevision)
                                                  ctx, requestPool.pool()),
                 NULL);
 
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass("java/lang/String");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobjectArray jsuggestions = env->NewObjectArray(sources->nelts, clazz,
-                                                    NULL);
-    for (int i = 0; i < sources->nelts; ++i)
-    {
-        const char *source = APR_ARRAY_IDX(sources, i, const char *);
-        jstring jpath = JNIUtil::makeJString(source);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-        env->SetObjectArrayElement(jsuggestions, i, jpath);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    return jsuggestions;
+    return CreateJ::StringSet(sources);
 }
 
 void SVNClient::merge(const char *path1, Revision &revision1,
@@ -812,7 +781,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
     {
         addRevisions = env->GetMethodID(clazz, "addRevisions",
                                         "(Ljava/lang/String;"
-                                        "[L"JAVA_PACKAGE"/RevisionRange;)V");
+                                        "Ljava/util/List;)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
@@ -831,8 +800,8 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
         apr_hash_this(hi, &path, NULL, &val);
 
         jstring jpath = JNIUtil::makeJString((const char *) path);
-        jobjectArray jranges =
-            CreateJ::RevisionRangeArray((apr_array_header_t *) val);
+        jobject jranges =
+            CreateJ::RevisionRangeList((apr_array_header_t *) val);
 
         env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 
@@ -843,6 +812,10 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
+
+    env->DeleteLocalRef(clazz);
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
     return jmergeinfo;
 }
@@ -870,8 +843,8 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
     Path srcURL(mergeSourceURL);
     SVN_JNI_ERR(srcURL.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_mergeinfo_log(urlPath.c_str(),
-                                         type == 1 ? true : false,
+    SVN_JNI_ERR(svn_client_mergeinfo_log((type == 1),
+                                         urlPath.c_str(),
                                          pegRevision.revision(),
                                          srcURL.c_str(),
                                          srcPegRevision.revision(),
@@ -889,9 +862,8 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
 /**
  * Get a property.
  */
-jobject SVNClient::propertyGet(jobject jthis, const char *path,
-                               const char *name, Revision &revision,
-                               Revision &pegRevision)
+jbyteArray SVNClient::propertyGet(const char *path, const char *name,
+                                  Revision &revision, Revision &pegRevision)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
@@ -922,7 +894,8 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     if (propval == NULL)
         return NULL;
 
-    return CreateJ::Property(jthis, path, name, propval);
+    return JNIUtil::makeJByteArray((const signed char *)propval->data,
+                                   propval->len);
 }
 
 void SVNClient::properties(const char *path, Revision &revision,
@@ -1255,14 +1228,14 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                                m_passWord.c_str());
 
     ctx->auth_baton = ab;
-    ctx->notify_func = Notify::notify;
-    ctx->notify_baton = m_notify;
+    ctx->notify_func = NULL;
+    ctx->notify_baton = NULL;
     ctx->log_msg_func3 = getCommitMessage;
     ctx->log_msg_baton3 = getCommitMessageBaton(message);
     ctx->cancel_func = checkCancel;
     m_cancelOperation = false;
     ctx->cancel_baton = this;
-    ctx->notify_func2= Notify2::notify;
+    ctx->notify_func2= NotifyCallback::notify;
     ctx->notify_baton2 = m_notify2;
 
     ctx->progress_func = ProgressListener::progress;
@@ -1463,8 +1436,8 @@ svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
     return read_stream;
 }
 
-jobject SVNClient::revProperty(jobject jthis, const char *path,
-                               const char *name, Revision &rev)
+jbyteArray SVNClient::revProperty(const char *path,
+                                  const char *name, Revision &rev)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
@@ -1498,7 +1471,8 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
     if (propval == NULL)
         return NULL;
 
-    return CreateJ::Property(jthis, path, name, propval);
+    return JNIUtil::makeJByteArray((const signed char *)propval->data,
+                                   propval->len);
 }
 void SVNClient::relocate(const char *from, const char *to, const char *path,
                          bool recurse)
@@ -1650,7 +1624,7 @@ void SVNClient::unlock(Targets &targets, bool force)
     SVN_JNI_ERR(svn_client_unlock((apr_array_header_t*)targetsApr, force,
                                   ctx, requestPool.pool()), );
 }
-void SVNClient::setRevProperty(jobject jthis, const char *path,
+void SVNClient::setRevProperty(const char *path,
                                const char *name, Revision &rev,
                                const char *value, const char *original_value,
                                bool force)
@@ -1883,8 +1857,7 @@ void SVNClient::upgrade(const char *path)
     SVN_JNI_ERR(svn_client_upgrade(path, ctx, requestPool.pool()), );
 }
 
-jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
-                                      Revision &revision)
+jobject SVNClient::revProperties(const char *path, Revision &revision)
 {
     apr_hash_t *props;
     SVN::Pool requestPool;
@@ -1907,45 +1880,7 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
                                         &set_rev, ctx, requestPool.pool()),
                 NULL);
 
-    apr_hash_index_t *hi;
-
-    int count = apr_hash_count(props);
-
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/PropertyData");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobjectArray jprops = env->NewObjectArray(count, clazz, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    int i = 0;
-    for (hi = apr_hash_first(requestPool.pool(), props);
-         hi;
-         hi = apr_hash_next(hi), ++i)
-    {
-        const char *key;
-        svn_string_t *val;
-
-        apr_hash_this(hi, (const void **)&key, NULL, (void**)&val);
-
-        jobject object = CreateJ::Property(jthis, path, key, val);
-
-        env->SetObjectArrayElement(jprops, i, object);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-        env->DeleteLocalRef(object);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    return jprops;
+    return CreateJ::PropertyMap(props, requestPool.pool());
 }
 
 struct info_baton

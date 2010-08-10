@@ -318,6 +318,37 @@ public class Status implements java.io.Serializable
     }
 
     /**
+     * A backward-compat wrapper.
+     */
+    public Status(org.apache.subversion.javahl.Status aStatus)
+    {
+        this(aStatus.getPath(), aStatus.getUrl(),
+             NodeKind.fromApache(aStatus.getNodeKind()),
+             aStatus.getRevisionNumber(),
+             aStatus.getLastChangedRevisionNumber(),
+             aStatus.getLastChangedDateMicros(), aStatus.getLastCommitAuthor(),
+             fromAStatusKind(aStatus.getTextStatus()),
+             fromAStatusKind(aStatus.getPropStatus()),
+             fromAStatusKind(aStatus.getRepositoryTextStatus()),
+             fromAStatusKind(aStatus.getRepositoryPropStatus()),
+             aStatus.isLocked(), aStatus.isCopied(), aStatus.hasTreeConflict(),
+             aStatus.getConflictDescriptor() == null ? null
+                : new ConflictDescriptor(aStatus.getConflictDescriptor()),
+             aStatus.getConflictOld(), aStatus.getConflictNew(),
+             aStatus.getConflictWorking(), aStatus.getUrlCopiedFrom(),
+             aStatus.getRevisionCopiedFromNumber(), aStatus.isSwitched(),
+             aStatus.isFileExternal(), aStatus.getLockToken(),
+             aStatus.getLockOwner(), aStatus.getLockComment(),
+             aStatus.getLockCreationDateMicros(),
+             aStatus.getReposLock() == null ? null
+                : new Lock(aStatus.getReposLock()),
+             aStatus.getReposLastCmtRevisionNumber(),
+             aStatus.getReposLastCmtDateMicros(),
+             NodeKind.fromApache(aStatus.getReposKind()),
+             aStatus.getReposLastCmtAuthor(), aStatus.getChangelist());
+    }
+
+    /**
      * Returns the file system path of the item
      * @return path of status entry
      */
@@ -837,5 +868,45 @@ public class Status implements java.io.Serializable
     private static Date microsecondsToDate(long micros)
     {
         return (micros == 0 ? null : new Date(micros / 1000));
+    }
+
+    private static int fromAStatusKind(
+                            org.apache.subversion.javahl.Status.Kind aKind)
+    {
+        if (aKind == null)
+            return StatusKind.none;
+
+        switch (aKind)
+        {
+            default:
+            case none:
+                return StatusKind.none;
+            case normal:
+                return StatusKind.normal;
+            case modified:
+                return StatusKind.modified;
+            case added:
+                return StatusKind.added;
+            case deleted:
+                return StatusKind.deleted;
+            case unversioned:
+                return StatusKind.unversioned;
+            case missing:
+                return StatusKind.missing;
+            case replaced:
+                return StatusKind.replaced;
+            case merged:
+                return StatusKind.merged;
+            case conflicted:
+                return StatusKind.conflicted;
+            case obstructed:
+                return StatusKind.obstructed;
+            case ignored:
+                return StatusKind.ignored;
+            case incomplete:
+                return StatusKind.incomplete;
+            case external:
+                return StatusKind.external;
+        }
     }
 }

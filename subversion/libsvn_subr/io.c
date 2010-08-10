@@ -716,9 +716,8 @@ svn_io_copy_file(const char *src,
 {
   apr_file_t *from_file, *to_file;
   apr_status_t apr_err;
-  const char *src_apr, *dst_tmp_apr;
   const char *dst_tmp;
-  svn_error_t *err, *err2;
+  svn_error_t *err;
 
   /* ### NOTE: sometimes src == dst. In this case, because we copy to a
      ###   temporary file, and then rename over the top of the destination,
@@ -738,8 +737,6 @@ svn_io_copy_file(const char *src,
     return SVN_NO_ERROR;
 #endif
 
-  SVN_ERR(cstring_from_utf8(&src_apr, src, pool));
-
   SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
                          APR_OS_DEFAULT, pool));
 
@@ -749,7 +746,6 @@ svn_io_copy_file(const char *src,
   SVN_ERR(svn_io_open_unique_file3(&to_file, &dst_tmp,
                                    svn_dirent_dirname(dst, pool),
                                    svn_io_file_del_none, pool, pool));
-  SVN_ERR(cstring_from_utf8(&dst_tmp_apr, dst_tmp, pool));
 
   apr_err = copy_contents(from_file, to_file, pool);
 
@@ -763,21 +759,17 @@ svn_io_copy_file(const char *src,
    else
      err = NULL;
 
-  err2 = svn_io_file_close(from_file, pool);
-  if (! err)
-    err = err2;
-  else
-    svn_error_clear(err2);
-  err2 = svn_io_file_close(to_file, pool);
-  if (! err)
-    err = err2;
-  else
-    svn_error_clear(err2);
+  err = svn_error_compose_create(err,
+                                 svn_io_file_close(from_file, pool));
+
+  err = svn_error_compose_create(err,
+                                 svn_io_file_close(to_file, pool));
+
   if (err)
     {
-      apr_err = apr_file_remove(dst_tmp_apr, pool);
-      WIN32_RETRY_LOOP(apr_err, apr_file_remove(dst_tmp_apr, pool));
-      return err;
+      return svn_error_compose_create(
+                                 err,
+                                 svn_io_remove_file2(dst_tmp, TRUE, pool));
     }
 
   /* If copying perms, set the perms on dst_tmp now, so they will be
@@ -787,7 +779,7 @@ svn_io_copy_file(const char *src,
   if (copy_perms)
     SVN_ERR(svn_io_copy_perms(src, dst_tmp, pool));
 
-  return svn_io_file_rename(dst_tmp, dst, pool);
+  return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
 
@@ -1909,9 +1901,8 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
  this causes problems if you are using this kind of loop inside a
  function that is recursively deleting a directory, because when you
  get around to removing the directory it will still have something in
- it.
-
- Similar problem has been observed on FreeBSD.
+ it. A similar problem has been observed in other BSDs. This bug has
+ since been fixed. See http://www.vnode.ch/fixing_seekdir for details.
 
  The workaround is to delete the files only _after_ the initial
  directory scan.  A previous workaround involving rewinddir is
@@ -1948,11 +1939,11 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
     {
       /* if the directory doesn't exist, our mission is accomplished */
       if (ignore_enoent && APR_STATUS_IS_ENOENT(err->apr_err))
-	{
-	  svn_error_clear(err);
-	  return SVN_NO_ERROR;
-	}
-      return err;
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      return svn_error_return(err);
     }
 
   for (ent = apr_hash_first(subpool, dirents); ent; ent = apr_hash_next(ent))
@@ -2957,7 +2948,9 @@ svn_io_file_rename(const char *from_path, const char *to_path,
   status = apr_file_rename(from_path_apr, to_path_apr, pool);
 
 #ifdef WIN32
-  if (APR_STATUS_IS_EACCES(status))
+  /* If the target file is read only NTFS reports EACCESS and
+     FAT/FAT32 reports EEXIST */
+  if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
     {
       /* Set the destination file writable because Windows will not
          allow us to rename when to_path is read-only, but will
@@ -3532,17 +3525,20 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
 
 /* Wrapper for apr_file_mktemp(). */
 svn_error_t *
-svn_io_file_mktemp(apr_file_t **new_file, char *templ,
+svn_io_file_mktemp(apr_file_t **new_file, const char *templ,
                   apr_int32_t flags, apr_pool_t *pool)
 {
   const char *templ_apr;
   apr_status_t status;
 
-  SVN_ERR(cstring_from_utf8(&templ_apr, templ, pool));
+  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr, templ, pool));
 
-  /* ### I don't want to copy the template string again just to
-   * make it writable... so cast away const.
-   * Should the UTF-8 conversion functions really be returning const??? */
+  /* ### svn_path_cstring_from_utf8() guarantees to make a copy of the
+         data available in POOL and we need a non-const pointer here,
+         as apr changes the template to return the new filename. 
+
+         But we can't provide the filename to our caller as that might need
+         more bytes then there are XXXXs after converting it back to utf-8. */
   status = apr_file_mktemp(new_file, (char *)templ_apr, flags, pool);
 
   if (status)

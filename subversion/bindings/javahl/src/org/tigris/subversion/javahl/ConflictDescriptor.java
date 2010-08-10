@@ -116,6 +116,19 @@ public class ConflictDescriptor
         this.srcRightVersion = srcRight;
     }
 
+    public ConflictDescriptor(org.apache.subversion.javahl.ConflictDescriptor
+                                                                aDesc)
+    {
+        this(aDesc.getPath(), aDesc.getKind().ordinal(),
+             NodeKind.fromApache(aDesc.getNodeKind()),
+             aDesc.getPropertyName(), aDesc.isBinary(), aDesc.getMIMEType(),
+             aDesc.getAction().ordinal(), aDesc.getReason().ordinal(),
+             aDesc.getOperation().ordinal(), aDesc.getBasePath(),
+             aDesc.getTheirPath(), aDesc.getMyPath(), aDesc.getMergedPath(),
+             new ConflictVersion(aDesc.getSrcLeftVersion()),
+             new ConflictVersion(aDesc.getSrcRightVersion()));
+    }
+
     public String getPath()
     {
         return path;

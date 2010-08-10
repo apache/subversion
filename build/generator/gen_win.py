@@ -395,7 +395,7 @@ class WinGeneratorBase(GeneratorBase):
           else:
             dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
-    
+
     for target in install_targets:
       target.project_guid = self.makeguid(target.name)
 
@@ -480,9 +480,10 @@ class WinGeneratorBase(GeneratorBase):
       jar_exe = os.path.join(self.jdk_path, "bin", jar_exe)
 
     if not isinstance(target, gen_base.TargetProject):
-      cbuild = None
-      ctarget = None
       for source, object, reldir in self.get_win_sources(target):
+        cbuild = None
+        ctarget = None
+        cdesc = None
         if isinstance(target, gen_base.TargetJavaHeaders):
           classes = self.path(target.classes)
           if self.junit_path is not None:
@@ -496,6 +497,7 @@ class WinGeneratorBase(GeneratorBase):
                       self.quote(headers), classname)
 
           ctarget = self.path(object.filename_win)
+          cdesc = "Generating %s" % (object.filename_win)
 
         elif isinstance(target, gen_base.TargetJavaClasses):
           classes = targetdir = self.path(target.classes)
@@ -504,12 +506,13 @@ class WinGeneratorBase(GeneratorBase):
 
           sourcepath = self.path(source.sourcepath)
 
-          cbuild = "%s -g -target 1.2 -source 1.3 -classpath %s -d %s " \
+          cbuild = "%s -g -target 1.5 -source 1.5 -classpath %s -d %s " \
                    "-sourcepath %s $(InputPath)" \
                    % tuple(map(self.quote, (javac_exe, classes,
                                             targetdir, sourcepath)))
 
           ctarget = self.path(object.filename)
+          cdesc = "Compiling %s" % (source)
 
         rsrc = self.path(str(source))
         if quote_path and '-' in rsrc:
@@ -517,6 +520,7 @@ class WinGeneratorBase(GeneratorBase):
 
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    custom_build=cbuild, custom_target=ctarget,
+                                   custom_desc=cdesc,
                                    extension=os.path.splitext(rsrc)[1]))
 
     if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
@@ -694,7 +698,7 @@ class WinGeneratorBase(GeneratorBase):
     #
     # This section parses those dependencies and adds them to the dependency list
     # for this target.
-    if name == 'javahl-javah' or name == 'libsvnjavahl':
+    if name[0:7] == 'javahl-' or name == 'libsvnjavahl':
       for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
         dep = dep.replace('_', '-')
         depends.extend(self.sections[dep].get_targets())
@@ -1521,9 +1525,7 @@ class WinGeneratorBase(GeneratorBase):
       os.path.join('subversion', 'libsvn_wc', 'wc-checks'),
       ]
     for sql in sql_sources:
-      transform_sql.main(open(sql + '.sql', 'r'),
-                         open(sql + '.h', 'w'),
-                         os.path.basename(sql + '.sql'))
+      transform_sql.main(sql + '.sql', open(sql + '.h', 'w'))
 
 
 class ProjectItem:

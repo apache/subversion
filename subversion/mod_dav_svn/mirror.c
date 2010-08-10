@@ -35,7 +35,8 @@
    the request is ready to be proxied away.  MASTER_URI is the URI
    specified in the SVNMasterURI Apache configuration value.
    URI_SEGMENT is the URI bits relative to the repository root (but if
-   non-empty, *does* have a leading slash delimiter).  */
+   non-empty, *does* have a leading slash delimiter).
+   MASTER_URI and URI_SEGMENT are not URI-encoded. */
 static void proxy_request_fixup(request_rec *r,
                                 const char *master_uri,
                                 const char *uri_segment)
@@ -45,8 +46,10 @@ static void proxy_request_fixup(request_rec *r,
 
     r->proxyreq = PROXYREQ_REVERSE;
     r->uri = r->unparsed_uri;
-    r->filename = apr_pstrcat(r->pool, "proxy:", master_uri,
-                              uri_segment, NULL);
+    r->filename = (char *) svn_path_uri_encode(apr_pstrcat(r->pool, "proxy:",
+                                                           master_uri,
+                                                           uri_segment,
+                                                           NULL), r->pool);
     r->handler = "proxy-server";
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
     ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
@@ -54,7 +57,7 @@ static void proxy_request_fixup(request_rec *r,
 }
 
 
-int dav_svn__proxy_merge_fixup(request_rec *r)
+int dav_svn__proxy_request_fixup(request_rec *r)
 {
     const char *root_dir, *master_uri, *special_uri;
 
@@ -73,18 +76,21 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
 
         /* These are read-only requests -- the kind we like to handle
            ourselves -- but we need to make sure they aren't aimed at
-           working resource URIs before trying to field them.  Why?
-           Because working resource URIs are modeled in Subversion
-           using uncommitted Subversion transactions -- stuff our copy
-           of the repository isn't guaranteed to have on hand. */
+           resources that only exist on the master server such as
+           working resource URIs or the HTTPv2 transaction root and
+           transaction tree resouces. */
         if (r->method_number == M_PROPFIND ||
             r->method_number == M_GET) {
-            seg = ap_strstr(r->unparsed_uri, root_dir);
-            if (seg && ap_strstr_c(seg,
-                                   apr_pstrcat(r->pool, special_uri,
-                                               "/wrk/", NULL))) {
-                seg += strlen(root_dir);
-                proxy_request_fixup(r, master_uri, seg);
+            if ((seg = ap_strstr(r->uri, root_dir))) {
+                if (ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
+                                                 "/wrk/", NULL))
+                    || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
+                                                    "/txn/", NULL))
+                    || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
+                                                    "/txr/", NULL))) {
+                    seg += strlen(root_dir);
+                    proxy_request_fixup(r, master_uri, seg);
+                }
             }
             return OK;
         }
@@ -92,7 +98,7 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
         /* If this is a write request aimed at a public URI (such as
            MERGE, LOCK, UNLOCK, etc.) or any as-yet-unhandled request
            using a "special URI", we have to doctor it a bit for proxying. */
-        seg = ap_strstr(r->unparsed_uri, root_dir);
+        seg = ap_strstr(r->uri, root_dir);
         if (seg && (r->method_number == M_MERGE ||
                     r->method_number == M_LOCK ||
                     r->method_number == M_UNLOCK ||
@@ -125,7 +131,7 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
     locate_ctx_t *ctx = f->ctx;
     apr_status_t rv;
     apr_bucket *bkt;
-    const char *master_uri, *root_dir;
+    const char *master_uri, *root_dir, *canonicalized_uri;
     apr_uri_t uri;
 
     /* Don't filter if we're in a subrequest or we aren't setup to
@@ -140,7 +146,11 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
        (that is, if our root path matches that of the master server). */
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
-    if (strcmp(uri.path, root_dir) == 0) {
+    if (uri.path)
+        canonicalized_uri = svn_uri_canonicalize(uri.path, r->pool);
+    else
+        canonicalized_uri = uri.path;
+    if (strcmp(canonicalized_uri, root_dir) == 0) {
         ap_remove_input_filter(f);
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
@@ -151,9 +161,14 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
        ### PUT requests and properties in PROPPATCH requests.
        ### See issue #3445 for details. */
 
+    /* We are url encoding the current url and the master url
+       as incoming(from client) request body has it encoded already. */
+    canonicalized_uri = (char *) svn_path_uri_encode(canonicalized_uri,
+                                                     r->pool);
+    root_dir = (char *) svn_path_uri_encode(root_dir, r->pool);
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-        ctx->remotepath = uri.path;
+        ctx->remotepath = canonicalized_uri;
         ctx->remotepath_len = strlen(ctx->remotepath);
         ctx->localpath = root_dir;
         ctx->localpath_len = strlen(ctx->localpath);
@@ -209,6 +224,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
     /* Don't filter if we're in a subrequest or we aren't setup to
        proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
+    master_uri = (char *) svn_path_uri_encode(master_uri, r->pool);
     if (r->main || !master_uri) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
@@ -223,9 +239,10 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
         start_foo += strlen(master_uri);
         new_uri = ap_construct_url(r->pool,
                                    apr_pstrcat(r->pool,
-                                               dav_svn__get_root_dir(r),
+                                               dav_svn__get_root_dir(r), "/",
                                                start_foo, NULL),
                                    r);
+        new_uri = (char *) svn_path_uri_encode(new_uri, r->pool);
         apr_table_set(r->headers_out, "Location", new_uri);
     }
     return ap_pass_brigade(f->next, bb);
@@ -237,7 +254,7 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
     request_rec *r = f->r;
     locate_ctx_t *ctx = f->ctx;
     apr_bucket *bkt;
-    const char *master_uri, *root_dir;
+    const char *master_uri, *root_dir, *canonicalized_uri;
     apr_uri_t uri;
 
     /* Don't filter if we're in a subrequest or we aren't setup to
@@ -252,7 +269,11 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
        (that is, if our root path matches that of the master server). */
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
-    if (strcmp(uri.path, root_dir) == 0) {
+    if (uri.path)
+        canonicalized_uri = svn_uri_canonicalize(uri.path, r->pool);
+    else
+        canonicalized_uri = uri.path;
+    if (strcmp(canonicalized_uri, root_dir) == 0) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
     }
@@ -263,9 +284,14 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
        ### they return in the process of trying to do URI fix-ups.
        ### See issue #3445 for details. */
 
+    /* We are url encoding the current url and the master url
+       as incoming(from master) request body has it encoded already. */
+    canonicalized_uri = (char *) svn_path_uri_encode(canonicalized_uri,
+                                                     r->pool);
+    root_dir = (char *) svn_path_uri_encode(root_dir, r->pool);
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-        ctx->remotepath = uri.path;
+        ctx->remotepath = canonicalized_uri;
         ctx->remotepath_len = strlen(ctx->remotepath);
         ctx->localpath = root_dir;
         ctx->localpath_len = strlen(ctx->localpath);

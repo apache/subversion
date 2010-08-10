@@ -55,7 +55,7 @@ I.    INTRODUCTION
       'installers' for both Windows and OS X.  Visit this page for
       package links:
 
-         http://subversion.tigris.org/project_packages.html
+         http://subversion.apache.org/packages.html
 
       For those of you who still wish to build from source, Subversion
       follows the Unix convention of "./configure && make", but it has
@@ -1468,7 +1468,7 @@ IV.   PLATFORM-SPECIFIC ISSUES
 
       And there's an item about this in the Subversion FAQ:
 
-          http://subversion.tigris.org/faq.html#windows-xp-server
+          http://subversion.apache.org/faq.html#windows-xp-server
 
       The only known workaround for now is to update to Windows XP
       SP1 (or higher).

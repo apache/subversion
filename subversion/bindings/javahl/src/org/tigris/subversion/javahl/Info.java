@@ -141,6 +141,21 @@ public class Info implements java.io.Serializable
     }
 
     /**
+     * A backward-compat constructor
+     */
+    public Info(org.apache.subversion.javahl.Info aInfo)
+    {
+        this(aInfo.getName(), aInfo.getUrl(), aInfo.getUuid(),
+             aInfo.getRepository(), aInfo.getSchedule().ordinal(),
+             NodeKind.fromApache(aInfo.getNodeKind()),
+             aInfo.getAuthor(), aInfo.getRevision(),
+             aInfo.getLastChangedRevision(), aInfo.getLastChangedDate(),
+             aInfo.getLastDateTextUpdate(), aInfo.getLastDatePropsUpdate(),
+             aInfo.isCopied(), aInfo.isDeleted(), aInfo.isAbsent(),
+             aInfo.isIncomplete(), aInfo.getCopyRev(), aInfo.getCopyUrl());
+    }
+
+    /**
      * Retrieves the name of the item
      * @return name of the item
      */

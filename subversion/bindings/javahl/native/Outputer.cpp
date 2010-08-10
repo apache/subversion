@@ -82,7 +82,7 @@ svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/IOutput");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
@@ -129,7 +129,7 @@ svn_error_t *Outputer::close(void *baton)
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/OutputInterface");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/IOutput");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 

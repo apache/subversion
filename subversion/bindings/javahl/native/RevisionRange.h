@@ -30,7 +30,7 @@
 #include <jni.h>
 #include "svn_types.h"
 
-class SVN::Pool;
+#include "Pool.h"
 
 /**
  * A container for our copy sources, which can convert them into an

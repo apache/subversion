@@ -413,7 +413,8 @@ static svn_error_t * end_element(void *baton, int state,
     case ELEM_href:
       /* Special handling for <href> that belongs to the <response> tag. */
       if (rsrc->href_parent == ELEM_response)
-        return assign_rsrc_url(pc->rsrc, cdata, pc->pool);
+        return assign_rsrc_url(pc->rsrc, svn_uri_canonicalize(cdata, pc->pool),
+                               pc->pool);
 
       /* Use the parent element's name, not the href. */
       parent_defn = defn_from_id(rsrc->href_parent);
@@ -424,7 +425,8 @@ static svn_error_t * end_element(void *baton, int state,
 
       /* All other href's we'll treat as property values. */
       name = parent_defn->name;
-      value = svn_string_create(cdata, pc->pool);
+      value = svn_string_create(svn_uri_canonicalize(cdata, pc->pool),
+                                pc->pool);
       break;
 
     default:
@@ -1089,7 +1091,7 @@ svn_error_t *
 svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
                           const char *url,
                           apr_hash_t *prop_changes,
-                          apr_array_header_t *prop_deletes,
+                          const apr_array_header_t *prop_deletes,
                           apr_hash_t *extra_headers,
                           apr_pool_t *pool)
 {

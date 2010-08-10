@@ -79,6 +79,17 @@ def print_report(wcroot):
 
 if __name__ == '__main__':
   if len(sys.argv) > 1:
+    if '--help' in sys.argv[1:]:
+      print("""\
+Usage: %s [WCROOT]
+       %s --help
+
+Show statistics related to outstanding WC-NG code conversion work
+items in working copy branch root WCROOT.  If WCROOT is omitted, this
+program will attempt to guess it using the assumption that it is being
+run from within the working copy of interest."""
+% (sys.argv[0], sys.argv[0]))
+      sys.exit(0)
     print_report(sys.argv[1])
   else:
     cwd = os.path.abspath(os.getcwd())

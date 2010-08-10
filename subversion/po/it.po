@@ -5700,7 +5700,7 @@ msgstr ""
 msgid ""
 "This client is too old to work with working copy '%s'.  You need\n"
 "to get a newer Subversion client, or to downgrade this working copy.\n"
-"See http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"See http://subversion.apache.org/faq.html#working-copy-format-change\n"
 "for details."
 msgstr ""
 

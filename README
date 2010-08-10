@@ -18,7 +18,7 @@ I.    A FEW POINTERS
 
       For an overview of the Subversion project, visit
 
-         http://subversion.tigris.org/
+         http://subversion.apache.org/
 
       Once you have a Subversion client you can get the latest version
       of the code with the command:
@@ -50,7 +50,7 @@ III.  PARTICIPATING IN THE SUBVERSION COMMUNITY
 
       Talk on IRC with developers:  irc.freenode.net, channel #svn-dev.
 
-      Read the FAQ:  http://subversion.tigris.org/faq.html
+      Read the FAQ:  http://subversion.apache.org/faq.html
 
 
 

@@ -7,7 +7,7 @@
 #
 # License:
 #    The same as svn itself. for latest version check:
-#    http://svn.collab.net/repos/svn/trunk/subversion/LICENSE
+#    http://svn.apache.org/repos/asf/subversion/trunk/subversion/LICENSE
 #
 #######################################################################
 

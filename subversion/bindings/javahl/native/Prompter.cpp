@@ -28,7 +28,7 @@
 #include "Pool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
-#include "../include/org_tigris_subversion_javahl_PromptUserPassword2.h"
+#include "../include/org_apache_subversion_javahl_callback_UserPasswordCallback.h"
 #include <apr_strings.h>
 #include "svn_auth.h"
 #include "svn_error.h"
@@ -425,12 +425,12 @@ int Prompter::askTrust(const char *question, bool maySave)
       const char *answer = askQuestion(NULL, q.c_str(), true, false);
       if (*answer == 't' || *answer == 'T')
         return
-          org_tigris_subversion_javahl_PromptUserPassword2_AcceptTemporary;
+          org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptTemporary;
       else if (maySave && (*answer == 'p' || *answer == 'P'))
         return
-          org_tigris_subversion_javahl_PromptUserPassword2_AcceptPermanently;
+          org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptPermanently;
       else
-        return org_tigris_subversion_javahl_PromptUserPassword2_Reject;
+        return org_apache_subversion_javahl_callback_UserPasswordCallback_Reject;
     }
   return -1;
 }
@@ -706,11 +706,11 @@ Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
 
   switch(that->askTrust(question.c_str(), may_save ? true : false))
     {
-    case org_tigris_subversion_javahl_PromptUserPassword2_AcceptTemporary:
+    case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptTemporary:
       *cred_p = ret;
       ret->may_save = FALSE;
       break;
-    case org_tigris_subversion_javahl_PromptUserPassword2_AcceptPermanently:
+    case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptPermanently:
       *cred_p = ret;
       ret->may_save = TRUE;
       ret->accepted_failures = failures;

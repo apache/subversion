@@ -25,7 +25,7 @@ if version_info[0] >= 3:
 else:
   # Python <3.0
   from cStringIO import StringIO
-import unittest, os, tempfile, shutil, setup_path, binascii
+import unittest, os, tempfile, setup_path, binascii
 import svn.diff
 from svn import core, repos, wc, client
 from svn import delta, ra
@@ -62,7 +62,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.wc = wc.adm_open3(None, self.path, True, -1, None)
 
   def test_entry(self):
-      wc_entry = wc.entry(self.path, self.wc, True)
+      wc.entry(self.path, self.wc, True)
 
   def test_lock(self):
       readme_path = '%s/trunk/README.txt' % self.path
@@ -112,13 +112,13 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
       class MyReporter:
           def __init__(self):
-              self._finished_report = False
+              self.finished_report = False
 
           def abort_report(self, pool):
               pass
 
           def finish_report(self, pool):
-              self._finished_report = True
+              self.finished_report = True
 
           def set_path(self, path, revision, start_empty, lock_token, pool):
               set_paths.append(path)
@@ -142,7 +142,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                           True, True, False, notify, info)
 
       # Check that the report finished
-      self.assert_(reporter._finished_report)
+      self.assert_(reporter.finished_report)
       self.assertEqual([''], set_paths)
       self.assertEqual(1, len(infos))
 
@@ -333,7 +333,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     got_prop_changes = []
     def props_changed(path, propchanges):
       for (name, value) in propchanges.items():
-        (kind, unused_prefix_len) = core.svn_property_kind(name)
+        (kind, _) = core.svn_property_kind(name)
         if kind != core.svn_prop_regular_kind:
           continue
         got_prop_changes.append((path[len(self.path) + 1:], name, value))

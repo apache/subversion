@@ -46,7 +46,7 @@ SVN::Client - Subversion client functions
               SVN::Client::get_username_provider()]
               );
 
-    $ctx->cat (\*STDOUT, 'http://svn.collab.net/repos/svn/trunk/README',
+    $ctx->cat (\*STDOUT, 'http://svn.apache.org/repos/asf/subversion/trunk/README',
                'HEAD');
 
     sub simple_prompt {

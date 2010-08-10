@@ -60,8 +60,8 @@ copy_props(svn_wc__db_t *db,
                              scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *propname = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      const char *propname = svn__apr_hash_index_key(hi);
+      svn_string_t *propval = svn__apr_hash_index_val(hi);
 
       SVN_ERR(svn_wc__internal_propset(db, dst_abspath, propname, propval,
                                        FALSE /* skip_checks */,
@@ -188,8 +188,8 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn_apr_hash_index_key(hi);
-          svn_io_dirent_t *dirent = svn_apr_hash_index_val(hi);
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_io_dirent_t *dirent = svn__apr_hash_index_val(hi);
           const char *node_abspath;
           svn_wc__db_kind_t kind;
 
@@ -402,9 +402,16 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
                             scratch_pool, scratch_pool));
 
   /* Sanity check 2: You cannot make a copy of something that's not
-     in the repository unless it's a copy of an uncommitted copy. */
-  if ((src_entry->schedule == svn_wc_schedule_add && (! src_entry->copied))
-      || (! src_entry->url))
+     in the repository unless it's a copy of an uncommitted copy.
+     Added files don't have a base, but replaced files have a revert-base.
+     ### TODO: svn_opt_revision_base currently means "commit-base", which
+     ### technically is none for replaced files. We currently have no way to
+     ### get at the revert-base and need a new svn_opt_revision_X for that.
+   */
+  if (((src_entry->schedule == svn_wc_schedule_add
+        || src_entry->schedule == svn_wc_schedule_replace)
+       && (!src_entry->copied))
+      || (!src_entry->url))
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
@@ -484,6 +491,10 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
                                         err, NULL);
               else if (err)
                 return svn_error_return(err);
+              
+              /* Above add/replace condition should have caught this already
+               * (-> error "Cannot copy..."). */
+              SVN_ERR_ASSERT(contents != NULL);
             }
           else if (err)
             return svn_error_return(err);
@@ -513,6 +524,9 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
 
     SVN_ERR(svn_wc_get_pristine_contents2(&base_contents, wc_ctx, src_abspath,
                                           scratch_pool, scratch_pool));
+    /* Above add/replace condition should have caught this already
+     * (-> error "Cannot copy..."). */
+    SVN_ERR_ASSERT(base_contents != NULL);
 
     SVN_ERR(svn_wc_add_repos_file4(wc_ctx, dst_abspath,
                                    base_contents, contents,

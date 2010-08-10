@@ -19,6 +19,7 @@
 #
 #
 import unittest, weakref, setup_path
+import os, tempfile
 import svn.core, svn.client, libsvn.core
 from svn.core import *
 from libsvn.core import application_pool, GenericSWIGWrapper
@@ -29,27 +30,54 @@ class PoolTestCase(unittest.TestCase):
 
   def assertNotNone(self, value):
     """Assert that the specified value is not None"""
-    return self.assertNotEqual(value, None);
+    return self.assertNotEqual(value, None)
 
   def assertNone(self, value):
     """Assert that the specified value is None"""
-    return self.assertEqual(value, None);
+    return self.assertEqual(value, None)
 
   def test_object_struct_members(self):
     """Check that object struct members work correctly"""
 
     # Test good object assignment operations
     client_ctx = svn.client.svn_client_create_context()
-    config = svn.core.svn_config_get_config(None)
-    client_ctx.config = config
+    auth = svn.core.svn_auth_open([])
+    client_ctx.auth_baton = auth
 
     # Check that parent pools are set correctly on struct accesses
-    self.assertEqual(client_ctx.config._parent_pool, config._parent_pool)
+    self.assertEqual(client_ctx.auth_baton._parent_pool, auth._parent_pool)
 
     # Test bad object assignment operations
     def test_bad_assignment(self):
       head_revision = svn.core.svn_opt_revision_t()
-      head_revision.kind = config
+      head_revision.kind = auth
+    self.assertRaises(TypeError, test_bad_assignment)
+
+  def test_object_hash_struct_members(self):
+    """Check that struct members which are hashes of objects work correctly"""
+
+    # Get an empty config
+    (cfg_fd, cfg_name) = tempfile.mkstemp(prefix="conf-")
+    os.close(cfg_fd)
+
+    try:
+      cfg = svn.core.svn_config_read(
+        svn.core.svn_dirent_internal_style(cfg_name),
+        False)
+    finally:
+      os.remove(cfg_name)
+
+    client_ctx = svn.client.svn_client_create_context()
+    category = svn.core.SVN_CONFIG_CATEGORY_SERVERS
+    client_ctx.config = { category: cfg }
+
+    # Check that parent pools are set correctly
+    self.assertEqual(client_ctx.config[category]._parent_pool,
+      cfg._parent_pool)
+
+    # Test invalid assignment
+    def test_bad_assignment(self):
+      client_ctx.config = 42
     self.assertRaises(TypeError, test_bad_assignment)
 
   def test_assert_valid(self):
@@ -57,29 +85,29 @@ class PoolTestCase(unittest.TestCase):
 
     # Test assert_valid with destroy()
     client_ctx = svn.client.svn_client_create_context()
-    config = svn.core.svn_config_get_config(None)
-    wrapped_config = GenericSWIGWrapper(config, config._parent_pool)
-    client_ctx.config = config
-    config.assert_valid()
-    wrapped_config.assert_valid()
-    client_ctx.config.assert_valid()
-    config._parent_pool.destroy()
-    self.assertRaises(AssertionError, lambda: config.assert_valid())
-    self.assertRaises(AssertionError, lambda: wrapped_config.assert_valid())
-    self.assertRaises(AssertionError, lambda: client_ctx.config)
+    auth = svn.core.svn_auth_open([])
+    wrapped_auth = GenericSWIGWrapper(auth, auth._parent_pool)
+    client_ctx.auth_baton = auth
+    auth.assert_valid()
+    wrapped_auth.assert_valid()
+    client_ctx.auth_baton.assert_valid()
+    auth._parent_pool.destroy()
+    self.assertRaises(AssertionError, lambda: auth.assert_valid())
+    self.assertRaises(AssertionError, lambda: wrapped_auth.assert_valid())
+    self.assertRaises(AssertionError, lambda: client_ctx.auth_baton)
 
     # Test assert_valid with clear()
     client_ctx = svn.client.svn_client_create_context()
-    config = svn.core.svn_config_get_config(None)
-    wrapped_config = GenericSWIGWrapper(config, config._parent_pool)
-    client_ctx.config = config
-    config.assert_valid()
-    client_ctx.config.assert_valid()
-    wrapped_config.assert_valid()
-    config._parent_pool.clear()
-    self.assertRaises(AssertionError, lambda: config.assert_valid())
-    self.assertRaises(AssertionError, lambda: wrapped_config.assert_valid())
-    self.assertRaises(AssertionError, lambda: client_ctx.config)
+    auth = svn.core.svn_auth_open([])
+    wrapped_auth = GenericSWIGWrapper(auth, auth._parent_pool)
+    client_ctx.auth_baton = auth
+    auth.assert_valid()
+    wrapped_auth.assert_valid()
+    client_ctx.auth_baton.assert_valid()
+    auth._parent_pool.clear()
+    self.assertRaises(AssertionError, lambda: auth.assert_valid())
+    self.assertRaises(AssertionError, lambda: wrapped_auth.assert_valid())
+    self.assertRaises(AssertionError, lambda: client_ctx.auth_baton)
 
   def test_integer_struct_members(self):
     """Check that integer struct members work correctly"""
@@ -105,7 +133,7 @@ class PoolTestCase(unittest.TestCase):
     pool = Pool(pool)
 
     # Make sure proper exceptions are raised with incorrect input
-    self.assertRaises(TypeError, lambda: Pool("abcd"));
+    self.assertRaises(TypeError, lambda: Pool("abcd"))
 
     # Check that garbage collection is working OK
     self.assertNotNone(parent_pool_ref())
@@ -137,7 +165,7 @@ class PoolTestCase(unittest.TestCase):
     pool_ref = weakref.ref(pool)
 
     # Make sure proper exceptions are raised with incorrect input
-    self.assertRaises(TypeError, lambda: svn_pool_create("abcd"));
+    self.assertRaises(TypeError, lambda: svn_pool_create("abcd"))
 
     # Test whether pools are destroyed properly
     pool = svn_pool_create(pool)
@@ -152,7 +180,7 @@ class PoolTestCase(unittest.TestCase):
     newpool2 = Pool(newpool)
     svn_pool_clear(newpool)
     self.assertRaises(AssertionError, lambda: libsvn.core.apr_pool_destroy(newpool2))
-    self.assertRaises(AssertionError, lambda: svn_pool_destroy(newpool2));
+    self.assertRaises(AssertionError, lambda: svn_pool_destroy(newpool2))
     svn_pool_destroy(newpool)
     self.assertRaises(AssertionError, lambda: svn_pool_destroy(newpool))
 
@@ -179,7 +207,7 @@ class PoolTestCase(unittest.TestCase):
     self.assertNone(libsvn.core.application_pool)
 
     # Try to allocate memory from the old application pool
-    self.assertRaises(AssertionError, lambda: svn_pool_create(application_pool));
+    self.assertRaises(AssertionError, lambda: svn_pool_create(application_pool))
 
     # Bring the application pool back to life
     svn_pool_create()
@@ -195,4 +223,4 @@ def suite():
 
 if __name__ == '__main__':
   runner = unittest.TextTestRunner()
-  runner.run(suite());
+  runner.run(suite())

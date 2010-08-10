@@ -880,7 +880,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
                                   apr_hash_t **locations,
                                   const char *path,
                                   svn_revnum_t peg_revision,
-                                  apr_array_header_t *location_revisions,
+                                  const apr_array_header_t *location_revisions,
                                   apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -971,9 +971,9 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
 
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
-      const void *path;
-      apr_hash_this(hi, &path, NULL, NULL);
-      SVN_ERR_ASSERT(*((const char *)path) != '/');
+      const char *path = svn__apr_hash_index_key(hi);
+
+      SVN_ERR_ASSERT(*path != '/');
     }
 
   if (comment && ! svn_xml_is_xml_safe(comment, strlen(comment)))
@@ -996,9 +996,9 @@ svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
-      const void *path;
-      apr_hash_this(hi, &path, NULL, NULL);
-      SVN_ERR_ASSERT(*((const char *)path) != '/');
+      const char *path = svn__apr_hash_index_key(hi);
+
+      SVN_ERR_ASSERT(*path != '/');
     }
 
   return session->vtable->unlock(session, path_tokens, break_lock,
@@ -1137,18 +1137,19 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
 }
 
 svn_error_t *
-svn_ra__obliterate(svn_ra_session_t *session,
-                   svn_revnum_t rev,
-                   const char *path,
-                   apr_pool_t *pool)
+svn_ra__obliterate_path_rev(svn_ra_session_t *session,
+                            svn_revnum_t rev,
+                            const char *path,
+                            apr_pool_t *pool)
 {
   const char *session_url;
 
   SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
 
   if (session->vtable->obliterate_path_rev == NULL)
-    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                            "obliterate not supported by this RA layer");
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                            _("Obliterate is not supported by this "
+                              "Repository Access method"));
 
   return session->vtable->obliterate_path_rev(session, rev, path, pool);
 }

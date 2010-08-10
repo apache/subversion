@@ -24,13 +24,14 @@
 package org.tigris.subversion.javahl;
 
 /**
- * class for kind of mergeinfo logs
+ * Constants to specify which collection of revisions to report in
+ * getMergeinfoLog.
  */
 public interface MergeinfoLogKind
 {
-    /** does not exist */
+    /** Revisions eligible for merging from merge-source to merge-target. */
     public static final int eligible = 0;
 
-    /** exists, but uninteresting */
+    /** Revisions already merged from merge-source to merge-target. */
     public static final int merged = 1;
 }

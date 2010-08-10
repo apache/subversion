@@ -332,9 +332,8 @@ uri_previous_segment(const char *uri,
   return i;
 }
 
-/* Return the canonicalized version of PATH, allocated in POOL.
- * Pass type_uri for TYPE if PATH is a uri and type_dirent if PATH
- * is a regular path.
+/* Return the canonicalized version of PATH, of type TYPE, allocated in
+ * POOL.
  */
 static const char *
 canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
@@ -353,10 +352,9 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 
   dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 
-  /* Try to parse the path as an URI. */
-  url = FALSE;
+  /* If this is supposed to be an URI and it starts with "scheme://", then
+     copy the scheme, host name, etc. to DST and set URL = TRUE. */
   src = path;
-
   if (type == type_uri && *src != '/')
     {
       while (*src && (*src != '/') && (*src != ':'))
@@ -416,6 +414,8 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         }
     }
 
+  /* Copy to DST any separator or drive letter that must come before the
+     first regular path segment. */
   if (! url && type != type_relpath)
     {
       src = path;
@@ -441,6 +441,9 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
                (src[1] == ':'))
         {
           *(dst++) = canonicalize_to_upper(*(src++));
+          /* Leave the ':' to be processed as (or as part of) a path segment
+             by the following code block, so we need not care whether it has
+             a slash after it. */
         }
 #endif
     }

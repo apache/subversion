@@ -3266,8 +3266,10 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           ap_fputs(output, bb, ">\n");
         }
 
-      if ((resource->info->repos_path && resource->info->repos_path[1] != '\0')
-          && (resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION))
+      if ((resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+          && resource->info->repos_path
+          && ((resource->info->repos_path[1] != '\0')
+              || dav_svn__get_list_parentpath_flag(resource->info->r)))
         {
           if (gen_html)
             {

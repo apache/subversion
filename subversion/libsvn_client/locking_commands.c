@@ -362,7 +362,7 @@ fetch_tokens(svn_ra_session_t *ra_session, apr_hash_t *path_tokens,
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn_apr_hash_index_key(hi);
+      const char *path = svn__apr_hash_index_key(hi);
       svn_lock_t *lock;
 
       svn_pool_clear(iterpool);

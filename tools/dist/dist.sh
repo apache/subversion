@@ -228,15 +228,6 @@ echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 
 rm -f "$DISTPATH/STATUS"
 
-# Remove the www/ directory, and create an empty directory in it's place.
-# Export hacking.html from trunk into that directory.
-# (See http://svn.haxx.se/dev/archive-2008-02/0863.shtml for rationale.)
-rm -rf "$DISTPATH/www"
-mkdir "$DISTPATH/www"
-${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-    "http://svn.apache.org/repos/asf/subversion/trunk/www/hacking.html" \
-    --username none --password none "$DISTPATH/www/hacking.html"
-
 # Remove contrib/ from our distribution tarball.  Some of it is of
 # unknown license, and usefulness.
 # (See http://svn.haxx.se/dev/archive-2009-04/0166.shtml for discussion.)
@@ -245,6 +236,21 @@ rm -rf "$DISTPATH/contrib"
 # Remove packages/ from the tarball.
 # (See http://svn.haxx.se/dev/archive-2009-12/0205.shtml)
 rm -rf "$DISTPATH/packages"
+
+# Check for a recent enough Python
+# Instead of attempting to deal with various line ending issues, just export
+# the find_python script manually.
+${svn:-svn} export -q -r "$REVISION"  \
+     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/build/find_python.sh" \
+     --username none --password none "$DIST_SANDBOX/find_python.sh"
+PYTHON="`$DIST_SANDBOX/find_python.sh`"
+if test -z "$PYTHON"; then
+  echo "Python 2.4 or later is required to run dist.sh"
+  echo "If you have a suitable Python installed, but not on the"
+  echo "PATH, set the environment variable PYTHON to the full path"
+  echo "to the Python executable, and re-run dist.sh"
+  exit 1
+fi
 
 install_dependency()
 {
@@ -345,6 +351,12 @@ if [ -z "$ZIP" ] ; then
   echo "Running ./autogen.sh in sandbox, to create ./configure ..."
   (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 fi
+
+# Pre-translate the various sql-derived header files
+echo "Generating SQL-derived headers..."
+for f in `find "$DISTPATH/subversion" -name '*.sql'`; do
+  $PYTHON $DISTPATH/build/transform_sql.py $f `echo $f | sed 's/\.[^\.]*$//'`.h
+done
 
 echo "Removing any autom4te.cache directories that might exist..."
 find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;

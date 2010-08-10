@@ -63,10 +63,10 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_ra__obliterate(svn_ra_session_t *session,
-                   svn_revnum_t rev,
-                   const char *path,
-                   apr_pool_t *pool);
+svn_ra__obliterate_path_rev(svn_ra_session_t *session,
+                            svn_revnum_t rev,
+                            const char *path,
+                            apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

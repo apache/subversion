@@ -284,7 +284,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
                            apr_hash_t **locations_p,
                            const char *path,
                            svn_revnum_t peg_revision,
-                           apr_array_header_t *location_revisions,
+                           const apr_array_header_t *location_revisions,
                            apr_pool_t *pool)
 {
   apr_hash_t *locations = apr_hash_make(pool);
@@ -800,6 +800,7 @@ log_path_del_receiver(void *baton,
                       svn_log_entry_t *log_entry,
                       apr_pool_t *pool)
 {
+  log_path_del_rev_t *b = baton;
   apr_hash_index_t *hi;
 
   /* No paths were changed in this revision.  Nothing to do. */
@@ -816,14 +817,11 @@ log_path_del_receiver(void *baton,
 
       apr_hash_this(hi, (void *) &path, NULL, &val);
       log_item = val;
-      if (svn_path_compare_paths(((log_path_del_rev_t *) baton)->path,
-                                 path) == 0
-                                 && (log_item->action == 'D'
-                                     || log_item->action == 'R'))
+      if (svn_path_compare_paths(b->path, path) == 0
+          && (log_item->action == 'D' || log_item->action == 'R'))
         {
           /* Found the first deletion or replacement, we are done. */
-          ((log_path_del_rev_t *) baton)->revision_deleted =
-            log_entry->revision;
+          b->revision_deleted = log_entry->revision;
           break;
         }
     }

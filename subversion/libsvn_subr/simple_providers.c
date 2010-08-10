@@ -202,7 +202,7 @@ svn_auth__simple_first_creds_helper(void **credentials,
               else
                 need_to_save = TRUE;
             }
-	}
+        }
 
       /* See if we need to save this password if it is not present in
          auth cache. */

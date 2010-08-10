@@ -62,50 +62,37 @@ def db_dump(db_dump_name, repo_path, table):
     elif copying:
       yield line
 
-def crude_bdb_parse(line):
-  """Replace BDB ([klen] kval) syntax with (kval) syntax. This is a very
-  crude parser, only just good enough to make a more human-friendly output
-  in common cases. The result is not intended to be unambiguous or machine-
-  parsable."""
-  lparts = line.split('(')
-  new_lparts = []
-  for lpart in lparts:
-    rparts = lpart.split(')')
-    new_rparts = []
-    for rpart in rparts:
-      words = rpart.split(' ')
+def pretty_print_skel(line):
+  """Return LINE modified so as to look prettier for human reading, but no
+  longer unambiguous or machine-parsable. LINE is assumed to be in the
+  "Skel" format in which some values are preceded by a decimal length. This
+  function removes the length indicator, and also replaces a zero-length
+  value with a pair of single quotes."""
+  new_line = ''
+  while line:
+    # an explicit-length atom
+    explicit_atom = re.match(r'\d+ ', line)
+    if explicit_atom:
+      n = int(explicit_atom.group())
+      line = line[explicit_atom.end():]
+      new_line += line[:n]
+      line = line[n:]
+      if n == 0:
+        new_line += "''"
+      continue
 
-      # Set new_words to all the words that we want to keep
-      new_words = []
-      last_len = None
-      last_word = None
-      for word in words:
-        if last_len is None:
-          try:
-            last_len = int(word)
-            last_word = word
-          except ValueError:
-            if last_word is not None:
-              new_words += [last_word]
-            new_words += [word]
-            last_word = None
-            last_len = None
-        else:  # print a word that was previously prefixed by its len
-          if not len(word) == last_len + word.count('\\') * 2:
-            print "## parsed wrongly: %d %d '%s'" % (last_len, len(word), word)
-          if word == "":
-            new_words += ["''"]
-          else:
-            new_words += [word]
-          last_word = None
-          last_len = None
+    # an implicit-length atom
+    implicit_atom = re.match(r'[A-Za-z][^\s()]*', line)
+    if implicit_atom:
+      n = implicit_atom.end()
+      new_line += line[:n]
+      line = line[n:]
+      continue
 
-      if last_word is not None:
-        new_words += [last_word]
+    # parentheses, white space or any other non-atom
+    new_line += line[:1]
+    line = line[1:]
 
-      new_rparts += [' '.join(new_words)]
-    new_lparts += [')'.join(new_rparts)]
-  new_line = '('.join(new_lparts)
   return new_line
 
 def dump_bdb(db_dump_name, repo_path, dump_dir):
@@ -117,15 +104,20 @@ def dump_bdb(db_dump_name, repo_path, dump_dir):
                 'node-origins', 'representations', 'checksum-reps', 'strings',
                 'locks', 'lock-tokens', 'miscellaneous', 'uuids']:
     file.write(table + ":\n")
+    next_key_line = False
     for line in db_dump(db_dump_name, repo_path, table):
-      file.write(crude_bdb_parse(line))
+      # Omit any 'next-key' line and the following line.
+      if next_key_line:
+        next_key_line = False
+        continue
+      if line == ' next-key\n':
+        next_key_line = True
+        continue
+      # The line isn't necessarily a skel, but pretty_print_skel() shouldn't
+      # do too much harm if it isn't.
+      file.write(pretty_print_skel(line))
     file.write("\n")
   file.close()
-
-  # Dump the svn view of the repository
-  #svnadmin dump    repo_path > dump_dir + "/dump.svn"
-  #svnadmin lslocks repo_path > dump_dir + "/locks.svn"
-  #svnadmin lstxns  repo_path > dump_dir + "/txns.svn"
 
 def locate_db_dump():
   """Locate a db_dump executable"""
@@ -150,6 +142,8 @@ class SvnRepository:
     self.repo_url = repo_url
     self.repo_absdir = os.path.abspath(repo_dir)
     self.db_dump_name = locate_db_dump()
+    # This repository object's idea of its own head revision.
+    self.head_rev = 0
 
   def dump(self, output_dir):
     """Dump the repository into the directory OUTPUT_DIR"""
@@ -170,11 +164,23 @@ class SvnRepository:
     main.file_append(ldumpfile, ''.join(stdout))
 
 
-  def obliterate_node_rev(self, path, rev):
-    """Obliterate the single node-rev PATH in revision REV."""
+  def obliterate_node_rev(self, path, rev,
+                          exp_out=None, exp_err=[], exp_exit=0):
+    """Obliterate the single node-rev PATH in revision REV. Check the
+    expected stdout, stderr and exit code (EXP_OUT, EXP_ERR, EXP_EXIT)."""
+    arg = self.repo_url + '/' + path + '@' + str(rev)
+    actions.run_and_verify_svn2(None, exp_out, exp_err, exp_exit,
+                                'obliterate', arg)
+
+  def svn_mkdirs(self, *dirs):
+    """Run 'svn mkdir' on the repository. DIRS is a list of directories to
+    make, and each directory is a path relative to the repository root,
+    neither starting nor ending with a slash."""
+    urls = [self.repo_url + '/' + dir for dir in dirs]
     actions.run_and_verify_svn(None, None, [],
-                               'obliterate',
-                               self.repo_url + '/' + path + '@' + str(rev))
+                               'mkdir', '-m', 'svn_mkdirs()', '--parents',
+                               *urls)
+    self.head_rev += 1
 
 
 ######################################################################
@@ -190,9 +196,9 @@ class SvnWC:
      in Subversion canonical form ('/' separators).
      """
 
-  def __init__(self, wc_dir):
-    """Initialize the object to use the existing WC at path WC_DIR.
-    """
+  def __init__(self, wc_dir, repo):
+    """Initialize the object to use the existing WC at path WC_DIR and
+    the existing repository object REPO."""
     self.wc_absdir = os.path.abspath(wc_dir)
     # 'state' is, at all times, the 'wc.State' representation of the state
     # of the WC, with paths relative to 'wc_absdir'.
@@ -202,15 +208,10 @@ class SvnWC:
     self.state.add({
       '': wc.StateItem()
     })
-    # This WC's idea of the repository's head revision.
-    # ### Shouldn't be in this class: should ask the repository instead.
-    self.head_rev = 0
-
-    print "## new SvnWC:"
-    print self
+    self.repo = repo
 
   def __str__(self):
-    return "SvnWC(head_rev=" + str(self.head_rev) + ", state={" + \
+    return "SvnWC(head_rev=" + str(self.repo.head_rev) + ", state={" + \
       str(self.state.desc) + \
       "})"
 
@@ -306,10 +307,13 @@ class SvnWC:
       rpath2: self.state.desc[rpath1]
     })
 
-  def svn_delete(self, rpath):
+  def svn_delete(self, rpath, even_if_modified=False):
     "Delete a WC path locally."
     lpath = local_path(rpath)
-    actions.run_and_verify_svn(None, None, [], 'delete', lpath)
+    args = []
+    if even_if_modified:
+      args += ['--force']
+    actions.run_and_verify_svn(None, None, [], 'delete', lpath, *args)
 
   def svn_commit(self, rpath='', log=''):
     "Commit a WC path (recursively). Return the new revision number."
@@ -317,9 +321,14 @@ class SvnWC:
     actions.run_and_verify_svn(None, verify.AnyOutput, [],
                                'commit', '-m', log, lpath)
     actions.run_and_verify_update(lpath, None, None, None)
-    self.head_rev += 1
-    print "## head-rev == " + str(self.head_rev)
-    return self.head_rev
+    self.repo.head_rev += 1
+    print "## head-rev == " + str(self.repo.head_rev)
+    return self.repo.head_rev
+
+  def svn_update(self, rpath='', rev='HEAD'):
+    "Update the WC to the specified revision"
+    lpath = local_path(rpath)
+    actions.run_and_verify_update(lpath, None, None, None)
 
 #  def svn_merge(self, rev_spec, source, target, exp_out=None):
 #    """Merge a single change from path 'source' to path 'target'.

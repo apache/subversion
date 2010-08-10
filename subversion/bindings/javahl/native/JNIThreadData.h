@@ -29,8 +29,8 @@
 
 #include <jni.h>
 #include "JNIUtil.h"
+
 struct apr_threadkey_t;
-class SVN::Pool;
 
 /**
  * This class implements thread local storage for JNIUtil.

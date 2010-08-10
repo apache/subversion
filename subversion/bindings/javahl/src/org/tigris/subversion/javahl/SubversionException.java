@@ -47,4 +47,12 @@ public class SubversionException extends Exception
     {
         super(message);
     }
+
+    /**
+     * This constructor is for backward compat.
+     */
+    SubversionException(org.apache.subversion.javahl.SubversionException ex)
+    {
+        super(ex.getMessage());
+    }
 }

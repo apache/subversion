@@ -239,7 +239,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   g_pool = svn_pool_create(NULL);
 
 #if defined(WIN32) || defined(__CYGWIN__)
-  /* See http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt */
+  /* See http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt */
   /* ### This code really only needs to be invoked by consumers of
      ### the libsvn_wc library, which basically means SVNClient. */
   if (getenv ("SVN_ASP_DOT_NET_HACK"))
@@ -338,6 +338,11 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
   JNIEnv *env = getEnv();
   jclass clazz = env->FindClass(className);
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   if (getLogLevel() >= exceptionLog)
     {
       JNICriticalSection cs(*g_logMutex);
@@ -350,37 +355,25 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
       g_logStream << std::endl;
     }
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN_NOTHING();
 
   jstring jmessage = makeJString(msg);
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN_NOTHING();
   jstring jsource = makeJString(source);
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN_NOTHING();
 
   jmethodID mid = env->GetMethodID(clazz, "<init>",
                                    "(Ljava/lang/String;Ljava/lang/String;I)V");
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN_NOTHING();
   jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
                                            static_cast<jint>(aprErr));
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN_NOTHING();
 
-  env->DeleteLocalRef(clazz);
-  if (isJavaExceptionThrown())
-    return;
-
-  env->DeleteLocalRef(jmessage);
-  if (isJavaExceptionThrown())
-    return;
-
-  env->DeleteLocalRef(jsource);
-  if (isJavaExceptionThrown())
-    return;
-
-  env->Throw(static_cast<jthrowable>(nativeException));
+  env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
 }
 
 void JNIUtil::handleSVNError(svn_error_t *err)

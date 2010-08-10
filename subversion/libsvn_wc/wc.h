@@ -98,10 +98,21 @@ extern "C" {
  *
  * The change from 11 to 12 was a switch from 'entries' to 'wc.db'.
  *
- * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', and
- * moved the wcprops into the 'dav_cache' column in BASE_NODE.
+ * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', moved
+ * the wcprops into the 'dav_cache' column in BASE_NODE, and stopped using
+ * the 'incomplete_children' column of BASE_NODE.
  *
- * The change from 13 to 14 added the WCLOCKS table.
+ * The change from 13 to 14 added the WCLOCKS table (and migrated locks
+ * from the filesystem into wc.db), and some columns to ACTUAL_NODE for
+ * future use.
+ *
+ * The change from 14 to 15 switched from depth='exclude' on directories to
+ * using presence='exclude' within the BASE_NODE and WORKING_NODE tables.
+ * This change also enabled exclude support on files and symlinks.
+ *
+ * The change from 15 to 16 added 'locked_levels' to WC_LOCK, setting
+ * any existing locks to a level of 0. The 'md5_checksum' column was
+ * added to PRISTINE for future use.
  *
  * == 1.7.x shipped with format ???
  *
@@ -167,6 +178,61 @@ svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
                                svn_config_t *config,
                                svn_wc__db_t *db,
                                apr_pool_t *result_pool);
+
+
+/*** Committed Queue ***/
+
+/**
+ * Return the pool associated with QUEUE.  (This so we can keep some
+ * deprecated functions that need to peek inside the QUEUE struct in
+ * deprecated.c).
+ */
+apr_pool_t *
+svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
+
+
+/** Internal helper for svn_wc_process_committed_queue2().
+ *
+ * ### If @a queue is NULL, then ...?
+ * ### else:
+ * Bump an item from @a queue (the one associated with @a
+ * local_abspath) to @a new_revnum after a commit succeeds, recursing
+ * if @a recurse is set.
+ *
+ * @a new_date is the (server-side) date of the new revision, or 0.
+ *
+ * @a rev_author is the (server-side) author of the new
+ * revision; it may be @c NULL.
+ *
+ * @a new_dav_cache is a hash of dav property changes to be made to
+ * the @a local_abspath.
+ *   ### [JAF]  Is it? See svn_wc_queue_committed3(). It ends up being
+ *   ### assigned as a whole to wc.db:BASE_NODE:dav_cache.
+ *
+ * If @a no_unlock is set, don't release any user locks on @a
+ * local_abspath; otherwise release them as part of this processing.
+ *
+ * If @keep_changelist is set, don't remove any changeset assignments
+ * from @a local_abspath; otherwise, clear it of such assignments.
+ *
+ * If @a local_abspath is a file and @a checksum is non-NULL, use @a checksum
+ * as the checksum for the new text base. Otherwise, calculate the checksum
+ * if needed.
+ *   ### [JAF]  No, it doesn't calculate the checksum, it stores null in wc.db.
+ */
+svn_error_t *
+svn_wc__process_committed_internal(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_boolean_t recurse,
+                                   svn_revnum_t new_revnum,
+                                   apr_time_t new_date,
+                                   const char *rev_author,
+                                   apr_hash_t *new_dav_cache,
+                                   svn_boolean_t no_unlock,
+                                   svn_boolean_t keep_changelist,
+                                   const svn_checksum_t *checksum,
+                                   const svn_wc_committed_queue_t *queue,
+                                   apr_pool_t *scratch_pool);
 
 
 /*** Update traversals. ***/
@@ -250,6 +316,27 @@ struct svn_wc_traversal_info_t
 /* Ensure that DIR exists. */
 svn_error_t *svn_wc__ensure_directory(const char *path, apr_pool_t *pool);
 
+
+/* Return a hash keyed by 'const char *' property names and with
+   'svn_string_t *' values built from PROPS (which is an array of
+   pointers to svn_prop_t's) or to NULL if PROPS is NULL or empty.
+   PROPS items which lack a value will be ignored.  If PROPS contains
+   multiple properties with the same name, each successive such item
+   reached in a walk from the beginning to the end of the array will
+   overwrite the previous in the returned hash.
+
+   NOTE: While the returned hash will be allocated in RESULT_POOL, the
+   items it holds will share storage with those in PROPS.
+
+   ### This is rather the reverse of svn_prop_hash_to_array(), except
+   ### that function's arrays contains svn_prop_t's, whereas this
+   ### one's contains *pointers* to svn_prop_t's.  So much for
+   ### consistency.  */
+apr_hash_t *
+svn_wc__prop_array_to_hash(const apr_array_header_t *props,
+                           apr_pool_t *result_pool);
+
+
 /* Baton for svn_wc__compat_call_notify_func below. */
 typedef struct svn_wc__compat_notify_baton_t {
   /* Wrapped func/baton. */
@@ -388,14 +475,6 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     const char *target,
                                     svn_wc__db_t *db,
                                     apr_pool_t *pool);
-
-/* Similar to svn_wc__path_switched(), but with a wc_db parameter instead of
- * a wc_context. */
-svn_error_t *
-svn_wc__internal_path_switched(svn_boolean_t *switched,
-                               svn_wc__db_t *wc_db,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
 
 
 /* Similar to svn_wc_conflicted_p3(), but with a wc_db parameter in place of

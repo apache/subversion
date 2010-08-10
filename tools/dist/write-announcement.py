@@ -63,13 +63,13 @@ For this release, the following people have provided PGP signatures:
 @RCWARNING@
 Release notes for the @MAJOR_MINOR@.x release series may be found at:
 
-    http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html
+    http://subversion.apache.org/docs/release-notes/@MAJOR_MINOR@.html
 
 You can find the list of changes between @VERSION@ and earlier versions at:
 
-    http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES
+    http://svn.apache.org/repos/asf/subversion/tags/@VERSION@/CHANGES
 
-Questions, comments, and bug reports to users@subversion.tigris.org.
+Questions, comments, and bug reports to users@subversion.apache.org.
 
 Thanks,
 - The Subversion Team
@@ -117,11 +117,11 @@ ann_html = """\
 @RCWARNING@
 <p>Release notes for the @MAJOR_MINOR@.x release series may be found at:</p>
 
-<dl><dd><a href="http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html">http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html</a></dd></dl>
+<dl><dd><a href="http://subversion.apache.org/docs/release-notes/@MAJOR_MINOR@.html">http://subversion.apache.org/docs/release-notes/@MAJOR_MINOR@.html</a></dd></dl>
 
 <p>You can find the list of changes between @VERSION@ and earlier versions at:</p>
 
-<dl><dd><a href="http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES">http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES</a></dd></dl>
+<dl><dd><a href="http://svn.apache.org/repos/asf/subversion/tags/@VERSION@/CHANGES">http://svn.apache.org/repos/asf/subversion/tags/@VERSION@/CHANGES</a></dd></dl>
 """
 
 rc_warning_text = [ """\

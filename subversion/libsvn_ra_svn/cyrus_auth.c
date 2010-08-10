@@ -726,7 +726,7 @@ svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport,
 
 svn_error_t *
 svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
-                          apr_array_header_t *mechlist,
+                          const apr_array_header_t *mechlist,
                           const char *realm, apr_pool_t *pool)
 {
   apr_pool_t *subpool;

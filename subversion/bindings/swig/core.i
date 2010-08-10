@@ -745,6 +745,16 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %ignore svn_opt_parse_all_args;
 #endif
 
+#ifdef SWIGPYTHON
+# The auth baton depends on the providers, so we preserve a
+# reference to them inside the wrapper. This way, if all external
+# references to the providers are gone, they will still be alive,
+# keeping the baton valid.
+%feature("pythonappend") svn_auth_open %{
+  val.__dict__["_deps"] = list(args[0])
+%}
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_error_codes_h.swg
@@ -775,6 +785,10 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGPERL
+/* The apr_file_t* 'in' typemap can't cope with struct members, and there
+   is no reason to change this one. */
+%immutable svn_patch_t::patch_file;
+
 %include svn_diff_h.swg
 %include svn_error_h.swg
 

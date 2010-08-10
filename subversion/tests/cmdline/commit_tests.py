@@ -3,7 +3,7 @@
 #  commit_tests.py:  testing fancy commit cases.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -1496,8 +1496,11 @@ def commit_multiple_wc_multiple_repos(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
   # Commit should fail, since WCs come from different repositories.
+  # The exact error message depends on whether or not the tests are
+  # run below a 1.7 working copy
+  error_re = ".*(is not a|Are all targets part of the same) working copy.*"
   svntest.actions.run_and_verify_svn("Expected output on stderr doesn't match",
-                                     [], ".*is not a working copy.*",
+                                     [], error_re,
                                      'commit', '-m', 'log',
                                      wc1_dir, wc2_dir)
 
@@ -2430,7 +2433,7 @@ def set_invalid_revprops(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'svn: Revision property pair is empty',
                                      'mkdir', '-m', 'msg',
-				     '--with-revprop', '',
+                                     '--with-revprop', '',
                                      remote_dir)
 
 #----------------------------------------------------------------------

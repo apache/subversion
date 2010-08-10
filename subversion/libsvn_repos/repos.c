@@ -288,8 +288,8 @@ create_locks(svn_repos_t *repos, apr_pool_t *pool)
 #define PREWRITTEN_HOOKS_TEXT                                                 \
   "# For more examples and pre-written hooks, see those in"                NL \
   "# the Subversion repository at"                                         NL \
-  "# http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/ and"        NL \
-  "# http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/"          NL
+  "# http://svn.apache.org/repos/asf/subversion/trunk/tools/hook-scripts/ and"        NL \
+  "# http://svn.apache.org/repos/asf/subversion/trunk/contrib/hook-scripts/"          NL
 
 
 static svn_error_t *
@@ -1107,7 +1107,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### access through http: and/or file: URLs, then this file is"              NL
 "### irrelevant.)"                                                           NL
 ""                                                                           NL
-"### Visit http://subversion.tigris.org/ for more information."              NL
+"### Visit http://subversion.apache.org/ for more information."              NL
 ""                                                                           NL
 "[general]"                                                                  NL
 "### These options control access to the repository for unauthenticated"     NL
@@ -1284,7 +1284,7 @@ create_repos_structure(svn_repos_t *repos,
       "requirements of your site."                                           NL
       ""                                                                     NL;
     const char * const readme_footer =
-      "Visit http://subversion.tigris.org/ for more information."            NL;
+      "Visit http://subversion.apache.org/ for more information."            NL;
     apr_file_t *f;
     apr_size_t written;
 
@@ -1369,7 +1369,9 @@ svn_repos_create(svn_repos_t **repos_p,
   if (root_path != NULL)
     return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL, _("'%s' is a "
                               "subdirectory of an existing repository rooted "
-                              "at '%s'"), path, root_path);
+                              "at '%s'"),
+                              svn_dirent_local_style(path, pool),
+                              svn_dirent_local_style(root_path, pool));
 
   /* Create the various files and subdirectories for the repository. */
   SVN_ERR_W(create_repos_structure(repos, path, fs_config, pool),
@@ -1961,7 +1963,7 @@ svn_repos_stat(svn_dirent_t **dirent,
 
 svn_error_t *
 svn_repos_remember_client_capabilities(svn_repos_t *repos,
-                                       apr_array_header_t *capabilities)
+                                       const apr_array_header_t *capabilities)
 {
   repos->client_capabilities = capabilities;
   return SVN_NO_ERROR;

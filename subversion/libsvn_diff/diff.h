@@ -91,7 +91,7 @@ typedef enum svn_diff__normalize_state_t
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
-	      apr_pool_t *pool);
+              apr_pool_t *pool);
 
 
 /*

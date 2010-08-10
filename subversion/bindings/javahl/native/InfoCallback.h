@@ -57,10 +57,6 @@ class InfoCallback
    * A local reference to the corresponding Java object.
    */
   jobject m_callback;
-
-  jobject createJavaInfo2(const char *path,
-                          const svn_info_t *info,
-                          apr_pool_t *pool);
 };
 
 #endif  // INFOCALLBACK_H

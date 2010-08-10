@@ -56,8 +56,8 @@
 /* Set *txn_p to a transaction object allocated in POOL for the
    transaction in FS whose id is TXN_ID.  If EXPECT_DEAD is set, this
    transaction must be a dead one, else an error is returned.  If
-   EXPECT_DEAD is not set, an error is thrown if the transaction is
-   *not* dead. */
+   EXPECT_DEAD is not set, the transaction must *not* be a dead one,
+   else an error is returned. */
 static svn_error_t *
 get_txn(transaction_t **txn_p,
         svn_fs_t *fs,
@@ -437,9 +437,10 @@ svn_fs_base__add_txn_copy(svn_fs_t *fs,
 /* Duplicate all entries in the "changes" table that are keyed by OLD_TXN_ID,
  * creating new entries that are keyed by NEW_TXN_ID.
  *
- * Each new "change" has the same content as the old one, except that if the
+ * Give each new "change" the same content as the old one, except that if the
  * txn-id component of its noderev-id is OLD_TXN_ID (which is the case for
- * all changes except deletes) then that is changed to NEW_TXN_ID.
+ * all changes except deletes, and for some deletes, it seems) then change
+ * that to NEW_TXN_ID.
  *
  * Work within TRAIL. */
 static svn_error_t *
@@ -456,17 +457,15 @@ changes_dup(const char *new_txn_id,
   for (i = 0; i < changes->nelts; i++)
     {
       change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+      const char *node_id = svn_fs_base__id_node_id(change->noderev_id);
+      const char *copy_id = svn_fs_base__id_copy_id(change->noderev_id);
+      const char *txn_id = svn_fs_base__id_txn_id(change->noderev_id);
 
-      if (change->kind != svn_fs_path_change_delete
-          && change->kind != svn_fs_path_change_reset)
+      /* if (change->kind != svn_fs_path_change_delete
+       *     && change->kind != svn_fs_path_change_reset) */
+      if (svn_fs_base__key_compare(txn_id, old_txn_id) == 0)
         {
-          const char *node_id, *copy_id;
-
           /* Modify the "change": change noderev_id's txn_id to NEW_TXN_ID */
-          node_id = svn_fs_base__id_node_id(change->noderev_id);
-          copy_id = svn_fs_base__id_copy_id(change->noderev_id);
-          SVN_ERR_ASSERT(svn_fs_base__key_compare(
-            svn_fs_base__id_txn_id(change->noderev_id), old_txn_id) == 0);
           change->noderev_id = svn_fs_base__id_create(node_id, copy_id,
                                                       new_txn_id,
                                                       scratch_pool);
@@ -638,7 +637,7 @@ svn_fs_base__change_txn_prop(svn_fs_txn_t *txn,
 
 svn_error_t *
 svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
-                              apr_array_header_t *props,
+                              const apr_array_header_t *props,
                               apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);

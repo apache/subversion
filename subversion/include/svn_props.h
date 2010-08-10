@@ -371,7 +371,7 @@ svn_prop_name_is_valid(const char *prop_name);
  * The following properties are used for storing meta-data about
  * individual entries in the meta-data branches of subversion,
  * see issue #1256 or browseable at
- * http://svn.collab.net/viewvc/svn/branches/meta-data-versioning/ .
+ * http://svn.apache.org/viewvc/subversion/branches/meta-data-versioning/ .
  * Furthermore @c svntar (http://svn.borg.ch/svntar/) and @c FSVS
  * (http://fsvs.tigris.org/) use these, too.
  *

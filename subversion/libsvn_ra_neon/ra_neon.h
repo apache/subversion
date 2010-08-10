@@ -82,7 +82,7 @@ typedef struct {
 
 
 
-typedef struct {
+typedef struct svn_ra_neon__session_t {
   apr_pool_t *pool;
   svn_stringbuf_t *url;                 /* original, unparsed session url */
   ne_uri root;                          /* parsed version of above */
@@ -112,6 +112,9 @@ typedef struct {
 
   svn_ra_progress_notify_func_t progress_func;
   void *progress_baton;
+
+  apr_off_t total_progress;             /* Total number of bytes sent in this
+                                           session with a -1 total marker */
 
   /* Maps SVN_RA_CAPABILITY_foo keys to "yes" or "no" values.
      If a capability is not yet discovered, it is absent from the table.
@@ -567,7 +570,7 @@ svn_error_t *svn_ra_neon__get_vcc(const char **vcc,
 svn_error_t *svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
                                        const char *url,
                                        apr_hash_t *prop_changes,
-                                       apr_array_header_t *prop_deletes,
+                                       const apr_array_header_t *prop_deletes,
                                        apr_hash_t *extra_headers,
                                        apr_pool_t *pool);
 
@@ -973,6 +976,7 @@ svn_ra_neon__copy(svn_ra_neon__session_t *ras,
                   apr_pool_t *pool);
 
 /* Return the Location HTTP header or NULL if none was sent.
+ * (Return a canonical URL even if the header ended with a slash.)
  *
  * Do allocations in POOL.
  */
@@ -988,7 +992,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
                            apr_hash_t **locations,
                            const char *path,
                            svn_revnum_t peg_revision,
-                           apr_array_header_t *location_revisions,
+                           const apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
 
 
@@ -1086,10 +1090,15 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
    RAS->capabilities with the server's capabilities as read from the
    response headers.  Use POOL only for temporary allocation.
 
-   NOTE:  This function also expects the server to announce the
+   If the server is kind enough to tell us the current youngest
+   revision of the target repository, set *YOUNGEST_REV to that value;
+   set it to SVN_INVALID_REVNUM otherwise.
+
+  NOTE:  This function also expects the server to announce the
    activity collection.  */
 svn_error_t *
 svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
+                                   svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool);
 
 /*

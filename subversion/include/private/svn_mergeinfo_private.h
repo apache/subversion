@@ -151,30 +151,41 @@ svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
                                    svn_mergeinfo_t mergeinfo,
                                    apr_pool_t *pool);
 
-/* Set *FILTERED_MERGEINFO to a deep copy of MERGEINFO, allocated in POOL, less
-   any rangelists that fall outside of the range OLDEST_REV:YOUGEST_REV
-   (inclusive).  If all the rangelists mapped to a given path are filtered
+/* Set *FILTERED_MERGEINFO to a deep copy of MERGEINFO, allocated in
+   RESULT_POOL, less any rangelists that fall outside of the range
+   OLDEST_REV:YOUGEST_REV (inclusive) if INCLUDE_RANGE is true, or less
+   any rangelists within the range OLDEST_REV:YOUGEST_REV if INCLUDE_RANGE
+   is false.  If all the rangelists mapped to a given path are filtered
    then filter that path as well.  If all paths are filtered or MERGEINFO is
-   empty or NULL then *FILTERED_MERGEINFO is set to an empty hash. */
+   empty or NULL then *FILTERED_MERGEINFO is set to an empty hash.
+
+   Use SCRATCH_POOL for any temporary allocations. */
 svn_error_t *
 svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
                                           svn_mergeinfo_t mergeinfo,
                                           svn_revnum_t youngest_rev,
                                           svn_revnum_t oldest_rev,
-                                          apr_pool_t *pool);
+                                          svn_boolean_t include_range,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool);
 
 /* Filter each mergeinfo in CATALOG as per
-   svn_mergeinfo__filter_mergefino_by_ranges and put a deep copy of the
-   result in *FILTERED_CATALOG.  If any mergeinfo is filtered to an empty
-   hash then filter that path/mergeinfo as well.  If all mergeinfo is filtered
-   or CATALOG is NULL then set *FILTERED_CATALOG to an empty hash. */
+   svn_mergeinfo__filter_mergeinfo_by_ranges() and put a deep copy of the
+   result in *FILTERED_CATALOG, allocated in RESULT_POOL.  If any mergeinfo
+   is filtered to an empty hash then filter that path/mergeinfo as well.
+   If all mergeinfo is filtered or CATALOG is NULL then set *FILTERED_CATALOG
+   to an empty hash.
+
+   Use SCRATCH_POOL for any temporary allocations. */
 svn_error_t*
 svn_mergeinfo__filter_catalog_by_ranges(
   svn_mergeinfo_catalog_t *filtered_catalog,
   svn_mergeinfo_catalog_t catalog,
   svn_revnum_t youngest_rev,
   svn_revnum_t oldest_rev,
-  apr_pool_t *pool);
+  svn_boolean_t include_range,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 /* If MERGEINFO is non-inheritable return TRUE, return FALSE otherwise.
    MERGEINFO may be NULL or empty. */
@@ -190,6 +201,15 @@ svn_error_t *
 svn_mergeinfo__string_has_noninheritable(svn_boolean_t *is_noninheritable,
                                          const char *mergeinfo_str,
                                          apr_pool_t *scratch_pool);
+
+/* Return a rangelist with one svn_merge_range_t * element defined by START,
+   END, and INHERITABLE.  The rangelist and its contents are allocated in
+   RESULT_POOL. */
+apr_array_header_t *
+svn_rangelist__initialize(svn_revnum_t start,
+                          svn_revnum_t end,
+                          svn_boolean_t inheritable,
+                          apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

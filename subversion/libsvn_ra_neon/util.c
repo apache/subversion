@@ -1084,11 +1084,29 @@ wrapper_endelm_cb(void *baton,
   return 0;
 }
 
+/* If XML_PARSER found an XML parse error, then return a Subversion error
+ * saying that the error was found in the response to the DAV request METHOD
+ * for the URL URL. Otherwise, return SVN_NO_ERROR. */
+static svn_error_t *
+check_parse_error(const char *method,
+                  ne_xml_parser *xml_parser,
+                  const char *url)
+{
+  const char *msg = ne_xml_get_error(xml_parser);
+  if (msg != NULL && *msg != '\0')
+    return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                             _("The %s request returned invalid XML "
+                               "in the response: %s (%s)"),
+                             method, msg, url);
+  return SVN_NO_ERROR;
+}
+
 static int
 wrapper_reader_cb(void *baton, const char *data, size_t len)
 {
   parser_wrapper_baton_t *pwb = baton;
   svn_ra_neon__session_t *sess = pwb->req->sess;
+  int parser_status;
 
   if (pwb->req->err)
     return 1;
@@ -1101,7 +1119,16 @@ wrapper_reader_cb(void *baton, const char *data, size_t len)
   if (pwb->req->err)
     return 1;
 
-  return ne_xml_parse(pwb->parser, data, len);
+  parser_status = ne_xml_parse(pwb->parser, data, len);
+  if (parser_status)
+    {
+      /* Pass XML parser error. */
+      SVN_RA_NEON__REQ_ERR(pwb->req,
+                           check_parse_error(pwb->req->method, pwb->parser,
+                                             pwb->req->url));
+    }
+
+  return parser_status;
 }
 
 ne_xml_parser *
@@ -1194,7 +1221,6 @@ parsed_request(svn_ra_neon__request_t *req,
                apr_pool_t *pool)
 {
   ne_xml_parser *success_parser = NULL;
-  const char *msg;
   spool_reader_baton_t spool_reader_baton;
 
   if (body == NULL)
@@ -1261,13 +1287,7 @@ parsed_request(svn_ra_neon__request_t *req,
         }
     }
 
-  /* was there an XML parse error somewhere? */
-  msg = ne_xml_get_error(success_parser);
-  if (msg != NULL && *msg != '\0')
-    return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                             _("The %s request returned invalid XML "
-                               "in the response: %s (%s)"),
-                             method, msg, url);
+  SVN_ERR(check_parse_error(method, success_parser, url));
 
   return SVN_NO_ERROR;
 }
@@ -1490,5 +1510,5 @@ svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
                                   apr_pool_t *pool)
 {
   const char *val = ne_get_response_header(request->ne_req, "Location");
-  return val ? apr_pstrdup(pool, val) : NULL;
+  return val ? svn_uri_canonicalize(val, pool) : NULL;
 }

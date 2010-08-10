@@ -299,7 +299,6 @@ def setup_development_mode():
         'run_and_verify_export',
         'run_and_verify_update',
         'run_and_verify_merge',
-        'run_and_verify_merge2',
         'run_and_verify_switch',
         'run_and_verify_commit',
         'run_and_verify_unquiet_status',
@@ -359,9 +358,9 @@ def get_fsfs_format_file_path(repo_dir):
 
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=0, *varargs):
-  """Run COMMAND with VARARGS; return exit code as int; stdout, stderr
-  as lists of lines.  See run_command_stdin() for details.
-  If ERROR_EXPECTED is None, any stderr also will be printed."""
+  """Run COMMAND with VARARGS. Return exit code as int; stdout, stderr
+  as lists of lines (including line terminators).  See run_command_stdin()
+  for details.  If ERROR_EXPECTED is None, any stderr also will be printed."""
 
   return run_command_stdin(command, error_expected, binary_mode,
                            None, *varargs)
@@ -434,8 +433,8 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
   to finish, dying if it does.  If KID fails, create an error message
   containing any stdout and stderr from the kid.  Show COMMAND_STRING in
   diagnostic messages.  Normalize Windows line endings of stdout and stderr
-  if not BINARY_MODE.  Return KID's exit code, stdout and stderr (the latter
-  two as lists)."""
+  if not BINARY_MODE.  Return KID's exit code as int; stdout, stderr as
+  lists of lines (including line terminators)."""
   if waiter is None:
     return
 
@@ -478,7 +477,9 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
 
 def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
   """Run any binary, supplying input text, logging the command line.
-  Normalize Windows line endings of stdout and stderr if not BINARY_MODE."""
+  Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
+  Return exit code as int; stdout, stderr as lists of lines (including
+  line terminators)."""
   if stdin_lines and not isinstance(stdin_lines, list):
     raise TypeError("stdin_lines should have list type")
 
@@ -510,7 +511,8 @@ def run_command_stdin(command, error_expected, binary_mode=0,
   is willing to buffer, this will deadlock, with both Python and
   COMMAND waiting to write to each other for ever.
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
-  Return exit code as int; stdout, stderr as lists of lines.
+  Return exit code as int; stdout, stderr as lists of lines (including
+  line terminators).
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
   if verbose_mode:
@@ -595,7 +597,7 @@ def _with_auth(args):
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return exit code as int; stdout, stderr as
-  lists of lines.
+  lists of lines (including line terminators).
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
@@ -605,23 +607,23 @@ def run_svn(error_expected, *varargs):
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
   """Run svnadmin with VARARGS, returns exit code as int; stdout, stderr as
-  list of lines."""
+  list of lines (including line terminators)."""
   return run_command(svnadmin_binary, 1, 0, *varargs)
 
 # For running svnlook.  Ignores the output.
 def run_svnlook(*varargs):
   """Run svnlook with VARARGS, returns exit code as int; stdout, stderr as
-  list of lines."""
+  list of lines (including line terminators)."""
   return run_command(svnlook_binary, 1, 0, *varargs)
 
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as
-  list of lines."""
+  list of lines (including line terminators)."""
   return run_command(svnsync_binary, 1, 0, *(_with_config_dir(varargs)))
 
 def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
-  as list of lines."""
+  as list of lines (including line terminators)."""
   return run_command(svnversion_binary, 1, 0, *varargs)
 
 def run_entriesdump(path):
@@ -944,6 +946,22 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
   os.environ['SVN_TEST_PYTHON'] = sys.executable
 
+def mergeinfo_notify_line(revstart, revend):
+  """Return an expected output line that describes the beginning of a
+  mergeinfo recording notification on revisions REVSTART through REVEND."""
+  if (revend is None):
+    if (revstart < 0):
+      revstart = abs(revstart)
+      return "--- Recording mergeinfo for reverse merge of r%ld .*:\n" \
+             % (revstart)
+    else:
+      return "--- Recording mergeinfo for merge of r%ld .*:\n" % (revstart)
+  elif (revstart < revend):
+    return "--- Recording mergeinfo for merge of r%ld through r%ld .*:\n" \
+           % (revstart, revend)
+  else:
+    return "--- Recording mergeinfo for reverse merge of r%ld through " \
+           "r%ld .*:\n" % (revstart, revend)
 
 def merge_notify_line(revstart=None, revend=None, same_URL=True,
                       foreign=False):
@@ -1100,7 +1118,7 @@ class TestSpawningThread(threading.Thread):
     if server_minor_version:
       args.append('--server-minor-version=' + str(server_minor_version))
 
-    result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
+    result, stdout_lines, stderr_lines = spawn_process(command, 0, None, *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
 
     if result != 1:

@@ -41,7 +41,7 @@
 
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
-#include "../../libsvn_wc/wc-metadata.h"
+#include "../../libsvn_wc/wc-queries.h"
 
 #include "private/svn_wc_private.h"
 
@@ -77,13 +77,7 @@
 
 #define I_TC_DATA "((conflict F file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
 
-static const char * const data_loading_sql[] = {
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  (
-   /* Load the table and index definitions. */
-   WC_METADATA_SQL_12
-   " "
-
+static const char * const TESTING_DATA = (
    /* Load our test data.
 
       Note: do not use named-column insertions. This allows us to test
@@ -301,14 +295,21 @@ static const char * const data_loading_sql[] = {
    " "
    "insert into actual_node values ("
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
-   "'" I_TC_DATA "');"
-   ),
+   "'" I_TC_DATA "', null, null, null, null);"
+   "  "
+   "insert into base_node values ("
+   "  1, 'M', null, null, '', 'normal', 'dir', "
+   "  1, null, null, "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
+   "  null); "
+   "insert into working_node values ("
+   "  1, 'M/M-a', 'M', 'not-present', 'file', "
+   "  null, null, "
+   "  null, null, null, null, null, "
+   "  null, null, null, 0, null, null, '()', 0); "
+   );
 
-  WC_METADATA_SQL_13,
-  WC_METADATA_SQL_14,
-  WC_METADATA_SQL_15,
-  WC_METADATA_SQL_16
-};
+WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 
 
 static svn_error_t *
@@ -318,12 +319,24 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
                                              "fake-wc", subdir, ".svn", NULL);
   const char *dbpath = svn_dirent_join(dirpath, "wc.db", scratch_pool);
   svn_sqlite__db_t *sdb;
+  const char * const my_statements[] = {
+    statements[STMT_CREATE_SCHEMA],
+    TESTING_DATA,
+    NULL
+  };
 
   SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
   svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate, NULL,
-                           format, data_loading_sql,
+  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate,
+                           my_statements,
+                           0, NULL,
                            scratch_pool, scratch_pool));
+
+  /* Create the database's schema.  */
+  SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ 0));
+
+  /* Throw our extra data into the database.  */
+  SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ 1));
 
   return SVN_NO_ERROR;
 }
@@ -636,10 +649,6 @@ validate_node(svn_wc__db_t *db,
   value = apr_hash_get(props, "p999", APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
 
-  if (status == svn_wc__db_status_normal)
-    SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, path, props, FALSE,
-                                                  scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -772,7 +781,7 @@ test_children(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
                                        pool, pool));
-  SVN_TEST_ASSERT(children->nelts == 11);
+  SVN_TEST_ASSERT(children->nelts == 12);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -784,7 +793,7 @@ test_children(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_read_children(&children,
                                    db, local_abspath,
                                    pool, pool));
-  SVN_TEST_ASSERT(children->nelts == 12);
+  SVN_TEST_ASSERT(children->nelts == 13);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -1223,6 +1232,20 @@ test_scan_deletion(apr_pool_t *pool)
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "L/L-a",
                                    work_del_abspath, pool));
 
+  /* Root of delete, parent converted to BASE during post-commit. */
+  SVN_ERR(svn_wc__db_scan_deletion(
+            &base_del_abspath,
+            &base_replaced,
+            &moved_to_abspath,
+            &work_del_abspath,
+            db, svn_dirent_join(local_abspath, "M/M-a", pool),
+            pool, pool));
+  SVN_TEST_ASSERT(base_del_abspath == NULL);
+  SVN_TEST_ASSERT(!base_replaced);
+  SVN_TEST_ASSERT(moved_to_abspath == NULL);
+  SVN_TEST_ASSERT(validate_abspath(local_abspath, "M/M-a",
+                                   work_del_abspath, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1301,6 +1324,11 @@ test_upgrading_to_f15(apr_pool_t *pool)
 static int
 detect_work_item(const svn_skel_t *work_item)
 {
+  /* Test work items are a list with one integer atom as operation */
+  if (!work_item->children)
+    return -1;
+  work_item = work_item->children;
+
   if (!work_item->is_atom || work_item->len != 1)
     return -1;
   return work_item->data[0] - '0';
@@ -1320,13 +1348,16 @@ test_work_queue(apr_pool_t *pool)
                       svn_wc__db_openmode_readwrite, pool));
 
   /* Create three work items.  */
-  work_item = svn_skel__str_atom("0", pool);
+  work_item = svn_skel__make_empty_list(pool);
+  svn_skel__prepend_int(0, work_item, pool);
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
 
-  work_item = svn_skel__str_atom("1", pool);
+  work_item = svn_skel__make_empty_list(pool);
+  svn_skel__prepend_int(1, work_item, pool);
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
 
-  work_item = svn_skel__str_atom("2", pool);
+  work_item = svn_skel__make_empty_list(pool);
+  svn_skel__prepend_int(2, work_item, pool);
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
 
   while (TRUE)

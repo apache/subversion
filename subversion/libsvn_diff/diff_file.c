@@ -302,10 +302,11 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
           had_cr = (*eol == '\r');
           eol++;
           /* If we have the whole eol sequence in the chunk... */
-          if (!had_cr || eol != endp)
+          if (!(had_cr && eol == endp))
             {
+              /* Also skip past the '\n' in an '\r\n' sequence. */
               if (had_cr && *eol == '\n')
-                ++eol;
+                eol++;
               break;
             }
         }

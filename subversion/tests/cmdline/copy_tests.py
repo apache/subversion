@@ -3,7 +3,7 @@
 #  copy_tests.py:  testing the many uses of 'svn cp' and 'svn mv'
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -29,7 +29,7 @@ import stat, os, re, shutil
 
 # Our testing module
 import svntest
-
+from svntest import main
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
@@ -702,13 +702,16 @@ def copy_delete_commit(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      B_path, B2_path)
 
-  # delete a file
+  # delete two files
+  lambda_path = os.path.join(wc_dir, 'A', 'B2', 'lambda')
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', alpha_path, lambda_path)
 
   # commit copied tree containing a deleted file
   expected_output = svntest.wc.State(wc_dir, {
     'A/B2' : Item(verb='Adding'),
+    'A/B2/lambda' : Item(verb='Deleting'),
     'A/B2/E/alpha' : Item(verb='Deleting'),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -4266,6 +4269,127 @@ def move_below_move(sbox):
                                         None, sbox.wc_dir)
 
 
+def reverse_merge_move(sbox):
+  """reverse merge move"""
+
+  # Alias for svntest.actions.run_and_verify_svn
+  rav_svn = svntest.actions.run_and_verify_svn
+
+  wc_dir = sbox.wc_dir
+  a_dir = os.path.join(wc_dir, 'A')
+  a_repo_url = sbox.repo_url + '/A'
+  sbox.build()
+
+  # Create another working copy path and checkout.
+  wc2_dir = sbox.add_wc_path('2')
+  rav_svn(None, None, [], 'co', sbox.repo_url, wc2_dir)
+
+  # Update working directory and ensure that we are at revision 1.
+  rav_svn(None, ["At revision 1.\n"], [], 'up', wc_dir)
+
+  # Add new folder and file, later commit
+  new_path = os.path.join(a_dir, 'New')
+  os.mkdir(new_path)
+  first_path = os.path.join(new_path, 'first')
+  svntest.main.file_append(first_path, 'appended first text')
+  svntest.main.run_svn(None, "add", new_path)
+  rav_svn(None, None, [], 'ci', wc_dir, '-m', 'Add new folder %s' % new_path)
+  rav_svn(None, ["At revision 2.\n"], [], 'up', wc_dir)
+
+  # Reverse merge to revert previous changes and commit
+  rav_svn(None, None, [], 'merge', '-c', '-2', a_repo_url, a_dir)
+  rav_svn(None, None, [], 'ci', '-m', 'Reverting svn merge -c -2.', a_dir)
+  rav_svn(None, ["At revision 3.\n"], [], 'up', wc_dir)
+
+  # Reverse merge again to undo last revert.
+  rav_svn(None, None, [], 'merge', '-c', '-3', a_repo_url, a_dir)
+
+  # Move new added file to another one and commit.
+  second_path = os.path.join(new_path, 'second')
+  rav_svn(None, None, [], 'move', first_path, second_path)
+  rav_svn(None, "Adding.*New|Adding.*first||Committed revision 4.", [],
+          'ci', '-m',
+          'Revert svn merge. svn mv %s %s.' % (first_path, second_path), a_dir)
+
+  # Update second working copy. There was a bug (at least on the 1.6.x
+  # branch) in which this update received both "first" and "second".
+  expected_output = svntest.wc.State(wc2_dir, {
+      'A/New'         : Item(status='A '),
+      'A/New/second'  : Item(status='A '),
+      })
+  svntest.actions.run_and_verify_update(wc2_dir,
+                                        expected_output,
+                                        None,
+                                        None)
+
+def nonrecursive_commit_of_copy(sbox):
+  """commit only top of copy; check child behavior"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  main.run_svn(None, 'cp', os.path.join(wc_dir, 'A'),
+               os.path.join(wc_dir, 'A_new'))
+  main.run_svn(None, 'cp', os.path.join(wc_dir, 'A/D/G'),
+               os.path.join(wc_dir, 'A_new/G_new'))
+  main.run_svn(None, 'rm', os.path.join(wc_dir, 'A_new/C'))
+  main.run_svn(None, 'rm', os.path.join(wc_dir, 'A_new/B/E'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'A_new'             : Item(status='A ', copied='+', wc_rev='-'),
+      'A_new/D'           : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/G'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/G/pi'      : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/G/rho'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/G/tau'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/H'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/H/psi'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/H/chi'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/H/omega'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/gamma'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/B'           : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/B/lambda'    : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/B/E'         : Item(status='D ', wc_rev='?'),
+      'A_new/B/E/alpha'   : Item(status='D ', wc_rev='?'),
+      'A_new/B/E/beta'    : Item(status='D ', wc_rev='?'),
+      'A_new/B/F'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/mu'          : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/C'           : Item(status='D ', wc_rev='?'),
+      'A_new/G_new'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A_new/G_new/pi'    : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/G_new/rho'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/G_new/tau'   : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  
+  expected_output = svntest.wc.State(wc_dir, {
+    'A_new': Item(verb='Adding'),
+    })
+  
+  # These nodes are added by the commit
+  expected_status.tweak('A_new', 'A_new/D', 'A_new/D/G', 'A_new/D/G/pi',
+                        'A_new/D/G/rho', 'A_new/D/G/tau', 'A_new/D/H',
+                        'A_new/D/H/psi', 'A_new/D/H/chi', 'A_new/D/H/omega',
+                        'A_new/D/gamma', 'A_new/B', 'A_new/B/lambda',
+                        'A_new/B/F', 'A_new/mu',
+                        status='  ', copied=None, wc_rev='2')
+
+  # And these are deleted with their parent (not sure if this is ok)
+  expected_status.remove('A_new/C', 'A_new/B/E', 'A_new/B/E/alpha',
+                         'A_new/B/E/beta')
+
+  # 'A_new/G_new' and everything below should still be added
+  # as their operation root was not committed
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir, '--depth', 'immediates')
+
+
 ########################################################################
 # Run the tests
 
@@ -4352,7 +4476,9 @@ test_list = [ None,
               path_copy_in_repo_2475,
               commit_copy_depth_empty,
               copy_below_copy,
-              XFail(move_below_move)
+              XFail(move_below_move),
+              reverse_merge_move,
+              XFail(nonrecursive_commit_of_copy),
              ]
 
 if __name__ == '__main__':

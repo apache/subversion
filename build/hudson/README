@@ -11,7 +11,7 @@ The test results can be viewed in this page:
 SETUP DETAILS
 -------------
   - The last 40 build reports are retained.
-  - The Subversion repository is polled every 30 minutes.
+  - The Subversion repository is polled every 1 hour.
   - The failure notifications are sent to
     notifications@subversion.apache.org mailing list.
   - The builds corresponding to Linux are performed in a Ubuntu system.

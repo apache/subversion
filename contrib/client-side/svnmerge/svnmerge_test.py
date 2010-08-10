@@ -200,7 +200,7 @@ class TestCase_PathIdentifier(unittest.TestCase):
     rrp = "/trunk/contrib/client-side/svnmerge"
     uuid = "65390229-12b7-0310-b90b-f21a5aa7ec8e"
     uuidrl = 'uuid://'+uuid+rrp
-    url= "http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge"
+    url= "http://svn.apache.org/repos/asf/subversion/trunk/contrib/client-side/svnmerge"
     ext = "uuid://65390229-12b7-0310-b90b-f21a5aa7ec8e/trunk/contrib/client-side/svnmerge"
     def try_pathid(self, rrp, uuid, url, ext, expected_str, expected_formats):
         l = svnmerge.PathIdentifier(rrp, uuid, url, ext)

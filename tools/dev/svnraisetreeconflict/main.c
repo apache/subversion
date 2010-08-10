@@ -185,11 +185,12 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 {
   int i = 0;
   svn_wc_conflict_version_t *left, *right;
-  svn_wc_conflict_description_t *c;
-  svn_wc_adm_access_t *adm_access;
+  svn_wc_conflict_description2_t *c;
+  svn_wc_context_t *wc_ctx;
 
   /* Conflict description parameters */
-  const char *wc_path, *repos_url1, *repos_url2, *path_in_repos1, *path_in_repos2;
+  const char *wc_path, *wc_abspath;
+  const char *repos_url1, *repos_url2, *path_in_repos1, *path_in_repos2;
   int operation, action, reason;
   int peg_rev1, peg_rev2;
   int kind, kind1, kind2;
@@ -215,26 +216,19 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
 
 
   /* Allocate and fill in the description data structures */
+  SVN_ERR(svn_dirent_get_absolute(&wc_abspath, wc_path, pool));
   left = svn_wc_conflict_version_create(repos_url1, path_in_repos1, peg_rev1,
                                         kind1, pool);
   right = svn_wc_conflict_version_create(repos_url2, path_in_repos2, peg_rev2,
                                          kind2, pool);
-  c = svn_wc_conflict_description_create_tree(wc_path, NULL, kind,
+  c = svn_wc_conflict_description_create_tree2(wc_abspath, kind,
                                               operation, left, right, pool);
   c->action = (svn_wc_conflict_action_t)action;
   c->reason = (svn_wc_conflict_reason_t)reason;
 
   /* Raise the conflict */
-  {
-    const char *parent_path;
-
-    parent_path = svn_path_dirname(wc_path, pool);
-    SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_path, TRUE, 0,
-                             NULL, NULL, pool));
-  }
-
-  /* Raise the conflict */
-  SVN_ERR(svn_wc__add_tree_conflict(c, adm_access, pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+  SVN_ERR(svn_wc__add_tree_conflict(wc_ctx, c, pool));
 
   return SVN_NO_ERROR;
 }

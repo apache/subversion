@@ -2,7 +2,7 @@
 # __init__.py: defines this directory as the 'svn' package
 #
 # Subversion is a tool for revision control.
-# See http://subversion.tigris.org for more information.
+# See http://subversion.apache.org for more information.
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -23,5 +23,5 @@
 #    under the License.
 ######################################################################
 
-__all__ = ['core', 'client', 'delta', 'fs', 'ra', 'repos', 'wc']
+__all__ = ['core', 'client', 'delta', 'diff', 'fs', 'ra', 'repos', 'wc']
 

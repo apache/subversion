@@ -52,22 +52,27 @@ svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
                                       apr_pool_t *pool);
 
 
-/* Atomically rename a temporary text-base file to its canonical
-   location.  The tmp file should be closed already. */
+/* Atomically rename a temporary text-base file TMP_TEXT_BASE_ABSPATH to its
+   canonical location.  LOCAL_ABSPATH is the path of the working file whose
+   text-base is to be moved.  The tmp file should be closed already. */
 svn_error_t *
-svn_wc__sync_text_base(const char *path, apr_pool_t *pool);
+svn_wc__sync_text_base(const char *local_abspath,
+                       const char *tmp_text_base_path,
+                       apr_pool_t *pool);
 
 
-/* Return an absolute path to LOCAL_ABSPATH's text-base file.
-   If TMP is set, return a path to the tmp text-base file. */
+/* Set *RESULT_ABSPATH to the absolute path to LOCAL_ABSPATH's text-base file,
+   or, if TMP is set, to its temporary text-base file. */
 svn_error_t *
-svn_wc__text_base_path(const char **result_path,
+svn_wc__text_base_path(const char **result_abspath,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t tmp,
                        apr_pool_t *pool);
 
-/* Return a readonly stream on the LOCAL_ABSPATH's base file. */
+/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's base file.
+ * For more detail, please see the description of
+ * svn_wc_get_pristine_contents2().*/
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
                               svn_wc__db_t *db,
@@ -77,7 +82,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
 
 
-/* Return a readonly stream on the LOCAL_ABSPATH's revert file. */
+/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's revert file. */
 svn_error_t *
 svn_wc__get_revert_contents(svn_stream_t **contents,
                             svn_wc__db_t *db,
@@ -86,8 +91,7 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
                             apr_pool_t *scratch_pool);
 
 
-/* Retrieve an absolute path to LOCAL_ABSPATH's revert file.
-   If TMP is set, return a path to the tmp revert file. */
+/* Set *RESULT_ABSPATH to the absolute path to LOCAL_ABSPATH's revert file. */
 svn_error_t *
 svn_wc__text_revert_path(const char **result_abspath,
                          svn_wc__db_t *db,
@@ -100,7 +104,7 @@ svn_wc__text_revert_path(const char **result_abspath,
    and svn_node_file. */
 svn_error_t *svn_wc__prop_path(const char **prop_path,
                                const char *path,
-                               svn_wc__db_kind_t kind,
+                               svn_wc__db_kind_t node_kind,
                                svn_wc__props_kind_t props_kind,
                                apr_pool_t *pool);
 
@@ -116,16 +120,17 @@ svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
                                      apr_pool_t *scratch_pool);
 
 
-/* Open the normal or revert text base, associated with PATH, for writing.
-   The selection is based on NEED_REVERT_BASE. The opened stream will be
-   returned in STREAM and the selected path will be returned in,
-   TEMP_BASE_PATH, and both will be allocated in RESULT_POOL. Any temporary
-   allocations will be performed in SCRATCH_POOL. */
+/* Open a writable stream to a temporary (normal or revert) text base,
+   associated with the versioned file LOCAL_ABSPATH in DB.  Set *STREAM to
+   the opened stream and *TEMP_BASE_ABSPATH to the path to the temporary
+   file, both allocated in RESULT_POOL.  The temporary file will have an
+   arbitrary unique name, in contrast to the deterministic name that
+   svn_wc__text_base_path(tmp=TRUE) returns. */
 svn_error_t *
 svn_wc__open_writable_base(svn_stream_t **stream,
-                           const char **temp_base_path,
-                           const char *path,
-                           svn_boolean_t need_revert_base,
+                           const char **temp_base_abspath,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 

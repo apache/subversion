@@ -54,7 +54,7 @@
   <jdk>(Default)</jdk>
   <triggers class="vector">
     <hudson.triggers.SCMTrigger>
-      <spec>*/30 * * * *</spec>
+      <spec>0 * * * *</spec>
     </hudson.triggers.SCMTrigger>
   </triggers>
   <concurrentBuild>false</concurrentBuild>

@@ -168,7 +168,7 @@ test_path_is_url(apr_pool_t *pool)
     { "//blah/blah",                      FALSE },
     { "://blah/blah",                     FALSE },
     { "a:abb://boo/",                     FALSE },
-    { "http://svn.collab.net/repos/svn",  TRUE  },
+    { "http://svn.apache.org/repos/asf/subversion",  TRUE  },
     { "scheme/with",                      FALSE },
     { "scheme/with:",                     FALSE },
     { "scheme/with:/",                    FALSE },

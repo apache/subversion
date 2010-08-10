@@ -1293,7 +1293,6 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
-  const char *dir_abspath = svn_dirent_dirname(target_abspath, scratch_pool);
 
   SVN_ERR(svn_wc__internal_merge(&log_accum, merge_outcome,
                                  wc_ctx->db,
@@ -1313,9 +1312,19 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
   /* Write our accumulation of log entries into a log file */
   if (!dry_run)
     {
+      const char *dir_abspath = svn_dirent_dirname(target_abspath,
+                                                   scratch_pool);
+
+      /* Verify that we're holding this directory's write lock.  */
+      SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
+
+      /* Add all the work items to the queue, then run it.  */
+      /* ### add_loggy takes a DIR, but wq_run is a simple WRI_ABSPATH  */
       SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath,
                                    log_accum, scratch_pool));
-      SVN_ERR(svn_wc__run_log2(wc_ctx->db, dir_abspath, scratch_pool));
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, target_abspath,
+                             cancel_func, cancel_baton,
+                             scratch_pool));
     }
 
   return SVN_NO_ERROR;

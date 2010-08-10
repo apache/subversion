@@ -337,23 +337,34 @@ svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
    the root_dir when the resource structure is built.
 */
 
-/* Return the special URI to be used for this resource. */
+/* Return the repo-root-relative URI of the special namespace to be used for
+ * this resource.
+ * Comes from the <SVNSpecialURI> directive. */
+/* ### Is this assumed to be URI-encoded? */
 const char *dav_svn__get_special_uri(request_rec *r);
 
-/* Return a descriptive name for the repository */
+/* Return a descriptive name for the repository.
+ * Comes from the <SVNReposName> directive. */
 const char *dav_svn__get_repo_name(request_rec *r);
 
-/* Return the URI of an XSL transform stylesheet */
+/* Return the server-relative URI of an XSL transform stylesheet.
+   Comes from the <SVNIndexXSLT> directive. */
+/* ### Is this assumed to be URI-encoded? */
 const char *dav_svn__get_xslt_uri(request_rec *r);
 
-/* Return the master URI (for mirroring) */
-const char * dav_svn__get_master_uri(request_rec *r);
+/* Return the full URL of the master repository (for mirroring).
+   Comes from the <SVNMasterURI> directive. */
+/* ### Is this assumed to be URI-encoded? */
+const char *dav_svn__get_master_uri(request_rec *r);
 
-/* Return the activities db */
-const char * dav_svn__get_activities_db(request_rec *r);
+/* Return the disk path to the activities db.
+   Comes from the <SVNActivitiesDB> directive. */
+const char *dav_svn__get_activities_db(request_rec *r);
 
-/* Return the root directory */
-const char * dav_svn__get_root_dir(request_rec *r);
+/* Return the server-relative URI of the repository root.
+   Comes from the <Location> directive. */
+/* ### Is this assumed to be URI-encoded? */
+const char *dav_svn__get_root_dir(request_rec *r);
 
 
 /** For HTTP protocol v2, these are the new URIs and URI stubs
@@ -761,7 +772,7 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
                           apr_pool_t *pool);
 
 
-int dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri);
+int dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri);
 
 
 
@@ -879,7 +890,7 @@ int dav_svn__error_response_tag(request_rec *r, dav_error *err);
 /*** mirror.c ***/
 
 /* Perform the fixup hook for the R request.  */
-int dav_svn__proxy_merge_fixup(request_rec *r);
+int dav_svn__proxy_request_fixup(request_rec *r);
 
 /* An Apache input filter which rewrites the locations in headers and
    request body.  It reads from filter F using BB data, MODE mode, BLOCK

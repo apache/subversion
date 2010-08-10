@@ -5368,11 +5368,11 @@ msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
-"  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
 msgstr ""
 "此客户端对于工作副本“%s”太旧(格式 %d)。\n"
 "你需要取得更新的 Subversion 客户端。参见\n"
-"  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
 "以获得更详细的信息。\n"
 
 #, c-format

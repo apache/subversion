@@ -6507,11 +6507,11 @@ msgstr "El formato de la copia de trabajo de '%s' es demasiado viejo (%d); por f
 msgid ""
 "This client is too old to work with working copy '%s'.  You need\n"
 "to get a newer Subversion client, or to downgrade this working copy.\n"
-"See http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"See http://subversion.apache.org/faq.html#working-copy-format-change\n"
 "for details."
 msgstr ""
 "Este cliente es demasiado viejo para funcionar con la copia de trabajo '%s'.  Necesita conseguir uno nuevo o bajar la versión de esta copia de trabajo.\n"
-"Vea http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"Vea http://subversion.apache.org/faq.html#working-copy-format-change\n"
 "para más detalles."
 
 #: ../libsvn_wc/questions.c:281

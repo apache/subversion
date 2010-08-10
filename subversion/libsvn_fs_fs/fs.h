@@ -59,8 +59,8 @@ extern "C" {
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
                                                     has not been packed. */
-#define PATH_MIN_UNPACKED_REVPROP "min-unpacked-revprop" /* Oldest revision 
-                                                            property which has 
+#define PATH_MIN_UNPACKED_REVPROP "min-unpacked-revprop" /* Oldest revision
+                                                            property which has
                                                             not been packed. */
 #define PATH_REVPROPS_DB "revprops.db"
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */

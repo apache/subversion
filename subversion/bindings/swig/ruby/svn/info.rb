@@ -26,8 +26,8 @@ require "nkf"
 begin
   require "uconv"
 rescue LoadError
-  module Uconv
-    class Error < StandardError
+  module Uconv #:nodoc:
+    class Error < StandardError #:nodoc:
     end
     def self.u8toeuc(str)
       raise Error

@@ -517,7 +517,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool);
 
 /**
@@ -533,7 +533,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool);
 
 
@@ -555,7 +555,7 @@ SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array(apr_array_header_t **targets_p,
                              apr_getopt_t *os,
-                             apr_array_header_t *known_targets,
+                             const apr_array_header_t *known_targets,
                              svn_opt_revision_t *start_revision,
                              svn_opt_revision_t *end_revision,
                              svn_boolean_t extract_revisions,
@@ -764,7 +764,7 @@ svn_opt_print_help(apr_getopt_t *os,
  * @since New in 1.7. */
 svn_error_t *
 svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
-                          apr_array_header_t *targets,
+                          const apr_array_header_t *targets,
                           apr_pool_t *pool);
 
 #ifdef __cplusplus

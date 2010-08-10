@@ -30,7 +30,8 @@
 
 /* The MD5 digest for the empty string. */
 static const unsigned char svn_md5__empty_string_digest_array[] = {
-  212, 29, 140, 217, 143, 0, 178, 4, 233, 128, 9, 152, 236, 248, 66, 126
+  0xd4, 0x1d, 0x8c, 0xd9, 0x8f, 0x00, 0xb2, 0x04,
+  0xe9, 0x80, 0x09, 0x98, 0xec, 0xf8, 0x42, 0x7e
 };
 
 const unsigned char *

@@ -333,7 +333,7 @@ jlong SVNAdmin::recover(const char *path)
   return youngest_rev;
 }
 
-void SVNAdmin::rmtxns(const char *path, Targets &transactions)
+void SVNAdmin::rmtxns(const char *path, StringArray &transactions)
 {
   SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -498,7 +498,7 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
                                  requestPool.pool()), );
 }
 
-jobjectArray SVNAdmin::lslocks(const char *path)
+jobject SVNAdmin::lslocks(const char *path)
 {
   SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", NULL);
@@ -515,43 +515,33 @@ jobjectArray SVNAdmin::lslocks(const char *path)
                                      requestPool.pool()),
               NULL);
 
-  int count = apr_hash_count (locks);
-
   JNIEnv *env = JNIUtil::getEnv();
   jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jobjectArray ret = env->NewObjectArray(count, clazz, NULL);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+  std::vector<jobject> jlocks;
 
-  env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  int i = 0;
   for (hi = apr_hash_first (requestPool.pool(), locks);
        hi;
-       hi = apr_hash_next (hi), ++i)
+       hi = apr_hash_next (hi))
     {
       void *val;
       apr_hash_this (hi, NULL, NULL, &val);
       svn_lock_t *lock = (svn_lock_t *)val;
       jobject jLock = CreateJ::Lock(lock);
-      env->SetObjectArrayElement(ret, i, jLock);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
 
-      env->DeleteLocalRef(jLock);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+      jlocks.push_back(jLock);
     }
 
-  return ret;
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return CreateJ::Set(jlocks);
 }
 
-void SVNAdmin::rmlocks(const char *path, Targets &locks)
+void SVNAdmin::rmlocks(const char *path, StringArray &locks)
 {
   SVN::Pool requestPool;
   apr_pool_t *pool = requestPool.pool();

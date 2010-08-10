@@ -3,7 +3,7 @@
 #  getopt_tests.py:  testing the svn command line processing
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -205,7 +205,7 @@ test_list = [ None,
               getopt__help,
               getopt_help,
               getopt_help_bogus_cmd,
-              getopt_help_log_switch
+              getopt_help_log_switch,
             ]
 
 if __name__ == '__main__':

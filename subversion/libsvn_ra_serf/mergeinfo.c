@@ -243,6 +243,8 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   const char *relative_url, *basecoll_url;
   const char *path;
 
+  *catalog = NULL;
+
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
                                          NULL, NULL, revision, NULL, pool));
 
@@ -296,7 +298,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 
   SVN_ERR(err);
 
-  if (mergeinfo_ctx->done)
+  if (mergeinfo_ctx->done && apr_hash_count(mergeinfo_ctx->result_catalog))
     *catalog = mergeinfo_ctx->result_catalog;
 
   return SVN_NO_ERROR;

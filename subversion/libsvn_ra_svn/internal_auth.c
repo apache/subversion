@@ -37,7 +37,7 @@
 
 #include "ra_svn.h"
 
-svn_boolean_t svn_ra_svn__find_mech(apr_array_header_t *mechlist,
+svn_boolean_t svn_ra_svn__find_mech(const apr_array_header_t *mechlist,
                                     const char *mech)
 {
   int i;
@@ -69,7 +69,7 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 
 svn_error_t *
 svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
-                             apr_array_header_t *mechlist,
+                             const apr_array_header_t *mechlist,
                              const char *realm, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess->conn;

@@ -116,6 +116,9 @@ typedef enum {
   opt_trust_server_cert,
   opt_show_copies_as_adds,
   opt_ignore_keywords,
+  opt_reverse_diff,
+  opt_include_pattern,
+  opt_exclude_pattern,
   opt_ignore_mergeinfo
 } svn_cl__longopt_t;
 
@@ -343,6 +346,40 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("don't expand keywords\n"
                        "                             "
                        "[alias: --ik]")},
+  {"reverse-diff", opt_reverse_diff, 0,
+                    N_("apply the unidiff in reverse\n"
+                       "                             "
+                       "[alias: --rd]")},
+  {"include-pattern", opt_include_pattern, 1,
+                    N_("operate only on targets matching ARG,\n"
+                       "                             "
+                       "which may be a glob pattern such as '*.txt'.\n"
+                       "                             "
+                       "If this option is specified multiple times,\n"
+                       "                             "
+                       "all patterns are matched in turn.\n"
+                       "                             "
+                       "If both --include-pattern and --exclude-pattern\n"
+                       "                             "
+                       "options are specified include patterns are applied\n"
+                       "                             "
+                       "first, i.e. exclude patterns are applied to all\n"
+                       "                             "
+                       "targets which match an include pattern.\n"
+                       "                             "
+                       "[alias: --ip]")},
+  {"exclude-pattern", opt_exclude_pattern, 1,
+                    N_("do not operate on targets matching ARG,\n"
+                       "                             "
+                       "which may be a glob pattern such as '*.txt'.\n"
+                       "                             "
+                       "If this option is specified multiple times,\n"
+                       "                             "
+                       "all patterns are matched in turn.\n"
+                       "                             "
+                       "See also the --include-pattern option.\n"
+                       "                             "
+                       "[alias: --ep]")},
   {"ignore-mergeinfo",  opt_ignore_mergeinfo, 0,
                     N_("ignore changes to mergeinfo")},
 
@@ -361,6 +398,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"na",            opt_notice_ancestry, 0, NULL},
   {"ia",            opt_ignore_ancestry, 0, NULL},
   {"ie",            opt_ignore_externals, 0, NULL},
+  {"rd",            opt_reverse_diff, 0, NULL},
   {"ro",            opt_record_only, 0, NULL},
   {"cd",            opt_config_dir, 1, NULL},
   {"cl",            opt_changelist, 1, NULL},
@@ -369,6 +407,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ri",            opt_reintegrate, 0, NULL},
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
+  {"ip",            opt_include_pattern, 1, NULL},
+  {"ep",            opt_exclude_pattern, 1, NULL},
 
   {0,               0, 0, 0},
 };
@@ -779,17 +819,21 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Apply a patch to a working copy.\n"
      "usage: patch PATCHFILE [WCPATH]\n"
      "\n"
-     "  Apply unidiff content in PATCHFILE to the working copy WCPATH.\n"
+     "  Apply a unidiff patch in PATCHFILE to the working copy WCPATH.\n"
      "  If WCPATH is omitted, '.' is assumed.\n"
-     "  A unidiff file suitable for application to a working copy can be\n"
+     "\n"
+     "  A unidiff patch suitable for application to a working copy can be\n"
      "  produced with the 'svn diff' command or third-party diffing tools.\n"
      "  Any non-unidiff content of PATCHFILE is ignored.\n"
      "\n"
+     "  Changes listed in the patch will either be applied or rejected.\n"
      "  If a change does not match at its exact line offset, it may be applied\n"
      "  earlier or later in the file if a match is found elsewhere for the\n"
-     "  surrounding lines of context provided in the unidiff.\n"
-     "  If no matching context can be found for a change, the change will\n"
-     "  produce a text conflict at its exact line offset.\n"
+     "  surrounding lines of context provided by the patch.\n"
+     "  A change may also be applied with fuzz, which means that one\n"
+     "  or more lines of context are ignored when matching the change.\n"
+     "  If no matching context can be found for a change, the change conflicts\n"
+     "  and will be written to a reject file with the extension .svnpatch.rej.\n"
      "\n"
      "  For each patched file a line will be printed with characters reporting\n"
      "  the action taken. These characters have the following meaning:\n"
@@ -798,14 +842,18 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    D  Deleted\n"
      "    U  Updated\n"
      "    C  Conflict\n"
-     "    G  Merged\n"
+     "    G  Merged (with local uncommitted changes)\n"
      "\n"
-     "  If a unidiff removes all content from a file, that file is scheduled\n"
-     "  for deletion. If a unidiff creates a new file, that file is scheduled\n"
+     "  Changes applied with an offset or fuzz are reported on lines starting\n"
+     "  with the '>' symbol. You should review such changes carefully.\n"
+     "\n"
+     "  If the patch removes all content from a file, that file is scheduled\n"
+     "  for deletion. If the patch creates a new file, that file is scheduled\n"
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run, opt_accept, opt_merge_cmd, 'p'} },
+    {'q', opt_dry_run, 'p', opt_reverse_diff, opt_include_pattern,
+     opt_exclude_pattern} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1716,6 +1764,21 @@ main(int argc, const char *argv[])
         break;
       case opt_ignore_keywords:
         opt_state.ignore_keywords = TRUE;
+        break;
+      case opt_reverse_diff:
+        opt_state.reverse_diff = TRUE;
+        break;
+      case opt_include_pattern:
+        if (opt_state.include_patterns == NULL)
+          opt_state.include_patterns = apr_array_make(pool, 1,
+                                                      sizeof (const char *));
+        APR_ARRAY_PUSH(opt_state.include_patterns, const char *) = opt_arg;
+        break;
+      case opt_exclude_pattern:
+        if (opt_state.exclude_patterns == NULL)
+          opt_state.exclude_patterns = apr_array_make(pool, 1,
+                                                      sizeof (const char *));
+        APR_ARRAY_PUSH(opt_state.exclude_patterns, const char *) = opt_arg;
         break;
       case opt_ignore_mergeinfo:
         opt_state.ignore_mergeinfo = TRUE;

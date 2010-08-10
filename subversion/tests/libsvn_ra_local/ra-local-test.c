@@ -26,15 +26,6 @@
 #include <apr_general.h>
 #include <apr_pools.h>
 
-#ifdef _MSC_VER
-#include <direct.h>
-#define getcwd _getcwd
-#else
-#include <unistd.h> /* for getcwd() */
-#endif
-
-#include "svn_string.h"
-#include "svn_utf.h"
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
@@ -47,36 +38,6 @@
 /*-------------------------------------------------------------------*/
 
 /** Helper routines. **/
-
-
-/* Helper function.  Set URL to a "file://" url for the current directory,
-   suffixed by the forward-slash-style relative path SUFFIX, performing all
-   allocation in POOL. */
-static svn_error_t *
-current_directory_url(const char **url,
-                      const char *suffix,
-                      apr_pool_t *pool)
-{
-  /* 8KB is a lot, but it almost guarantees that any path will fit. */
-  char curdir[8192];
-  const char *utf8_ls_curdir, *utf8_is_curdir, *unencoded_url;
-
-  if (! getcwd(curdir, sizeof(curdir)))
-    return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
-
-  SVN_ERR(svn_utf_cstring_to_utf8(&utf8_ls_curdir, curdir, pool));
-  utf8_is_curdir = svn_path_internal_style(utf8_ls_curdir, pool);
-
-  unencoded_url = apr_psprintf(pool, "file://%s%s%s%s",
-                               (utf8_is_curdir[0] != '/') ? "/" : "",
-                               utf8_is_curdir,
-                               (suffix[0] && suffix[0] != '/') ? "/" : "",
-                               suffix);
-
-  *url = svn_path_uri_encode(unencoded_url, pool);
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -94,7 +55,7 @@ make_and_open_local_repos(svn_ra_session_t **session,
   SVN_ERR(svn_test__create_repos(&repos, repos_name, opts, pool));
   SVN_ERR(svn_ra_initialize(pool));
 
-  SVN_ERR(current_directory_url(&url, repos_name, pool));
+  SVN_ERR(svn_test__current_directory_url(&url, repos_name, pool));
 
   SVN_ERR(svn_ra_open3(session,
                        url,
@@ -262,7 +223,7 @@ check_split_url(const char *repos_path,
   /* Create a filesystem and repository */
   SVN_ERR(svn_test__create_repos(&repos, repos_path, opts, pool));
 
-  SVN_ERR(current_directory_url(&root_url, repos_path, pool));
+  SVN_ERR(svn_test__current_directory_url(&root_url, repos_path, pool));
   if (in_repos_path)
     url = apr_pstrcat(pool, root_url, in_repos_path, NULL);
   else

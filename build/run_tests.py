@@ -33,6 +33,10 @@
 The optional flags and the first two parameters are passed unchanged
 to the TestHarness constructor.  All other parameters are names of
 test programs.
+
+Each <prog> should be the full path (absolute or from the current directory)
+and filename of a test program, optionally followed by '#' and a comma-
+separated list of test numbers; the default is to run all the tests in it.
 '''
 
 import os, sys
@@ -216,11 +220,15 @@ class TestHarness:
     else:
       log = sys.stdout
 
+    test_nums = None
+    if '#' in prog:
+      prog, test_nums = prog.split('#')
+
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
       test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
-      sys.stdout.write('Running all tests in %s' % (test_info, ))
+      sys.stdout.write('Running tests in %s' % (test_info, ))
       sys.stdout.write('.'*(35 - len(test_info)))
 
     log.write('START: %s\n' % progbase)
@@ -267,6 +275,10 @@ class TestHarness:
       cmdline.append('--fsfs-sharding=%d' % self.fsfs_sharding)
     if self.fsfs_packing is not None:
       cmdline.append('--fsfs-packing')
+
+    if test_nums:
+      test_nums = test_nums.split(',')
+      cmdline.extend(test_nums)
 
     old_cwd = os.getcwd()
     try:

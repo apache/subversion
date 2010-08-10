@@ -223,6 +223,9 @@ typedef struct svn_cl__opt_state_t
                                       otherwise be rejected as "untrusted" */
   int strip_count; /* number of leading path components to strip */
   svn_boolean_t ignore_keywords;  /* do not expand keywords */
+  svn_boolean_t reverse_diff;     /* reverse a diff (e.g. when patching) */
+  apr_array_header_t *include_patterns; /* targets to include in operation */
+  apr_array_header_t *exclude_patterns; /* targets to exclude from operation */
   svn_boolean_t ignore_mergeinfo; /* ignore mergeinfo in reporting commands. */
 } svn_cl__opt_state_t;
 
@@ -379,7 +382,11 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
    unversioned items found in the working copy.
 
    When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
-   as broken WC locks. */
+   as broken WC locks.
+
+   Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
+   a conflict was encountered.
+   */
 svn_error_t *
 svn_cl__print_status(const char *path,
                      const svn_wc_status2_t *status,
@@ -387,6 +394,9 @@ svn_cl__print_status(const char *path,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
                      svn_boolean_t repos_locks,
+                     unsigned int *text_conflicts,
+                     unsigned int *prop_conflicts,
+                     unsigned int *tree_conflicts,
                      apr_pool_t *pool);
 
 
@@ -437,7 +447,7 @@ svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
  */
 svn_error_t *
 svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
-                        apr_array_header_t *targets,
+                        const apr_array_header_t *targets,
                         const char **URL,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
@@ -668,7 +678,9 @@ svn_cl__check_boolean_prop_val(const char *propname,
 
 /* De-streamifying wrapper around svn_client_get_changelists(), which
    is called for each target in TARGETS to populate *PATHS (a list of
-   paths assigned to one of the CHANGELISTS. */
+   paths assigned to one of the CHANGELISTS.
+   If all targets are to be included, may set *PATHS to TARGETS without
+   reallocating. */
 svn_error_t *
 svn_cl__changelist_paths(apr_array_header_t **paths,
                          const apr_array_header_t *changelists,
@@ -684,7 +696,7 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
 svn_error_t *
 svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_getopt_t *os,
-                                            apr_array_header_t *known_targets,
+                                            const apr_array_header_t *known_targets,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *pool);
 
@@ -698,7 +710,8 @@ svn_cl__indent_string(const char *str,
 
 
 /* Return a string showing NODE's kind, URL and revision, to the extent that
- * that information is available in NODE.
+ * that information is available in NODE. If NODE itself is NULL, this prints
+ * just a 'none' node kind.
  * WC_REPOS_ROOT_URL should reflect the target working copy's repository
  * root URL. If NODE is from that same URL, the printed URL is abbreviated
  * to caret notation (^/). WC_REPOS_ROOT_URL may be NULL, in which case
@@ -716,8 +729,8 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
  * if BASE is an uri, dirent or relative.
  */
 const char *
-svn_cl__path_join(const char *base, 
-                  const char *component, 
+svn_cl__path_join(const char *base,
+                  const char *component,
                   apr_pool_t *pool);
 
 #ifdef __cplusplus

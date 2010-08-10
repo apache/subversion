@@ -1218,7 +1218,7 @@ print_tree(svn_fs_root_t *root,
       subpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          svn_fs_dirent_t *entry = svn_apr_hash_index_val(hi);
+          svn_fs_dirent_t *entry = svn__apr_hash_index_val(hi);
 
           svn_pool_clear(subpool);
           SVN_ERR(print_tree(root,
@@ -1685,9 +1685,14 @@ do_plist(svnlook_ctxt_t *c,
       SVN_ERR(verify_path(&kind, root, path, pool));
       SVN_ERR(svn_fs_node_proplist(&props, root, path, pool));
     }
-  else
+  else if (c->is_revision)
     {
       SVN_ERR(svn_fs_revision_proplist(&props, c->fs, c->rev_id, pool));
+      revprop = TRUE;
+    }
+  else
+    {
+      SVN_ERR(svn_fs_txn_proplist(&props, c->txn, pool));
       revprop = TRUE;
     }
 
@@ -1703,8 +1708,16 @@ do_plist(svnlook_ctxt_t *c,
       if (revprop)
         {
           /* "<revprops ...>" */
-          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
-                                "rev", revstr, NULL);
+          if (c->is_revision)
+            {
+              svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
+                                    "rev", revstr, NULL);
+            }
+          else
+            {
+              svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
+                                    "txn", c->txn_name, NULL);
+            }
         }
       else
         {
@@ -1716,8 +1729,8 @@ do_plist(svnlook_ctxt_t *c,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *pname = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      const char *pname = svn__apr_hash_index_key(hi);
+      svn_string_t *propval = svn__apr_hash_index_val(hi);
 
       SVN_ERR(check_cancel(NULL));
 
@@ -1739,12 +1752,11 @@ do_plist(svnlook_ctxt_t *c,
           else
             printf("  %s : %s\n", pname_stdout, propval->data);
         }
+      else if (xml)
+        svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
+                              "name", pname, NULL);
       else
-        if (xml)
-          svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
-                                "name", pname, NULL);
-        else
-          printf("  %s\n", pname);
+        printf("  %s\n", pname);
     }
   if (xml)
     {

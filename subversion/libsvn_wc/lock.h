@@ -106,16 +106,6 @@ svn_error_t *svn_wc__write_check(svn_wc__db_t *db,
                                  const char *local_abspath,
                                  apr_pool_t *scratch_pool);
 
-/* Ensure DB has a lock and for an entire WC tree (all the way
-   to its leaf nodes).  While locking a tree up front using
-   LEVELS_TO_LOCK of -1 is a more appropriate operation, this function
-   can be used to extend the depth of a lock via a tree-crawl after a
-   lock is taken out.  Use POOL for temporary allocations. */
-svn_error_t *svn_wc__adm_extend_lock_to_tree(svn_wc__db_t *db,
-                                             const char* adm_abspath,
-                                             apr_pool_t *pool);
-
-
 /* Return the working copy database associated with this access baton. */
 svn_wc__db_t *
 svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access);
