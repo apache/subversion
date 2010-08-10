@@ -29,7 +29,6 @@
 #include "svn_path.h"
 
 #include "wc.h"
-#include "lock.h"
 
 /*
      Notes on the general depth-filtering strategy.
