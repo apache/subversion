@@ -30,7 +30,6 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 #include <apr_tables.h>
-#include <apr_file_io.h>
 #include <apr_strings.h>
 
 #include "svn_types.h"
@@ -39,12 +38,10 @@
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
-#include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
-#include "svn_config.h"
 #include "svn_iter.h"
 
 #include "wc.h"
@@ -55,7 +52,6 @@
 #include "workqueue.h"
 
 #include "private/svn_wc_private.h"
-
 /* Checks whether a svn_wc__db_status_t indicates whether a node is
    present in a working copy. Used by the editor implementation */
 #define IS_NODE_PRESENT(status)                             \
