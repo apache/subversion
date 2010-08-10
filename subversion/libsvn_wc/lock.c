@@ -638,13 +638,12 @@ svn_wc__adm_available(svn_boolean_t *available,
                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_depth_t depth;
 
   if (kind)
     *kind = svn_wc__db_kind_unknown;
 
   SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
@@ -659,8 +658,7 @@ svn_wc__adm_available(svn_boolean_t *available,
                  status == svn_wc__db_status_obstructed_delete ||
                  status == svn_wc__db_status_absent ||
                  status == svn_wc__db_status_excluded ||
-                 status == svn_wc__db_status_not_present ||
-                 depth == svn_depth_exclude);
+                 status == svn_wc__db_status_not_present);
 
   return SVN_NO_ERROR;
 }
