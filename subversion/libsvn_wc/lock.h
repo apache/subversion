@@ -68,14 +68,6 @@ svn_wc__internal_check_wc(int *wc_format,
                           svn_boolean_t check_path,
                           apr_pool_t *scratch_pool);
 
-
-/* Ensure LOCAL_ABSPATH is still locked in DB.  Returns the error
- * SVN_ERR_WC_NOT_LOCKED if this is not the case.
- */
-svn_error_t *svn_wc__write_check(svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool);
-
 /* Return the working copy database associated with this access baton. */
 svn_wc__db_t *
 svn_wc__adm_get_db(const svn_wc_adm_access_t *adm_access);

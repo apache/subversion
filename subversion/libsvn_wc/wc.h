@@ -656,6 +656,15 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
 
+/* Ensure LOCAL_ABSPATH is still locked in DB.  Returns the error
+ * SVN_ERR_WC_NOT_LOCKED if this is not the case.
+ */
+svn_error_t *
+svn_wc__write_check(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

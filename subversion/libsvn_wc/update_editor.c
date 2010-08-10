@@ -50,7 +50,6 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "entries.h"
-#include "lock.h"
 #include "translate.h"
 #include "tree_conflicts.h"
 #include "workqueue.h"

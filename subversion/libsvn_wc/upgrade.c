@@ -31,7 +31,6 @@
 
 #include "wc.h"
 #include "adm_files.h"
-#include "lock.h"
 #include "entries.h"
 #include "wc_db.h"
 #include "tree_conflicts.h"
