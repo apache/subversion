@@ -887,10 +887,14 @@ complete_directory(struct edit_baton *eb,
         }
 #ifndef SVN_WC__SINGLE_DB
       /* In Single-DB mode, administrative data is never reported as missing
-         by the adm crawler, and we should always remove nodes recursively */
+         by the adm crawler, and we should always remove nodes using normal
+         update handling.
+         In !Single-DB mode the nodes should have been re-added by now,
+         so we can assume that the repository doesn't know about them. */
       else if (kind == svn_wc__db_kind_dir
-               && svn_wc__adm_missing(eb->db, node_abspath, iterpool)
-               && status != svn_wc__db_status_absent)
+               && (status == svn_wc__db_status_obstructed
+                   || status == svn_wc__db_status_obstructed_delete
+                   || status == svn_wc__db_status_obstructed_add))
         {
           SVN_ERR(svn_wc__db_temp_op_remove_entry(eb->db, node_abspath,
                                                   iterpool));
@@ -1840,7 +1844,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                * but the update editor will not visit the subdirectories
                * of a directory that it wants to delete.  Therefore, we
                * need to start a separate crawl here. */
-              if (!svn_wc__adm_missing(eb->db, local_abspath, pool))
+              if (status != svn_wc__db_status_obstructed)
                 SVN_ERR(tree_has_local_mods(&modified, &all_mods_are_deletes,
                                             eb->db, local_abspath,
                                             eb->cancel_func, eb->cancel_baton,
@@ -5560,6 +5564,9 @@ tweak_entries(svn_wc__db_t *db,
       excluded = (apr_hash_get(exclude_paths, child_abspath,
                                APR_HASH_KEY_STRING) != NULL);
 
+      if (excluded)
+        continue;
+
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -5575,8 +5582,7 @@ tweak_entries(svn_wc__db_t *db,
             || status == svn_wc__db_status_absent
             || status == svn_wc__db_status_excluded)
         {
-          if (excluded)
-            continue;
+          
 
           if (kind == svn_wc__db_kind_dir)
             SVN_ERR(tweak_node(db, child_abspath, svn_wc__db_kind_dir, TRUE,
@@ -5605,39 +5611,35 @@ tweak_entries(svn_wc__db_t *db,
              long as this function is only called as a helper to
              svn_wc__do_update_cleanup, since the update will already have
              restored any missing items that it didn't want to delete. */
-          if (svn_wc__adm_missing(db, child_abspath, iterpool))
+          if (status == svn_wc__db_status_obstructed_add
+              || status == svn_wc__db_status_obstructed)
             {
-              if ( (status == svn_wc__db_status_added
-                    || status == svn_wc__db_status_obstructed_add)
-                  && !excluded)
+              SVN_ERR(svn_wc__db_temp_op_remove_entry(db, child_abspath,
+                                                      iterpool));
+
+              if (notify_func)
                 {
-                  SVN_ERR(svn_wc__db_temp_op_remove_entry(db, child_abspath,
-                                                          iterpool));
+                  svn_wc_notify_t *notify;
 
-                  if (notify_func)
-                    {
-                      svn_wc_notify_t *notify;
+                  notify = svn_wc_create_notify(child_abspath,
+                                                svn_wc_notify_delete,
+                                                iterpool);
 
-                      notify = svn_wc_create_notify(child_abspath,
-                                                    svn_wc_notify_delete,
-                                                    iterpool);
+                  if (kind == svn_wc__db_kind_dir)
+                    notify->kind = svn_node_dir;
+                  else if (kind == svn_wc__db_kind_file)
+                    notify->kind = svn_node_file;
+                  else
+                    notify->kind = svn_node_unknown;
 
-                      if (kind == svn_wc__db_kind_dir)
-                        notify->kind = svn_node_dir;
-                      else if (kind == svn_wc__db_kind_file)
-                        notify->kind = svn_node_file;
-                      else
-                        notify->kind = svn_node_unknown;
-
-                      (* notify_func)(notify_baton, notify, iterpool);
-                    }
+                  notify_func(notify_baton, notify, iterpool);
                 }
-              /* Else if missing item is schedule-add, do nothing. */
             }
 
-          /* Not missing, deleted, or absent, so recurse. */
+          /* Not missing or hidden, so recurse. */
           else
 #endif
+
             {
               SVN_ERR(tweak_entries(db, child_abspath, child_repos_relpath,
                                     new_repos_root_url, new_repos_uuid,
@@ -5769,19 +5771,42 @@ close_edit(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  #ifndef SVN_WC__SINGLE_DB
+#ifndef SVN_WC__SINGLE_DB
   /* If the explicit target still misses its administrative data, then it
      apparently wasn't re-added by the update process, so we'll
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
-  if ((*eb->target_basename) &&
-      svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
+  if (!eb->target_deleted
+      && (*eb->target_basename))
     {
-      /* Still passing NULL for THEIR_URL. A case where THEIR_URL
-       * is needed in this call is rare or even non-existant.
-       * ### TODO: Construct a proper THEIR_URL anyway. See also
-       * NULL handling code in do_entry_deletion(). */
-      SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
+      svn_wc__db_status_t status;
+      svn_wc__db_kind_t kind;
+      svn_error_t *err;
+
+      err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
+                                 eb->db, eb->target_abspath,
+                                 pool, pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
+
+      if (!err && kind == svn_wc__db_kind_dir
+          && (status == svn_wc__db_status_obstructed
+              || status == svn_wc__db_status_obstructed_add
+              || status == svn_wc__db_status_obstructed_delete))
+        {
+          /* Still passing NULL for THEIR_URL. A case where THEIR_URL
+           * is needed in this call is rare or even non-existant.
+           * ### TODO: Construct a proper THEIR_URL anyway. See also
+           * NULL handling code in do_entry_deletion(). */
+          SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE,
+                                    pool));
+        }
     }
 #endif
 
