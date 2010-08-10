@@ -565,8 +565,7 @@ def diff_multiple_reverse(sbox):
   repo_diff(wc_dir, 4, 1, check_add_a_file_in_a_subdir)
   repo_diff(wc_dir, 4, 1, check_add_a_file)
   repo_diff(wc_dir, 1, 4, check_update_a_file)
-### TODO: directory delete doesn't work yet
-#  repo_diff(wc_dir, 1, 4, check_add_a_file_in_a_subdir_reverse)
+  repo_diff(wc_dir, 1, 4, check_add_a_file_in_a_subdir_reverse)
   repo_diff(wc_dir, 1, 4, check_add_a_file_reverse)
 
 # test 6
@@ -1921,6 +1920,7 @@ def diff_renamed_dir(sbox):
                        'A') :
     raise svntest.Failure
 
+  # Commit
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg')
 
@@ -1949,20 +1949,62 @@ def diff_renamed_dir(sbox):
                        'A') :
     raise svntest.Failure
 
-  # Test the diff while within the moved directory
-  os.chdir(os.path.join('A','D','I'))
+  # repos->repos with explicit URL arg
+  exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                            '-r', '1:2',
+                                                            '^/A')
+  if check_diff_output(diff_output,
+                       os.path.join('D', 'G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+  if check_diff_output(diff_output,
+                       os.path.join('D', 'I', 'pi'),
+                       'A') :
+    raise svntest.Failure
 
+  # Go to the parent of the moved directory
+  os.chdir(os.path.join('A','D'))
+
+  # repos->wc diff in the parent
   exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
                                                             '-r', '1')
 
-  if check_diff_output(diff_output, 'pi', 'A') :
+  if check_diff_output(diff_output, 
+                       os.path.join('G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+  if check_diff_output(diff_output, 
+                       os.path.join('I', 'pi'),
+                       'A') :
     raise svntest.Failure
 
-  # Test a repos->repos diff while within the moved directory
+  # repos->repos diff in the parent
   exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
                                                             '-r', '1:2')
 
-  if check_diff_output(diff_output, 'pi', 'A') :
+  if check_diff_output(diff_output, 
+                       os.path.join('G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+  if check_diff_output(diff_output, 
+                       os.path.join('I', 'pi'),
+                       'A') :
+    raise svntest.Failure
+
+  # Go to the move target directory
+  os.chdir('I')
+
+  # repos->wc diff while within the moved directory (should be empty)
+  exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                            '-r', '1')
+  if diff_output:
+    raise svntest.Failure
+
+  # repos->repos diff while within the moved directory (should be empty)
+  exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                            '-r', '1:2')
+
+  if diff_output:
     raise svntest.Failure
 
 
@@ -3584,7 +3626,7 @@ test_list = [ None,
               diff_keywords,
               diff_force,
               diff_schedule_delete,
-              XFail(diff_renamed_dir),
+              diff_renamed_dir,
               diff_property_changes_to_base,
               diff_mime_type_changes,
               diff_prop_change_local_propmod,

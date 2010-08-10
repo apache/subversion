@@ -52,10 +52,8 @@
 #include "svn_sorts.h"
 
 #include "wc.h"
-#include "log.h"
 #include "adm_files.h"
 #include "entries.h"
-#include "lock.h"
 #include "props.h"
 #include "translate.h"
 #include "tree_conflicts.h"
@@ -1538,7 +1536,7 @@ revert_entry(svn_depth_t *depth,
           /* Before single-db we didn't have to perform a recursive delete
              here. With single-db we really must delete missing nodes */
           if (disk_kind == svn_node_none
-              || svn_wc__adm_missing(db, local_abspath, pool))
+              || status == svn_wc__db_status_obstructed_add)
             {
               /* Schedule add but missing, just remove the entry
                  or it's missing an adm area in which case
@@ -1940,6 +1938,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 {
   svn_error_t *err;
   svn_boolean_t left_something = FALSE;
+  svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
 
   /* ### This whole function should be rewritten to run inside a transaction,
@@ -1958,7 +1957,11 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
 
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
@@ -2050,7 +2053,9 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
     }  /* done with file case */
 #ifndef SVN_WC__SINGLE_DB
-  else if (svn_wc__adm_missing(db, local_abspath, scratch_pool))
+  else if (status == svn_wc__db_status_obstructed
+           || status == svn_wc__db_status_obstructed_add
+           || status == svn_wc__db_status_obstructed_delete)
     {
       /* The directory is missing  so don't try to recurse, in
          not existing administrative data, just delete the
@@ -2155,7 +2160,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
           err = svn_io_dir_remove_nonrecursive(local_abspath, iterpool);
           if (err)
             {
-              left_something = TRUE;
+              if (!APR_STATUS_IS_ENOENT(err->apr_err))
+                left_something = TRUE;
               svn_error_clear(err);
             }
         }

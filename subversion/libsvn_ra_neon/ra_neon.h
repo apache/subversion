@@ -98,7 +98,8 @@ typedef struct svn_ra_neon__session_t {
   void *callback_baton;
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
-  const char *auth_username;            /* last authenticated username used */
+  svn_boolean_t auth_used;              /* Save authorization state after
+                                           successful usage */
 
   svn_auth_iterstate_t *p11pin_iterstate; /* state of PKCS#11 pin retries */
 

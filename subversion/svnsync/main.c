@@ -338,8 +338,8 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
     }
 
   return svn_error_createf(APR_EINVAL, NULL,
-                           "Couldn't get lock on destination repos "
-                           "after %d attempts\n", i);
+                           _("Couldn't get lock on destination repos "
+                             "after %d attempts"), i);
 }
 
 
@@ -387,20 +387,8 @@ with_locked(svn_ra_session_t *session,
   err = func(session, baton, pool);
 
   err2 = svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK, NULL, pool);
-  if (err2 && err)
-    {
-      svn_error_clear(err2); /* XXX what to do here? */
 
-      return err;
-    }
-  else if (err2)
-    {
-      return err2;
-    }
-  else
-    {
-      return err;
-    }
+  return svn_error_compose_create(err, svn_error_return(err2));
 }
 
 

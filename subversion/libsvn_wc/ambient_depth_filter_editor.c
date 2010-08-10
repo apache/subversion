@@ -29,7 +29,6 @@
 #include "svn_path.h"
 
 #include "wc.h"
-#include "lock.h"
 
 /*
      Notes on the general depth-filtering strategy.
@@ -176,6 +175,9 @@ ambient_read_info(svn_boolean_t *hidden,
         case svn_wc__db_status_absent:
         case svn_wc__db_status_excluded:
           *hidden = TRUE;
+          break;
+        default:
+          break;
       }
 
   return SVN_NO_ERROR;

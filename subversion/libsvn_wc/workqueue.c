@@ -35,7 +35,6 @@
 #include "workqueue.h"
 #include "adm_files.h"
 #include "translate.h"
-#include "log.h"
 
 #include "svn_private_config.h"
 #include "private/svn_skel.h"
@@ -44,13 +43,12 @@
 /* Workqueue operation names.  */
 #define OP_REVERT "revert"
 #define OP_KILLME "killme"
-#define OP_LOGGY "loggy"
+#define OP_BASE_REMOVE "base-remove"
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
 /* Arguments of OP_POSTCOMMIT:
  *   (local_abspath, revnum, date, [author], [checksum],
  *    [dav_cache/wc_props], keep_changelist, [tmp_text_base_abspath]). */
 #define OP_POSTCOMMIT "postcommit"
-#define OP_INSTALL_PROPERTIES "install-properties-2"
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
 #define OP_FILE_MOVE "file-move"
@@ -640,57 +638,228 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 #endif
 
 /* ------------------------------------------------------------------------ */
+/* OP_REMOVE_BASE  */
 
-/* OP_LOGGY  */
-
-/* Process the OP_LOGGY work item WORK_ITEM.
- * See svn_wc__wq_add_loggy() which generates this work item.
- * Implements (struct work_item_dispatch).func. */
+/* Removes a BASE_NODE and all it's data, leaving any adds and copies as is.
+   Do this as a depth first traversal to make sure than any parent still exists
+   on error conditions. 
+   
+   ### This function needs review for 4th tree behavior.*/
 static svn_error_t *
-run_loggy(svn_wc__db_t *db,
-          const svn_skel_t *work_item,
-          const char *wri_abspath,
-          svn_cancel_func_t cancel_func,
-          void *cancel_baton,
-          apr_pool_t *scratch_pool)
+remove_base_node(svn_wc__db_t *db,
+                 const char *local_abspath,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
 {
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *adm_abspath;
+  svn_wc__db_status_t base_status, wrk_status;
+  svn_wc__db_kind_t base_kind, wrk_kind;
+  svn_boolean_t have_base, have_work;
 
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  adm_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
-  return svn_error_return(svn_wc__run_xml_log(
-                            db, adm_abspath,
-                            arg1->next->data, arg1->next->len,
-                            scratch_pool));
-}
+  SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, &have_base,
+                               &have_work, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
 
+#ifndef SVN_WC__SINGLE_DB
+  if (!have_base)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Node '%s' not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+#else
+  SVN_ERR_ASSERT(have_base); /* Verified in caller and _base_get_children() */
+#endif
 
-svn_error_t *
-svn_wc__wq_build_loggy(svn_skel_t **work_item,
-                       svn_wc__db_t *db,
-                       const char *adm_abspath,
-                       const svn_stringbuf_t *log_content,
-                       apr_pool_t *result_pool)
-{
-  if (log_content == NULL || svn_stringbuf_isempty(log_content))
+  if (wrk_status == svn_wc__db_status_normal
+      || wrk_status == svn_wc__db_status_not_present
+      || wrk_status == svn_wc__db_status_absent)
     {
-      *work_item = NULL;
-      return SVN_NO_ERROR;
+      base_status = wrk_status;
+      base_kind = wrk_kind;
+    }
+  else
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool));
+
+  /* Children first */
+  if (base_kind == svn_wc__db_kind_dir
+      && base_status == svn_wc__db_status_normal)
+    {
+      const apr_array_header_t *children;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      int i;
+
+      SVN_ERR(svn_wc__db_base_get_children(&children, db, local_abspath,
+                                           scratch_pool, iterpool));
+
+      for (i = 0; i < children->nelts; i++)
+        {
+          const char *child_name = APR_ARRAY_IDX(children, i, const char *);
+          const char *child_abspath;
+
+          svn_pool_clear(iterpool);
+
+          child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
+
+          SVN_ERR(remove_base_node(db, child_abspath, cancel_func, cancel_baton,
+                                   iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
     }
 
-  *work_item = svn_skel__make_empty_list(result_pool);
+  if (base_status == svn_wc__db_status_normal
+      && wrk_status != svn_wc__db_status_added
+      && wrk_status != svn_wc__db_status_obstructed_add
+      && wrk_status != svn_wc__db_status_excluded)
+    {
+#ifndef SVN_WC__SINGLE_DB
+      if (base_kind == svn_wc__db_kind_dir)
+        SVN_ERR(svn_wc__adm_destroy(db, local_abspath, cancel_func, cancel_baton,
+                                    scratch_pool));
+#endif
 
-  /* NOTE: the skel still points at ADM_ABSPATH and LOG_CONTENT, but we
-     require these parameters to be allocated in RESULT_POOL.  */
-  svn_skel__prepend_str(log_content->data, *work_item, result_pool);
-  svn_skel__prepend_str(adm_abspath, *work_item, result_pool);
-  svn_skel__prepend_str(OP_LOGGY, *work_item, result_pool);
+      if (wrk_status != svn_wc__db_status_deleted
+          && (base_kind == svn_wc__db_kind_file
+              || base_kind == svn_wc__db_kind_symlink))
+        {
+          SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
+        }
+      else if (base_kind == svn_wc__db_kind_dir
+#ifdef SVN_WC__SINGLE_DB
+               && wrk_status != svn_wc__db_status_deleted
+#endif
+              )
+        {
+          svn_error_t *err = svn_io_dir_remove_nonrecursive(local_abspath,
+                                                            scratch_pool);
+
+          if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+                      || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)
+                      || APR_STATUS_IS_ENOTEMPTY(err->apr_err)))
+            svn_error_clear(err);
+          else
+            SVN_ERR(err);
+        }
+
+      /* This should remove just BASE and ACTUAL, but for now also remove
+         not existing WORKING_NODE data. */
+      SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath, scratch_pool));
+    }
+  else if (wrk_status == svn_wc__db_status_added
+           || wrk_status == svn_wc__db_status_obstructed_add
+           || (have_work && wrk_status == svn_wc__db_status_excluded))
+    /* ### deletes of working additions should fall in this case, but
+       ### we can't express these without the 4th tree */
+    {
+      /* Just remove the BASE_NODE data */
+      SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
+    }
+  else
+    SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
+/* Process the OP_REMOVE_BASE work item WORK_ITEM.
+ * See svn_wc__wq_build_remove_base() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+
+static svn_error_t *
+run_base_remove(svn_wc__db_t *db,
+                const svn_skel_t *work_item,
+                const char *wri_abspath,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath;
+  svn_boolean_t keep_not_present;
+  svn_revnum_t revision;
+  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  svn_wc__db_kind_t kind;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  keep_not_present = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
+
+  if (keep_not_present)
+    {
+      SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision, &repos_relpath,
+                                       &repos_root_url, &repos_uuid, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      if (!repos_relpath)
+        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                           &repos_uuid,
+                                           db, local_abspath, scratch_pool,
+                                           scratch_pool));
+
+#ifndef SVN_WC__SINGLE_DB
+      /* ### When LOCAL_ABSPATH is obstructed, we might not receive a valid
+         ### revision here. For the small time that is left until Single-DB
+         ### just mark the not-present node as revision 0, as we are not
+         ### interested in the revision of not-present nodes anyway.
+
+         ### Triggered by update_tests.py 15: issue #919, updates that delete
+       */
+      if (!SVN_IS_VALID_REVNUM(revision))
+        revision = 0;
+#endif
+    }
+
+  SVN_ERR(remove_base_node(db, local_abspath,
+                           cancel_func, cancel_baton,
+                           scratch_pool));
+
+  if (keep_not_present)
+    {
+      SVN_ERR(svn_wc__db_base_add_absent_node(db, local_abspath,
+                                              repos_relpath,
+                                              repos_root_url,
+                                              repos_uuid,
+                                              revision,
+                                              kind,
+                                              svn_wc__db_status_not_present,
+                                              NULL,
+                                              NULL,
+                                              scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wq_build_base_remove(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t keep_not_present,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  /* If a SOURCE_ABSPATH was provided, then put it into the skel. If this
+     value is not provided, then the file's pristine contents will be used.  */
+
+  svn_skel__prepend_int(keep_not_present, *work_item, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_BASE_REMOVE, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -1151,9 +1320,6 @@ log_do_committed(svn_wc__db_t *db,
                 set_read_write = TRUE;
             }
         }
-
-      /* Install LOCAL_ABSPATHs working props as base props. */
-      SVN_ERR(svn_wc__working_props_committed(db, local_abspath, pool));
     }
 
   /* If it's a file, install the tree changes and the file's text. */
@@ -1418,119 +1584,6 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
-
-/* ------------------------------------------------------------------------ */
-
-/* OP_INSTALL_PROPERTIES */
-
-/* See props.h  */
-#ifdef SVN__SUPPORT_BASE_MERGE
-
-/* Process the OP_INSTALL_PROPERTIES work item WORK_ITEM.
- * See svn_wc__wq_add_install_properties() which generates this work item.
- * Implements (struct work_item_dispatch).func. */
-static svn_error_t *
-run_install_properties(svn_wc__db_t *db,
-                       const svn_skel_t *work_item,
-                       const char *wri_abspath,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
-                       apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg = work_item->children->next;
-  const char *local_abspath;
-  apr_hash_t *base_props;
-  apr_hash_t *actual_props;
-
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
-
-  arg = arg->next;
-  if (arg->is_atom)
-    base_props = NULL;
-  else
-    SVN_ERR(svn_skel__parse_proplist(&base_props, arg, scratch_pool));
-
-  arg = arg->next;
-  if (arg->is_atom)
-    actual_props = NULL;
-  else
-    SVN_ERR(svn_skel__parse_proplist(&actual_props, arg, scratch_pool));
-
-  if (base_props != NULL)
-    {
-        svn_boolean_t written = FALSE;
-
-          {
-            svn_error_t *err;
-
-            /* Try writing to the WORKING tree first.  */
-            err = svn_wc__db_temp_working_set_props(db, local_abspath,
-                                                    base_props,
-                                                    scratch_pool);
-            if (err)
-              {
-                if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                  return svn_error_return(err);
-                svn_error_clear(err);
-                /* The WORKING node is not present.  */
-              }
-            else
-              {
-                /* The WORKING node is present, and we wrote the props.  */
-                written = TRUE;
-              }
-          }
-
-        if (!written)
-          SVN_ERR(svn_wc__db_temp_base_set_props(db, local_abspath,
-                                                 base_props, scratch_pool));
-    }
-
-  /* Okay. It's time to save the ACTUAL props.  */
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
-                                  NULL, NULL, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__wq_add_install_properties(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_hash_t *base_props,
-                                  apr_hash_t *actual_props,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-  svn_skel_t *props;
-
-  if (actual_props != NULL)
-    {
-      SVN_ERR(svn_skel__unparse_proplist(&props, actual_props, scratch_pool));
-      svn_skel__prepend(props, work_item);
-    }
-  else
-    svn_skel__prepend_str("", work_item, scratch_pool);
-
-  if (base_props != NULL)
-    {
-      SVN_ERR(svn_skel__unparse_proplist(&props, base_props, scratch_pool));
-      svn_skel__prepend(props, work_item);
-    }
-  else
-    svn_skel__prepend_str("", work_item, scratch_pool);
-
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_INSTALL_PROPERTIES, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-#endif /* SVN__SUPPORT_BASE_MERGE  */
-
 
 /* ------------------------------------------------------------------------ */
 
@@ -2303,7 +2356,6 @@ svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
 
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
-  { OP_LOGGY, run_loggy },
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
   { OP_POSTCOMMIT, run_postcommit },
   { OP_FILE_INSTALL, run_file_install },
@@ -2313,17 +2365,13 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_RECORD_FILEINFO, run_record_fileinfo },
+  { OP_BASE_REMOVE, run_base_remove },
   { OP_TMP_SET_TEXT_CONFLICT_MARKERS, run_set_text_conflict_markers },
   { OP_TMP_SET_PROPERTY_CONFLICT_MARKER, run_set_property_conflict_marker },
   { OP_PRISTINE_GET_TRANSLATED, run_pristine_get_translated },
 
 #ifndef SVN_WC__SINGLE_DB
   { OP_KILLME, run_killme },
-#endif
-
-/* See props.h  */
-#ifdef SVN__SUPPORT_BASE_MERGE
-  { OP_INSTALL_PROPERTIES, run_install_properties },
 #endif
 
   /* Sentinel.  */

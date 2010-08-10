@@ -347,13 +347,17 @@ svn_wc__db_close(svn_wc__db_t *db);
    A REPOSITORY row will be constructed for the repository identified by
    REPOS_ROOT_URL and REPOS_UUID. Neither of these may be NULL.
 
-   A node will be created for the directory at REPOS_RELPATH will be added.
+   A BASE_NODE row will be created for the directory at REPOS_RELPATH at
+   revision INITIAL_REV.
    If INITIAL_REV is greater than zero, then the node will be marked as
    "incomplete" because we don't know its children. Contrary, if the
    INITIAL_REV is zero, then this directory should represent the root and
    we know it has no children, so the node is complete.
 
-   DEPTH is the initial depth of the working copy, it must be a definite
+   ### Is there any benefit to marking it 'complete' if rev==0?  Seems like
+   ### an unnecessary special case.
+
+   DEPTH is the initial depth of the working copy; it must be a definite
    depth, not svn_depth_unknown.
 
    Use SCRATCH_POOL for temporary allocations.

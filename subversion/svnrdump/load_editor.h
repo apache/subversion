@@ -66,6 +66,8 @@ struct node_baton
   const char *copyfrom_path;
 
   void *file_baton;
+  const char *base_checksum;
+
   struct revision_baton *rb;
 };
 

@@ -196,6 +196,23 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                       svn_boolean_t use_commit_times,
                       apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that will remove all the data of
+   the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping
+   any WORKING_NODE data.
+
+   This function doesn't check for local modifications of the text files
+   as these would have triggered a tree conflict before.
+
+   ### This is only used from update_editor.c's do_entry_deletion().
+ */
+svn_error_t *
+svn_wc__wq_build_base_remove(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t keep_not_present,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 #ifndef SVN_WC__SINGLE_DB
 /* Handle the old "KILLME" concept -- perform the actual deletion of a
    subdir (or just its admin area) during post-commit processing of a
@@ -206,24 +223,6 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
                       svn_boolean_t adm_only,
                       apr_pool_t *scratch_pool);
 #endif
-
-
-/* ### temporary compat for mapping the old loggy into workqueue space.
-
-   Set *WORK_ITEM to a new work item ...
-
-   LOG_CONTENT may be NULL or reference an empty log.  Set *WORK_ITEM to
-   NULL in this case.
-
-   NOTE: ADM_ABSPATH and LOG_CONTENT must live at least as long as
-   RESULT_POOL (typically, they'll be allocated within RESULT_POOL).
-*/
-svn_error_t *
-svn_wc__wq_build_loggy(svn_skel_t **work_item,
-                       svn_wc__db_t *db,
-                       const char *adm_abspath,
-                       const svn_stringbuf_t *log_content,
-                       apr_pool_t *result_pool);
 
 
 /* ### Temporary helper to store text conflict marker locations as a wq
@@ -301,18 +300,6 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           svn_boolean_t keep_changelist,
                           svn_boolean_t no_unlock,
                           apr_pool_t *scratch_pool);
-
-
-/* See props.h  */
-#ifdef SVN__SUPPORT_BASE_MERGE
-svn_error_t *
-svn_wc__wq_add_install_properties(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_hash_t *pristine_props,
-                                  apr_hash_t *actual_props,
-                                  apr_pool_t *scratch_pool);
-#endif
-
 
 #ifdef __cplusplus
 }

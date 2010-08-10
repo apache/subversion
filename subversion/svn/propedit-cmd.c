@@ -98,6 +98,9 @@ svn_cl__propedit(apr_getopt_t *os,
                                                       opt_state->targets,
                                                       ctx, pool));
 
+  /* We do our own notifications */
+  ctx->notify_func2 = NULL;
+
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;

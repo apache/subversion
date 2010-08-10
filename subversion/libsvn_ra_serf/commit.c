@@ -753,7 +753,6 @@ create_proppatch_body(serf_bucket_t **bkt,
 {
   proppatch_context_t *ctx = baton;
   serf_bucket_t *body_bkt;
-  svn_error_t *err;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
