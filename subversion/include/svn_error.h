@@ -195,6 +195,8 @@ svn_error_root_cause(svn_error_t *err);
 
 /** Return TRUE if @a err's chain contains the error code @a apr_err.
  *
+ * If @a err is #SVN_NO_ERROR, return FALSE.
+ *
  * @since New in 1.7.
  */
 svn_boolean_t

@@ -274,10 +274,6 @@ svn_error_has_cause(svn_error_t *err, apr_status_t apr_err)
 {
   svn_error_t *child;
 
-  if (! err && ! apr_err)
-    /* The API doesn't specify the behaviour when ERR is NULL. */
-    return TRUE;
-  
   for (child = err; child; child = child->child)
     if (child->apr_err == apr_err)
       return TRUE;
