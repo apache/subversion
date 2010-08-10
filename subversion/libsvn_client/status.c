@@ -127,7 +127,7 @@ tweak_status(void *baton,
 
       if (ignore)
         {
-          ((svn_wc_status2_t *) status)->prop_status = svn_wc_status_normal;
+          ((svn_wc_status3_t *) status)->prop_status = svn_wc_status_normal;
 
           if (!svn_wc__is_sendable_status(status, sb->no_ignore, sb->get_all))
             return SVN_NO_ERROR;
