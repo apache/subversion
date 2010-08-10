@@ -2666,7 +2666,6 @@ svn_client_diff5(const apr_array_header_t *diff_options,
  * @c FALSE and @a use_git_diff_format set to @c FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- *
  * @since New in 1.5.
  */
 SVN_DEPRECATED
@@ -2695,7 +2694,6 @@ svn_client_diff4(const apr_array_header_t *diff_options,
  * FALSE, set @a depth to #svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
- *
  * @since New in 1.3.
  */
 SVN_DEPRECATED
@@ -2721,7 +2719,6 @@ svn_client_diff3(const apr_array_header_t *diff_options,
  * @c APR_LOCALE_CHARSET.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
- *
  * @since New in 1.2.
  */
 SVN_DEPRECATED
@@ -2827,7 +2824,6 @@ svn_client_diff_peg4(const apr_array_header_t *diff_options,
  * FALSE, set @a depth to #svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
- *
  * @since New in 1.3.
  */
 SVN_DEPRECATED
@@ -2852,7 +2848,6 @@ svn_client_diff_peg3(const apr_array_header_t *diff_options,
  * @c APR_LOCALE_CHARSET.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
- *
  * @since New in 1.2.
  */
 SVN_DEPRECATED
