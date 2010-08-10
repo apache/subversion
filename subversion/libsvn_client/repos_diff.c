@@ -504,8 +504,6 @@ diff_deleted_dir(const char *dir,
         {
           struct file_baton *b;
           const char *mimetype1, *mimetype2;
-          svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
-          svn_boolean_t tree_conflicted = FALSE;
 
           /* Compare a file being deleted against an empty file */
           b = make_file_baton(path, FALSE, eb, iterpool);
@@ -516,7 +514,7 @@ diff_deleted_dir(const char *dir,
           get_file_mime_types(&mimetype1, &mimetype2, b);
 
           SVN_ERR(eb->diff_callbacks->file_deleted
-                  (NULL, &state, &tree_conflicted, b->wcpath,
+                  (NULL, NULL, NULL, b->wcpath,
                    b->path_start_revision,
                    b->path_end_revision,
                    mimetype1, mimetype2,
