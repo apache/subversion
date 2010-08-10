@@ -1321,9 +1321,6 @@ log_do_committed(svn_wc__db_t *db,
                 set_read_write = TRUE;
             }
         }
-
-      /* Install LOCAL_ABSPATHs working props as base props. */
-      SVN_ERR(svn_wc__working_props_committed(db, local_abspath, pool));
     }
 
   /* If it's a file, install the tree changes and the file's text. */

@@ -198,6 +198,7 @@ queue_install_props(svn_wc__db_t *db,
   if (install_pristine_props)
     {
       /* Write out a new set of pristine properties.  */
+      SVN_ERR(sv
       SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
                                 svn_wc__props_base, scratch_pool));
       SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
@@ -268,15 +269,6 @@ immediate_install_props(svn_wc__db_t *db,
                                   NULL, /* work_items */
                                   scratch_pool));
 
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__working_props_committed(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool)
-{
   return SVN_NO_ERROR;
 }
 
