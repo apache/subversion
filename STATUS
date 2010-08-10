@@ -319,11 +319,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-     
- * r948916
-   JavaHL: Use the verify API, rather than a dump-load cycle for verification.
-   Justification:
-     This ensures that the output received through JavaHL and that received
-     when running 'svnadmin verify' are identical.  (Eliminates user confusion.)
-   Votes:
-     +1: hwright, rhuijben
