@@ -2059,18 +2059,23 @@ do_entry_deletion(struct edit_baton *eb,
                   apr_pool_t *pool)
 {
   svn_wc__db_kind_t kind;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   svn_boolean_t hidden;
   svn_skel_t *work_item;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, local_abspath, FALSE, pool));
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &conflicted, NULL,
+                               eb->db, local_abspath, pool, pool));
 
   /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  local_abspath, pool));
-  if (already_conflicted)
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    local_abspath, pool));
+  if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
@@ -2250,7 +2255,7 @@ add_directory(const char *path,
   svn_node_kind_t kind;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t wc_kind;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
   svn_boolean_t versioned_locally_and_present;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_error_t *err;
@@ -2340,8 +2345,8 @@ add_directory(const char *path,
 
   err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             &conflicted, NULL,
                              eb->db, db->local_abspath, db->pool, db->pool);
   if (err)
     {
@@ -2358,9 +2363,10 @@ add_directory(const char *path,
     versioned_locally_and_present = IS_NODE_PRESENT(status);
 
   /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  db->local_abspath, pool));
-  if (already_conflicted
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    db->local_abspath, pool));
+  if (conflicted
       && status == svn_wc__db_status_not_present
       && kind == svn_node_none)
     {
@@ -2385,12 +2391,12 @@ add_directory(const char *path,
                                                   db->local_abspath,
                                                   NULL, pool));
           /* Don't skip this path after all. */
-          already_conflicted = FALSE;
+          conflicted = FALSE;
         }
     }
 
   /* Now the "usual" behaviour if already conflicted. Skip it. */
-  if (already_conflicted)
+  if (conflicted)
     {
       /* Record this conflict so that its descendants are skipped silently. */
       SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
@@ -2711,7 +2717,7 @@ open_directory(const char *path,
   struct dir_baton *db, *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_boolean_t have_work;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_wc__db_status_t status, base_status;
 
@@ -2741,7 +2747,7 @@ open_directory(const char *path,
                                NULL, NULL, NULL, NULL, NULL,
                                &db->ambient_depth, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, &have_work, NULL, NULL,
+                               NULL, &have_work, &conflicted, NULL,
                                eb->db, db->local_abspath, pool, pool));
 
   if (!have_work)
@@ -2756,9 +2762,10 @@ open_directory(const char *path,
   db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
 
   /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  db->local_abspath, pool));
-  if (already_conflicted)
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    db->local_abspath, pool));
+  if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
@@ -3740,7 +3747,7 @@ add_file(const char *path,
   svn_wc__db_kind_t wc_kind;
   svn_wc__db_status_t status;
   apr_pool_t *subpool;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
   svn_boolean_t versioned_locally_and_present;
   svn_error_t *err;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
@@ -3790,8 +3797,8 @@ add_file(const char *path,
 
   err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             &conflicted, NULL,
                              eb->db, fb->local_abspath, subpool, subpool);
 
   if (err)
@@ -3810,9 +3817,10 @@ add_file(const char *path,
 
 
   /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  fb->local_abspath, subpool));
-  if (already_conflicted)
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    fb->local_abspath, subpool));
+  if (conflicted)
     {
       svn_boolean_t do_skip = TRUE;
 
@@ -4109,7 +4117,7 @@ open_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
   svn_node_kind_t kind;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
 
   /* the file_pool can stick around for a *long* time, so we want to use
@@ -4140,13 +4148,14 @@ open_file(const char *path,
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, &fb->old_revision, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &conflicted, NULL,
                                eb->db, fb->local_abspath, subpool, subpool));
 
   /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  fb->local_abspath, pool));
-  if (already_conflicted)
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    fb->local_abspath, pool));
+  if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
