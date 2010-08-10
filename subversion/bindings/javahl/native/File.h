@@ -20,26 +20,36 @@
  * ====================================================================
  * @endcopyright
  *
- * @file org_apache_subversion_javahl_Path.cpp
- * @brief Implementation of the native methods in the Java class Path
+ * @file File.h
+ * @brief Interface of the class File
  */
 
+#ifndef FILE_H
+#define FILE_H
+
 #include <jni.h>
-#include "../include/org_apache_subversion_javahl_Path.h"
-#include "JNIUtil.h"
-#include "JNIStackElement.h"
+#include "svn_io.h"
+#include "Pool.h"
 #include "JNIStringHolder.h"
-#include "Path.h"
 
-JNIEXPORT jboolean JNICALL
-Java_org_apache_subversion_javahl_Path_isValid(JNIEnv *env,
-                                               jclass jthis,
-                                               jstring jpath)
+/**
+ * This class contains a Java objects implementing the interface File and
+ * implements the functions read & close of svn_stream_t.
+ */
+class File
 {
-  JNIEntry(Path, isValid);
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return JNI_FALSE;
+ private:
+  /**
+   * A local reference to the Java object.
+   */
+  jobject m_jthis;
+  JNIStringHolder *stringHolder;
+ public:
+  File(jobject jthis);
+  ~File();
+  const char *getAbsPath();
+  const char *getInternalStyle(const SVN::Pool &pool);
+  bool isNull();
+};
 
-  return Path::isValid(path);
-}
+#endif // FILE_H

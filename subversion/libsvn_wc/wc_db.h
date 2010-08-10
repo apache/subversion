@@ -180,7 +180,7 @@ typedef enum {
     svn_wc__db_status_normal,
 
     /* The node has been added (potentially obscuring a delete or move of
-       the BASE node; see BASE_SHADOWED param). The text will be marked as
+       the BASE node; see HAVE_BASE param). The text will be marked as
        modified, and if properties exist, they will be marked as modified.
 
        In many cases svn_wc__db_status_added means any of added, moved-here
@@ -714,6 +714,27 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Just like svn_wc__db_base_get_info, but always reads information
+   from inside the parent of LOCAL_ABSPATH, to allow reading the
+   information of a node that is obstructed by a separate working
+   copy.
+   
+   ### BH: This information is necessary for svn_wc_add3()'s
+   ###     checkout integration support. Even after we switch to
+   ###     a single db.
+   */
+svn_error_t *
+svn_wc__db_base_get_info_from_parent(svn_wc__db_status_t *status,
+                                     svn_wc__db_kind_t *kind,
+                                     svn_revnum_t *revision,
+                                     const char **repos_relpath,
+                                     const char **repos_root_url,
+                                     const char **repos_uuid,
+                                     svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
 
 /* Set *PROPVAL to the value of the property named PROPNAME of the node
    LOCAL_ABSPATH in the BASE tree.
@@ -786,6 +807,13 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
                               const char *local_abspath,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
+
+/* Recursively clear the dav cache for LOCAL_ABSPATH.  Use
+   SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          apr_pool_t *scratch_pool);
 
 
 /* ### how to handle depth? empty != absent. thus, record depth on each
@@ -861,7 +889,7 @@ typedef enum {
    ### This is temporary - callers should not be looking at the file
    directly.
 
-   Allocate the stream in RESULT_POOL. */
+   Allocate the path in RESULT_POOL. */
 svn_error_t *
 svn_wc__db_pristine_get_path(const char **pristine_abspath,
                              svn_wc__db_t *db,
@@ -869,6 +897,17 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
                              const svn_checksum_t *checksum,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
+
+/* Set *PRISTINE_ABSPATH to the path under WCROOT_ABSPATH that will be
+   used by the pristine text identified by SHA1_CHECKSUM.  The file
+   need not exist.
+ */
+svn_error_t *
+svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
+                                    const char *wcroot_abspath,
+                                    svn_checksum_t *sha1_checksum,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
 
 
 /* Set *CONTENTS to a readable stream that will yield the pristine text
@@ -954,6 +993,13 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
                            const char *wri_abspath,
                            const svn_checksum_t *sha1_checksum,
                            apr_pool_t *scratch_pool);
+
+
+/* Remove all unreferenced pristines belonging to WRI_ABSPATH in DB. */
+svn_error_t *
+svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            apr_pool_t *scratch_pool);
 
 
 /* ### check for presence, according to the given mode (on how hard we
@@ -1241,7 +1287,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 
 /* Return a hash @a *tree_conflicts of all the children of @a
  * local_abspath that are in tree conflicts.  The hash maps local
- * abspaths to pointers to svn_wc_conflict_description2_t, all
+ * basenames to pointers to svn_wc_conflict_description2_t, all
  * allocated in result pool.
  */
 svn_error_t *
@@ -1329,9 +1375,9 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
      ORIGINAL_ROOT_URL       NULL
      ORIGINAL_UUID           NULL
      ORIGINAL_REVISION       SVN_INVALID_REVNUM
-     TEXT_MOD                n/a (always available)
      PROPS_MOD               n/a (always available)
-     BASE_SHADOWED           n/a (always available)
+     HAVE_BASE               n/a (always available)
+     HAVE_WORK               n/a (always available)
      CONFLICTED              FALSE
      LOCK                    NULL
 
@@ -1342,7 +1388,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 
      svn_wc__db_status_added
      svn_wc__db_status_obstructed_add
-       A node has been added/copied/moved to here. See BASE_SHADOWED to see
+       A node has been added/copied/moved to here. See HAVE_BASE to see
        if this change overwrites a BASE node. Use scan_addition() to resolve
        whether this has been added, copied, or moved, and the details of the
        operation (this function only looks at LOCAL_ABSPATH, but resolving
@@ -1365,9 +1411,8 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 
      svn_wc__db_status_excluded
        The node has been excluded from the working copy tree. This may
-       be an exclusion from the BASE tree, or an exclusion for a child
-       node of a copy/move to an ancestor (see BASE_SHADOWED to determine
-       the situation).
+       be an exclusion from the BASE tree, or an exclusion in the
+       WORKING tree for a child node of a copied/moved parent.
 
      svn_wc__db_status_not_present
        This is a node from the BASE tree, has been marked as "not-present"
@@ -1420,7 +1465,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
    ###   repos_* will be NULL
    ###   changed_rev will be SVN_INVALID_REVNUM
    ###   changed_date will be 0
-   ###   changed_author will be NULLn
+   ###   changed_author will be NULL
    ###   status will be svn_wc__db_status_added
    ###   text_mod will be TRUE
    ###   prop_mod will be TRUE if any props have been set
@@ -1460,10 +1505,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_revnum_t *original_revision,
 
                      /* ### the followed are derived fields */
-                     svn_boolean_t *text_mod,  /* ### possibly modified */
                      svn_boolean_t *props_mod,
-                     svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
-                                                       ### deleted BASE? */
+                     svn_boolean_t *have_base,
+                     svn_boolean_t *have_work,
 
                      svn_boolean_t *conflicted,
 
@@ -1613,6 +1657,17 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
    ### changelist usage -- we may already assume the list fits in memory.
 */
 
+/* Checks if LOCAL_ABSPATH has a parent directory that knows about its
+ * existance. Set *IS_ROOT to FALSE if a parent is found, and to TRUE
+ * if there is no such parent.
+ */
+svn_error_t *
+svn_wc__db_is_wcroot(svn_boolean_t *is_root,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool);
+
+
 
 /* @} */
 
@@ -1683,6 +1738,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
+                         svn_boolean_t no_unlock,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
@@ -2015,6 +2071,15 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
                                    apr_pool_t *scratch_pool);
 
 
+/* ### need much more docco
+
+   ### this function should be called within a sqlite transaction. it makes
+   ### assumptions around this fact.
+
+   Apply the various sets of properties to the database nodes based on
+   their existence/presence, the current state of the node, and the original
+   format of the working copy which provided these property sets.
+*/
 svn_error_t *
 svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                const char *local_relpath,
@@ -2308,21 +2373,6 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
                                        svn_boolean_t incomplete,
                                        apr_pool_t *scratch_pool);
 
-svn_error_t *
-svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
-                                          const char *local_dir_abspath,
-                                          svn_boolean_t incomplete,
-                                          apr_pool_t *scratch_pool);
-
-
-/* Set the pristine text checksum of the WORKING_NODE of LOCAL_ABSPATH in DB
-   to CHECKSUM. */
-svn_error_t *
-svn_wc__db_temp_op_set_working_checksum(svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        const svn_checksum_t *checksum,
-                                        apr_pool_t *scratch_pool);
-
 /* Update the BASE_NODE of directory LOCAL_ABSPATH to be NEW_REPOS_RELPATH
    at revision NEW_REV with status incomplete. */
 svn_error_t *
@@ -2378,6 +2428,73 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                      const svn_opt_revision_t *peg_rev,
                                      const svn_opt_revision_t *rev,
                                      apr_pool_t *scratch_pool);
+
+/* Set the conflict marker information on LOCAL_ABSPATH to the specified
+   values */
+svn_error_t *
+svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
+                                                  const char *local_abspath,
+                                                  const char *old_basename,
+                                                  const char *new_basename,
+                                                  const char *wrk_basename,
+                                                  apr_pool_t *scratch_pool);
+
+/* Set the conflict marker information on LOCAL_ABSPATH to the specified
+   values */
+svn_error_t *
+svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
+                                                     const char *local_abspath,
+                                                     const char *prej_basename,
+                                                     apr_pool_t *scratch_pool);
+
+/* Ensure that the parent stub of LOCAL_ABSPATH contains a BASE_NODE record with
+   a normal status and optionally remove the WORKING_NODE record for the node;
+   this assumes that the parent directory is in the incomplete state, or the
+   node already exists (either as working or as base node). 
+
+   ### This function is a HACK with assumptions that aren't completely checked.
+   ### Don't add new callers unless you exactly know what 
+   ### you are doing! This call is never needed once we get to a central db. */
+svn_error_t *
+svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          svn_boolean_t delete_working,
+                                          apr_pool_t *scratch_pool);
+
+/* Sets a base nodes revision and/or repository relative path. If
+   LOCAL_ABSPATH's rev (REV) is valid, set is revision and if SET_REPOS_RELPATH
+   is TRUE set its repository relative path to REPOS_RELPATH (and make sure its
+   REPOS_ROOT_URL and REPOS_ROOT_UUID are still valid).
+ */
+svn_error_t *
+svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
+                                             const char *local_abspath,
+                                             svn_revnum_t rev,
+                                             svn_boolean_t set_repos_relpath,
+                                             const char *repos_relpath,
+                                             const char *repos_root_url,
+                                             const char *repos_uuid,
+                                             svn_boolean_t update_stub,
+                                             apr_pool_t *scratch_pool);
+
+/* Tweak a locally added existing directory LOCAL_ABSPATH to have a base
+   node with incomplete status and revision REVISION instead. If
+   REPOS_RELPATH is not NULL, apply REPOS_RELPATH, REPOS_ROOT_URL and
+   REPOS_UUID.
+   Perform all temporary allocations in SCRATCH_POOL.
+   
+   ### For 1.7 this should probably become a proper tree conflict and
+   ### just handled by putting a base directory below the existing
+   ### working node.
+   */
+svn_error_t *
+svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
+                                             const char *local_abspath,
+                                             const char *repos_relpath,
+                                             const char *repos_root_url,
+                                             const char *repos_uuid,
+                                             svn_revnum_t revision,
+                                             apr_pool_t *scratch_pool);
 
 /* @} */
 

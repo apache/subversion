@@ -21,46 +21,29 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.callback;
+
+import org.apache.subversion.javahl.ReposNotifyInformation;
+
+import java.util.EventListener;
 
 /**
- * Subversion path validation and manipulation.
+ * Subversion notification interface.
  *
- * @since 1.4.0
+ * Implement this interface to provide a custom notification handler
+ * to the SVNClient class.  If you need to pass extra information to
+ * the notification handler add it to your implementing class.
+ *
+ * @since 1.2
  */
-public class Path
+public interface ReposNotifyCallback extends EventListener
 {
     /**
-     * Load the required native library.
-     */
-    static
-    {
-        NativeResources.loadNativeLibrary();
-    }
-
-    /**
-     * A valid path is a UTF-8 string without any control characters.
+     * Handler for Subversion notifications.
      *
-     * @return Whether Subversion can store the path in a repository.
+     * Override this function to allow Subversion to
+     * send notifications
+     * @param info everything to know about this event
      */
-    public static native boolean isValid(String path);
-
-    /**
-     * Whether a URL is valid. Implementation may behave differently
-     * than <code>svn_path_is_url()</code>.
-     *
-     * @param path The Subversion "path" to inspect.
-     * @return Whether <code>path</code> is a URL.
-     * @throws IllegalArgumentException If <code>path</code> is
-     * <code>null</code>.
-     */
-    public static boolean isURL(String path)
-    {
-        if (path == null)
-        {
-            throw new IllegalArgumentException();
-        }
-        // Require at least "s://".
-        return (path.indexOf("://") > 0);
-    }
+    public void onNotify(ReposNotifyInformation info);
 }

@@ -78,7 +78,7 @@ typedef enum
 } svn_ra_serf__authn_types;
 
 /* A serf connection and optionally associated SSL context.  */
-typedef struct {
+typedef struct svn_ra_serf__connection_t {
   /* Our connection to a server. */
   serf_connection_t *conn;
 
@@ -254,7 +254,7 @@ struct svn_ra_serf__session_t {
 /*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
  */
-typedef struct {
+typedef struct svn_ra_serf__dav_props_t {
   /* Element namespace */
   const char *namespace;
   /* Element name */
@@ -466,24 +466,12 @@ typedef apr_status_t
  * Structure that can be passed to our default handler to guide the
  * execution of the request through its lifecycle.
  */
-typedef struct {
+typedef struct svn_ra_serf__handler_t {
   /* The HTTP method string of the request */
   const char *method;
 
   /* The resource to the execute the method on. */
   const char *path;
-
-  /* The request's body buckets.
-   *
-   * May be NULL if there is no body to send or ->body_delegate is set.
-   *
-   * Using the body_delegate function is preferred as it delays the
-   * creation of the body until we're about to deliver the request
-   * instead of creating it earlier.
-   *
-   * @see svn_ra_serf__request_body_delegate_t
-   */
-  serf_bucket_t *body_buckets;
 
   /* The content-type of the request body. */
   const char *body_type;
@@ -522,6 +510,9 @@ typedef struct {
    *
    * It will be executed after the request has been set up but before it is
    * delivered.
+   *
+   * May be NULL if there is no body to send.
+   *
    */
   svn_ra_serf__request_body_delegate_t body_delegate;
   void *body_delegate_baton;
@@ -529,9 +520,6 @@ typedef struct {
   /* The connection and session to be used for this request. */
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__session_t *session;
-
-  /* Marks whether a snapshot was set on the body bucket. */
-  svn_boolean_t body_snapshot_set;
 } svn_ra_serf__handler_t;
 
 /*
@@ -664,7 +652,7 @@ struct svn_ra_serf__xml_parser_t {
 /*
  * Parses a server-side error message into a local Subversion error.
  */
-typedef struct {
+typedef struct svn_ra_serf__server_error_t {
   /* Our local representation of the error. */
   svn_error_t *error;
 
@@ -691,7 +679,7 @@ typedef struct {
 } svn_ra_serf__server_error_t;
 
 /* A simple request context that can be passed to handle_status_only. */
-typedef struct {
+typedef struct svn_ra_serf__simple_request_context_t {
   /* The HTTP status code of the response */
   int status;
 
@@ -955,12 +943,16 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
                             const svn_ra_serf__dav_props_t *props,
                             apr_pool_t *pool);
 
-/* ### TODO: doco. */
+/* Set PROPS for PATH at REV revision with a NS:NAME VAL.
+ *
+ * The POOL governs allocation.
+ */
 void
 svn_ra_serf__set_ver_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name,
                           const svn_string_t *val, apr_pool_t *pool);
+#define svn_ra_serf__set_rev_prop svn_ra_serf__set_ver_prop
 
 /** Property walker functions **/
 
@@ -1036,16 +1028,6 @@ svn_ra_serf__get_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns,
                       const char *name);
-
-/* Set PROPS for PATH at REV revision with a NS:NAME VAL.
- *
- * The POOL governs allocation.
- */
-void
-svn_ra_serf__set_rev_prop(apr_hash_t *props,
-                          const char *path, svn_revnum_t rev,
-                          const char *ns, const char *name,
-                          const svn_string_t *val, apr_pool_t *pool);
 
 /* Same as set_rev_prop, but sets it for the unknown revision. */
 void
@@ -1365,6 +1347,7 @@ svn_error_t *
 svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        apr_hash_t **locks,
                        const char *path,
+                       svn_depth_t depth,
                        apr_pool_t *pool);
 
 svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,

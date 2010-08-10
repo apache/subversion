@@ -33,7 +33,7 @@
 #include "Revision.h"
 #include "RevisionRange.h"
 #include "EnumMapper.h"
-#include "NotifyCallback.h"
+#include "ClientNotifyCallback.h"
 #include "ConflictResolverCallback.h"
 #include "ProgressListener.h"
 #include "CommitMessage.h"
@@ -43,6 +43,7 @@
 #include "DiffSummaryReceiver.h"
 #include "BlameCallback.h"
 #include "ProplistCallback.h"
+#include "PatchCallback.h"
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
 #include "StatusCallback.h"
@@ -354,7 +355,7 @@ Java_org_apache_subversion_javahl_SVNClient_notification2
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  NotifyCallback *notify2 = NotifyCallback::makeCNotify(jnotify2);
+  ClientNotifyCallback *notify2 = ClientNotifyCallback::makeCNotify(jnotify2);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1608,25 +1609,6 @@ Java_org_apache_subversion_javahl_SVNClient_cancelOperation
   cl->cancelOperation();
 }
 
-JNIEXPORT jobject JNICALL
-Java_org_apache_subversion_javahl_SVNClient_info
-(JNIEnv *env, jobject jthis, jstring jpath)
-{
-  JNIEntry(SVNClient, info);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError("bad C++ this");
-      return NULL;
-    }
-
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  return cl->info(path);
-}
-
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_addToChangelist
 (JNIEnv *env, jobject jthis, jobject jtargets, jstring jchangelist,
@@ -1783,4 +1765,32 @@ Java_org_apache_subversion_javahl_SVNClient_info2
   InfoCallback callback(jinfoCallback);
   cl->info2(path, revision, pegRevision, EnumMapper::toDepth(jdepth),
             changelists, &callback);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_patch
+(JNIEnv *env, jobject jthis, jstring jpatchPath, jstring jtargetPath,
+ jboolean jdryRun, jint jstripCount, jboolean jreverse,
+ jboolean jignoreWhitespace, jboolean jremoveTempfiles, jobject jcallback)
+{
+  JNIEntry(SVNClient, patch);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return;
+    }
+
+  JNIStringHolder patchPath(jpatchPath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  JNIStringHolder targetPath(jtargetPath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  PatchCallback callback(jcallback);
+  cl->patch(patchPath, targetPath, jdryRun ? true : false, (int) jstripCount,
+            jreverse ? true : false, jignoreWhitespace ? true : false,
+            jremoveTempfiles ? true : false, &callback);
 }

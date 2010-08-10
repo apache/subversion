@@ -74,7 +74,7 @@ struct status_baton
 struct status_cache
 {
   const char *path;
-  svn_wc_status3_t *status;
+  svn_client_status_t *status;
 };
 
 /* Print conflict stats accumulated in status baton SB.
@@ -143,7 +143,7 @@ print_finish_target_xml(svn_revnum_t repos_rev,
 static svn_error_t *
 print_status_normal_or_xml(void *baton,
                            const char *path,
-                           const svn_wc_status3_t *status,
+                           const svn_client_status_t *status,
                            apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
@@ -167,19 +167,18 @@ print_status_normal_or_xml(void *baton,
 static svn_error_t *
 print_status(void *baton,
              const char *path,
-             const svn_wc_status3_t *status,
+             const svn_client_status_t *status,
              apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
-  svn_wc_status3_t *tweaked_status;
+
   svn_revnum_t revision;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
   const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, sb->cl_pool));
-  tweaked_status = svn_wc_dup_status3(status, sb->cl_pool);
+  local_abspath = status->local_abspath;
 
   /* ### The revision information with associates are based on what
    * ### _read_info() returns. The svn_wc_status_func4_t callback is
@@ -187,8 +186,14 @@ print_status(void *baton,
    * ### WORKING nodes on its own. Until we've agreed on how the CLI should
    * ### handle the revision information, we use this appproach to stay compat
    * ### with our testsuite. */
-  if (status->versioned)
+  if (status->versioned
+      && !SVN_IS_VALID_REVNUM(status->revision)
+      && !status->copied)
     {
+      svn_client_status_t *tweaked_status
+                 = svn_client_status_dup(status, sb->cl_pool);
+
+      /* Retrieve some data from the original version of the replaced node */
       SVN_ERR(svn_wc__node_get_working_rev_info(&revision, &changed_rev,
                                                 &changed_date,
                                                 &changed_author,
@@ -199,6 +204,8 @@ print_status(void *baton,
       tweaked_status->changed_rev = changed_rev;
       tweaked_status->changed_date = changed_date;
       tweaked_status->changed_author = changed_author;
+
+      status = tweaked_status;
     }
 
   /* If the path is part of a changelist, then we don't print
@@ -211,7 +218,7 @@ print_status(void *baton,
       const char *cl_key = apr_pstrdup(sb->cl_pool, status->changelist);
       struct status_cache *scache = apr_pcalloc(sb->cl_pool, sizeof(*scache));
       scache->path = apr_pstrdup(sb->cl_pool, path);
-      scache->status = svn_wc_dup_status3(tweaked_status, sb->cl_pool);
+      scache->status = svn_client_status_dup(status, sb->cl_pool);
 
       path_array =
         apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);
@@ -227,7 +234,7 @@ print_status(void *baton,
       return SVN_NO_ERROR;
     }
 
-  return print_status_normal_or_xml(baton, path, tweaked_status, pool);
+  return print_status_normal_or_xml(baton, path, status, pool);
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -290,7 +297,7 @@ svn_cl__status(apr_getopt_t *os,
   sb.tree_conflicts = 0;
   sb.ctx = ctx;
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
@@ -308,8 +315,7 @@ svn_cl__status(apr_getopt_t *os,
 
       /* Retrieve a hash of status structures with the information
          requested by the user. */
-      SVN_ERR(svn_cl__try(svn_client_status5(&repos_rev, target, &rev,
-                                             print_status, &sb,
+      SVN_ERR(svn_cl__try(svn_client_status5(&repos_rev, ctx, target, &rev,
                                              opt_state->depth,
                                              opt_state->verbose,
                                              opt_state->update,
@@ -317,7 +323,8 @@ svn_cl__status(apr_getopt_t *os,
                                              opt_state->ignore_externals,
                                              opt_state->ignore_mergeinfo,
                                              opt_state->changelists,
-                                             ctx, iterpool),
+                                             print_status, &sb,
+                                             iterpool),
                           NULL, opt_state->quiet,
                           /* not versioned: */
                           SVN_ERR_WC_NOT_WORKING_COPY,

@@ -297,10 +297,10 @@ resolve_target_path(patch_target_t *target,
       else
         return svn_error_return(err);
     }
-  else if (status->text_status == svn_wc_status_ignored ||
-           status->text_status == svn_wc_status_unversioned ||
-           status->text_status == svn_wc_status_missing ||
-           status->text_status == svn_wc_status_obstructed)
+  else if (status->node_status == svn_wc_status_ignored ||
+           status->node_status == svn_wc_status_unversioned ||
+           status->node_status == svn_wc_status_missing ||
+           status->node_status == svn_wc_status_obstructed)
     {
       target->skipped = TRUE;
       return SVN_NO_ERROR;
@@ -1483,8 +1483,8 @@ find_existing_children(void *baton,
 {
   struct status_baton *btn = baton;
 
-  if (status->text_status != svn_wc_status_none
-      && status->text_status != svn_wc_status_deleted
+  if (status->node_status != svn_wc_status_none
+      && status->node_status != svn_wc_status_deleted
       && strcmp(abspath, btn->parent_path))
     {
       APR_ARRAY_PUSH(btn->existing_targets, 

@@ -44,24 +44,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/** Similar to svn_wc__get_entry() and svn_wc__entry_versioned().
- *
- * This function allows callers in libsvn_client to directly fetch entry data
- * without having to open up an adm_access baton.  Its error and return
- * semantics are the same as svn_wc__entry_versioned(), and parameters are the
- * same as svn_wc__get_entry() (defined in libsvn_wc/entries.h).
- */
-svn_error_t *
-svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            svn_node_kind_t kind,
-                            svn_boolean_t show_hidden,
-                            svn_boolean_t need_parent_stub,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
-
 /** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
  * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
  * All temporary allocations are done in * @a scratch_pool.
@@ -367,6 +349,20 @@ svn_wc__node_get_url(const char **url,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+/**
+ * Set @a *repos_relpath to the corresponding repos_relpath for @a
+ * local_abspath, using @a wc_ctx. If the node is added, return the
+ * repos_relpath it will have in the repository.
+ *
+ * If @a local_abspath is not in the working copy, return @c
+ * SVN_ERR_WC_PATH_NOT_FOUND. 
+ * */
+svn_error_t *
+svn_wc__node_get_repos_relpath(const char **repos_relpath,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 /**
  * Set @a *copyfrom_url to the corresponding copy-from URL (allocated
@@ -376,14 +372,20 @@ svn_wc__node_get_url(const char **url,
  * copy information (versus being a member of the subtree beneath such
  * a copy target).
  *
- * If @a local_abspath is not copied, set @a *copyfrom_rev to NULL and
+ * @a copyfrom_root_url and @a copyfrom_repos_relpath return the exact same
+ * information as @a copyfrom_url, just still separated as root and relpath.
+ *
+ * If @a local_abspath is not copied, set @a *copyfrom_root_url, 
+ * @a *copyfrom_repos_relpath and @a copyfrom_url to NULL and
  * @a *copyfrom_rev to @c SVN_INVALID_REVNUM.
  *
- * Any of @a copyfrom_url, @a copyfrom_rev, or @a is_copy_target may
- * be NULL if the caller doesn't care about those values.
+ * Any out parameters may be NULL if the caller doesn't care about those
+ * values.
  */
 svn_error_t *
-svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
+svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
+                               const char **copyfrom_repos_relpath,
+                               const char **copyfrom_url,
                                svn_revnum_t *copyfrom_rev,
                                svn_boolean_t *is_copy_target,
                                svn_wc_context_t *wc_ctx,
@@ -392,8 +394,8 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
                                apr_pool_t *scratch_pool);
 
 /**
- * Recursively call @a callbacks->found_node for all nodes underneath
- * @a local_abspath.
+ * Recursively call @a walk_callback for all nodes underneath
+ * @a local_abspath, restricted by @a walk_depth.
  */
 svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
@@ -622,6 +624,25 @@ svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/**
+ * A hack to remove the last entry from libsvn_client.  This simply fetches an
+ * entry, and puts the needed bits into the output parameters, allocated in
+ * @a result_pool. All output arguments can be NULL to indicate that the
+ * caller is not interested in the specific result.
+ *
+ * @a local_abspath and @a wc_ctx are what you think they are.
+ */
+svn_error_t *
+svn_wc__node_get_info_bits(apr_time_t *text_time,
+                           const char **conflict_old,
+                           const char **conflict_new,
+                           const char **conflict_wrk,
+                           const char **prejfile,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 
 /**
  * Recursively acquire write locks for @a local_abspath if
@@ -696,6 +717,38 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool);
+
+/**
+ * Register @a local_abspath as a new file external aimed at
+ * @a external_url, @a external_peg_rev, and @a external_rev.
+ *
+ * If not @c NULL, @a external_peg_rev and @a external_rev must each
+ * be of kind @c svn_opt_revision_number or @c svn_opt_revision_head.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               const char *external_url,
+                               const svn_opt_revision_t *external_peg_rev,
+                               const svn_opt_revision_t *external_rev,
+                               apr_pool_t *scratch_pool);
+
+/**
+ * Calculates the schedule and copied status of a node as that would
+ * have been stored in an svn_wc_entry_t instance.
+ *
+ * If not @c NULL, @a schedule and @a copied are set to their calculated
+ * values.
+ */
+svn_error_t *
+svn_wc__node_get_schedule(svn_wc_schedule_t *schedule,
+                          svn_boolean_t *copied,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

@@ -18,9 +18,9 @@ detailed below.
 KIND indicates the kind of conflict description that follows and is one
 of:
 
-  "text" - meaning a "normal" text conflict of the whole node (which must be a
-    file), with left/right/mine full texts saved, and (unless it's
-    "binary") conflict markers in the working text;
+  "text" - meaning a text conflict of the whole text of the node (which
+    must be a file), with left/right/mine full texts saved, and (unless
+    it's "binary") conflict markers in the working text;
   "prop" - meaning a "normal" property conflict, with left/right/mine full
     values saved;
   "tree" - meaning a tree conflict;

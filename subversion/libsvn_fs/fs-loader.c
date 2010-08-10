@@ -1199,11 +1199,21 @@ svn_fs_revision_proplist(apr_hash_t **table_p, svn_fs_t *fs, svn_revnum_t rev,
 }
 
 svn_error_t *
+svn_fs_change_rev_prop2(svn_fs_t *fs, svn_revnum_t rev, const char *name,
+                        const svn_string_t *const *old_value_p,
+                        const svn_string_t *value, apr_pool_t *pool)
+{
+  return svn_error_return(fs->vtable->change_rev_prop(fs, rev, name,
+                                                      old_value_p,
+                                                      value, pool));
+}
+
+svn_error_t *
 svn_fs_change_rev_prop(svn_fs_t *fs, svn_revnum_t rev, const char *name,
                        const svn_string_t *value, apr_pool_t *pool)
 {
-  return svn_error_return(fs->vtable->change_rev_prop(fs, rev, name, value,
-                                                      pool));
+  return svn_error_return(
+           svn_fs_change_rev_prop2(fs, rev, name, NULL, value, pool));
 }
 
 svn_error_t *
@@ -1291,15 +1301,28 @@ svn_fs_get_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
 }
 
 svn_error_t *
-svn_fs_get_locks(svn_fs_t *fs, const char *path,
-                 svn_fs_get_locks_callback_t get_locks_func,
-                 void *get_locks_baton,
-                 apr_pool_t *pool)
+svn_fs_get_locks2(svn_fs_t *fs, const char *path, svn_depth_t depth,
+                  svn_fs_get_locks_callback_t get_locks_func,
+                  void *get_locks_baton, apr_pool_t *pool)
 {
-  return svn_error_return(fs->vtable->get_locks(fs, path, get_locks_func,
+  SVN_ERR_ASSERT((depth == svn_depth_empty) ||
+                 (depth == svn_depth_files) ||
+                 (depth == svn_depth_immediates) ||
+                 (depth == svn_depth_infinity));
+  return svn_error_return(fs->vtable->get_locks(fs, path, depth,
+                                                get_locks_func,
                                                 get_locks_baton, pool));
 }
 
+svn_error_t *
+svn_fs_get_locks(svn_fs_t *fs, const char *path,
+                 svn_fs_get_locks_callback_t get_locks_func,
+                 void *get_locks_baton, apr_pool_t *pool)
+{
+  return svn_error_return(svn_fs_get_locks2(fs, path, svn_depth_infinity,
+                                            get_locks_func, get_locks_baton,
+                                            pool));
+}
 
 
 /* --- History functions --- */

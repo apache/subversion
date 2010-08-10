@@ -116,7 +116,7 @@ relegate_dir_external(void *baton,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
-      svn_dirent_split(b->local_abspath, &parent_dir, &dirname, scratch_pool);
+      svn_dirent_split(&parent_dir, &dirname, b->local_abspath, scratch_pool);
 
       /* Reserve the new dir name. */
       SVN_ERR(svn_io_open_uniquely_named(NULL, &new_path,
@@ -439,8 +439,8 @@ switch_file_external(const char *path,
       if (err)
         goto cleanup;
 
-      err = svn_wc_register_file_external(ctx->wc_ctx, local_abspath, url,
-                                          peg_revision, revision, subpool);
+      err = svn_wc__register_file_external(ctx->wc_ctx, local_abspath, url,
+                                           peg_revision, revision, subpool);
       if (err)
         goto cleanup;
     }
@@ -1301,15 +1301,15 @@ svn_client__fetch_externals(apr_hash_t *externals,
 
 
 svn_error_t *
-svn_client__do_external_status(apr_hash_t *externals_new,
-                               svn_wc_status_func4_t status_func,
-                               void *status_baton,
+svn_client__do_external_status(svn_client_ctx_t *ctx,
+                               apr_hash_t *externals_new,
                                svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
                                apr_hash_t *ignored_props,
-                               svn_client_ctx_t *ctx,
+                               svn_client_status_func_t status_func,
+                               void *status_baton,
                                apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -1365,13 +1365,13 @@ svn_client__do_external_status(apr_hash_t *externals_new,
                                     iterpool), iterpool);
 
           /* And then do the status. */
-          SVN_ERR(svn_client_status5(NULL, fullpath,
+          SVN_ERR(svn_client_status5(NULL, ctx, fullpath,
                                      &(external->revision),
-                                     status_func, status_baton,
                                      depth, get_all, update,
-                                     no_ignore, FALSE, NULL,
+                                     no_ignore, FALSE,
                                      ignored_props ? TRUE : FALSE,
-                                     ctx, iterpool));
+                                     NULL, status_func, status_baton,
+                                     iterpool));
         }
     }
 

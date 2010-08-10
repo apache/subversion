@@ -3428,10 +3428,11 @@ def copy_peg_rev_url(sbox):
                                      wc_dir)
 
   # Copy using a peg rev
+  # Add peg rev '@HEAD' to sigma_url when copying which tests for issue #3651.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp',
                                      iota_url + '@HEAD', '-r', '1',
-                                     sigma_url, '-m', 'rev 3')
+                                     sigma_url + '@HEAD', '-m', 'rev 3')
 
   # Validate the copy destination's mergeinfo (we expect none).
   svntest.actions.run_and_verify_svn(None, [], [],
@@ -4462,6 +4463,37 @@ def copy_added_dir_with_copy(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def copy_broken_symlink(sbox):
+  """copy broken symlink"""
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3303. ##
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  new_symlink = os.path.join(wc_dir, 'new_symlink');
+  copied_symlink = os.path.join(wc_dir, 'copied_symlink');
+  os.symlink('linktarget', new_symlink)
+
+  # Alias for svntest.actions.run_and_verify_svn
+  rav_svn = svntest.actions.run_and_verify_svn
+
+  rav_svn(None, None, [], 'add', new_symlink)
+  rav_svn(None, None, [], 'cp', new_symlink, copied_symlink)
+
+  # Check whether both new_symlink and copied_symlink are added to the
+  # working copy
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  expected_status.add(
+    {
+      'new_symlink'       : Item(status='A ', wc_rev='0'),
+      'copied_symlink'    : Item(status='A ', wc_rev='0'),
+    })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -4491,9 +4523,7 @@ test_list = [ None,
               repos_to_wc_1634,
               double_uri_escaping_1814,
               wc_to_wc_copy_between_different_repos,
-              ### should be XFail, but it core dumps with an assertion.
-              ### marking as Skip() to avoid core dump turds...
-              Skip(wc_to_wc_copy_deleted),
+              XFail(wc_to_wc_copy_deleted),
               url_to_non_existent_url_path,
               non_existent_url_to_url,
               old_dir_url_to_url,
@@ -4538,7 +4568,7 @@ test_list = [ None,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
-              allow_unversioned_parent_for_copy_src,
+              XFail(allow_unversioned_parent_for_copy_src),
               replaced_local_source_for_incoming_copy,
               unneeded_parents,
               double_parents_with_url,
@@ -4551,7 +4581,8 @@ test_list = [ None,
               XFail(move_below_move),
               reverse_merge_move,
               XFail(nonrecursive_commit_of_copy),
-              XFail(copy_added_dir_with_copy),
+              copy_added_dir_with_copy,
+              SkipUnless(copy_broken_symlink, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':

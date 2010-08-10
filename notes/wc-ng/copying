@@ -42,8 +42,6 @@ changes have to be made in the repository.  Some examples:
                              A /X (from S@N)    R /X/T (from G@M)
 
   /S@N    not-present        A /X (from /S@N)   D /X/T
-          or
-          absent
 
   /S@N    excluded           A /X (from S@N)
 
@@ -77,10 +75,10 @@ in issue 3314).  We will probably have to continue rely on this in
 WC-NG as there is not enough information in the source to determine
 whether or not the child also exists in the parent's revision.
 
-Child nodes not-present or absent in the source become not-present
-working nodes in the copy, this ensures that they get deleted by the
-commit.  We might want to use a new not-copied state instead, since
-these deletes cannot be reverted.
+Child nodes not-present in the source become not-present working nodes
+in the copy, this ensures that they get deleted by the commit.  We
+might want to use a new not-copied state instead, since these deletes
+cannot be reverted.
 
 Child nodes that are excluded in the source can remain excluded in the
 copy.
@@ -93,6 +91,11 @@ copy.  Some operations, like delete, could be possible on the
 incomplete node.  Could "svn up" retrieve the missing information and
 make them complete?  The commit processing would probably choose not
 to allow incomplete directories.
+
+Child nodes that are absent in the source cannot be copied and
+committed.  During the commit the copy of the parent will fail with an
+authz error since Subversion requires read access to the whole tree
+being copied.
 
 --
 

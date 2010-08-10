@@ -1553,11 +1553,11 @@ svn_repos_open(svn_repos_t **repos_p,
 
 
 svn_error_t *
-svn_repos_upgrade(const char *path,
-                  svn_boolean_t nonblocking,
-                  svn_error_t *(*start_callback)(void *baton),
-                  void *start_callback_baton,
-                  apr_pool_t *pool)
+svn_repos_upgrade2(const char *path,
+                   svn_boolean_t nonblocking,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   apr_pool_t *pool)
 {
   svn_repos_t *repos;
   const char *format_path;
@@ -1571,8 +1571,17 @@ svn_repos_upgrade(const char *path,
      lock_repos.) */
   SVN_ERR(get_repos(&repos, path, TRUE, nonblocking, FALSE, subpool));
 
-  if (start_callback)
-    SVN_ERR(start_callback(start_callback_baton));
+  if (notify_func)
+    {
+      /* We notify *twice* here, because there are two different logistical
+         actions occuring. */
+      svn_repos_notify_t *notify = svn_repos_notify_create(
+                                    svn_repos_notify_mutex_acquired, subpool);
+      notify_func(notify_baton, notify, subpool);
+
+      notify->action = svn_repos_notify_upgrade_start;
+      notify_func(notify_baton, notify, subpool);
+    }
 
   /* Try to overwrite with its own contents.  We do this only to
      verify that we can, because we don't want to actually bump the
@@ -1721,11 +1730,12 @@ svn_repos_fs(svn_repos_t *repos)
  */
 
 svn_error_t *
-svn_repos_recover3(const char *path,
+svn_repos_recover4(const char *path,
                    svn_boolean_t nonblocking,
-                   svn_error_t *(*start_callback)(void *baton),
-                   void *start_callback_baton,
-                   svn_cancel_func_t cancel_func, void *cancel_baton,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void * cancel_baton,
                    apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -1740,8 +1750,17 @@ svn_repos_recover3(const char *path,
                     FALSE,    /* don't try to open the db yet. */
                     subpool));
 
-  if (start_callback)
-    SVN_ERR(start_callback(start_callback_baton));
+  if (notify_func)
+    {
+      /* We notify *twice* here, because there are two different logistical
+         actions occuring. */
+      svn_repos_notify_t *notify = svn_repos_notify_create(
+                                    svn_repos_notify_mutex_acquired, subpool);
+      notify_func(notify_baton, notify, subpool);
+
+      notify->action = svn_repos_notify_recover_start;
+      notify_func(notify_baton, notify, subpool);
+    }
 
   /* Recover the database to a consistent state. */
   SVN_ERR(svn_fs_recover(repos->db_path, cancel_func, cancel_baton, subpool));
@@ -1837,6 +1856,8 @@ static svn_error_t *hotcopy_structure(void *baton,
     return create_repos_dir(target, pool);
   else if (finfo->filetype == APR_REG)
     return svn_io_copy_file(path, target, TRUE, pool);
+  else if (finfo->filetype == APR_LNK)
+    return svn_io_copy_link(path, target, pool);
   else
     return SVN_NO_ERROR;
 }

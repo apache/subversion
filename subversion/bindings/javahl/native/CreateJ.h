@@ -29,6 +29,7 @@
 
 #include <jni.h>
 #include "svn_wc.h"
+#include "svn_repos.h"
 #include "svn_client.h"
 
 #include <vector>
@@ -45,9 +46,6 @@ class CreateJ
   ConflictDescriptor(const svn_wc_conflict_description_t *desc);
 
   static jobject
-  Info(const svn_wc_entry_t *entry);
-
-  static jobject
   Info2(const char *path, const svn_info_t *info);
 
   static jobject
@@ -55,10 +53,13 @@ class CreateJ
 
   static jobject
   Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
-         const svn_wc_status3_t *status, apr_pool_t *pool);
+         const svn_client_status_t *status, apr_pool_t *pool);
 
   static jobject
-  NotifyInformation(const svn_wc_notify_t *notify);
+  ClientNotifyInformation(const svn_wc_notify_t *notify, apr_pool_t *pool);
+
+  static jobject
+  ReposNotifyInformation(const svn_repos_notify_t *notify, apr_pool_t *pool);
 
   static jobject
   RevisionRangeList(apr_array_header_t *ranges);

@@ -34,7 +34,7 @@
 
 class Revision;
 class RevisionRange;
-class NotifyCallback;
+class ClientNotifyCallback;
 class ConflictResolverCallback;
 class ProgressListener;
 class Targets;
@@ -48,6 +48,7 @@ class LogMessageCallback;
 class InfoCallback;
 class ListCallback;
 class StatusCallback;
+class PatchCallback;
 class ChangelistCallback;
 class CommitMessage;
 class StringArray;
@@ -59,6 +60,9 @@ class RevpropTable;
 class SVNClient :public SVNBase
 {
  public:
+  void patch(const char *patchPath, const char *targetPath, bool dryRun,
+             int stripCount, bool reverse, bool ignoreWhitespace,
+             bool removeTempfiles, PatchCallback *callback);
   void info2(const char *path, Revision &revision, Revision &pegRevision,
              svn_depth_t depth, StringArray &changelists,
              InfoCallback *callback);
@@ -143,7 +147,7 @@ class SVNClient :public SVNBase
   void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, const char *message, bool force,
               bool keep_local, RevpropTable &revprops);
-  void notification2(NotifyCallback *notify2);
+  void notification2(ClientNotifyCallback *notify2);
   void setConflictResolver(ConflictResolverCallback *conflictResolver);
   void setProgressListener(ProgressListener *progressListener);
   jlong checkout(const char *moduleName, const char *destPath,
@@ -159,7 +163,6 @@ class SVNClient :public SVNBase
   void username(const char *pi_username);
   jstring getAdminDirectoryName();
   jboolean isAdminDirectory(const char *name);
-  jobject info(const char *path);
   void addToChangelist(Targets &srcPaths, const char *changelist,
                        svn_depth_t depth, StringArray &changelists);
   void removeFromChangelists(Targets &srcPaths, svn_depth_t depth,
@@ -225,7 +228,7 @@ class SVNClient :public SVNBase
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds);
 
-  NotifyCallback *m_notify2;
+  ClientNotifyCallback *m_notify2;
   ConflictResolverCallback *m_conflictResolver;
   ProgressListener *m_progressListener;
   Prompter *m_prompter;

@@ -54,7 +54,6 @@
 #include "wc.h"
 #include "log.h"
 #include "adm_files.h"
-#include "entries.h"
 #include "props.h"
 #include "translate.h"
 #include "lock.h"  /* for svn_wc__write_check()  */
@@ -852,34 +851,51 @@ generate_conflict_message(const char *propname,
       /* Attempting to delete the value INCOMING_BASE.  */
       SVN_ERR_ASSERT_NO_RETURN(incoming_base != NULL);
 
+      /* Are we trying to delete a local addition? */
+      if (original == NULL && mine != NULL)
+        return svn_string_createf(result_pool,
+                                  _("Trying to delete property '%s' with "
+                                    "value '%s',\nbut property has been "
+                                    "locally added with value '%s'."),
+                                  propname, incoming_base->data,
+                                  mine->data);
+
       /* A conflict can only occur if we originally had the property;
          otherwise, we would have merged the property-delete into the
          non-existent property.  */
       SVN_ERR_ASSERT_NO_RETURN(original != NULL);
 
-      if (mine && svn_string_compare(original, incoming_base))
+      if (svn_string_compare(original, incoming_base))
         {
-          /* We were trying to delete the correct property, but an edit
-             caused the conflict.  */
+          if (mine)
+            /* We were trying to delete the correct property, but an edit
+               caused the conflict.  */
+            return svn_string_createf(result_pool,
+                                      _("Trying to delete property '%s' with "
+                                        "value '%s',\nbut it has been modified "
+                                        "from '%s' to '%s'."),
+                                      propname, incoming_base->data,
+                                      original->data, mine->data);
+        }
+      else if (mine == NULL)
+        {
+          /* We were trying to delete the property, but we have locally
+             deleted the same property, but with a different value. */
           return svn_string_createf(result_pool,
                                     _("Trying to delete property '%s' with "
-                                      "value '%s'\nbut it has been modified "
-                                      "from '%s' to '%s'."),
+                                      "value '%s',\nbut property with value "
+                                      "'%s' is locally deleted."),
                                     propname, incoming_base->data,
-                                    original->data, mine->data);
+                                    original->data);          
         }
 
       /* We were trying to delete INCOMING_BASE but our ORIGINAL is
          something else entirely.  */
       SVN_ERR_ASSERT_NO_RETURN(!svn_string_compare(original, incoming_base));
 
-      /* ### wait. what if we had a different property and locally
-         ### deleted it? the statement below is gonna blow up.
-         ### we could have: local-add, local-edit, local-del, or just
-         ### something different (and unchanged).  */
       return svn_string_createf(result_pool,
                                 _("Trying to delete property '%s' with "
-                                  "value '%s'\nbut the local value is "
+                                  "value '%s',\nbut the local value is "
                                   "'%s'."),
                                 propname, incoming_base->data, mine->data);
     }
@@ -1466,12 +1482,27 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
 
   if (! base_val)
     {
-      /* ### what about working_val? what if we locally-added?  */
-
-      apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
-      if (old_val)
-        /* This is a merge, merging a delete into non-existent */
-        set_prop_merge_state(state, svn_wc_notify_state_merged);
+      if (working_val
+          && !svn_string_compare(working_val, old_val))
+        {
+          /* We are trying to delete a locally-added prop. */
+          SVN_ERR(maybe_generate_propconflict(conflict_remains,
+                                              db, local_abspath,
+                                              left_version, right_version,
+                                              is_dir, propname,
+                                              working_props, old_val, NULL,
+                                              base_val, working_val,
+                                              conflict_func, conflict_baton,
+                                              dry_run, scratch_pool));
+        }
+      else
+        {
+          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
+          if (old_val)
+            /* This is a merge, merging a delete into non-existent
+               property or a local addition of same prop value. */
+            set_prop_merge_state(state, svn_wc_notify_state_merged);
+        }
     }
 
   else if (svn_string_compare(base_val, old_val))
@@ -1496,7 +1527,8 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
              }
          }
        else
-         /* The property is locally deleted, so it's a merge */
+         /* The property is locally deleted from the same value, so it's
+            a merge */
          set_prop_merge_state(state, svn_wc_notify_state_merged);
     }
 
@@ -1785,7 +1817,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   apr_pool_t *iterpool;
   int i;
   svn_boolean_t is_dir;
-  const char *adm_abspath;
   svn_skel_t *conflict_skel = NULL;
 
   SVN_ERR_ASSERT(base_props != NULL);
@@ -1795,11 +1826,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   *new_actual_props = NULL;
 
   is_dir = (kind == svn_wc__db_kind_dir);
-
-  if (is_dir)
-    adm_abspath = local_abspath;
-  else
-    adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
   if (!server_baseprops)
     server_baseprops = base_props;
@@ -1935,7 +1961,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
               reject_filename = SVN_WC__THIS_DIR_PREJ;
             }
           else
-            svn_dirent_split(local_abspath, &reject_dirpath, &reject_filename,
+            svn_dirent_split(&reject_dirpath, &reject_filename, local_abspath,
                              scratch_pool);
 
           SVN_ERR(svn_io_open_uniquely_named(NULL, &reject_path,
@@ -1952,14 +1978,14 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
-        svn_wc_entry_t entry;
         svn_skel_t *work_item;
 
-        entry.prejfile = svn_dirent_is_child(adm_abspath, reject_path, NULL);
-        SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, adm_abspath,
-                                           local_abspath, &entry,
-                                           SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                           scratch_pool));
+        SVN_ERR(svn_wc__wq_tmp_build_set_property_conflict_marker(
+                                          &work_item,
+                                          db, local_abspath,
+                                          svn_dirent_basename(reject_path, NULL),
+                                          scratch_pool, scratch_pool));
+
         SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
       }
 

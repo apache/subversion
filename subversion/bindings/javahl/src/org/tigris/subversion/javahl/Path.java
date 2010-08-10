@@ -28,6 +28,56 @@ package org.tigris.subversion.javahl;
  *
  * @since 1.4.0
  */
-public class Path extends org.apache.subversion.javahl.Path
+public class Path
 {
+    /**
+     * Load the required native library.
+     */
+    static
+    {
+        org.apache.subversion.javahl.NativeResources.loadNativeLibrary();
+    }
+
+    /**
+     * A valid path is a UTF-8 string without any control characters.
+     *
+     * @return Whether Subversion can store the path in a repository.
+     */
+    public static boolean isValid(String path)
+    {
+        try {
+            byte[] bytes = path.getBytes("UTF-8");
+
+            for (byte b : bytes)
+            {
+                if (b < 0x20)
+                    return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            return false;
+        }
+    }
+
+    /**
+     * Whether a URL is valid. Implementation may behave differently
+     * than <code>svn_path_is_url()</code>.
+     *
+     * @param path The Subversion "path" to inspect.
+     * @return Whether <code>path</code> is a URL.
+     * @throws IllegalArgumentException If <code>path</code> is
+     * <code>null</code>.
+     */
+    public static boolean isURL(String path)
+    {
+        if (path == null)
+        {
+            throw new IllegalArgumentException();
+        }
+        // Require at least "s://".
+        return (path.indexOf("://") > 0);
+    }
 }

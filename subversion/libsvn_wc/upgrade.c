@@ -73,11 +73,10 @@
 
 /* Forward declare until we decide to shift/reorder functions.  */
 static svn_error_t *
-migrate_node_props(const char *wcroot_abspath,
-                   const char *name,
-                   svn_sqlite__db_t *sdb,
-                   int original_format,
-                   apr_pool_t *scratch_pool);
+migrate_props(const char *wcroot_abspath,
+              svn_sqlite__db_t *sdb,
+              int original_format,
+              apr_pool_t *scratch_pool);
 
 
 /* Read the properties from the file at PROPFILE_ABSPATH, returning them
@@ -339,6 +338,52 @@ get_versioned_subdirs(apr_array_header_t **children,
 }
 
 
+/* Return in CHILDREN, the list of all versioned *files* in SDB.
+   These files' existence on disk is not tested.
+
+   This set of children is intended for props/text-base upgrades.
+   Subdirectory's properties exist in the subdirs. Non-files have no
+   text bases.
+
+   Note that this uses just the SDB to locate children, which means
+   that the children must have been upgraded to wc-ng format. Also note
+   that this returns *all* files found in SDB. Typically, this is just
+   one directory's worth since it won't be run on a single-db.  */
+static svn_error_t *
+get_versioned_files(const apr_array_header_t **children,
+                    svn_sqlite__db_t *sdb,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  apr_array_header_t *child_relpaths;
+  svn_boolean_t have_row;
+
+  /* ### just select 'file' children. do we need 'symlink' in the future?  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ALL_FILES));
+
+  /* ### 10 is based on Subversion's average of 8.5 files per versioned
+     ### directory in its repository. maybe use a different value? or
+     ### count rows first?  */
+  child_relpaths = apr_array_make(result_pool, 10, sizeof(const char *));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *local_relpath = svn_sqlite__column_text(stmt, 0,
+                                                          result_pool);
+
+      APR_ARRAY_PUSH(child_relpaths, const char *) = local_relpath;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  *children = child_relpaths;
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
 /* */
 static const char *
 build_lockfile_path(const char *local_dir_abspath,
@@ -422,6 +467,15 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                                       scratch_pool),
                     TRUE, scratch_pool));
 
+#if (SVN_WC__VERSION >= 17)
+  /* Remove the old text-base directory and the old text-base files. */
+  svn_error_clear(svn_io_remove_dir2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      TEXT_BASE_SUBDIR,
+                                      scratch_pool),
+                    FALSE, NULL, NULL, scratch_pool));
+#endif
+
 #if 0  /* ### NOT READY TO WIPE THESE FILES!!  */
   /* Remove the old properties files... whole directories at a time.  */
   svn_error_clear(svn_io_remove_dir2(
@@ -436,13 +490,10 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                     FALSE, NULL, NULL, scratch_pool));
 #endif
 
-#if 0  /* Conditional upon upgrading to format 18 */
-  /* Remove the old text-base directory. */
-  svn_error_clear(svn_io_remove_dir2(
-                    svn_wc__adm_child(wcroot_abspath,
-                                      TEXT_BASE_SUBDIR,
-                                      scratch_pool),
-                    FALSE, NULL, NULL, scratch_pool));
+#if 0
+  /* ### this checks for a write-lock, and we are not (always) taking out
+     ### a write lock in all callers.  */
+  SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, wcroot_abspath, iterpool));
 #endif
 
   /* Remove the old-style lock file LAST.  */
@@ -457,7 +508,8 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
    used within the upgraded entries as they are written into the database.
 
    If one or both are not available, then it attempts to retrieve this
-   information from REPOS_INFO_FUNC, passing REPOS_INFO_BATON.
+   information from REPOS_CACHE. And if that fails from REPOS_INFO_FUNC,
+   passing REPOS_INFO_BATON.
    Returns a user understandable error using LOCAL_ABSPATH if the
    information cannot be obtained.  */
 static svn_error_t *
@@ -465,12 +517,35 @@ ensure_repos_info(svn_wc_entry_t *entry,
                   const char *local_abspath,
                   svn_wc_upgrade_get_repos_info_t repos_info_func,
                   void *repos_info_baton,
+                  apr_hash_t *repos_cache,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   /* Easy exit.  */
   if (entry->repos != NULL && entry->uuid != NULL)
     return SVN_NO_ERROR;
+
+  if ((entry->repos == NULL || entry->uuid == NULL)
+      && entry->url)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, repos_cache);
+           hi; hi = apr_hash_next(hi))
+        {
+          if (svn_uri_is_child(svn__apr_hash_index_key(hi),
+                               entry->url, NULL))
+            {
+              if (!entry->repos)
+                entry->repos = svn__apr_hash_index_key(hi);
+
+              if (!entry->uuid)
+                entry->uuid = svn__apr_hash_index_val(hi);
+
+              return SVN_NO_ERROR;
+            }
+        }
+    }
 
   if (entry->repos == NULL && repos_info_func == NULL)
     return svn_error_createf(
@@ -496,142 +571,6 @@ ensure_repos_info(svn_wc_entry_t *entry,
                                               repos_info_baton,
                                               entry->url,
                                               result_pool, scratch_pool));
-}
-
-
-/* Upgrade the working copy directory represented by DB/DIR_ABSPATH
-   from OLD_FORMAT to the wc-ng format (SVN_WC__WC_NG_VERSION)'.
-
-   Uses SCRATCH_POOL for all temporary allocation.  */
-static svn_error_t *
-upgrade_to_wcng(svn_wc__db_t *db,
-                const char *dir_abspath,
-                int old_format,
-                svn_wc_upgrade_get_repos_info_t repos_info_func,
-                void *repos_info_baton,
-                apr_pool_t *scratch_pool)
-{
-  const char *logfile_path = svn_wc__adm_child(dir_abspath, ADM_LOG,
-                                               scratch_pool);
-  svn_node_kind_t logfile_on_disk;
-  apr_hash_t *entries;
-  svn_wc_entry_t *this_dir;
-  svn_sqlite__db_t *sdb;
-  apr_int64_t repos_id;
-  apr_int64_t wc_id;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_index_t *hi;
-
-  /* Don't try to mess with the WC if there are old log files left. */
-
-  /* Is the (first) log file present?  */
-  SVN_ERR(svn_io_check_path(logfile_path, &logfile_on_disk, iterpool));
-  if (logfile_on_disk == svn_node_file)
-    return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-                            _("Cannot upgrade with existing logs; please "
-                              "run 'svn cleanup' with Subversion 1.6"));
-
-  /* Lock this working copy directory, or steal an existing lock. Do this
-     BEFORE we read the entries. We don't want another process to modify the
-     entries after we've read them into memory.  */
-  SVN_ERR(create_physical_lock(dir_abspath, iterpool));
-
-  /* What's going on here?
-   *
-   * We're attempting to upgrade an older working copy to the new wc-ng format.
-   * The semantics and storage mechanisms between the two are vastly different,
-   * so it's going to be a bit painful.  Here's a plan for the operation:
-   *
-   * 1) The 'entries' file needs to be moved to the new format. We read it
-   *    using the old-format reader, and then use our compatibility code
-   *    for writing entries to fill out the (new) wc_db state.
-   *
-   * 2) Convert wcprop to the wc-ng format
-   *
-   * 3) Trash old, unused files and subdirs
-   *
-   * ### (fill in other bits as they are implemented)
-   */
-
-  /***** ENTRIES *****/
-  SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
-                                   scratch_pool, iterpool));
-
-  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
-  SVN_ERR(ensure_repos_info(this_dir, dir_abspath,
-                            repos_info_func, repos_info_baton,
-                            scratch_pool, iterpool));
-
-  /* Create an empty sqlite database for this directory. */
-  SVN_ERR(svn_wc__db_upgrade_begin(&sdb, &repos_id, &wc_id, dir_abspath,
-                                   this_dir->repos, this_dir->uuid,
-                                   scratch_pool, iterpool));
-
-  /* Migrate the entries over to the new database.
-     ### We need to think about atomicity here.
-
-     entries_write_new() writes in current format rather than f12. Thus, this
-     function bumps a working copy all the way to current.  */
-  SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
-                                       iterpool));
-  SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, 0, iterpool));
-  SVN_ERR(svn_wc__write_upgraded_entries(db, sdb, repos_id, wc_id,
-                                         dir_abspath, entries,
-                                         iterpool));
-
-  /***** WC PROPS *****/
-
-  /* Ugh. We don't know precisely where the wcprops are. Ignore them.  */
-  if (old_format != SVN_WC__WCPROPS_LOST)
-    {
-      apr_hash_t *all_wcprops;
-
-      if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
-        SVN_ERR(read_many_wcprops(&all_wcprops, dir_abspath,
-                                  iterpool, iterpool));
-      else
-        SVN_ERR(read_wcprops(&all_wcprops, dir_abspath,
-                             iterpool, iterpool));
-
-      SVN_ERR(svn_wc__db_upgrade_apply_dav_cache(sdb, all_wcprops, iterpool));
-    }
-
-  /* Upgrade all the properties (including "this dir").
-
-     Note: this must come AFTER the entries have been migrated into the
-     database. The upgrade process needs to examine the WORKING state.  */
-  for (hi = apr_hash_first(scratch_pool, entries);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *name = svn__apr_hash_index_key(hi);
-
-      svn_pool_clear(iterpool);
-
-#if 0
-      /* ### need to skip subdir stub entries.  */
-      /* ### not ready for this yet.  */
-      SVN_ERR(migrate_node_props(dir_abspath, name, sdb, old_format,
-                                 iterpool));
-#endif
-    }
-
-  SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, sdb, iterpool));
-
-  /* All subdir access batons (and locks!) will be closed. Of course, they
-     should have been closed/unlocked just after their own upgrade process
-     has run.  */
-  /* ### well, actually.... we don't recursively delete subdir locks here,
-     ### we rely upon their own upgrade processes to do it. */
-  SVN_ERR(svn_wc__db_wclock_remove(db, dir_abspath, iterpool));
-
-  /* Zap all the obsolete files. This removes the old-style lock file.  */
-  wipe_obsolete_files(dir_abspath, iterpool);
-
-  /* ### need to (eventually) delete the .svn subdir.  */
-
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
 }
 
 
@@ -919,12 +858,15 @@ migrate_locks(const char *wcroot_abspath,
   return SVN_NO_ERROR;
 }
 
+struct bump_baton {
+  const char *wcroot_abspath;
+};
 
 /* */
 static svn_error_t *
 bump_to_14(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  const char *wcroot_abspath = baton;
+  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
 
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_14));
 
@@ -1054,25 +996,14 @@ migrate_props(const char *wcroot_abspath,
   */
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_wc__db_t *db;
   int i;
-
-  /* ### the use of DB within this function must go away.  */
-
-  /* *sigh*  We actually want to use wc_db APIs to read data, but we aren't
-     provided a wc_db, so open one. */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_default, NULL, FALSE, TRUE,
-                          scratch_pool, scratch_pool));
 
   /* Migrate the props for "this dir".  */
   SVN_ERR(migrate_node_props(wcroot_abspath, "", sdb, original_format,
-                             scratch_pool));
+                             iterpool));
 
-  /* Go find all the children of the wcroot. */
-  SVN_ERR(svn_wc__db_read_children(&children, db, wcroot_abspath,
-                                   scratch_pool, scratch_pool));
-
-  /* Iterate over the children, as described above */
+  /* Iterate over all the files in this SDB.  */
+  SVN_ERR(get_versioned_files(&children, sdb, scratch_pool, iterpool));
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
@@ -1083,12 +1014,6 @@ migrate_props(const char *wcroot_abspath,
                                  iterpool));
     }
 
-#if 0
-  /* ### we are not (yet) taking out a write lock  */
-  SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, wcroot_abspath, iterpool));
-#endif
-
-  SVN_ERR(svn_wc__db_close(db));
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -1096,7 +1021,7 @@ migrate_props(const char *wcroot_abspath,
 
 
 /* */
-struct bump_to_17_baton
+struct bump_to_18_baton
 {
   const char *wcroot_abspath;
   int original_format;
@@ -1104,16 +1029,16 @@ struct bump_to_17_baton
 
 
 static svn_error_t *
-bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  struct bump_to_17_baton *b17 = baton;
+  struct bump_to_18_baton *b18 = baton;
 
 #if 0
   /* ### no schema changes (yet)... */
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_18));
 #endif
 
-  SVN_ERR(migrate_props(b17->wcroot_abspath, sdb, b17->original_format,
+  SVN_ERR(migrate_props(b18->wcroot_abspath, sdb, b18->original_format,
                         scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1174,16 +1099,19 @@ migrate_text_bases(const char *wcroot_abspath,
       SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
-      /* Compute the path of the pristine.
-         Note: in format 18, pristines are not yet sharded, so don't include
-         that in the path computation. */
-      pristine_path = svn_dirent_join_many(iterpool,
-                                           wcroot_abspath,
-                                           svn_wc_get_adm_dir(iterpool),
-                                           PRISTINE_STORAGE_RELPATH,
-                                           NULL);
+      SVN_ERR(svn_wc__db_pristine_get_future_path(&pristine_path,
+                                                  wcroot_abspath,
+                                                  sha1_checksum,
+                                                  iterpool, iterpool));
 
-      /* Finally, copy the file over. */
+      /* Ensure any sharding directories exist. */
+      SVN_ERR(svn_wc__ensure_directory(svn_dirent_dirname(pristine_path,
+                                                          iterpool),
+                                       iterpool));
+
+      /* Copy, rather than move, so that the upgrade can be restarted.
+         It could be moved if upgrades scanned for files in the
+         pristine directory as well as the text-base directory. */
       SVN_ERR(svn_io_copy_file(text_base_path, pristine_path, TRUE,
                                iterpool));
     }
@@ -1195,10 +1123,11 @@ migrate_text_bases(const char *wcroot_abspath,
 
 
 static svn_error_t *
-bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  const char *wcroot_abspath = baton;
+  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
 
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
   SVN_ERR(migrate_text_bases(wcroot_abspath, sdb, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1211,7 +1140,7 @@ bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 static svn_error_t *
 bump_to_XXX(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  const char *wcroot_abspath = baton;
+  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
 
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_XXX));
 
@@ -1222,6 +1151,154 @@ bump_to_XXX(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 #endif /* ### no tree conflict migration yet */
 
+/* Upgrade the working copy directory represented by DB/DIR_ABSPATH
+   from OLD_FORMAT to the wc-ng format (SVN_WC__WC_NG_VERSION)'.
+
+   Pass REPOS_INFO_FUNC, REPOS_INFO_BATON and REPOS_CACHE to
+   ensure_repos_info. Add the found repository root and UUID to
+   REPOS_CACHE if it doesn't have a cached entry for this
+   repository.
+
+   Uses SCRATCH_POOL for all temporary allocation.  */
+static svn_error_t *
+upgrade_to_wcng(svn_wc__db_t *db,
+                const char *dir_abspath,
+                int old_format,
+                svn_wc_upgrade_get_repos_info_t repos_info_func,
+                void *repos_info_baton,
+                apr_hash_t *repos_cache,
+                apr_pool_t *scratch_pool)
+{
+  const char *logfile_path = svn_wc__adm_child(dir_abspath, ADM_LOG,
+                                               scratch_pool);
+  svn_node_kind_t logfile_on_disk;
+  apr_hash_t *entries;
+  svn_wc_entry_t *this_dir;
+  svn_sqlite__db_t *sdb;
+  apr_int64_t repos_id;
+  apr_int64_t wc_id;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  /* Don't try to mess with the WC if there are old log files left. */
+
+  /* Is the (first) log file present?  */
+  SVN_ERR(svn_io_check_path(logfile_path, &logfile_on_disk, iterpool));
+  if (logfile_on_disk == svn_node_file)
+    return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                            _("Cannot upgrade with existing logs; please "
+                              "run 'svn cleanup' with Subversion 1.6"));
+
+  /* Lock this working copy directory, or steal an existing lock. Do this
+     BEFORE we read the entries. We don't want another process to modify the
+     entries after we've read them into memory.  */
+  SVN_ERR(create_physical_lock(dir_abspath, iterpool));
+
+  /* What's going on here?
+   *
+   * We're attempting to upgrade an older working copy to the new wc-ng format.
+   * The semantics and storage mechanisms between the two are vastly different,
+   * so it's going to be a bit painful.  Here's a plan for the operation:
+   *
+   * 1) The 'entries' file needs to be moved to the new format. We read it
+   *    using the old-format reader, and then use our compatibility code
+   *    for writing entries to fill out the (new) wc_db state.
+   *
+   * 2) Convert wcprop to the wc-ng format
+   *
+   * 3) Trash old, unused files and subdirs
+   *
+   * ### (fill in other bits as they are implemented)
+   */
+
+  /***** ENTRIES *****/
+  SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
+                                   scratch_pool, iterpool));
+
+  this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
+  SVN_ERR(ensure_repos_info(this_dir, dir_abspath,
+                            repos_info_func, repos_info_baton,
+                            repos_cache,
+                            scratch_pool, iterpool));
+
+  /* Cache repos UUID pairs for when a subdir doesn't have this information */
+  if (!apr_hash_get(repos_cache, this_dir->repos, APR_HASH_KEY_STRING))
+    {
+      apr_pool_t *hash_pool = apr_hash_pool_get(repos_cache);
+
+      apr_hash_set(repos_cache,
+                   apr_pstrdup(hash_pool, this_dir->repos),
+                   APR_HASH_KEY_STRING,
+                   apr_pstrdup(hash_pool, this_dir->uuid));
+    }
+
+  /* Create an empty sqlite database for this directory. */
+  SVN_ERR(svn_wc__db_upgrade_begin(&sdb, &repos_id, &wc_id, dir_abspath,
+                                   this_dir->repos, this_dir->uuid,
+                                   scratch_pool, iterpool));
+
+  /* Migrate the entries over to the new database.
+     ### We need to think about atomicity here.
+
+     entries_write_new() writes in current format rather than f12. Thus, this
+     function bumps a working copy all the way to current.  */
+  SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
+                                       iterpool));
+  SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, 0, iterpool));
+  SVN_ERR(svn_wc__write_upgraded_entries(db, sdb, repos_id, wc_id,
+                                         dir_abspath, entries,
+                                         iterpool));
+
+  /***** WC PROPS *****/
+
+  /* Ugh. We don't know precisely where the wcprops are. Ignore them.  */
+  if (old_format != SVN_WC__WCPROPS_LOST)
+    {
+      apr_hash_t *all_wcprops;
+
+      if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+        SVN_ERR(read_many_wcprops(&all_wcprops, dir_abspath,
+                                  iterpool, iterpool));
+      else
+        SVN_ERR(read_wcprops(&all_wcprops, dir_abspath,
+                             iterpool, iterpool));
+
+      SVN_ERR(svn_wc__db_upgrade_apply_dav_cache(sdb, all_wcprops, iterpool));
+    }
+
+  /* Upgrade all the properties (including "this dir").
+
+     Note: this must come AFTER the entries have been migrated into the
+     database. The upgrade process needs the children in BASE_NODE and
+     WORKING_NODE, and to examine the resultant WORKING state.  */
+#if 0
+  /* ### not quite yet  */
+  SVN_ERR(migrate_props(dir_abspath, sdb, old_format, iterpool));
+#endif
+
+#if (SVN_WC__VERSION >= 17)
+  SVN_ERR(migrate_text_bases(dir_abspath, sdb, iterpool));
+#endif
+
+  /* All done. DB should finalize the upgrade process now.  */
+  SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, sdb, iterpool));
+
+  /* All subdir access batons (and locks!) will be closed. Of course, they
+     should have been closed/unlocked just after their own upgrade process
+     has run.  */
+  /* ### well, actually.... we don't recursively delete subdir locks here,
+     ### we rely upon their own upgrade processes to do it. */
+  SVN_ERR(svn_wc__db_wclock_remove(db, dir_abspath, iterpool));
+
+  /* Zap all the obsolete files. This removes the old-style lock file.  */
+  wipe_obsolete_files(dir_abspath, iterpool);
+
+  /* ### need to (eventually) delete the .svn subdir.  */
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+
 
 svn_error_t *
 svn_wc__upgrade_sdb(int *result_format,
@@ -1230,6 +1307,8 @@ svn_wc__upgrade_sdb(int *result_format,
                     int start_format,
                     apr_pool_t *scratch_pool)
 {
+  struct bump_baton bb = { wcroot_abspath };
+
   if (start_format < SVN_WC__WC_NG_VERSION /* 12 */)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
                              _("Working copy format of '%s' is too old (%d); "
@@ -1246,8 +1325,7 @@ svn_wc__upgrade_sdb(int *result_format,
   switch (start_format)
     {
       case 12:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_13,
-                                             (void *)wcroot_abspath,
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_13, &bb,
                                              scratch_pool));
         /* If the transaction succeeded, then we don't need the wcprops
            files. We stopped writing them partway through format 12, but
@@ -1265,8 +1343,7 @@ svn_wc__upgrade_sdb(int *result_format,
 
       case 13:
         /* Build WCLOCKS and migrate any physical lock.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_14,
-                                             (void *)wcroot_abspath,
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_14, &bb,
                                              scratch_pool));
         /* If the transaction succeeded, then any lock has been migrated,
            and we can toss the physical file (below).  */
@@ -1276,16 +1353,14 @@ svn_wc__upgrade_sdb(int *result_format,
 
       case 14:
         /* Revamp the recording of 'excluded' nodes.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_15,
-                                             (void *)wcroot_abspath,
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_15, &bb,
                                              scratch_pool));
         *result_format = 15;
         /* FALLTHROUGH  */
 
       case 15:
         /* Perform some minor changes to the schema.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_16,
-                                             (void *)wcroot_abspath,
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_16, &bb,
                                              scratch_pool));
         *result_format = 16;
         /* FALLTHROUGH  */
@@ -1293,13 +1368,16 @@ svn_wc__upgrade_sdb(int *result_format,
 #if (SVN_WC__VERSION > 16)
       case 16:
         {
-          struct bump_to_17_baton b17;
+          const char *pristine_dir;
 
-          b17.wcroot_abspath = wcroot_abspath;
-          b17.original_format = start_format;
+          /* Create the '.svn/pristine' directory.  */
+          pristine_dir = svn_wc__adm_child(wcroot_abspath,
+                                           SVN_WC__ADM_PRISTINE,
+                                           scratch_pool);
+          SVN_ERR(svn_wc__ensure_directory(pristine_dir, scratch_pool));
 
-          /* Move the properties into the database.  */
-          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17, &b17,
+          /* Move text bases into the pristine directory, and update the db */
+          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17, &bb,
                                                scratch_pool));
         }
 
@@ -1307,19 +1385,16 @@ svn_wc__upgrade_sdb(int *result_format,
         /* FALLTHROUGH  */
 #endif
 
-#if 0
+#if (SVN_WC__VERSION > 17)
       case 17:
         {
-          const char *pristine_dir;
+          struct bump_to_18_baton b18;
 
-          /* Create the '.svn/pristine' directory.  */
-          pristine_dir = svn_wc__adm_child(wcroot_abspath,
-                                           SVN_WC__ADM_PRISTINE,
-                                           scratch_pool);
-          SVN_ERR(svn_io_dir_make(pristine_dir, APR_OS_DEFAULT, scratch_pool));
+          b18.wcroot_abspath = wcroot_abspath;
+          b18.original_format = start_format;
 
-          /* Move text bases into the pristine directory, and update the db */
-          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_18, wcroot_abspath,
+          /* Move the properties into the database.  */
+          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_18, &b18,
                                                scratch_pool));
         }
 
@@ -1351,6 +1426,7 @@ upgrade_working_copy(svn_wc__db_t *db,
                      const char *dir_abspath,
                      svn_wc_upgrade_get_repos_info_t repos_info_func,
                      void *repos_info_baton,
+                     apr_hash_t *repos_cache,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
@@ -1376,7 +1452,7 @@ upgrade_working_copy(svn_wc__db_t *db,
   if (old_format < SVN_WC__WC_NG_VERSION)
     SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format,
                             repos_info_func, repos_info_baton,
-                            iterpool));
+                            repos_cache, iterpool));
 
   if (notify_func)
     notify_func(notify_baton,
@@ -1393,6 +1469,7 @@ upgrade_working_copy(svn_wc__db_t *db,
 
       SVN_ERR(upgrade_working_copy(db, child_abspath,
                                    repos_info_func, repos_info_baton,
+                                   repos_cache,
                                    cancel_func, cancel_baton,
                                    notify_func, notify_baton,
                                    iterpool));
@@ -1439,6 +1516,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   /* Upgrade this directory and/or its subdirectories.  */
   SVN_ERR(upgrade_working_copy(db, local_abspath,
                                repos_info_func, repos_info_baton,
+                               apr_hash_make(scratch_pool),
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool));

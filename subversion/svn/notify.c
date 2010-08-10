@@ -613,22 +613,17 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_changelist_set:
-      if ((err = svn_cmdline_printf(pool, _("Path '%s' is now a member of "
-                                            "changelist '%s'.\n"),
-                                    path_local, n->changelist_name)))
+      if ((err = svn_cmdline_printf(pool, "A [%s] %s\n",
+                                    n->changelist_name, path_local)))
         goto print_error;
       break;
 
     case svn_wc_notify_changelist_clear:
-      if ((err = svn_cmdline_printf(pool,
-                                    _("Path '%s' is no longer a member of "
-                                      "a changelist.\n"),
-                                    path_local)))
-        goto print_error;
-      break;
-
     case svn_wc_notify_changelist_moved:
-      svn_handle_warning2(stderr, n->err, "svn: ");
+      if ((err = svn_cmdline_printf(pool,
+                                    "D [%s] %s\n",
+                                    n->changelist_name, path_local)))
+        goto print_error;
       break;
 
     case svn_wc_notify_merge_begin:

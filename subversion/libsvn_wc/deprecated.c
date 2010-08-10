@@ -38,6 +38,7 @@
 #include "private/svn_wc_private.h"
 
 #include "wc.h"
+#include "entries.h"
 #include "lock.h"
 #include "props.h"
 #include "workqueue.h"
@@ -1053,14 +1054,22 @@ svn_wc_get_ancestry(char **url,
                     apr_pool_t *pool)
 {
   const char *local_abspath;
+  const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  return svn_error_return(svn_wc__internal_get_ancestry(
-                            (const char **)url, rev,
-                            svn_wc__adm_get_db(adm_access),
-                            local_abspath,
+  SVN_ERR(svn_wc__get_entry(&entry, svn_wc__adm_get_db(adm_access),
+                            local_abspath, FALSE,
+                            svn_node_unknown, FALSE,
                             pool, pool));
+
+  if (url)
+    *url = apr_pstrdup(pool, entry->url);
+
+  if (rev)
+    *rev = entry->revision;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1963,6 +1972,35 @@ svn_wc_walk_entries(const char *path,
                               pool);
 }
 
+svn_error_t *
+svn_wc_mark_missing_deleted(const char *path,
+                            svn_wc_adm_access_t *parent,
+                            apr_pool_t *pool)
+{
+#ifdef SINGLE_DB
+  /* With a single DB a node will never be missing */
+  return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
+                           _("Unexpectedly found '%s': "
+                             "path is marked 'missing'"),
+                           svn_dirent_local_style(path, scratch_pool));
+#else
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(parent), pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__temp_mark_missing_not_present(local_abspath, wc_ctx, pool));
+
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+  return SVN_NO_ERROR;
+#endif
+}
+
+
 /*** From props.c ***/
 svn_error_t *
 svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
@@ -2746,13 +2784,25 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_is_wc_root2(wc_root, wc_ctx, local_abspath, pool));
+  err = svn_wc_is_wc_root2(wc_root, wc_ctx, local_abspath, pool);
+
+  if (err
+      && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
+          || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+    {
+      /* Subversion <= 1.6 just said that a not versioned path is not a root */
+      svn_error_clear(err);
+      *wc_root = FALSE;
+    }
+  else
+    SVN_ERR(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -3834,21 +3884,15 @@ svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
                                  int caller_lineno,
                                  apr_pool_t *pool)
 {
-  svn_wc_context_t *wc_ctx;
   const char *local_abspath;
-
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__get_entry_versioned(entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, show_hidden,
+  SVN_ERR(svn_wc__get_entry_versioned(entry, svn_wc__adm_get_db(adm_access),
+                                      local_abspath, svn_node_unknown,
+                                      show_hidden,
                                       FALSE, /* NEED_PARENT_STUB */
                                       pool, pool));
-
-  SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   return SVN_NO_ERROR;
 }

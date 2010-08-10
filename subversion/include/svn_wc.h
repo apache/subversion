@@ -994,7 +994,8 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_changelist_clear,
 
   /** Warn user that a path has moved from one changelist to another.
-      @since New in 1.5. */
+      @since New in 1.5.
+      @deprecated As of 1.7, separate clear and set notifications are sent. */
   svn_wc_notify_changelist_moved,
 
   /** A merge operation (to path) has begun.  See #svn_wc_notify_t.merge_range.
@@ -1209,7 +1210,7 @@ typedef struct svn_wc_notify_t {
    */
   svn_revnum_t revision;
 
-  /** When @c action is #svn_wc_notify_changelist_add or name. (### What?)
+  /** If @c action pertains to a changelist, this is the changelist name.
    * In all other cases, it is @c NULL.  @since New in 1.5 */
   const char *changelist_name;
 
@@ -3532,8 +3533,16 @@ typedef struct svn_wc_status3_t
    * (#svn_depth_unknown for files or when no depth is set) */
   svn_depth_t depth;
 
-  /** Can be @c NULL if not under version control. */
-  const svn_wc_entry_t *entry;
+  /** If the path is under version control, versioned is TRUE, otherwise
+   * FALSE. */
+  svn_boolean_t versioned;
+
+  /** Set to TRUE if the item is the victim of a conflict. */
+  svn_boolean_t conflicted;
+
+  /** The status of the node itself. In order of precendence: Tree conflicts,
+   * structural changes, text changes (including text conflicts). */
+  enum svn_wc_status_kind node_status;
 
   /** The status of the entry itself, including its text if it is a file. */
   enum svn_wc_status_kind text_status;
@@ -3541,30 +3550,43 @@ typedef struct svn_wc_status3_t
   /** The status of the entry's properties. */
   enum svn_wc_status_kind prop_status;
 
-  /** a directory can be 'locked' if a working copy update was interrupted. */
-  svn_boolean_t locked;
-
   /** a file or directory can be 'copied' if it's scheduled for
    * addition-with-history (or part of a subtree that is scheduled as such.).
    */
   svn_boolean_t copied;
 
-  /** a file or directory can be 'switched' if the switch command has been
+  /** Base revision. */
+  svn_revnum_t revision;
+
+  /** Last revision this was changed */
+  svn_revnum_t changed_rev;
+
+  /** Date of last commit. */
+  apr_time_t changed_date;
+
+  /** Last commit author of this item */
+  const char *changed_author;
+
+  /** The URL of the repository */
+  const char *repos_root_url;
+
+  /** The in-repository path relative to the repository root. 
+   * Use svn_path_url_component2() to join this value to the
+   * repos_root_url to get the full URL.
+   */
+  const char *repos_relpath;
+
+    /** a file or directory can be 'switched' if the switch command has been
    * used.  If this is TRUE, then file_external will be FALSE.
    */
   svn_boolean_t switched;
 
-  /** The entry's text status in the repository. */
-  enum svn_wc_status_kind repos_text_status;
+  /** The locally present lock. (Values of path, token, owner, comment and
+   * are available if a lock is present) */
+  const svn_lock_t *lock;
 
-  /** The entry's property status in the repository. */
-  enum svn_wc_status_kind repos_prop_status;
-
-  /** The entry's lock in the repository, if any. */
-  const svn_lock_t *repos_lock;
-
-  /** Set to the URI (actual or expected) of the item. */
-  const char *url;
+  /** Which changelist this item is part of, or NULL if not part of any. */
+  const char *changelist;
 
   /**
    * @defgroup svn_wc_status_ood WC out-of-date info from the repository
@@ -3577,93 +3599,38 @@ typedef struct svn_wc_status3_t
    * below.
    */
 
-  /** Set to the youngest committed revision, or #SVN_INVALID_REVNUM
-   * if not out of date.
-   */
-  svn_revnum_t ood_last_cmt_rev;
-
-  /** Set to the most recent commit date, or @c 0 if not out of date.
-   */
-  apr_time_t ood_last_cmt_date;
-
   /** Set to the node kind of the youngest commit, or #svn_node_none
-   * if not out of date.
-   */
+   * if not out of date. */
   svn_node_kind_t ood_kind;
+
+  /** The status of the node, based on the text status if the node has no
+   * restructuring changes */
+  enum svn_wc_status_kind repos_node_status;
+
+  /** The entry's text status in the repository. */
+  enum svn_wc_status_kind repos_text_status;
+
+  /** The entry's property status in the repository. */
+  enum svn_wc_status_kind repos_prop_status;
+
+  /** The entry's lock in the repository, if any. */
+  const svn_lock_t *repos_lock;
+
+  /** Set to the youngest committed revision, or #SVN_INVALID_REVNUM
+   * if not out of date. */
+  svn_revnum_t ood_changed_rev;
+
+  /** Set to the most recent commit date, or @c 0 if not out of date. */
+  apr_time_t ood_changed_date;
 
   /** Set to the user name of the youngest commit, or @c NULL if not
    * out of date or non-existent.  Because a non-existent @c
    * svn:author property has the same behavior as an out-of-date
    * working copy, examine @c ood_last_cmt_rev to determine whether
-   * the working copy is out of date.
-   */
-  const char *ood_last_cmt_author;
+   * the working copy is out of date. */
+  const char *ood_changed_author;
 
   /** @} */
-
-  /** If the item is a file that was added to the working copy with an
-   * svn:externals; if file_external is TRUE, then switched is always
-   * FALSE.
-   */
-  svn_boolean_t file_external;
-
-  /** The actual status of the text compared to the pristine base of the
-   * file. This value isn't masked by other working copy statuses.
-   * @c pristine_text_status is #svn_wc_status_none if this value was
-   * not calculated during the status walk.
-   */
-  enum svn_wc_status_kind pristine_text_status;
-
-  /** The actual status of the properties compared to the pristine base of
-   * the node. This value isn't masked by other working copy statuses.
-   * @c pristine_prop_status is #svn_wc_status_none if this value was
-   * not calculated during the status walk.
-   */
-  enum svn_wc_status_kind pristine_prop_status;
-
-  /** Base revision.  */
-  svn_revnum_t revision;
-
-  /** Last revision this was changed */
-  svn_revnum_t changed_rev;
-
-  /** Last commit author of this item */
-  const char *changed_author;
-
-  /** Date of last commit. */
-  apr_time_t changed_date;
-
-  /** The locally present lock token.
-   */
-  const char *lock_token;
-
-  /** The locally present lock owner.
-   */
-  const char *lock_owner;
-
-  /** The locally present lock comment.
-   */
-  const char *lock_comment;
-
-  /** The locally present lock creation date.
-   */
-  apr_time_t lock_creation_date;
-  
-  /** Set to TRUE if the item is the victim of a conflict. */
-  svn_boolean_t conflicted;
-
-  /** If the path is under version control, versioned is TRUE. */
-  svn_boolean_t versioned;
-
-  /** Which changelist this item is part of, or NULL if not part of any. */
-  const char *changelist;
-
-  /** The leading part of the url, not including the wc root and subsequent
-   * paths. */
-  const char *repos_root_url;
-
-  /** The path relative to the wc root. */
-  const char *repos_relpath;
 
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
@@ -4412,39 +4379,34 @@ svn_wc_delete(const char *path,
               apr_pool_t *pool);
 
 /**
- * Register @a local_abspath as a new file external aimed at
- * @a external_url, @a external_peg_rev, and @a external_rev.
+ * Put @a local_abspath under version control by registering it as addition
+ * or copy in the database containing its parent. The new node is scheduled
+ * for addition to the repository below its parent node.
  *
- * If not @c NULL, @a external_peg_rev and @a external_rev must each
- * be of kind @c svn_opt_revision_number or @c svn_opt_revision_head.
+ * 1) If the node already exists, it MUST BE the root of a separate working
+ * copy from the same repository as the parent working copy. The new node
+ * and anything below it will be scheduled for addition inside the parent
+ * working copy as a copy of the original location. The separate working
+ * copy will be integrated by this step. In this case, which is only used
+ * by code like that of 'svn cp URL@rev path' @a copyfrom_url and
+ * @a copyfrom_rev MUST BE the the url and revision of @a local_abspath
+ * in the separate working copy.
  *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_wc_register_file_external(svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              const char *external_url,
-                              const svn_opt_revision_t *external_peg_rev,
-                              const svn_opt_revision_t *external_rev,
-                              apr_pool_t *scratch_pool);
-
-/**
- * Put @a local_abspath under version control by adding an entry in its
- * parent, and if @a local_abspath is a directory, adding an
- * administrative area.  The new node and anything under it is scheduled
- * for addition to the repository.  @a wc_ctx should hold a write lock
- * for the parent directory of @a local_abspath.  If @a local_abspath is
- * a directory then an access baton for @a local_abspath will be added
- * to the set containing @a parent_access.
+ * 2a) If the node was not versioned before it will be scheduled as a local
+ * addition or 2b) if @a copyfrom_url and @a copyfrom_rev are set as a copy
+ * of that location. In this last case the function doesn't set the pristine
+ * version (of a file) and/or pristine properties, which callers should
+ * handle via different APIs. Usually it is easier to call
+ * svn_wc_add_repos_file4() (### or a possible svn_wc_add_repos_dir()) then
+ * using this variant.
  *
- * If @a local_abspath does not exist, return #SVN_ERR_WC_PATH_NOT_FOUND.
+ * If @a local_abspath does not exist as file, directory or symlink, return
+ * #SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * If @a local_abspath is a directory, add it at @a depth; otherwise, ignore
- * @a depth.
- *
- * If @a copyfrom_url is non-NULL, it and @a copyfrom_rev are used as
- * `copyfrom' args.  This is for copy operations, where one wants
- * to schedule @a local_abspath for addition with a particular history.
+ * If @a local_abspath is an unversioned directory, record @a depth on it;
+ * otherwise, ignore @a depth. (Use #svn_depth_infinity unless you exactly
+ * know what you are doing, or you may create an unexpected sparse working
+ * copy)
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -4452,39 +4414,6 @@ svn_wc_register_file_external(svn_wc_context_t *wc_ctx,
  *
  * When the @a local_abspath has been added, then @a notify_func will be
  * called (if it is not @c NULL) with the @a notify_baton and the path.
- *
- * Return #SVN_ERR_WC_NODE_KIND_CHANGE if @a local_abspath is both an
- * unversioned directory and a file that is scheduled for deletion or in
- * state deleted.
- *
- *<pre> ### This function currently does double duty -- it is also
- * ### responsible for "switching" a working copy directory over to a
- * ### new copyfrom ancestry and scheduling it for addition.  Here is
- * ### the old doc string from Ben, lightly edited to bring it
- * ### up-to-date, explaining the TRUE, secret life of this function:</pre>
- *
- * Given a @a path within a working copy of type KIND, follow this algorithm:
- *
- *    - if @a path is not under version control:
- *       - Place it under version control and schedule for addition;
- *         if @a copyfrom_url is non-NULL, use it and @a copyfrom_rev as
- *         'copyfrom' history
- *
- *    - if @a path is already under version control:
- *          (This can only happen when a directory is copied, in which
- *           case ancestry must have been supplied as well.)
- *
- *       -  Schedule the directory itself for addition with copyfrom history.
- *       -  Mark all its children with a 'copied' flag
- *       -  Rewrite all the URLs to what they will be after a commit.
- *       -  ### @todo Remove old wcprops too, see the '###' below.
- *
- *<pre> ### I think possibly the "switchover" functionality should be
- * ### broken out into a separate function, but it's all intertwined in
- * ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve?</pre>
- *
- * ### Update: see "###" comment in svn_wc_add_repos_file3()'s doc
- * string about this.
  *
  * @since New in 1.7.
  */
@@ -6368,11 +6297,10 @@ typedef enum svn_wc_merge_outcome_t
  * @a left_abspath and @a right_abspath into @a target_abspath.
  * It may help to know that @a left_abspath, @a right_abspath and @a
  * target_abspath correspond to "OLDER", "YOURS", and "MINE",
- * respectively, in the diff3 documentation.)  Use @a scratch_pool for any
- * temporary allocation.
+ * respectively, in the diff3 documentation.
  *
  * @a wc_ctx should contain a write lock for the directory containing @a
- * merge_target.
+ * target_abspath.
  *
  * This function assumes that @a left_abspath and @a right_abspath are
  * in repository-normal form (linefeeds, with keywords contracted); if
@@ -6409,7 +6337,7 @@ typedef enum svn_wc_merge_outcome_t
  *
  *   * Copy @a left_abspath, @a right_abspath, and the original @a
  *     target_abspath to unique names in the same directory as @a
- *     merge_target, ending with the suffixes ".LEFT_LABEL", ".RIGHT_LABEL",
+ *     target_abspath, ending with the suffixes ".LEFT_LABEL", ".RIGHT_LABEL",
  *     and ".TARGET_LABEL" respectively.
  *
  *   * Mark @a target_abspath as "text-conflicted", and track the above
@@ -6430,6 +6358,8 @@ typedef enum svn_wc_merge_outcome_t
  *
  * If @a dry_run is @c TRUE no files are changed.  The outcome of the merge
  * is returned in @a *merge_outcome.
+ *
+ * Use @a scratch_pool for any temporary allocation.
  *
  * @since New in 1.7.
  */
@@ -7127,16 +7057,17 @@ svn_wc_translated_file(const char **xlated_p,
                        apr_pool_t *pool);
 
 
-/** Returns a @a stream allocated in @a result_pool with access to the given
- * @a local_abspath taking the file properties from @a versioned_abspath
- * using @a wc_ctx.
+/** Set @a stream to a stream allocated in @a result_pool, that will
+ * translate *to* normal form while reading, or *from* normal form while
+ * writing @a local_abspath.  The translation will take the file properties
+ * from @a versioned_abspath using @a wc_ctx.
  *
- * When translation from normal form is requested
- * (#SVN_WC_TRANSLATE_FROM_NF is specified in @a flags), @a path
- * is used as target path and stream read operations are not supported.
- * Conversely, if translation to normal form is requested
- * (#SVN_WC_TRANSLATE_TO_NF is specified in @a flags), @a path is
- * used as source path and stream write operations are not supported.
+ * If @a flags includes #SVN_WC_TRANSLATE_FROM_NF, the stream will
+ * translate from Normal Form to working copy form while writing to
+ * @a local_abspath; stream read operations are not supported.
+ * Conversely, if @a flags includes #SVN_WC_TRANSLATE_TO_NF, the stream will
+ * translate from working copy form to Normal Form while reading from
+ * @a local_abspath; stream write operations are not supported.
  *
  * The @a flags are the same constants as those used for
  * svn_wc_translated_file().

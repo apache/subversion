@@ -52,6 +52,75 @@ def make_diff_header(path, old_tag, new_tag):
     "+++ " + path_as_shown + "\t(" + new_tag + ")\n",
     ]
 
+def make_git_diff_header(path, old_tag, new_tag, add=False, src_label=None,
+                         dst_label=None, delete=False, cp=False, mv=False, 
+                         copyfrom=None):
+  """ Generate the expected 'git diff' header for file PATH, with its old
+  and new versions described in parentheses by OLD_TAG and NEW_TAG.
+  SRC_LABEL and DST_LABEL are paths or urls that are added to the diff
+  labels if we're diffing against the repository. ADD, DELETE, CP and MV
+  denotes the operations performed on the file. COPYFROM is the source of a
+  copy or move.  Return the header as an array of newline-terminated
+  strings."""
+
+  path_as_shown = path.replace('\\', '/')
+  if copyfrom:
+    copyfrom_as_shown = copyfrom.replace('\\', '/')
+  if src_label:
+    src_label = src_label.replace('\\', '/')
+    src_label = '\t(.../' + src_label + ')'
+  else:
+    src_label = ''
+  if dst_label:
+    dst_label = dst_label.replace('\\', '/')
+    dst_label = '\t(.../' + dst_label + ')'
+  else:
+    dst_label = ''
+
+  if add:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + path_as_shown + " b/" + path_as_shown + "\n",
+      "new file mode 10644\n",
+      "--- /dev/null\t(" + old_tag + ")\n",
+      "+++ b/" + path_as_shown + dst_label + "\t(" + new_tag + ")\n",
+    ]
+  elif delete:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + path_as_shown + " b/" + path_as_shown + "\n",
+      "deleted file mode 10644\n",
+      "--- a/" + path_as_shown + src_label + "\t(" + old_tag + ")\n",
+      "+++ /dev/null\t(" + new_tag + ")\n",
+    ]
+  elif cp:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + copyfrom_as_shown + " b/" + path_as_shown + "\n",
+      "copy from " + copyfrom_as_shown + "\n",
+      "copy to " + path_as_shown + "\n",
+    ]
+  elif mv:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + copyfrom_as_shown + " b/" + path_as_shown + "\n",
+      "rename from " + copyfrom_as_shown + "\n",
+      "rename to " + path_as_shown + "\n",
+    ]
+  else:
+    return [
+      "Index: " + path_as_shown + "\n",
+      "===================================================================\n",
+      "diff --git a/" + path_as_shown + " b/" + path_as_shown + "\n",
+      "--- a/" + path_as_shown + src_label + "\t(" + old_tag + ")\n",
+      "+++ b/" + path_as_shown + dst_label + "\t(" + new_tag + ")\n",
+    ]
+
+
 ######################################################################
 # Diff output checker
 #
@@ -3008,6 +3077,202 @@ def diff_external_diffcmd(sbox):
                                      'diff', '--diff-cmd', diff_script_path,
                                      iota_path)
 
+
+#----------------------------------------------------------------------
+# Diffing an unrelated repository URL against working copy with
+# local modifications (i.e. not committed). This is issue #3295 (diff
+# local changes against arbitrary URL@REV ignores local add).
+
+# Helper
+def make_file_edit_del_add(dir):
+  "make a file mod (M), a deletion (D) and an addition (A)."
+  alpha = os.path.join(dir, 'B', 'E', 'alpha')
+  beta = os.path.join(dir, 'B', 'E', 'beta')
+  theta = os.path.join(dir, 'B', 'E', 'theta')
+
+  # modify alpha, remove beta and add theta.
+  svntest.main.file_append(alpha, "Edited file alpha.\n")
+  svntest.main.run_svn(None, 'remove', beta)
+  svntest.main.file_append(theta, "Created file theta.\n")
+
+  svntest.main.run_svn(None, 'add', theta)
+
+
+def diff_url_against_local_mods(sbox):
+  "diff URL against working copy with local mods"
+
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+
+  A = 'A'
+  A_url = sbox.repo_url + '/A'
+
+  # First, just make a copy.
+  A2 = 'A2'
+  A2_url = sbox.repo_url + '/A2'
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', 'log msg',
+                                     A_url, A2_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up')
+
+  # In A, add, remove and change a file, and commit.
+  make_file_edit_del_add(A);
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'committing A')
+
+  # In A2, do the same changes but leave uncommitted.
+  make_file_edit_del_add(A2);
+
+  # Diff URL of A against working copy of A2. Output should be empty.
+  expected_output = []
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--old', A_url, '--new', A2)
+
+
+#----------------------------------------------------------------------
+# Diff rev against working copy of a removed and locally re-added file.
+# This is issue #1675 ("svn diff -rN added-file" has odd behavior).
+
+def diff_preexisting_rev_against_local_add(sbox):
+  "diff -r1 of removed file to its local addition"
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+
+  beta = os.path.join('A', 'B', 'E', 'beta')
+
+  # remove
+  svntest.main.run_svn(None, 'remove', beta)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'removing beta')
+
+  # re-add, without committing
+  svntest.main.file_append(beta, "Re-created file beta.\n")
+  svntest.main.run_svn(None, 'add', beta)
+
+  # diff against -r1, the diff should show both removal and re-addition
+  exit_code, diff_output, err_output = svntest.main.run_svn(
+                        None, 'diff', '-r1', 'A')
+
+  verify_expected_output(diff_output, "-This is the file 'beta'.")
+  verify_expected_output(diff_output, "+Re-created file beta.")
+
+def diff_git_format_wc_wc(sbox):
+  "create a diff in git unidiff format for wc-wc"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  new_path = os.path.join(wc_dir, 'new')
+  svntest.main.file_append(iota_path, "Changed 'iota'.\n")
+  svntest.main.file_append(new_path, "This is the file 'new'.\n")
+  svntest.main.run_svn(None, 'add', new_path)
+  svntest.main.run_svn(None, 'rm', mu_path)
+
+  ### We're not testing copied or moved paths
+
+  expected_output = make_git_diff_header(mu_path, "revision 1", 
+                                         "working copy", 
+                                         delete=True) + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'mu'.\n",
+  ] + make_git_diff_header(new_path, "revision 0", "working copy", 
+                           add=True) + [
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'.\n",
+  ] +  make_git_diff_header(iota_path, "revision 1", 
+                            "working copy") + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Changed 'iota'.\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+                                     '--git-diff', wc_dir)
+
+def diff_git_format_url_wc(sbox):
+  "create a diff in git unidiff format for url-wc"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  new_path = os.path.join(wc_dir, 'new')
+  svntest.main.file_append(iota_path, "Changed 'iota'.\n")
+  svntest.main.file_append(new_path, "This is the file 'new'.\n")
+  svntest.main.run_svn(None, 'add', new_path)
+  svntest.main.run_svn(None, 'rm', mu_path)
+
+  ### We're not testing copied or moved paths
+
+  svntest.main.run_svn(None, 'commit', '-m', 'Committing changes', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  expected_output = make_git_diff_header(new_path, "revision 0", "revision 2", 
+                                         dst_label=wc_dir, add=True) + [
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'.\n",
+  ] + make_git_diff_header(mu_path, "revision 1", 
+                           "working copy", 
+                           src_label=repo_url,
+                           delete=True) + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'mu'.\n",
+  ] +  make_git_diff_header(iota_path, "revision 1", 
+                            "working copy", src_label=repo_url,
+                            dst_label=wc_dir) + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Changed 'iota'.\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+                                     '--git-diff',
+                                     '--old', repo_url + '@1', '--new',
+                                     wc_dir)
+
+def diff_git_format_url_url(sbox):
+  "create a diff in git unidiff format for url-url"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  new_path = os.path.join(wc_dir, 'new')
+  svntest.main.file_append(iota_path, "Changed 'iota'.\n")
+  svntest.main.file_append(new_path, "This is the file 'new'.\n")
+  svntest.main.run_svn(None, 'add', new_path)
+  svntest.main.run_svn(None, 'rm', mu_path)
+
+  ### We're not testing copied or moved paths. When we do, we will not be
+  ### able to identify them as copies/moves until we have editor-v2.
+
+  svntest.main.run_svn(None, 'commit', '-m', 'Committing changes', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  expected_output = make_git_diff_header("A/mu", "revision 1", 
+                                         "revision 2", 
+                                         delete=True) + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'mu'.\n",
+    ] + make_git_diff_header("new", "revision 0", "revision 2", 
+                              add=True) + [
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'.\n",
+  ] +  make_git_diff_header("iota", "revision 1", 
+                            "revision 2") + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Changed 'iota'.\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+                                     '--git-diff', 
+                                     '--old', repo_url + '@1', '--new',
+                                     repo_url + '@2')
+
 # Check ignoring mergeinfo in a diff
 def diff_ignore_mergeinfo(sbox):
   "svn diff --ignore-mergeinfo"
@@ -3103,88 +3368,6 @@ def diff_ignore_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--ignore-mergeinfo')
 
-
-#----------------------------------------------------------------------
-# Diffing an unrelated repository URL against working copy with
-# local modifications (i.e. not committed). This is issue #3295 (diff
-# local changes against arbitrary URL@REV ignores local add).
-
-# Helper
-def make_file_edit_del_add(dir):
-  "make a file mod (M), a deletion (D) and an addition (A)."
-  alpha = os.path.join(dir, 'B', 'E', 'alpha')
-  beta = os.path.join(dir, 'B', 'E', 'beta')
-  theta = os.path.join(dir, 'B', 'E', 'theta')
-
-  # modify alpha, remove beta and add theta.
-  svntest.main.file_append(alpha, "Edited file alpha.\n")
-  svntest.main.run_svn(None, 'remove', beta)
-  svntest.main.file_append(theta, "Created file theta.\n")
-
-  svntest.main.run_svn(None, 'add', theta)
-
-
-def diff_url_against_local_mods(sbox):
-  "diff URL against working copy with local mods"
-
-  sbox.build()
-  os.chdir(sbox.wc_dir)
-
-  A = 'A'
-  A_url = sbox.repo_url + '/A'
-
-  # First, just make a copy.
-  A2 = 'A2'
-  A2_url = sbox.repo_url + '/A2'
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', '-m', 'log msg',
-                                     A_url, A2_url)
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up')
-
-  # In A, add, remove and change a file, and commit.
-  make_file_edit_del_add(A);
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'committing A')
-
-  # In A2, do the same changes but leave uncommitted.
-  make_file_edit_del_add(A2);
-
-  # Diff URL of A against working copy of A2. Output should be empty.
-  expected_output = []
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'diff', '--old', A_url, '--new', A2)
-
-
-#----------------------------------------------------------------------
-# Diff rev against working copy of a removed and locally re-added file.
-# This is issue #1675 ("svn diff -rN added-file" has odd behavior).
-
-def diff_preexisting_rev_against_local_add(sbox):
-  "diff -r1 of removed file to its local addition"
-  sbox.build()
-  os.chdir(sbox.wc_dir)
-
-  beta = os.path.join('A', 'B', 'E', 'beta')
-
-  # remove
-  svntest.main.run_svn(None, 'remove', beta)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'removing beta')
-
-  # re-add, without committing
-  svntest.main.file_append(beta, "Re-created file beta.\n")
-  svntest.main.run_svn(None, 'add', beta)
-
-  # diff against -r1, the diff should show both removal and re-addition
-  exit_code, diff_output, err_output = svntest.main.run_svn(
-                        None, 'diff', '-r1', 'A')
-
-  verify_expected_output(diff_output, "-This is the file 'beta'.")
-  verify_expected_output(diff_output, "+Re-created file beta.")
-
 ########################################################################
 #Run the tests
 
@@ -3241,6 +3424,9 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
+              diff_git_format_wc_wc,
+              diff_git_format_url_wc,
+              diff_git_format_url_url,
               diff_ignore_mergeinfo,
               ]
 

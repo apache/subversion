@@ -674,9 +674,7 @@ fp.close()"""
 # list all tests here, starting with None:
 test_list = [ None,
               test_misc,
-              ### it would be nice to XFail this, but it throws an assertion
-              ### which leaves a core dump. let's not leave turds right now.
-              Skip(delete_file_in_moved_dir),
+              delete_file_in_moved_dir,
               test_print_property_diffs,
               info_bad_newlines,
               changed_copy_info,

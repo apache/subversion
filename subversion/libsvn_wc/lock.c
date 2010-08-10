@@ -36,7 +36,6 @@
 #include "lock.h"
 #include "props.h"
 #include "log.h"
-#include "entries.h"
 #include "wc_db.h"
 
 #include "svn_private_config.h"
@@ -310,7 +309,14 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   if (write_lock)
     {
-      SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, 0, scratch_pool));
+      svn_boolean_t owns_lock;
+
+      /* If the db already owns a lock, we can't add an extra lock record */
+      SVN_ERR(svn_wc__db_temp_own_lock(&owns_lock, db, path, scratch_pool));
+
+      if (!owns_lock)
+        SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, 0, scratch_pool));
+
       SVN_ERR(svn_wc__db_temp_mark_locked(db, lock->abspath, scratch_pool));
     }
 
@@ -1044,7 +1050,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
   svn_boolean_t found_in_parent = FALSE;
   int i;
 
-  svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
+  svn_dirent_split(&parent_abspath, &base, local_abspath, scratch_pool);
 
   /* Check if the parent directory knows about this node */
   err = svn_wc__db_read_children(&children, db, parent_abspath, scratch_pool,
@@ -1564,7 +1570,7 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
       parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
       err = svn_wc__db_read_kind(&parent_kind, wc_ctx->db, parent_abspath, TRUE,
                                  scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+      if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
         {
           svn_error_clear(err);
           parent_kind = svn_wc__db_kind_unknown;
@@ -1732,8 +1738,10 @@ svn_wc__path_switched(svn_boolean_t *switched,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool)
 {
-  return svn_error_return(child_is_disjoint(switched, wc_ctx->db,
-                                            local_abspath, scratch_pool));
+  svn_boolean_t wc_root;
+
+  return svn_wc__check_wc_root(&wc_root, NULL, switched, wc_ctx->db,
+                               local_abspath, scratch_pool);
 }
 
 

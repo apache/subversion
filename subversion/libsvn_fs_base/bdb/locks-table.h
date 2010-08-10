@@ -86,12 +86,16 @@ svn_error_t *svn_fs_bdb__lock_get(svn_lock_t **lock_p,
    in FS. Pass each lock to GET_LOCKS_FUNC callback along with
    GET_LOCKS_BATON.
 
+   Use DEPTH to filter the reported locks to only those within the
+   requested depth of PATH.
+
    This function promises to auto-expire any locks encountered while
    building the hash.  That means that the caller can trust that each
    returned lock hasn't yet expired.
 */
 svn_error_t *svn_fs_bdb__locks_get(svn_fs_t *fs,
                                    const char *path,
+                                   svn_depth_t depth,
                                    svn_fs_get_locks_callback_t get_locks_func,
                                    void *get_locks_baton,
                                    trail_t *trail,

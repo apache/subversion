@@ -26,6 +26,9 @@ package org.apache.subversion.javahl;
 import java.util.Set;
 import java.io.OutputStream;
 import java.io.InputStream;
+import java.io.File;
+
+import org.apache.subversion.javahl.callback.ReposNotifyCallback;
 
 /**
  * This class offers the same commands as the svnadmin commandline
@@ -98,8 +101,8 @@ public class SVNAdmin implements ISVNAdmin
      * @param fstype                the type of the filesystem (BDB or FSFS)
      * @throws ClientException  throw in case of problem
      */
-    public native void create(String path, boolean disableFsyncCommit,
-                              boolean keepLog, String configPath,
+    public native void create(File path, boolean disableFsyncCommit,
+                              boolean keepLog, File configPath,
                               String fstype) throws ClientException;
 
     /**
@@ -109,25 +112,12 @@ public class SVNAdmin implements ISVNAdmin
      * @param end               end revision
      * @throws ClientException  throw in case of problem
      */
-    public native void deltify(String path, Revision start, Revision end)
+    public native void deltify(File path, Revision start, Revision end)
             throws ClientException;
 
-    /**
-     * dump the data in a repository
-     * @param path              the path to the repository
-     * @param dataOut           the data will be outputed here
-     * @param errorOut          the messages will be outputed here
-     * @param start             the first revision to be dumped
-     * @param end               the last revision to be dumped
-     * @param incremental       the dump will be incremantal
-     * @param useDeltas         the dump will contain deltas between nodes
-     * @throws ClientException  throw in case of problem
-     * @since 1.5
-     */
-    public native void dump(String path, OutputStream dataOut,
-                            OutputStream errorOut, Revision start,
-                            Revision end, boolean incremental,
-                            boolean useDeltas)
+    public native void dump(File path, OutputStream dataOut,
+                            Revision start, Revision end, boolean incremental,
+                            boolean useDeltas, ReposNotifyCallback callback)
             throws ClientException;
 
     /**
@@ -138,7 +128,7 @@ public class SVNAdmin implements ISVNAdmin
      *                          repository
      * @throws ClientException  throw in case of problem
      */
-    public native void hotcopy(String path, String targetPath,
+    public native void hotcopy(File path, File targetPath,
                                boolean cleanLogs) throws ClientException;
 
     /**
@@ -147,7 +137,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public native void listDBLogs(String path, MessageReceiver receiver)
+    public native void listDBLogs(File path, MessageReceiver receiver)
             throws ClientException;
 
     /**
@@ -156,7 +146,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public native void listUnusedDBLogs(String path, MessageReceiver receiver)
+    public native void listUnusedDBLogs(File path, MessageReceiver receiver)
             throws ClientException;
 
     /**
@@ -171,25 +161,10 @@ public class SVNAdmin implements ISVNAdmin
         public void receiveMessageLine(String message);
     }
 
-    /**
-     * load the data of a dump into a repository,
-     * @param path              the path to the repository
-     * @param dataInput         the data input source
-     * @param messageOutput     the target for processing messages
-     * @param ignoreUUID        ignore any UUID found in the input stream
-     * @param forceUUID         set the repository UUID to any found in the
-     *                          stream
-     * @param usePreCommitHook  use the pre-commit hook when processing commits
-     * @param usePostCommitHook use the post-commit hook when processing commits
-     * @param relativePath      the directory in the repository, where the data
-     *                          in put optional.
-     * @throws ClientException  throw in case of problem
-     * @since 1.5
-     */
-    public native void load(String path, InputStream dataInput,
-                            OutputStream messageOutput, boolean ignoreUUID,
-                            boolean forceUUID, boolean usePreCommitHook,
-                            boolean usePostCommitHook, String relativePath)
+    public native void load(File path, InputStream dataInput,
+                            boolean ignoreUUID, boolean forceUUID,
+                            boolean usePreCommitHook, boolean usePostCommitHook,
+                            String relativePath, ReposNotifyCallback callback)
             throws ClientException;
 
     /**
@@ -198,15 +173,11 @@ public class SVNAdmin implements ISVNAdmin
      * @param receiver          receives one transaction name per call
      * @throws ClientException  throw in case of problem
      */
-    public native void lstxns(String path, MessageReceiver receiver)
+    public native void lstxns(File path, MessageReceiver receiver)
             throws ClientException;
 
-    /**
-     * recover the berkeley db of a repository, returns youngest revision
-     * @param path              the path to the repository
-     * @throws ClientException  throw in case of problem
-     */
-    public native long recover(String path) throws ClientException;
+    public native long recover(File path, ReposNotifyCallback callback)
+            throws ClientException;
 
     /**
      * remove open transaction in a repository
@@ -214,7 +185,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param transactions      the transactions to be removed
      * @throws ClientException  throw in case of problem
      */
-    public native void rmtxns(String path, String [] transactions)
+    public native void rmtxns(File path, String[] transactions)
             throws ClientException;
 
     /**
@@ -233,24 +204,14 @@ public class SVNAdmin implements ISVNAdmin
      * @throws SubversionException If a problem occurs.
      * @since 1.5.0
      */
-    public native void setRevProp(String path, Revision rev,
+    public native void setRevProp(File path, Revision rev,
                                   String propName, String propValue,
                                   boolean usePreRevPropChangeHook,
                                   boolean usePostRevPropChangeHook)
             throws SubversionException;
 
-    /**
-     * Verify the repository at <code>path</code> between revisions
-     * <code>start</code> and <code>end</code>.
-     *
-     * @param path              the path to the repository
-     * @param messageOut        the receiver of all messages
-     * @param start             the first revision
-     * @param end               the last revision
-     * @throws ClientException If an error occurred.
-     */
-    public native void verify(String path, OutputStream messageOut,
-                              Revision start, Revision end)
+    public native void verify(File path, Revision start, Revision end,
+                              ReposNotifyCallback callback)
             throws ClientException;
 
     /**
@@ -259,7 +220,7 @@ public class SVNAdmin implements ISVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.2
      */
-    public native Set<Lock> lslocks(String path) throws ClientException;
+    public native Set<Lock> lslocks(File path) throws ClientException;
 
     /**
      * remove multiple locks from the repository
@@ -268,6 +229,10 @@ public class SVNAdmin implements ISVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.2
      */
-    public native void rmlocks(String path, String [] locks)
+    public native void rmlocks(File path, String[] locks)
             throws ClientException;
+
+    public native void upgrade(File path, ReposNotifyCallback callback);
+
+    public native void pack(File path, ReposNotifyCallback callback);
 }

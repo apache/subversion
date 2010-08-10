@@ -31,9 +31,6 @@
 #include "svn_path.h"
 
 #include "wc.h"
-#include "lock.h"
-#include "entries.h"
-#include "adm_files.h"
 
 #include "svn_private_config.h"
 
@@ -215,7 +212,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
   svn_wc__db_kind_t kind;
   svn_revnum_t revision;
   const char *repos_relpath, *repos_root, *repos_uuid;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
 
   SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, &is_switched,
                                 wc_ctx->db, local_abspath, scratch_pool));
@@ -241,7 +238,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
                                &repos_root, &repos_uuid, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, &base_shadowed, NULL, NULL,
+                               &have_base, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -276,7 +273,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
         break; /* Ok to exclude */
     }
 
-  if (base_shadowed)
+  if (have_base)
     SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision, &repos_relpath,
                                      &repos_root, &repos_uuid, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,

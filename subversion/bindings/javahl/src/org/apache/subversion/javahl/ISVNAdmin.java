@@ -26,8 +26,10 @@ package org.apache.subversion.javahl;
 import java.util.Set;
 import java.io.OutputStream;
 import java.io.InputStream;
+import java.io.File;
 
 import org.apache.subversion.javahl.SVNAdmin.MessageReceiver;
+import org.apache.subversion.javahl.callback.ReposNotifyCallback;
 
 public interface ISVNAdmin {
 
@@ -60,8 +62,8 @@ public interface ISVNAdmin {
 	 * @param fstype                the type of the filesystem (BDB or FSFS)
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void create(String path, boolean disableFsyncCommit,
-			boolean keepLog, String configPath, String fstype)
+	public abstract void create(File path, boolean disableFsyncCommit,
+			boolean keepLog, File configPath, String fstype)
 			throws ClientException;
 
 	/**
@@ -71,24 +73,24 @@ public interface ISVNAdmin {
 	 * @param end               end revision
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void deltify(String path, Revision start, Revision end)
+	public abstract void deltify(File path, Revision start, Revision end)
 			throws ClientException;
 
 	/**
 	 * dump the data in a repository
 	 * @param path              the path to the repository
 	 * @param dataOut           the data will be outputed here
-	 * @param errorOut          the messages will be outputed here
 	 * @param start             the first revision to be dumped
 	 * @param end               the last revision to be dumped
 	 * @param incremental       the dump will be incremantal
 	 * @param useDeltas         the dump will contain deltas between nodes
+     * @param callback          the callback to recieve notifications
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.5
 	 */
-	public abstract void dump(String path, OutputStream dataOut,
-                OutputStream errorOut, Revision start, Revision end,
-                boolean incremental, boolean useDeltas)
+	public abstract void dump(File path, OutputStream dataOut,
+                Revision start, Revision end, boolean incremental,
+                boolean useDeltas, ReposNotifyCallback callback)
 			throws ClientException;
 
 	/**
@@ -99,7 +101,7 @@ public interface ISVNAdmin {
 	 *                          repository
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void hotcopy(String path, String targetPath,
+	public abstract void hotcopy(File path, File targetPath,
 			boolean cleanLogs) throws ClientException;
 
 	/**
@@ -108,7 +110,7 @@ public interface ISVNAdmin {
 	 * @param receiver          interface to receive the logfile names
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void listDBLogs(String path, MessageReceiver receiver)
+	public abstract void listDBLogs(File path, MessageReceiver receiver)
 			throws ClientException;
 
 	/**
@@ -117,7 +119,7 @@ public interface ISVNAdmin {
 	 * @param receiver          interface to receive the logfile names
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void listUnusedDBLogs(String path, MessageReceiver receiver)
+	public abstract void listUnusedDBLogs(File path, MessageReceiver receiver)
 			throws ClientException;
 
 	/**
@@ -135,10 +137,11 @@ public interface ISVNAdmin {
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.5
 	 */
-	public abstract void load(String path, InputStream dataInput,
-			OutputStream messageOutput, boolean ignoreUUID, boolean forceUUID,
-			boolean usePreCommitHook, boolean usePostCommitHook,
-			String relativePath) throws ClientException;
+	public abstract void load(File path, InputStream dataInput,
+			boolean ignoreUUID, boolean forceUUID, boolean usePreCommitHook,
+            boolean usePostCommitHook, String relativePath,
+            ReposNotifyCallback callback)
+        throws ClientException;
 
 	/**
 	 * list all open transactions in a repository
@@ -146,7 +149,7 @@ public interface ISVNAdmin {
 	 * @param receiver          receives one transaction name per call
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void lstxns(String path, MessageReceiver receiver)
+	public abstract void lstxns(File path, MessageReceiver receiver)
 			throws ClientException;
 
 	/**
@@ -154,7 +157,8 @@ public interface ISVNAdmin {
 	 * @param path              the path to the repository
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract long recover(String path) throws ClientException;
+	public abstract long recover(File path, ReposNotifyCallback callback)
+            throws ClientException;
 
 	/**
 	 * remove open transaction in a repository
@@ -162,7 +166,7 @@ public interface ISVNAdmin {
 	 * @param transactions      the transactions to be removed
 	 * @throws ClientException  throw in case of problem
 	 */
-	public abstract void rmtxns(String path, String[] transactions)
+	public abstract void rmtxns(File path, String[] transactions)
 			throws ClientException;
 
 	/**
@@ -181,7 +185,7 @@ public interface ISVNAdmin {
 	 * @throws SubversionException If a problem occurs.
 	 * @since 1.5.0
 	 */
-	public abstract void setRevProp(String path, Revision rev, String propName,
+	public abstract void setRevProp(File path, Revision rev, String propName,
 			String propValue, boolean usePreRevPropChangeHook,
 			boolean usePostRevPropChangeHook) throws SubversionException;
 
@@ -190,13 +194,14 @@ public interface ISVNAdmin {
 	 * <code>start</code> and <code>end</code>.
 	 *
 	 * @param path              the path to the repository
-	 * @param messageOut        the receiver of all messages
 	 * @param start             the first revision
 	 * @param end               the last revision
+     * @param callback          the callback to recieve notifications
 	 * @throws ClientException If an error occurred.
 	 */
-	public abstract void verify(String path, OutputStream messageOut,
-			Revision start, Revision end) throws ClientException;
+	public abstract void verify(File path, Revision start, Revision end,
+                ReposNotifyCallback callback)
+            throws ClientException;
 
 	/**
 	 * list all locks in the repository
@@ -204,7 +209,7 @@ public interface ISVNAdmin {
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.2
 	 */
-	public abstract Set<Lock> lslocks(String path) throws ClientException;
+	public abstract Set<Lock> lslocks(File path) throws ClientException;
 
 	/**
 	 * remove multiple locks from the repository
@@ -213,7 +218,24 @@ public interface ISVNAdmin {
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.2
 	 */
-	public abstract void rmlocks(String path, String[] locks)
+	public abstract void rmlocks(File path, String[] locks)
 			throws ClientException;
 
+    /**
+     * upgrade the repository format
+     * @param path              the path to the repository
+     * @param callback          for notification
+	 * @throws ClientException  throw in case of problem
+     */
+    public abstract void upgrade(File path, ReposNotifyCallback callback)
+			throws ClientException;
+
+    /**
+     * pack the repository
+     * @param path              the path to the repository
+     * @param callback          for notification
+	 * @throws ClientException  throw in case of problem
+     */
+    public abstract void pack(File path, ReposNotifyCallback callback)
+			throws ClientException;
 }

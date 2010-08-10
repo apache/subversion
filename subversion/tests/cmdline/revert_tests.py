@@ -968,7 +968,7 @@ def revert_add_over_not_present_dir(sbox):
   
   main.run_svn(None, 'mkdir', os.path.join(wc_dir, 'A/C'))
   
-  # This fails in the current WC-NG state (r927318).
+  # This failed in some WC-NG intermediate format (r927318-r958992).
   main.run_svn(None, 'revert', os.path.join(wc_dir, 'A/C'))
   
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1000,7 +1000,7 @@ test_list = [ None,
                    status_of_missing_dir_after_revert_replaced_with_history_dir),
               revert_replaced_with_history_file_2,
               revert_tree_conflicts_in_updated_files,
-              XFail(revert_add_over_not_present_dir),
+              revert_add_over_not_present_dir,
              ]
 
 if __name__ == '__main__':

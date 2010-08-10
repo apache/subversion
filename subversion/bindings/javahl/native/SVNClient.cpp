@@ -26,7 +26,7 @@
 
 #include "SVNClient.h"
 #include "JNIUtil.h"
-#include "NotifyCallback.h"
+#include "ClientNotifyCallback.h"
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
 #include "ConflictResolverCallback.h"
@@ -40,6 +40,7 @@
 #include "ProplistCallback.h"
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
+#include "PatchCallback.h"
 #include "StatusCallback.h"
 #include "ChangelistCallback.h"
 #include "ListCallback.h"
@@ -59,6 +60,7 @@
 #include "svn_config.h"
 #include "svn_io.h"
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "svn_utf.h"
 #include "svn_private_config.h"
 #include "JNIStringHolder.h"
@@ -176,14 +178,14 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     rev.kind = svn_opt_revision_unspecified;
 
-    SVN_JNI_ERR(svn_client_status5(&youngest, checkedPath.c_str(),
-                                   &rev, StatusCallback::callback,
-                                   callback,
+    SVN_JNI_ERR(svn_client_status5(&youngest, ctx, checkedPath.c_str(),
+                                   &rev,
                                    depth,
                                    getAll, onServer, noIgnore,
                                    ignoreExternals,
                                    changelists.array(requestPool),
-                                   ctx, requestPool.pool()), );
+                                   StatusCallback::callback, callback,
+                                   requestPool.pool()), );
 }
 
 void SVNClient::username(const char *pi_username)
@@ -291,7 +293,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     return rev;
 }
 
-void SVNClient::notification2(NotifyCallback *notify2)
+void SVNClient::notification2(ClientNotifyCallback *notify2)
 {
     delete m_notify2;
     m_notify2 = notify2;
@@ -1002,6 +1004,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    noDiffDelete,
                                    showCopiesAsAdds,
                                    force,
+                                   FALSE,
                                    SVN_APR_LOCALE_CHARSET,
                                    outfile,
                                    NULL /* error file */,
@@ -1033,6 +1036,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                noDiffDelete,
                                showCopiesAsAdds,
                                force,
+                               FALSE,
                                SVN_APR_LOCALE_CHARSET,
                                outfile,
                                NULL /* error file */,
@@ -1230,7 +1234,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     ctx->cancel_func = checkCancel;
     m_cancelOperation = false;
     ctx->cancel_baton = this;
-    ctx->notify_func2= NotifyCallback::notify;
+    ctx->notify_func2= ClientNotifyCallback::notify;
     ctx->notify_baton2 = m_notify2;
 
     ctx->progress_func = ProgressListener::progress;
@@ -1659,107 +1663,11 @@ void SVNClient::setRevProperty(const char *path,
                                         requestPool.pool()), );
 }
 
-struct version_status_baton
-{
-    svn_revnum_t min_rev;    /* lowest revision found. */
-    svn_revnum_t max_rev;    /* highest revision found. */
-    svn_boolean_t switched;  /* is anything switched? */
-    svn_boolean_t modified;  /* is anything modified? */
-    svn_boolean_t committed; /* examine last committed revisions */
-    svn_boolean_t done;      /* note completion of our task. */
-    const char *wc_abspath;  /* path whose URL we're looking for. */
-    const char *wc_url;      /* URL for the path whose URL we're looking for. */
-    apr_pool_t *pool;        /* pool in which to store alloc-needy things. */
-};
-
-/* This implements `svn_cancel_func_t'. */
-static svn_error_t *
-cancel(void *baton)
-{
-    struct version_status_baton *sb = (version_status_baton *)baton;
-    if (sb->done)
-        return svn_error_create(SVN_ERR_CANCELLED, NULL, "Finished");
-    else
-        return SVN_NO_ERROR;
-}
-
-/* An svn_wc_status_func4_t callback function for analyzing status
- * structures. */
-static svn_error_t *
-analyze_status(void *baton,
-               const char *local_abspath,
-               const svn_wc_status3_t *status,
-               apr_pool_t *pool)
-{
-    struct version_status_baton *sb = (version_status_baton *)baton;
-
-    if (sb->done)
-        return SVN_NO_ERROR;
-
-    if (! status->entry)
-        return SVN_NO_ERROR;
-
-    /* Added files have a revision of no interest */
-    if (status->text_status != svn_wc_status_added)
-    {
-        svn_revnum_t item_rev = (sb->committed
-                                 ? status->entry->cmt_rev
-                                 : status->entry->revision);
-
-        if (sb->min_rev == SVN_INVALID_REVNUM || item_rev < sb->min_rev)
-            sb->min_rev = item_rev;
-
-        if (sb->max_rev == SVN_INVALID_REVNUM || item_rev > sb->max_rev)
-            sb->max_rev = item_rev;
-    }
-
-    sb->switched |= status->switched;
-    sb->modified |= (status->text_status != svn_wc_status_normal);
-    sb->modified |= (status->prop_status != svn_wc_status_normal
-                     && status->prop_status != svn_wc_status_none);
-
-    if (sb->wc_abspath
-        && (! sb->wc_url)
-        && (strcmp(local_abspath, sb->wc_abspath) == 0)
-        && (status->entry))
-        sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
-
-    return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_wc_notify_func_t'. */
-static void
-notify(void *baton,
-       const char *path,
-       svn_wc_notify_action_t action,
-       svn_node_kind_t kind,
-       const char *mime_type,
-       svn_wc_notify_state_t content_state,
-       svn_wc_notify_state_t prop_state,
-       svn_revnum_t revision)
-{
-    struct version_status_baton *sb = (version_status_baton *)baton;
-    if ((action == svn_wc_notify_status_external)
-        || (action == svn_wc_notify_status_completed))
-        sb->done = TRUE;
-}
-
 jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
                                   bool lastChanged)
 {
-    struct version_status_baton sb;
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
-    sb.switched = FALSE;
-    sb.modified = FALSE;
-    sb.committed = FALSE;
-    sb.min_rev = SVN_INVALID_REVNUM;
-    sb.max_rev = SVN_INVALID_REVNUM;
-    sb.wc_abspath = NULL;
-    sb.wc_url = NULL;
-    sb.done = FALSE;
-    sb.pool = requestPool.pool();
 
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), NULL);
@@ -1791,48 +1699,30 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
         }
     }
 
-    sb.wc_abspath = intPath.c_str();
-    svn_opt_revision_t rev;
-    rev.kind = svn_opt_revision_unspecified;
+    svn_wc_revision_status_t *result;
+    const char *local_abspath;
 
-    svn_error_t *err;
-    err = svn_client_status5(NULL, intPath.c_str(), &rev, analyze_status,
-                             &sb, svn_depth_infinity, TRUE, FALSE, FALSE,
-                             FALSE, NULL, ctx, requestPool.pool());
-    if (err && (err->apr_err == SVN_ERR_CANCELLED))
-        svn_error_clear(err);
-    else
-        SVN_JNI_ERR(err, NULL);
-
-    if ((! sb.switched ) && (trailUrl))
-    {
-        /* If the trailing part of the URL of the working copy directory
-         * does not match the given trailing URL then the whole working
-         * copy is switched. */
-        if (! sb.wc_url)
-        {
-            sb.switched = TRUE;
-        }
-        else
-        {
-            apr_size_t len1 = strlen(trailUrl);
-            apr_size_t len2 = strlen(sb.wc_url);
-            if ((len1 > len2) || strcmp(sb.wc_url + len2 - len1, trailUrl))
-                sb.switched = TRUE;
-        }
-    }
+    SVN_JNI_ERR(svn_dirent_get_absolute(&local_abspath, intPath.c_str(),
+                                        requestPool.pool()), NULL);
+    SVN_JNI_ERR(svn_wc_revision_status2(&result, ctx->wc_ctx, local_abspath,
+                                        trailUrl, lastChanged,
+                                        ctx->cancel_func, ctx->cancel_baton,
+                                        requestPool.pool(),
+                                        requestPool.pool()), NULL);
 
     std::ostringstream value;
-    value << sb.min_rev;
-    if (sb.min_rev != sb.max_rev)
+    value << result->min_rev;
+    if (result->min_rev != result->max_rev)
     {
         value << ":";
-        value << sb.max_rev;
+        value << result->max_rev;
     }
-    if (sb.modified)
+    if (result->modified)
         value << "M";
-    if (sb.switched)
+    if (result->switched)
         value << "S";
+    if (result->sparse_checkout)
+        value << "P";
 
     return JNIUtil::makeJString(value.str().c_str());
 }
@@ -1885,30 +1775,6 @@ struct info_baton
     apr_pool_t *pool;
 };
 
-/**
- * Get information about a file or directory.
- */
-jobject SVNClient::info(const char *path)
-{
-    SVN::Pool requestPool;
-    svn_wc_adm_access_t *adm_access;
-    const svn_wc_entry_t *entry;
-
-    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
-    Path intPath(path);
-    SVN_JNI_ERR(intPath.error_occured(), NULL);
-
-    SVN_JNI_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, intPath.c_str(),
-                                       FALSE, 0, NULL, NULL,
-                                       requestPool.pool()),
-                NULL);
-    SVN_JNI_ERR(svn_wc_entry(&entry, intPath.c_str(), adm_access, FALSE,
-                             requestPool.pool()),
-                NULL);
-
-    return CreateJ::Info(entry);
-}
-
 void
 SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
                  svn_depth_t depth, StringArray &changelists,
@@ -1924,11 +1790,38 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
     Path checkedPath(path);
     SVN_JNI_ERR(checkedPath.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_info2(checkedPath.c_str(),
+    SVN_JNI_ERR(svn_client_info3(checkedPath.c_str(),
                                  pegRevision.revision(),
                                  revision.revision(),
                                  InfoCallback::callback,
                                  callback, depth,
                                  changelists.array(requestPool), ctx,
+                                 requestPool.pool()), );
+}
+
+void
+SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
+                 int stripCount, bool reverse, bool ignoreWhitespace,
+                 bool removeTempfiles, PatchCallback *callback)
+{
+    SVN_JNI_NULL_PTR_EX(patchPath, "patchPath", );
+    SVN_JNI_NULL_PTR_EX(targetPath, "targetPath", );
+
+    SVN::Pool requestPool;
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    Path checkedPatchPath(patchPath);
+    SVN_JNI_ERR(checkedPatchPath.error_occured(), );
+    Path checkedTargetPath(targetPath);
+    SVN_JNI_ERR(checkedTargetPath.error_occured(), );
+
+    SVN_JNI_ERR(svn_client_patch(checkedPatchPath.c_str(),
+                                 checkedTargetPath.c_str(),
+                                 dryRun, stripCount, reverse, ignoreWhitespace,
+                                 removeTempfiles,
+                                 PatchCallback::callback, callback,
+                                 ctx, requestPool.pool(),
                                  requestPool.pool()), );
 }

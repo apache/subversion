@@ -734,7 +734,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   if (! targets->nelts)
     {
       const char *bname;
-      svn_uri_split(common, &common, &bname, pool);
+      svn_uri_split(&common, &bname, common, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
     }
   else
@@ -756,7 +756,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
       if (resplit)
         {
           const char *bname;
-          svn_uri_split(common, &common, &bname, pool);
+          svn_uri_split(&common, &bname, common, pool);
           for (i = 0; i < targets->nelts; i++)
             {
               const char *path = APR_ARRAY_IDX(targets, i, const char *);
@@ -767,6 +767,11 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
     }
   qsort(targets->elts, targets->nelts, targets->elt_size,
         svn_sort_compare_paths);
+
+  /* ### This reparent may be problematic in limited-authz-to-common-parent
+     ### scenarios (compare issue #3242).  See also issue #3649. */
+  if (ra_session)
+    SVN_ERR(svn_ra_reparent(ra_session, common, pool));
 
   /* Create new commit items and add them to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))

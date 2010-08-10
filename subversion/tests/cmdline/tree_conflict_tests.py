@@ -46,7 +46,7 @@ AnyOutput = svntest.verify.AnyOutput
 
 # If verbose mode is enabled, print the LINE and a newline.
 def verbose_print(line):
-  if main.verbose_mode:
+  if main.options.verbose:
     print(line)
 
 # If verbose mode is enabled, print the (assumed newline-terminated) LINES.
@@ -107,6 +107,7 @@ def incoming_paths(root_dir, parent_dir):
     'F1' : os.path.join(root_dir,   "F1"),
     'F'  : os.path.join(parent_dir, "F"),
     'F2' : os.path.join(parent_dir, "F2-in"),
+    'F3' : os.path.join(root_dir,   "F3"),
     'D1' : os.path.join(root_dir,   "D1"),
     'D'  : os.path.join(parent_dir, "D"),
     'D2' : os.path.join(parent_dir, "D2-in"),
@@ -120,6 +121,7 @@ def localmod_paths(root_dir, parent_dir):
     'F1' : os.path.join(root_dir,   "F1"),
     'F'  : os.path.join(parent_dir, "F"),
     'F2' : os.path.join(parent_dir, "F2-local"),
+    'F3' : os.path.join(root_dir,   "F3"),
     'D1' : os.path.join(root_dir,   "D1"),
     'D'  : os.path.join(parent_dir, "D"),
     'D2' : os.path.join(parent_dir, "D2-local"),
@@ -127,8 +129,9 @@ def localmod_paths(root_dir, parent_dir):
 
 # Perform the action MODACTION on the WC items given by PATHS. The
 # available actions can be seen within this function.
-def modify(modaction, paths):
+def modify(modaction, paths, is_init=True):
   F1 = paths['F1']  # existing file to copy from
+  F3 = paths['F3']  # existing file to copy from
   F  = paths['F']   # target file
   F2 = paths['F2']  # non-existing file to copy/move to
   D1 = paths['D1']  # existing dir to copy from
@@ -161,7 +164,10 @@ def modify(modaction, paths):
     main.run_svn(None, 'add', D)
     main.run_svn(None, 'pset', 'dprop2', 'A prop of added dir D.', D)
   elif modaction == 'fC':  # file Copy (from F1)
-    main.run_svn(None, 'copy', F1, F)
+    if is_init:
+      main.run_svn(None, 'copy', F1, F)
+    else:
+      main.run_svn(None, 'copy', F3, F)
   elif modaction == 'dC':  # dir Copy (from D1)
     main.run_svn(None, 'copy', D1, D)
   elif modaction == 'fM':  # file Move (to F2)
@@ -199,6 +205,7 @@ def modify(modaction, paths):
 
 # File names:
 #   F1 = any existing file
+#   F3 = any existing file
 #   F  = the file-path being acted on
 #   F2 = any non-existent file-path
 #   D1 = any existing dir
@@ -316,8 +323,10 @@ def set_up_repos(wc_dir, br_dir, scenarios):
   # create the file F1 and dir D1 which the tests regard as pre-existing
   paths = incoming_paths(wc_dir, wc_dir)  # second arg is bogus but unimportant
   F1 = paths['F1']  # existing file to copy from
+  F3 = paths['F3']  # existing file to copy from
   main.file_write(F1, "This is initially file F1.\n")
-  main.run_svn(None, 'add', F1)
+  main.file_write(F3, "This is initially file F3.\n")
+  main.run_svn(None, 'add', F1, F3)
   D1 = paths['D1']  # existing dir to copy from
   main.run_svn(None, 'mkdir', D1)
 
@@ -411,7 +420,7 @@ def ensure_tree_conflict(sbox, operation,
 
       verbose_print("--- Making local mods")
       for modaction in loc_action:
-        modify(modaction, localmod_paths(".", target_path))
+        modify(modaction, localmod_paths(".", target_path), is_init=False)
       if commit_local_mods:
         run_and_verify_svn(None, AnyOutput, [],
                            'commit', target_path,
@@ -1191,6 +1200,42 @@ def up_add_onto_add_revert(sbox):
                         wc2_dir)
 
 
+#----------------------------------------------------------------------
+# Regression test for issue #3525 and #3533
+#
+def lock_update_only(sbox):
+  "lock status update shouldn't flag tree conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path_b = os.path.join(wc_b, fname)
+
+  # Lock a file as wc_author, and schedule the file for deletion.
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '-m', '', file_path)
+  svntest.main.run_svn(None, 'delete', file_path)
+
+  # In our other working copy, steal that lock.
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '-m', '', '--force', file_path)
+  
+  # Now update the first working copy.  It should appear as a no-op.
+  expected_disk = main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_status = get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='D ')
+  run_and_verify_update(wc_dir,
+                        None, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc_dir)
+
 
 #######################################################################
 # Run the tests
@@ -1221,6 +1266,7 @@ test_list = [ None,
               XFail(force_del_tc_is_target),
               XFail(query_absent_tree_conflicted_dir),
               XFail(up_add_onto_add_revert),
+              XFail(lock_update_only),
              ]
 
 if __name__ == '__main__':

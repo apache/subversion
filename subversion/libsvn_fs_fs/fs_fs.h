@@ -401,12 +401,6 @@ svn_error_t *svn_fs_fs__move_into_place(const char *old_filename,
                                         const char *perms_reference,
                                         apr_pool_t *pool);
 
-/* Match the perms on FILENAME to the PERMS_REFERENCE file if we're
-   not on a win32 system.  On win32, this is a no-op. */
-svn_error_t *svn_fs_fs__dup_perms(const char *filename,
-                                  const char *perms_reference,
-                                  apr_pool_t *pool);
-
 /* Sets *PATH to the path of REV in FS, whether in a pack file or not.
    Allocate in POOL. */
 svn_error_t *
@@ -441,9 +435,11 @@ svn_error_t *svn_fs_fs__revision_prop(svn_string_t **value_p, svn_fs_t *fs,
 /* Change, add, or delete a property on a revision REV in filesystem
    FS.  NAME gives the name of the property, and value, if non-NULL,
    gives the new contents of the property.  If value is NULL, then the
-   property will be deleted.  Do any temporary allocation in POOL.  */
+   property will be deleted.  If OLD_VALUE_P is not NULL, do nothing unless the
+   preexisting value is *OLD_VALUE_P.  Do any temporary allocation in POOL.  */
 svn_error_t *svn_fs_fs__change_rev_prop(svn_fs_t *fs, svn_revnum_t rev,
                                         const char *name,
+                                        const svn_string_t *const *old_value_p,
                                         const svn_string_t *value,
                                         apr_pool_t *pool);
 

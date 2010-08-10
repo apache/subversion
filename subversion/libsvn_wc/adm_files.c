@@ -217,7 +217,7 @@ svn_wc__text_base_path(const char **result_abspath,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  svn_dirent_split(local_abspath, &newpath, &base_name, pool);
+  svn_dirent_split(&newpath, &base_name, local_abspath, pool);
   *result_abspath = simple_extend(newpath,
                                   FALSE,
                                   SVN_WC__ADM_TEXT_BASE,
@@ -239,7 +239,7 @@ svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  svn_dirent_split(local_abspath, &newpath, &base_name, pool);
+  svn_dirent_split(&newpath, &base_name, local_abspath, pool);
   *result_abspath = simple_extend(newpath, TRUE, SVN_WC__ADM_TEXT_BASE,
                                   base_name, SVN_WC__BASE_EXT, pool);
 
@@ -257,7 +257,7 @@ svn_wc__text_revert_path(const char **result_abspath,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  svn_dirent_split(local_abspath, &newpath, &base_name, pool);
+  svn_dirent_split(&newpath, &base_name, local_abspath, pool);
   *result_abspath = simple_extend(newpath,
                                   FALSE,
                                   SVN_WC__ADM_TEXT_BASE,
@@ -589,29 +589,89 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
 
 svn_error_t *
-svn_wc__get_ultimate_base_md5_checksum(const svn_checksum_t **md5_checksum,
-                                       svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *result_pool,
-                                       apr_pool_t *scratch_pool)
+svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
+                                    const svn_checksum_t **md5_checksum,
+                                    svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
+  const svn_checksum_t *checksum;
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, md5_checksum,
+                                 NULL, NULL, NULL, NULL, NULL, &checksum,
                                  NULL, NULL, NULL,
                                  db, local_abspath,
-                                 scratch_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+                                 result_pool, scratch_pool);
+  if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      || checksum == NULL)
     {
       svn_error_clear(err);
-      *md5_checksum = NULL;
+      if (sha1_checksum)
+        *sha1_checksum = NULL;
+      if (md5_checksum)
+        *md5_checksum = NULL;
       return SVN_NO_ERROR;
     }
-  if (*md5_checksum && (*md5_checksum)->kind != svn_checksum_md5)
-    SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, db, local_abspath,
-                                        *md5_checksum,
-                                        scratch_pool, scratch_pool));
+
+  if (checksum->kind == svn_checksum_sha1)
+    {
+      if (sha1_checksum)
+        *sha1_checksum = checksum;
+      if (md5_checksum)
+        SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, db, local_abspath,
+                                            checksum,
+                                            result_pool, scratch_pool));
+    }
+  else
+    {
+      if (sha1_checksum)
+        SVN_ERR(svn_wc__db_pristine_get_sha1(sha1_checksum, db, local_abspath,
+                                             checksum,
+                                             result_pool, scratch_pool));
+      if (md5_checksum)
+        *md5_checksum = checksum;
+    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__get_working_checksums(const svn_checksum_t **sha1_checksum,
+                              const svn_checksum_t **md5_checksum,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  const svn_checksum_t *checksum;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &checksum,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               result_pool, scratch_pool));
+
+  if (checksum->kind == svn_checksum_sha1)
+    {
+      if (sha1_checksum)
+        *sha1_checksum = checksum;
+      if (md5_checksum)
+        SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, db, local_abspath,
+                                            checksum,
+                                            result_pool, scratch_pool));
+    }
+  else
+    {
+      if (sha1_checksum)
+        SVN_ERR(svn_wc__db_pristine_get_sha1(sha1_checksum, db, local_abspath,
+                                             checksum,
+                                             result_pool, scratch_pool));
+      if (md5_checksum)
+        *md5_checksum = checksum;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -669,7 +729,7 @@ svn_wc__prop_path(const char **prop_path,
 
       const char *base_name;
 
-      svn_dirent_split(path, prop_path, &base_name, pool);
+      svn_dirent_split(prop_path, &base_name, path, pool);
       *prop_path = simple_extend(*prop_path, FALSE, dirs[props_kind],
                                  base_name, extensions[props_kind], pool);
     }
@@ -771,8 +831,14 @@ init_adm(svn_wc__db_t *db,
 
   /** Make subdirectories. ***/
 
+#ifndef SVN_EXPERIMENTAL_PRISTINE
+  /* ### The absence of this directory is used to indicate to the
+     ### regression tests that SHA1 pristines are enabled.  This is a
+     ### temporary hack, to avoid bumping the wc format. */
+
   /* SVN_WC__ADM_TEXT_BASE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_TEXT_BASE, FALSE, pool));
+#endif
 
   /* SVN_WC__ADM_PROP_BASE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROP_BASE, FALSE, pool));

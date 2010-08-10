@@ -26,6 +26,7 @@ package org.tigris.subversion.javahl;
 import java.util.Set;
 import java.io.OutputStream;
 import java.io.InputStream;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -101,7 +102,8 @@ public class SVNAdmin
             throws ClientException
     {
         try {
-            aSVNAdmin.create(path, disableFsyncCommit, keepLog, configPath,
+            aSVNAdmin.create(new File(path), disableFsyncCommit, keepLog,
+                             configPath == null ? null : new File(configPath),
                              fstype);
         } catch (org.apache.subversion.javahl.ClientException ex) {
             throw new ClientException(ex);
@@ -120,7 +122,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.deltify(path,
+            aSVNAdmin.deltify(new File(path),
                               start == null ? null : start.toApache(),
                               end == null ? null : end.toApache());
         }
@@ -167,11 +169,11 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.dump(path, new OutputWrapper(dataOut),
-                           new OutputWrapper(errorOut),
+            aSVNAdmin.dump(new File(path), new OutputWrapper(dataOut),
                            start == null ? null : start.toApache(),
                            end == null ? null : end.toApache(),
-                           incremental, useDeltas);
+                           incremental, useDeltas,
+                           new ReposNotifyHandler(errorOut));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -192,7 +194,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.hotcopy(path, targetPath, cleanLogs);
+            aSVNAdmin.hotcopy(new File(path), new File(targetPath), cleanLogs);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -211,7 +213,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.listDBLogs(path, receiver);
+            aSVNAdmin.listDBLogs(new File(path), receiver);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -230,7 +232,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.listUnusedDBLogs(path, receiver);
+            aSVNAdmin.listUnusedDBLogs(new File(path), receiver);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -290,10 +292,10 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.load(path, new InputWrapper(dataInput),
-                           new OutputWrapper(messageOutput),
+            aSVNAdmin.load(new File(path), new InputWrapper(dataInput),
                            ignoreUUID, forceUUID, usePreCommitHook,
-                           usePostCommitHook, relativePath);
+                           usePostCommitHook, relativePath,
+                           new ReposNotifyHandler(messageOutput));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -312,7 +314,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.lstxns(path, receiver);
+            aSVNAdmin.lstxns(new File(path), receiver);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -330,7 +332,7 @@ public class SVNAdmin
     {
         try
         {
-            return aSVNAdmin.recover(path);
+            return aSVNAdmin.recover(new File(path), null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -349,7 +351,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.rmtxns(path, transactions);
+            aSVNAdmin.rmtxns(new File(path), transactions);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -372,7 +374,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.setRevProp(path,
+            aSVNAdmin.setRevProp(new File(path),
                                  rev == null ? null : rev.toApache(),
                                  "svn:log", message,
                                  !bypassHooks, !bypassHooks);
@@ -406,7 +408,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.setRevProp(path,
+            aSVNAdmin.setRevProp(new File(path),
                                  rev == null ? null : rev.toApache(),
                                  propName, propValue,
                                  usePreRevPropChangeHook,
@@ -434,9 +436,10 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.verify(path, new OutputWrapper(messageOut),
+            aSVNAdmin.verify(new File(path),
                              start == null ? null : start.toApache(),
-                             end == null ? null : end.toApache());
+                             end == null ? null : end.toApache(),
+                             new ReposNotifyHandler(messageOut));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -456,7 +459,8 @@ public class SVNAdmin
         try
         {
             Set<org.apache.subversion.javahl.Lock> aLocks =
-                                                    aSVNAdmin.lslocks(path);
+                                                    aSVNAdmin.lslocks(
+                                                        new File(path));
             Lock[] locks = new Lock[aLocks.size()];
 
             int i = 0;
@@ -486,7 +490,7 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.rmlocks(path, locks);
+            aSVNAdmin.rmlocks(new File(path), locks);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -545,6 +549,108 @@ public class SVNAdmin
         public void close() throws IOException
         {
             inputer.close();
+        }
+    }
+
+    private class ReposNotifyHandler
+        implements org.apache.subversion.javahl.callback.ReposNotifyCallback
+    {
+        private OutputInterface outputer;
+
+        public ReposNotifyHandler(OutputInterface outputer)
+        {
+            this.outputer = outputer;
+        }
+
+        public void onNotify(org.apache.subversion.javahl.ReposNotifyInformation
+                                                                           info)
+        {
+            String val;
+
+            switch (info.getAction())
+            {
+                case warning:
+                    val = info.getWarning();
+                    break;
+
+                case dump_rev_end:
+                    val = "* Dumped revision " + info.getRevision() + ".\n";
+                    break;
+
+                case verify_rev_end:
+                    val = "* Verified revision " + info.getRevision() + ".\n";
+                    break;
+
+                case load_txn_committed:
+                    if (info.getOldRevision() == Revision.SVN_INVALID_REVNUM)
+                        val = "\n------- Committed revision " +
+                              info.getNewRevision() + " >>>\n\n";
+                    else
+                        val = "\n------- Committed new rev " +
+                               info.getNewRevision() +
+                              " (loaded from original rev " +
+                              info.getOldRevision() +
+                              ") >>>\n\n";
+                    break;
+
+                case load_node_start:
+                    switch (info.getNodeAction())
+                    {
+                        case change:
+                            val = "     * editing path : " + info.getPath() +
+                                  " ...";
+                            break;
+
+                        case deleted:
+                            val = "     * deleting path : " + info.getPath() +
+                                  " ...";
+                            break;
+
+                        case add:
+                            val = "     * adding path : " + info.getPath() +
+                                  " ...";
+                            break;
+
+                        case replace:
+                            val = "     * replacing path : " + info.getPath() +
+                                  " ...";
+                            break;
+
+                        default:
+                            val = null;
+                    }
+                    break;
+
+                case load_node_done:
+                    val = " done.\n";
+                    break;
+
+                case load_copied_node:
+                    val = "COPIED...";
+                    break;
+
+                case load_txn_start:
+                    val = "<<< Started new transaction, based on " +
+                          "original revision " + info.getOldRevision() + "\n";
+                    break;
+
+                case load_normalized_mergeinfo:
+                    val = " removing '\\r' from svn:mergeinfo ...";
+                    break;
+
+                default:
+                    val = null;
+            }
+
+            if (val != null)
+                try 
+                {
+                    outputer.write(val.getBytes());
+                }
+                catch (IOException ex)
+                {
+                    ; // ignore
+                }
         }
     }
 }

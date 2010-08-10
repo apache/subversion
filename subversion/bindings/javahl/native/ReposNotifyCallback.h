@@ -20,44 +20,41 @@
  * ====================================================================
  * @endcopyright
  *
- * @file NotifyCallback.h
- * @brief Interface of the class NotifyCallback
+ * @file ReposNotifyCallback.h
+ * @brief Interface of the class ReposNotifyCallback
  */
 
-#ifndef NOTIFY2_H
-#define NOTIFY2_H
+#ifndef REPOSNOTIFYCALLBACK_H
+#define REPOSNOTIFYCALLBACK_H
 
 #include <jni.h>
-#include "svn_wc.h"
+#include "svn_repos.h"
 
 /**
  * This class passes notification from subversion to a Java object
  * (1.2 version).
  */
-class NotifyCallback
+class ReposNotifyCallback
 {
  private:
   /**
-   * The Java object to receive the notifications.  This is a global
-   * reference because it has to live longer than the
-   * SVNClient.notification call.
+   * The local reference to the Java object.
    */
   jobject m_notify;
-  NotifyCallback(jobject p_notify);
 
  public:
-  static NotifyCallback *makeCNotify(jobject notify);
-  ~NotifyCallback();
+  ReposNotifyCallback(jobject p_notify);
+  ~ReposNotifyCallback();
 
   /**
-   * Implementation of the svn_wc_notify_func_t API.
+   * Implementation of the svn_repos_notify_func_t API.
    *
    * @param baton notification instance is passed using this parameter
    * @param notify all the information about the event
    * @param pool An APR pool from which to allocate memory.
    */
   static void notify(void *baton,
-                     const svn_wc_notify_t *notify,
+                     const svn_repos_notify_t *notify,
                      apr_pool_t *pool);
 
   /**
@@ -66,8 +63,8 @@ class NotifyCallback
    * @param notify all the information about the event
    * @param pool An APR pool from which to allocate memory.
    */
-  void onNotify(const svn_wc_notify_t *notify,
+  void onNotify(const svn_repos_notify_t *notify,
                 apr_pool_t *pool);
 };
 
-#endif  // NOTIFY2_H
+#endif  // REPOSNOTIFYCALLBACK_H

@@ -41,7 +41,10 @@ and filename of a test program, optionally followed by '#' and a comma-
 separated list of test numbers; the default is to run all the tests in it.
 '''
 
-import os, sys
+# A few useful constants
+LINE_LENGTH = 40
+
+import os, sys, subprocess
 from datetime import datetime
 
 import getopt
@@ -215,12 +218,6 @@ class TestHarness:
   def _run_test(self, prog, test_nr, total_tests):
     "Run a single test. Return the test's exit code."
 
-    def quote(arg):
-      if sys.platform == 'win32':
-        return '"' + arg + '"'
-      else:
-        return arg
-
     if self.log:
       log = self.log
     else:
@@ -235,7 +232,8 @@ class TestHarness:
       # Using write here because we don't want even a trailing space
       test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
       sys.stdout.write('Running tests in %s' % (test_info, ))
-      sys.stdout.write('.'*(40 - len(test_info)))
+      sys.stdout.write('.'*(LINE_LENGTH - len(test_info)))
+      sys.stdout.flush()
 
     log.write('START: %s\n' % progbase)
     log.flush()
@@ -243,22 +241,23 @@ class TestHarness:
     start_time = datetime.now()
     if progbase[-3:] == '.py':
       progname = sys.executable
-      cmdline = [quote(progname),
-                 quote(os.path.join(self.srcdir, prog))]
+      cmdline = [progname,
+                 os.path.join(self.srcdir, prog)]
       if self.base_url is not None:
-        cmdline.append(quote('--url=' + self.base_url))
+        cmdline.append('--url=' + self.base_url)
       if self.enable_sasl is not None:
         cmdline.append('--enable-sasl')
       if self.parallel is not None:
         cmdline.append('--parallel')
       if self.config_file is not None:
-        cmdline.append(quote('--config-file=' + self.config_file))
+        cmdline.append('--config-file=' + self.config_file)
     elif os.access(prog, os.X_OK):
       progname = './' + progbase
-      cmdline = [quote(progname),
-                 quote('--srcdir=' + os.path.join(self.srcdir, progdir))]
+      cmdline = [progname,
+                 '--srcdir=' + os.path.join(self.srcdir, progdir)]
       if self.config_file is not None:
-        cmdline.append(quote('--config-file=' + self.config_file))
+        cmdline.append('--config-file=' + self.config_file)
+      cmdline.append('--trap-assertion-failures')
     else:
       print('Don\'t know what to do about ' + progbase)
       sys.exit(1)
@@ -268,15 +267,15 @@ class TestHarness:
     if self.cleanup is not None:
       cmdline.append('--cleanup')
     if self.fs_type is not None:
-      cmdline.append(quote('--fs-type=' + self.fs_type))
+      cmdline.append('--fs-type=' + self.fs_type)
     if self.http_library is not None:
-      cmdline.append(quote('--http-library=' + self.http_library))
+      cmdline.append('--http-library=' + self.http_library)
     if self.server_minor_version is not None:
-      cmdline.append(quote('--server-minor-version=' + self.server_minor_version))
+      cmdline.append('--server-minor-version=' + self.server_minor_version)
     if self.list_tests is not None:
       cmdline.append('--list')
     if self.svn_bin is not None:
-      cmdline.append(quote('--bin=' + self.svn_bin))
+      cmdline.append('--bin=' + self.svn_bin)
     if self.fsfs_sharding is not None:
       cmdline.append('--fsfs-sharding=%d' % self.fsfs_sharding)
     if self.fsfs_packing is not None:
@@ -326,31 +325,9 @@ class TestHarness:
     '''Execute the file PROGNAME in a subprocess, with ARGLIST as its
     arguments (a list/tuple of arg0..argN), redirecting standard output and
     error to the log file. Return the command's exit code.'''
-    def restore_streams(stdout, stderr):
-      os.dup2(stdout, 1)
-      os.dup2(stderr, 2)
-      os.close(stdout)
-      os.close(stderr)
-
-    if self.log:
-      sys.stdout.flush()
-      sys.stderr.flush()
-      self.log.flush()
-      old_stdout = os.dup(1)
-      old_stderr = os.dup(2)
-    try:
-      if self.log:
-        os.dup2(self.log.fileno(), 1)
-        os.dup2(self.log.fileno(), 2)
-      rv = os.spawnv(os.P_WAIT, progname, arglist)
-    except:
-      if self.log:
-        restore_streams(old_stdout, old_stderr)
-      raise
-    else:
-      if self.log:
-        restore_streams(old_stdout, old_stderr)
-      return rv
+    prog = subprocess.Popen(arglist, stdout=self.log, stderr=self.log)
+    prog.wait()
+    return prog.returncode
 
 
 def main():

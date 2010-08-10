@@ -451,6 +451,16 @@ create_getlock_body(void *baton,
   return buckets;
 }
 
+static apr_status_t
+setup_getlock_headers(serf_bucket_t *headers,
+                      void *baton,
+                      apr_pool_t *pool)
+{
+  serf_bucket_headers_set(headers, "Depth", "0");
+
+  return APR_SUCCESS;
+}
+
 static serf_bucket_t*
 create_lock_body(void *baton,
                  serf_bucket_alloc_t *alloc,
@@ -529,23 +539,14 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   handler->body_delegate = create_getlock_body;
   handler->body_delegate_baton = lock_ctx;
 
+  handler->header_delegate = setup_getlock_headers;
+  handler->header_delegate_baton = lock_ctx;
+
   handler->response_handler = handle_lock;
   handler->response_baton = parser_ctx;
 
   svn_ra_serf__request_create(handler);
   err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, pool);
-  if (err)
-    {
-      /* A 403 forbidden error indicates there's no lock, which we can ignore
-         here.
-
-         ### BH: Is this assumption really ok or are we ignoring real errors? */
-      if (lock_ctx->status_code == 403)
-        {
-          svn_error_clear(err);
-          err = NULL;
-        }
-    }
 
   if (status_code == 404)
     {

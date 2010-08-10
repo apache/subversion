@@ -123,7 +123,8 @@ extern "C" {
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 16
+#define SVN_WC__VERSION 17
+#define SVN_EXPERIMENTAL_PRISTINE
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */
@@ -157,7 +158,15 @@ extern "C" {
 #define SVN_WC__USES_DAV_CACHE 13
 
 /* A version < this does not store properties in wc.db.  */
-#define SVN_WC__PROPS_IN_DB 17
+#define SVN_WC__PROPS_IN_DB 18
+
+/* Return true iff error E indicates an "is not a working copy" type
+   of error, either because something wasn't a working copy at all, or
+   because it's a working copy from a previous version (in need of
+   upgrade). */
+#define SVN_WC__ERR_IS_NOT_CURRENT_WC(e) \
+            ((e->apr_err == SVN_ERR_WC_NOT_WORKING_COPY) || \
+             (e->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
 
 
 
@@ -520,15 +529,6 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc_get_ancestry(). */
-svn_error_t *
-svn_wc__internal_get_ancestry(const char **url,
-                              svn_revnum_t *rev,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
-
 /* Library-internal version of svn_wc_ensure_adm4(). */
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
@@ -573,6 +573,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               apr_pool_t *scratch_pool);
 
 
+/* Library-internal version of svn_wc__node_is_replaced(). */
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              svn_wc__db_t *db,
@@ -580,6 +581,7 @@ svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              apr_pool_t *scratch_pool);
 
 
+/* Library-internal version of svn_wc__node_get_url(). */
 svn_error_t *
 svn_wc__internal_node_get_url(const char **url,
                               svn_wc__db_t *db,
@@ -588,11 +590,21 @@ svn_wc__internal_node_get_url(const char **url,
                               apr_pool_t *scratch_pool);
 
 
+/* Library-internal version of svn_wc__node_is_file_external(). */
 svn_error_t *
 svn_wc__internal_is_file_external(svn_boolean_t *file_external,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
                                   apr_pool_t *scratch_pool);
+
+/* Library-internal version of svn_wc__node_get_schedule(). */
+svn_error_t *
+svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
+                                   svn_boolean_t *copied,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *scratch_pool);
+
 
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at

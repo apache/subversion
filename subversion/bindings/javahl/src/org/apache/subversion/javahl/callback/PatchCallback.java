@@ -23,27 +23,18 @@
 
 package org.apache.subversion.javahl.callback;
 
-import org.apache.subversion.javahl.NotifyInformation;
-
-import java.util.EventListener;
-
 /**
- * Subversion notification interface.
- *
- * Implement this interface to provide a custom notification handler
- * to the SVNClient class.  If you need to pass extra information to
- * the notification handler add it to your implementing class.
- *
- * @since 1.2
+ * This interface is invoked before each patch in a
+ * SVNClientInterface.patch call.
  */
-public interface NotifyCallback extends EventListener
+public interface PatchCallback
 {
     /**
-     * Handler for Subversion notifications.
-     *
-     * Override this function to allow Subversion to
-     * send notifications
-     * @param info everything to know about this event
+     * the method will be called for every line in a file.
+     * @param path        the path.
+     * @param properties  the properties on the path.
+     * @return            return TRUE to filter out the prospective patch
      */
-    public void onNotify(NotifyInformation info);
+    public boolean singlePatch(String pathFromPatchfile, String patchPath,
+                               String rejectPath);
 }

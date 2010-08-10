@@ -214,6 +214,60 @@ svn_wc__wq_build_loggy(svn_skel_t **work_item,
                        apr_pool_t *result_pool);
 
 
+/* ### Temporary helper to store text conflict marker locations as a wq
+   ### operation. Eventually the data must be stored in the pristine store+db
+   ### before the wq runs (within the operation transaction) and then a wq
+   ### operation will create the markers.
+
+   Set *WORK_ITEM to a new work item that sets the conflict marker values
+   on ACTUAL_NODE to the passed values or to NULL if NULL is passed.
+
+   Allocate the result in RESULT_POOL and perform temporary allocations
+   in SCRATCH_POOL
+*/
+svn_error_t *
+svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
+                                               svn_wc__db_t *db,
+                                               const char *local_abspath,
+                                               const char *old_basename,
+                                               const char *new_basename,
+                                               const char *wrk_basename,
+                                               apr_pool_t *result_pool,
+                                               apr_pool_t *scratch_pool);
+
+/* ### Temporary helper to store the property conflict marker location as a wq
+   ### operation. Eventually the data must be stored in the pristine store+db
+   ### before the wq runs (within the operation transaction) and then a wq
+   ### operation will create the marker.
+
+   Set *WORK_ITEM to a new work item that sets the conflict marker values
+   on ACTUAL_NODE to the passed values or to NULL if NULL is passed.
+
+   Allocate the result in RESULT_POOL and perform temporary allocations
+   in SCRATCH_POOL
+*/
+svn_error_t *
+svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
+                                                  svn_wc__db_t *db,
+                                                  const char *local_abspath,
+                                                  const char *prej_basename,
+                                                  apr_pool_t *result_pool,
+                                                  apr_pool_t *scratch_pool);
+
+/* Set *WORK_ITEM to a new work item that will create the file NEW_ABSPATH
+ * with the pristine text identified by PRISTINE_SHA1, translated into
+ * working-copy form according to the versioned properties of
+ * VERSIONED_ABSPATH that are current when the work item is executed.  The
+ * work item will overwrite NEW_ABSPATH if that already exists. */
+svn_error_t *
+svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
+                                         svn_wc__db_t *db,
+                                         const char *versioned_abspath,
+                                         const char *new_abspath,
+                                         const svn_checksum_t *pristine_sha1,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
 svn_error_t *
 svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
                                    const char *local_abspath,
@@ -232,6 +286,7 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           const svn_checksum_t *new_checksum,
                           apr_hash_t *new_dav_cache,
                           svn_boolean_t keep_changelist,
+                          svn_boolean_t no_unlock,
                           apr_pool_t *scratch_pool);
 
 

@@ -53,7 +53,8 @@ num_backups = int(os.environ.get("SVN_HOTBACKUP_BACKUPS_NUMBER", 64))
 archive_map = {
   'gz'  : ".tar.gz",
   'bz2' : ".tar.bz2",
-  'zip' : ".zip"
+  'zip' : ".zip",
+  'zip64' : ".zip"
   }
 
 # Chmod recursively on a whole subtree
@@ -100,9 +101,10 @@ the BACKUP_PATH location, named after the youngest revision.
 
 Options:
   --archive-type=FMT Create an archive of the backup. FMT can be one of:
-                       bz2 : Creates a bzip2 compressed tar file.
-                       gz  : Creates a gzip compressed tar file.
-                       zip : Creates a compressed zip file.
+                       bz2  : Creates a bzip2 compressed tar file.
+                       gz   : Creates a gzip compressed tar file.
+                       zip  : Creates a compressed zip file.
+                       zip64: Creates a zip64 file (can be > 2GB).
   --num-backups=N    Number of prior backups to keep around (0 to keep all).
   --help      -h     Print this help message and exit.
 
@@ -284,7 +286,7 @@ if archive_type:
       err_msg = "Tar failed: " + str(e)
       err_code = -3
 
-  elif archive_type == 'zip':
+  elif archive_type == 'zip' or archive_type == 'zip64':
     try:
       import zipfile
       
@@ -299,7 +301,7 @@ if archive_type:
             for dirpath, dirs, files in os.walk(path):
               add_to_zip(zp, path, dirpath, dirs + files)
             
-      zp = zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED)
+      zp = zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED, archive_type == 'zip64')
       for dirpath, dirs, files in os.walk(backup_subdir):
         add_to_zip(zp, backup_dir, dirpath, dirs + files)
       zp.close()

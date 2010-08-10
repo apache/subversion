@@ -63,7 +63,7 @@ public class SVNAdminTests extends SVNTests
     {
         OneTest thisTest = new OneTest(false);
         final String MSG = "Initial repository creation";
-        admin.setRevProp(thisTest.getRepositoryPath(), Revision.getInstance(0),
+        admin.setRevProp(thisTest.getRepository(), Revision.getInstance(0),
                          "svn:log", MSG, false, false);
         Map<String, byte[]> pdata = client.revProperties(
                                       makeReposUrl(thisTest.getRepository()),
@@ -72,6 +72,32 @@ public class SVNAdminTests extends SVNTests
         String logMessage = new String(pdata.get("svn:log"));
         assertEquals("expect rev prop change to take effect", MSG, logMessage);
     }
+
+    /* This test only tests the call down to the C++ layer. */
+    public void testVerify()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(false);
+        admin.verify(thisTest.getRepository(), Revision.getInstance(0),
+                     Revision.HEAD, null);
+    }
+
+    /* This test only tests the call down to the C++ layer. */
+    public void testUpgrade()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(false);
+        admin.upgrade(thisTest.getRepository(), null);
+    }
+
+    /* This test only tests the call down to the C++ layer. */
+    public void testPack()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(false);
+        admin.pack(thisTest.getRepository(), null);
+    }
+
     public void testLoadRepo()
         throws SubversionException, IOException
     {
@@ -101,9 +127,8 @@ public class SVNAdminTests extends SVNTests
                 "subversion/bindings/javahl");
         File dump = new File(testSrcdir, "tests/data/issue2979.dump");
         InputStream input = new FileInputStream(dump);
-        OutputStream loadLog = new IgnoreOutputer();
-        admin.load(thisTest.getRepositoryPath(),
-                   input, loadLog, true, true, false, false, null);
+        admin.load(thisTest.getRepository(),
+                   input, true, true, false, false, null, null);
         // should have two revs after the load
         infoHolder[0] = null;
         client.info2(repoUrl, Revision.HEAD, Revision.HEAD,

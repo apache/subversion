@@ -61,14 +61,14 @@ GNU_ICONV_VER	= 1.13.1
 APR_UTIL_VER	= 1.3.9
 HTTPD_VER	= 2.2.15
 NEON_VER	= 0.29.3
-SERF_VER	= 0.6.1
+SERF_VER	= 0.6.x
 SQLITE_VER	= 3.6.23.1
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
 GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
-SERF_DIST	= serf-$(SERF_VER).tar.gz
+#SERF_DIST	= serf-$(SERF_VER).tar.gz
 SQLITE_DIST	= sqlite-$(SQLITE_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
 
@@ -82,14 +82,15 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 FETCH_CMD	= wget -c
 
 SUBVERSION_REPOS_URL = https://svn.apache.org/repos/asf/subversion
-BDB_URL		= http://download.oracle.com/berkeley-db/$(BDB_DIST)
+BDB_URL		= http://ftp2.de.freebsd.org/pub/FreeBSD/distfiles/bdb/$(BDB_DIST)
 APR_URL		= http://svn.apache.org/repos/asf/apr/apr
 APR_ICONV_URL	= ftp://ftp.fu-berlin.de/unix/www/apache/apr/$(APR_ICONV_DIST)
 GNU_ICONV_URL	= ftp://ftp.fu-berlin.de/unix/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= http://svn.apache.org/repos/asf/apr/apr-util
 HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
-SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
+#SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
+SERF_URL	= http://serf.googlecode.com/svn/branches/$(SERF_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -249,7 +250,7 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 			> $(APR_SRCDIR)/build/apr_hints.m4
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
-		&& $(APR_SRCDIR)/configure \
+		&& env CFLAGS="-O0 -g" $(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
 		--disable-threads
@@ -323,22 +324,58 @@ gnu-iconv-reset:
 
 gnu-iconv-clean:
 	-(cd $(GNU_ICONV_OBJDIR) && make clean)
+	rm -f $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff
+	rm -f $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
 
 # fetch distfile for gnu-iconv
 $(DISTDIR)/$(GNU_ICONV_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(GNU_ICONV_URL)
 
-# retrieve gnu-iconv
-$(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST)
+$(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
 	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
+	echo "--- lib/encodings.def.orig	Wed Oct 24 23:41:41 2007" > $@
+	echo "+++ lib/encodings.def	Wed Oct 24 23:43:47 2007" >> $@
+	echo "@@ -37,6 +37,7 @@" >> $@
+	echo " " >> $@
+	echo " " >> $@
+	echo " DEFENCODING(( \"US-ASCII\",               /* IANA */" >> $@
+	echo "+              \"646\"," >> $@
+	echo "               \"ASCII\",                  /* IANA, JDK 1.1 */" >> $@
+	echo "               \"ISO646-US\",              /* IANA */" >> $@
+	echo "               \"ISO_646.IRV:1991\",       /* IANA */" >> $@
+
+$(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
+	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
+	echo "--- lib/aliases.gperf.orig	Wed Oct 24 23:41:32 2007" > $@
+	echo "+++ lib/aliases.gperf	Wed Oct 24 23:47:38 2007" >> $@
+	echo "@@ -10,6 +10,7 @@ struct alias { int name; unsigned int encoding_index; " >> $@
+	echo " %pic" >> $@
+	echo " %%" >> $@
+	echo " US-ASCII, ei_ascii" >> $@
+	echo "+646, ei_ascii" >> $@
+	echo " ASCII, ei_ascii" >> $@
+	echo " ISO646-US, ei_ascii" >> $@
+	echo " ISO_646.IRV:1991, ei_ascii" >> $@
+
+# retrieve gnu-iconv
+# Add 646 as an alias for ASCII to fix prop_test 22 on OpenBSD
+$(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST) \
+		$(GNU_ICONV_OBJDIR)/lib_encodings.def.diff \
+		$(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GNU_ICONV_DIST)
+	cd $(SRCDIR)/libiconv-$(GNU_ICONV_VER) && \
+		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff && \
+		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
 	touch $@
 
 # configure gnu-iconv
 $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
+	cd $(SRCDIR)/libiconv-${GNU_ICONV_VER} && \
+		${MAKE} -f Makefile.devel lib/aliases.h
 	cd $(GNU_ICONV_OBJDIR) \
 		&& env CFLAGS="-g" $(GNU_ICONV_SRCDIR)/configure \
-		--prefix=$(PREFIX)/iconv
+		--prefix=$(PREFIX)/iconv \
+		--enable-extra-encodings
 	touch $@
 
 # compile gnu-iconv
@@ -403,6 +440,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved
 	cd $(APR_UTIL_SRCDIR) && ./buildconf --with-apr=$(APR_SRCDIR)
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
+			CFLAGS="-O0 -g" \
 			$(APR_UTIL_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
@@ -505,9 +543,9 @@ neon-reset:
 neon-clean:
 	-(cd $(NEON_OBJDIR) && make clean)
 
-# fetch distfile for serf
-$(DISTDIR)/$(SERF_DIST):
-	cd $(DISTDIR) && $(FETCH_CMD) $(SERF_URL)
+# fetch distfile for neon
+$(DISTDIR)/$(NEON_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
 
 # retrieve neon
 $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
@@ -552,21 +590,30 @@ serf-clean:
 	-(cd $(SERF_SRCDIR) && ./serfmake clean)
 
 
-# fetch distfile for neon
-$(DISTDIR)/$(NEON_DIST):
-	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
+# fetch distfile for serf
+#$(DISTDIR)/$(SERF_DIST):
+#	cd $(DISTDIR) && $(FETCH_CMD) $(SERF_URL)
 #
 # retrieve serf
-$(SERF_OBJDIR)/.retrieved: $(DISTDIR)/$(SERF_DIST)
+#$(SERF_OBJDIR)/.retrieved: $(DISTDIR)/$(SERF_DIST)
+#	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
+#	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SERF_DIST)
+#	cd $(SRCDIR)/serf-$(SERF_VER) && \
+#		svn diff -c1394 http://serf.googlecode.com/svn | patch -p2
+#	touch $@
+
+# retrieve serf if not present yet
+$(SERF_OBJDIR)/.retrieved:
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
-	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SERF_DIST)
+	if [ ! -d $(SERF_SRCDIR) ]; then \
+		svn export $(SERF_URL) $(SERF_SRCDIR); \
+	fi
 	touch $@
 
 # compile serf (serf won't compile outside its source tree)
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved
 	cd $(SERF_SRCDIR) && \
-		./serfmake --with-apr=$(PREFIX)/apr \
-			--with-apr-util=$(PREFIX)/apr \
+		env CFLAGS="-O0 -g" ./serfmake --with-apr=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf \
 			build
 	touch $@

@@ -51,18 +51,27 @@
    accordingly. */
 struct status_baton
 {
-  svn_boolean_t deleted_in_repos;          /* target is deleted in repos */
-  apr_hash_t *changelist_hash;             /* keys are changelist names */
-  svn_wc_status_func4_t real_status_func;  /* real status function */
-  void *real_status_baton;                 /* real status baton */
-  const char *anchor_abspath;              /* Absolute path of anchor */
-  const char *anchor_relpath;              /* Relative path of anchor */
-  apr_hash_t *ignored_props;               /* props to ignore mods to */
-  svn_wc_context_t *wc_ctx;                /* working copy context */
-  svn_boolean_t no_ignore;            /* Same as svn_client_status5() */
-  svn_boolean_t get_all;              /* Same as svn_client_status5() */
+  svn_boolean_t deleted_in_repos;             /* target is deleted in repos */
+  apr_hash_t *changelist_hash;                /* keys are changelist names */
+  svn_client_status_func_t real_status_func;  /* real status function */
+  void *real_status_baton;                    /* real status baton */
+  const char *anchor_abspath;                 /* Absolute path of anchor */
+  const char *anchor_relpath;                 /* Relative path of anchor */
+  apr_hash_t *ignored_props;                  /* props to ignore mods to */
+  svn_wc_context_t *wc_ctx;                   /* working copy context */
+  svn_boolean_t no_ignore;                    /* Same as svn_client_status5() */
+  svn_boolean_t get_all;                      /* Same as svn_client_status5() */
 };
 
+
+/* Create svn_client_status_t from svn_wc_satus3_t */
+static svn_error_t *
+create_client_status(svn_client_status_t **cst,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     const svn_wc_status3_t *status,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
 /* A status callback function which wraps the *real* status
    function/baton.   This sucker takes care of any status tweaks we
@@ -78,6 +87,7 @@ tweak_status(void *baton,
 {
   struct status_baton *sb = baton;
   const char *path = local_abspath;
+  svn_client_status_t *cst;
 
   /* If we know that the target was deleted in HEAD of the repository,
      we need to note that fact in all the status structures that come
@@ -134,8 +144,11 @@ tweak_status(void *baton,
         }
     }
 
+  SVN_ERR(create_client_status(&cst, sb->wc_ctx, local_abspath, status,
+                               scratch_pool, scratch_pool));
+
   /* Call the real status function/baton. */
-  return sb->real_status_func(sb->real_status_baton, path, status,
+  return sb->real_status_func(sb->real_status_baton, path, cst,
                               scratch_pool);
 }
 
@@ -146,6 +159,7 @@ typedef struct report_baton_t {
   /* The common ancestor URL of all paths included in the report. */
   char *ancestor;
   void *set_locks_baton;
+  svn_depth_t depth;
   svn_client_ctx_t *ctx;
   /* Pool to store locks in. */
   apr_pool_t *pool;
@@ -186,14 +200,17 @@ reporter_link_path(void *report_baton, const char *path, const char *url,
   const char *ancestor;
   apr_size_t len;
 
-  ancestor = svn_dirent_get_longest_ancestor(url, rb->ancestor, pool);
+  ancestor = svn_uri_get_longest_ancestor(url, rb->ancestor, pool);
 
   /* If we got a shorter ancestor, truncate our current ancestor.
      Note that svn_dirent_get_longest_ancestor will allocate its return
      value even if it identical to one of its arguments. */
   len = strlen(ancestor);
   if (len < strlen(rb->ancestor))
-    rb->ancestor[len] = '\0';
+    {
+      rb->ancestor[len] = '\0';
+      rb->depth = svn_depth_infinity;
+    }
 
   return rb->wrapped_reporter->link_path(rb->wrapped_report_baton, path, url,
                                          revision, depth, start_empty,
@@ -220,7 +237,7 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
   /* The locks need to live throughout the edit.  Note that if the
      server doesn't support lock discovery, we'll just not do locky
      stuff. */
-  err = svn_ra_get_locks(ras, &locks, "", rb->pool);
+  err = svn_ra_get_locks2(ras, &locks, "", rb->depth, rb->pool);
   if (err && ((err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
               || (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)))
     {
@@ -266,10 +283,9 @@ static svn_ra_reporter3_t lock_fetch_reporter = {
 
 svn_error_t *
 svn_client_status5(svn_revnum_t *result_rev,
+                   svn_client_ctx_t *ctx,
                    const char *path,
                    const svn_opt_revision_t *revision,
-                   svn_wc_status_func4_t status_func,
-                   void *status_baton,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
@@ -277,7 +293,8 @@ svn_client_status5(svn_revnum_t *result_rev,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t ignore_mergeinfo,
                    const apr_array_header_t *changelists,
-                   svn_client_ctx_t *ctx,
+                   svn_client_status_func_t status_func,
+                   void *status_baton,
                    apr_pool_t *pool)  /* ### aka scratch_pool */
 {
   struct status_baton sb;
@@ -499,14 +516,19 @@ svn_client_status5(svn_revnum_t *result_rev,
           /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR(svn_ra_do_status2(ra_session, &rb.wrapped_reporter,
                                     &rb.wrapped_report_baton,
-                                    target_basename, revnum, depth, editor,
-                                    edit_baton, pool));
+                                    target_basename, revnum, svn_depth_unknown,
+                                    editor, edit_baton, pool));
 
           /* Init the report baton. */
           rb.ancestor = apr_pstrdup(pool, URL); /* Edited later */
           rb.set_locks_baton = set_locks_baton;
           rb.ctx = ctx;
           rb.pool = pool;
+
+          if (depth == svn_depth_unknown)
+            rb.depth = svn_depth_infinity;
+          else
+            rb.depth = depth;
 
           SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                         SVN_RA_CAPABILITY_DEPTH, pool));
@@ -573,11 +595,155 @@ svn_client_status5(svn_revnum_t *result_rev,
      in the future.
   */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    SVN_ERR(svn_client__do_external_status(externals_store.externals_new,
-                                           status_func, status_baton,
+    SVN_ERR(svn_client__do_external_status(ctx, externals_store.externals_new,
                                            depth, get_all,
                                            update, no_ignore, ignored_props,
-                                           ctx, pool));
+                                           status_func, status_baton, pool));
 
   return SVN_NO_ERROR;
 }
+
+svn_client_status_t *
+svn_client_status_dup(const svn_client_status_t *status,
+                      apr_pool_t *result_pool)
+{
+  svn_client_status_t *st = apr_palloc(result_pool, sizeof(*st));
+
+  *st = *status;
+
+  if (status->local_abspath)
+    st->local_abspath = apr_pstrdup(result_pool, status->local_abspath);
+
+  if (status->repos_root_url)
+    st->repos_root_url = apr_pstrdup(result_pool, status->repos_root_url);
+
+  if (status->repos_relpath)
+    st->repos_relpath = apr_pstrdup(result_pool, status->repos_relpath);
+
+  if (status->changed_author)
+    st->changed_author = apr_pstrdup(result_pool, status->changed_author);
+
+  if (status->lock)
+    st->lock = svn_lock_dup(status->lock, result_pool);
+
+  if (status->changelist)
+    st->changelist = apr_pstrdup(result_pool, status->changelist);
+
+  if (status->repos_lock)
+    st->repos_lock = svn_lock_dup(status->repos_lock, result_pool);
+
+  if (status->backwards_compatibility_baton)
+    {
+      const svn_wc_status3_t *wc_st = status->backwards_compatibility_baton;
+
+      st->backwards_compatibility_baton = svn_wc_dup_status3(wc_st,
+                                                             result_pool);
+    }
+
+  return st;
+}
+
+/* Create a svn_client_status_t structure *CST for LOCAL_ABSPATH, shallow
+ * copying data from *STATUS wherever possible and retrieving the other values
+ * where needed. Peform temporary allocations in SCRATCH_POOL and allocate the
+ * result in RESULT_POOL
+ */
+static svn_error_t *
+create_client_status(svn_client_status_t **cst,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     const svn_wc_status3_t *status,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  *cst = apr_pcalloc(result_pool, sizeof(**cst));
+
+  (*cst)->kind = status->kind;
+  (*cst)->local_abspath = local_abspath;
+  (*cst)->versioned = status->versioned;
+
+  (*cst)->conflicted = status->conflicted;
+
+  (*cst)->node_status = status->node_status;
+  (*cst)->text_status = status->text_status;
+  (*cst)->prop_status = status->prop_status;
+
+  (*cst)->switched = status->switched;
+
+  if (status->kind == svn_node_dir)
+    SVN_ERR(svn_wc_locked2(NULL, &(*cst)->locked, wc_ctx, local_abspath,
+                           scratch_pool));
+
+  (*cst)->copied = status->copied;
+  (*cst)->revision = status->revision;
+
+  (*cst)->changed_rev = status->changed_rev;
+  (*cst)->changed_date = status->changed_date;
+  (*cst)->changed_author = status->changed_author;
+
+  (*cst)->repos_root_url = status->repos_root_url;
+  (*cst)->repos_relpath = status->repos_relpath;
+
+  (*cst)->switched = status->switched;
+  (*cst)->file_external = FALSE;
+
+  if (status->versioned
+      && status->switched
+      && status->kind == svn_node_file)
+    {
+      svn_boolean_t is_file_external;
+      SVN_ERR(svn_wc__node_is_file_external(&is_file_external, wc_ctx,
+                                            local_abspath, scratch_pool));
+
+      if (is_file_external)
+        {
+          (*cst)->file_external = is_file_external;
+          (*cst)->switched = FALSE; /* ### Keep switched true now? */
+        }
+    }
+
+  (*cst)->lock = status->lock;
+
+  (*cst)->changelist = status->changelist;
+  (*cst)->depth = status->depth;
+
+  /* Out of date information */
+  (*cst)->ood_kind = status->ood_kind;
+  (*cst)->repos_node_status = status->repos_node_status;
+  (*cst)->repos_text_status = status->repos_text_status;
+  (*cst)->repos_prop_status = status->repos_prop_status;
+  (*cst)->repos_lock = status->repos_lock;
+
+  (*cst)->ood_changed_rev = status->ood_changed_rev;
+  (*cst)->ood_changed_date = status->ood_changed_date;
+  (*cst)->ood_changed_author = status->ood_changed_author;
+
+  /* When changing the value of backwards_compatibility_baton, also
+     change its use in status4_wrapper_func in deprecated.c */
+  (*cst)->backwards_compatibility_baton = status;
+
+  if (status->versioned && status->conflicted)
+    {
+      svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+
+      /* Note: This checks the on disk markers to automatically hide
+               text/property conflicts that are hidden by removing their
+               markers */
+      SVN_ERR(svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                                   &tree_conflicted, wc_ctx, local_abspath,
+                                   scratch_pool));
+
+      if (text_conflicted)
+        (*cst)->text_status = svn_wc_status_conflicted;
+
+      if (prop_conflicted)
+        (*cst)->prop_status = svn_wc_status_conflicted;
+
+      /* ### Also set this for tree_conflicts? */
+      if (text_conflicted || prop_conflicted)
+        (*cst)->node_status = svn_wc_status_conflicted;
+    }
+
+  return SVN_NO_ERROR;
+}
+

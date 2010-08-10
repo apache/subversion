@@ -60,10 +60,31 @@ generate_status_code(enum svn_wc_status_kind status)
     }
 }
 
+/* Return the combined STATUS as shown in 'svn status' based
+   on the node status and text status */
+static enum svn_wc_status_kind
+combined_status(const svn_client_status_t *status)
+{
+  enum svn_wc_status_kind new_status = status->node_status;
+
+  switch (status->node_status)
+    {
+      case svn_wc_status_modified:
+      case svn_wc_status_conflicted:
+        /* This value might be the property status */
+        new_status = status->text_status;
+        break;
+      default:
+        break;
+    }
+
+  return new_status;
+}
+
 /* Return the single character representation of the switched column
    status. */
 static char
-generate_switch_column_code(const svn_wc_status3_t *status)
+generate_switch_column_code(const svn_client_status_t *status)
 {
   if (status->switched)
     return 'S';
@@ -105,16 +126,20 @@ print_status(const char *path,
              svn_boolean_t detailed,
              svn_boolean_t show_last_committed,
              svn_boolean_t repos_locks,
-             const svn_wc_status3_t *status,
+             const svn_client_status_t *status,
              unsigned int *text_conflicts,
              unsigned int *prop_conflicts,
              unsigned int *tree_conflicts,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
-  enum svn_wc_status_kind text_status = status->text_status;
+  enum svn_wc_status_kind node_status = status->node_status;
+  enum svn_wc_status_kind prop_status = status->prop_status;
   char tree_status_code = ' ';
   const char *tree_desc_line = "";
+
+  if (node_status == svn_wc_status_added)
+      prop_status = svn_wc_status_none;
 
   /* To indicate this node is the victim of a tree conflict, we show
      'C' in the tree-conflict column, overriding any other status.
@@ -123,12 +148,10 @@ print_status(const char *path,
   if (status->conflicted)
     {
       const char *desc;
-      const char *local_abspath;
+      const char *local_abspath = status->local_abspath;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
       svn_boolean_t tree_conflicted;
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
       SVN_ERR(svn_wc__node_check_conflicts(&prop_conflicted,
                                            &text_conflicted,
@@ -166,25 +189,22 @@ print_status(const char *path,
          ### revision=0.  This is wrong, and we're trying to remedy that,
          ### but for the sake of test suite and code sanity now in WC-NG,
          ### we'll just maintain the old behavior. */
-      if (! status->entry)
+      if (! status->versioned)
         working_rev = "";
+      else if (status->copied)
+        working_rev = "-";
       else if (! SVN_IS_VALID_REVNUM(status->revision))
         {
-          if (status->copied)
-            working_rev = "-";
-          else if (text_status == svn_wc_status_added
-              || text_status == svn_wc_status_replaced)
+          if (node_status == svn_wc_status_added ||
+              node_status == svn_wc_status_replaced)
             working_rev = "0";
           else
             working_rev = " ? ";
         }
-      else if (status->copied)
-        working_rev = "-";
       else
         working_rev = apr_psprintf(pool, "%ld", status->revision);
 
-      if (status->repos_text_status != svn_wc_status_none
-          || status->repos_prop_status != svn_wc_status_none)
+      if (status->repos_node_status != svn_wc_status_none)
         ood_status = '*';
       else
         ood_status = ' ';
@@ -193,9 +213,9 @@ print_status(const char *path,
         {
           if (status->repos_lock)
             {
-              if (status->lock_token)
+              if (status->lock)
                 {
-                  if (strcmp(status->repos_lock->token, status->lock_token)
+                  if (strcmp(status->repos_lock->token, status->lock->token)
                       == 0)
                     lock_status = 'K';
                   else
@@ -204,13 +224,13 @@ print_status(const char *path,
               else
                 lock_status = 'O';
             }
-          else if (status->lock_token)
+          else if (status->lock)
             lock_status = 'B';
           else
             lock_status = ' ';
         }
       else
-        lock_status = (status->lock_token) ? 'K' : ' ';
+        lock_status = (status->lock) ? 'K' : ' ';
 
       if (show_last_committed)
         {
@@ -219,14 +239,14 @@ print_status(const char *path,
 
           if (SVN_IS_VALID_REVNUM(status->changed_rev))
             commit_rev = apr_psprintf(pool, "%ld", status->changed_rev);
-          else if (status->entry)
+          else if (status->versioned)
             commit_rev = " ? ";
           else
             commit_rev = "";
 
           if (status->changed_author)
             commit_author = status->changed_author;
-          else if (status->entry)
+          else if (status->versioned)
             commit_author = " ? ";
           else
             commit_author = "";
@@ -234,8 +254,8 @@ print_status(const char *path,
           SVN_ERR
             (svn_cmdline_printf(pool,
                                 "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s%s\n",
-                                generate_status_code(text_status),
-                                generate_status_code(status->prop_status),
+                                generate_status_code(combined_status(status)),
+                                generate_status_code(prop_status),
                                 status->locked ? 'L' : ' ',
                                 status->copied ? '+' : ' ',
                                 generate_switch_column_code(status),
@@ -249,10 +269,10 @@ print_status(const char *path,
                                 tree_desc_line));
         }
       else
-        SVN_ERR
-          (svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s\n",
-                              generate_status_code(text_status),
-                              generate_status_code(status->prop_status),
+        SVN_ERR(
+           svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s\n",
+                              generate_status_code(combined_status(status)),
+                              generate_status_code(prop_status),
                               status->locked ? 'L' : ' ',
                               status->copied ? '+' : ' ',
                               generate_switch_column_code(status),
@@ -264,14 +284,14 @@ print_status(const char *path,
                               tree_desc_line));
     }
   else
-    SVN_ERR
-      (svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %s%s\n",
-                          generate_status_code(text_status),
-                          generate_status_code(status->prop_status),
+    SVN_ERR(
+       svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %s%s\n",
+                          generate_status_code(combined_status(status)),
+                          generate_status_code(prop_status),
                           status->locked ? 'L' : ' ',
                           status->copied ? '+' : ' ',
                           generate_switch_column_code(status),
-                          ((status->lock_token)
+                          ((status->lock)
                            ? 'K' : ' '),
                           tree_status_code,
                           path,
@@ -283,32 +303,35 @@ print_status(const char *path,
 
 svn_error_t *
 svn_cl__print_status_xml(const char *path,
-                         const svn_wc_status3_t *status,
+                         const svn_client_status_t *status,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
   apr_hash_t *att_hash;
-  const char *local_abspath;
-  svn_boolean_t tree_conflicted;
+  const char *local_abspath = status->local_abspath;
+  svn_boolean_t tree_conflicted = FALSE;
 
-  if (status->text_status == svn_wc_status_none
-      && status->repos_text_status == svn_wc_status_none)
+  if (status->node_status == svn_wc_status_none)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__node_check_conflicts(NULL, NULL, &tree_conflicted,
-                                       ctx->wc_ctx, local_abspath, pool,
-                                       pool));
+  if (status->conflicted)
+    SVN_ERR(svn_wc__node_check_conflicts(NULL, NULL, &tree_conflicted,
+                                         ctx->wc_ctx, local_abspath, pool,
+                                         pool));
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "path", svn_dirent_local_style(path, pool), NULL);
 
   att_hash = apr_hash_make(pool);
   apr_hash_set(att_hash, "item", APR_HASH_KEY_STRING,
-               generate_status_desc(status->text_status));
+               generate_status_desc(combined_status(status)));
+
   apr_hash_set(att_hash, "props", APR_HASH_KEY_STRING,
-               generate_status_desc(status->prop_status));
+               generate_status_desc(
+                     (status->node_status != svn_wc_status_deleted)
+                                          ? status->prop_status
+                                          : svn_wc_status_none));
   if (status->locked)
     apr_hash_set(att_hash, "wc-locked", APR_HASH_KEY_STRING, "true");
   if (status->copied)
@@ -317,7 +340,7 @@ svn_cl__print_status_xml(const char *path,
     apr_hash_set(att_hash, "switched", APR_HASH_KEY_STRING, "true");
   if (status->file_external)
     apr_hash_set(att_hash, "file-external", APR_HASH_KEY_STRING, "true");
-  if (status->entry && ! status->entry->copied)
+  if (status->versioned && ! status->copied)
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "%ld", status->revision));
   if (tree_conflicted)
@@ -330,40 +353,39 @@ svn_cl__print_status_xml(const char *path,
     {
       svn_cl__print_xml_commit(&sb, status->changed_rev,
                                status->changed_author,
-                               svn_time_to_cstring(status->entry->cmt_date,
+                               svn_time_to_cstring(status->changed_date,
                                                    pool),
                                pool);
     }
 
-  if (status->lock_token)
+  if (status->lock)
     {
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
 
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", status->lock_token);
+      svn_cl__xml_tagged_cdata(&sb, pool, "token", status->lock->token);
 
       /* If lock_owner is NULL, assume WC is corrupt. */
-      if (status->lock_owner)
+      if (status->lock->owner)
         svn_cl__xml_tagged_cdata(&sb, pool, "owner",
-                                 status->lock_owner);
+                                 status->lock->owner);
       else
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("'%s' has lock token, but no lock owner"),
                                  svn_dirent_local_style(path, pool));
 
       svn_cl__xml_tagged_cdata(&sb, pool, "comment",
-                               status->lock_comment);
+                               status->lock->comment);
 
       svn_cl__xml_tagged_cdata(&sb, pool, "created",
                                svn_time_to_cstring
-                               (status->lock_creation_date, pool));
+                               (status->lock->creation_date, pool));
 
       svn_xml_make_close_tag(&sb, pool, "lock");
     }
 
   svn_xml_make_close_tag(&sb, pool, "wc-status");
 
-  if (status->repos_text_status != svn_wc_status_none
-      || status->repos_prop_status != svn_wc_status_none
+  if (status->repos_node_status != svn_wc_status_none
       || status->repos_lock)
     {
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "repos-status",
@@ -411,7 +433,7 @@ svn_cl__print_status_xml(const char *path,
 /* Called by status-cmd.c */
 svn_error_t *
 svn_cl__print_status(const char *path,
-                     const svn_wc_status3_t *status,
+                     const svn_client_status_t *status,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
@@ -422,17 +444,10 @@ svn_cl__print_status(const char *path,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  const char *local_abspath;
-  svn_boolean_t tree_conflicted;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__node_check_conflicts(NULL, NULL, &tree_conflicted,
-                                       ctx->wc_ctx, local_abspath, pool,
-                                       pool));
   if (! status
-      || (skip_unrecognized && !(status->entry || tree_conflicted))
-      || (status->text_status == svn_wc_status_none
-          && status->repos_text_status == svn_wc_status_none))
+      || (skip_unrecognized && !(status->versioned || status->conflicted))
+      || (status->node_status == svn_wc_status_none
+          && status->repos_node_status == svn_wc_status_none))
     return SVN_NO_ERROR;
 
   return print_status(svn_dirent_local_style(path, pool),

@@ -64,7 +64,7 @@ jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
 jobject EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", (int) state);
+  return mapEnum(JAVA_PACKAGE"/ClientNotifyInformation$Status", (int) state);
 }
 
 /**
@@ -73,7 +73,22 @@ jobject EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 jobject EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", (int) action);
+  return mapEnum(JAVA_PACKAGE"/ClientNotifyInformation$Action", (int) action);
+}
+
+jobject EnumMapper::mapReposNotifyNodeAction(svn_node_action action)
+{
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/ReposNotifyInformation$NodeAction", (int) action);
+}
+
+/**
+ * Map a C repos notify action constant to the Java constant.
+ */
+jobject EnumMapper::mapReposNotifyAction(svn_repos_notify_action_t action)
+{
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/ReposNotifyInformation$Action", (int) action);
 }
 
 /**
@@ -91,7 +106,7 @@ jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 jobject EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", (int) state);
+  return mapEnum(JAVA_PACKAGE"/ClientNotifyInformation$LockStatus", (int) state);
 }
 
 /**

@@ -256,9 +256,9 @@ svn_dirent_dirname(const char *dirent,
  * @since New in 1.7.
  */
 void
-svn_dirent_split(const char *dirent,
-                 const char **dirpath,
+svn_dirent_split(const char **dirpath,
                  const char **base_name,
+                 const char *dirent,
                  apr_pool_t *pool);
 
 /** Divide the canonicalized @a relpath into @a *dirpath and @a
@@ -280,9 +280,9 @@ svn_dirent_split(const char *dirent,
  * @since New in 1.7.
  */
 void
-svn_relpath_split(const char *relpath,
-                  const char **dirpath,
+svn_relpath_split(const char **dirpath,
                   const char **base_name,
+                  const char *relpath,
                   apr_pool_t *pool);
 
 /** Get the basename of the specified canonicalized @a relpath.  The
@@ -338,9 +338,9 @@ svn_relpath_dirname(const char *relpath,
  * @since New in 1.7.
  */
 void
-svn_uri_split(const char *dirent,
-              const char **dirpath,
+svn_uri_split(const char **dirpath,
               const char **base_name,
+              const char *uri,
               apr_pool_t *pool);
 
 /** Get the basename of the specified canonicalized @a uri.  The
@@ -763,7 +763,7 @@ svn_uri_condense_targets(const char **pcommon,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-/* Check that when @a path is joined to @a base_path, the resulting path
+/** Check that when @a path is joined to @a base_path, the resulting path
  * is still under BASE_PATH in the local filesystem. If not, return @c FALSE.
  * If @c TRUE is returned, @a *full_path will be set to the absolute path
  * of @a path, allocated in @a pool.
@@ -778,6 +778,26 @@ svn_dirent_is_under_root(char **full_path,
                          const char *base_path,
                          const char *path,
                          apr_pool_t *pool);
+
+/** Set @a *dirent to the path corresponding to the file:// URL @a url, using
+ * the platform-specific file:// rules.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_uri_get_dirent_from_file_url(const char **dirent,
+                                 const char *url,
+                                 apr_pool_t *pool);
+
+/** Set @a *url to a file:// URL, corresponding to @a dirent using the
+ * platform specific dirent and file:// rules.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_uri_get_file_url_from_dirent(const char **url,
+                                 const char *dirent,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

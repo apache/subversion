@@ -85,7 +85,7 @@ svn_wc__ensure_directory(const char *path,
           if (shorter[0] == '\0')
             {
               /* A weird and probably rare situation. */
-              return svn_error_create(0, NULL,
+              return svn_error_create(APR_EGENERAL, NULL,
                                       _("Unable to make any directories"));
             }
           else  /* We have a valid path, so recursively ensure it. */
@@ -546,15 +546,13 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
 
 svn_error_t *
 svn_wc__status2_from_3(svn_wc_status2_t **status,
-                       const svn_wc_status3_t *old_status, 
+                       const svn_wc_status3_t *old_status,
                        svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
-  const svn_wc_conflict_description2_t *tree_conflict;
-  svn_wc_conflict_description_t *old_tree_conflict;
+  const svn_wc_entry_t *entry = NULL;
 
   if (old_status == NULL)
     {
@@ -564,33 +562,141 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
   *status = apr_pcalloc(result_pool, sizeof(**status));
 
-  SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
-                            svn_node_unknown, FALSE, result_pool,
-                            scratch_pool));
+  if (old_status->versioned)
+    {
+      svn_error_t *err;
+      err= svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, FALSE,
+                             svn_node_unknown, FALSE, result_pool,
+                             scratch_pool);
 
-  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, wc_ctx->db,
-                                           local_abspath, scratch_pool,
-                                           scratch_pool));
-  old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
+      if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
+    }
 
   (*status)->entry = entry;
-  (*status)->text_status = old_status->text_status;
-  (*status)->prop_status = old_status->prop_status;
-  (*status)->locked = old_status->locked;
   (*status)->copied = old_status->copied;
-  (*status)->switched = old_status->switched;
-  (*status)->repos_text_status = old_status->repos_text_status;
-  (*status)->repos_prop_status = old_status->repos_prop_status;
   (*status)->repos_lock = svn_lock_dup(old_status->repos_lock, result_pool);
-  (*status)->url = apr_pstrdup(result_pool, old_status->url);
-  (*status)->ood_last_cmt_rev = old_status->ood_last_cmt_rev;
-  (*status)->ood_last_cmt_date = old_status->ood_last_cmt_date;
+
+  if (old_status->repos_relpath)
+    (*status)->url = svn_path_url_add_component2(old_status->repos_root_url,
+                                                 old_status->repos_relpath,
+                                                 result_pool);
+  (*status)->ood_last_cmt_rev = old_status->ood_changed_rev;
+  (*status)->ood_last_cmt_date = old_status->ood_changed_date;
   (*status)->ood_kind = old_status->ood_kind;
-  (*status)->ood_last_cmt_author = old_status->ood_last_cmt_author;
-  (*status)->tree_conflict = old_tree_conflict;
-  (*status)->file_external = old_status->file_external;
-  (*status)->pristine_text_status = old_status->pristine_text_status;
-  (*status)->pristine_prop_status = old_status->pristine_prop_status;
+  (*status)->ood_last_cmt_author = old_status->ood_changed_author;
+
+  if (old_status->conflicted)
+    {
+      const svn_wc_conflict_description2_t *tree_conflict;
+      SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, wc_ctx->db,
+                                               local_abspath, scratch_pool,
+                                               scratch_pool));
+      (*status)->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
+    }
+
+  (*status)->switched = old_status->switched;
+
+  if (old_status->versioned
+      && old_status->switched
+      && old_status->kind == svn_node_file)
+    {
+      svn_boolean_t file_external;
+
+      SVN_ERR(svn_wc__internal_is_file_external(&file_external,
+                                            wc_ctx->db, local_abspath,
+                                            scratch_pool));
+
+      if (file_external)
+        {
+          (*status)->switched = FALSE;
+          (*status)->file_external = TRUE;
+        }
+    }
+
+  (*status)->text_status = old_status->node_status;
+  (*status)->prop_status = old_status->prop_status;
+
+  (*status)->repos_text_status = old_status->repos_node_status;
+  (*status)->repos_prop_status = old_status->repos_prop_status;
+
+  /* Some values might be inherited from properties */
+  if (old_status->node_status == svn_wc_status_modified
+      || old_status->node_status == svn_wc_status_conflicted)
+    (*status)->text_status = old_status->text_status;
+
+  /* (Currently a no-op, but just make sure it is ok) */
+  if (old_status->repos_node_status == svn_wc_status_modified
+      || old_status->repos_node_status == svn_wc_status_conflicted)
+    (*status)->text_status = old_status->repos_text_status;
+
+  if (old_status->node_status == svn_wc_status_added)
+    (*status)->prop_status = svn_wc_status_none; /* No separate info */
+
+  /* Find pristine_text_status value */
+  switch (old_status->text_status)
+    {
+      case svn_wc_status_none:
+      case svn_wc_status_normal:
+      case svn_wc_status_modified:
+        (*status)->pristine_text_status = old_status->text_status;
+        break;
+      case svn_wc_status_conflicted:
+      default:
+        /* ### Fetch compare data, or fall back to the documented
+               not retrieved behavior? */
+        (*status)->pristine_text_status = svn_wc_status_none;
+        break;
+    }
+
+  /* Find pristine_prop_status value */
+  switch (old_status->prop_status)
+    {
+      case svn_wc_status_none:
+      case svn_wc_status_normal:
+      case svn_wc_status_modified:
+        if (old_status->node_status != svn_wc_status_added
+            && old_status->node_status != svn_wc_status_deleted
+            && old_status->node_status != svn_wc_status_replaced)
+          {
+            (*status)->pristine_prop_status = old_status->prop_status;
+          }
+        else
+          (*status)->pristine_prop_status = svn_wc_status_none;
+        break;
+      case svn_wc_status_conflicted:
+      default:
+        /* ### Fetch compare data, or fall back to the documented
+               not retrieved behavior? */
+        (*status)->pristine_prop_status = svn_wc_status_none;
+        break;
+    }
+
+  if (old_status->versioned
+      && old_status->conflicted
+      && old_status->node_status != svn_wc_status_obstructed
+      && (old_status->kind == svn_node_file 
+          || old_status->node_status != svn_wc_status_missing))
+    {
+      svn_boolean_t text_conflict_p, prop_conflict_p;
+
+      /* The entry says there was a conflict, but the user might have
+         marked it as resolved by deleting the artifact files, so check
+         for that. */
+      SVN_ERR(svn_wc__internal_conflicted_p(&text_conflict_p,
+                                            &prop_conflict_p,
+                                            NULL,
+                                            wc_ctx->db, local_abspath,
+                                            scratch_pool));
+
+      if (text_conflict_p)
+        (*status)->text_status = svn_wc_status_conflicted;
+
+      if (prop_conflict_p)
+        (*status)->prop_status = svn_wc_status_conflicted;
+    }
 
   return SVN_NO_ERROR;
 }

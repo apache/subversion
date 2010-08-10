@@ -34,35 +34,39 @@
 #include "OutputStream.h"
 #include "InputStream.h"
 #include "MessageReceiver.h"
+#include "ReposNotifyCallback.h"
 #include "StringArray.h"
+#include "File.h"
 
 class SVNAdmin : public SVNBase
 {
  public:
-  void rmlocks(const char *path, StringArray &locks);
-  jobject lslocks(const char *path);
-  void verify(const char *path, OutputStream &messageOut,
-              Revision &revisionStart, Revision &revisionEnd);
-  void setRevProp(const char *path, Revision &revision,
+  void rmlocks(File &path, StringArray &locks);
+  jobject lslocks(File &path);
+  void verify(File &path, Revision &revisionStart, Revision &revisionEnd,
+              ReposNotifyCallback *notifyCallback);
+  void setRevProp(File &path, Revision &revision,
                   const char *propName, const char *propValue,
                   bool usePreRevPropChangeHook,
                   bool usePostRevPropChangeHook);
-  void rmtxns(const char *path, StringArray &transactions);
-  jlong recover(const char *path);
-  void lstxns(const char *path, MessageReceiver &messageReceiver);
-  void load(const char *path, InputStream &dataIn, OutputStream &messageOut,
-            bool ignoreUUID, bool forceUUID, bool usePreCommitHook,
-            bool usePostCommitHook, const char *relativePath);
-  void listUnusedDBLogs(const char *path,
+  void rmtxns(File &path, StringArray &transactions);
+  jlong recover(File &path, ReposNotifyCallback *notifyCallback);
+  void lstxns(File &path, MessageReceiver &messageReceiver);
+  void load(File &path, InputStream &dataIn, bool ignoreUUID, bool forceUUID,
+            bool usePreCommitHook, bool usePostCommitHook,
+            const char *relativePath, ReposNotifyCallback *notifyCallback);
+  void listUnusedDBLogs(File &path,
                         MessageReceiver &messageReceiver);
-  void listDBLogs(const char *path, MessageReceiver &messageReceiver);
-  void hotcopy(const char *path, const char *targetPath, bool cleanLogs);
-  void dump(const char *path, OutputStream &dataOut, OutputStream &messageOut,
-            Revision &revsionStart, Revision &RevisionEnd,
-            bool incremental, bool useDeltas);
-  void deltify(const char *path, Revision &start, Revision &end);
-  void create(const char *path, bool ignoreUUID, bool forceUUID,
-              const char *configPath, const char *fstype);
+  void listDBLogs(File &path, MessageReceiver &messageReceiver);
+  void hotcopy(File &path, File &targetPath, bool cleanLogs);
+  void dump(File &path, OutputStream &dataOut, Revision &revsionStart,
+            Revision &RevisionEnd, bool incremental, bool useDeltas,
+            ReposNotifyCallback *notifyCallback);
+  void deltify(File &path, Revision &start, Revision &end);
+  void create(File &path, bool ignoreUUID, bool forceUUID, File &configPath,
+              const char *fstype);
+  void upgrade(File &path, ReposNotifyCallback *callback);
+  void pack(File &path, ReposNotifyCallback *callback);
   SVNAdmin();
   virtual ~SVNAdmin();
   void dispose(jobject jthis);

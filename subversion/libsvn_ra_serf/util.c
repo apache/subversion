@@ -1255,10 +1255,6 @@ svn_ra_serf__credentials_callback(char **username, char **password,
    response status and headers, and invoke CTX->response_handler() to
    carry out operation-specific processing.  Afterwards, check for
    connection close.
-
-   If during the setup of the request we set a snapshot on the body buckets,
-   handle_response has to make sure these buckets get destroyed iff the
-   request doesn't have to be resent.
    */
 static apr_status_t
 handle_response(serf_request_t *request,
@@ -1439,15 +1435,6 @@ handle_response(serf_request_t *request,
     }
 
 cleanup:
-  /* If a snapshot was set on the body bucket, it wasn't destroyed when the
-     request was sent, we have to destroy it now upon successful handling of
-     the response. */
-  if (ctx->body_snapshot_set && ctx->body_buckets)
-    {
-      serf_bucket_destroy(ctx->body_buckets);
-      ctx->body_buckets = NULL;
-      ctx->body_snapshot_set = FALSE;
-    }
 
   return status;
 }
@@ -1496,7 +1483,8 @@ setup_request(serf_request_t *request,
     }
   else
     {
-      serf_bucket_t *body_bkt = ctx->body_buckets;
+      serf_bucket_t *body_bkt;
+      serf_bucket_alloc_t *bkt_alloc = serf_request_get_alloc(request);
 
       if (strcmp(ctx->method, "HEAD") == 0)
         {
@@ -1505,49 +1493,13 @@ setup_request(serf_request_t *request,
 
       if (ctx->body_delegate)
         {
-          body_bkt = ctx->body_buckets =
-              ctx->body_delegate(ctx->body_delegate_baton,
-                                 serf_request_get_alloc(request),
-                                 pool);
+          body_bkt =
+              ctx->body_delegate(ctx->body_delegate_baton, bkt_alloc, pool);
         }
-      /* If this is a request that has to be retried, we might be able to reuse
-         the existing body buckets if a snapshot was set. */
-      else if (ctx->body_buckets)
-          {
-            /* Wrap the body bucket in a barrier bucket if a snapshot was set.
-               After the request is sent serf will destroy the request bucket
-               (req_bkt) including this barrier bucket, but this way our
-               body_buckets bucket will not be destroyed and we can reuse it
-               later.
-               This does put ownership of body_buckets in our own hands though,
-               so we have to make sure it gets destroyed when handling the
-               response. */
-            /* TODO: for now we assume restoring a snapshot on a bucket that
-               hasn't been read yet is a cheap operation. We need a way to find
-               out if we really need to restore a snapshot, or if we still are
-               in the initial state. */
-            apr_status_t status;
-            if (ctx->body_snapshot_set)
-              {
-                /* If restoring a snapshot doesn't work, we have to fall back
-                   on current behavior (ie. retrying a request fails). */
-                status = serf_bucket_restore_snapshot(ctx->body_buckets);
-              }
-            status = serf_bucket_snapshot(ctx->body_buckets);
-            if (status == APR_SUCCESS)
-              {
-                ctx->body_snapshot_set = TRUE;
-                body_bkt = serf_bucket_barrier_create(ctx->body_buckets,
-                             serf_request_get_alloc(request));
-              }
-            else
-              {
-                /* If the snapshot wasn't successful (maybe because the caller
-                   used a bucket that doesn't support the snapshot feature),
-                   fall back to non-snapshot behavior and hope that the request
-                   is handled the first time. */
-              }
-          }
+      else
+        {
+          body_bkt = NULL;
+        }
 
       svn_ra_serf__setup_serf_req(request, req_bkt, &headers_bkt, ctx->conn,
                                   ctx->method, ctx->path,

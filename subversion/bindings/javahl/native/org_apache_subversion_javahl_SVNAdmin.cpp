@@ -34,6 +34,8 @@
 #include "InputStream.h"
 #include "OutputStream.h"
 #include "MessageReceiver.h"
+#include "File.h"
+#include "ReposNotifyCallback.h"
 #include "svn_props.h"
 #include "svn_private_config.h"
 
@@ -72,8 +74,8 @@ Java_org_apache_subversion_javahl_SVNAdmin_finalize
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_create
-(JNIEnv *env, jobject jthis, jstring jpath, jboolean jdisableFsyncCommit,
- jboolean jkeepLog, jstring jconfigpath, jstring jfstype)
+(JNIEnv *env, jobject jthis, jobject jpath, jboolean jdisableFsyncCommit,
+ jboolean jkeepLog, jobject jconfigpath, jstring jfstype)
 {
   JNIEntry(SVNAdmin, create);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -83,11 +85,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_create
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder configpath(jconfigpath);
+  File configpath(jconfigpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -101,7 +103,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_create
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_deltify
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevisionStart,
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jrevisionStart,
  jobject jrevisionStop)
 {
   JNIEntry(SVNAdmin, deltify);
@@ -112,7 +114,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_deltify
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -129,9 +131,9 @@ Java_org_apache_subversion_javahl_SVNAdmin_deltify
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_dump
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jdataout,
- jobject jmessageout, jobject jrevisionStart, jobject jrevisionEnd,
- jboolean jincremental, jboolean juseDeltas)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jdataout,
+ jobject jrevisionStart, jobject jrevisionEnd, jboolean jincremental,
+ jboolean juseDeltas, jobject jnotifyCallback)
 {
   JNIEntry(SVNAdmin, dump);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -141,15 +143,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_dump
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
   OutputStream dataOut(jdataout);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  OutputStream messageOut(jmessageout);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -161,13 +159,16 @@ Java_org_apache_subversion_javahl_SVNAdmin_dump
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->dump(path, dataOut, messageOut, revisionStart, revisionEnd,
-           jincremental ? true : false, juseDeltas ? true : false);
+  ReposNotifyCallback notifyCallback(jnotifyCallback);
+
+  cl->dump(path, dataOut, revisionStart, revisionEnd,
+           jincremental ? true : false, juseDeltas ? true : false,
+           jnotifyCallback != NULL ? &notifyCallback : NULL);
 }
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_hotcopy
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jtargetPath,
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jtargetPath,
  jboolean jcleanLogs)
 {
   JNIEntry(SVNAdmin, hotcopy);
@@ -178,11 +179,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_hotcopy
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder targetPath(jtargetPath);
+  File targetPath(jtargetPath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -191,7 +192,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_hotcopy
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_listDBLogs
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jreceiver)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jreceiver)
 {
   JNIEntry(SVNAdmin, listDBLogs);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -201,7 +202,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_listDBLogs
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -214,7 +215,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_listDBLogs
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_listUnusedDBLogs
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jreceiver)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jreceiver)
 {
   JNIEntry(SVNAdmin, listUnusedDBLogs);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -224,7 +225,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_listUnusedDBLogs
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -237,9 +238,9 @@ Java_org_apache_subversion_javahl_SVNAdmin_listUnusedDBLogs
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_load
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jinputData,
- jobject joutputMsg, jboolean jignoreUUID, jboolean jforceUUID,
- jboolean jusePreCommitHook, jboolean jusePostCommitHook, jstring jrelativePath)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jinputData,
+ jboolean jignoreUUID, jboolean jforceUUID, jboolean jusePreCommitHook,
+ jboolean jusePostCommitHook, jstring jrelativePath, jobject jnotifyCallback)
 {
   JNIEntry(SVNAdmin, load);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -249,7 +250,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_load
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -257,23 +258,21 @@ Java_org_apache_subversion_javahl_SVNAdmin_load
   if (JNIUtil::isExceptionThrown())
     return;
 
-
-  OutputStream outputMsg(joutputMsg);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
   JNIStringHolder relativePath(jrelativePath);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->load(path, inputData, outputMsg, jignoreUUID ? true : false,
+  ReposNotifyCallback notifyCallback(jnotifyCallback);
+
+  cl->load(path, inputData, jignoreUUID ? true : false,
            jforceUUID ? true : false, jusePreCommitHook ? true : false,
-           jusePostCommitHook ? true : false, relativePath);
+           jusePostCommitHook ? true : false, relativePath,
+           jnotifyCallback != NULL ? &notifyCallback : NULL);
 }
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_lstxns
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jmessageReceiver)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jmessageReceiver)
 {
   JNIEntry(SVNAdmin, lstxns);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -283,7 +282,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_lstxns
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -296,7 +295,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_lstxns
 
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_recover
-(JNIEnv *env, jobject jthis, jstring jpath)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
 {
   JNIEntry(SVNAdmin, recover);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -306,16 +305,18 @@ Java_org_apache_subversion_javahl_SVNAdmin_recover
       return -1;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  return cl->recover(path);
+  ReposNotifyCallback callback(jnotifyCallback);
+
+  return cl->recover(path, jnotifyCallback != NULL ? &callback : NULL);
 }
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_rmtxns
-(JNIEnv *env, jobject jthis, jstring jpath, jobjectArray jtransactions)
+(JNIEnv *env, jobject jthis, jobject jpath, jobjectArray jtransactions)
 {
   JNIEntry(SVNAdmin, rmtxns);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -325,7 +326,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmtxns
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -338,7 +339,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmtxns
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jrevision,
  jstring jpropName, jstring jpropValue, jboolean jusePreRevPropChangeHook,
  jboolean jusePostRevPropChangeHook)
 {
@@ -350,7 +351,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -373,8 +374,8 @@ Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_verify
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jmessageout,
- jobject jrevisionStart, jobject jrevisionEnd)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jrevisionStart,
+ jobject jrevisionEnd, jobject jcallback)
 {
   JNIEntry(SVNAdmin, verify);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -384,11 +385,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_verify
       return;
     }
 
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  OutputStream messageOut(jmessageout);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -400,12 +397,17 @@ Java_org_apache_subversion_javahl_SVNAdmin_verify
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->verify(path, messageOut, revisionStart, revisionEnd);
+  ReposNotifyCallback callback(jcallback);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->verify(path, revisionStart, revisionEnd,
+             jcallback != NULL ? &callback : NULL);
 }
 
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_lslocks
-(JNIEnv *env, jobject jthis, jstring jpath)
+(JNIEnv *env, jobject jthis, jobject jpath)
 {
   JNIEntry(SVNAdmin, lslocks);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -415,7 +417,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_lslocks
       return NULL;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
@@ -424,7 +426,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_lslocks
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_rmlocks
-(JNIEnv *env, jobject jthis, jstring jpath, jobjectArray jlocks)
+(JNIEnv *env, jobject jthis, jobject jpath, jobjectArray jlocks)
 {
   JNIEntry(SVNAdmin, rmlocks);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -434,7 +436,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmlocks
       return;
     }
 
-  JNIStringHolder path(jpath);
+  File path(jpath);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -443,4 +445,46 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmlocks
     return;
 
   cl->rmlocks(path, locks);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNAdmin_upgrade
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
+{
+  JNIEntry(SVNAdmin, upgrade);
+  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  File path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  ReposNotifyCallback callback(jnotifyCallback);
+
+  cl->upgrade(path, jnotifyCallback != NULL ? &callback : NULL);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNAdmin_pack
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
+{
+  JNIEntry(SVNAdmin, pack);
+  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  File path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  ReposNotifyCallback callback(jnotifyCallback);
+
+  cl->pack(path, jnotifyCallback != NULL ? &callback : NULL);
 }

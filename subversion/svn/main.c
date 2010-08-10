@@ -121,6 +121,7 @@ typedef enum {
   opt_ignore_whitespace,
   opt_show_diff,
   opt_internal_diff,
+  opt_use_git_diff_format,
   opt_ignore_mergeinfo
 } svn_cl__longopt_t;
 
@@ -368,6 +369,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("override diff-cmd specified in config file\n"
                        "                             "
                        "[alias: --idiff]")},
+  {"git-diff", opt_use_git_diff_format, 0,
+                       N_("use git's extended diff format\n")},
   {"ignore-mergeinfo",  opt_ignore_mergeinfo, 0,
                     N_("ignore changes to mergeinfo")},
 
@@ -576,7 +579,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
      opt_internal_diff, 'x', opt_no_diff_deleted, opt_show_copies_as_adds,
      opt_notice_ancestry, opt_ignore_mergeinfo, opt_summarize, opt_changelist,
-     opt_force, opt_xml} },
+     opt_force, opt_xml, opt_use_git_diff_format} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -1051,10 +1054,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      ' ' the working copy is up to date\n"
      "\n"
      "  Remaining fields are variable width and delimited by spaces:\n"
-     "    The working revision (with -u or -v)\n"
+     "    The working revision (with -u or -v; '-' if the item is copied)\n"
      "    The last committed revision and last committed author (with -v)\n"
      "    The working copy path is always the final field, so it can\n"
      "      include spaces.\n"
+     "\n"
+     "  The presence of a question mark ('?') where a working revision, last\n"
+     "  committed revision, or last committed author was expected indicates\n"
+     "  that the information is unknown or irrelevant given the state of the\n"
+     "  item (for example, when the item is the result of a copy operation).\n"
+     "  The question mark serves as a visual placeholder to facilitate parsing.\n"
      "\n"
      "  Example output:\n"
      "    svn status wc\n"
@@ -1064,13 +1073,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn status -u wc\n"
      "     M           965    wc/bar.c\n"
      "           *     965    wc/foo.c\n"
-     "    A  +         965    wc/qax.c\n"
+     "    A  +           -    wc/qax.c\n"
      "    Status against revision:   981\n"
      "\n"
      "    svn status --show-updates --verbose wc\n"
      "     M           965       938 kfogel       wc/bar.c\n"
      "           *     965       922 sussman      wc/foo.c\n"
-     "    A  +         965       687 joe          wc/qax.c\n"
+     "    A  +           -       687 joe          wc/qax.c\n"
      "                 965       687 joe          wc/zig.c\n"
      "    Status against revision:   981\n"
      "\n"
@@ -1769,6 +1778,8 @@ main(int argc, const char *argv[])
       case opt_internal_diff:
         opt_state.internal_diff = TRUE;
         break;
+      case opt_use_git_diff_format:
+        opt_state.use_git_diff_format = TRUE;
       case opt_ignore_mergeinfo:
         opt_state.ignore_mergeinfo = TRUE;
         break;

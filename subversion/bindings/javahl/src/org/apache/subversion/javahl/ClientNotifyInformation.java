@@ -23,6 +23,7 @@
 
 package org.apache.subversion.javahl;
 
+import java.util.Map;
 import java.util.EventObject;
 
 /**
@@ -31,7 +32,7 @@ import java.util.EventObject;
  *
  * @since 1.2
  */
-public class NotifyInformation extends EventObject
+public class ClientNotifyInformation extends EventObject
 {
     // Update the serialVersionUID when there is a incompatible change
     // made to this class.  See any of the following, depending upon
@@ -105,6 +106,24 @@ public class NotifyInformation extends EventObject
      */
     private String pathPrefix;
 
+    private String propName;
+
+    private Map<String, String> revProps;
+
+    long oldRevision;
+
+    long hunkOriginalStart;
+    
+    long hunkOriginalLength;
+
+    long hunkModifiedStart;
+
+    long hunkModifiedLength;
+
+    long hunkMatchedLine;
+
+    int hunkFuzz;
+
     /**
      * This constructor is to be used by the native code.
      *
@@ -124,12 +143,16 @@ public class NotifyInformation extends EventObject
      * @param mergeRange The range of the merge just beginning to occur.
      * @param pathPrefix A common path prefix.
      */
-    public NotifyInformation(String path, Action action, NodeKind kind,
+    public ClientNotifyInformation(String path, Action action, NodeKind kind,
                              String mimeType, Lock lock, String errMsg,
                              Status contentState, Status propState,
                              LockStatus lockState, long revision,
                              String changelistName, RevisionRange mergeRange,
-                             String pathPrefix)
+                             String pathPrefix, String propName,
+                             Map<String, String> revProps, long oldRevision,
+                             long hunkOriginalStart, long hunkOriginalLength,
+                             long hunkModifiedStart, long hunkModifiedLength,
+                             long hunkMatchedLine, int hunkFuzz)
     {
         super(path == null ? "" : path);
         this.action = action;
@@ -144,6 +167,15 @@ public class NotifyInformation extends EventObject
         this.changelistName = changelistName;
         this.mergeRange = mergeRange;
         this.pathPrefix = pathPrefix;
+        this.propName = propName;
+        this.revProps = revProps;
+        this.oldRevision = oldRevision;
+        this.hunkOriginalStart = hunkOriginalStart;
+        this.hunkOriginalLength = hunkOriginalLength;
+        this.hunkModifiedStart = hunkModifiedStart;
+        this.hunkModifiedLength = hunkModifiedLength;
+        this.hunkMatchedLine = hunkMatchedLine;
+        this.hunkFuzz = hunkFuzz;
     }
 
     /**
@@ -251,6 +283,51 @@ public class NotifyInformation extends EventObject
     public String getPathPrefix()
     {
         return pathPrefix;
+    }
+
+    public String getPropName()
+    {
+        return propName;
+    }
+
+    public Map<String, String> getRevProps()
+    {
+        return revProps;
+    }
+
+    public long getOldRevision()
+    {
+        return oldRevision;
+    }
+
+    public long getHunkOriginalStart()
+    {
+        return hunkOriginalStart;
+    }
+
+    public long getHunkOriginalLength()
+    {
+        return hunkOriginalLength;
+    }
+
+    public long getHunkModifiedStart()
+    {
+        return hunkModifiedStart;
+    }
+
+    public long getHunkModifiedLength()
+    {
+        return hunkModifiedLength;
+    }
+
+    public long getHunkMatchedLine()
+    {
+        return hunkMatchedLine;
+    }
+
+    public int getHunkFuzz()
+    {
+        return hunkFuzz;
     }
 
     /**

@@ -1894,6 +1894,10 @@ svn_fs_revision_proplist(apr_hash_t **table_p,
  * - @a fs is a filesystem, and @a rev is the revision in that filesystem
  *   whose property should change.
  * - @a name is the name of the property to change.
+ * - if @a old_value_p is not @c NULL, then @a *old_value_p is the expected old
+ *   value of the property, and changing the value will fail with error
+ *   #SVN_ERR_BAD_PROPERTY_VALUE if the present value of the property is not @a
+ *   *old_value_p.
  * - @a value is the new value of the property, or zero if the property should
  *   be removed altogether.
  *
@@ -1902,7 +1906,25 @@ svn_fs_revision_proplist(apr_hash_t **table_p,
  * via transactions.
  *
  * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_fs_change_rev_prop2(svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        const char *name,
+                        const svn_string_t *const *old_value_p,
+                        const svn_string_t *value,
+                        apr_pool_t *pool);
+
+
+/** 
+ * Similar to svn_fs_change_rev_prop2(), but with @a old_value_p passed as
+ * @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_change_rev_prop(svn_fs_t *fs,
                        svn_revnum_t rev,
@@ -2104,6 +2126,11 @@ typedef svn_error_t *(*svn_fs_get_locks_callback_t)(void *baton,
  * get_locks_func / @a get_locks_baton.  Use @a pool for necessary
  * allocations.
  *
+ * @a depth limits the reported locks to those associated with paths
+ * within the specified depth of @a path, and must be one of the
+ * following values:  #svn_depth_empty, #svn_depth_files,
+ * #svn_depth_immediates, or #svn_depth_infinity.
+ *
  * If the @a get_locks_func callback implementation returns an error,
  * lock iteration will terminate and that error will be returned by
  * this function.
@@ -2115,7 +2142,24 @@ typedef svn_error_t *(*svn_fs_get_locks_callback_t)(void *baton,
  * start a new Berkeley DB transaction (which is most of this svn_fs
  * API).  Yes, this is a nasty implementation detail to have to be
  * aware of.  We hope to fix this problem in the future.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_fs_get_locks2(svn_fs_t *fs,
+                  const char *path,
+                  svn_depth_t depth,
+                  svn_fs_get_locks_callback_t get_locks_func,
+                  void *get_locks_baton,
+                  apr_pool_t *pool);
+
+/** 
+ * Similar to svn_fs_get_locks2(), but with @a depth always passed as
+ * svn_depth_infinity.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_get_locks(svn_fs_t *fs,
                  const char *path,
@@ -2143,7 +2187,15 @@ typedef enum
   svn_fs_pack_notify_start = 0,
 
   /** packing of the shard is completed */
-  svn_fs_pack_notify_end
+  svn_fs_pack_notify_end,
+
+  /** packing of the shard revprops has commenced
+      @since New in 1.7. */
+  svn_fs_pack_notify_start_revprop,
+
+  /** packing of the shard revprops has completed
+      @since New in 1.7. */
+  svn_fs_pack_notify_end_revprop
 
 } svn_fs_pack_notify_action_t;
 

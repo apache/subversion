@@ -282,10 +282,11 @@ log_entry_receiver(void *baton,
         return svn_error_wrap_apr(status, _("Can't open stderr"));
 
       /* Fall back to "" to get options initialized either way. */
-      {
-        const char *optstr = lb->diff_extensions ? lb->diff_extensions : "";
-        diff_options = svn_cstring_split(optstr, " \t\n\r", TRUE, pool);
-      }
+      if (lb->diff_extensions)
+        diff_options = svn_cstring_split(lb->diff_extensions, " \t\n\r", 
+                                         TRUE, pool);
+      else
+        diff_options = NULL;
 
       start_revision.kind = svn_opt_revision_number;
       start_revision.value.number = log_entry->revision - 1;
@@ -304,6 +305,7 @@ log_entry_receiver(void *baton,
                              TRUE, /* no diff deleted */
                              FALSE, /* show copies as adds */
                              FALSE, /* ignore content type */
+                             FALSE, /* use git diff format */
                              FALSE, /* ignore mergeinfo */
                              svn_cmdline_output_encoding(pool),
                              outfile,
@@ -337,6 +339,7 @@ log_entry_receiver(void *baton,
                                          TRUE, /* no diff deleted */
                                          FALSE, /* show copies as adds */
                                          FALSE, /* ignore content type */
+                                         FALSE, /* use git diff format */
                                          FALSE, /* ignore mergeinfo */
                                          svn_cmdline_output_encoding(iterpool),
                                          outfile,

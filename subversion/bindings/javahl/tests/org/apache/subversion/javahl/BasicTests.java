@@ -129,58 +129,6 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Tests Subversion path validation.
-     */
-    public void testPathValidation() throws Throwable
-    {
-        // Rather than segfaulting, JavaHL considers null an invalid path.
-        assertFalse("Path validation produced false-positive for null path",
-                    Path.isValid(null));
-
-        String path = "valid-path";
-        assertTrue("Validation check of valid path '" + path +
-                   "' should succeed", Path.isValid(path));
-
-        // File names cannot contain control characters.
-        path = "invalid-\u0001-path";
-        assertFalse("Validation check of invalid path '" + path +
-                    "' (which contains control characters) should fail",
-                    Path.isValid(path));
-    }
-
-    /**
-     * Tests Subversion path as URL predicate.
-     */
-    public void testPathIsURL() throws Throwable
-    {
-        try
-        {
-            Path.isURL(null);
-            fail("A null path should raise an exception");
-        }
-        catch (IllegalArgumentException expected)
-        {
-        }
-
-        // Subversion "paths" which aren't URLs.
-        String[] paths = { "/path", "c:\\path" };
-        for (String path : paths)
-        {
-            assertFalse("'" + path + "' should not be considered a URL",
-                        Path.isURL(path));
-        }
-
-        // Subversion "paths" which are URLs.
-        paths = new String[] { "http://example.com", "svn://example.com",
-                               "svn+ssh://example.com", "file:///src/svn/" };
-        for (String path : paths)
-        {
-            assertTrue("'" + path + "' should be considered a URL",
-                       Path.isURL(path));
-        }
-    }
-
-    /**
      * Tests Mergeinfo and RevisionRange classes.
      * @since 1.5
      */
@@ -2447,11 +2395,11 @@ public class BasicTests extends SVNTests
 
         // Add a "begin merge" notification handler.
         final Revision[] actualRange = new Revision[2];
-        NotifyCallback notify = new NotifyCallback()
+        ClientNotifyCallback notify = new ClientNotifyCallback()
         {
-            public void onNotify(NotifyInformation info)
+            public void onNotify(ClientNotifyInformation info)
             {
-                if (info.getAction() == NotifyInformation.Action.merge_begin)
+                if (info.getAction() == ClientNotifyInformation.Action.merge_begin)
                 {
                     RevisionRange r = info.getMergeRange();
                     actualRange[0] = r.getFromRevision();
@@ -2785,6 +2733,42 @@ public class BasicTests extends SVNTests
 
         return thisTest;
     }
+    
+    /**
+     * Test the patch API.  This doesn't yet test the results, it only ensures
+     * that execution goes down to the C layer and back.
+     * @throws Throwable
+     */
+    public void testPatch() throws SubversionException, IOException
+    {
+    	OneTest thisTest = new OneTest(true);
+    	File patchInput = new File(super.localTmp, thisTest.testName);
+    	final String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
+        final String NL = System.getProperty("line.separator");
+    	
+    	final String patchText = "Index: iota" + NL +
+            "===================================================================" + NL +
+            "--- iota\t(revision 1)" + NL +
+            "+++ iota\t(working copy)" + NL +
+            "@@ -1 +1,2 @@" + NL +
+            " This is the file 'iota'." + NL +
+            "+No, this is *really* the file 'iota'." + NL;
+    	
+        PrintWriter writer = new PrintWriter(new FileOutputStream(patchInput));
+        writer.print(patchText);
+        writer.flush();
+        writer.close();
+    	
+    	client.patch(patchInput.getAbsolutePath(), iotaPath, false, 0,
+    			false, true, true,
+    			new PatchCallback() {
+					public boolean singlePatch(String pathFromPatchfile,
+                            String patchPath, String rejectPath) {
+						// Do nothing, right now.
+                        return false;
+					}
+    	});
+    }
 
     /**
      * Test the {@link SVNClientInterface.diff()} APIs.
@@ -3084,9 +3068,9 @@ public class BasicTests extends SVNTests
     {
         // build the test setup
         OneTest thisTest = new OneTest();
-        NotifyCallback notify = new NotifyCallback()
+        ClientNotifyCallback notify = new ClientNotifyCallback()
         {
-            public void onNotify(NotifyInformation info)
+            public void onNotify(ClientNotifyInformation info)
             {
                 client.isAdminDirectory(".svn");
             }
@@ -3102,9 +3086,9 @@ public class BasicTests extends SVNTests
     {
         // build the test setup
         OneTest thisTest = new OneTest();
-        NotifyCallback notify = new NotifyCallback()
+        ClientNotifyCallback notify = new ClientNotifyCallback()
         {
-            public void onNotify(NotifyInformation info)
+            public void onNotify(ClientNotifyInformation info)
             {
                 try
                 {

@@ -838,9 +838,9 @@ test_working_info(apr_pool_t *pool)
   const char *original_root_url;
   const char *original_uuid;
   svn_revnum_t original_revnum;
-  svn_boolean_t text_mod;
   svn_boolean_t props_mod;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
+  svn_boolean_t have_work;
   svn_boolean_t conflicted;
   svn_wc__db_lock_t *lock;
   svn_wc__db_t *db;
@@ -857,7 +857,7 @@ test_working_info(apr_pool_t *pool)
             &depth, &checksum, &translated_size, &target,
             &changelist, &original_repos_relpath, &original_root_url,
             &original_uuid, &original_revnum,
-            &text_mod, &props_mod, &base_shadowed,
+            &props_mod, &have_base, &have_work,
             &conflicted, &lock,
             db, svn_dirent_join(local_abspath, "I", pool),
             pool, pool));
@@ -879,9 +879,9 @@ test_working_info(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(original_root_url, ROOT_TWO);
   SVN_TEST_STRING_ASSERT(original_uuid, UUID_TWO);
   SVN_TEST_ASSERT(original_revnum == 2);
-  SVN_TEST_ASSERT(text_mod == FALSE);
   SVN_TEST_ASSERT(props_mod == FALSE);
-  SVN_TEST_ASSERT(base_shadowed == TRUE);
+  SVN_TEST_ASSERT(have_base == TRUE);
+  SVN_TEST_ASSERT(have_work == TRUE);
   SVN_TEST_ASSERT(conflicted == FALSE);
   SVN_TEST_ASSERT(lock == NULL);
 

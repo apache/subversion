@@ -80,23 +80,34 @@ values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
 -- STMT_INSERT_BASE_NODE_INCOMPLETE
 insert or ignore into base_node (
   wc_id, local_relpath, parent_relpath, presence, kind, revnum)
-values (?1, ?2, ?3, 'incomplete', 'unknown', ?5);
+values (?1, ?2, ?3, 'incomplete', 'unknown', ?4);
+
+-- STMT_INSERT_BASE_NODE_INCOMPLETE_DIR
+insert or ignore into base_node (
+  wc_id, local_relpath, repos_id, repos_relpath, parent_relpath, presence,
+  kind, revnum)
+values (?1, ?2, ?3, ?4, ?5, 'incomplete', 'dir', ?6);
 
 -- STMT_INSERT_WORKING_NODE_INCOMPLETE
-INSERT OR IGNORE INTO BASE_NODE (
+INSERT OR IGNORE INTO WORKING_NODE (
   wc_id, local_relpath, parent_relpath, presence, kind)
 VALUES (?1, ?2, ?3, 'incomplete', 'unknown');
+
+-- STMT_COUNT_BASE_NODE_CHILDREN
+SELECT COUNT(*) FROM BASE_NODE
+WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_COUNT_WORKING_NODE_CHILDREN
+SELECT COUNT(*) FROM WORKING_NODE
+WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_SELECT_BASE_NODE_CHILDREN
 select local_relpath from base_node
 where wc_id = ?1 and parent_relpath = ?2;
 
--- STMT_SELECT_WORKING_CHILDREN
-select local_relpath from base_node
-where wc_id = ?1 and parent_relpath = ?2
-union
-select local_relpath from working_node
-where wc_id = ?1 and parent_relpath = ?2;
+-- STMT_SELECT_WORKING_NODE_CHILDREN
+SELECT local_relpath FROM WORKING_NODE
+WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_SELECT_WORKING_IS_FILE
 select kind == 'file' from working_node
@@ -210,6 +221,26 @@ insert into actual_node (
   wc_id, local_relpath, tree_conflict_data)
 values (?1, ?2, ?3);
 
+-- STMT_UPDATE_ACTUAL_TEXT_CONFLICTS
+update actual_node set conflict_old = ?3, conflict_new = ?4,
+conflict_working = ?5
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_INSERT_ACTUAL_TEXT_CONFLICTS
+insert into actual_node (
+  wc_id, local_relpath, conflict_old, conflict_new, conflict_working,
+  parent_relpath)
+values (?1, ?2, ?3, ?4, ?5, ?6);
+
+-- STMT_UPDATE_ACTUAL_PROPERTY_CONFLICTS
+update actual_node set prop_reject = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_INSERT_ACTUAL_PROPERTY_CONFLICTS
+insert into actual_node (
+  wc_id, local_relpath, prop_reject, parent_relpath)
+values (?1, ?2, ?3, ?4);
+
 -- STMT_UPDATE_ACTUAL_CHANGELIST
 update actual_node set changelist = ?3
 where wc_id = ?1 and local_relpath = ?2;
@@ -256,6 +287,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 update base_node set presence= ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_PRESENCE_KIND
+update base_node set presence = ?3, kind = ?4
+where wc_id = ?1 and local_relpath = ?2;
+
 -- STMT_UPDATE_WORKING_PRESENCE
 update working_node set presence = ?3
 where wc_id = ?1 and local_relpath =?2;
@@ -293,6 +328,10 @@ WHERE checksum = ?1
 SELECT checksum
 FROM pristine
 WHERE md5_checksum = ?1
+
+-- STMT_SELECT_PRISTINE_ROWS
+SELECT checksum
+FROM pristine
 
 -- STMT_SELECT_ANY_PRISTINE_REFERENCE
 SELECT 1 FROM base_node
@@ -446,6 +485,19 @@ SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, properties,
      prop_reject, changelist, text_mod, tree_conflict_data FROM ACTUAL_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_SELECT_SUBDIR
+SELECT 1 FROM BASE_NODE WHERE wc_id = ?1 and local_relpath = ?2 and kind = 'subdir'
+UNION
+SELECT 0 FROM WORKING_NODE WHERE wc_id = ?1 and local_relpath = ?2 and kind = 'subdir';
+
+-- STMT_UPDATE_BASE_REVISION
+UPDATE BASE_NODE SET revnum=?3
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_REPOS
+UPDATE BASE_NODE SET repos_id = ?3, repos_relpath = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */
@@ -497,11 +549,6 @@ where wc_id = ?1 and local_relpath = ?2;
 update base_node set file_external = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_UPDATE_WORKING_CHECKSUM
-update working_node set checksum = ?3
-where wc_id = ?1 and local_relpath = ?2;
-
-
 /* ------------------------------------------------------------------------- */
 
 /* these are used in upgrade.c  */
@@ -522,6 +569,18 @@ values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
 
 -- STMT_ERASE_OLD_CONFLICTS
 update actual_node set tree_conflict_data = null;
+
+-- STMT_SELECT_ALL_FILES
+SELECT local_relpath FROM BASE_NODE
+WHERE kind = 'file'
+UNION
+SELECT local_relpath FROM WORKING_NODE
+WHERE kind = 'file';
+
+-- STMT_PLAN_PROP_UPGRADE
+SELECT 0, null, wc_id FROM BASE_NODE WHERE local_relpath = ?1
+UNION
+SELECT 1, presence, wc_id FROM WORKING_NODE WHERE local_relpath = ?1;
 
 
 /* ------------------------------------------------------------------------- */

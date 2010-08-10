@@ -174,7 +174,7 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.2
      */
-    public native void notification2(NotifyCallback notify);
+    public native void notification2(ClientNotifyCallback notify);
 
     /**
      * @since 1.5
@@ -508,14 +508,6 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #info2(String, Revision, Revision, int, String[],
-     *                               InfoCallback)} instead.
-     * @since 1.0
-     */
-    public native Info info(String path)
-            throws ClientException;
-
-    /**
      * @since 1.5
      */
     public native void addToChangelist(Set<String> paths, String changelist,
@@ -625,4 +617,14 @@ public class SVNClient implements ISVNClient
                              Collection<String> changelists,
                              InfoCallback callback)
             throws ClientException;
+    
+    /**
+     * @since 1.7
+     */
+    public native void patch(String patchPath, String targetPath,
+                             boolean dryRun, int stripCount, boolean reverse,
+                             boolean ignoreWhitespace, boolean removeTempfiles,
+                             PatchCallback callback)
+            throws ClientException;
+
 }

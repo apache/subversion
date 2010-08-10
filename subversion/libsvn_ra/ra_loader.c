@@ -1014,13 +1014,26 @@ svn_error_t *svn_ra_get_lock(svn_ra_session_t *session,
   return session->vtable->get_lock(session, lock, path, pool);
 }
 
+svn_error_t *svn_ra_get_locks2(svn_ra_session_t *session,
+                               apr_hash_t **locks,
+                               const char *path,
+                               svn_depth_t depth,
+                               apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT((depth == svn_depth_empty) ||
+                 (depth == svn_depth_files) ||
+                 (depth == svn_depth_immediates) ||
+                 (depth == svn_depth_infinity));
+  return session->vtable->get_locks(session, locks, path, depth, pool);
+}
+
 svn_error_t *svn_ra_get_locks(svn_ra_session_t *session,
                               apr_hash_t **locks,
                               const char *path,
                               apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(*path != '/');
-  return session->vtable->get_locks(session, locks, path, pool);
+  return svn_ra_get_locks2(session, locks, path, svn_depth_infinity, pool);
 }
 
 svn_error_t *svn_ra_replay(svn_ra_session_t *session,

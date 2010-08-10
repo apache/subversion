@@ -97,7 +97,7 @@ svn_cl__changelist(apr_getopt_t *os,
   if (depth == svn_depth_unknown)
     depth = svn_depth_empty;
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
   if (changelist_name)
     {

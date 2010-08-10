@@ -58,8 +58,6 @@
 #include "wc.h"
 #include "props.h"
 #include "adm_files.h"
-#include "lock.h"
-#include "entries.h"
 #include "translate.h"
 
 #include "svn_private_config.h"
@@ -587,9 +585,10 @@ file_diff(struct dir_baton *db,
   const char *empty_file;
   svn_boolean_t replaced;
   svn_wc__db_status_t status;
+  const char *original_repos_relpath;
   svn_revnum_t revision;
   svn_revnum_t revert_base_revnum;
-  svn_boolean_t base_shadowed;
+  svn_boolean_t have_base;
   svn_wc__db_status_t base_status;
   const char *local_abspath;
 
@@ -607,10 +606,10 @@ file_diff(struct dir_baton *db,
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &base_shadowed, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &have_base, NULL, NULL, NULL,
                                eb->db, local_abspath, pool, pool));
-  if (base_shadowed)
+  if (have_base)
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
@@ -618,14 +617,15 @@ file_diff(struct dir_baton *db,
 
   replaced = ((status == svn_wc__db_status_added
                || status == svn_wc__db_status_obstructed_add)
-              && base_shadowed
+              && have_base
               && base_status != svn_wc__db_status_not_present);
 
   /* Now refine ADDED to one of: ADDED, COPIED, MOVED_HERE. Note that only
      the latter two have corresponding pristine info to diff against.  */
   if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, eb->db, local_abspath,
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
+                                     &original_repos_relpath, NULL, NULL,
+                                     NULL, eb->db, local_abspath,
                                      pool, pool));
 
   /* A wc-wc diff of replaced files actually shows a diff against the
@@ -664,7 +664,10 @@ file_diff(struct dir_baton *db,
       /* Get svn:mime-type from pristine props (in BASE or WORKING) of PATH. */
       SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
                                          pool, pool));
-      base_mimetype = get_prop_mimetype(baseprops);
+      if (baseprops)
+        base_mimetype = get_prop_mimetype(baseprops);
+      else
+        base_mimetype = NULL;
 
       SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, NULL, path,
                                           textbase,
@@ -720,9 +723,9 @@ file_diff(struct dir_baton *db,
                                         0, revision,
                                         NULL,
                                         working_mimetype,
-                                        NULL, SVN_INVALID_REVNUM,
-                                        propchanges, baseprops,
-                                        eb->callback_baton,
+                                        original_repos_relpath,
+                                        SVN_INVALID_REVNUM, propchanges,
+                                        baseprops, eb->callback_baton,
                                         pool));
     }
   else
@@ -1534,7 +1537,7 @@ apply_textdelta(void *file_baton,
                                      NULL, NULL, NULL, eb->db,
                                      fb->local_abspath, pool, pool));
 
-  svn_dirent_split(fb->wc_path, &parent, &base_name, fb->pool);
+  svn_dirent_split(&parent, &base_name, fb->wc_path, fb->pool);
 
   /* If the node is added-with-history, then this is not actually
      an add, but a modification. */
@@ -1934,7 +1937,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
       target = "";
     }
   else
-    svn_dirent_split(target_path, &anchor_path, &target, pool);
+    svn_dirent_split(&anchor_path, &target, target_path, pool);
 
   SVN_ERR(make_edit_baton(&eb,
                           wc_ctx->db,

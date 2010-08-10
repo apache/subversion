@@ -457,14 +457,14 @@ def verify_windows_paths_in_repos(sbox):
 # numbered REV in REPO_DIR, which must be in the first shard if we're
 # using a sharded repository.
 def fsfs_file(repo_dir, kind, rev):
-  if svntest.main.server_minor_version >= 5:
-    if svntest.main.fsfs_sharding is None:
+  if svntest.main.options.server_minor_version >= 5:
+    if svntest.main.options.fsfs_sharding is None:
       return os.path.join(repo_dir, 'db', kind, '0', rev)
     else:
       shard = int(rev) // svntest.main.fsfs_sharding
       path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
 
-      if svntest.main.fsfs_packing is None or kind == 'revprops':
+      if svntest.main.options.fsfs_packing is None or kind == 'revprops':
         # we don't pack revprops
         return path
       elif os.path.exists(path):
@@ -1188,6 +1188,67 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
+
+def hotcopy_symlink(sbox):
+  "'svnadmin hotcopy' replicates symlink"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2591. ##
+
+  original_repo = sbox.repo_dir
+
+  hotcopy_repo, hotcopy_url = sbox.add_repo_path('hotcopy')
+
+  # Create a repository.
+  svntest.main.safe_rmtree(original_repo, 1)
+  svntest.main.create_repos(original_repo)
+
+  # Create a file, a dir and a missing path outside the repoitory.
+  svntest.main.safe_rmtree(sbox.wc_dir, 1)
+  os.mkdir(sbox.wc_dir)
+  external_file_path = os.path.join(sbox.wc_dir, "file")
+  svntest.main.file_write(external_file_path, "An existing file")
+  external_dir_path = os.path.join(sbox.wc_dir, "dir")
+  os.mkdir(external_dir_path)
+  external_missing_path = os.path.join(sbox.wc_dir, "missing")
+
+  # Symlink definitions: base name -> target relpath.
+  # Check both existing and nonexistent targets.
+  # Check targets both within and outside the source repository.
+  symlinks = [
+    ('in_repos_file',    'format'),
+    ('in_repos_dir',     'conf'),
+    ('in_repos_missing', 'missing'),
+    ('external_file',    os.path.join('..', '..', '..', external_file_path)),
+    ('external_dir',     os.path.join('..', '..', '..', external_dir_path)),
+    ('external_missing', os.path.join('..', '..', '..', external_missing_path)),
+  ]
+
+  # Create symlinks within the repository directory.
+  for name, target_relpath in symlinks:
+    target_path = os.path.join(original_repo, target_relpath)
+    target_abspath = os.path.abspath(target_path)
+
+    # Create two symlinks to each target - one relative, one absolute.
+    symlink_path = os.path.join(original_repo, name)
+    os.symlink(target_relpath, symlink_path + '_rel')
+    os.symlink(target_abspath, symlink_path + '_abs')
+
+  svntest.actions.run_and_verify_svnadmin(
+    None, None, [],
+    "hotcopy", original_repo, hotcopy_repo)
+
+  # Check if the symlinks were copied correctly.
+  for name, target_relpath in symlinks:
+    target_path = os.path.join(original_repo, target_relpath)
+    target_abspath = os.path.abspath(target_path)
+
+    # Check two symlinks to each target - one relative, one absolute.
+    symlink_path = os.path.join(hotcopy_repo, name)
+    if os.readlink(symlink_path + '_rel') != target_relpath:
+      raise svntest.Failure
+    if os.readlink(symlink_path + '_abs') != target_abspath:
+      raise svntest.Failure
+
 ########################################################################
 # Run the tests
 
@@ -1216,6 +1277,7 @@ test_list = [ None,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
               XFail(dont_drop_valid_mergeinfo_during_incremental_loads),
+              SkipUnless(hotcopy_symlink, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':

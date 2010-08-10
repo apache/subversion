@@ -728,7 +728,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
           else
             svn_error_clear(err);
 
-          svn_uri_split(url, &temp, &dir, pool);
+          svn_uri_split(&temp, &dir, url, pool);
           APR_ARRAY_PUSH(new_entries, const char *) =
             svn_path_uri_decode(dir, pool);
           url = temp;
@@ -1028,8 +1028,8 @@ check_nonrecursive_dir_delete(const char *target_path,
                  pristine compare etc. */
           SVN_ERR(svn_wc_status3(&status, wc_ctx, target_abspath, pool,
                                  pool));
-          if (status->text_status == svn_wc_status_deleted ||
-              status->text_status == svn_wc_status_replaced)
+          if (status->node_status == svn_wc_status_deleted ||
+              status->node_status == svn_wc_status_replaced)
             {
               const apr_array_header_t *children;
 

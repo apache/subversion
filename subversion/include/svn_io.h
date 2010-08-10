@@ -130,7 +130,8 @@ svn_io_check_resolved_path(const char *path,
  * utf-8 encoded @a filename, in the directory @a dirpath.  The file handle is
  * returned in @a *file, and the name, which ends with @a suffix, is returned
  * in @a *unique_name, also utf8-encoded.  Either @a file or @a unique_name
- * may be @c NULL.
+ * may be @c NULL.  If @a file is @c NULL, the file will be created but not
+ * open.
  *
  * If @a delete_when is #svn_io_file_del_on_close, then the @c APR_DELONCLOSE
  * flag will be used when opening the file.  The @c APR_BUFFERED flag will
@@ -187,10 +188,11 @@ svn_io_open_uniquely_named(apr_file_t **file,
                            apr_pool_t *scratch_pool);
 
 
-/** Create a writable file in the directory @a dirpath. The file will have
- * an arbitrary and unique name, and the full path will be returned in
- * @a temp_path. The file will be returned in @a file. Both will be
- * allocated from @a result_pool.
+/** Create a writable file, with an arbitrary and unique name, in the
+ * directory @a dirpath.  Set @a *temp_path to its full path, and set
+ * @a *file to the file handle, both allocated from @a result_pool.  Either
+ * @a file or @a unique_name may be @c NULL.  If @a file is @c NULL, the file
+ * will be created but not open.
  *
  * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
  * (Note that when using the system-provided temp directory, it may not
@@ -299,6 +301,8 @@ svn_io_copy_file(const char *src,
 
 /** Copy permission flags from @a src onto the file at @a dst. Both
  * filenames are utf8-encoded filenames.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_io_copy_perms(const char *src,
@@ -1891,6 +1895,16 @@ svn_io_dir_read(apr_finfo_t *finfo,
                 apr_dir_t *thedir,
                 apr_pool_t *pool);
 
+/** Wrapper for apr_file_name_get().  @a *filename is utf8-encoded.
+ *
+ * @note The file name may be NULL.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_name_get(const char **filename,
+                     apr_file_t *file,
+                     apr_pool_t *pool);
+
 
 
 /** Version/format files.
@@ -1918,14 +1932,6 @@ svn_error_t *
 svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
-
-/** Wrapper for apr_file_name_get().
- *
- * @since New in 1.7. */
-svn_error_t *
-svn_io_file_name_get(const char **filename,
-                     apr_file_t *file,
-                     apr_pool_t *pool);
 
 /** @} */
 
