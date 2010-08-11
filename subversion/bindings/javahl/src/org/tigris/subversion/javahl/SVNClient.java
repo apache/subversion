@@ -354,6 +354,22 @@ public class SVNClient implements SVNClientInterface
         {
             return askTrustSSLServer(info, allowPermanently);
         }
+
+        public boolean userAllowedSave()
+        {
+            return false;
+        }
+
+        public String askQuestion(String realm, String question,
+                                  boolean showAnswer, boolean maySave)
+        {
+            return askQuestion(realm, question, showAnswer);
+        }
+
+        public boolean prompt(String realm, String username, boolean maySave)
+        {
+            return prompt(realm, username);
+        }
     }
 
     /**
