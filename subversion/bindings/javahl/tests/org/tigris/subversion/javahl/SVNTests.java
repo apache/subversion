@@ -284,7 +284,7 @@ class SVNTests extends TestCase
 
         public int askTrustSSLServer(String info, boolean allowPermanently) 
         {
-            return PromptUserPassword.AcceptTemporary;
+            return PromptUserPassword3.AcceptTemporary;
         }
 
         public String askQuestion(String realm, String question, boolean showAnswer)
