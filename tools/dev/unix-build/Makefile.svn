@@ -10,6 +10,7 @@ ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 
 PWD		= $(shell pwd)
+UNAME		= $(shell uname)
 
 TAG		?= none
 ifeq ($(TAG),none)
@@ -528,11 +529,22 @@ $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(NEON_DIST)
 	touch $@
 
+# OpenBSD does not have krb5-config in PATH, but the neon port has
+# a suitable replacement.
+ifeq ($(UNAME),OpenBSD)
+KRB5_CONFIG_PATH=/usr/ports/net/neon/files
+endif
+
 # configure neon
 $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 	cd $(NEON_SRCDIR) && ./autogen.sh
+	if [ -n "$(KRB5_CONFIG_PATH)" -a -d "$(KRB5_CONFIG_PATH)" ]; then \
+		cp $(KRB5_CONFIG_PATH)/krb5-config $(NEON_OBJDIR); \
+		chmod +x $(NEON_OBJDIR)/krb5-config; \
+	fi
 	cd $(NEON_OBJDIR) \
 		&& env CFLAGS="-g" $(NEON_SRCDIR)/configure \
+		PATH=$(NEON_OBJDIR):$$PATH \
 		--prefix=$(PREFIX)/neon \
 		--with-ssl \
 		--enable-shared
