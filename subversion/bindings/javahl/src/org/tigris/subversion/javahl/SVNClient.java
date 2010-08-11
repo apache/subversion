@@ -313,12 +313,55 @@ public class SVNClient implements SVNClientInterface
         aSVNClient.password(password);
     }
 
+    private class PromptUser1Wrapper
+        implements org.apache.subversion.javahl.callback.UserPasswordCallback
+    {
+        PromptUserPassword oldPrompt;
+
+        PromptUser1Wrapper(PromptUserPassword prompt)
+        {
+            oldPrompt = prompt;
+        }
+
+        public String getPassword()
+        {
+            return oldPrompt.getPassword();
+        }
+
+        public String getUsername()
+        {
+            return oldPrompt.getUsername();
+        }
+
+        public String askQuestion(String realm, String question,
+                                  boolean showAnswer)
+        {
+            return oldPrompt.askQuestion(realm, question, showAnswer);
+        }
+
+        public boolean askYesNo(String realm, String question,
+                                boolean yesIsDefault)
+        {
+            return oldPrompt.askYesNo(realm, question, yesIsDefault);
+        }
+
+        public boolean prompt(String realm, String username)
+        {
+            return oldPrompt.prompt(realm, username);
+        }
+
+        public int askTrustSSLServer(String info, boolean allowPermanently)
+        {
+            return askTrustSSLServer(info, allowPermanently);
+        }
+    }
+
     /**
      * @since 1.0
      */
     public void setPrompt(PromptUserPassword prompt)
     {
-        aSVNClient.setPrompt(prompt);
+        aSVNClient.setPrompt(new PromptUser1Wrapper(prompt));
     }
 
     /**
