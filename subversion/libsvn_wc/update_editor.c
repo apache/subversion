@@ -3752,10 +3752,6 @@ add_file(const char *path,
   svn_error_t *err;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
 
-  /* Skip the initial '/' */
-  const char *copyfrom_relpath = (copyfrom_path && copyfrom_path[0] ?
-                                  copyfrom_path+1 : copyfrom_path);
-
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
   SVN_ERR_ASSERT((copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
@@ -3876,9 +3872,8 @@ add_file(const char *path,
          If the UUID doesn't match the parent's, or the URL isn't a child of
          the parent dir's URL, it's an error.
 
-         A file with matching history is OK.  Set add_existed so that
-         user notification is delayed until after any text or prop conflicts
-         have been found.
+         Set add_existed so that user notification is delayed until after any
+         text or prop conflicts have been found.
 
          Whether the incoming add is a symlink or a file will only be known in
          close_file(), when the props are known. So with a locally added file
@@ -3887,32 +3882,32 @@ add_file(const char *path,
          We will never see missing files here, because these would be
          re-added during the crawler phase. */
       svn_boolean_t local_is_file;
-      svn_boolean_t local_is_non_file;
       svn_boolean_t is_file_external;
-      const char *local_copyfrom_repos_relpath = NULL;
-      svn_revnum_t local_copyfrom_rev = SVN_INVALID_REVNUM;
 
-      /* Is the local add a copy, and where from? */
+      /* Is the local node a copy or move */
       if (status == svn_wc__db_status_added)
-        SVN_ERR(svn_wc__node_get_copyfrom_info(NULL,
-                                               &local_copyfrom_repos_relpath,
-                                               NULL,
-                                               &local_copyfrom_rev,
-                                               NULL,
-                                               eb->wc_ctx,
-                                               fb->local_abspath,
-                                               subpool, subpool));
-
+        SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
+                                         eb->db, fb->local_abspath,
+                                         subpool, subpool));
 
       /* Is there something that is a file? */
-      local_is_file = ((wc_kind == svn_wc__db_kind_file
-                        || wc_kind == svn_wc__db_kind_symlink) 
-                       && status != svn_wc__db_status_deleted);
+      local_is_file = (wc_kind == svn_wc__db_kind_file
+                       || wc_kind == svn_wc__db_kind_symlink);
 
+#ifndef SVN_WC__SINGLE_DB
       /* Is there *something* that is not a file? */
-      local_is_non_file = ((wc_kind == svn_wc__db_kind_dir
-                            || wc_kind == svn_wc__db_kind_unknown)
-                           && status != svn_wc__db_status_deleted);
+      if (status != svn_wc__db_status_deleted 
+          && wc_kind == svn_wc__db_kind_dir)
+        {
+          return svn_error_createf(
+                           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                           _("Failed to add file '%s': a non-file object "
+                             "of the same name already exists"),
+                           svn_dirent_local_style(fb->local_abspath,
+                                                  pool));
+        }
+#endif
 
       if (local_is_file)
         {
@@ -3922,16 +3917,6 @@ add_file(const char *path,
                                         eb->db, fb->local_abspath, pool));
 
           err = NULL;
-
-          if (wc_root)
-            {
-              err = svn_error_createf(
-                         SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                         _("Failed to add file '%s': a file "
-                           "from another repository with the same name "
-                           "already exists"),
-                         svn_dirent_local_style(fb->local_abspath, pool));
-            }
 
           if (switched && !eb->switch_relpath)
             {
@@ -3954,18 +3939,6 @@ add_file(const char *path,
             }
         }
 
-      /* We can't properly handle add vs. add with mismatching
-       * node kinds before single db. */
-      if (local_is_non_file)
-        {
-          return svn_error_createf(
-                           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                           _("Failed to add file '%s': a non-file object "
-                             "of the same name already exists"),
-                           svn_dirent_local_style(fb->local_abspath,
-                                                  pool));
-        }
-
       /* Find out if this is a file external, because we want to allow pulling
        * in a file external onto an existing node -- because that's how
        * externals are currently implemented. :( */
@@ -3979,47 +3952,16 @@ add_file(const char *path,
       else
         SVN_ERR(err);
 
-      /* Do tree conflict checking if
-       *  - if a copy is involved on either side, except if both are copies
-       *    from the same URL and revnum.
-       *  - if this is a switch operation
-       *  - if we are not busy fetching externals
-       *  - the node kinds mismatch (when single db is here)
-       * IOW, do no tree conflict checking if during update both sides'
-       * histories match (both simple adds or both copies from the same
-       * URL@REV); don't flag tree conflicts on externals, being handled
-       * elsewhere.
-       *
-       * During switch, local adds at the same path as incoming adds get
-       * "lost" in that switching back to the original will no longer have the
-       * local add. So switch always alerts the user with a tree conflict.
-       *
-       * Allow pulling absent/exluded/not_present nodes back in.
-       *
-       * ### This code is already gearing up to single db with respect to
-       * add-vs.-add conflicts with mismatching node kinds. But before single
-       * db, we cannot deal with mismatching node kinds properly.
-       *
-       * ### Checking the copyfrom_path is bogus during checkout and when
-       * contacting older servers, because then, there is no incoming copy
-       * information. In those cases svn still acts like 1.6 did, like it used
-       * to -- fails to flag same-kind tree conflicts with local-add vs.
-       * incoming-copy, and fails to not flag conflicts on matching copies. */
+      /* Don't perform tree conflict checking if
+       *  - if we are in a deleted subtree
+       *  - if this is a file external
+       *  - if this is a normal file addition and we  we are switching
+       */
       if (! pb->in_deleted_and_tree_conflicted_subtree
           && ! is_file_external
           && (eb->switch_relpath != NULL
-              || local_is_non_file
-              || ((copyfrom_path != NULL 
-                   || local_copyfrom_repos_relpath != NULL)
-                  &&
-                  ! (copyfrom_path != NULL
-                     && local_copyfrom_repos_relpath != NULL
-                     && strcmp(local_copyfrom_repos_relpath,
-                               copyfrom_relpath) == 0
-                     && local_copyfrom_rev == copyfrom_rev)
-                 )
-             )
-         )
+              || !local_is_file
+              || status != svn_wc__db_status_added))
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       fb->local_abspath,
@@ -4027,7 +3969,6 @@ add_file(const char *path,
                                       svn_node_file, fb->new_relpath,
                                       subpool));
         }
-
 
       if (tree_conflict == NULL)
         /* We have a node in WORKING and we've decided not to flag a
