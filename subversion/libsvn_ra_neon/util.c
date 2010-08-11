@@ -1525,5 +1525,8 @@ svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
                                   apr_pool_t *pool)
 {
   const char *val = ne_get_response_header(request->ne_req, "Location");
-  return val ? svn_uri_canonicalize(val, pool) : NULL;
+  return val ? svn_uri_join(request->url,
+                            svn_uri_canonicalize(val, pool),
+                            pool)
+             : NULL;
 }
