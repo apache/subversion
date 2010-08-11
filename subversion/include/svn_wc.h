@@ -1086,6 +1086,11 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_patch_hunk_already_applied,
 
+  /** The server has instructed the client to follow a URL
+   * redirection.
+   * @since New in 1.7. */
+  svn_wc_notify_url_redirect
+
 } svn_wc_notify_action_t;
 
 

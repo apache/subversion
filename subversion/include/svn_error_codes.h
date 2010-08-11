@@ -837,6 +837,11 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 10,
              "Repository root URL does not match expected root URL")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_RA_SESSION_URL_MISMATCH,
+             SVN_ERR_RA_CATEGORY_START + 11,
+             "Session URL does not match expected session URL")
+
   /* ra_dav errors */
 
   SVN_ERRDEF(SVN_ERR_RA_DAV_SOCK_INIT,
@@ -1164,6 +1169,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT,
              SVN_ERR_CLIENT_CATEGORY_START + 18,
              "Invalid path component strip count specified")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_CYCLE_DETECTED,
+             SVN_ERR_CLIENT_CATEGORY_START + 19,
+             "Detected a cycle while processing the operation")
 
   /* misc errors */
 

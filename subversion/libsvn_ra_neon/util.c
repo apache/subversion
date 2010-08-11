@@ -562,6 +562,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
 
         case 301:
         case 302:
+        case 307:
           return svn_error_create
             (SVN_ERR_RA_DAV_RELOCATED, NULL,
              apr_psprintf(pool,
@@ -1263,12 +1264,10 @@ parsed_request(svn_ra_neon__request_t *req,
                                                  success_parser, pool));
 
   /* run the request and get the resulting status code. */
-  SVN_ERR(svn_ra_neon__request_dispatch(status_code,
-                                        req, extra_headers, body,
-                                        (strcmp(method, "PROPFIND") == 0)
-                                        ? 207 : 200,
-                                        0, /* not used */
-                                        pool));
+  SVN_ERR(svn_ra_neon__request_dispatch(
+              status_code, req, extra_headers, body,
+              (strcmp(method, "PROPFIND") == 0) ? 207 : 200,
+              0, pool));
 
   if (spool_response)
     {

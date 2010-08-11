@@ -688,9 +688,9 @@ mkdir_urls(const apr_array_header_t *urls,
       const char *first_url = APR_ARRAY_IDX(urls, 0, const char *);
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, first_url,
-                                                   NULL, NULL, FALSE,
-                                                   TRUE, ctx, pool));
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
+                                                   first_url, NULL, NULL,
+                                                   FALSE, TRUE, ctx, pool));
 
       for (i = 0; i < urls->nelts; i++)
         {
@@ -790,8 +790,9 @@ mkdir_urls(const apr_array_header_t *urls,
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
   if (!ra_session)
-    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common, NULL,
-                                                 NULL, FALSE, TRUE, ctx, pool));
+    SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, common,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
 
   /* URI-decode each target. */
   for (i = 0; i < targets->nelts; i++)

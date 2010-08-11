@@ -881,6 +881,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           goto print_error;
       break;
 
+    case svn_wc_notify_url_redirect:
+      err = svn_cmdline_printf(pool, _("Redirecting to URL '%s'\n"),
+                               n->url);
+      if (err)
+        goto print_error;
+
     default:
       break;
     }
