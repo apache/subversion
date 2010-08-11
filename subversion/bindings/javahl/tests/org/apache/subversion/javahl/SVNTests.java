@@ -272,12 +272,74 @@ class SVNTests extends TestCase
         this.client = new SVNClient();
         this.client.notification2(new MyNotifier());
         this.client.commitMessageHandler(new MyCommitMessage());
+        this.client.setPrompt(new DefaultPromptUserPassword());
         this.client.username("jrandom");
-        this.client.password("rayjandom");
+        this.client.setProgressCallback(new DefaultProgressListener());
         this.client.setConfigDirectory(this.conf.getAbsolutePath());
         this.expectedCommitItems = new HashMap<String, MyCommitItem>();
     }
+    /**
+     * the default prompt : never prompts the user, provides defaults answers
+     */
+    private static class DefaultPromptUserPassword implements UserPasswordCallback
+    {
 
+        public int askTrustSSLServer(String info, boolean allowPermanently) 
+        {
+            return UserPasswordCallback.AcceptTemporary;
+        }
+
+        public String askQuestion(String realm, String question, boolean showAnswer)
+        {
+            return "";
+        }
+
+        public boolean askYesNo(String realm, String question, boolean yesIsDefault)
+        {
+            return yesIsDefault;
+        }
+
+        public String getPassword()
+        {
+            return "rayjandom";
+        }
+
+        public String getUsername()
+        {
+            return "jrandom";
+        }
+
+        public boolean prompt(String realm, String username)
+        {
+            return false;
+        }
+
+        public boolean prompt(String realm, String username, boolean maySave)
+        {
+            return false;
+        }
+
+        public String askQuestion(String realm, String question,
+                boolean showAnswer, boolean maySave) 
+        {
+            return "";
+        }
+
+        public boolean userAllowedSave() 
+        {
+            return false;
+        }
+    }
+
+    private static class DefaultProgressListener implements ProgressCallback 
+    {
+
+        public void onProgress(ProgressEvent event) 
+        {
+            // Do nothing, just receive the event
+        }
+        
+    }
     /**
      * build a sample directory with test files to be used as import for
      * the sample repository. Create also the master working copy test set.
