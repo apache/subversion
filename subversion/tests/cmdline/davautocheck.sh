@@ -210,6 +210,9 @@ LOAD_MOD_LOG_CONFIG=$(get_loadmodule_config mod_log_config) \
 LOAD_MOD_MIME=$(get_loadmodule_config mod_mime) \
   || fail "MIME module not found"
 
+LOAD_MOD_ALIAS=$(get_loadmodule_config mod_alias) \
+  || fail "ALIAS module not found"
+
 # needed for Auth*, Require, etc. directives
 LOAD_MOD_AUTH=$(get_loadmodule_config mod_auth) \
   || {
@@ -258,6 +261,7 @@ touch $HTTPD_MIME_TYPES
 cat > "$HTTPD_CFG" <<__EOF__
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
+$LOAD_MOD_ALIAS
 $LOAD_MOD_UNIXD
 $LOAD_MOD_DAV
 LoadModule          dav_svn_module "$MOD_DAV_SVN"
