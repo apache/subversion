@@ -67,6 +67,28 @@ def verify_url(wc_path, url, wc_path_is_file=False):
 
 #----------------------------------------------------------------------
 
+def temporary_redirect(sbox):
+  "temporary redirect should error out"
+
+  sbox.build(create_wc=False)
+  wc_dir = sbox.add_wc_path("my")
+  co_url = sbox.redirected_root_url(temporary=True)
+  
+  # Try various actions against the repository, expecting an error
+  # that indicates that some relocation has occurred.
+  exit_code, out, err = svntest.main.run_svn('.*moved temporarily.*',
+                                             'info', co_url)
+  exit_code, out, err = svntest.main.run_svn('.*moved temporarily.*',
+                                             'co', co_url, wc_dir)
+  exit_code, out, err = svntest.main.run_svn('.*moved temporarily.*',
+                                             'mkdir', '-m', 'MKDIR',
+                                             co_url + '/newdir')
+  exit_code, out, err = svntest.main.run_svn('.*moved temporarily.*',
+                                             'delete', '-m', 'DELETE',
+                                             co_url + '/iota')
+
+#----------------------------------------------------------------------
+
 def redirected_checkout(sbox):
   "redirected checkout"
 
@@ -120,6 +142,8 @@ def redirected_update(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
+              SkipUnless(temporary_redirect,
+                         svntest.main.is_ra_type_dav),
               SkipUnless(redirected_checkout,
                          svntest.main.is_ra_type_dav),
               SkipUnless(redirected_update,
