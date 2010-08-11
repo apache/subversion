@@ -51,7 +51,7 @@ ProgressListener::makeCProgressListener(jobject jprogressListener)
 
   // Sanity check that the object implements the ProgressListener
   // Java interface.
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressListener");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ProgressCallback");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -96,7 +96,7 @@ ProgressListener::onProgress(apr_off_t progressVal, apr_off_t total,
   if (mid == 0)
     {
       // Initialize the method ID.
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressListener");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ProgressCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NOTHING();
 

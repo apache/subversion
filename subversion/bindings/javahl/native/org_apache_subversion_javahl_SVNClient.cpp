@@ -382,10 +382,10 @@ Java_org_apache_subversion_javahl_SVNClient_setConflictResolver
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_setProgressListener
+Java_org_apache_subversion_javahl_SVNClient_setProgressCallback
 (JNIEnv *env, jobject jthis, jobject jprogressListener)
 {
-  JNIEntry(SVNClient, setProgressListener);
+  JNIEntry(SVNClient, setProgressCallback);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
