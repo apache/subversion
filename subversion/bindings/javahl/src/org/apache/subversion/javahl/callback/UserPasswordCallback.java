@@ -24,9 +24,13 @@
 package org.apache.subversion.javahl.callback;
 
 /**
- * The original interface for receiving callbacks for authentication.
- * Consider this code deprecated -- new applications should use
- * PromptUserPassword3 instead.
+ * <p>The interface for requesting authentication credentials from the
+ * user.  Should the javahl bindings need the matching information,
+ * these methodes will be called.</p>
+ *
+ * <p>This callback can also be used to provide the equivalent of the
+ * <code>--no-auth-cache</code> and <code>--non-interactive</code>
+ * arguments accepted by the command-line client.</p>
  */
 public interface UserPasswordCallback
 {
@@ -39,12 +43,6 @@ public interface UserPasswordCallback
      * Accept the connection to the server <i>once</i>.
      */
     public static final int AcceptTemporary = 1;
-
-    /**
-     * @deprecated Use the correctly spelled "AcceptTemporary"
-     * constant instead.
-     */
-    public static final int AccecptTemporary = AcceptTemporary;
 
     /**
      * Accept the connection to the server <i>forever</i>.
