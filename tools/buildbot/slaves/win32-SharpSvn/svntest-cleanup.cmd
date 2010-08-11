@@ -58,4 +58,7 @@ IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
   rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"
 )
 
+del "%TESTDIR%\tests\*.log" 2> nul:
+
+
 exit /B 0
