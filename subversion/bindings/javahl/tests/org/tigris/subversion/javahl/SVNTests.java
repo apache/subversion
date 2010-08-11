@@ -29,6 +29,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import org.tigris.subversion.javahl.ProgressListener;
+import org.tigris.subversion.javahl.PromptUserPassword;
+import org.tigris.subversion.javahl.PromptUserPassword3;
 
 import junit.framework.TestCase;
 
@@ -267,10 +270,72 @@ class SVNTests extends TestCase
         this.client = new SVNClientSynchronized();
         this.client.notification2(new MyNotifier());
         this.client.commitMessageHandler(new MyCommitMessage());
-        this.client.username("jrandom");
-        this.client.password("rayjandom");
+        this.client.setPrompt(new DefaultPromptUserPassword());
+        this.client.setProgressListener(new DefaultProgressListener());
         this.client.setConfigDirectory(this.conf.getAbsolutePath());
         this.expectedCommitItems = new HashMap();
+    }
+    /**
+     * the default prompt : never prompts the user, provides defaults answers
+     */
+    private static class DefaultPromptUserPassword implements PromptUserPassword3
+    {
+
+        public int askTrustSSLServer(String info, boolean allowPermanently) 
+        {
+            return PromptUserPassword.AcceptTemporary;
+        }
+
+        public String askQuestion(String realm, String question, boolean showAnswer)
+        {
+            return "";
+        }
+
+        public boolean askYesNo(String realm, String question, boolean yesIsDefault)
+        {
+            return yesIsDefault;
+        }
+
+        public String getPassword()
+        {
+            return "rayjandom";
+        }
+
+        public String getUsername()
+        {
+            return "jrandom";
+        }
+
+        public boolean prompt(String realm, String username)
+        {
+            return false;
+        }
+
+        public boolean prompt(String realm, String username, boolean maySave)
+        {
+            return false;
+        }
+
+        public String askQuestion(String realm, String question,
+                boolean showAnswer, boolean maySave) 
+        {
+            return "";
+        }
+
+        public boolean userAllowedSave() 
+        {
+            return false;
+        }
+    }
+
+    private static class DefaultProgressListener implements ProgressListener 
+    {
+
+        public void onProgress(ProgressEvent event) 
+        {
+            // Do nothing, just receive the event
+        }
+        
     }
 
     /**
