@@ -772,6 +772,7 @@ ensure_neon_initialized(void)
 
 static svn_error_t *
 svn_ra_neon__open(svn_ra_session_t *session,
+                  const char **corrected_url,
                   const char *repos_URL,
                   const svn_ra_callbacks2_t *callbacks,
                   void *callback_baton,
@@ -1073,7 +1074,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
 
   session->priv = ras;
 
-  return svn_ra_neon__exchange_capabilities(ras, &ignored_revnum, pool);
+  return svn_ra_neon__exchange_capabilities(ras, corrected_url,
+                                            &ignored_revnum, pool);
 }
 
 

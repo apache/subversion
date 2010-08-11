@@ -214,9 +214,9 @@ delete_urls(const apr_array_header_t *paths,
          session.  */
       if (! ra_session)
         {
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, item_url,
-                                                       NULL, NULL, FALSE,
-                                                       TRUE, ctx, pool));
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
+                                                       item_url, NULL, NULL,
+                                                       FALSE, TRUE, ctx, pool));
         }
       else
         {

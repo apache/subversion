@@ -192,7 +192,7 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
 
   /* Open an RA session to our common ancestor and grab the locks under it.
    */
-  SVN_ERR(svn_client__open_ra_session_internal(&ras, rb->ancestor, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ras, NULL, rb->ancestor, NULL,
                                                NULL, FALSE, TRUE,
                                                rb->ctx, subpool));
 
@@ -394,7 +394,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                                     pool, pool));
 
       /* Open a repository session to the URL. */
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL,
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL,
                                                    dir_abspath,
                                                    NULL, FALSE, TRUE,
                                                    ctx, pool));

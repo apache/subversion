@@ -331,6 +331,7 @@ svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
 
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
+                  const char **corrected_url,
                   const char *repos_URL,
                   const svn_ra_callbacks2_t *callbacks,
                   void *callback_baton,
@@ -341,6 +342,9 @@ svn_ra_serf__open(svn_ra_session_t *session,
   svn_ra_serf__session_t *serf_sess;
   apr_uri_t url;
   const char *client_string = NULL;
+
+  if (corrected_url)
+    *corrected_url = NULL;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   serf_sess->pool = svn_pool_create(pool);
@@ -452,7 +456,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  return svn_ra_serf__exchange_capabilities(serf_sess, pool);
+  return svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
 }
 
 static svn_error_t *

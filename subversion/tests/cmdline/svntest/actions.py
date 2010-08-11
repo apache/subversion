@@ -38,6 +38,12 @@ def no_sleep_for_timestamps():
 def do_sleep_for_timestamps():
   os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'no'
 
+def no_relocate_validation():
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION'] = 'yes'
+
+def do_relocate_validation():
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION'] = 'no'
+
 def setup_pristine_greek_repository():
   """Create the pristine repository and 'svn import' the greek tree"""
 

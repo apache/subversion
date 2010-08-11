@@ -1192,6 +1192,7 @@ class TestRunner:
                                       str(self.index)
 
     svntest.actions.no_sleep_for_timestamps()
+    svntest.actions.do_relocate_validation()
 
     saved_dir = os.getcwd()
     try:

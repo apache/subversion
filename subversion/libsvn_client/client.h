@@ -349,7 +349,9 @@ svn_client__default_walker_error_handler(const char *path,
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
-/* Open an RA session, returning it in *RA_SESSION.
+/* Open an RA session, returning it in *RA_SESSION or a corrected URL
+   in *CORRECTED_URL.  (This function mirrors svn_ra_open4(), which
+   see, regarding the interpretation and handling of these two parameters.)
 
    The root of the session is specified by BASE_URL and BASE_DIR.
 
@@ -375,6 +377,7 @@ svn_client__default_walker_error_handler(const char *path,
    avoid confusion with the public API svn_client_open_ra_session(). */
 svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
+                                     const char **corrected_url,
                                      const char *base_url,
                                      const char *base_dir_abspath,
                                      const apr_array_header_t *commit_items,

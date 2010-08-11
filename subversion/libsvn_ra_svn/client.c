@@ -685,7 +685,9 @@ ra_svn_get_schemes(apr_pool_t *pool)
 
 
 
-static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
+static svn_error_t *ra_svn_open(svn_ra_session_t *session,
+                                const char **corrected_url,
+                                const char *url,
                                 const svn_ra_callbacks2_t *callbacks,
                                 void *callback_baton,
                                 apr_hash_t *config,
@@ -696,6 +698,10 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   const char *tunnel, **tunnel_argv;
   apr_uri_t uri;
   svn_config_t *cfg, *cfg_client;
+
+  /* We don't support server-prescribed redirections in ra-svn. */
+  if (corrected_url)
+    *corrected_url = NULL;
 
   SVN_ERR(parse_url(url, &uri, sess_pool));
 
