@@ -46,16 +46,6 @@ class Prompter
   jobject m_prompter;
 
   /**
-   * The callback objects implements PromptUserPassword2.
-   */
-  bool m_version2;
-
-  /**
-   * The callback objects implements PromptUserPassword3.
-   */
-  bool m_version3;
-
-  /**
    * Tntermediate storage for an answer.
    */
   std::string m_answer;
@@ -66,7 +56,7 @@ class Prompter
    */
   bool m_maySave;
 
-  Prompter(jobject jprompter, bool v2, bool v3);
+  Prompter(jobject jprompter);
   bool prompt(const char *realm, const char *pi_username, bool maySave);
   bool askYesNo(const char *realm, const char *question, bool yesIsDefault);
   const char *askQuestion(const char *realm, const char *question,
