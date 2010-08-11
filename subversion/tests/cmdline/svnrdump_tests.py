@@ -159,11 +159,11 @@ def skeleton_load(sbox):
   run_load_test(sbox, "skeleton.dump")
 
 def copy_and_modify_dump(sbox):
-  "copy and modify"
+  "copy and modify dump"
   run_dump_test(sbox, "copy-and-modify.dump")
 
 def copy_and_modify_load(sbox):
-  "copy and modify"
+  "copy and modify load"
   run_load_test(sbox, "copy-and-modify.dump")
   
 ########################################################################
