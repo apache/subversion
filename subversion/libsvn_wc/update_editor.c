@@ -867,10 +867,10 @@ complete_directory(struct edit_baton *eb,
            * Note that add_file() automatically fixes such an
            * added-not_present node when it finds the obstruction gone. */
           const svn_wc_conflict_description2_t *tree_conflict;
-          SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict,
-                                            eb->wc_ctx,
-                                            node_abspath,
-                                            iterpool, iterpool));
+          SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict,
+                                                   eb->db,
+                                                   node_abspath,
+                                                   iterpool, iterpool));
           if (!tree_conflict
               || tree_conflict->reason != svn_wc_conflict_reason_unversioned)
             SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
@@ -894,10 +894,11 @@ complete_directory(struct edit_baton *eb,
           SVN_ERR(svn_wc__db_temp_op_remove_entry(eb->db, node_abspath,
                                                   iterpool));
 
-          do_notification(eb, node_abspath, svn_wc_notify_update_delete,
+          do_notification(eb, node_abspath,
                           (kind == svn_wc__db_kind_dir)
                             ? svn_node_dir
                             : svn_node_file,
+                          svn_wc_notify_update_delete,
                           iterpool);
         }
 #endif
