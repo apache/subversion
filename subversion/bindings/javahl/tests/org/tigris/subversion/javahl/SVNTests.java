@@ -271,6 +271,7 @@ class SVNTests extends TestCase
         this.client.notification2(new MyNotifier());
         this.client.commitMessageHandler(new MyCommitMessage());
         this.client.setPrompt(new DefaultPromptUserPassword());
+        this.client.username("jrandom");
         this.client.setProgressListener(new DefaultProgressListener());
         this.client.setConfigDirectory(this.conf.getAbsolutePath());
         this.expectedCommitItems = new HashMap();
