@@ -262,11 +262,6 @@ svn_cl__status(apr_getopt_t *os,
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;
 
-  /* The notification callback, leave the notifier as NULL in XML mode */
-  if (! opt_state->xml)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
-
   sb.had_print_error = FALSE;
 
   if (opt_state->xml)

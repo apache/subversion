@@ -16,10 +16,6 @@ Revision-number: 1
 Prop-content-length: 137
 Content-length: 137
 
-K 7
-svn:log
-V 37
-adding file with prop 'svn:eol-style'
 K 10
 svn:author
 V 5
@@ -28,6 +24,10 @@ K 8
 svn:date
 V 27
 2009-06-05T14:23:41.185914Z
+K 7
+svn:log
+V 37
+adding file with prop 'svn:eol-style'
 PROPS-END
 
 Node-path: file
@@ -51,10 +51,6 @@ Revision-number: 2
 Prop-content-length: 139
 Content-length: 139
 
-K 7
-svn:log
-V 39
-removing prop 'svn:eol-style' from file
 K 10
 svn:author
 V 5
@@ -63,6 +59,10 @@ K 8
 svn:date
 V 27
 2009-06-05T14:23:42.140849Z
+K 7
+svn:log
+V 39
+removing prop 'svn:eol-style' from file
 PROPS-END
 
 Node-path: file

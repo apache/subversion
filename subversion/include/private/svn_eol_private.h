@@ -58,22 +58,36 @@ svn_eol__find_eol_start(char *buf, apr_size_t len);
  * no more likely to be incorrect than correct for any caller that
  * doesn't.
  *
+ * The returned string is statically allocated.
+ *
+ * ### [JAF] Does it make sense for this to use "[buf, end)" while
+ *     svn_eol__find_eol_start() uses "buf, len"?
+ *
  * @since New in 1.7
  */
 const char *
 svn_eol__detect_eol(char *buf, char *endp);
 
-/* Detect the EOL marker used in @a file and return it in @a *eol.
+/* Set @a *eol to the EOL marker used in @a file.
  * If it cannot be detected, set @a *eol to NULL.
  *
  * The file is searched starting at the current file cursor position.
- * The first EOL marker found will be returnd. So if the file has
+ * The first EOL marker found will be returned. So if the file has
  * inconsistent EOL markers, this won't be detected.
  *
  * Upon return, the original file cursor position is always preserved,
  * even if an error is thrown.
  *
+ * The string @a *eol is statically allocated.
  * Do temporary allocations in @a pool.
+ *
+ * ### [JAF] Apparent bug: implementation suffers from the "one byte of a
+ *     two-byte sequence" issue noted for svn_eol__detect_eol().
+ *
+ * ### [JAF] Apparent bug: if file pointer is at EOF, returns "success"
+ *     without initializing @a *eol.
+ *
+ * ### [JAF] Wouldn't it make more sense to accept a stream than a file?
  *
  * @since New in 1.7 */
 svn_error_t *

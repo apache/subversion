@@ -171,7 +171,7 @@ def basic_reintegrate(sbox):
     'mu'           : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -229,7 +229,7 @@ def basic_reintegrate(sbox):
     'mu'           : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_MOVED_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_MOVED_path, {
     })
@@ -452,8 +452,8 @@ def reintegrate_with_rename(sbox):
     'D/G/tauprime' : Item(status='A '),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    ''             : Item(status=' G'),
-    'D/G/tauprime' : Item(status=' G'),
+    ''             : Item(status=' U'),
+    'D/G/tauprime' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1114,9 +1114,9 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D'         : Item(status=' U'),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    ''   : Item(status=' G'),
+    ''   : Item(status=' U'),
     'mu' : Item(status=' G'),
-    'D'  : Item(status=' G'),
+    'D'  : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1350,9 +1350,9 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D/gamma_moved' : Item(status=' U'),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    ''              : Item(status=' G'),
+    ''              : Item(status=' U'),
     'mu'            : Item(status=' G'),
-    'D'             : Item(status=' G'),
+    'D'             : Item(status=' U'),
     'D/gamma_moved' : Item(status=' G'),
     })
   expected_elision_output = wc.State(A_path, {
@@ -1397,8 +1397,21 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D/G/pi'        : Item("This is the file 'pi'.\n"),
     'D/G/rho'       : Item("New content"),
     'D/G/tau'       : Item("This is the file 'tau'.\n"),
+    # Why do we expect mergeinfo of '/A_COPY/D/G/tauprime:2-9' on
+    # A/D/G/tauprime?  Because this --reintegrate merge is effectively a
+    # two URL merge of %URL%/A@9 %URL%/A_COPY@9 to 'A'.  Since %URL%/A@9 and
+    # %URL%/A_COPY@9 have a common ancestor in %URL%/A@1 we expect this 2-URL
+    # merge to record mergeinfo and a component of that mergeinfo describes
+    # the merge of %URL%/A_COPY@2 to %URL%/A_COPY@9.  We see that above on
+    # A.  But we also get it on A's subtrees with explicit mergeinfo, namely
+    # A/D/G/tauprime.  Now I know what you are thinking, "'A_COPY/D/G/tauprime'
+    # doesn't even exist until r9!", and you are quite right.  But this
+    # inheritance of bogus mergeinfo is a known problem, see
+    # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8,
+    # and is not what this test is about, so we won't fail because of it.
     'D/gamma_moved' : Item(
-      "Even newer content", props={SVN_PROP_MERGEINFO :
+      "Even newer content", props={SVN_PROP_MERGEINFO : 
+                                   '/A/D/gamma_moved:2-15\n'
                                    '/A_COPY/D/gamma_moved:2-19\n'
                                    '/A_COPY_3/D/gamma:9'}),
     'D/H'           : Item(),
@@ -1514,7 +1527,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
     'B/E/beta' : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1983,7 +1996,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     'C/nu'     : Item(status=' U'),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    ''     : Item(status=' G'),
+    ''     : Item(status=' U'),
     'C/nu' : Item(status=' G'),
     })
   expected_elision_output = wc.State(A_path, {
@@ -2149,36 +2162,15 @@ def two_URL_merge_removes_valid_mergefino_from_target(sbox):
   # of mergeinfo showing that the history of A_COPY is now part of A_COPY_2,
   # i.e. '/A_COPY:2-11'
   #
-  # This test is currently marked as XFail because this is not what happens.
-  # Well, actually, all the above *does* happen, but as discussed in
-  # http://svn.haxx.se/dev/archive-2010-05/0292.shtml, the merge removes some
-  # of the valid mergeinfo on A_COPY_2 that describes the sync merge made in
-  # r9:
-  #
-  #   >svn pl -vR A_COPY_2
-  #   Properties on 'A_COPY_2':
-  #     svn:mergeinfo
-  #       /A:9-10
-  #       /A_COPY:2-11
-  #
-  #   >svn diff --depth empty A_COPY_2
-  #
-  #   Property changes on: A_COPY_2
-  #   ___________________________________________________________________
-  #   Modified: svn:mergeinfo
-  #      Reverse-merged /A:r3-8
-  #      Merged /A_COPY:r2-11
-  #
-  # '/A:r3-8' represents valid, operative changes merged from A to A_COPY_2!
-  # If this merge was committed, subsequent merges would try to reapply the
-  # diff, possibly leading to spurious conflicts.
+  # Before issue #3648 was fixed this test failed because the valid mergeinfo
+  # '/A:r3-8' on A_COPY_2 was removed by the merge.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(A_COPY_2_path, {
     ''         : Item(status=' G'),
     'B/lambda' : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_COPY_2_path, {
     })
@@ -2262,7 +2254,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               reintegrate_with_self_referential_mergeinfo,
               added_subtrees_with_mergeinfo_break_reintegrate,
-              XFail(two_URL_merge_removes_valid_mergefino_from_target),
+              two_URL_merge_removes_valid_mergefino_from_target,
              ]
 
 if __name__ == '__main__':

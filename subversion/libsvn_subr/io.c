@@ -222,14 +222,7 @@ io_check_path(const char *path,
 
   if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
-  else if (APR_STATUS_IS_ENOTDIR(apr_err)
-#ifdef WIN32
-           /* On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
-            * invalid-pathname error but not this one, so we include it. */
-           /* ### This fix should go into APR. */
-           || (APR_TO_OS_ERROR(apr_err) == ERROR_INVALID_NAME)
-#endif
-           )
+  else if (SVN__APR_STATUS_IS_ENOTDIR(apr_err))
     *kind = svn_node_none;
   else if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't check path '%s'"),
@@ -1918,7 +1911,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
   svn_error_t *err;
   apr_pool_t *subpool;
   apr_hash_t *dirents;
-  apr_hash_index_t *ent;
+  apr_hash_index_t *hi;
 
   /* Check for pending cancellation request.
      If we need to bail out, do so early. */
@@ -1928,7 +1921,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
 
   subpool = svn_pool_create(pool);
 
-  err = svn_io_get_dirents2(&dirents, path, subpool);
+  err = svn_io_get_dirents3(&dirents, path, TRUE, subpool, subpool);
   if (err)
     {
       /* if the directory doesn't exist, our mission is accomplished */
@@ -1940,15 +1933,14 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
       return svn_error_return(err);
     }
 
-  for (ent = apr_hash_first(subpool, dirents); ent; ent = apr_hash_next(ent))
+  for (hi = apr_hash_first(subpool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      char *fullpath;
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      const char *fullpath;
 
-      apr_hash_this(ent, &key, NULL, &val);
-      fullpath = svn_dirent_join(path, key, subpool);
-      if (((svn_io_dirent_t *)val)->kind == svn_node_dir)
+      fullpath = svn_dirent_join(path, name, subpool);
+      if (dirent->kind == svn_node_dir)
         {
           /* Don't check for cancellation, the callee will immediately do so */
           SVN_ERR(svn_io_remove_dir2(fullpath, FALSE, cancel_func,
@@ -1977,59 +1969,50 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
                          const char *path,
                          apr_pool_t *pool)
 {
-  apr_status_t status;
-  apr_dir_t *this_dir;
-  apr_finfo_t this_entry;
-  apr_int32_t flags = APR_FINFO_NAME;
+  return svn_error_return(svn_io_get_dirents3(dirents, path, TRUE,
+                                              pool, pool));
+}
 
-  *dirents = apr_hash_make(pool);
+svn_io_dirent2_t *
+svn_io_dirent2_create(apr_pool_t *result_pool)
+{
+  svn_io_dirent2_t *dirent = apr_pcalloc(result_pool, sizeof(*dirent));
 
-  SVN_ERR(svn_io_dir_open(&this_dir, path, pool));
+  /*dirent->kind = svn_node_none;
+  dirent->special = FALSE;*/
+  dirent->filesize = SVN_INVALID_FILESIZE;
+  /*dirent->mtime = 0;*/
 
-  for (status = apr_dir_read(&this_entry, flags, this_dir);
-       status == APR_SUCCESS;
-       status = apr_dir_read(&this_entry, flags, this_dir))
-    {
-      if ((this_entry.name[0] == '.')
-          && ((this_entry.name[1] == '\0')
-              || ((this_entry.name[1] == '.')
-                  && (this_entry.name[2] == '\0'))))
-        {
-          continue;
-        }
-      else
-        {
-          const char *name;
-          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
-          apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, name);
-        }
-    }
+  return dirent;
+}
 
-  if (! (APR_STATUS_IS_ENOENT(status)))
-    return svn_error_wrap_apr(status, _("Can't read directory '%s'"),
-                              svn_dirent_local_style(path, pool));
-
-  status = apr_dir_close(this_dir);
-  if (status)
-    return svn_error_wrap_apr(status, _("Error closing directory '%s'"),
-                              svn_dirent_local_style(path, pool));
-
-  return SVN_NO_ERROR;
+svn_io_dirent2_t *
+svn_io_dirent2_dup(const svn_io_dirent2_t *item,
+                   apr_pool_t *result_pool)
+{
+  return apr_pmemdup(result_pool,
+                     item,
+                     sizeof(*item));
 }
 
 svn_error_t *
-svn_io_get_dirents2(apr_hash_t **dirents,
+svn_io_get_dirents3(apr_hash_t **dirents,
                     const char *path,
-                    apr_pool_t *pool)
+                    svn_boolean_t only_check_type,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   apr_status_t status;
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
-  *dirents = apr_hash_make(pool);
+  if (!only_check_type)
+    flags |= APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-  SVN_ERR(svn_io_dir_open(&this_dir, path, pool));
+  *dirents = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_io_dir_open(&this_dir, path, scratch_pool));
 
   for (status = apr_dir_read(&this_entry, flags, this_dir);
        status == APR_SUCCESS;
@@ -2045,13 +2028,19 @@ svn_io_get_dirents2(apr_hash_t **dirents,
       else
         {
           const char *name;
-          svn_io_dirent_t *dirent = apr_palloc(pool, sizeof(*dirent));
+          svn_io_dirent2_t *dirent = svn_io_dirent2_create(result_pool);
 
-          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
+          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, result_pool));
 
           map_apr_finfo_to_node_kind(&(dirent->kind),
                                      &(dirent->special),
                                      &this_entry);
+
+          if (!only_check_type)
+            {
+              dirent->filesize = this_entry.size;
+              dirent->mtime = this_entry.mtime;
+            }
 
           apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
         }
@@ -2059,25 +2048,54 @@ svn_io_get_dirents2(apr_hash_t **dirents,
 
   if (! (APR_STATUS_IS_ENOENT(status)))
     return svn_error_wrap_apr(status, _("Can't read directory '%s'"),
-                              svn_dirent_local_style(path, pool));
+                              svn_dirent_local_style(path, scratch_pool));
 
   status = apr_dir_close(this_dir);
   if (status)
     return svn_error_wrap_apr(status, _("Error closing directory '%s'"),
-                              svn_dirent_local_style(path, pool));
+                              svn_dirent_local_style(path, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_io_get_dirents(apr_hash_t **dirents,
+svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
-                   apr_pool_t *pool)
+                   svn_boolean_t ignore_enoent,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
-  /* Note that in C, padding is not allowed at the beginning of structs,
-     so this is actually portable, since the kind field of svn_io_dirent_t
-     is first in that struct. */
-  return svn_io_get_dirents2(dirents, path, pool);
+  apr_finfo_t finfo;
+  svn_io_dirent2_t *dirent;
+  svn_error_t *err;
+
+  err = svn_io_stat(&finfo, path,
+                    APR_FINFO_TYPE | APR_FINFO_LINK
+                    | APR_FINFO_SIZE | APR_FINFO_MTIME,
+                    scratch_pool);
+
+  if (err && ignore_enoent && 
+      (APR_STATUS_IS_ENOENT(err->apr_err)
+       || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      dirent = svn_io_dirent2_create(result_pool);
+      SVN_ERR_ASSERT(dirent->kind == svn_node_none);
+
+      *dirent_p = dirent;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
+  dirent = svn_io_dirent2_create(result_pool);
+  map_apr_finfo_to_node_kind(&(dirent->kind), &(dirent->special), &finfo);
+
+  dirent->filesize = finfo.size;
+  dirent->mtime = finfo.mtime;
+
+  *dirent_p = dirent;
+
+  return SVN_NO_ERROR;
 }
 
 /* Pool userdata key for the error file passed to svn_io_start_cmd(). */
@@ -2628,11 +2646,15 @@ svn_io_detect_mimetype2(const char **mimetype,
 
 
   /* Right now, this function is going to be really stupid.  It's
-     going to examine the first block of data, and make sure that 85%
+     going to examine the first block of data, and make sure that 15%
      of the bytes are such that their value is in the ranges 0x07-0x0D
-     or 0x20-0x7F, and that 100% of those bytes is not 0x00.
+     or 0x20-0x7F, and that none of those bytes is 0x00.  If those
+     criteria are not met, we're calling it binary.
 
-     If those criteria are not met, we're calling it binary. */
+     NOTE:  Originally, I intended to target 85% of the bytes being in
+     the specified ranges, but I flubbed the condition.  At any rate,
+     folks aren't complaining, so I'm not sure that it's worth
+     adjusting this retroactively now.  --cmpilato  */
   if (amt_read > 0)
     {
       apr_size_t i;
@@ -3117,6 +3139,10 @@ svn_io_dir_open(apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Forward declaration */
+static apr_status_t
+dir_is_empty(const char *dir, apr_pool_t *pool);
+
 
 svn_error_t *
 svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)
@@ -3129,10 +3155,22 @@ svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)
   status = apr_dir_remove(dirname_apr, pool);
 
 #ifdef WIN32
-  if (APR_TO_OS_ERROR(status) != ERROR_DIR_NOT_EMPTY)
-    {
-      WIN32_RETRY_LOOP(status, apr_dir_remove(dirname_apr, pool));
-    }
+  {
+    svn_boolean_t retry = TRUE;
+
+    if (APR_TO_OS_ERROR(status) == ERROR_DIR_NOT_EMPTY)
+      {
+        apr_status_t empty_status = dir_is_empty(dirname_apr, pool);
+
+        if (APR_STATUS_IS_ENOTEMPTY(empty_status))
+          retry = FALSE;
+      }
+    
+    if (retry)
+      {
+        WIN32_RETRY_LOOP(status, apr_dir_remove(dirname_apr, pool));
+      }
+  }
 #endif
   if (status)
     return svn_error_wrap_apr(status, _("Can't remove directory '%s'"),
@@ -3170,11 +3208,11 @@ svn_io_dir_read(apr_finfo_t *finfo,
 
 
 svn_error_t *
-svn_io_dir_walk(const char *dirname,
-                apr_int32_t wanted,
-                svn_io_walk_func_t walk_func,
-                void *walk_baton,
-                apr_pool_t *pool)
+svn_io_dir_walk2(const char *dirname,
+                 apr_int32_t wanted,
+                 svn_io_walk_func_t walk_func,
+                 void *walk_baton,
+                 apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_dir_t *handle;
@@ -3243,11 +3281,11 @@ svn_io_dir_walk(const char *dirname,
           SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
                                      subpool));
           full_path = svn_dirent_join(dirname, name_utf8, subpool);
-          SVN_ERR(svn_io_dir_walk(full_path,
-                                  wanted,
-                                  walk_func,
-                                  walk_baton,
-                                  subpool));
+          SVN_ERR(svn_io_dir_walk2(full_path,
+                                   wanted,
+                                   walk_func,
+                                   walk_baton,
+                                   subpool));
         }
       else if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
         {
@@ -3261,9 +3299,10 @@ svn_io_dir_walk(const char *dirname,
                                subpool));
         }
       /* else:
-         some other type of file; skip it.
+         Some other type of file; skip it for now.  We've reserved the
+         right to expand our coverage here in the future, though,
+         without revving this API.
       */
-
     }
 
   svn_pool_destroy(subpool);

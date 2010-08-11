@@ -38,7 +38,13 @@ def no_sleep_for_timestamps():
 def do_sleep_for_timestamps():
   os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'no'
 
-def setup_pristine_repository():
+def no_relocate_validation():
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION'] = 'yes'
+
+def do_relocate_validation():
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION'] = 'no'
+
+def setup_pristine_greek_repository():
   """Create the pristine repository and 'svn import' the greek tree"""
 
   # these directories don't exist out of the box, so we may have to create them
@@ -49,8 +55,8 @@ def setup_pristine_repository():
     os.makedirs(main.general_repo_dir) # this also creates all the intermediate dirs
 
   # If there's no pristine repos, create one.
-  if not os.path.exists(main.pristine_dir):
-    main.create_repos(main.pristine_dir)
+  if not os.path.exists(main.pristine_greek_repos_dir):
+    main.create_repos(main.pristine_greek_repos_dir)
 
     # if this is dav, gives us access rights to import the greek tree.
     if main.is_ra_type_dav():
@@ -66,7 +72,7 @@ def setup_pristine_repository():
     exit_code, output, errput = main.run_svn(None, 'import', '-m',
                                              'Log message for revision 1.',
                                              main.greek_dump_dir,
-                                             main.pristine_url)
+                                             main.pristine_greek_repos_url)
 
     # check for any errors from the import
     if len(errput):
@@ -99,9 +105,9 @@ def setup_pristine_repository():
 
     # Finally, disallow any changes to the "pristine" repos.
     error_msg = "Don't modify the pristine repository"
-    create_failing_hook(main.pristine_dir, 'start-commit', error_msg)
-    create_failing_hook(main.pristine_dir, 'pre-lock', error_msg)
-    create_failing_hook(main.pristine_dir, 'pre-revprop-change', error_msg)
+    create_failing_hook(main.pristine_greek_repos_dir, 'start-commit', error_msg)
+    create_failing_hook(main.pristine_greek_repos_dir, 'pre-lock', error_msg)
+    create_failing_hook(main.pristine_greek_repos_dir, 'pre-revprop-change', error_msg)
 
 
 ######################################################################
@@ -110,7 +116,7 @@ def guarantee_empty_repository(path):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing."""
 
-  if path == main.pristine_dir:
+  if path == main.pristine_greek_repos_dir:
     print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
     sys.exit(1)
 
@@ -121,19 +127,19 @@ def guarantee_empty_repository(path):
 # Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
-# Note: make sure setup_pristine_repository was called once before
+# Note: make sure setup_pristine_greek_repository was called once before
 # using this function.
 def guarantee_greek_repository(path):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing but the greek-tree at revision 1."""
 
-  if path == main.pristine_dir:
+  if path == main.pristine_greek_repos_dir:
     print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
     sys.exit(1)
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
-  if main.copy_repos(main.pristine_dir, path, 1):
+  if main.copy_repos(main.pristine_greek_repos_dir, path, 1):
     print("ERROR:  copying repository failed.")
     sys.exit(1)
 
@@ -276,13 +282,28 @@ def run_and_verify_load(repo_dir, dump_file_content):
                         None, expected_stderr)
 
 
-def run_and_verify_dump(repo_dir):
+def run_and_verify_dump(repo_dir, deltas=False):
   "Runs 'svnadmin dump' and reports any errors, returning the dump content."
-  exit_code, output, errput = main.run_svnadmin('dump', repo_dir)
+  if deltas:
+    exit_code, output, errput = main.run_svnadmin('dump', '--deltas',
+                                                  repo_dir)
+  else:
+    exit_code, output, errput = main.run_svnadmin('dump', repo_dir)
   verify.verify_outputs("Missing expected output(s)", output, errput,
                         verify.AnyOutput, verify.AnyOutput)
   return output
 
+
+def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
+                            expected_stderr, expected_exit, *varargs):
+  """Runs 'svnrdump dump|load' depending on dumpfile_content and
+  reports any errors."""
+  exit_code, output, err = main.run_svnrdump(dumpfile_content, *varargs)
+
+  verify.verify_outputs("Unexpected output", output, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
+  return output
 
 def load_repo(sbox, dumpfile_path = None, dump_str = None):
   "Loads the dumpfile into sbox"
@@ -310,12 +331,13 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None):
 #
 
 
-def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
-                            singleton_handler_a = None,
-                            a_baton = None,
-                            singleton_handler_b = None,
-                            b_baton = None,
-                            *args):
+def run_and_verify_checkout2(do_remove,
+                             URL, wc_dir_name, output_tree, disk_tree,
+                             singleton_handler_a = None,
+                             a_baton = None,
+                             singleton_handler_b = None,
+                             b_baton = None,
+                             *args):
   """Checkout the URL into a new directory WC_DIR_NAME. *ARGS are any
   extra optional args to the checkout subcommand.
 
@@ -326,8 +348,8 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   function's doc string for more details.  Return if successful, raise
   on failure.
 
-  WC_DIR_NAME is deleted if present unless the '--force' option is passed
-  in *ARGS."""
+  WC_DIR_NAME is deleted if DO_REMOVE is True.
+  """
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
@@ -337,7 +359,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   # Remove dir if it's already there, unless this is a forced checkout.
   # In that case assume we want to test a forced checkout's toleration
   # of obstructing paths.
-  if '--force' not in args:
+  if do_remove:
     main.safe_rmtree(wc_dir_name)
 
   # Checkout and make a tree of the output, using l:foo/p:bar
@@ -367,6 +389,28 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
     print("ACTUAL DISK TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
+
+def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
+                            singleton_handler_a = None,
+                            a_baton = None,
+                            singleton_handler_b = None,
+                            b_baton = None,
+                            *args):
+  """Same as run_and_verify_checkout2(), but without the DO_REMOVE arg.
+  WC_DIR_NAME is deleted if present unless the '--force' option is passed
+  in *ARGS."""
+
+
+  # Remove dir if it's already there, unless this is a forced checkout.
+  # In that case assume we want to test a forced checkout's toleration
+  # of obstructing paths.
+  return run_and_verify_checkout2(('--force' not in args),
+                                  URL, wc_dir_name, output_tree, disk_tree,
+                                  singleton_handler_a,
+                                  a_baton,
+                                  singleton_handler_b,
+                                  b_baton,
+                                  *args)
 
 
 def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
@@ -1515,16 +1559,15 @@ def run_and_verify_resolved(expected_paths, *args):
 def make_repo_and_wc(sbox, create_wc = True, read_only = False):
   """Create a fresh 'Greek Tree' repository and check out a WC from it.
 
-  If read_only is False, a dedicated repository will be created, named
-  TEST_NAME. The repository will live in the global dir 'general_repo_dir'.
-  If read_only is True the pristine repository will be used.
+  If READ_ONLY is False, a dedicated repository will be created, at the path
+  SBOX.repo_dir.  If READ_ONLY is True, the pristine repository will be used.
+  In either case, SBOX.repo_url is assumed to point to the repository that
+  will be used.
 
   If create_wc is True, a dedicated working copy will be checked out from
-  the repository, named TEST_NAME. The wc directory will live in the global
-  dir 'general_wc_dir'.
+  the repository, at the path SBOX.wc_dir.
 
-  Both variables 'general_repo_dir' and 'general_wc_dir' are defined at the
-  top of this test suite.)  Returns on success, raises on failure."""
+  Returns on success, raises on failure."""
 
   # Create (or copy afresh) a new repos with a greek tree in it.
   if not read_only:
@@ -1576,25 +1619,28 @@ def get_virginal_state(wc_dir, rev):
 
   return state
 
-def remove_admin_tmp_dir(wc_dir):
-  "Remove the tmp directory within the administrative directory."
-
-  tmp_path = os.path.join(wc_dir, main.get_admin_name(), 'tmp')
-  ### Any reason not to use main.safe_rmtree()?
-  os.rmdir(os.path.join(tmp_path, 'prop-base'))
-  os.rmdir(os.path.join(tmp_path, 'props'))
-  os.rmdir(os.path.join(tmp_path, 'text-base'))
-  os.rmdir(tmp_path)
-
 # Cheap administrative directory locking
 def lock_admin_dir(wc_dir):
   "Lock a SVN administrative directory"
+  dot_svn = svntest.main.get_admin_name()
+  root_path = wc_dir
+  relpath = ''
 
-  db = svntest.sqlite3.connect(os.path.join(wc_dir, main.get_admin_name(),
-                                            'wc.db'))
+  while True:
+    db_path = os.path.join(root_path, dot_svn, 'wc.db')
+    try:
+      db = svntest.sqlite3.connect(db_path)
+      break
+    except: pass
+    head, tail = os.path.split(root_path)
+    if head == root_path:
+      raise svntest.Failure("No DB for " + wc_dir)
+    root_path = head
+    relpath = os.path.join(tail, relpath).replace(os.path.sep, '/').rstrip('/')
+
   db.execute('insert into wc_lock (wc_id, local_dir_relpath, locked_levels) '
              + 'values (?, ?, ?)',
-             (1, '', 0))
+             (1, relpath, 0))
   db.commit()
   db.close()
 
@@ -2265,7 +2311,8 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
 
   j = os.path.join
 
-  sbox.build()
+  if not sbox.is_built():
+    sbox.build()
   wc_dir = sbox.wc_dir
 
 
@@ -2506,7 +2553,8 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
 
   j = os.path.join
 
-  sbox.build()
+  if not sbox.is_built():
+    sbox.build()
   wc_dir = sbox.wc_dir
 
 

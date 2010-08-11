@@ -50,6 +50,15 @@ extern "C" {
                                                file */
 
 
+/* ### Both SVN_WC__SINGLE_DB and SINGLE_DB are needed for proper use of the
+   ### experimental single-db feature.  They have slightly different meanings,
+   ### which is why there are two contants.  They will both disappear in the
+   ### final 1.7 release, but for now, if you want to use SINGLE_DB, you'll
+   ### need to uncomment the following line. */
+/* #define SVN_WC__SINGLE_DB */
+#ifdef SVN_WC__SINGLE_DB
+#define SINGLE_DB
+#endif
 
 
 /* We can handle this format or anything lower, and we (should) error
@@ -115,16 +124,20 @@ extern "C" {
  * any existing locks to a level of 0. The 'md5_checksum' column was
  * added to PRISTINE for future use.
  *
- * The change from 16 to 17 added a '.svn/pristine' dir and ...
- * ### IN PROGRESS
+ * The change from 16 to 17 added a '.svn/pristine' dir and moved the text
+ * bases into the Pristine Store (the PRISTINE table and '.svn/pristine'
+ * dir), and removed the '/.svn/text-base' dir.
+ *
+ * The change from 17 to 18 moved the properties from separate files in the
+ * props and prop-base directory (and .svn for the dir itself) into the
+ * wc.db file, and then removes the props and prop-base dir.
  *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 17
-#define SVN_EXPERIMENTAL_PRISTINE
+#define SVN_WC__VERSION 18
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */
@@ -242,11 +255,15 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
  * If @a sha1_checksum is non-NULL, use it instead of @a md5_checksum to
  * identify the node's pristine text.
  * ### NOT YET IMPLEMENTED.
+ *
+ * Set TOP_OF_RECURSE to TRUE to show that this the top of a possibly
+ * recursive commit operation.
  */
 svn_error_t *
 svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    const char *local_abspath,
                                    svn_boolean_t recurse,
+                                   svn_boolean_t top_of_recurse,
                                    svn_revnum_t new_revnum,
                                    apr_time_t new_date,
                                    const char *rev_author,
@@ -290,12 +307,6 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_ENTRIES             "entries"
 #define SVN_WC__ADM_TMP                 "tmp"
-#define SVN_WC__ADM_TEXT_BASE           "text-base"
-#define SVN_WC__ADM_PROPS               "props"
-#define SVN_WC__ADM_PROP_BASE           "prop-base"
-#define SVN_WC__ADM_DIR_PROPS           "dir-props"
-#define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
-#define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_PRISTINE            "pristine"
 #define SVN_WC__ADM_NONEXISTENT_PATH    "nonexistent-path"
 
@@ -466,17 +477,21 @@ svn_wc__walker_default_error_handler(const char *path,
  * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
  * @c svn_depth_immediates, or @c svn_depth_unknown.
  *
+ * If @a read_base is TRUE, always read the depth data from BASE_NODE
+ * instead of from WORKING when that exists.
+ *
  * Allocations are done in POOL.
  */
 svn_error_t *
 svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void **edit_baton,
-                                    const svn_delta_editor_t *wrapped_editor,
-                                    void *wrapped_edit_baton,
+                                    svn_wc__db_t *db,
                                     const char *anchor_abspath,
                                     const char *target,
-                                    svn_wc__db_t *db,
-                                    apr_pool_t *pool);
+                                    svn_boolean_t read_base,
+                                    const svn_delta_editor_t *wrapped_editor,
+                                    void *wrapped_edit_baton,
+                                    apr_pool_t *result_pool);
 
 
 /* Similar to svn_wc_conflicted_p3(), but with a wc_db parameter in place of
@@ -495,8 +510,8 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
  *
  * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
- * and compare the result with BASE_FILE_ABSPATH.  If COMPARE_TEXTBASES is
- * false, translate BASE_FILE_ABSPATH's EOL style and keywords to working-copy
+ * and compare the result with PRISTINE_STREAM.  If COMPARE_TEXTBASES is
+ * false, translate PRISTINE_STREAM's EOL style and keywords to working-copy
  * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
  * result with VERSIONED_FILE_ABSPATH.
  */
@@ -504,7 +519,7 @@ svn_error_t *
 svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                          svn_wc__db_t *db,
                                          const char *versioned_file_abspath,
-                                         const char *base_file_abspath,
+                                         svn_stream_t *pristine_stream,
                                          svn_boolean_t compare_textbases,
                                          apr_pool_t *scratch_pool);
 
@@ -640,6 +655,15 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
+
+/* Ensure LOCAL_ABSPATH is still locked in DB.  Returns the error
+ * SVN_ERR_WC_NOT_LOCKED if this is not the case.
+ */
+svn_error_t *
+svn_wc__write_check(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

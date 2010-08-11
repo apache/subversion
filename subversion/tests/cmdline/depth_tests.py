@@ -1045,6 +1045,10 @@ def diff_in_depthy_wc(sbox):
     "@@ -1 +1 @@\n",
     "-new text\n",
     "+This is the file 'mu'.\n",
+    "Index: A\n",
+    "===================================================================\n",
+    "--- A\t(revision 2)\n",
+    "+++ A\t(working copy)\n",
     "\n",
     "Property changes on: A\n",
     "___________________________________________________________________\n",
@@ -1058,6 +1062,10 @@ def diff_in_depthy_wc(sbox):
     "@@ -1 +1 @@\n",
     "-new text\n",
     "+This is the file 'iota'.\n",
+    "Index: .\n",
+    "===================================================================\n",
+    "--- .\t(revision 2)\n",
+    "+++ .\t(working copy)\n",
     "\n",
     "Property changes on: .\n",
     "___________________________________________________________________\n",
@@ -1067,7 +1075,7 @@ def diff_in_depthy_wc(sbox):
 
   os.chdir(wc_empty)
 
-  expected_output = svntest.verify.UnorderedOutput(diff[20:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[24:])
   # The diff should contain only the propchange on '.'
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
@@ -1077,11 +1085,11 @@ def diff_in_depthy_wc(sbox):
                                      '--set-depth', 'files', '-r1')
   # The diff should contain only the propchange on '.' and the
   # contents change on iota.
-  expected_output = svntest.verify.UnorderedOutput(diff[13:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[17:])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth empty.
-  expected_output = svntest.verify.UnorderedOutput(diff[20:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[24:])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'empty', '-rHEAD')
 
@@ -1090,11 +1098,11 @@ def diff_in_depthy_wc(sbox):
                                      '--set-depth', 'immediates', '-r1')
   # The diff should contain the propchanges on '.' and 'A' and the
   # contents change on iota.
-  expected_output = svntest.verify.UnorderedOutput(diff[7:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[7:])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '-rHEAD')
   # Do a diff at --depth files.
-  expected_output = svntest.verify.UnorderedOutput(diff[13:26])
+  expected_output = svntest.verify.UnorderedOutput(diff[17:])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--depth', 'files', '-rHEAD')
 
@@ -2434,6 +2442,8 @@ def make_depth_tree_conflicts(sbox):
   expected_disk.remove('A/mu',
                        'A/B', 'A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
                        'A/D/gamma');
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_disk.remove('A/B/E', 'A/B/F')
 
   # This test is set XFail because this (correct) status cannot be
   # verified due to an "svn update" bug. The tree-conflict on A/B
@@ -2669,6 +2679,45 @@ def update_excluded_path_sticky_depths(sbox):
   }
   svntest.actions.run_and_verify_info([expected_info], B_path)
 
+
+def update_depth_empty_root_of_infinite_children(sbox):
+  """update depth=empty root of depth=infinite children"""
+
+  wc_dir, ign_a, ign_b, wc_other = set_up_depthy_working_copies(sbox,
+                                                                empty=True,
+                                                                infinity=True)
+  A_path = os.path.join(wc_dir, 'A')
+
+  # Update A to depth 'infinity'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'infinity', A_path)
+
+  # Tweak some files in the full working copy and commit.
+  svntest.main.file_append(os.path.join(wc_other, 'A', 'B', 'E', 'alpha'),
+                           "Modified alpha.\n")
+  svntest.main.file_append(os.path.join(wc_other, 'A', 'D', 'G', 'rho'),
+                           "Modified rho.\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', '', wc_other)
+
+  # Now update the original working copy and make sure we get those changes.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha'      : Item(status='U '),
+    'A/D/G/rho'        : Item(status='U '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('iota')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_disk.tweak('A/B/E/alpha', contents="This is the file 'alpha'.\nModified alpha.\n")
+  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\nModified rho.\n")
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None, wc_dir)
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2713,7 +2762,8 @@ test_list = [ None,
               tree_conflicts_resolved_depth_immediates,
               tree_conflicts_resolved_depth_infinity,
               update_excluded_path_sticky_depths,
-            ]
+              update_depth_empty_root_of_infinite_children,
+              ]
 
 if __name__ == "__main__":
   svntest.main.run_tests(test_list)

@@ -138,6 +138,7 @@ svn_test_add_dir_cleanup(const char *path)
     {
       const char *abspath;
       svn_error_t *err = svn_path_get_absolute(&abspath, path, cleanup_pool);
+      svn_error_clear(err);
       if (!err)
         apr_pool_cleanup_register(cleanup_pool, abspath, cleanup_rmtree,
                                   apr_pool_cleanup_null);

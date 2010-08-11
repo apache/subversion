@@ -72,7 +72,7 @@ paths adjusted appropriately:
      AuthUserFile /usr/local/apache2/conf/users
      Require valid-user
    </Location>
-     
+
    <Location /svn-test-work/local_tmp/repos>
      DAV svn
      SVNPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp/repos
@@ -82,6 +82,9 @@ paths adjusted appropriately:
      AuthUserFile /usr/local/apache2/conf/users
      Require valid-user
    </Location>
+
+   RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$ /svn-test-work/repositories/$1
+   RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$ /svn-test-work/repositories/$1
 
 Httpd should be running on port 80.  You may also need to ensure that
 it's running as you, so it has read/write access to the repositories

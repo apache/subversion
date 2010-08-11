@@ -153,7 +153,6 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
@@ -186,34 +185,6 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
                                            result_pool, scratch_pool));
       return SVN_NO_ERROR;
     }
-#else
-  svn_error_t *err;
-
-  err = svn_wc__text_base_path_to_read(result_abspath, db, local_abspath,
-                                       result_pool, scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    svn_error_clear(err);
-  else
-    return svn_error_return(err);
-
-  err = svn_wc__text_revert_path_to_read(result_abspath, db, local_abspath,
-                                         result_pool);
-
-  /* If there is no revert base to diff either, don't attempt to diff it.
-     ### This is a band-aid.
-     ### In WC-NG, files added within a copied subtree are marked "copied",
-     ### which will cause the code below to end up calling
-     ### eb->callbacks->file_changed() with a non-existent text-base.
-     ### Not sure how to properly tell apart a file added within a copied
-     ### subtree from a copied file. But eventually we'll have to get the
-     ### base text from the pristine store anyway and use tempfiles (or
-     ### streams, hopefully) for diffing, so this hack will just go away. */
-  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    svn_error_clear(err);
-  else
-    return svn_error_return(err);
-#endif
 
   *result_abspath = NULL;
   return SVN_NO_ERROR;
@@ -765,9 +736,9 @@ file_diff(struct dir_baton *db,
           /* We don't want the normal pristine properties (which are
              from the WORKING tree). We want the pristines associated
              with the BASE tree, which are saved as "revert" props.  */
-          SVN_ERR(svn_wc__get_revert_props(&baseprops,
-                                           eb->db, local_abspath,
-                                           pool, pool));
+          SVN_ERR(svn_wc__db_base_get_props(&baseprops,
+                                            eb->db, local_abspath,
+                                            pool, pool));
         }
       else
         {
@@ -779,6 +750,10 @@ file_diff(struct dir_baton *db,
 
           SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
                                              pool, pool));
+
+          /* baseprops will be NULL for added nodes */
+          if (!baseprops)
+            baseprops = apr_hash_make(pool);
         }
       base_mimetype = get_prop_mimetype(baseprops);
 
@@ -1889,11 +1864,12 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   if (depth == svn_depth_unknown)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
-                                                inner_editor,
-                                                inner_baton,
+                                                wc_ctx->db,
                                                 anchor_abspath,
                                                 target,
-                                                wc_ctx->db,
+                                                FALSE /* read_base */,
+                                                inner_editor,
+                                                inner_baton,
                                                 result_pool));
 
   return svn_delta_get_cancellation_editor(cancel_func,

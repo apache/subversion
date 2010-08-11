@@ -190,6 +190,118 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
 }
 
+/* Adjust PATH, ORIG_PATH_1 and ORIG_PATH_2, representing the changed file
+ * and the two original targets passed to the diff command, to handle the
+ * case when we're dealing with different anchors. RELATIVE_TO_DIR is the
+ * directory the diff target should be considered relative to. All
+ * allocations are done in POOL. */
+static svn_error_t *
+adjust_paths_for_diff_labels(const char **path,
+                             const char **orig_path_1,
+                             const char **orig_path_2,
+                             const char *relative_to_dir,
+                             apr_pool_t *pool)
+{
+  apr_size_t len;
+  const char *new_path = *path;
+  const char *new_path1 = *orig_path_1;
+  const char *new_path2 = *orig_path_2;
+
+  /* ### Holy cow.  Due to anchor/target weirdness, we can't
+     simply join diff_cmd_baton->orig_path_1 with path, ditto for
+     orig_path_2.  That will work when they're directory URLs, but
+     not for file URLs.  Nor can we just use anchor1 and anchor2
+     from do_diff(), at least not without some more logic here.
+     What a nightmare.
+
+     For now, to distinguish the two paths, we'll just put the
+     unique portions of the original targets in parentheses after
+     the received path, with ellipses for handwaving.  This makes
+     the labels a bit clumsy, but at least distinctive.  Better
+     solutions are possible, they'll just take more thought. */
+
+  len = strlen(svn_dirent_get_longest_ancestor(new_path1, new_path2, pool));
+  new_path1 = new_path1 + len;
+  new_path2 = new_path2 + len;
+
+  /* ### Should diff labels print paths in local style?  Is there
+     already a standard for this?  In any case, this code depends on
+     a particular style, so not calling svn_dirent_local_style() on the
+     paths below.*/
+  if (new_path1[0] == '\0')
+    new_path1 = apr_psprintf(pool, "%s", new_path);
+  else if (new_path1[0] == '/')
+    new_path1 = apr_psprintf(pool, "%s\t(...%s)", new_path, new_path1);
+  else
+    new_path1 = apr_psprintf(pool, "%s\t(.../%s)", new_path, new_path1);
+
+  if (new_path2[0] == '\0')
+    new_path2 = apr_psprintf(pool, "%s", new_path);
+  else if (new_path2[0] == '/')
+    new_path2 = apr_psprintf(pool, "%s\t(...%s)", new_path, new_path2);
+  else
+    new_path2 = apr_psprintf(pool, "%s\t(.../%s)", new_path, new_path2);
+
+  if (relative_to_dir)
+    {
+      /* Possibly adjust the paths shown in the output (see issue #2723). */
+      const char *child_path = svn_dirent_is_child(relative_to_dir, new_path,
+                                                   pool);
+
+      if (child_path)
+        new_path = child_path;
+      else if (!svn_path_compare_paths(relative_to_dir, new_path))
+        new_path = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(new_path, relative_to_dir);
+
+      child_path = svn_dirent_is_child(relative_to_dir, new_path1, pool);
+
+      if (child_path)
+        new_path1 = child_path;
+      else if (!svn_path_compare_paths(relative_to_dir, new_path1))
+        new_path1 = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(new_path1, relative_to_dir);
+
+      child_path = svn_dirent_is_child(relative_to_dir, new_path2, pool);
+
+      if (child_path)
+        new_path2 = child_path;
+      else if (!svn_path_compare_paths(relative_to_dir, new_path2))
+        new_path2 = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(new_path2, relative_to_dir);
+    }
+  *path = new_path;
+  *orig_path_1 = new_path1;
+  *orig_path_2 = new_path2;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Generate a label for the diff output for file PATH at revision REVNUM.
+   If REVNUM is invalid then it is assumed to be the current working
+   copy.  Assumes the paths are already in the desired style (local
+   vs internal).  Allocate the label in POOL. */
+static const char *
+diff_label(const char *path,
+           svn_revnum_t revnum,
+           apr_pool_t *pool)
+{
+  const char *label;
+  if (revnum != SVN_INVALID_REVNUM)
+    label = apr_psprintf(pool, _("%s\t(revision %ld)"), path, revnum);
+  else
+    label = apr_psprintf(pool, _("%s\t(working copy)"), path);
+
+  return label;
+}
+
+
+
+
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
    passed to svn_client_diff5, which is probably stdout. */
@@ -197,28 +309,61 @@ static svn_error_t *
 display_prop_diffs(const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
                    const char *path,
+                   const char *orig_path1,
+                   const char *orig_path2,
+                   svn_revnum_t rev1,
+                   svn_revnum_t rev2,
                    const char *encoding,
                    apr_file_t *file,
                    const char *relative_to_dir,
+                   svn_boolean_t show_diff_header,
                    apr_hash_t *ignored_props,
                    apr_pool_t *pool)
 {
   int i;
   svn_boolean_t header_printed = FALSE;
 
-  if (relative_to_dir)
-    {
-      /* Possibly adjust the path shown in the output (see issue #2723). */
-      const char *child_path = svn_dirent_is_child(relative_to_dir, path,
-                                                   pool);
+  /* If we're creating a diff on the wc root, path would be empty. */
+  if (path[0] == '\0')
+    path = apr_psprintf(pool, ".");
 
-      if (child_path)
-        path = child_path;
-      else if (!svn_path_compare_paths(relative_to_dir, path))
-        path = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir);
-    }
+    if (show_diff_header)
+      {
+        const char *path1 = orig_path1;
+        const char *path2 = orig_path2;
+        const char *label1;
+        const char *label2;
+
+        SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
+                                             relative_to_dir, pool));
+
+        label1 = diff_label(path1, rev1, pool);
+        label2 = diff_label(path2, rev2, pool);
+
+        /* ### Should we show the paths in platform specific format,
+         * ### diff_content_changed() does not! */
+
+        SVN_ERR(file_printf_from_utf8 (file, encoding,
+                                       "Index: %s" APR_EOL_STR 
+                                       "%s" APR_EOL_STR, 
+                                       path,
+                                       equal_string));
+
+        SVN_ERR(file_printf_from_utf8(file, encoding,
+                                            "--- %s" APR_EOL_STR
+                                            "+++ %s" APR_EOL_STR,
+                                            label1,
+                                            label2));
+      }
+
+  SVN_ERR(file_printf_from_utf8(file, encoding,
+                                _("%sProperty changes on: %s%s"),
+                                APR_EOL_STR,
+                                path,
+                                APR_EOL_STR));
+
+  SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
+                                under_string));
 
   for (i = 0; i < propchanges->nelts; i++)
     {
@@ -470,25 +615,13 @@ struct diff_cmd_baton {
   svn_boolean_t use_git_diff_format;
 
   svn_wc_context_t *wc_ctx;
+
+  /* A hashtable using the visited paths as keys. 
+   * ### This is needed for us to know if we need to print a diff header for
+   * ### a path that has property changes. */
+  apr_hash_t *visited_paths;
 };
 
-/* Generate a label for the diff output for file PATH at revision REVNUM.
-   If REVNUM is invalid then it is assumed to be the current working
-   copy.  Assumes the paths are already in the desired style (local
-   vs internal).  Allocate the label in POOL. */
-static const char *
-diff_label(const char *path,
-           svn_revnum_t revnum,
-           apr_pool_t *pool)
-{
-  const char *label;
-  if (revnum != SVN_INVALID_REVNUM)
-    label = apr_psprintf(pool, _("%s\t(revision %ld)"), path, revnum);
-  else
-    label = apr_psprintf(pool, _("%s\t(working copy)"), path);
-
-  return label;
-}
 
 /* An svn_wc_diff_callbacks4_t function.  Used for both file and directory
    property diffs. */
@@ -504,17 +637,39 @@ diff_props_changed(const char *local_dir_abspath,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   apr_array_header_t *props;
+  svn_boolean_t show_diff_header;
   apr_pool_t *subpool = svn_pool_create(diff_cmd_baton->pool);
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, subpool));
 
+  if (apr_hash_get(diff_cmd_baton->visited_paths, path, APR_HASH_KEY_STRING))
+    show_diff_header = FALSE;
+  else
+    show_diff_header = TRUE;
+
   if (props->nelts > 0)
-    SVN_ERR(display_prop_diffs(props, original_props, path,
-                               diff_cmd_baton->header_encoding,
-                               diff_cmd_baton->outfile,
-                               diff_cmd_baton->relative_to_dir,
-                               diff_cmd_baton->ignored_props,
-                               subpool));
+    {
+      /* We're using the revnums from the diff_cmd_baton since there's
+       * no revision argument to the svn_wc_diff_callback_t
+       * dir_props_changed(). */
+      SVN_ERR(display_prop_diffs(props, original_props, path,
+                                 diff_cmd_baton->orig_path_1,
+                                 diff_cmd_baton->orig_path_2,
+                                 diff_cmd_baton->revnum1,
+                                 diff_cmd_baton->revnum2,
+                                 diff_cmd_baton->header_encoding,
+                                 diff_cmd_baton->outfile,
+                                 diff_cmd_baton->relative_to_dir,
+                                 show_diff_header,
+                                 diff_cmd_baton->ignored_props,
+                                 subpool));
+
+      /* We've printed the diff header so now we can mark the path as
+       * visited. */
+      if (show_diff_header)
+        apr_hash_set(diff_cmd_baton->visited_paths, path,
+                     APR_HASH_KEY_STRING, path);
+    }
 
   if (state)
     *state = svn_wc_notify_state_unknown;
@@ -550,80 +705,17 @@ diff_content_changed(const char *path,
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
   const char *path1, *path2;
-  apr_size_t len;
 
   /* Get a stream from our output file. */
   os = svn_stream_from_aprfile2(diff_cmd_baton->outfile, TRUE, subpool);
 
   /* Generate the diff headers. */
 
-  /* ### Holy cow.  Due to anchor/target weirdness, we can't
-     simply join diff_cmd_baton->orig_path_1 with path, ditto for
-     orig_path_2.  That will work when they're directory URLs, but
-     not for file URLs.  Nor can we just use anchor1 and anchor2
-     from do_diff(), at least not without some more logic here.
-     What a nightmare.
-
-     For now, to distinguish the two paths, we'll just put the
-     unique portions of the original targets in parentheses after
-     the received path, with ellipses for handwaving.  This makes
-     the labels a bit clumsy, but at least distinctive.  Better
-     solutions are possible, they'll just take more thought. */
-
   path1 = diff_cmd_baton->orig_path_1;
   path2 = diff_cmd_baton->orig_path_2;
-  len = strlen(svn_dirent_get_longest_ancestor(path1, path2, subpool));
-  path1 = path1 + len;
-  path2 = path2 + len;
 
-  /* ### Should diff labels print paths in local style?  Is there
-     already a standard for this?  In any case, this code depends on
-     a particular style, so not calling svn_dirent_local_style() on the
-     paths below.*/
-  if (path1[0] == '\0')
-    path1 = apr_psprintf(subpool, "%s", path);
-  else if (path1[0] == '/')
-    path1 = apr_psprintf(subpool, "%s\t(...%s)", path, path1);
-  else
-    path1 = apr_psprintf(subpool, "%s\t(.../%s)", path, path1);
-
-  if (path2[0] == '\0')
-    path2 = apr_psprintf(subpool, "%s", path);
-  else if (path2[0] == '/')
-    path2 = apr_psprintf(subpool, "%s\t(...%s)", path, path2);
-  else
-    path2 = apr_psprintf(subpool, "%s\t(.../%s)", path, path2);
-
-  if (diff_cmd_baton->relative_to_dir)
-    {
-      /* Possibly adjust the paths shown in the output (see issue #2723). */
-      const char *child_path = svn_dirent_is_child(rel_to_dir, path, subpool);
-
-      if (child_path)
-        path = child_path;
-      else if (!svn_path_compare_paths(rel_to_dir, path))
-        path = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path, rel_to_dir);
-
-      child_path = svn_dirent_is_child(rel_to_dir, path1, subpool);
-
-      if (child_path)
-        path1 = child_path;
-      else if (!svn_path_compare_paths(rel_to_dir, path1))
-        path1 = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path1, rel_to_dir);
-
-      child_path = svn_dirent_is_child(rel_to_dir, path2, subpool);
-
-      if (child_path)
-        path2 = child_path;
-      else if (!svn_path_compare_paths(rel_to_dir, path2))
-        path2 = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path2, rel_to_dir);
-    }
+  SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
+                                       rel_to_dir, subpool));
 
   label1 = diff_label(path1, rev1, subpool);
   label2 = diff_label(path2, rev2, subpool);
@@ -786,6 +878,11 @@ diff_content_changed(const char *path,
                    diff_cmd_baton->header_encoding, rel_to_dir,
                    diff_cmd_baton->options.for_internal->show_c_function,
                    subpool));
+
+          /* We have a printed a diff for this path, mark it as visited. */
+          apr_hash_set(diff_cmd_baton->visited_paths, path,
+                       APR_HASH_KEY_STRING, path);
+
         }
     }
 
@@ -1305,7 +1402,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   if (strcmp(drr->url2, params->path2) != 0)
     drr->base_path = params->path2;
 
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, drr->url2,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, drr->url2,
                                                NULL, NULL, FALSE,
                                                TRUE, ctx, pool));
 
@@ -1342,7 +1439,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   /* Do the same for the first target. */
   SVN_ERR(svn_ra_reparent(ra_session, drr->url1, pool));
   SVN_ERR(svn_client__get_revision_number(&drr->rev1, NULL, ctx->wc_ctx,
-           (params->path1 == drr->url1) ? NULL : params_path1_abspath,
+           (strcmp(params->path1, drr->url1) == 0) ? NULL : params_path1_abspath,
            ra_session, params->revision1, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev1, &kind1, pool));
   if (kind1 == svn_node_none)
@@ -1523,9 +1620,9 @@ diff_repos_repos(const struct diff_parameters *diff_param,
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
      contents.  */
-  SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, drr.anchor1,
-                                               NULL, NULL, FALSE, TRUE, ctx,
-                                               pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, NULL,
+                                               drr.anchor1, NULL, NULL, FALSE,
+                                               TRUE, ctx, pool));
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
@@ -1645,7 +1742,7 @@ diff_repos_wc(const char *path1,
     }
 
   /* Establish RA session to path2's anchor */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, anchor_url,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, anchor_url,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
@@ -1665,7 +1762,7 @@ diff_repos_wc(const char *path1,
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
   SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
-                                          (path1 == url1) ? NULL : abspath1,
+                                          (strcmp(path1, url1) == 0) ? NULL : abspath1,
                                           ra_session, revision1, pool));
 
   if (!reverse)
@@ -1781,9 +1878,9 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used to get the kind of deleted paths.  */
-  SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, drr.anchor1,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, NULL,
+                                               drr.anchor1, NULL, NULL, FALSE,
+                                               TRUE, ctx, pool));
 
   /* Set up the repos_diff editor. */
   SVN_ERR(svn_client__get_diff_summarize_editor
@@ -1999,6 +2096,7 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
+  diff_cmd_baton.visited_paths = apr_hash_make(pool);
 
   if (ignore_mergeinfo)
     {
@@ -2078,6 +2176,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.relative_to_dir = relative_to_dir;
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
+  diff_cmd_baton.visited_paths = apr_hash_make(pool);
 
   if (ignore_mergeinfo)
     {

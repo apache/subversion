@@ -51,8 +51,8 @@ class Sandbox:
       self.repo_url = (svntest.main.options.test_area_url + '/'
                        + svntest.main.pathname2url(self.repo_dir))
     else:
-      self.repo_dir = svntest.main.pristine_dir
-      self.repo_url = svntest.main.pristine_url
+      self.repo_dir = svntest.main.pristine_greek_repos_dir
+      self.repo_url = svntest.main.pristine_greek_repos_url
 
     ### TODO: Move this into to the build() method
     # For dav tests we need a single authz file which must be present,
@@ -96,11 +96,8 @@ class Sandbox:
        and check out a WC from it (unless CREATE_WC is false). Change the
        sandbox's name to NAME. See actions.make_repo_and_wc() for details."""
     self._set_name(name, read_only)
-    if svntest.actions.make_repo_and_wc(self, create_wc, read_only):
-      raise svntest.Failure("Could not build repository and sandbox '%s'"
-                            % self.name)
-    else:
-      self._is_built = True
+    svntest.actions.make_repo_and_wc(self, create_wc, read_only)
+    self._is_built = True
 
   def add_test_path(self, path, remove=True):
     self.test_paths.append(path)
@@ -133,6 +130,20 @@ class Sandbox:
     self.add_test_path(path, remove)
     return path
 
+  tempname_offs = 0 # Counter for get_tempname
+
+  def get_tempname(self, prefix='tmp'):
+    """Get a stable name for a temporary file that will be removed after
+       running the test"""
+
+    dir = self.add_wc_path('tmp')
+    if not os.path.exists(dir):
+      os.mkdir(dir)
+
+    self.tempname_offs = self.tempname_offs + 1
+
+    return os.path.join(dir, '%s-%s' % (prefix, self.tempname_offs))
+
   def cleanup_test_paths(self):
     "Clean up detritus from this sandbox, and any dependents."
     if self.dependents:
@@ -141,7 +152,7 @@ class Sandbox:
         sbox.cleanup_test_paths()
     # cleanup all test specific working copies and repositories
     for path in self.test_paths:
-      if not path is svntest.main.pristine_dir:
+      if not path is svntest.main.pristine_greek_repos_dir:
         _cleanup_test_path(path)
 
   def is_built(self):
@@ -153,6 +164,19 @@ class Sandbox:
       wc_dir = self.wc_dir
     return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
 
+  def redirected_root_url(self, temporary=False):
+    """If TEMPORARY is set, return the URL which should be configured
+       to temporarily redirect to the root of this repository;
+       otherwise, return the URL which should be configured to
+       permanent redirect there.  (Assumes that the sandbox is not
+       read-only.)"""
+    assert not self.read_only
+    assert self.repo_url.startswith("http")
+    parts = self.repo_url.rsplit('/', 1)
+    return '%s/REDIRECT-%s-%s' % (parts[0],
+                                  temporary and 'TEMP' or 'PERM',
+                                  parts[1])
+    
   def simple_commit(self, target=None):
     assert not self.read_only
     if target is None:
@@ -220,6 +244,6 @@ def _cleanup_test_path(path, retrying=False):
   try:
     svntest.main.safe_rmtree(path)
   except:
-    if svntest.main.verbose_mode:
+    if svntest.main.options.verbose:
       print("WARNING: cleanup failed, will try again later")
     _deferred_test_paths.append(path)

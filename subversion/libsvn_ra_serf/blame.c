@@ -330,7 +330,7 @@ end_blame(svn_ra_serf__xml_parser_t *parser,
   else if (state == TXDELTA &&
            strcmp(name.name, "txdelta") == 0)
     {
-      svn_stream_close(info->stream);
+      SVN_ERR(svn_stream_close(info->stream));
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -382,8 +382,10 @@ cdata_blame(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t*
-create_file_revs_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_file_revs_body(serf_bucket_t **body_bkt,
+                      void *baton,
                       serf_bucket_alloc_t *alloc,
                       apr_pool_t *pool)
 {
@@ -419,7 +421,8 @@ create_file_revs_body(void *baton,
   svn_ra_serf__add_close_tag_buckets(buckets, alloc,
                                      "S:file-revs-report");
 
-  return buckets;
+  *body_bkt = buckets;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -483,8 +486,10 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool);
 
   err = svn_error_compose_create(
-                svn_ra_serf__error_on_status(status_code, handler->path),
-                err);
+            svn_ra_serf__error_on_status(status_code,
+                                         handler->path,
+                                         parser_ctx->location),
+            err);
 
   return svn_error_return(err);
 }

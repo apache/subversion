@@ -218,6 +218,9 @@ typedef struct report_info_t
   svn_txdelta_window_handler_t textdelta;
   void *textdelta_baton;
 
+  /* Checksum for close_file */
+  const char *final_checksum;
+
   /* temporary property for this file which is currently being parsed
    * It will eventually be stored in our parent directory's property hash.
    */
@@ -235,9 +238,6 @@ typedef struct report_info_t
 typedef struct report_fetch_t {
   /* Our pool. */
   apr_pool_t *pool;
-
-  /* Non-NULL if we received an error during processing. */
-  svn_error_t *err;
 
   /* The session we should use to fetch the file. */
   svn_ra_serf__session_t *sess;
@@ -445,6 +445,12 @@ set_file_props(void *baton,
   report_info_t *info = baton;
   const svn_delta_editor_t *editor = info->dir->update_editor;
 
+  if (name_len == 12
+      && ns_len == 39
+      && strcmp(name, "md5-checksum") == 0
+      && strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
+    info->final_checksum = apr_pstrdup(info->pool, val->data);
+
   return svn_ra_serf__set_baton_props(editor->change_file_prop,
                                       info->file_baton,
                                       ns, ns_len, name, name_len, val, pool);
@@ -554,17 +560,21 @@ close_dir(report_dir_t *dir)
 
   SVN_ERR_ASSERT(! dir->ref_count);
 
-  svn_ra_serf__walk_all_props(dir->props, dir->base_name, dir->base_rev,
-                              set_dir_props, dir, dir->dir_baton_pool);
+  SVN_ERR(svn_ra_serf__walk_all_props(dir->props, dir->base_name,
+                                      dir->base_rev,
+                                      set_dir_props, dir,
+                                      dir->dir_baton_pool));
 
-  svn_ra_serf__walk_all_props(dir->removed_props, dir->base_name,
-                              dir->base_rev, remove_dir_props, dir,
-                              dir->dir_baton_pool);
+  SVN_ERR(svn_ra_serf__walk_all_props(dir->removed_props, dir->base_name,
+                                      dir->base_rev, remove_dir_props, dir,
+                                      dir->dir_baton_pool));
 
   if (dir->fetch_props)
     {
-      svn_ra_serf__walk_all_props(dir->props, dir->url, dir->target_rev,
-                                  set_dir_props, dir, dir->dir_baton_pool);
+      SVN_ERR(svn_ra_serf__walk_all_props(dir->props, dir->url,
+                                          dir->target_rev,
+                                          set_dir_props, dir,
+                                          dir->dir_baton_pool));
     }
 
   SVN_ERR(dir->update_editor->close_directory(dir->dir_baton,
@@ -655,7 +665,7 @@ check_lock(report_info_t *info)
     }
 }
 
-static apr_status_t
+static svn_error_t *
 headers_fetch(serf_bucket_t *headers,
               void *baton,
               apr_pool_t *pool)
@@ -676,10 +686,10 @@ headers_fetch(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 cancel_fetch(serf_request_t *request,
              serf_bucket_t *response,
              int status_code,
@@ -708,11 +718,11 @@ cancel_fetch(serf_request_t *request,
           fetch_ctx->read_size = 0;
         }
 
-      return APR_SUCCESS;
+      return SVN_NO_ERROR;
     }
 
   /* We have no idea what went wrong. */
-  SVN_ERR_MALFUNCTION_NO_RETURN();
+  SVN_ERR_MALFUNCTION();
 }
 
 static svn_error_t *
@@ -720,8 +730,6 @@ error_fetch(serf_request_t *request,
             report_fetch_t *fetch_ctx,
             svn_error_t *err)
 {
-  fetch_ctx->err = err;
-
   fetch_ctx->done = TRUE;
 
   fetch_ctx->done_item.data = fetch_ctx;
@@ -733,7 +741,12 @@ error_fetch(serf_request_t *request,
   serf_request_set_handler(request,
                            svn_ra_serf__response_discard_handler, NULL);
 
-  return SVN_NO_ERROR;
+  /* Some errors would be handled by serf; make sure they really make
+     the update fail by wrapping it in a different error. */
+  if (!SERF_BUCKET_READ_ERROR(err->apr_err))
+    return svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
+
+  return err;
 }
 
 /* Implements svn_ra_serf__response_handler_t */
@@ -928,27 +941,31 @@ handle_fetch(serf_request_t *request,
             check_lock(info);
 
           /* set all of the properties we received */
-          svn_ra_serf__walk_all_props(info->props,
-                                      info->base_name,
-                                      info->base_rev,
-                                      set_file_props,
-                                      info, info->editor_pool);
-          svn_ra_serf__walk_all_props(info->dir->removed_props,
-                                      info->base_name,
-                                      info->base_rev,
-                                      remove_file_props,
-                                      info, info->editor_pool);
-          if (info->fetch_props)
+          err = svn_ra_serf__walk_all_props(info->props,
+                                            info->base_name,
+                                            info->base_rev,
+                                            set_file_props,
+                                            info, info->editor_pool);
+
+          if (!err)
+            err = svn_ra_serf__walk_all_props(info->dir->removed_props,
+                                              info->base_name,
+                                              info->base_rev,
+                                              remove_file_props,
+                                              info, info->editor_pool);
+          if (!err && info->fetch_props)
             {
-              svn_ra_serf__walk_all_props(info->props,
-                                          info->url,
-                                          info->target_rev,
-                                          set_file_props,
-                                          info, info->editor_pool);
+              err = svn_ra_serf__walk_all_props(info->props,
+                                                info->url,
+                                                info->target_rev,
+                                                set_file_props,
+                                                info, info->editor_pool);
             }
 
-          err = info->dir->update_editor->close_file(info->file_baton, NULL,
-                                                     info->editor_pool);
+          if (!err)
+            err = info->dir->update_editor->close_file(info->file_baton,
+                                                       info->final_checksum,
+                                                       info->editor_pool);
 
           if (err)
             {
@@ -985,16 +1002,26 @@ handle_stream(serf_request_t *request,
 {
   report_fetch_t *fetch_ctx = handler_baton;
   serf_status_line sl;
+  const char *location;
+  svn_error_t *err;
 
   serf_bucket_response_status(response, &sl);
 
   /* Woo-hoo.  Nothing here to see.  */
-  fetch_ctx->err = svn_ra_serf__error_on_status(sl.code, fetch_ctx->info->name);
-  if (fetch_ctx->err)
+  location = svn_ra_serf__response_get_location(response, pool);
+  
+  err = svn_ra_serf__error_on_status(sl.code,
+                                     fetch_ctx->info->name,
+                                     location);
+  if (err)
     {
       fetch_ctx->done = TRUE;
 
-      return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
+      err = svn_error_compose_create(
+                  err,
+                  svn_ra_serf__handle_discard_body(request, response, NULL, pool));
+
+      return svn_error_return(err);
     }
 
   while (1)
@@ -1044,7 +1071,8 @@ handle_stream(serf_request_t *request,
 
           written_len = len;
 
-          svn_stream_write(fetch_ctx->target_stream, data, &written_len);
+          SVN_ERR(svn_stream_write(fetch_ctx->target_stream, data,
+                                   &written_len));
         }
 
       if (APR_STATUS_IS_EOF(status))
@@ -1108,19 +1136,23 @@ handle_propchange_only(report_info_t *info)
     check_lock(info);
 
   /* set all of the properties we received */
-  svn_ra_serf__walk_all_props(info->props,
-                              info->base_name, info->base_rev,
-                              set_file_props, info, info->editor_pool);
-  svn_ra_serf__walk_all_props(info->dir->removed_props,
-                              info->base_name, info->base_rev,
-                              remove_file_props, info, info->editor_pool);
+  SVN_ERR(svn_ra_serf__walk_all_props(info->props,
+                                      info->base_name, info->base_rev,
+                                      set_file_props, info,
+                                      info->editor_pool));
+  SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
+                                      info->base_name, info->base_rev,
+                                      remove_file_props, info,
+                                      info->editor_pool));
   if (info->fetch_props)
     {
-      svn_ra_serf__walk_all_props(info->props, info->url, info->target_rev,
-                                  set_file_props, info, info->editor_pool);
+      SVN_ERR(svn_ra_serf__walk_all_props(info->props, info->url,
+                                          info->target_rev, set_file_props,
+                                          info, info->editor_pool));
     }
 
-  SVN_ERR(info->dir->update_editor->close_file(info->file_baton, NULL,
+  SVN_ERR(info->dir->update_editor->close_file(info->file_baton,
+                                               info->final_checksum,
                                                info->editor_pool));
 
   /* We're done with our pools. */
@@ -1247,9 +1279,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              _("Missing revision attr in target-revision element"));
         }
 
-      ctx->update_editor->set_target_revision(ctx->update_baton,
-                                              SVN_STR_TO_REV(rev),
-                                              ctx->sess->pool);
+      SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
+                                                      SVN_STR_TO_REV(rev),
+                                                      ctx->sess->pool));
     }
   else if (state == NONE && strcmp(name.name, "open-directory") == 0)
     {
@@ -1485,9 +1517,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      ctx->update_editor->absent_directory(file_name,
-                                           info->dir->dir_baton,
-                                           info->dir->pool);
+      SVN_ERR(ctx->update_editor->absent_directory(file_name,
+                                                   info->dir->dir_baton,
+                                                   info->dir->pool));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "absent-file") == 0)
@@ -1508,9 +1540,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      ctx->update_editor->absent_file(file_name,
-                                      info->dir->dir_baton,
-                                      info->dir->pool);
+      SVN_ERR(ctx->update_editor->absent_file(file_name,
+                                              info->dir->dir_baton,
+                                              info->dir->pool));
     }
   else if (state == OPEN_DIR || state == ADD_DIR)
     {
@@ -2178,18 +2210,21 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
 
       /* Authentication protocol specific initalization. */
       if (sess->auth_protocol)
-        sess->auth_protocol->init_conn_func(sess, sess->conns[cur], sess->pool);
+        SVN_ERR(sess->auth_protocol->init_conn_func(sess, sess->conns[cur],
+                                                    sess->pool));
       if (sess->proxy_auth_protocol)
-        sess->proxy_auth_protocol->init_conn_func(sess, sess->conns[cur],
-                                                  sess->pool);
+        SVN_ERR(sess->proxy_auth_protocol->init_conn_func(sess,
+                                                          sess->conns[cur],
+                                                          sess->pool));
     }
 
   return SVN_NO_ERROR;
 }
 
 /* Serf callback to create update request body bucket. */
-static serf_bucket_t *
-create_update_report_body(void *baton,
+static svn_error_t *
+create_update_report_body(serf_bucket_t **body_bkt,
+                          void *baton,
                           serf_bucket_alloc_t *alloc,
                           apr_pool_t *pool)
 {
@@ -2199,7 +2234,9 @@ create_update_report_body(void *baton,
   offset = 0;
   apr_file_seek(report->body_file, APR_SET, &offset);
 
-  return serf_bucket_file_create(report->body_file, alloc);
+  *body_bkt = serf_bucket_file_create(report->body_file, alloc);
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -2275,17 +2312,23 @@ finish_report(void *report_baton,
 
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
+      svn_error_t *err;
       status = serf_context_run(sess->context, sess->timeout, pool);
+
+      err = sess->pending_error;
+      sess->pending_error = SVN_NO_ERROR;
+
       if (APR_STATUS_IS_TIMEUP(status))
         {
+          svn_error_clear(err);
           return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
                                   NULL,
                                   _("Connection timed out"));
         }
+
+      SVN_ERR(err);
       if (status)
         {
-          SVN_ERR(sess->pending_error);
-
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
                                     status);
         }
@@ -2358,21 +2401,6 @@ finish_report(void *report_baton,
           report_fetch_t *done_fetch = done_list->data;
           report_dir_t *cur_dir;
 
-          if (done_fetch->err)
-            {
-              svn_error_t *err = done_fetch->err;
-              /* Error found. There might be more, clear those first. */
-              done_list = done_list->next;
-              while (done_list)
-                {
-                  done_fetch = done_list->data;
-                  if (done_fetch->err)
-                    svn_error_clear(done_fetch->err);
-                  done_list = done_list->next;
-                }
-              return err;
-            }
-
           /* decrease our parent's directory refcount. */
           cur_dir = done_fetch->info->dir;
           cur_dir->ref_count--;
@@ -2438,7 +2466,10 @@ abort_report(void *report_baton,
 #if 0
   report_context_t *report = report_baton;
 #endif
-  SVN_ERR_MALFUNCTION();
+
+  /* Should we perform some cleanup here? */
+
+  return SVN_NO_ERROR;
 }
 
 static const svn_ra_reporter3_t ra_serf_reporter = {
@@ -2700,8 +2731,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, fetch_url,
                                           revision, "0", all_props, pool));
 
-      svn_ra_serf__walk_all_props(fetch_props, fetch_url, revision,
-                                  svn_ra_serf__set_flat_props, *props, pool);
+      SVN_ERR(svn_ra_serf__walk_all_props(fetch_props, fetch_url, revision,
+                                          svn_ra_serf__set_flat_props, *props, pool));
     }
 
   if (stream)
@@ -2732,7 +2763,6 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
 
       SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
-      SVN_ERR(stream_ctx->err);
     }
 
   return SVN_NO_ERROR;

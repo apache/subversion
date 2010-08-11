@@ -44,17 +44,16 @@
 
 /*** Code. ***/
 
-/* Helper function to handle copying a potentially translated version of
-   local file LOCAL_ABSPATH to OUTPUT.  REVISION must be one of the following:
-   BASE, COMMITTED, WORKING.  Uses SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-cat_local_file(svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
-               svn_stream_t *output,
-               const svn_opt_revision_t *revision,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__get_normalized_stream(svn_stream_t **normal_stream,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  const svn_opt_revision_t *revision,
+                                  svn_boolean_t expand_keywords,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
@@ -84,7 +83,7 @@ cat_local_file(svn_wc_context_t *wc_ctx,
   if (revision->kind != svn_opt_revision_working)
     {
       SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
-                                            scratch_pool, scratch_pool));
+                                            result_pool, scratch_pool));
       if (input == NULL)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                  _("'%s' has no base revision until it is committed"),
@@ -98,7 +97,7 @@ cat_local_file(svn_wc_context_t *wc_ctx,
       svn_wc_status3_t *status;
 
       SVN_ERR(svn_stream_open_readonly(&input, local_abspath, scratch_pool,
-                                       scratch_pool));
+                                       result_pool));
 
       SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath, scratch_pool,
                                 scratch_pool));
@@ -162,18 +161,14 @@ cat_local_file(svn_wc_context_t *wc_ctx,
                                         author, scratch_pool));
     }
 
-  /* Our API contract says that OUTPUT will not be closed. The two paths
-     below close it, so disown the stream to protect it. The input will
-     be closed, which is good (since we opened it). */
-  output = svn_stream_disown(output, scratch_pool);
-
   /* Wrap the output stream if translation is needed. */
   if (eol != NULL || kw != NULL)
-    output = svn_subst_stream_translated(output, eol, FALSE, kw, TRUE,
-                                         scratch_pool);
+    input = svn_subst_stream_translated(input, eol, FALSE, kw, expand_keywords,
+                                        result_pool);
 
-  return svn_error_return(svn_stream_copy3(input, output, cancel_func,
-                                           cancel_baton, scratch_pool));
+  *normal_stream = input;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -212,11 +207,20 @@ svn_client_cat2(svn_stream_t *out,
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       const char *local_abspath;
+      svn_stream_t *normal_stream;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
-      return svn_error_return(
-        cat_local_file(ctx->wc_ctx, local_abspath, out, revision,
-                       ctx->cancel_func, ctx->cancel_baton, pool));
+      SVN_ERR(svn_client__get_normalized_stream(&normal_stream, ctx->wc_ctx,
+                                            local_abspath, revision, TRUE,
+                                            ctx->cancel_func, ctx->cancel_baton,
+                                            pool, pool));
+
+      /* We don't promise to close output, so disown it to ensure we don't. */
+      output = svn_stream_disown(output, pool);
+
+      return svn_error_return(svn_stream_copy3(normal_stream, output,
+                                               ctx->cancel_func,
+                                               ctx->cancel_baton, pool));
     }
 
   /* Get an RA plugin for this filesystem object. */

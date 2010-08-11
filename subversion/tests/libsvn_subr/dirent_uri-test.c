@@ -2792,6 +2792,73 @@ test_file_url_from_dirent(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_dirent_is_under_root(apr_pool_t *pool)
+{
+  struct {
+    const char *base_path;
+    const char *path;
+    svn_boolean_t under_root;
+    const char *result;
+  } tests[] = {
+    { "/",        "/base",          FALSE},
+    { "/aa",      "/aa/bb",         FALSE},
+    { "/base",    "/base2",         FALSE},
+    { "/b",       "bb",             TRUE, "/b/bb"},
+    { "/b",       "../bb",          FALSE},
+    { "/b",       "r/./bb",         TRUE, "/b/r/bb"},
+    { "/b",       "r/../bb",        TRUE, "/b/bb"},
+    { "/b",       "r/../../bb",     FALSE},
+    { "/b",       "./bb",           TRUE, "/b/bb"},
+    { "/b",       ".",              TRUE, "/b"},
+    { "/b",       "",               TRUE, "/b"},
+    { "b",        "b",              TRUE, "b/b"},
+#ifdef SVN_USE_DOS_PATHS
+    { "C:/file",  "a\\d",           TRUE, "C:/file/a/d"},
+    { "C:/file",  "aa\\..\\d",      TRUE, "C:/file/d"},
+    { "C:/file",  "aa\\..\\..\\d",  FALSE},
+#else
+    { "C:/file",  "a\\d",           TRUE, "C:/file/a\\d"},
+    { "C:/file",  "aa\\..\\d",      TRUE, "C:/file/aa\\..\\d"},
+    { "C:/file",  "aa\\..\\..\\d",  TRUE, "C:/file/aa\\..\\..\\d"},
+#endif /* SVN_USE_DOS_PATHS */
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      svn_boolean_t under_root;
+      const char *result;
+      
+      SVN_ERR(svn_dirent_is_under_root(&under_root,
+                                       &result,
+                                       tests[i].base_path,
+                                       tests[i].path,
+                                       pool));
+
+      if (under_root != tests[i].under_root)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_is_under_root(..\"%s\", \"%s\"..)"
+                                 " returned %s expected %s.",
+                                 tests[i].base_path,
+                                 tests[i].path,
+                                 under_root ? "TRUE" : "FALSE",
+                                 tests[i].under_root ? "TRUE" : "FALSE");
+
+      if (under_root
+          && strcmp(result, tests[i].result) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_is_under_root(..\"%s\", \"%s\"..)"
+                                 " found \"%s\" expected \"%s\".",
+                                 tests[i].base_path,
+                                 tests[i].path,
+                                 result,
+                                 tests[i].result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -2890,5 +2957,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_get_dirent_from_file_url errors"),
     SVN_TEST_PASS2(test_file_url_from_dirent,
                    "test svn_uri_get_file_url_from_dirent"),
+    SVN_TEST_PASS2(test_dirent_is_under_root,
+                   "test svn_dirent_is_under_root"),
     SVN_TEST_NULL
   };

@@ -616,11 +616,9 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
               else
                 {
                   sesspool = svn_pool_create(scratch_pool);
-                  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                                               url, NULL, NULL,
-                                                               FALSE, TRUE,
-                                                               ctx,
-                                                               sesspool));
+                  SVN_ERR(svn_client__open_ra_session_internal(
+                              &ra_session, NULL, url, NULL, NULL, FALSE,
+                              TRUE, ctx, sesspool));
                 }
 
               SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
@@ -725,9 +723,9 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
   if (session == NULL)
     {
       sesspool = svn_pool_create(pool);
-      SVN_ERR(svn_client__open_ra_session_internal(&session, url, NULL, NULL,
-                                                   FALSE, TRUE, ctx,
-                                                   sesspool));
+      SVN_ERR(svn_client__open_ra_session_internal(&session, NULL, url, NULL,
+                                                   NULL, FALSE, TRUE,
+                                                   ctx, sesspool));
     }
 
   /* Fetch the location segments for our URL@PEG_REVNUM. */
@@ -1031,9 +1029,10 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
       svn_mergeinfo_catalog_t tmp_catalog;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", scratch_pool));
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, path_or_url,
-                                                   NULL, NULL, FALSE,
-                                                   TRUE, ctx, scratch_pool));
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
+                                                   path_or_url, NULL, NULL,
+                                                   FALSE, TRUE, ctx,
+                                                   scratch_pool));
       SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
                                               local_abspath, ra_session,
                                               &peg_rev, scratch_pool));
@@ -1081,9 +1080,9 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
       svn_boolean_t indirect;
 
       /* Check server Merge Tracking capability. */
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
-                                                   NULL, NULL, FALSE,
-                                                   TRUE, ctx, scratch_pool));
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url,
+                                                   NULL, NULL, FALSE, TRUE,
+                                                   ctx, scratch_pool));
       SVN_ERR(svn_ra__assert_mergeinfo_capable_server(ra_session, path_or_url,
                                                       scratch_pool));
 

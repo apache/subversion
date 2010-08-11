@@ -24,6 +24,7 @@
 #include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "svn_utf.h"
 
 #include "cl.h"
@@ -44,6 +45,7 @@ svn_cl__changelist(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   svn_depth_t depth = opt_state->depth;
+  int i;
 
   /* If we're not removing changelists, then our first argument should
      be the name of a changelist. */
@@ -70,10 +72,20 @@ svn_cl__changelist(apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
-  else
+  /* Don't even attempt to modify the working copy if any of the
+   * targets look like URLs. URLs are invalid input. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      if (svn_path_is_url(target))
+        return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                                  NULL,
+                                                  _("'%s' is not a local path"),
+                                                  target));
+    }
+
+  if (opt_state->quiet)
     /* FIXME: This is required because svn_client_create_context()
        always initializes ctx->notify_func2 to a wrapper function
        which calls ctx->notify_func() if it isn't NULL.  In other

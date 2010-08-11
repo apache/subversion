@@ -34,7 +34,7 @@ import org.apache.subversion.javahl.callback.ReposNotifyCallback;
  * This class offers the same commands as the svnadmin commandline
  * client.
  */
-public class SVNAdmin implements ISVNAdmin
+public class SVNRepos implements ISVNRepos
 {
     /**
      * Load the required native library.
@@ -47,7 +47,7 @@ public class SVNAdmin implements ISVNAdmin
     /**
      * Standard empty contructor, builds just the native peer.
      */
-    public SVNAdmin()
+    public SVNRepos()
     {
         cppAddr = ctNative();
     }
@@ -137,7 +137,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public native void listDBLogs(File path, MessageReceiver receiver)
+    public native void listDBLogs(File path, ISVNRepos.MessageReceiver receiver)
             throws ClientException;
 
     /**
@@ -146,20 +146,8 @@ public class SVNAdmin implements ISVNAdmin
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public native void listUnusedDBLogs(File path, MessageReceiver receiver)
+    public native void listUnusedDBLogs(File path, ISVNRepos.MessageReceiver receiver)
             throws ClientException;
-
-    /**
-     * interface to receive the messages
-     */
-    public static interface MessageReceiver
-    {
-        /**
-         * receive one message line
-         * @param message   one line of message
-         */
-        public void receiveMessageLine(String message);
-    }
 
     public native void load(File path, InputStream dataInput,
                             boolean ignoreUUID, boolean forceUUID,
@@ -173,7 +161,7 @@ public class SVNAdmin implements ISVNAdmin
      * @param receiver          receives one transaction name per call
      * @throws ClientException  throw in case of problem
      */
-    public native void lstxns(File path, MessageReceiver receiver)
+    public native void lstxns(File path, ISVNRepos.MessageReceiver receiver)
             throws ClientException;
 
     public native long recover(File path, ReposNotifyCallback callback)

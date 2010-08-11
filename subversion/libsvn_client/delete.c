@@ -136,8 +136,7 @@ path_driver_cb_func(void **dir_baton,
 
 
 static svn_error_t *
-delete_urls(svn_commit_info_t **commit_info_p,
-            const apr_array_header_t *paths,
+delete_urls(const apr_array_header_t *paths,
             const apr_hash_t *revprop_table,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
@@ -145,7 +144,6 @@ delete_urls(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  void *commit_baton;
   const char *log_msg;
   svn_node_kind_t kind;
   apr_array_header_t *targets;
@@ -216,9 +214,9 @@ delete_urls(svn_commit_info_t **commit_info_p,
          session.  */
       if (! ra_session)
         {
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, item_url,
-                                                       NULL, NULL, FALSE,
-                                                       TRUE, ctx, pool));
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
+                                                       item_url, NULL, NULL,
+                                                       FALSE, TRUE, ctx, pool));
         }
       else
         {
@@ -237,11 +235,10 @@ delete_urls(svn_commit_info_t **commit_info_p,
   SVN_ERR(svn_ra_reparent(ra_session, common, pool));
 
   /* Fetch RA commit editor */
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    svn_client__commit_callback,
-                                    commit_baton,
+                                    ctx->commit_callback2,
+                                    ctx->commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
@@ -314,25 +311,38 @@ delete_with_write_lock_func(void *baton,
 }
 
 svn_error_t *
-svn_client_delete3(svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *paths,
+svn_client_delete4(const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_boolean_t keep_local,
                    const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
+  svn_boolean_t is_url;
+  int i;
+
   if (! paths->nelts)
     return SVN_NO_ERROR;
 
-  if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
+  /* Check that all targets are of the same type. */
+  is_url = svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *));
+  for (i = 1; i < paths->nelts; i++)
     {
-      SVN_ERR(delete_urls(commit_info_p, paths, revprop_table, ctx, pool));
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      if (is_url != svn_path_is_url(path))
+        return svn_error_return(
+                 svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                  _("Cannot mix repository and working copy "
+                                    "targets")));
+    }
+
+  if (is_url)
+    {
+      SVN_ERR(delete_urls(paths, revprop_table, ctx, pool));
     }
   else
     {
       apr_pool_t *subpool = svn_pool_create(pool);
-      int i;
 
       for (i = 0; i < paths->nelts; i++)
         {
@@ -353,7 +363,8 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
           dwwlb.ctx = ctx;
           SVN_ERR(svn_wc__call_with_write_lock(delete_with_write_lock_func,
                                                &dwwlb, ctx->wc_ctx,
-                                               local_abspath, pool, subpool));
+                                               local_abspath, TRUE,
+                                               pool, subpool));
         }
       svn_pool_destroy(subpool);
     }

@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl.callback;
 
 import org.apache.subversion.javahl.DiffSummary;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * Subversion diff summarization interface.  An implementation which
@@ -45,7 +46,7 @@ public interface DiffSummaryCallback
 {
     /**
      * Implement this interface to receive diff summaries from the
-     * {@link SVNClientInterface#diffSummarize} API.
+     * {@link ISVNClient#diffSummarize} API.
      *
      * @param descriptor A summary of the diff.
      */

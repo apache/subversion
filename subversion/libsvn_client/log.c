@@ -44,38 +44,6 @@
 
 /*** Getting misc. information ***/
 
-/* A log callback conforming to the svn_log_entry_receiver_t
-   interface for obtaining the last revision of a node at a path and
-   storing it in *BATON (an svn_revnum_t). */
-static svn_error_t *
-revnum_receiver(void *baton,
-                svn_log_entry_t *log_entry,
-                apr_pool_t *pool)
-{
-  if (SVN_IS_VALID_REVNUM(log_entry->revision))
-    *((svn_revnum_t *) baton) = log_entry->revision;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
-                               svn_ra_session_t *ra_session,
-                               const char *rel_path,
-                               svn_revnum_t rev,
-                               apr_pool_t *pool)
-{
-  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
-  apr_array_header_t *revprops = apr_array_make(pool, 0, sizeof(char *));
-  *oldest_rev = SVN_INVALID_REVNUM;
-  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
-
-  /* Trace back in history to find the revision at which this node
-     was created (copied or added). */
-  return svn_ra_get_log2(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                         FALSE, revprops, revnum_receiver, oldest_rev, pool);
-}
-
 /* The baton for use with copyfrom_info_receiver(). */
 typedef struct
 {
@@ -423,8 +391,17 @@ svn_client_log5(const apr_array_header_t *targets,
         {
           /* We have some paths, let's use them. Start after the URL.  */
           for (i = 1; i < targets->nelts; i++)
-            APR_ARRAY_PUSH(condensed_targets, const char *) =
-                APR_ARRAY_IDX(targets, i, const char *);
+            {
+              const char *target;
+
+              target = APR_ARRAY_IDX(targets, i, const char *);
+              if (svn_path_is_url(target) || svn_dirent_is_absolute(target))
+                return svn_error_return(svn_error_createf(
+                                          SVN_ERR_ILLEGAL_TARGET, NULL,
+                                          _("'%s' is not a relative path"),
+                                          target));
+              APR_ARRAY_PUSH(condensed_targets, const char *) = target;
+            }
         }
       else
         {

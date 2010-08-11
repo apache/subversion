@@ -47,7 +47,6 @@
 #include "wc.h"
 #include "props.h"
 #include "entries.h"
-#include "log.h"
 #include "wc_db.h"
 
 #include "svn_private_config.h"
@@ -146,7 +145,7 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                                 NULL, repos_root_url, repos_uuid,
                                 NULL, NULL, NULL, NULL,
                                 wc_ctx->db, local_abspath,
-                                scratch_pool, scratch_pool));
+                                result_pool, scratch_pool));
     }
 
   /* If we didn't get repository information, and the status means we are
@@ -173,15 +172,20 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
 svn_error_t *
 svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_wc_context_t *wc_ctx,
-                 const char *abspath,
+                 const char *local_abspath,
                  svn_boolean_t show_hidden,
                  apr_pool_t *scratch_pool)
 {
+  svn_wc__db_status_t db_status;
   svn_wc__db_kind_t db_kind;
   svn_error_t *err;
 
-  err = svn_wc__db_read_kind(&db_kind, wc_ctx->db, abspath, FALSE,
-                             scratch_pool);
+  err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
+                             wc_ctx->db, local_abspath,
+                             scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
@@ -212,14 +216,16 @@ svn_wc_read_kind(svn_node_kind_t *kind,
 
   /* Make sure hidden nodes return svn_node_none. */
   if (! show_hidden)
-    {
-      svn_boolean_t hidden;
+    switch (db_status)
+      {
+        case svn_wc__db_status_not_present:
+        case svn_wc__db_status_absent:
+        case svn_wc__db_status_excluded:
+          *kind = svn_node_none;
 
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, wc_ctx->db, abspath,
-                                     scratch_pool));
-      if (hidden)
-        *kind = svn_node_none;
-    }
+        default:
+          break;
+      }
 
   return SVN_NO_ERROR;
 }
@@ -442,9 +448,9 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                    && (status == svn_wc__db_status_deleted
                        || status == svn_wc__db_status_obstructed_delete)))
         {
-          const char *parent_abspath, *basename, *parent_relpath;
+          const char *parent_abspath, *name, *parent_relpath;
 
-          svn_dirent_split(&parent_abspath, &basename, local_abspath,
+          svn_dirent_split(&parent_abspath, &name, local_abspath,
                            scratch_pool);
           SVN_ERR(svn_wc__node_get_repos_relpath(&parent_relpath, wc_ctx,
                                                  parent_abspath,
@@ -452,7 +458,7 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                                                  scratch_pool));
 
           if (parent_relpath)
-            *repos_relpath = svn_relpath_join(parent_relpath, basename,
+            *repos_relpath = svn_relpath_join(parent_relpath, name,
                                               result_pool);
         }
       else
@@ -467,17 +473,16 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
 }
 
 svn_error_t *
-svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
-                               const char **copyfrom_repos_relpath,
-                               const char **copyfrom_url,
-                               svn_revnum_t *copyfrom_rev,
-                               svn_boolean_t *is_copy_target,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
+svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
+                                   const char **copyfrom_repos_relpath,
+                                   const char **copyfrom_url,
+                                   svn_revnum_t *copyfrom_rev,
+                                   svn_boolean_t *is_copy_target,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = wc_ctx->db;
   const char *original_root_url;
   const char *original_repos_relpath;
   svn_revnum_t original_revision;
@@ -544,11 +549,12 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
 
           /* This is a copied node, so we should never fall off the top of a
            * working copy here. */
-          SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
-                                                 &parent_copyfrom_url,
-                                                 NULL, NULL,
-                                                 wc_ctx, parent_abspath,
-                                                 scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__internal_get_copyfrom_info(NULL, NULL,
+                                                     &parent_copyfrom_url,
+                                                     NULL, NULL,
+                                                     db, parent_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
 
           /* So, count this as a separate copy target only if the URLs
            * don't match up, or if the parent isn't copied at all. */
@@ -607,8 +613,39 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
+                               const char **copyfrom_repos_relpath,
+                               const char **copyfrom_url,
+                               svn_revnum_t *copyfrom_rev,
+                               svn_boolean_t *is_copy_target,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  return
+    svn_error_return(svn_wc__internal_get_copyfrom_info(copyfrom_root_url,
+                                                        copyfrom_repos_relpath,
+                                                        copyfrom_url,
+                                                        copyfrom_rev,
+                                                        is_copy_target,
+                                                        wc_ctx->db,
+                                                        local_abspath,
+                                                        result_pool,
+                                                        scratch_pool));
+}
 
-/* A recursive node-walker, helper for svn_wc__node_walk_children(). */
+/* A recursive node-walker, helper for svn_wc__node_walk_children().
+ *
+ * Call WALK_CALLBACK with WALK_BATON on all children (recursively) of
+ * DIR_ABSPATH in DB, but not on DIR_ABSPATH itself. DIR_ABSPATH must be a
+ * versioned directory. If SHOW_HIDDEN is true, visit hidden nodes, else
+ * ignore them. Restrict the depth of the walk to DEPTH.
+ *
+ * ### Is it possible for a subdirectory to be hidden and known to be a
+ *     directory?  If so, and if show_hidden is true, this will try to
+ *     recurse into it.  */
 static svn_error_t *
 walker_helper(svn_wc__db_t *db,
               const char *dir_abspath,
@@ -635,6 +672,7 @@ walker_helper(svn_wc__db_t *db,
     {
       const char *child_abspath;
       svn_wc__db_kind_t child_kind;
+      svn_wc__db_status_t child_status;
 
       svn_pool_clear(iterpool);
 
@@ -647,27 +685,31 @@ walker_helper(svn_wc__db_t *db,
                                                     const char *),
                                       iterpool);
 
-      if (!show_hidden)
-        {
-          svn_boolean_t hidden;
-
-          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
-          if (hidden)
-            continue;
-        }
-
-      SVN_ERR(svn_wc__db_read_info(NULL, &child_kind, NULL, NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_read_info(&child_status, &child_kind, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
-                                   NULL,
+                                   NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
+
+      if (!show_hidden)
+        switch (child_status)
+          {
+            case svn_wc__db_status_not_present:
+            case svn_wc__db_status_absent:
+            case svn_wc__db_status_excluded:
+              continue;
+            default:
+              break;
+          }
 
       /* Return the child, if appropriate.  (For a directory,
        * this is the first visit: as a child.) */
       if (child_kind == svn_wc__db_kind_file
             || depth >= svn_depth_immediates)
         {
+          /* ### Maybe we should pass kind to the callback?.
+             ### almost every callee starts by asking for this */
           SVN_ERR(walk_callback(child_abspath, walk_baton, iterpool));
         }
 
@@ -973,13 +1015,13 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
 
   if (status == svn_wc__db_status_deleted)
     {
-      const char *work_del_abspath = NULL;
-      const char *base_del_abspath = NULL;
+      const char *work_del_abspath;
+      const char *base_del_abspath;
 
       SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
                                        NULL, &work_del_abspath, wc_ctx->db,
                                        local_abspath, scratch_pool,
-                                       result_pool));
+                                       scratch_pool));
       if (work_del_abspath)
         {
           SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, NULL, NULL,
@@ -1208,6 +1250,7 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool)
 {
+#ifndef SVN_WC__SINGLE_DB
   svn_boolean_t is_deleted;
 
   SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, local_abspath,
@@ -1216,6 +1259,7 @@ svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
     SVN_ERR(svn_wc__db_temp_determine_keep_local(keep_local, wc_ctx->db,
                                                  local_abspath, scratch_pool));
   else
+#endif
     *keep_local = FALSE;
 
   return SVN_NO_ERROR;

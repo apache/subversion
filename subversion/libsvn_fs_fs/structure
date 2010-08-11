@@ -59,7 +59,7 @@ repository) is:
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
   min-unpacked-rev    File containing the oldest revision not in a pack file
-  min-unpacked_revprop File containing the oldest revision of unpacked revprop
+  min-unpacked-revprop File containing the oldest revision of unpacked revprop
   rep-cache.db        SQLite database mapping rep checksums to locations
   revprops.db         SQLite database of the packed revision properties
 

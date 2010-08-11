@@ -51,7 +51,7 @@ def verbose_print(line):
 
 # If verbose mode is enabled, print the (assumed newline-terminated) LINES.
 def verbose_printlines(lines):
-  if main.verbose_mode:
+  if main.options.verbose:
     for line in lines:
       sys.stdout.write(line)
 

@@ -323,6 +323,10 @@ class State:
           if item.entry_rev is not None:
             item.wc_rev = item.entry_rev
             item.entry_rev = None
+          # status might vary as well, e.g. when a directory is missing
+          if item.entry_status is not None:
+            item.status = item.entry_status
+            item.entry_status = None
       if item.writelocked:
         # we don't contact the repository, so our only information is what
         # is in the working copy. 'K' means we have one and it matches the
@@ -551,17 +555,14 @@ class State:
     desc = { }
     dot_svn = svntest.main.get_admin_name()
 
-    for dirpath, dirs, files in os.walk(base):
-      if dot_svn in dirs:
-        # don't visit the .svn subdir
-        dirs.remove(dot_svn)
-      else:
-        # this is not a versioned directory. remove all subdirectories since
-        # we don't want to visit them. then skip this directory.
-        dirs[:] = []
-        continue
+    for dirpath in svntest.main.run_entriesdump_subdirs(base):
+
+      if base == '.' and dirpath != '.':
+        dirpath = '.' + os.path.sep + dirpath
 
       entries = svntest.main.run_entriesdump(dirpath)
+      if entries is None:
+        continue
 
       if dirpath == '.':
         parent = ''
@@ -603,12 +604,6 @@ class State:
         if implied_url and implied_url != entry.url:
           item.switched = 'S'
 
-      # only recurse into directories found in this entries. remove any
-      # which are not mentioned.
-      unmentioned = set(dirs) - set(entries.keys())
-      for subdir in unmentioned:
-        dirs.remove(subdir)
-
     return cls('', desc)
 
 
@@ -621,7 +616,8 @@ class StateItem:
   """
 
   def __init__(self, contents=None, props=None,
-               status=None, verb=None, wc_rev=None, entry_rev=None,
+               status=None, verb=None, wc_rev=None,
+               entry_rev=None, entry_status=None,
                locked=None, copied=None, switched=None, writelocked=None,
                treeconflict=None):
     # provide an empty prop dict if it wasn't provided
@@ -644,9 +640,10 @@ class StateItem:
     self.verb = verb
     # The base revision number of the node in the WC, as a string.
     self.wc_rev = wc_rev
-    # This one will be set when we expect the wc_rev to differ from the one
-    # found ni the entries code.
+    # These will be set when we expect the wc_rev/status to differ from those
+    # found in the entries code.
     self.entry_rev = entry_rev
+    self.entry_status = entry_status
     # For the following attributes, the value is the status character of that
     # field from 'svn status', except using value None instead of status ' '.
     self.locked = locked
@@ -820,31 +817,41 @@ def text_base_path(file_path):
   """Return the path to the text-base file for the versioned file
      FILE_PATH."""
   dot_svn = svntest.main.get_admin_name()
-  parent_path, file_name = os.path.split(file_path)
+  root_path, relpath = os.path.split(file_path)
 
-  ### Temporary until the wc format changes.
-  text_base_path = os.path.join(parent_path, dot_svn, 'text-base')
-  if os.path.exists(text_base_path):
-    return os.path.join(text_base_path, file_name + '.svn-base')
+  while True:
+    db_path = os.path.join(root_path, dot_svn, 'wc.db')
+    try:
+      db = svntest.sqlite3.connect(db_path)
+      break
+    except: pass
+    head, tail = os.path.split(root_path)
+    if head == root_path:
+      raise svntest.Failure("No DB for " + file_path)
+    root_path = head
+    relpath = os.path.join(tail, relpath).replace(os.sep, '/')
 
-  db_path = os.path.join(parent_path, dot_svn, 'wc.db')
-  db = svntest.sqlite3.connect(db_path)
   c = db.cursor()
   c.execute("""select checksum from working_node
-               where local_relpath = '""" + file_name + """'""")
+               where local_relpath = '""" + relpath + """'""")
   checksum = c.fetchone()
   if checksum is None:
     c.execute("""select checksum from base_node
-                 where local_relpath = '""" + file_name + """'""")
+                 where local_relpath = '""" + relpath + """'""")
     checksum = c.fetchone()[0]
-  if checksum is not None and checksum[0:6] == "$md5 $":
-    c.execute("""select checksum from pristine
-                 where md5_checksum = '""" + checksum + """'""")
-    checksum = c.fetchone()[0]
-  if checksum is None:
-    raise svntest.Failure("No SHA1 checksum for " + file_path)
+  if checksum is None or checksum[0:6] != "$sha1$":
+    raise svntest.Failure("No SHA1 checksum for " + relpath)
   db.close()
-  return os.path.join(parent_path, dot_svn, 'pristine', checksum[6:])
+
+  checksum = checksum[6:]
+  # Calculate single DB location
+  fn = os.path.join(root_path, dot_svn, 'pristine', checksum[0:2], checksum)
+
+  if os.path.isfile(fn):
+    return fn
+
+  # Calculate per dir location
+  return os.path.join(root_path, dot_svn, 'pristine', checksum)
 
 
 # ------------

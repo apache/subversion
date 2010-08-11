@@ -91,8 +91,8 @@ svn_cl__propdel(apr_getopt_t *os,
 
   if (! opt_state->quiet)
     {
-      SVN_ERR(svn_cl__get_notifier(&nwb.real_func, &nwb.real_baton, FALSE,
-                                   FALSE, FALSE, pool));
+      nwb.real_func = ctx->notify_func2;
+      nwb.real_baton = ctx->notify_baton2;
       ctx->notify_func2 = notify_wrapper;
       ctx->notify_baton2 = &nwb;
     }
@@ -129,15 +129,14 @@ svn_cl__propdel(apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
-          svn_commit_info_t *commit_info;
 
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
           /* Pass FALSE for 'skip_checks' because it doesn't matter here,
              and opt_state->force doesn't apply to this command anyway. */
-          SVN_ERR(svn_cl__try(svn_client_propset3
-                              (&commit_info, pname_utf8,
+          SVN_ERR(svn_cl__try(svn_client_propset4(
+                               pname_utf8,
                                NULL, target,
                                opt_state->depth,
                                FALSE, SVN_INVALID_REVNUM,

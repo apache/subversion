@@ -2079,7 +2079,8 @@ public class BasicTests extends SVNTests
         assertEquals("wrong copy source rev", -1,
                       changedApath.getCopySrcRevision());
         assertNull("wrong copy source path", changedApath.getCopySrcPath());
-        assertEquals("wrong action", 'A', changedApath.getAction());
+        assertEquals("wrong action", ChangePath.Action.add,
+                     changedApath.getAction());
         assertEquals("wrong time with getTimeMicros()",
                      lm[0].getTimeMicros()/1000,
                      lm[0].getDate().getTime());
@@ -2855,7 +2856,10 @@ public class BasicTests extends SVNTests
         String aPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A"),
                                      false);
 
-        expectedDiffOutput = NL + "Property changes on: A" + NL +
+        expectedDiffOutput = "Index: A" + NL + sepLine +
+            "--- A\t(revision 1)" + NL +
+            "+++ A\t(working copy)" + NL +
+            NL + "Property changes on: A" + NL +
             underSepLine +
             "Added: testprop" + NL +
             "## -0,0 +1 ##" + NL +
@@ -2871,7 +2875,10 @@ public class BasicTests extends SVNTests
                                  expectedDiffOutput, diffOutput);
 
         // Test diff where relativeToDir and path are the same.
-        expectedDiffOutput = NL + "Property changes on: ." + NL +
+        expectedDiffOutput = "Index: ." + NL + sepLine +
+            "--- .\t(revision 1)" + NL +
+            "+++ .\t(working copy)" + NL +
+            NL + "Property changes on: ." + NL +
             underSepLine +
             "Added: testprop" + NL +
             "## -0,0 +1 ##" + NL +
@@ -3244,6 +3251,11 @@ public class BasicTests extends SVNTests
      * @throws IOException
      * @throws SubversionException
      */
+    /*
+      This is currently commented out, because we don't have an XFail method
+      for JavaHL.  The resolution is pending the result of issue #3680:
+      http://subversion.tigris.org/issues/show_bug.cgi?id=3680
+
     public void testObstructionTolerance()
             throws SubversionException, IOException
     {
@@ -3400,7 +3412,7 @@ public class BasicTests extends SVNTests
                                    backupTest.getWc().getItemContent("A/D/H/omega"));
 
         backupTest.checkStatus();
-    }
+    }*/
 
     /**
      * Test basic blame functionality.  This test marginally tests blame

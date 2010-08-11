@@ -433,6 +433,10 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
                                            pool));
 
   SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
+
+  /* Remove old test data from the previous run */
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
   SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
   svn_test_add_dir_cleanup(wc_path);
 
@@ -465,6 +469,14 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, wc_path, TRUE, -1, NULL, NULL,
                              pool));
+
+    /* ### The above svn_wc_adm_open3 creates a new svn_wc__db_t
+       ### instance.  The svn_wc_add3 below doesn't work while the
+       ### original svn_wc__db_t created by svn_client_create_context
+       ### remains open.  Closing the wc-context gets around the
+       ### problem but is obviously a hack. */
+    SVN_ERR(svn_wc_context_destroy(ctx->wc_ctx));
+    SVN_ERR(svn_wc_context_create(&ctx->wc_ctx, NULL, pool, pool));
 
     /* Fix up copy as add with history */
     SVN_ERR(svn_wc_add3(new_dir_path, adm_access, svn_depth_infinity,

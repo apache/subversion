@@ -347,13 +347,17 @@ svn_wc__db_close(svn_wc__db_t *db);
    A REPOSITORY row will be constructed for the repository identified by
    REPOS_ROOT_URL and REPOS_UUID. Neither of these may be NULL.
 
-   A node will be created for the directory at REPOS_RELPATH will be added.
+   A BASE_NODE row will be created for the directory at REPOS_RELPATH at
+   revision INITIAL_REV.
    If INITIAL_REV is greater than zero, then the node will be marked as
    "incomplete" because we don't know its children. Contrary, if the
    INITIAL_REV is zero, then this directory should represent the root and
    we know it has no children, so the node is complete.
 
-   DEPTH is the initial depth of the working copy, it must be a definite
+   ### Is there any benefit to marking it 'complete' if rev==0?  Seems like
+   ### an unnecessary special case.
+
+   DEPTH is the initial depth of the working copy; it must be a definite
    depth, not svn_depth_unknown.
 
    Use SCRATCH_POOL for temporary allocations.
@@ -413,6 +417,15 @@ svn_wc__db_from_relpath(const char **local_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/* Compute the working copy root WCROOT_ABSPATH for WRI_ABSPATH using DB.
+ */
+svn_error_t *
+svn_wc__db_get_wcroot(const char **wcroot_abspath,
+                      svn_wc__db_t *db,
+                      const char *wri_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
 /* @} */
 
 /* Different kinds of trees
@@ -455,6 +468,9 @@ svn_wc__db_from_relpath(const char **local_abspath,
    This subsystem does not use DEPTH, but it can be recorded here in
    the BASE tree for higher-level code to use.
 
+   If DAV_CACHE is not NULL, sets LOCAL_ABSPATH's dav cache to the specified
+   data.
+
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
 
@@ -476,6 +492,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const char *changed_author,
                               const apr_array_header_t *children,
                               svn_depth_t depth,
+                              apr_hash_t *dav_cache,
                               const svn_skel_t *conflict,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
@@ -500,6 +517,9 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
    by its properties) is known, then pass it as TRANSLATED_SIZE. Otherwise,
    pass SVN_INVALID_FILESIZE.
 
+   If DAV_CACHE is not NULL, sets LOCAL_ABSPATH's dav cache to the specified
+   data.
+
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
 
@@ -521,6 +541,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
                          svn_filesize_t translated_size,
+                         apr_hash_t *dav_cache,
                          const svn_skel_t *conflict,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
@@ -539,6 +560,9 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
    CHANGED_AUTHOR>.
 
    The target of the symlink is specified by TARGET.
+
+   If DAV_CACHE is not NULL, sets LOCAL_ABSPATH's dav cache to the specified
+   data.
 
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
@@ -588,6 +612,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             apr_time_t changed_date,
                             const char *changed_author,
                             const char *target,
+                            apr_hash_t *dav_cache,
                             const svn_skel_t *conflict,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
@@ -836,53 +861,6 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
    @{
 */
 
-/* Enumerated constants for how hard svn_wc__db_pristine_check() should
-   work on checking for the pristine file.
-*/
-typedef enum {
-
-  /* ### bah. this is bogus. we open the sqlite database "all the time",
-     ### and don't worry about optimizing that. so: given the db is always
-     ### open, then the following modes are overengineered, premature
-     ### optimizations. ... will clean up in a future rev.  */
-
-  /* The caller wants to be sure the pristine file is present and usable.
-     This is the typical mode to use.
-
-     Implementation note: the SQLite database is opened (if not already)
-       and its state is verified against the file in the filesystem. */
-  svn_wc__db_checkmode_usable,
-
-  /* The caller is performing just this one check. The implementation will
-     optimize around the assumption no further calls to _check() will occur
-     (but of course has no problem if they do).
-
-     Note: this test is best used for detecting a *missing* file
-     rather than for detecting a usable file.
-
-     Implementation note: this will examine the presence of the pristine file
-       in the filesystem. The SQLite database is untouched, though if it is
-       (already) open, then it will be used instead. */
-  svn_wc__db_checkmode_single,
-
-  /* The caller is going to perform multiple calls, so the implementation
-     should optimize its operation around that.
-
-     Note: this test is best used for detecting a *missing* file
-     rather than for detecting a usable file.
-
-     Implementation note: the SQLite database will be opened (if not already),
-     and all checks will simply look in the TEXT_BASE table to see if the
-     given key is present. Note that the file may not be present. */
-  svn_wc__db_checkmode_multi,
-
-  /* Similar to _usable, but the file is checksum'd to ensure that it has
-     not been corrupted in some way. */
-  svn_wc__db_checkmode_validate
-
-} svn_wc__db_checkmode_t;
-
-
 /* Set *PRISTINE_ABSPATH to the path to the pristine text file
    identified by SHA1_CHECKSUM.  Error if it does not exist.
 
@@ -1002,15 +980,14 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/* ### check for presence, according to the given mode (on how hard we
-   ### should examine things)
+/* Set *PRESENT to true if the pristine store for WRI_ABSPATH in DB contains
+   a pristine text with SHA-1 checksum SHA1_CHECKSUM, and to false otherwise.
 */
 svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_wc__db_t *db,
                           const char *wri_abspath,
                           const svn_checksum_t *sha1_checksum,
-                          svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool);
 
 
@@ -1190,6 +1167,8 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool);
 
+/* See props.h  */
+#ifdef SVN__SUPPORT_BASE_MERGE
 /* ### Set the properties of the node LOCAL_ABSPATH in the BASE tree to PROPS.
    ###
    ### This function should not exist because properties should be stored
@@ -1222,7 +1201,7 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   const apr_hash_t *props,
                                   apr_pool_t *scratch_pool);
-
+#endif
 
 /* ### KFF: This handles files, dirs, symlinks, anything else? */
 /* ### dlr: Does this support recursive dir deletes (e.g. _revert)? Document. */
@@ -1715,10 +1694,14 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
    the commit. It will become the BASE node's 'revnum' and 'changed_rev'
    values in the BASE_NODE table.
 
-   NEW_DATE is the (server-side) date of the new revision. It may be 0 if
+   CHANGED_REVISION is the the new 'last changed' revision. If the node is
+   modified its value is equivalent to NEW_REVISION, but in case of a
+   decendant of a copy/move it can be an older revision.
+
+   CHANGED_DATE is the (server-side) date of CHANGED_REVISION. It may be 0 if
    the revprop is missing on the revision.
 
-   NEW_AUTHOR is the (server-side) author of the new revision. It may be
+   CHANGED_AUTHOR is the (server-side) author of CHANGED_REVISION. It may be
    NULL if the revprop is missing on the revision.
 
    One or both of NEW_CHECKSUM and NEW_CHILDREN should be NULL. For new:
@@ -1732,8 +1715,9 @@ svn_error_t *
 svn_wc__db_global_commit(svn_wc__db_t *db,
                          const char *local_abspath,
                          svn_revnum_t new_revision,
-                         apr_time_t new_date,
-                         const char *new_author,
+                         svn_revnum_t changed_revision,
+                         apr_time_t changed_date,
+                         const char *changed_author,
                          const svn_checksum_t *new_checksum,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
@@ -2082,6 +2066,7 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
 */
 svn_error_t *
 svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
+                               const char *dir_abspath,
                                const char *local_relpath,
                                apr_hash_t *base_props,
                                apr_hash_t *revert_props,
@@ -2168,23 +2153,39 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
    that they still function correctly, even in the new world.  'levels to
    lock' should not be exposed through the wc-ng APIs at all: users either
    get to lock the entire tree (rooted at some subdir, of course), or none.
+
+   An infinite depth lock is obtained with LEVELS_TO_LOCK set to -1, but until
+   we move to a single DB only depth 0 is supported.
 */
 svn_error_t *
-svn_wc__db_wclock_set(svn_wc__db_t *db,
-                      const char *local_abspath,
-                      int levels_to_lock,
-                      apr_pool_t *scratch_pool);
+svn_wc__db_wclock_obtain(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         int levels_to_lock,
+                         svn_boolean_t steal_lock,
+                         apr_pool_t *scratch_pool);
 
+/* Check if somebody has a wclock on LOCAL_ABSPATH */
 svn_error_t *
 svn_wc__db_wclocked(svn_boolean_t *locked,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     apr_pool_t *scratch_pool);
 
+/* Release the previously obtained lock on LOCAL_ABSPATH */
 svn_error_t *
-svn_wc__db_wclock_remove(svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *scratch_pool);
+svn_wc__db_wclock_release(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
+
+/* Checks whether DB currently owns a lock to operate on LOCAL_ABSPATH.
+   If EXACT is TRUE only lock roots are checked. */
+svn_error_t *
+svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_boolean_t exact,
+                            apr_pool_t *scratch_pool);
+
 
 
 /* @defgroup svn_wc__db_temp Various temporary functions during transition
@@ -2241,6 +2242,7 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
 
+#ifndef SVN_WC__SINGLE_DB
 /* For a deleted node, determine its keep_local flag. (This flag will
    go away once we have a consolidated administrative area) */
 svn_error_t *
@@ -2256,6 +2258,7 @@ svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
                                const char *local_abspath,
                                svn_boolean_t keep_local,
                                apr_pool_t *scratch_pool);
+#endif
 
 /* Removes all references of LOCAL_ABSPATH from its working copy
    using DB. */
@@ -2353,19 +2356,6 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
                                const char *wri_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_wc__db_temp_mark_locked(svn_wc__db_t *db,
-                            const char *local_dir_abspath,
-                            apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_wc__db_temp_own_lock(svn_boolean_t *own_lock,
-                         svn_wc__db_t *db,
-                         const char *local_dir_abspath,
-                         apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
@@ -2494,8 +2484,27 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
                                              const char *repos_root_url,
                                              const char *repos_uuid,
                                              svn_revnum_t revision,
+                                             svn_depth_t depth,
                                              apr_pool_t *scratch_pool);
 
+/* Close the wc root LOCAL_ABSPATH and remove any per-directory
+   handles associated with it. */
+svn_error_t *
+svn_wc__db_drop_root(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool);
+
+/* Internal version of svn_wc__node_get_copyfrom_info */
+svn_error_t *
+svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
+                                   const char **copyfrom_repos_relpath,
+                                   const char **copyfrom_url,
+                                   svn_revnum_t *copyfrom_rev,
+                                   svn_boolean_t *is_copy_target,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 /* @} */
 
 

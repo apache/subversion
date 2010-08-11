@@ -34,6 +34,7 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 
 #include "private/svn_wc_private.h"
 
@@ -41,6 +42,7 @@
 #include "entries.h"
 #include "lock.h"
 #include "props.h"
+#include "translate.h"
 #include "workqueue.h"
 
 #include "svn_private_config.h"
@@ -419,12 +421,14 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_transmit_text_deltas3(tempfile,
-                                       digest ? &new_text_base_md5_checksum
-                                              : NULL,
-                                       NULL, wc_ctx,
-                                       local_abspath, fulltext, editor,
-                                       file_baton, pool, pool));
+  SVN_ERR(svn_wc__internal_transmit_text_deltas(tempfile,
+                                                (digest
+                                                 ? &new_text_base_md5_checksum
+                                                 : NULL),
+                                                NULL, wc_ctx->db,
+                                                local_abspath, fulltext,
+                                                editor, file_baton,
+                                                pool, pool));
 
   if (digest)
     memcpy(digest, new_text_base_md5_checksum->digest, APR_MD5_DIGESTSIZE);
@@ -559,6 +563,70 @@ svn_wc_get_pristine_contents(svn_stream_t **contents,
 
 
 svn_error_t *
+svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t recurse,
+                        const apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        const svn_checksum_t *md5_checksum,
+                        apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  return svn_wc_queue_committed3(queue, local_abspath, recurse, wcprop_changes,
+                                 remove_lock, remove_changelist, md5_checksum,
+                                 NULL /* sha1_checksum */, scratch_pool);
+}
+
+svn_error_t *
+svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
+                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t recurse,
+                       const apr_array_header_t *wcprop_changes,
+                       svn_boolean_t remove_lock,
+                       svn_boolean_t remove_changelist,
+                       const unsigned char *digest,
+                       apr_pool_t *pool)
+{
+  const svn_checksum_t *md5_checksum;
+
+  if (digest)
+    md5_checksum = svn_checksum__from_digest(
+                   digest, svn_checksum_md5,
+                   svn_wc__get_committed_queue_pool(*queue));
+  else
+    md5_checksum = NULL;
+
+  return svn_wc_queue_committed2(*queue, path, adm_access, recurse,
+                                 wcprop_changes, remove_lock,
+                                 remove_changelist, md5_checksum, pool);
+}
+
+svn_error_t *
+svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_revnum_t new_revnum,
+                               const char *rev_date,
+                               const char *rev_author,
+                               apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+  SVN_ERR(svn_wc_process_committed_queue2(queue, wc_ctx, new_revnum,
+                                          rev_date, rev_author, pool));
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc_process_committed4(const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t recurse,
@@ -590,7 +658,7 @@ svn_wc_process_committed4(const char *path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   wcprop_changes_hash = svn_wc__prop_array_to_hash(wcprop_changes, pool);
-  SVN_ERR(svn_wc__process_committed_internal(db, local_abspath, recurse,
+  SVN_ERR(svn_wc__process_committed_internal(db, local_abspath, recurse, TRUE,
                                              new_revnum, new_date, rev_author,
                                              wcprop_changes_hash,
                                              !remove_lock, !remove_changelist,
@@ -1982,7 +2050,7 @@ svn_wc_mark_missing_deleted(const char *path,
   return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                            _("Unexpectedly found '%s': "
                              "path is marked 'missing'"),
-                           svn_dirent_local_style(path, scratch_pool));
+                           svn_dirent_local_style(path, pool));
 #else
   const char *local_abspath;
   svn_wc_context_t *wc_ctx;
@@ -2082,13 +2150,19 @@ svn_wc_prop_set3(const char *name,
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access), pool));
 
-  SVN_ERR(svn_wc_prop_set4(wc_ctx, local_abspath, name, value, skip_checks,
-                           notify_func, notify_baton, pool));
+  err = svn_wc_prop_set4(wc_ctx, local_abspath, name, value, skip_checks,
+                         notify_func, notify_baton, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -2151,12 +2225,18 @@ svn_wc_prop_get(const svn_string_t **value,
 
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access), pool));
 
-  SVN_ERR(svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool));
+  err = svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -2250,12 +2330,29 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access), pool));
 
-  return svn_wc__props_modified(modified_p, db, local_abspath, pool);
+  err = svn_wc_props_modified_p2(modified_p,
+                                 wc_ctx,
+                                 local_abspath,
+                                 pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+      *modified_p = FALSE;
+    }
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
 
@@ -2786,6 +2883,13 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
   const char *local_abspath;
   svn_error_t *err;
 
+  /* Subversion <= 1.6 said that '.' or a drive root is a WC root. */
+  if (svn_path_is_empty(path) || svn_dirent_is_root(path, strlen(path)))
+    {
+      *wc_root = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access),
@@ -2797,9 +2901,9 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
       && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
           || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
     {
-      /* Subversion <= 1.6 just said that a not versioned path is not a root */
+      /* Subversion <= 1.6 said that an unversioned path is a WC root. */
       svn_error_clear(err);
-      *wc_root = FALSE;
+      *wc_root = TRUE;
     }
   else
     SVN_ERR(err);
@@ -3221,19 +3325,14 @@ svn_wc_translated_stream(svn_stream_t **stream,
 {
   const char *local_abspath;
   const char *versioned_abspath;
-  svn_wc_context_t *wc_ctx;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
 
-  SVN_ERR(svn_wc_translated_stream2(stream, wc_ctx, local_abspath,
-                                    versioned_abspath, flags,
-                                    pool, pool));
-
-  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  return svn_error_return(
+    svn_wc__internal_translated_stream(stream, svn_wc__adm_get_db(adm_access),
+                                       local_abspath, versioned_abspath, flags,
+                                       pool, pool));
 }
 
 svn_error_t *
@@ -3247,15 +3346,13 @@ svn_wc_translated_file2(const char **xlated_path,
   const char *versioned_abspath;
   const char *root;
   const char *tmp_root;
-  svn_wc_context_t *wc_ctx;
 
   SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
 
-  SVN_ERR(svn_wc_translated_file3(xlated_path, src, wc_ctx, versioned_abspath,
-                                  flags, NULL, NULL, pool, pool));
+  SVN_ERR(svn_wc__internal_translated_file(xlated_path, src,
+                                           svn_wc__adm_get_db(adm_access),
+                                           versioned_abspath,
+                                           flags, NULL, NULL, pool, pool));
   if (! svn_dirent_is_absolute(versioned_file))
     {
       SVN_ERR(svn_io_temp_dir(&tmp_root, pool));
@@ -3266,7 +3363,7 @@ svn_wc_translated_file2(const char **xlated_path,
         }
     }
 
-  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  return SVN_NO_ERROR;
 }
 
 /*** From relocate.c ***/
@@ -3551,6 +3648,7 @@ svn_wc_copy2(const char *src,
   SVN_ERR(svn_wc_copy3(wc_ctx,
                        src_abspath,
                        dst_abspath,
+                       FALSE /* metadata_only */, 
                        cancel_func, cancel_baton,
                        notify_func, notify_baton,
                        pool));
@@ -3795,70 +3893,6 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
     }
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
-}
-
-svn_error_t *
-svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        svn_boolean_t recurse,
-                        const apr_array_header_t *wcprop_changes,
-                        svn_boolean_t remove_lock,
-                        svn_boolean_t remove_changelist,
-                        const svn_checksum_t *md5_checksum,
-                        apr_pool_t *scratch_pool)
-{
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  return svn_wc_queue_committed3(queue, local_abspath, recurse, wcprop_changes,
-                                 remove_lock, remove_changelist, md5_checksum,
-                                 NULL /* sha1_checksum */, scratch_pool);
-}
-
-svn_error_t *
-svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
-                       const char *path,
-                       svn_wc_adm_access_t *adm_access,
-                       svn_boolean_t recurse,
-                       const apr_array_header_t *wcprop_changes,
-                       svn_boolean_t remove_lock,
-                       svn_boolean_t remove_changelist,
-                       const unsigned char *digest,
-                       apr_pool_t *pool)
-{
-  const svn_checksum_t *md5_checksum;
-
-  if (digest)
-    md5_checksum = svn_checksum__from_digest(
-                   digest, svn_checksum_md5,
-                   svn_wc__get_committed_queue_pool(*queue));
-  else
-    md5_checksum = NULL;
-
-  return svn_wc_queue_committed2(*queue, path, adm_access, recurse,
-                                 wcprop_changes, remove_lock,
-                                 remove_changelist, md5_checksum, pool);
-}
-
-svn_error_t *
-svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
-                               svn_wc_adm_access_t *adm_access,
-                               svn_revnum_t new_revnum,
-                               const char *rev_date,
-                               const char *rev_author,
-                               apr_pool_t *pool)
-{
-  svn_wc_context_t *wc_ctx;
-
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
-  SVN_ERR(svn_wc_process_committed_queue2(queue, wc_ctx, new_revnum,
-                                          rev_date, rev_author, pool));
-  SVN_ERR(svn_wc_context_destroy(wc_ctx));
-
-  return SVN_NO_ERROR;
 }
 
 #ifdef SVN_DISABLE_FULL_VERSION_MATCH

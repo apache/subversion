@@ -249,6 +249,7 @@ parse_capabilities(ne_request *req,
 
 svn_error_t *
 svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
+                                   const char **relocation_location,
                                    svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool)
 {
@@ -262,8 +263,11 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
   oc.cdata = svn_stringbuf_create("", pool);
 
   *youngest_rev = SVN_INVALID_REVNUM;
+  if (relocation_location)
+    *relocation_location = NULL;
 
-  req = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
+  SVN_ERR(svn_ra_neon__request_create(&req, ras, "OPTIONS", ras->url->data,
+                                      pool));
 
   /* ### Use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req->ne_req, "Content-Type", "text/xml");
@@ -280,8 +284,16 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
                                            "<D:options xmlns:D=\"DAV:\">"
                                            "<D:activity-collection-set/>"
                                            "</D:options>",
-                                           200, 0, pool)))
+                                           200,
+                                           relocation_location ? 301 : 0,
+                                           pool)))
     goto cleanup;
+
+  if (req->code == 301)
+    {
+      *relocation_location = svn_ra_neon__request_get_location(req, pool);
+      goto cleanup;
+    }
 
   /* Was there an XML parse error somewhere? */
   err = svn_ra_neon__check_parse_error("OPTIONS", parser, ras->url->data);
@@ -316,7 +328,8 @@ svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
 {
   svn_revnum_t ignored_revnum;
   if (! ras->act_coll)
-    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, &ignored_revnum, pool));
+    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, 
+                                               &ignored_revnum, pool));
   *activity_coll = svn_string_create(ras->act_coll, pool);
   return SVN_NO_ERROR;
 }
@@ -346,7 +359,8 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
   if (cap_result == NULL)
     {
       svn_revnum_t ignored_revnum;
-      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, &ignored_revnum, pool));
+      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL,
+                                                 &ignored_revnum, pool));
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * db-test.c :  test the wc_db subsystem
+ * entries-dump.c :  dump pre-1.6 svn_wc_* output for python
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -32,6 +32,7 @@
 #include "svn_wc.h"
 #include "svn_dirent_uri.h"
 
+#include "private/svn_wc_private.h"
 
 static void
 str_value(const char *name, const char *value)
@@ -131,6 +132,59 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
 }
 
 
+/* baton for print_dir */
+struct directory_walk_baton
+{
+  svn_wc_context_t *wc_ctx;
+  const char *root_abspath;
+  const char *prefix_path;
+};
+
+/* svn_wc__node_found_func_t implementation for directory_dump */
+static svn_error_t *
+print_dir(const char *local_abspath,
+          void *walk_baton,
+          apr_pool_t *scratch_pool)
+{
+  struct directory_walk_baton *bt = walk_baton;
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_wc_read_kind(&kind, bt->wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
+
+  if (kind != svn_node_dir)
+    return SVN_NO_ERROR;
+
+  printf("%s\n",
+         svn_dirent_local_style(
+                   svn_dirent_join(bt->prefix_path,
+                                   svn_dirent_skip_ancestor(bt->root_abspath,
+                                                            local_abspath),
+                                   scratch_pool),
+                   scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Print all not-hidden subdirectories in the working copy, starting by path */
+static svn_error_t *
+directory_dump(const char *path,
+               apr_pool_t *scratch_pool)
+{
+  struct directory_walk_baton bt;
+
+  SVN_ERR(svn_wc_context_create(&bt.wc_ctx, NULL, scratch_pool, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&bt.root_abspath, path, scratch_pool));
+
+  bt.prefix_path = path;
+
+  SVN_ERR(svn_wc__node_walk_children(bt.wc_ctx, bt.root_abspath, FALSE,
+                                     print_dir, &bt, svn_depth_infinity,
+                                     NULL, NULL, scratch_pool));
+
+  return svn_error_return(svn_wc_context_destroy(bt.wc_ctx));
+}
+
 int
 main(int argc, const char *argv[])
 {
@@ -138,24 +192,38 @@ main(int argc, const char *argv[])
   int exit_code = EXIT_SUCCESS;
   svn_error_t *err;
   const char *path;
+  const char *cmd;
 
-  if (argc != 2)
+  if (argc < 2 || argc > 4)
     {
-      printf("USAGE: entries-dump DIR_PATH\n");
+      fprintf(stderr, "USAGE: entries-dump [--entries|--subdirs] DIR_PATH\n");
       exit(1);
     }
 
   if (apr_initialize() != APR_SUCCESS)
     {
-      printf("apr_initialize() failed.\n");
+      fprintf(stderr, "apr_initialize() failed.\n");
       exit(1);
     }
 
   /* set up the global pool */
   pool = svn_pool_create(NULL);
 
-  path = svn_dirent_internal_style(argv[1], pool);
-  err = entries_dump(path, pool);
+  path = svn_dirent_internal_style(argv[argc-1], pool);
+
+  if (argc > 2)
+    cmd = argv[1];
+  else
+    cmd = NULL;
+
+  if (!cmd || !strcmp(cmd, "--entries"))
+    err = entries_dump(path, pool);
+  else if (!strcmp(cmd, "--subdirs"))
+    err = directory_dump(path, pool);
+  else
+    err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            "Invalid command '%s'",
+                            cmd);
   if (err)
     {
       svn_handle_error2(err, stderr, FALSE, "entries-dump: ");
@@ -167,6 +235,5 @@ main(int argc, const char *argv[])
   svn_pool_destroy(pool);
   apr_terminate();
 
-  exit(exit_code);
   return exit_code;
 }

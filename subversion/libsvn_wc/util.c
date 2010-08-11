@@ -61,41 +61,7 @@ svn_wc__ensure_directory(const char *path,
   else if (kind == svn_node_none)
     {
       /* The dir doesn't exist, and it's our job to change that. */
-      svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
-
-      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          /* Tried to create the dir, and encountered some problem
-             other than non-existence of intermediate dirs.  We can't
-             ensure the desired directory's existence, so just return
-             the error. */
-          return err;
-        }
-      else if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        /* (redundant conditional and comment) */
-        {
-          /* Okay, so the problem is a missing intermediate
-             directory.  We don't know which one, so we recursively
-             back up one level and try again. */
-          const char *shorter = svn_dirent_dirname(path, pool);
-
-          /* Clear the error. */
-          svn_error_clear(err);
-
-          if (shorter[0] == '\0')
-            {
-              /* A weird and probably rare situation. */
-              return svn_error_create(APR_EGENERAL, NULL,
-                                      _("Unable to make any directories"));
-            }
-          else  /* We have a valid path, so recursively ensure it. */
-            {
-              SVN_ERR(svn_wc__ensure_directory(shorter, pool));
-              return svn_wc__ensure_directory(path, pool);
-            }
-        }
-
-      SVN_ERR(err);
+      SVN_ERR(svn_io_make_dir_recursively(path, pool));
     }
   else  /* No problem, the dir already existed, so just leave. */
     SVN_ERR_ASSERT(kind == svn_node_dir);
