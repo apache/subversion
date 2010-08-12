@@ -177,6 +177,12 @@ class Sandbox:
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
     
+  def simple_update(self, target=None):
+    assert not self.read_only
+    if target is None:
+      target = self.wc_dir
+    svntest.main.run_svn(False, 'update', target)
+
   def simple_commit(self, target=None):
     assert not self.read_only
     if target is None:
