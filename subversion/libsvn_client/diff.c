@@ -322,6 +322,10 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 {
   int i;
   svn_boolean_t header_printed = FALSE;
+  svn_stringbuf_t *propdiff_header = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *append_buf;
+
+  /* First construct the prop diff header. */
 
   /* If we're creating a diff on the wc root, path would be empty. */
   if (path[0] == '\0')
@@ -343,27 +347,29 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         /* ### Should we show the paths in platform specific format,
          * ### diff_content_changed() does not! */
 
-        SVN_ERR(file_printf_from_utf8 (file, encoding,
-                                       "Index: %s" APR_EOL_STR 
-                                       "%s" APR_EOL_STR, 
-                                       path,
-                                       equal_string));
+        propdiff_header = svn_stringbuf_createf(pool,
+                                                "Index: %s" APR_EOL_STR 
+                                                "%s" APR_EOL_STR, 
+                                                path,
+                                                equal_string);
 
-        SVN_ERR(file_printf_from_utf8(file, encoding,
-                                            "--- %s" APR_EOL_STR
-                                            "+++ %s" APR_EOL_STR,
-                                            label1,
-                                            label2));
+        append_buf = svn_stringbuf_createf(pool,
+                                           "--- %s" APR_EOL_STR
+                                           "+++ %s" APR_EOL_STR,
+                                           label1,
+                                           label2);
+        svn_stringbuf_appendstr(propdiff_header, append_buf);
       }
 
-  SVN_ERR(file_printf_from_utf8(file, encoding,
-                                _("%sProperty changes on: %s%s"),
-                                APR_EOL_STR,
-                                path,
-                                APR_EOL_STR));
+  append_buf = svn_stringbuf_createf(pool,
+                                     _("%sProperty changes on: %s%s"),
+                                     APR_EOL_STR,
+                                     path,
+                                     APR_EOL_STR);
+  svn_stringbuf_appendstr(propdiff_header, append_buf);
 
-  SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
-                                under_string));
+  append_buf = svn_stringbuf_createf(pool, "%s" APR_EOL_STR, under_string);
+  svn_stringbuf_appendstr(propdiff_header, append_buf);
 
   for (i = 0; i < propchanges->nelts; i++)
     {
@@ -401,13 +407,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
       if (!header_printed)
         {
           SVN_ERR(file_printf_from_utf8(file, encoding,
-                                        _("%sProperty changes on: %s%s"),
-                                        APR_EOL_STR,
-                                        svn_dirent_local_style(path, pool),
-                                        APR_EOL_STR));
-
-          SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
-                                        under_string));
+                                        propdiff_header->data));
 
           header_printed = TRUE;
         }
