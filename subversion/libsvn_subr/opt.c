@@ -43,6 +43,7 @@
 #include "svn_utf.h"
 #include "svn_time.h"
 #include "svn_props.h"
+#include "svn_ctype.h"
 
 #include "private/svn_opt_private.h"
 
@@ -456,11 +457,11 @@ static char *parse_one_rev(svn_opt_revision_t *revision, char *str,
       revision->value.date = tm;
       return end + 1;
     }
-  else if (apr_isdigit(*str))
+  else if (svn_ctype_isdigit(*str))
     {
       /* It's a number. */
       end = str + 1;
-      while (apr_isdigit(*end))
+      while (svn_ctype_isdigit(*end))
         end++;
       save = *end;
       *end = '\0';
@@ -469,10 +470,10 @@ static char *parse_one_rev(svn_opt_revision_t *revision, char *str,
       *end = save;
       return end;
     }
-  else if (apr_isalpha(*str))
+  else if (svn_ctype_isalpha(*str))
     {
       end = str + 1;
-      while (apr_isalpha(*end))
+      while (svn_ctype_isalpha(*end))
         end++;
       save = *end;
       *end = '\0';

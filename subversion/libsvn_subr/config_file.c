@@ -34,6 +34,7 @@
 #include "svn_utf.h"
 #include "svn_pools.h"
 #include "svn_user.h"
+#include "svn_ctype.h"
 
 #include "svn_private_config.h"
 
@@ -121,7 +122,7 @@ skip_whitespace(parse_context_t *ctx, int *c, int *pcount)
   int count = 0;
 
   SVN_ERR(parser_getc(ctx, &ch));
-  while (ch != EOF && ch != '\n' && apr_isspace(ch))
+  while (ch != EOF && ch != '\n' && svn_ctype_isspace(ch))
     {
       ++count;
       SVN_ERR(parser_getc(ctx, &ch));

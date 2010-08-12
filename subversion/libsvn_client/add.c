@@ -43,6 +43,7 @@
 #include "svn_hash.h"
 #include "svn_sorts.h"
 #include "client.h"
+#include "svn_ctype.h"
 
 #include "private/svn_wc_private.h"
 
@@ -80,11 +81,11 @@ trim_string(char **pstr)
   char *str = *pstr;
   size_t i;
 
-  while (apr_isspace(*str))
+  while (svn_ctype_isspace(*str))
     str++;
   *pstr = str;
   i = strlen(str);
-  while ((i > 0) && apr_isspace(str[i-1]))
+  while ((i > 0) && svn_ctype_isspace(str[i-1]))
     i--;
   str[i] = '\0';
 }

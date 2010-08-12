@@ -727,7 +727,8 @@ svn_path_is_uri_safe(const char *path)
       /* Allow '%XX' (where each X is a hex digit) */
       if (path[i] == '%')
         {
-          if (apr_isxdigit(path[i + 1]) && apr_isxdigit(path[i + 2]))
+          if (svn_ctype_isxdigit(path[i + 1]) &&
+              svn_ctype_isxdigit(path[i + 2]))
             {
               i += 2;
               continue;
@@ -897,8 +898,8 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool)
            * RFC 2396, section 3.3  */
           c = ' ';
         }
-      else if (c == '%' && apr_isxdigit(path[i + 1])
-               && apr_isxdigit(path[i+2]))
+      else if (c == '%' && svn_ctype_isxdigit(path[i + 1])
+               && svn_ctype_isxdigit(path[i+2]))
         {
           char digitz[3];
           digitz[0] = path[++i];
