@@ -339,13 +339,20 @@ CREATE TABLE WORKING_NODE (
 
   /* should the node on disk be kept after a schedule delete?
 
-     ### Bert points out that this can disappear once we get centralized 
-     ### with our metadata.  The entire reason for this flag to exist is
-     ### so that the admin area can exist for the commit of a the delete,
+     ### Bert points out that this can disappear once we get to single-db. 
+     ### The entire reason for this flag to exist is
+     ### so that the admin area can exist for the commit of a delete,
      ### and so the post-commit cleanup knows not to actually delete the dir
      ### from disk (which is why the flag is only ever set on the this_dir
-     ### entry in WC-OLD.)  In the New World, we don't need to keep the old
-     ### admin area around, so this flag can disappear. */
+     ### entry in WC-OLD.)  With single-db, we don't need to keep the old
+     ### admin area around, so this flag can disappear.
+     ### neels: In contrast, the --keep-local commandline option will not
+     ### disappear. The user will still be able to do
+     ### 'svn delete --keep-local' and keep the to-be-unversioned paths
+     ### in the file system. It just won't be necessary to remember the
+     ### keep-local-ness here, because we either delete the file system paths
+     ### right away during 'svn delete' or we don't at all. There won't be a
+     ### "second pass" for file system deletion at commit time anymore. */
   keep_local  INTEGER,
 
   PRIMARY KEY (wc_id, local_relpath)
