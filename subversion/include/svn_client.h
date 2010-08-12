@@ -3506,7 +3506,8 @@ svn_client_revert(const apr_array_header_t *paths,
  * resolution support.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
- * Use svn_client_resolve() instead.
+ * Use svn_client_resolve() with @a conflict_choice == @c
+ * svn_wc_conflict_choose_merged instead.
  */
 SVN_DEPRECATED
 svn_error_t *
