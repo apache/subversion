@@ -588,3 +588,37 @@ Prompter::ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
   *cred_p = ret;
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+Prompter::plaintext_prompt(svn_boolean_t *may_save_plaintext,
+                           const char *realmstring,
+                           void *baton,
+                           apr_pool_t *pool)
+{
+  Prompter *that = (Prompter *) baton;
+
+  bool result = that->askYesNo(realmstring,
+                               _("Store password unencrypted?"),
+                               false);
+
+  *may_save_plaintext = (result ? TRUE : FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+Prompter::plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
+                                      const char *realmstring,
+                                      void *baton,
+                                      apr_pool_t *pool)
+{
+  Prompter *that = (Prompter *) baton;
+
+  bool result = that->askYesNo(realmstring,
+                               _("Store passphrase unencrypted?"),
+                               false);
+
+  *may_save_plaintext = (result ? TRUE : FALSE);
+
+  return SVN_NO_ERROR;
+}
