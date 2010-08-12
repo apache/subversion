@@ -2578,6 +2578,14 @@ def basic_diff_summarize(sbox):
   wc_dir = sbox.wc_dir
   p = sbox.ospath
 
+  # Add props to some items that will be deleted, and commit.
+  sbox.simple_propset('prop', 'val',
+                      p('A/C'),
+                      p('A/D/gamma'),
+                      p('A/D/H/chi'))
+  sbox.simple_commit() # r2
+  sbox.simple_update()
+
   # Content modification.
   svntest.main.file_append(p('A/mu'), 'new text\n')
 
@@ -2590,32 +2598,90 @@ def basic_diff_summarize(sbox):
 
   # File addition.
   svntest.main.file_append(p('newfile'), 'new text\n')
-  sbox.simple_add(p('newfile'))
+  svntest.main.file_append(p('newfile2'), 'new text\n')
+  sbox.simple_add(p('newfile'),
+                  p('newfile2'))
+  sbox.simple_propset('prop', 'val', p('newfile'))
 
   # File deletion.
-  sbox.simple_rm(p('A/B/lambda'))
+  sbox.simple_rm(p('A/B/lambda'),
+                 p('A/D/gamma'))
                  
+  # Directory addition.
+  os.makedirs(p('P'))
+  os.makedirs(p('Q/R'))
+  svntest.main.file_append(p('Q/newfile'), 'new text\n')
+  svntest.main.file_append(p('Q/R/newfile'), 'new text\n')
+  sbox.simple_add(p('P'),
+                  p('Q'))
+  sbox.simple_propset('prop', 'val',
+                      p('P'),
+                      p('Q/newfile'))
+
+  # Directory deletion.
+  sbox.simple_rm(p('A/D/H'),
+                 p('A/C'))
+ 
   # Commit, because diff-summarize handles repos-repos only.
-  sbox.simple_commit() # r2
+  #svntest.main.run_svn(False, 'st', wc_dir)
+  sbox.simple_commit() # r3
 
   # Get the differences between two versions of a file.
   expected_diff = svntest.wc.State(wc_dir, {
     'iota': Item(status=' M'),
     })
   svntest.actions.run_and_verify_diff_summarize(expected_diff,
-                                                p('iota'), '-c2')
+                                                p('iota'), '-c3')
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('iota'), '-c-3')
 
-  # Get the differences between two versions of an entire directory.
+  # wc-wc diff summary for a directory.
   expected_diff = svntest.wc.State(wc_dir, {
     'A/mu':           Item(status='M '),
     'iota':           Item(status=' M'),
     'A/D/G/tau':      Item(status='MM'),
-    'newfile':        Item(status='A '),
+    'newfile':        Item(status='AM'),
+    'newfile2':       Item(status='A '),
+    'P':              Item(status='AM'),
+    'Q':              Item(status='A '),
+    'Q/newfile':      Item(status='AM'),
+    'Q/R':            Item(status='A '),
+    'Q/R/newfile':    Item(status='A '),
     'A/B/lambda':     Item(status='D '),
+    'A/C':            Item(status='D '),
+    'A/D/gamma':      Item(status='D '),
+    'A/D/H':          Item(status='D '),
+#    'A/D/H/chi':      Item(status='D '),
+#    'A/D/H/psi':      Item(status='D '),
+#    'A/D/H/omega':    Item(status='D '),
     })
-  svntest.actions.run_and_verify_diff_summarize(expected_diff,
-                                                wc_dir, '-r1:2')
 
+  expected_reverse_diff = svntest.wc.State(wc_dir, {
+    'A/mu':           Item(status='M '),
+    'iota':           Item(status=' M'),
+    'A/D/G/tau':      Item(status='MM'),
+    'newfile':        Item(status='D '),
+    'newfile2':       Item(status='D '),
+    'P':              Item(status='D '),
+    'Q':              Item(status='D '),
+#    'Q/newfile':      Item(status='D '),
+#    'Q/R':            Item(status='D '),
+#    'Q/R/newfile':    Item(status='D '),
+    'A/B/lambda':     Item(status='A '),
+    'A/C':            Item(status='AM'),
+    'A/D/gamma':      Item(status='AM'),
+    'A/D/H':          Item(status='A '),
+    'A/D/H/chi':      Item(status='AM'),
+    'A/D/H/psi':      Item(status='A '),
+    'A/D/H/omega':    Item(status='A '),
+    })
+
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                wc_dir, '-c3')
+  svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
+                                                wc_dir, '-c-3')
+
+#----------------------------------------------------------------------
 def diff_weird_author(sbox):
   "diff with svn:author that has < in it"
 
