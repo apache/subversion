@@ -714,8 +714,8 @@ add_file(const char *path,
   struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
   const char *full_path = svn_dirent_join(eb->root_path, path, pool);
 
-  /* path is not canonicalized, i.e. it may still contain spaces etc.
-   * but eb->root_url is */
+  /* PATH is not canonicalized, i.e. it may still contain spaces etc.
+   * but EB->root_url is. */
   const char *full_url = svn_path_url_add_component2(eb->root_url,
                                                      path,
                                                      pool);
