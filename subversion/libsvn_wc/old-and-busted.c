@@ -164,7 +164,7 @@ read_str(const char **result,
             svn_stringbuf_appendbytes(s, start, *buf - start);
           (*buf)++;
           SVN_ERR(read_escaped(&c, buf, end));
-          svn_stringbuf_appendbytes(s, &c, 1);
+          svn_stringbuf_appendbyte(s, c);
           start = *buf;
         }
       else

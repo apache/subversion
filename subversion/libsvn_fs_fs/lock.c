@@ -192,7 +192,7 @@ write_digest_file(apr_hash_t *children,
           svn_stringbuf_appendbytes(children_list,
                                     svn__apr_hash_index_key(hi),
                                     svn__apr_hash_index_klen(hi));
-          svn_stringbuf_appendbytes(children_list, "\n", 1);
+          svn_stringbuf_appendbyte(children_list, '\n');
         }
       hash_store(hash, CHILDREN_KEY, sizeof(CHILDREN_KEY)-1,
                  children_list->data, children_list->len, pool);

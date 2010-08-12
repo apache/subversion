@@ -84,7 +84,7 @@ write_hash_to_stringbuf(apr_hash_t *hash,
                                             keylen));
 
       svn_stringbuf_appendbytes(*strbuf, (const char *) key, keylen);
-      svn_stringbuf_appendbytes(*strbuf, "\n", 1);
+      svn_stringbuf_appendbyte(*strbuf, '\n');
 
       /* Output value length, then value. */
 
@@ -93,7 +93,7 @@ write_hash_to_stringbuf(apr_hash_t *hash,
                                             value->len));
 
       svn_stringbuf_appendbytes(*strbuf, value->data, value->len);
-      svn_stringbuf_appendbytes(*strbuf, "\n", 1);
+      svn_stringbuf_appendbyte(*strbuf, '\n');
     }
 
   if (oldhash)
@@ -120,7 +120,7 @@ write_hash_to_stringbuf(apr_hash_t *hash,
                                                 keylen));
 
           svn_stringbuf_appendbytes(*strbuf, (const char *) key, keylen);
-          svn_stringbuf_appendbytes(*strbuf, "\n", 1);
+          svn_stringbuf_appendbyte(*strbuf, '\n');
         }
     }
   svn_stringbuf_appendbytes(*strbuf, "PROPS-END\n", 10);

@@ -253,6 +253,15 @@ svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes);
 void
 svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
 
+/** Append a single character @a byte onto @a targetstr.
+ *
+ * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * @since New in 1.7.
+ */
+void
+svn_stringbuf_appendbyte(svn_stringbuf_t *targetstr,
+                         char byte);
+
 /** Append an array of bytes onto @a targetstr.
  *
  * reallocs if necessary. @a targetstr is affected, nothing else is.

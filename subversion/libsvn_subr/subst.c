@@ -211,10 +211,10 @@ keyword_printf(const char *fmt,
             svn_stringbuf_appendcstr(value, url);
           break;
         case '%': /* '%%' => a literal % */
-          svn_stringbuf_appendbytes(value, cur, 1);
+          svn_stringbuf_appendbyte(value, *cur);
           break;
         case '\0': /* '%' as the last character of the string. */
-          svn_stringbuf_appendbytes(value, cur, 1);
+          svn_stringbuf_appendbyte(value, *cur);
           /* Now go back one character, since this was just a one character
            * sequence, whereas all others are two characters, and we do not
            * want to skip the null terminator entirely and carry on

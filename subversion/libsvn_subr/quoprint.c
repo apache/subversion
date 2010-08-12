@@ -92,7 +92,7 @@ encode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
       /* Encode this character.  */
       if (ENCODE_AS_LITERAL(*p))
         {
-          svn_stringbuf_appendbytes(str, p, 1);
+          svn_stringbuf_appendbyte(str, *p);
           (*linelen)++;
         }
       else
@@ -218,7 +218,7 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
         {
           /* Literal character; append it if it's valid as such.  */
           if (VALID_LITERAL(*inbuf))
-            svn_stringbuf_appendbytes(str, inbuf, 1);
+            svn_stringbuf_appendbyte(str, *inbuf);
           *inbuflen = 0;
         }
       else if (*inbuf == '=' && *inbuflen == 2 && inbuf[1] == '\n')
@@ -234,7 +234,7 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
           if (find1 != NULL && find2 != NULL)
             {
               c = ((find1 - hextab) << 4) | (find2 - hextab);
-              svn_stringbuf_appendbytes(str, &c, 1);
+              svn_stringbuf_appendbyte(str, c);
             }
           *inbuflen = 0;
         }

@@ -163,7 +163,7 @@ parse_value(int *pch, parse_context_t *ctx)
     /* last ch seen was ':' or '=' in parse_option. */
     {
       const char char_from_int = ch;
-      svn_stringbuf_appendbytes(ctx->value, &char_from_int, 1);
+      svn_stringbuf_appendbyte(ctx->value, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
   /* Leading and trailing whitespace is ignored. */
@@ -214,13 +214,12 @@ parse_value(int *pch, parse_context_t *ctx)
               else
                 {
                   /* This is a continuation line. Read it. */
-                  svn_stringbuf_appendbytes(ctx->value, " ", 1);
+                  svn_stringbuf_appendbyte(ctx->value, ' ');
 
                   while (ch != EOF && ch != '\n')
                     {
                       const char char_from_int = ch;
-                      svn_stringbuf_appendbytes(ctx->value,
-                                                &char_from_int, 1);
+                      svn_stringbuf_appendbyte(ctx->value, char_from_int);
                       SVN_ERR(parser_getc(ctx, &ch));
                     }
                   /* Trailing whitespace is ignored. */
@@ -247,7 +246,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   while (ch != EOF && ch != ':' && ch != '=' && ch != '\n')
     {
       const char char_from_int = ch;
-      svn_stringbuf_appendbytes(ctx->option, &char_from_int, 1);
+      svn_stringbuf_appendbyte(ctx->option, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
 
@@ -290,7 +289,7 @@ parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   while (ch != EOF && ch != ']' && ch != '\n')
     {
       const char char_from_int = ch;
-      svn_stringbuf_appendbytes(ctx->section, &char_from_int, 1);
+      svn_stringbuf_appendbyte(ctx->section, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
 

@@ -306,7 +306,7 @@ stream_readline(svn_stringbuf_t **stringbuf,
       else
         match = eol_str;
 
-      svn_stringbuf_appendbytes(str, &c, 1);
+      svn_stringbuf_appendbyte(str, c);
     }
 
   *eof = FALSE;

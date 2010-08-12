@@ -535,7 +535,7 @@ unparse(const svn_skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
         }
 
       /* Emit a closing parenthesis.  */
-      svn_stringbuf_appendbytes(str, ")", 1);
+      svn_stringbuf_appendbyte(str, ')');
     }
 
   return str;
