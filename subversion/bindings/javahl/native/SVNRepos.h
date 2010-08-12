@@ -42,7 +42,7 @@ class SVNRepos : public SVNBase
 {
  public:
   void rmlocks(File &path, StringArray &locks);
-  jobject lslocks(File &path);
+  jobject lslocks(File &path, svn_depth_t depth);
   void verify(File &path, Revision &revisionStart, Revision &revisionEnd,
               ReposNotifyCallback *notifyCallback);
   void setRevProp(File &path, Revision &revision,
