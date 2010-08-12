@@ -2576,62 +2576,42 @@ def basic_diff_summarize(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  p = sbox.ospath
 
-  # A content modification.
-  svntest.main.file_append(os.path.join(wc_dir, "A", "mu"), "New mu content")
+  # Content modification.
+  svntest.main.file_append(p('A/mu'), 'new text\n')
 
-  # A prop modification.
-  svntest.main.run_svn(None,
-                       "propset", "prop", "val",
-                       os.path.join(wc_dir, 'iota'))
+  # Prop modification.
+  sbox.simple_propset('prop', 'val', p('iota'))
 
   # Both content and prop mods.
-  tau_path = os.path.join(wc_dir, "A", "D", "G", "tau")
-  svntest.main.file_append(tau_path, "tautau")
-  svntest.main.run_svn(None,
-                       "propset", "prop", "val", tau_path)
+  svntest.main.file_append(p('A/D/G/tau'), 'new text\n')
+  sbox.simple_propset('prop', 'val', p('A/D/G/tau'))
 
-  # A file addition.
-  newfile_path = os.path.join(wc_dir, 'newfile')
-  svntest.main.file_append(newfile_path, 'newfile')
-  svntest.main.run_svn(None, 'add', newfile_path)
+  # File addition.
+  svntest.main.file_append(p('newfile'), 'new text\n')
+  sbox.simple_add(p('newfile'))
 
-  # A file deletion.
-  svntest.main.run_svn(None, "delete", os.path.join(wc_dir, 'A', 'B',
-                                                    'lambda'))
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/mu': Item(verb='Sending'),
-    'iota': Item(verb='Sending'),
-    'newfile': Item(verb='Adding'),
-    'A/D/G/tau': Item(verb='Sending'),
-    'A/B/lambda': Item(verb='Deleting'),
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'newfile': Item(status='  ', wc_rev=2),
-    })
-  expected_status.tweak("A/mu", "iota", "A/D/G/tau", 'newfile', wc_rev=2)
-  expected_status.remove("A/B/lambda")
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  # File deletion.
+  sbox.simple_rm(p('A/B/lambda'))
+                 
+  # Commit, because diff-summarize handles repos-repos only.
+  sbox.simple_commit() # r2
 
   # Get the differences between two versions of a file.
   expected_diff = svntest.wc.State(wc_dir, {
     'iota': Item(status=' M'),
     })
   svntest.actions.run_and_verify_diff_summarize(expected_diff,
-                                                os.path.join(wc_dir, 'iota'),
-                                                '-c2')
+                                                p('iota'), '-c2')
 
   # Get the differences between two versions of an entire directory.
   expected_diff = svntest.wc.State(wc_dir, {
-    'A/mu': Item(status='M '),
-    'iota': Item(status=' M'),
-    'A/D/G/tau': Item(status='MM'),
-    'newfile': Item(status='A '),
-    'A/B/lambda': Item(status='D '),
+    'A/mu':           Item(status='M '),
+    'iota':           Item(status=' M'),
+    'A/D/G/tau':      Item(status='MM'),
+    'newfile':        Item(status='A '),
+    'A/B/lambda':     Item(status='D '),
     })
   svntest.actions.run_and_verify_diff_summarize(expected_diff,
                                                 wc_dir, '-r1:2')
