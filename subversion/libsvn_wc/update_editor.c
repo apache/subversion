@@ -3750,8 +3750,8 @@ add_file(const char *path,
   apr_pool_t *subpool;
   svn_boolean_t conflicted;
   svn_boolean_t versioned_locally_and_present;
-  svn_error_t *err;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
+  svn_error_t *err;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
@@ -3912,7 +3912,8 @@ add_file(const char *path,
 
       if (local_is_file)
         {
-          svn_boolean_t wc_root, switched;
+          svn_boolean_t wc_root;
+          svn_boolean_t switched;
 
           SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched,
                                         eb->db, fb->local_abspath, pool));
