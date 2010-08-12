@@ -103,6 +103,16 @@ class Prompter
   svn_auth_provider_object_t *getProviderServerSSLTrust();
   svn_auth_provider_object_t *getProviderClientSSL();
   svn_auth_provider_object_t *getProviderClientSSLPassword();
+
+  static svn_error_t *plaintext_prompt(svn_boolean_t *may_save_plaintext,
+                                       const char *realmstring,
+                                       void *baton,
+                                       apr_pool_t *pool);
+  static svn_error_t *plaintext_passphrase_prompt(
+                                      svn_boolean_t *may_save_plaintext,
+                                      const char *realmstring,
+                                      void *baton,
+                                      apr_pool_t *pool);
 };
 
 #endif // PROMPTER_H

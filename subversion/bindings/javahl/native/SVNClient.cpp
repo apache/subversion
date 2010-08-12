@@ -1202,12 +1202,29 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                                                                 pool),
                 NULL);
 
+    /* Use the prompter (if available) to prompt for password and cert
+     * caching. */
+    svn_auth_plaintext_prompt_func_t plaintext_prompt_func = NULL;
+    void *plaintext_prompt_baton = NULL;
+    svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func;
+    void *plaintext_passphrase_prompt_baton = NULL;
+
+    if (m_prompter != NULL)
+    {
+        plaintext_prompt_func = Prompter::plaintext_prompt;
+        plaintext_prompt_baton = m_prompter;
+        plaintext_passphrase_prompt_func = Prompter::plaintext_passphrase_prompt;
+        plaintext_passphrase_prompt_baton = m_prompter;
+    }
+
     /* The main disk-caching auth providers, for both
      * 'username/password' creds and 'username' creds.  */
     svn_auth_provider_object_t *provider;
 
-    svn_auth_get_simple_provider(&provider, pool);
+    svn_auth_get_simple_provider2(&provider, plaintext_prompt_func,
+                                  plaintext_prompt_baton, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
     svn_auth_get_username_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
@@ -1225,7 +1242,9 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    svn_auth_get_ssl_client_cert_pw_file_provider(&provider, pool);
+    svn_auth_get_ssl_client_cert_pw_file_provider2(&provider,
+                        plaintext_passphrase_prompt_func,
+                        plaintext_passphrase_prompt_baton, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     if (m_prompter != NULL)
