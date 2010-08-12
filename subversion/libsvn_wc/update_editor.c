@@ -3817,52 +3817,54 @@ add_file(const char *path,
   if (conflicted)
     SVN_ERR(node_already_conflicted(&conflicted, eb->db,
                                     fb->local_abspath, subpool));
+
+  /* Do some user convenience in a specific tree conflicted state.
+   * When we flagged a tree conflict for a local unversioned node
+   * vs. an incoming add, and we find that this unversioned node is
+   * no longer in the way, automatically pull in the versioned node
+   * and remove the conflict marker. */
+  if (conflicted
+      && status == svn_wc__db_status_not_present
+      && kind == svn_node_none)
+    {
+      /* Right, the node status matches (not_present) and there is no
+       * unversioned obstruction in the file system (anymore?). If it
+       * has a tree conflict with reason 'unversioned', remove that. */
+      const svn_wc_conflict_description2_t *previous_tc;
+      SVN_ERR(svn_wc__get_tree_conflict(&previous_tc,
+                                        eb->wc_ctx,
+                                        fb->local_abspath,
+                                        subpool, subpool));
+      if (previous_tc
+          && previous_tc->reason == svn_wc_conflict_reason_unversioned)
+        {
+          /* Remove tree conflict. */
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                                  fb->local_abspath,
+                                                  NULL, subpool));
+
+          /* Verify that all conflicts are gone now. Since we don't ever have
+           * text/prop conflicts next to tree conflicts, this should always
+           * set CONFLICTED to FALSE. Making sure doesn't hurt though. */
+          SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                          fb->local_abspath, subpool));
+        }
+    }
+
+  /* Now the usual conflict handling: skip. */
   if (conflicted)
     {
-      svn_boolean_t do_skip = TRUE;
+      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
-      /* A conflict is flagged. Now let's do some user convenience.
-       * When we flagged a tree conflict for a local unversioned node
-       * vs. an incoming add, and we find that this unversioned node is
-       * no longer in the way, automatically pull in the versioned node
-       * and remove the conflict marker. */
-      if (status == svn_wc__db_status_not_present
-          && kind == svn_node_none)
-        {
-          /* Right, the node status matches (not_present) and there is no
-           * unversioned obstruction in the file system (anymore?). If it
-           * has a tree conflict with reason 'unversioned', remove that. */
-          const svn_wc_conflict_description2_t *previous_tc;
-          SVN_ERR(svn_wc__get_tree_conflict(&previous_tc,
-                                            eb->wc_ctx,
-                                            fb->local_abspath,
-                                            subpool, subpool));
-          if (previous_tc
-              && previous_tc->reason == svn_wc_conflict_reason_unversioned)
-            {
-              do_skip = FALSE;
+      fb->skip_this = TRUE;
+      fb->already_notified = TRUE;
 
-              /* Remove tree conflict. */
-              SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
-                                                      fb->local_abspath,
-                                                      NULL, subpool));
-            }
-        }
+      do_notification(eb, fb->local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip, subpool);
 
-      if (do_skip)
-        {
-          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+      svn_pool_destroy(subpool);
 
-          fb->skip_this = TRUE;
-          fb->already_notified = TRUE;
-
-          do_notification(eb, fb->local_abspath, svn_node_unknown,
-                          svn_wc_notify_skip, subpool);
-
-          svn_pool_destroy(subpool);
-
-          return SVN_NO_ERROR;
-        }
+      return SVN_NO_ERROR;
     }
 
 
