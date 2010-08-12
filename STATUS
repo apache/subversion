@@ -226,6 +226,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r984928, r984931
+   Fix an assertion seen in the wild.
+   Notes:
+    r984931 is an obvious fix (edits a comment).
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
