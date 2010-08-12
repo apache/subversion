@@ -150,6 +150,9 @@ read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
 static svn_error_t *
 update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool);
 
+static svn_error_t *
+update_min_unpacked_revprop(svn_fs_t *fs, apr_pool_t *pool);
+
 /* Pathname helper functions */
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
@@ -567,7 +570,8 @@ get_lock_on_filesystem(const char *lock_filename,
    BATON and that subpool, destroy the subpool (releasing the write
    lock) and return what BODY returned. */
 static svn_error_t *
-with_some_lock(svn_error_t *(*body)(void *baton,
+with_some_lock(svn_fs_t *fs,
+               svn_error_t *(*body)(void *baton,
                                     apr_pool_t *pool),
                void *baton,
                const char *lock_filename,
@@ -594,7 +598,11 @@ with_some_lock(svn_error_t *(*body)(void *baton,
   err = get_lock_on_filesystem(lock_filename, subpool);
 
   if (!err)
-    err = body(baton, subpool);
+    {
+      SVN_ERR(update_min_unpacked_rev(fs, pool));
+      SVN_ERR(update_min_unpacked_revprop(fs, pool));
+      err = body(baton, subpool);
+    }
 
   svn_pool_destroy(subpool);
 
@@ -622,7 +630,7 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
   apr_thread_mutex_t *mutex = ffsd->fs_write_lock;
 #endif
 
-  return with_some_lock(body, baton,
+  return with_some_lock(fs, body, baton,
                         path_lock(fs, pool),
 #if SVN_FS_FS__USE_LOCK_MUTEX
                         mutex,
@@ -645,7 +653,7 @@ with_txn_current_lock(svn_fs_t *fs,
   apr_thread_mutex_t *mutex = ffsd->txn_current_lock;
 #endif
 
-  return with_some_lock(body, baton,
+  return with_some_lock(fs, body, baton,
                         path_txn_current_lock(fs, pool),
 #if SVN_FS_FS__USE_LOCK_MUTEX
                         mutex,
@@ -2781,6 +2789,7 @@ set_revision_proplist(svn_fs_t *fs,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
+  SVN_ERR(update_min_unpacked_revprop(fs, pool));
   if (ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT ||
       rev >= ffd->min_unpacked_revprop)
     {
