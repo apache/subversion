@@ -144,6 +144,8 @@ parse_capabilities(ne_request *req,
   *youngest_rev = SVN_INVALID_REVNUM;
 
   /* Start out assuming all capabilities are unsupported. */
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+               APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
