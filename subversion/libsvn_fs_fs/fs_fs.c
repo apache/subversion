@@ -3398,10 +3398,45 @@ get_combined_window(svn_txdelta_window_t **result,
   return SVN_NO_ERROR;
 }
 
+/* Returns whether or not the expanded fulltext of the file is cachable
+ * based on its size SIZE.  The decision depends on the cache used by RB.
+ */
+static svn_boolean_t
+fulltext_size_is_cachable(fs_fs_data_t *ffd, svn_filesize_t size)
+{
+  return svn_cache__is_cachable(ffd->fulltext_cache, size);
+}
+
+/* Store fulltext in RB in the fulltext cache used by said RB. Items that
+ * are too large to be cached won't. Also, this will be a no-op if no 
+ * fulltext cache has been enabled in RB.
+ */
+static svn_error_t *
+cache_rep(struct rep_read_baton *rb)
+{
+  fs_fs_data_t *ffd = rb->fs->fsap_data;
+  if (rb->current_fulltext &&
+      fulltext_size_is_cachable(ffd, rb->current_fulltext->len))
+    {
+      SVN_ERR(svn_cache__set(ffd->fulltext_cache, rb->fulltext_cache_key,
+                             rb->current_fulltext, rb->pool));
+      rb->current_fulltext = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 rep_read_contents_close(void *baton)
 {
   struct rep_read_baton *rb = baton;
+
+  if (rb->len == 0)
+    {
+      /* This has not yet been attempted to be added to the cache.
+       * Now, the data should be in. */
+      cache_rep(rb);
+    }
 
   svn_pool_destroy(rb->pool);
   svn_pool_destroy(rb->filehandle_pool);
@@ -3596,29 +3631,14 @@ rep_read_contents(void *baton,
         }
     }
 
-  if (rb->off == rb->len && rb->current_fulltext)
-    {
-      fs_fs_data_t *ffd = rb->fs->fsap_data;
-      SVN_ERR(svn_cache__set(ffd->fulltext_cache, rb->fulltext_cache_key,
-                             rb->current_fulltext, rb->pool));
-      rb->current_fulltext = NULL;
-    }
+  /* Ff we read the whole content, cache it. 
+   * Otherwise, the closing the read stream will take care of that. */
+  if (rb->len && rb->len == rb->off)
+    cache_rep(rb);
 
   return SVN_NO_ERROR;
 }
 
-
-/* Returns whether or not the expanded fulltext of the file is
- * cachable based on its size SIZE.  Specifically, if it will fit
- * into a memcached value.  The memcached cutoff seems to be a bit
- * (header length?) under a megabyte; we round down a little to be
- * safe.
- */
-static svn_boolean_t
-fulltext_size_is_cachable(svn_filesize_t size)
-{
-  return size < 1000000;
-}
 
 /* Return a stream in *CONTENTS_P that will read the contents of a
    representation stored at the location given by REP.  Appropriate
@@ -3646,7 +3666,7 @@ read_representation(svn_stream_t **contents_p,
       struct rep_read_baton *rb;
 
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cachable(rep->expanded_size))
+          && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
           svn_string_t *fulltext;
           svn_boolean_t is_cached;

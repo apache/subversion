@@ -1051,12 +1051,23 @@ svn_membuffer_cache_iter(svn_boolean_t *completed,
                           _("Can't iterate a membuffer-based cache"));
 }
 
+static svn_boolean_t
+svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
+{
+  /* Don't allow extremely large element sizes. Otherwise, the cache
+   * might by thrashed by a few extremely large entries.
+   */
+  svn_membuffer_cache_t *cache = cache_void;
+  return size < cache->membuffer->data_size / 16;
+}
+
 /* the v-table for membuffer-based caches
  */
 static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_get,
   svn_membuffer_cache_set,
-  svn_membuffer_cache_iter
+  svn_membuffer_cache_iter,
+  svn_membuffer_cache_is_cachable
 };
 
 /* standard serialization function for svn_stringbuf_t items
