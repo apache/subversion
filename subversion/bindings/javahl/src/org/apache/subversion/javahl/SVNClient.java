@@ -225,10 +225,11 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native long commit(Set<String> paths, String message, Depth depth,
+    public native void commit(Set<String> paths, String message, Depth depth,
                               boolean noUnlock, boolean keepChangelist,
                               Collection<String> changelists,
-                              Map<String, String> revpropTable)
+                              Map<String, String> revpropTable,
+                              CommitCallback callback)
             throws ClientException;
 
     /**

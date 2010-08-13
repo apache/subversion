@@ -44,6 +44,7 @@
 #include "BlameCallback.h"
 #include "ProplistCallback.h"
 #include "PatchCallback.h"
+#include "CommitCallback.h"
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
 #include "StatusCallback.h"
@@ -516,37 +517,39 @@ Java_org_apache_subversion_javahl_SVNClient_update
                     jallowUnverObstructions ? true : false);
 }
 
-JNIEXPORT jlong JNICALL
+JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_commit
 (JNIEnv *env, jobject jthis, jobject jtargets, jstring jmessage, jobject jdepth,
  jboolean jnoUnlock, jboolean jkeepChangelist, jobject jchangelists,
- jobject jrevpropTable)
+ jobject jrevpropTable, jobject jcallback)
 {
   JNIEntry(SVNClient, commit);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
-      return -1;
+      return;
     }
   StringArray targetsArr(jtargets);
   Targets targets(targetsArr);
   JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
-    return -1;
+    return;
 
   // Build the changelist vector from the Java array.
   StringArray changelists(jchangelists);
   if (JNIUtil::isExceptionThrown())
-    return -1;
+    return;
 
   RevpropTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
-    return -1;
+    return;
 
-  return cl->commit(targets, message, EnumMapper::toDepth(jdepth),
-                    jnoUnlock ? true : false, jkeepChangelist ? true : false,
-                    changelists, revprops);
+  CommitCallback callback(jcallback);
+  cl->commit(targets, message, EnumMapper::toDepth(jdepth),
+             jnoUnlock ? true : false, jkeepChangelist ? true : false,
+             changelists, revprops,
+             jcallback ? &callback : NULL);
 }
 
 JNIEXPORT void JNICALL

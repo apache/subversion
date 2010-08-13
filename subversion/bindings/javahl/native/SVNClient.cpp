@@ -41,6 +41,7 @@
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
 #include "PatchCallback.h"
+#include "CommitCallback.h"
 #include "StatusCallback.h"
 #include "ChangelistCallback.h"
 #include "ListCallback.h"
@@ -68,51 +69,6 @@
 #include <iostream>
 #include <sstream>
 
-class CommitNotifier
-{
-  public:
-    CommitNotifier(SVN::Pool &inPool)
-        : pool(inPool), info(NULL)
-    {
-        ;
-    }
-
-    static svn_error_t *callback(const svn_commit_info_t *commit_info,
-                                 void *baton,
-                                 apr_pool_t *pool)
-    {
-      if (baton)
-        return ((CommitNotifier *)baton)->stashInfo(commit_info);
-
-      return SVN_NO_ERROR;
-    }
-
-    long getRevnum()
-    {
-        if (info && SVN_IS_VALID_REVNUM(info->revision))
-            return info->revision;
-
-        return SVN_INVALID_REVNUM;
-    }
-
-    /* Special operator new to allocate this thing in a pool. */
-    void * operator new(size_t sz, SVN::Pool &pool)
-    {
-        void *ptr = apr_pcalloc(pool.pool(), sizeof(CommitNotifier));
-        return ptr;
-    }
-
-  protected:
-    svn_error_t *stashInfo(const svn_commit_info_t *commit_info)
-    {
-        info = svn_commit_info_dup(commit_info, pool.pool());
-        return SVN_NO_ERROR;
-    }
-
-  private:
-    SVN::Pool &pool;
-    svn_commit_info_t *info;
-};
 
 struct log_msg_baton
 {
@@ -451,25 +407,27 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
     return jrevs;
 }
 
-jlong SVNClient::commit(Targets &targets, const char *message,
-                        svn_depth_t depth, bool noUnlock, bool keepChangelist,
-                        StringArray &changelists, RevpropTable &revprops)
+void SVNClient::commit(Targets &targets, const char *message,
+                       svn_depth_t depth, bool noUnlock, bool keepChangelist,
+                       StringArray &changelists, RevpropTable &revprops,
+                       CommitCallback *callback)
 {
     SVN::Pool requestPool;
     const apr_array_header_t *targets2 = targets.array(requestPool);
-    SVN_JNI_ERR(targets.error_occured(), -1);
+    SVN_JNI_ERR(targets.error_occured(), );
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
-        return SVN_INVALID_REVNUM;
+        return;
+
+    ctx->commit_callback2 = CommitCallback::callback;
+    ctx->commit_baton = callback;
 
     SVN_JNI_ERR(svn_client_commit5(targets2, depth,
                                    noUnlock, keepChangelist,
                                    changelists.array(requestPool),
                                    revprops.hash(requestPool), ctx,
                                    requestPool.pool()),
-                SVN_INVALID_REVNUM);
-
-    return ((CommitNotifier *)ctx->commit_baton)->getRevnum();
+                );
 }
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
@@ -1294,9 +1252,6 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
 
     ctx->progress_func = ProgressListener::progress;
     ctx->progress_baton = m_progressListener;
-
-    ctx->commit_callback2 = CommitNotifier::callback;
-    ctx->commit_baton = new (*requestPool) CommitNotifier(*requestPool);
 
     if (m_conflictResolver)
     {

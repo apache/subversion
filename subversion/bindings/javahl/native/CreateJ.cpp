@@ -850,6 +850,47 @@ CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify,
 }
 
 jobject
+CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  static jmethodID midCT = 0;
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitInfo");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  if (midCT == 0)
+    {
+      midCT = env->GetMethodID(clazz, "<init>",
+                               "(JLjava/lang/String;Ljava/lang/String;)V");
+      if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
+        POP_AND_RETURN_NULL;
+    }
+
+  jstring jAuthor = JNIUtil::makeJString(commit_info->author);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jDate = JNIUtil::makeJString(commit_info->date);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jlong jRevision = commit_info->revision;
+
+  // call the Java method
+  jobject jInfo = env->NewObject(clazz, midCT, jRevision, jDate, jAuthor);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  return env->PopLocalFrame(jInfo);
+}
+
+jobject
 CreateJ::RevisionRangeList(apr_array_header_t *ranges)
 {
   JNIEnv *env = JNIUtil::getEnv();
