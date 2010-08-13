@@ -284,10 +284,11 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    long commit(Set<String> path, String message, Depth depth,
+    void commit(Set<String> path, String message, Depth depth,
                 boolean noUnlock, boolean keepChangelist,
                 Collection<String> changelists,
-                Map<String, String> revpropTable)
+                Map<String, String> revpropTable,
+                CommitCallback callback)
             throws ClientException;
 
     /**

@@ -932,12 +932,20 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            return aSVNClient.commit(new HashSet<String>(Arrays.asList(paths)),
-                                     message, Depth.toADepth(depth), noUnlock,
-                                     keepChangelist,
-                                     changelists == null ? null
-                                       : Arrays.asList(changelists),
-                                     revpropTable);
+            final long[] revList = { -1 };
+            org.apache.subversion.javahl.callback.CommitCallback callback =
+                new org.apache.subversion.javahl.callback.CommitCallback () {
+                    public void commitInfo(org.apache.subversion.javahl.CommitInfo info)
+                    { revList[0] = info.getRevision(); }
+                };
+
+            aSVNClient.commit(new HashSet<String>(Arrays.asList(paths)),
+                              message, Depth.toADepth(depth), noUnlock,
+                              keepChangelist,
+                              changelists == null ? null
+                                : Arrays.asList(changelists),
+                              revpropTable, callback);
+            return revList[0];
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {

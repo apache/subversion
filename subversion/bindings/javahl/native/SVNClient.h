@@ -46,6 +46,7 @@ class BlameCallback;
 class ProplistCallback;
 class LogMessageCallback;
 class InfoCallback;
+class CommitCallback;
 class ListCallback;
 class StatusCallback;
 class PatchCallback;
@@ -136,9 +137,10 @@ class SVNClient :public SVNBase
   void copy(CopySources &copySources, const char *destPath,
             const char *message, bool copyAsChild, bool makeParents,
             bool ignoreExternals, RevpropTable &revprops);
-  jlong commit(Targets &targets, const char *message, svn_depth_t depth,
-               bool noUnlock, bool keepChangelist,
-               StringArray &changelists, RevpropTable &revprops);
+  void commit(Targets &targets, const char *message, svn_depth_t depth,
+              bool noUnlock, bool keepChangelist,
+              StringArray &changelists, RevpropTable &revprops,
+              CommitCallback *callback);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool depthIsSticky, bool ignoreExternals,
                     bool allowUnverObstructions);
