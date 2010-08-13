@@ -94,7 +94,7 @@ class SVNClient :public SVNBase
                          size_t bufSize);
   void propertySet(const char *path, const char *name, const char *value,
                    svn_depth_t depth, StringArray &changelists, bool force,
-                   RevpropTable &revprops);
+                   RevpropTable &revprops, CommitCallback *callback);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
                   StringArray &changelists, ProplistCallback *callback);
@@ -117,7 +117,7 @@ class SVNClient :public SVNBase
                         const char *localPath, bool dryRun);
   void doImport(const char *path, const char *url, const char *message,
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes,
-                RevpropTable &revprops);
+                RevpropTable &revprops, CommitCallback *callback);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
                  bool depthIsSticky, bool ignoreExternals,
@@ -130,13 +130,14 @@ class SVNClient :public SVNBase
                svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
   void mkdir(Targets &targets, const char *message, bool makeParents,
-             RevpropTable &revprops);
+             RevpropTable &revprops, CommitCallback *callback);
   void move(Targets &srcPaths, const char *destPath,
             const char *message, bool force, bool moveAsChild,
-            bool makeParents, RevpropTable &revprops);
+            bool makeParents, RevpropTable &revprops, CommitCallback *callback);
   void copy(CopySources &copySources, const char *destPath,
             const char *message, bool copyAsChild, bool makeParents,
-            bool ignoreExternals, RevpropTable &revprops);
+            bool ignoreExternals, RevpropTable &revprops,
+            CommitCallback *callback);
   void commit(Targets &targets, const char *message, svn_depth_t depth,
               bool noUnlock, bool keepChangelist,
               StringArray &changelists, RevpropTable &revprops,
@@ -148,7 +149,8 @@ class SVNClient :public SVNBase
            bool add_parents);
   void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, const char *message, bool force,
-              bool keep_local, RevpropTable &revprops);
+              bool keep_local, RevpropTable &revprops,
+              CommitCallback *callback);
   void notification2(ClientNotifyCallback *notify2);
   void setConflictResolver(ConflictResolverCallback *conflictResolver);
   void setProgressListener(ProgressListener *progressListener);

@@ -219,7 +219,8 @@ public interface ISVNClient
      * @since 1.5
      */
     void remove(Set<String> path, String message, boolean force,
-                boolean keepLocal, Map<String, String> revpropTable)
+                boolean keepLocal, Map<String, String> revpropTable,
+                CommitCallback callback)
             throws ClientException;
 
     /**
@@ -311,7 +312,8 @@ public interface ISVNClient
      */
     void copy(List<CopySource> sources, String destPath, String message,
               boolean copyAsChild, boolean makeParents,
-              boolean ignoreExternals, Map<String, String> revpropTable)
+              boolean ignoreExternals, Map<String, String> revpropTable,
+              CommitCallback callback)
             throws ClientException;
 
     /**
@@ -334,7 +336,7 @@ public interface ISVNClient
      */
     void move(Set<String> srcPaths, String destPath, String message,
               boolean force, boolean moveAsChild, boolean makeParents,
-              Map<String, String> revpropTable)
+              Map<String, String> revpropTable, CommitCallback callback)
         throws ClientException;
 
     /**
@@ -350,7 +352,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void mkdir(Set<String> path, String message, boolean makeParents,
-               Map<String, String> revpropTable)
+               Map<String, String> revpropTable, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -432,7 +434,7 @@ public interface ISVNClient
      */
     void doImport(String path, String url, String message, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
-                  Map<String, String> revpropTable)
+                  Map<String, String> revpropTable, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -683,7 +685,7 @@ public interface ISVNClient
      */
     void propertySet(String path, String name, String value, Depth depth,
                      Collection<String> changelists, boolean force,
-                     Map<String, String> revpropTable)
+                     Map<String, String> revpropTable, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -696,7 +698,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void propertyRemove(String path, String name, Depth depth,
-                        Collection<String> changelists)
+                        Collection<String> changelists, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -712,7 +714,8 @@ public interface ISVNClient
      * @since 1.5
      */
     void propertyCreate(String path, String name, String value, Depth depth,
-                        Collection<String> changelists, boolean force)
+                        Collection<String> changelists, boolean force,
+                        CommitCallback callback)
             throws ClientException;
 
     /**

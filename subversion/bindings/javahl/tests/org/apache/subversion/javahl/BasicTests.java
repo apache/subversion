@@ -252,7 +252,7 @@ public class BasicTests extends SVNTests
 
         // ----- r3: delete file A/D/G/pi ---------------------------
         client.remove(thisTest.getWCPathSet("/A/D/G/pi"), null,
-                      false, false, null);
+                      false, false, null, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/D/G/pi", NodeKind.file,
                               CommitItemStateFlags.Delete);
@@ -295,7 +295,7 @@ public class BasicTests extends SVNTests
 
         // ----- r5: delete dir with no children  A/C ---------------
         client.remove(thisTest.getWCPathSet("/A/C"), null,
-                      false, false, null);
+                      false, false, null, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/C", NodeKind.dir,
                               CommitItemStateFlags.Delete);
@@ -333,7 +333,7 @@ public class BasicTests extends SVNTests
                             Depth.unknown, false, false, false)[0], rev);
         thisTest.checkStatus();
         client.propertySet(thisTest.getWCPath(), "propname", "propval",
-                Depth.empty, null, false, null);
+                Depth.empty, null, false, null, null);
         thisTest.getWc().setItemPropStatus("", Status.Kind.modified);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(), null,
                               NodeKind.dir, CommitItemStateFlags.PropMods);
@@ -369,7 +369,7 @@ public class BasicTests extends SVNTests
 
         // ----- r9: Prop change on A/B/F ---------------------------
         client.propertySet(thisTest.getWCPath() + "/A/B/F", "propname",
-                           "propval", Depth.empty, null, false, null);
+                           "propval", Depth.empty, null, false, null, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/B/F", NodeKind.dir,
                               CommitItemStateFlags.PropMods);
@@ -389,7 +389,7 @@ public class BasicTests extends SVNTests
 
         // ----- r10-11: Replace file A/D/H/chi with file -----------
         client.remove(thisTest.getWCPathSet("/A/D/H/chi"),
-                      null, false, false, null);
+                      null, false, false, null, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/D/H/chi", NodeKind.file,
                               CommitItemStateFlags.Delete);
@@ -424,7 +424,7 @@ public class BasicTests extends SVNTests
 
         // ----- r12: Delete dir A/B/E with children ----------------
         client.remove(thisTest.getWCPathSet("/A/B/E"), null,
-                      false, false, null);
+                      false, false, null, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/B/E", NodeKind.dir,
                               CommitItemStateFlags.Delete);
@@ -450,7 +450,7 @@ public class BasicTests extends SVNTests
 
         // ----- r13-14: Replace file A/D/H/psi with dir ------------
         client.remove(thisTest.getWCPathSet("/A/D/H/psi"), null,
-                      false, false, null);
+                      false, false, null, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/D/H/psi", NodeKind.file,
                               CommitItemStateFlags.Delete);
@@ -599,7 +599,7 @@ public class BasicTests extends SVNTests
 
         // remove A/D/G
         client.remove(thisTest.getWCPathSet("/A/D/G"), null,
-                      false, false, null);
+                      false, false, null, null);
         thisTest.getWc().setItemTextStatus("A/D/G", Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G/pi", Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G/rho", Status.Kind.deleted);
@@ -678,7 +678,7 @@ public class BasicTests extends SVNTests
                                         false);
 
         client.propertySet(itemPath, "abc", "def", Depth.empty, null, false,
-                null);
+                null, null);
         Map<String, byte[]> properties = collectProperties(itemPath, null,
                                                     null, Depth.empty, null);
 
@@ -692,7 +692,7 @@ public class BasicTests extends SVNTests
                                           "/A/B/E/alpha"),
                                  false);
         client.propertyCreate(itemPath, "cqcq", "qrz", Depth.empty, null,
-                              false);
+                              false, null);
 
         final Map<String, Map<String, byte[]>> propMaps =
                                     new HashMap<String, Map<String, byte[]>>();
@@ -794,7 +794,7 @@ public class BasicTests extends SVNTests
         Set<String> urls = new HashSet<String>(2);
         urls.add(thisTest.getUrl() + "/Y");
         urls.add(thisTest.getUrl() + "/Y/Z");
-        client.mkdir(urls, "log_msg", false, null);
+        client.mkdir(urls, "log_msg", false, null, null);
 
         // add the new directories the expected working copy layout
         thisTest.getWc().addItem("Y", null);
@@ -844,7 +844,7 @@ public class BasicTests extends SVNTests
         }
         client.copy(sources,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, true, false, false, null);
+                    null, true, false, false, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -863,7 +863,7 @@ public class BasicTests extends SVNTests
         client.commitMessageHandler(null);
         client.copy(wcSource,
                     thisTest.getUrl() + "/parent/A/B",
-                    "Copy WC to URL", true, true, false, null);
+                    "Copy WC to URL", true, true, false, null, null);
 
         // update the WC to get new folder and confirm the copy
         assertEquals("wrong revision number from update",
@@ -907,7 +907,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, false, true, false, null);
+                    null, false, true, false, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -1320,7 +1320,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // create & add the directory X
-        client.mkdir(thisTest.getWCPathSet("/X"), null, false, null);
+        client.mkdir(thisTest.getWCPathSet("/X"), null, false, null, null);
         thisTest.getWc().addItem("X", null);
         thisTest.getWc().setItemTextStatus("X", Status.Kind.added);
 
@@ -1337,7 +1337,7 @@ public class BasicTests extends SVNTests
 
         // delete the directory A/B/E
         client.remove(thisTest.getWCPathSet("/A/B/E"), null, true,
-                      false, null);
+                      false, null, null);
         removeDirOrFile(new File(thisTest.getWorkingCopy(), "A/B/E"));
         thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.deleted);
         thisTest.getWc().removeItem("A/B/E/alpha");
@@ -1413,12 +1413,12 @@ public class BasicTests extends SVNTests
 
         // set a property on A/D/G/rho file
         client.propertySet(thisTest.getWCPath()+"/A/D/G/rho", "abc", "def",
-                Depth.infinity, null, false, null);
+                Depth.infinity, null, false, null, null);
         thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.modified);
 
         // set a property on A/B/F directory
         client.propertySet(thisTest.getWCPath()+"/A/B/F", "abc", "def",
-                Depth.empty, null, false, null);
+                Depth.empty, null, false, null, null);
         thisTest.getWc().setItemPropStatus("A/B/F", Status.Kind.modified);
 
         // create a unversioned A/C/sigma file
@@ -1441,7 +1441,7 @@ public class BasicTests extends SVNTests
         file = new File(thisTest.getWCPath(), "A/B/X");
         pathSet.clear();
         pathSet.add(file.getAbsolutePath());
-        client.mkdir(pathSet, null, false, null);
+        client.mkdir(pathSet, null, false, null, null);
         thisTest.getWc().addItem("A/B/X", null);
         thisTest.getWc().setItemTextStatus("A/B/X", Status.Kind.added);
 
@@ -1458,7 +1458,7 @@ public class BasicTests extends SVNTests
         file = new File(thisTest.getWCPath(), "A/B/Y");
         pathSet.clear();
         pathSet.add(file.getAbsolutePath());
-        client.mkdir(pathSet, null, false, null);
+        client.mkdir(pathSet, null, false, null, null);
         thisTest.getWc().addItem("A/B/Y", null);
         thisTest.getWc().setItemTextStatus("A/B/Y", Status.Kind.added);
 
@@ -1472,7 +1472,7 @@ public class BasicTests extends SVNTests
             // remove of A/D/H/chi without force should fail, because it is
             // modified
             client.remove(thisTest.getWCPathSet("/A/D/H/chi"),
-                    null, false, false, null);
+                    null, false, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1484,7 +1484,7 @@ public class BasicTests extends SVNTests
             // remove of A/D/H without force should fail, because A/D/H/chi is
             // modified
             client.remove(thisTest.getWCPathSet("/A/D/H"), null,
-                    false, false, null);
+                    false, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1496,7 +1496,7 @@ public class BasicTests extends SVNTests
             // remove of A/D/G/rho without force should fail, because it has
             // a new property
             client.remove(thisTest.getWCPathSet("/A/D/G/rho"),
-                    null, false, false, null);
+                    null, false, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1508,7 +1508,7 @@ public class BasicTests extends SVNTests
             // remove of A/D/G without force should fail, because A/D/G/rho has
             // a new property
             client.remove(thisTest.getWCPathSet("/A/D/G"), null,
-                    false, false, null);
+                    false, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1520,7 +1520,7 @@ public class BasicTests extends SVNTests
             // remove of A/B/F without force should fail, because it has
             // a new property
             client.remove(thisTest.getWCPathSet("/A/B/F"), null,
-                    false, false, null);
+                    false, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1532,7 +1532,7 @@ public class BasicTests extends SVNTests
             // remove of A/B without force should fail, because A/B/F has
             // a new property
             client.remove(thisTest.getWCPathSet("/A/B"), null,
-                    false, false, null);
+                    false, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1544,7 +1544,7 @@ public class BasicTests extends SVNTests
             // remove of A/C/sigma without force should fail, because it is
             // unversioned
             client.remove(thisTest.getWCPathSet("/A/C/sigma"),
-                          null, false, false, null);
+                          null, false, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1556,7 +1556,7 @@ public class BasicTests extends SVNTests
             // remove of A/C without force should fail, because A/C/sigma is
             // unversioned
             client.remove(thisTest.getWCPathSet("/A/C"), null,
-                          false, false, null);
+                          false, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1567,7 +1567,7 @@ public class BasicTests extends SVNTests
         {
             // remove of A/B/X without force should fail, because it is new
             client.remove(thisTest.getWCPathSet("/A/B/X"), null,
-                          false, false, null);
+                          false, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1579,56 +1579,56 @@ public class BasicTests extends SVNTests
 
         // the following removes should all work
         client.remove(thisTest.getWCPathSet("/A/B/E"), null,
-                      false, false, null);
+                      false, false, null, null);
         thisTest.getWc().setItemTextStatus("A/B/E",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/B/E/alpha",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/B/E/beta",Status.Kind.deleted);
         client.remove(thisTest.getWCPathSet("/A/D/H"), null, true,
-                      false, null);
+                      false, null, null);
         thisTest.getWc().setItemTextStatus("A/D/H",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/H/chi",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/H/omega",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/H/psi",Status.Kind.deleted);
         client.remove(thisTest.getWCPathSet("/A/D/G"), null, true,
-                      false, null);
+                      false, null, null);
         thisTest.getWc().setItemTextStatus("A/D/G",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G/rho",Status.Kind.deleted);
         thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.none);
         thisTest.getWc().setItemTextStatus("A/D/G/pi",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G/tau",Status.Kind.deleted);
         client.remove(thisTest.getWCPathSet("/A/B/F"), null, true,
-                      false, null);
+                      false, null, null);
         thisTest.getWc().setItemTextStatus("A/B/F",Status.Kind.deleted);
         thisTest.getWc().setItemPropStatus("A/B/F", Status.Kind.none);
         client.remove(thisTest.getWCPathSet("/A/C"), null, true,
-                      false, null);
+                      false, null, null);
         thisTest.getWc().setItemTextStatus("A/C",Status.Kind.deleted);
         client.remove(thisTest.getWCPathSet("/A/B/X"), null, true,
-                      false, null);
+                      false, null, null);
         file = new File(thisTest.getWorkingCopy(), "iota");
         file.delete();
         pathSet.clear();
         pathSet.add(file.getAbsolutePath());
-        client.remove(pathSet, null, true, false, null);
+        client.remove(pathSet, null, true, false, null, null);
         thisTest.getWc().setItemTextStatus("iota",Status.Kind.deleted);
         file = new File(thisTest.getWorkingCopy(), "A/D/gamma");
         file.delete();
         pathSet.clear();
         pathSet.add(file.getAbsolutePath());
-        client.remove(pathSet, null, false, false, null);
+        client.remove(pathSet, null, false, false, null, null);
         thisTest.getWc().setItemTextStatus("A/D/gamma",Status.Kind.deleted);
         pathSet.clear();
         pathSet.add(file.getAbsolutePath());
-        client.remove(pathSet, null, true, false, null);
+        client.remove(pathSet, null, true, false, null, null);
         client.remove(thisTest.getWCPathSet("/A/B/E"), null,
-                      false, false, null);
+                      false, false, null, null);
         thisTest.getWc().removeItem("A/B/X");
         thisTest.getWc().removeItem("A/B/X/xi");
         thisTest.getWc().removeItem("A/C/sigma");
         thisTest.getWc().removeItem("A/C/Q");
         thisTest.checkStatus();
         client.remove(thisTest.getWCPathSet("/A/D"),null, true,
-                      false, null);
+                      false, null, null);
         thisTest.getWc().setItemTextStatus("A/D", Status.Kind.deleted);
         thisTest.getWc().removeItem("A/D/Y");
 
@@ -1659,7 +1659,7 @@ public class BasicTests extends SVNTests
         pw.close();
         pathSet.clear();
         pathSet.add(file.getAbsolutePath());
-        client.remove(pathSet, null, true, false, null);
+        client.remove(pathSet, null, true, false, null, null);
         assertFalse("failed to remove unversioned file foo", file.exists());
 
         try
@@ -1667,7 +1667,7 @@ public class BasicTests extends SVNTests
             // delete non-existant file foo
             Set<String> paths = new HashSet<String>(1);
             paths.add(file.getAbsolutePath());
-            client.remove(paths, null, true, false, null);
+            client.remove(paths, null, true, false, null, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1678,7 +1678,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(null, thisTest.getUrl(), "iota", NodeKind.none,
                 CommitItemStateFlags.Delete);
         client.remove(thisTest.getUrlSet("/iota"),
-                      "delete iota URL", false, false, null);
+                      "delete iota URL", false, false, null, null);
     }
 
     public void testBasicCheckoutDeleted() throws Throwable
@@ -1688,7 +1688,7 @@ public class BasicTests extends SVNTests
 
         // delete A/D and its content
         client.remove(thisTest.getWCPathSet("/A/D"), null, true,
-                      false, null);
+                      false, null, null);
         thisTest.getWc().setItemTextStatus("A/D", Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G", Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G/rho", Status.Kind.deleted);
@@ -1743,7 +1743,7 @@ public class BasicTests extends SVNTests
         gammaSet.add(thisTest.getWCPath() + "/A/D/gamma");
 
         //  remove A/D/gamma
-        client.remove(gammaSet, null, false, false, null);
+        client.remove(gammaSet, null, false, false, null, null);
         thisTest.getWc().setItemTextStatus("A/D/gamma", Status.Kind.deleted);
 
         // check the working copy status
@@ -1753,7 +1753,7 @@ public class BasicTests extends SVNTests
         {
             // creating a directory in the place of the deleted file should
             // fail
-            client.mkdir(gammaSet, null, false, null);
+            client.mkdir(gammaSet, null, false, null, null);
             fail("can change node kind");
         }
         catch(ClientException e)
@@ -1780,7 +1780,7 @@ public class BasicTests extends SVNTests
         {
             // creating a directory in the place of the deleted file should
             // still fail
-            client.mkdir(gammaSet, null, false, null);
+            client.mkdir(gammaSet, null, false, null, null);
             fail("can change node kind");
         }
         catch(ClientException e)
@@ -1799,7 +1799,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // now creating the directory should succeed
-        client.mkdir(gammaSet, null, false, null);
+        client.mkdir(gammaSet, null, false, null, null);
         thisTest.getWc().addItem("A/D/gamma", null);
         thisTest.getWc().setItemTextStatus("A/D/gamma", Status.Kind.added);
 
@@ -1828,7 +1828,7 @@ public class BasicTests extends SVNTests
         client.doImport(file.getAbsolutePath(),
                 thisTest.getUrl()+"/dirA/dirB/new_file",
                 "log message for new import", Depth.infinity,
-                false, false, null);
+                false, false, null, null);
 
         // delete new_file
         file.delete();
@@ -1994,7 +1994,7 @@ public class BasicTests extends SVNTests
                 null, "dir", NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(dir.getAbsolutePath(), thisTest.getUrl()+"/dir",
                 "log message for import", Depth.infinity,
-                false, false, null);
+                false, false, null, null);
 
         // remove dir
         removeDirOrFile(dir);
@@ -2100,7 +2100,7 @@ public class BasicTests extends SVNTests
 
         client.propertySet(thisTest.getWCPath()+"/A/mu",
                            Property.NEEDS_LOCK, "*", Depth.empty,
-                           null, false, null);
+                           null, false, null, null);
 
         addExpectedCommitItem(thisTest.getWCPath(),
                               thisTest.getUrl(), "A/mu",NodeKind.file,
@@ -2676,7 +2676,7 @@ public class BasicTests extends SVNTests
                               NodeKind.none, CommitItemStateFlags.Add);
         Set<String> paths = new HashSet<String>(1);
         paths.add(thisTest.getUrl() + "/branches");
-        client.mkdir(paths, "log_msg", false, null);
+        client.mkdir(paths, "log_msg", false, null, null);
 
         // copy A to branches (r3)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches/A",
@@ -2685,7 +2685,7 @@ public class BasicTests extends SVNTests
         srcs.add(new CopySource(thisTest.getUrl() + "/A", Revision.HEAD,
                                 Revision.HEAD));
         client.copy(srcs, thisTest.getUrl() + "/branches/A",
-                    "create A branch", true, false, false, null);
+                    "create A branch", true, false, false, null, null);
 
         // update the WC (to r3) so that it has the branches folder
         client.update(thisTest.getWCPathSet(), Revision.HEAD,
@@ -2825,7 +2825,7 @@ public class BasicTests extends SVNTests
             "+Test property value." + NL;
 
         client.propertySet(aPath, "testprop", "Test property value.",
-                Depth.empty, null, false, null);
+                Depth.empty, null, false, null, null);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false, false);
@@ -2844,7 +2844,7 @@ public class BasicTests extends SVNTests
             "+Test property value." + NL;
 
         client.propertySet(aPath, "testprop", "Test property value.",
-                Depth.empty, null, false, null);
+                Depth.empty, null, false, null, null);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false, false);
@@ -2872,7 +2872,7 @@ public class BasicTests extends SVNTests
                 if (operativeRevision == 2) {
                     // Set svn:eol-style=native on iota
                     client.propertyCreate(iotaPath, "svn:eol-style", "native",
-                                          Depth.empty, null, false);
+                                          Depth.empty, null, false, null);
                     Set<String> paths = new HashSet<String>(1);
                     paths.add(iotaPath);
                     addExpectedCommitItem(thisTest.getWCPath(),
@@ -3149,7 +3149,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, false, true, false, null);
+                    null, false, true, false, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
