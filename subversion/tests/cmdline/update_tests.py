@@ -5705,7 +5705,7 @@ test_list = [ None,
               XFail(update_deleted_locked_files),
               XFail(update_empty_hides_entries),
               mergeinfo_updates_merge_with_local_mods,
-              XFail(add_moved_file_has_props),
+              add_moved_file_has_props,
              ]
 
 if __name__ == '__main__':
