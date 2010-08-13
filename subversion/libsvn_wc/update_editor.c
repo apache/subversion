@@ -3703,6 +3703,10 @@ add_file_with_history(struct dir_baton *pb,
                                       scratch_pool));
 
   tfb->copied_base_props = new_base_props;
+   /* ### Currently we always have to set this even though we don't have
+          a real copy, or update_tests.py 60 "add_moved_file_has_props" fails
+    */
+  tfb->copied_working_props = new_props;
 
   if (new_contents)
     {
@@ -3724,8 +3728,6 @@ add_file_with_history(struct dir_baton *pb,
       SVN_ERR(svn_stream_copy3(new_contents, tmp_contents, eb->cancel_func,
                                eb->cancel_baton,
                                scratch_pool));
-
-       tfb->copied_working_props = new_props;
     }
 
   return SVN_NO_ERROR;
