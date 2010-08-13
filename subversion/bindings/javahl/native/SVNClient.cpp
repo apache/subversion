@@ -314,7 +314,8 @@ void SVNClient::setProgressListener(ProgressListener *listener)
 }
 
 void SVNClient::remove(Targets &targets, const char *message, bool force,
-                       bool keep_local, RevpropTable &revprops)
+                       bool keep_local, RevpropTable &revprops,
+                       CommitCallback *callback)
 {
     SVN::Pool requestPool;
     svn_client_ctx_t *ctx = getContext(message);
@@ -323,6 +324,9 @@ void SVNClient::remove(Targets &targets, const char *message, bool force,
 
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
+
+    ctx->commit_callback2 = CommitCallback::callback;
+    ctx->commit_baton = callback;
 
     SVN_JNI_ERR(svn_client_delete4(targets2, force, keep_local,
                                    revprops.hash(requestPool), ctx,
@@ -432,7 +436,8 @@ void SVNClient::commit(Targets &targets, const char *message,
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
                      const char *message, bool copyAsChild, bool makeParents,
-                     bool ignoreExternals, RevpropTable &revprops)
+                     bool ignoreExternals, RevpropTable &revprops,
+                     CommitCallback *callback)
 {
     SVN::Pool requestPool;
 
@@ -451,6 +456,9 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     if (ctx == NULL)
         return;
 
+    ctx->commit_callback2 = CommitCallback::callback;
+    ctx->commit_baton = callback;
+
     SVN_JNI_ERR(svn_client_copy6(srcs, destinationPath.c_str(),
                                  copyAsChild, makeParents, ignoreExternals,
                                  revprops.hash(requestPool), ctx,
@@ -459,7 +467,8 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
                      const char *message, bool force, bool moveAsChild,
-                     bool makeParents, RevpropTable &revprops)
+                     bool makeParents, RevpropTable &revprops,
+                     CommitCallback *callback)
 {
     SVN::Pool requestPool;
 
@@ -473,6 +482,9 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     if (ctx == NULL)
         return;
 
+    ctx->commit_callback2 = CommitCallback::callback;
+    ctx->commit_baton = callback;
+
     SVN_JNI_ERR(svn_client_move6((apr_array_header_t *) srcs,
                                  destinationPath.c_str(), force, moveAsChild,
                                  makeParents, revprops.hash(requestPool), ctx,
@@ -480,12 +492,15 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
 }
 
 void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents,
-                      RevpropTable &revprops)
+                      RevpropTable &revprops, CommitCallback *callback)
 {
     SVN::Pool requestPool;
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
+
+    ctx->commit_callback2 = CommitCallback::callback;
+    ctx->commit_baton = callback;
 
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
@@ -592,7 +607,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 void SVNClient::doImport(const char *path, const char *url,
                          const char *message, svn_depth_t depth,
                          bool noIgnore, bool ignoreUnknownNodeTypes,
-                         RevpropTable &revprops)
+                         RevpropTable &revprops, CommitCallback *callback)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -605,6 +620,9 @@ void SVNClient::doImport(const char *path, const char *url,
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
+
+    ctx->commit_callback2 = CommitCallback::callback;
+    ctx->commit_baton = callback;
 
     SVN_JNI_ERR(svn_client_import4(intPath.c_str(), intUrl.c_str(), depth,
                                    noIgnore, ignoreUnknownNodeTypes,
@@ -914,7 +932,7 @@ void SVNClient::properties(const char *path, Revision &revision,
 void SVNClient::propertySet(const char *path, const char *name,
                             const char *value, svn_depth_t depth,
                             StringArray &changelists, bool force,
-                            RevpropTable &revprops)
+                            RevpropTable &revprops, CommitCallback *callback)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -932,6 +950,9 @@ void SVNClient::propertySet(const char *path, const char *name,
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
         return;
+
+    ctx->commit_callback2 = CommitCallback::callback;
+    ctx->commit_baton = callback;
 
     SVN_JNI_ERR(svn_client_propset4(name, val, intPath.c_str(),
                                     depth, force, SVN_INVALID_REVNUM,

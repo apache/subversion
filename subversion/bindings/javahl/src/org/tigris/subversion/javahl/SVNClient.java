@@ -766,7 +766,8 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.remove(new HashSet<String>(Arrays.asList(paths)),
-                              message, force, keepLocal, revpropTable);
+                              message, force, keepLocal, revpropTable,
+                              null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -973,7 +974,7 @@ public class SVNClient implements SVNClientInterface
             }
 
             aSVNClient.copy(aCopySources, destPath, message, copyAsChild,
-                            makeParents, ignoreExternals, revpropTable);
+                            makeParents, ignoreExternals, revpropTable, null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1021,7 +1022,7 @@ public class SVNClient implements SVNClientInterface
         {
             aSVNClient.move(new HashSet<String>(Arrays.asList(srcPaths)),
                             destPath, message, force, moveAsChild,
-                            makeParents, revpropTable);
+                            makeParents, revpropTable, null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1065,7 +1066,7 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.mkdir(new HashSet<String>(Arrays.asList(paths)),
-                             message, makeParents, revpropTable);
+                             message, makeParents, revpropTable, null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1246,7 +1247,8 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.doImport(path, url, message, Depth.toADepth(depth),
-                                noIgnore, ignoreUnknownNodeTypes, revpropTable);
+                                noIgnore, ignoreUnknownNodeTypes, revpropTable,
+                                null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1827,7 +1829,7 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.propertySet(path, name, value, Depth.toADepth(depth),
                                    changelists == null ? null
                                     : Arrays.asList(changelists),
-                                   force, revpropTable);
+                                   force, revpropTable, null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
