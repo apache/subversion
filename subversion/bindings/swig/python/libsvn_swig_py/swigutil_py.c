@@ -805,6 +805,7 @@ static PyObject *make_ob_##type(void *value) \
 
 DECLARE_SWIG_CONSTRUCTOR(txdelta_window, svn_txdelta_window_dup)
 DECLARE_SWIG_CONSTRUCTOR(log_changed_path, svn_log_changed_path_dup)
+DECLARE_SWIG_CONSTRUCTOR(log_changed_path2, svn_log_changed_path2_dup)
 DECLARE_SWIG_CONSTRUCTOR(wc_status, svn_wc_dup_status)
 DECLARE_SWIG_CONSTRUCTOR(lock, svn_lock_dup)
 DECLARE_SWIG_CONSTRUCTOR(auth_ssl_server_cert_info,
@@ -861,6 +862,42 @@ PyObject *svn_swig_py_changed_path_hash_to_dict(apr_hash_t *hash)
 
       apr_hash_this(hi, &key, NULL, &val);
       value = make_ob_log_changed_path(val);
+      if (value == NULL)
+        {
+            Py_DECREF(dict);
+            return NULL;
+        }
+      if (PyDict_SetItemString(dict, (char *)key, value) == -1)
+        {
+          Py_DECREF(value);
+          Py_DECREF(dict);
+          return NULL;
+        }
+      Py_DECREF(value);
+    }
+
+  return dict;
+}
+
+PyObject *svn_swig_py_changed_path2_hash_to_dict(apr_hash_t *hash)
+{
+  apr_hash_index_t *hi;
+  PyObject *dict;
+
+  if (hash == NULL)
+    Py_RETURN_NONE;
+
+  if ((dict = PyDict_New()) == NULL)
+    return NULL;
+
+  for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      PyObject *value;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      value = make_ob_log_changed_path2(val);
       if (value == NULL)
         {
             Py_DECREF(dict);

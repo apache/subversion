@@ -174,10 +174,15 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings);
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
 
-/* helper function to convert a hash mapping char * to svn_string_t * to a
- * Python dict mapping str to str. */
+/* helper function to convert a hash mapping char * to
+ * svn_log_changed_path_t * to a Python dict mapping str to str. */
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_changed_path_hash_to_dict(apr_hash_t *hash);
+
+/* helper function to convert a hash mapping char * to
+ * svn_log_changed_path2_t * to a Python dict mapping str to str. */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_changed_path2_hash_to_dict(apr_hash_t *hash);
 
 /* helper function to convert an array of 'svn_revnum_t' to a Python list
    of int objects */
