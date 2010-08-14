@@ -225,16 +225,16 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   if (get_global_membuffer_cache())
     SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->dir_cache),
                                               get_global_membuffer_cache(),
-                                              svn_fs_fs__dir_entries_serialize,
-                                              svn_fs_fs__dir_entries_deserialize,
+                                              svn_fs_fs__serialize_dir_entries,
+                                              svn_fs_fs__deserialize_dir_entries,
                                               APR_HASH_KEY_STRING,
                                               apr_pstrcat(pool, prefix, "DIR",
                                                           NULL),
                                               fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->dir_cache),
-                                        svn_fs_fs__dir_entries_serialize,
-                                        svn_fs_fs__dir_entries_deserialize,
+                                        svn_fs_fs__serialize_dir_entries,
+                                        svn_fs_fs__deserialize_dir_entries,
                                         APR_HASH_KEY_STRING,
                                         1024, 8, FALSE, fs->pool));
 
