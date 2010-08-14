@@ -2856,6 +2856,17 @@ svn_io_file_getc(char *ch, apr_file_t *file, apr_pool_t *pool)
 
 
 svn_error_t *
+svn_io_file_putc(char ch, apr_file_t *file, apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_putc(ch, file),
+     N_("Can't write file '%s'"),
+     N_("Can't write stream"),
+     pool);
+}
+
+
+svn_error_t *
 svn_io_file_info_get(apr_finfo_t *finfo, apr_int32_t wanted,
                      apr_file_t *file, apr_pool_t *pool)
 {
@@ -2886,6 +2897,24 @@ svn_io_file_read_full(apr_file_t *file, void *buf,
 {
   return do_io_file_wrapper_cleanup
     (file, apr_file_read_full(file, buf, nbytes, bytes_read),
+     N_("Can't read file '%s'"),
+     N_("Can't read stream"),
+     pool);
+}
+
+
+svn_error_t *
+svn_io_file_read_full2(apr_file_t *file, void *buf,
+                       apr_size_t nbytes, apr_size_t *bytes_read,
+                       svn_boolean_t eof_is_ok,
+                       apr_pool_t *pool)
+{
+  apr_status_t status = apr_file_read_full(file, buf, nbytes, bytes_read);
+  if (APR_STATUS_IS_EOF(status) && eof_is_ok)
+    return SVN_NO_ERROR;
+
+  return do_io_file_wrapper_cleanup
+    (file, status,
      N_("Can't read file '%s'"),
      N_("Can't read stream"),
      pool);

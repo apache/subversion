@@ -600,12 +600,15 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
   struct baton_apr *btn = baton;
   svn_error_t *err;
 
-  err = svn_io_file_read_full(btn->file, buffer, *len, len, btn->pool);
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
+  if (*len == 1)
     {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
+      err = svn_io_file_getc (buffer, btn->file, btn->pool);
+      if (err)
+        *len = 0;
     }
+    else
+      err = svn_io_file_read_full2(btn->file, buffer, *len, len, 
+                                   TRUE, btn->pool);
 
   return err;
 }
@@ -614,8 +617,18 @@ static svn_error_t *
 write_handler_apr(void *baton, const char *data, apr_size_t *len)
 {
   struct baton_apr *btn = baton;
+  svn_error_t *err;
 
-  return svn_io_file_write_full(btn->file, data, *len, len, btn->pool);
+  if (*len == 1)
+    {
+      err = svn_io_file_putc (*data, btn->file, btn->pool);
+      if (err)
+        *len = 0;
+    }
+    else
+      err = svn_io_file_write_full(btn->file, data, *len, len, btn->pool);
+
+  return err;
 }
 
 static svn_error_t *
