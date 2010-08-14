@@ -53,6 +53,8 @@ struct svn_stream_t {
   svn_io_reset_fn_t reset_fn;
   svn_io_mark_fn_t mark_fn;
   svn_io_seek_fn_t seek_fn;
+  svn_io_move_mark_fn_t move_mark_fn;
+  svn_io_buffered_fn_t buffered_fn;
 };
 
 
@@ -71,6 +73,8 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->reset_fn = NULL;
   stream->mark_fn = NULL;
   stream->seek_fn = NULL;
+  stream->move_mark_fn = NULL;
+  stream->buffered_fn = NULL;
   return stream;
 }
 
@@ -119,6 +123,20 @@ svn_stream_set_seek(svn_stream_t *stream, svn_io_seek_fn_t seek_fn)
   stream->seek_fn = seek_fn;
 }
 
+void
+svn_stream_set_move_mark(svn_stream_t *stream, 
+                         svn_io_move_mark_fn_t move_mark_fn)
+{
+  stream->move_mark_fn = move_mark_fn;
+}
+
+void
+svn_stream_set_buffered(svn_stream_t *stream, 
+                        svn_io_buffered_fn_t buffered_fn)
+{
+  stream->buffered_fn = buffered_fn;
+}
+
 svn_error_t *
 svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
@@ -144,6 +162,12 @@ svn_stream_reset(svn_stream_t *stream)
   return stream->reset_fn(stream->baton);
 }
 
+svn_boolean_t
+svn_stream_supports_mark(svn_stream_t *stream)
+{
+  return stream->mark_fn == NULL ? FALSE : TRUE;
+}
+
 svn_error_t *
 svn_stream_mark(svn_stream_t *stream, svn_stream_mark_t **mark,
                 apr_pool_t *pool)
@@ -161,6 +185,26 @@ svn_stream_seek(svn_stream_t *stream, svn_stream_mark_t *mark)
     return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
 
   return stream->seek_fn(stream->baton, mark);
+}
+
+svn_error_t *
+svn_stream_move_mark(svn_stream_t *stream, 
+                     svn_stream_mark_t *mark, 
+                     apr_off_t delta)
+{
+  if (stream->move_mark_fn == NULL)
+    return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
+
+  return stream->move_mark_fn(stream->baton, mark, delta);
+}
+
+svn_boolean_t 
+svn_stream_buffered(svn_stream_t *stream)
+{
+  if (stream->buffered_fn == NULL)
+    return FALSE;
+
+  return stream->buffered_fn(stream->baton);
 }
 
 svn_error_t *
@@ -452,6 +496,18 @@ seek_handler_empty(void *baton, svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_mark_handler_empty(void *baton, svn_stream_mark_t *mark, apr_off_t delta)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_boolean_t
+buffered_handler_empty(void *baton)
+{
+  return FALSE;
+}
+
 
 svn_stream_t *
 svn_stream_empty(apr_pool_t *pool)
@@ -464,6 +520,8 @@ svn_stream_empty(apr_pool_t *pool)
   svn_stream_set_reset(stream, reset_handler_empty);
   svn_stream_set_mark(stream, mark_handler_empty);
   svn_stream_set_seek(stream, seek_handler_empty);
+  svn_stream_set_move_mark(stream, move_mark_handler_empty);
+  svn_stream_set_buffered(stream, buffered_handler_empty);
   return stream;
 }
 
@@ -558,6 +616,18 @@ seek_handler_disown(void *baton, svn_stream_mark_t *mark)
   return svn_stream_seek(baton, mark);
 }
 
+static svn_error_t *
+move_mark_handler_disown(void *baton, svn_stream_mark_t *mark, apr_off_t delta)
+{
+  return svn_stream_move_mark(baton, mark, delta);
+}
+
+static svn_boolean_t
+buffered_handler_disown(void *baton)
+{
+  return svn_stream_buffered(baton);
+}
+
 svn_stream_t *
 svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
 {
@@ -568,6 +638,8 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
   svn_stream_set_reset(s, reset_handler_disown);
   svn_stream_set_mark(s, mark_handler_disown);
   svn_stream_set_seek(s, seek_handler_disown);
+  svn_stream_set_move_mark(s, move_mark_handler_disown);
+  svn_stream_set_buffered(s, buffered_handler_disown);
 
   return s;
 }
@@ -694,6 +766,23 @@ seek_handler_apr(void *baton, svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_mark_handler_apr(void *baton, svn_stream_mark_t *mark, apr_off_t delta)
+{
+  struct mark_apr *mark_apr;
+
+  mark_apr = (struct mark_apr *)mark;
+  mark_apr->off += delta;
+  return SVN_NO_ERROR;
+}
+
+static svn_boolean_t
+buffered_handler_apr(void *baton)
+{
+  struct baton_apr *btn = baton;
+  return apr_file_buffer_size_get(btn->file) != 0;
+}
+
 svn_error_t *
 svn_stream_open_readonly(svn_stream_t **stream,
                          const char *path,
@@ -774,6 +863,8 @@ stream_from_aprfile(struct baton_apr **baton,
   svn_stream_set_reset(stream, reset_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
+  svn_stream_set_move_mark(stream, move_mark_handler_apr);
+  svn_stream_set_buffered(stream, buffered_handler_apr);
 
   /* return structures */
   *baton = new_baton;
@@ -896,6 +987,8 @@ svn_stream_from_aprfile_range_readonly(apr_file_t *file,
   svn_stream_set_reset(stream, reset_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
+  svn_stream_set_move_mark(stream, move_mark_handler_apr);
+  svn_stream_set_buffered(stream, buffered_handler_apr);
 
   if (! disown)
     svn_stream_set_close(stream, close_handler_apr);
@@ -1454,6 +1547,24 @@ seek_handler_stringbuf(void *baton, svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_mark_handler_stringbuf(void *baton, 
+                            svn_stream_mark_t *mark, 
+                            apr_off_t delta)
+{
+  struct stringbuf_stream_mark *stringbuf_stream_mark;
+
+  stringbuf_stream_mark = (struct stringbuf_stream_mark *)mark;
+  stringbuf_stream_mark->pos += delta;
+  return SVN_NO_ERROR;
+}
+
+static svn_boolean_t
+buffered_handler_stringbuf(void *baton)
+{
+  return TRUE;
+}
+
 svn_stream_t *
 svn_stream_from_stringbuf(svn_stringbuf_t *str,
                           apr_pool_t *pool)
@@ -1473,6 +1584,8 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
   svn_stream_set_reset(stream, reset_handler_stringbuf);
   svn_stream_set_mark(stream, mark_handler_stringbuf);
   svn_stream_set_seek(stream, seek_handler_stringbuf);
+  svn_stream_set_move_mark(stream, move_mark_handler_stringbuf);
+  svn_stream_set_buffered(stream, buffered_handler_stringbuf);
   return stream;
 }
 

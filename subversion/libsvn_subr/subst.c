@@ -1222,6 +1222,42 @@ translated_stream_seek(void *baton, svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_io_move_mark_fn_t. */
+static svn_error_t *
+translated_stream_move_mark(void *baton, 
+                            svn_stream_mark_t *mark, 
+                            apr_off_t delta)
+{
+  struct translated_stream_baton *b = baton;
+  mark_translated_t *mt = (mark_translated_t *)mark;
+
+  /* Flush output buffer if necessary. */
+  if (b->written)
+    SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool));
+
+  SVN_ERR(svn_stream_move_mark(b->stream, mt->mark, delta));
+
+  /* Restore translation state, avoiding new allocations. */
+  *b->in_baton = *mt->saved_baton.in_baton;
+  *b->out_baton = *mt->saved_baton.out_baton;
+  b->written = mt->saved_baton.written;
+  svn_stringbuf_setempty(b->readbuf);
+  svn_stringbuf_appendbytes(b->readbuf, mt->saved_baton.readbuf->data, 
+                            mt->saved_baton.readbuf->len);
+  b->readbuf_off = mt->saved_baton.readbuf_off;
+  memcpy(b->buf, mt->saved_baton.buf, SVN__TRANSLATION_BUF_SIZE);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_io_buffered_fn_t. */
+static svn_boolean_t
+translated_stream_buffered(void *baton)
+{
+  struct translated_stream_baton *b = baton;
+  return svn_stream_buffered(b->stream);
+}
+
 svn_error_t *
 svn_subst_read_specialfile(svn_stream_t **stream,
                            const char *path,
@@ -1324,6 +1360,8 @@ svn_subst_stream_translated(svn_stream_t *stream,
   svn_stream_set_reset(s, translated_stream_reset);
   svn_stream_set_mark(s, translated_stream_mark);
   svn_stream_set_seek(s, translated_stream_seek);
+  svn_stream_set_move_mark(s, translated_stream_move_mark);
+  svn_stream_set_buffered(s, translated_stream_buffered);
 
   return s;
 }
