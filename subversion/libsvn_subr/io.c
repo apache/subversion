@@ -3605,8 +3605,6 @@ contents_identical_p(svn_boolean_t *identical_p,
                      const char *file2,
                      apr_pool_t *pool)
 {
-  svn_error_t *err1;
-  svn_error_t *err2;
   apr_size_t bytes_read1, bytes_read2;
   char *buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
@@ -3621,18 +3619,12 @@ contents_identical_p(svn_boolean_t *identical_p,
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
   do
     {
-      err1 = svn_io_file_read_full(file1_h, buf1,
-                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1, pool);
-      if (err1 && !APR_STATUS_IS_EOF(err1->apr_err))
-        return err1;
-
-      err2 = svn_io_file_read_full(file2_h, buf2,
-                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2, pool);
-      if (err2 && !APR_STATUS_IS_EOF(err2->apr_err))
-        {
-          svn_error_clear(err1);
-          return err2;
-        }
+      SVN_ERR(svn_io_file_read_full2(file1_h, buf1,
+                                     SVN__STREAM_CHUNK_SIZE, &bytes_read1, 
+                                     TRUE, pool));
+      SVN_ERR(svn_io_file_read_full2(file2_h, buf2,
+                                     SVN__STREAM_CHUNK_SIZE, &bytes_read2, 
+                                     TRUE, pool));
 
       if ((bytes_read1 != bytes_read2)
           || (memcmp(buf1, buf2, bytes_read1)))
@@ -3640,10 +3632,10 @@ contents_identical_p(svn_boolean_t *identical_p,
           *identical_p = FALSE;
           break;
         }
-    } while (! err1 && ! err2);
-
-  svn_error_clear(err1);
-  svn_error_clear(err2);
+      /* The read_full functions are supposed to read until either the
+         buffer has been completely filled or EOF has been accountered.
+         Hence, the following check reliably tests for EOF. */
+    } while (bytes_read1 == SVN__STREAM_CHUNK_SIZE);
 
   SVN_ERR(svn_io_file_close(file1_h, pool));
   return svn_io_file_close(file2_h, pool);
