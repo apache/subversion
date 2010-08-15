@@ -656,7 +656,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Determine the item type and read it in.  Make sure that c is the
    * first character at the end of the item so we can test to make
    * sure it's whitespace. */
-  if (apr_isdigit(c))
+  if (svn_ctype_isdigit(c))
     {
       /* It's a number or a string.  Read the number part, either way. */
       val = c - '0';
@@ -684,7 +684,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           item->u.number = val;
         }
     }
-  else if (apr_isalpha(c))
+  else if (svn_ctype_isalpha(c))
     {
       /* It's a word. */
       str = svn_stringbuf_create_ensure(16, pool);

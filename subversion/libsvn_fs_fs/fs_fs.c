@@ -927,7 +927,7 @@ check_format_file_buffer_numeric(const char *buf, const char *path,
   const char *p;
 
   for (p = buf; *p; p++)
-    if (!apr_isdigit(*p))
+    if (!svn_ctype_isdigit(*p))
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
         _("Format file '%s' contains an unexpected non-digit"),
         svn_dirent_local_style(path, pool));
