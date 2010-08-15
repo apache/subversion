@@ -298,7 +298,9 @@ change_prop(void *entry_baton,
   if (svn_property_kind(NULL, name) == svn_prop_regular_kind)
     {
       ensure_summarize(ib);
-      ib->summarize->prop_changed = TRUE;
+
+      if (ib->summarize->summarize_kind != svn_client_diff_summarize_kind_added)
+        ib->summarize->prop_changed = TRUE;
     }
 
   return SVN_NO_ERROR;
