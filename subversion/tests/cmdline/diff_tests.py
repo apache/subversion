@@ -3365,12 +3365,16 @@ def diff_git_format_wc_wc(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   new_path = os.path.join(wc_dir, 'new')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  lambda_copied_path = os.path.join(wc_dir, 'A', 'B', 'lambda_copied')
+
   svntest.main.file_append(iota_path, "Changed 'iota'.\n")
   svntest.main.file_append(new_path, "This is the file 'new'.\n")
   svntest.main.run_svn(None, 'add', new_path)
   svntest.main.run_svn(None, 'rm', mu_path)
+  svntest.main.run_svn(None, 'cp', lambda_path, lambda_copied_path)
 
-  ### We're not testing copied or moved paths
+  ### We're not testing moved paths
 
   expected_output = make_git_diff_header(mu_path, "revision 1", 
                                          "working copy", 
@@ -3386,7 +3390,8 @@ def diff_git_format_wc_wc(sbox):
     "@@ -1 +1,2 @@\n",
     " This is the file 'iota'.\n",
     "+Changed 'iota'.\n",
-  ]
+  ] + make_git_diff_header(lambda_copied_path, "revision 1",
+                           "working copy", copyfrom=lambda_path)
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
                                      '--git-diff', wc_dir)
@@ -3696,7 +3701,7 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
-              diff_git_format_wc_wc,
+              XFail(diff_git_format_wc_wc),
               diff_git_format_url_wc,
               diff_git_format_url_url,
               diff_prop_missing_context,
