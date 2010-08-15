@@ -314,8 +314,8 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *readbuf_getchar(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                    char *result)
+static APR_INLINE svn_error_t *
+readbuf_getchar(svn_ra_svn_conn_t *conn, apr_pool_t *pool, char *result)
 {
   if (conn->read_ptr == conn->read_end)
     SVN_ERR(readbuf_fill(conn, pool));
@@ -558,12 +558,12 @@ svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 /* Read LEN bytes from CONN into already-allocated structure ITEM.
  * Afterwards, *ITEM is of type 'SVN_RA_SVN_STRING', and its string
  * data is allocated in POOL. */
-static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                svn_ra_svn_item_t *item, apr_uint64_t len)
+static svn_error_t *
+read_long_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                 svn_stringbuf_t *stringbuf, apr_uint64_t len)
 {
   char readbuf[4096];
   apr_size_t readbuf_len;
-  svn_stringbuf_t *stringbuf = svn_stringbuf_create("", pool);
 
   /* We can't store strings longer than the maximum size of apr_size_t,
    * so check for wrapping */
@@ -583,6 +583,50 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       len -= readbuf_len;
     }
 
+  return SVN_NO_ERROR;
+}
+
+/* Read LEN bytes from CONN into already-allocated structure ITEM.
+ * Afterwards, *ITEM is of type 'SVN_RA_SVN_STRING', and its string
+ * data is allocated in POOL. */
+static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                svn_ra_svn_item_t *item, apr_uint64_t len)
+{
+  svn_stringbuf_t *stringbuf;
+  if (len > 0x100000)
+    {
+      /* This string might take a large amount of memory. Don't allocate
+       * the whole buffer at once, so to prevent OOM issues by corrupted
+       * network data.
+       */
+      stringbuf = svn_stringbuf_create("", pool);
+      SVN_ERR(read_long_string(conn, pool, stringbuf, len));
+    }
+  else
+    {
+      /* This is a reasonably sized string. So, provide a buffer large
+       * enough to prevent re-allocation as long as the data transmission
+       * is not flawed.
+       */
+      stringbuf = svn_stringbuf_create_ensure(len, pool);
+
+      /* Read the string data directly into the string structure.
+       * Do it iteratively, if necessary.
+       */
+      while (len)
+        {
+          apr_size_t readbuf_len = (apr_size_t)len;
+          char *dest = stringbuf->data + stringbuf->len;
+          SVN_ERR(readbuf_read(conn, pool, dest, readbuf_len));
+
+          stringbuf->len += readbuf_len;
+          stringbuf->data[stringbuf->len] = '\0';
+          len -= readbuf_len;
+        }
+    }
+
+  /* Return the string properly wrapped into an RA_SVN item.
+   */
   item->kind = SVN_RA_SVN_STRING;
   item->u.string = apr_palloc(pool, sizeof(*item->u.string));
   item->u.string->data = stringbuf->data;
@@ -643,7 +687,8 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else if (apr_isalpha(c))
     {
       /* It's a word. */
-      str = svn_stringbuf_ncreate(&c, 1, pool);
+      str = svn_stringbuf_create_ensure(16, pool);
+      svn_stringbuf_appendbyte(str, c);
       while (1)
         {
           SVN_ERR(readbuf_getchar(conn, pool, &c));
@@ -658,7 +703,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       /* Read in the list items. */
       item->kind = SVN_RA_SVN_LIST;
-      item->u.list = apr_array_make(pool, 0, sizeof(svn_ra_svn_item_t));
+      item->u.list = apr_array_make(pool, 4, sizeof(svn_ra_svn_item_t));
       while (1)
         {
           SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
