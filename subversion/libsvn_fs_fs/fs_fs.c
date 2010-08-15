@@ -3420,6 +3420,8 @@ cache_rep(struct rep_read_baton *rb)
     {
       SVN_ERR(svn_cache__set(ffd->fulltext_cache, rb->fulltext_cache_key,
                              rb->current_fulltext, rb->pool));
+
+      /* prevent duplicate caching (this is only to aid performance) */
       rb->current_fulltext = NULL;
     }
 
@@ -3632,7 +3634,8 @@ rep_read_contents(void *baton,
     }
 
   /* Ff we read the whole content, cache it. 
-   * Otherwise, the closing the read stream will take care of that. */
+   * Otherwise, the closing the read stream will take care of that. 
+   * Duplicate caching attemps will be handled / prevented by cache_rep. */
   if (rb->len && rb->len == rb->off)
     cache_rep(rb);
 

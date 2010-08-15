@@ -1004,7 +1004,7 @@ svn_stream_open_unique(svn_stream_t **stream,
 }
 
 /* Common initialization code for svn_stream_from_aprfile2() and
- * svn_stream_from_aprfile3().
+ * svn_stream__from_cached_file_handle().
  */
 static svn_stream_t *
 stream_from_aprfile(struct baton_apr **baton,
