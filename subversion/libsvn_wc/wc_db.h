@@ -438,10 +438,15 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
 
 /* @defgroup svn_wc__db_base  BASE tree management
 
-   BASE should be what we get from the server. The *absolute* pristine copy.
-   Nothing can change it -- it is always a reflection of the repository.
+   BASE is what we get from the server.  It is the *absolute* pristine copy.
    You need to use checkout, update, switch, or commit to alter your view of
    the repository.
+
+   In the BASE tree, each node corresponds to a particular node-rev in the
+   repository.  It can be a mixed-revision tree.  Each node holds either a
+   copy of the node-rev as it exists in the repository (if presence =
+   'normal'), or a place-holder (if presence = 'absent' or 'excluded' or
+   'not-present').
 
    @{
 */
