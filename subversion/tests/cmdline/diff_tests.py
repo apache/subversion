@@ -2651,9 +2651,9 @@ def basic_diff_summarize(sbox):
     'A/C':            Item(status='D '),
     'A/D/gamma':      Item(status='D '),
     'A/D/H':          Item(status='D '),
-#    'A/D/H/chi':      Item(status='D '),
-#    'A/D/H/psi':      Item(status='D '),
-#    'A/D/H/omega':    Item(status='D '),
+    'A/D/H/chi':      Item(status='D '),
+    'A/D/H/psi':      Item(status='D '),
+    'A/D/H/omega':    Item(status='D '),
     })
 
   expected_reverse_diff = svntest.wc.State(wc_dir, {
@@ -2664,9 +2664,9 @@ def basic_diff_summarize(sbox):
     'newfile2':       Item(status='D '),
     'P':              Item(status='D '),
     'Q':              Item(status='D '),
-#    'Q/newfile':      Item(status='D '),
-#    'Q/R':            Item(status='D '),
-#    'Q/R/newfile':    Item(status='D '),
+    'Q/newfile':      Item(status='D '),
+    'Q/R':            Item(status='D '),
+    'Q/R/newfile':    Item(status='D '),
     'A/B/lambda':     Item(status='A '),
     'A/C':            Item(status='A '),
     'A/D/gamma':      Item(status='A '),
