@@ -798,7 +798,8 @@ typedef struct svn_client_diff_summarize_t
   /** Change kind */
   svn_client_diff_summarize_kind_t summarize_kind;
 
-  /** Properties changed? */
+  /** Properties changed?  For consistency with 'svn status' output,
+   * this should be false if summarize_kind is _added or _deleted. */
   svn_boolean_t prop_changed;
 
   /** File or dir */
