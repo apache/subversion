@@ -311,7 +311,7 @@ svn_error_t *
 svn_client__get_diff_summarize_editor(const char *target,
                                       svn_client_diff_summarize_func_t
                                       summarize_func,
-                                      void *item_baton,
+                                      void *summarize_baton,
                                       svn_ra_session_t *ra_session,
                                       svn_revnum_t revision,
                                       svn_cancel_func_t cancel_func,
@@ -325,7 +325,7 @@ svn_client__get_diff_summarize_editor(const char *target,
 
   eb->target = target;
   eb->summarize_func = summarize_func;
-  eb->summarize_func_baton = item_baton;
+  eb->summarize_func_baton = summarize_baton;
   eb->ra_session = ra_session;
   eb->revision = revision;
 
