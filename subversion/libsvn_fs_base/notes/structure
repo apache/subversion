@@ -141,7 +141,7 @@ Note that a node cannot change its kind from one revision to the next.
 A directory node is always a directory; a file node is always a file;
 etc.  The fact that the node's kind is stored in each node revision,
 rather than in some revision-independent place, might suggest that
-it's possible for a node change kinds from revision to revision, but
+it's possible for a node to change kinds from revision to revision, but
 Subversion does not allow this.
 
 PROP-KEY is a key into the `representations' table (see REPRESENTATIONS 
