@@ -376,7 +376,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
   svn_stream_mark_t *mark;
   apr_size_t numbytes;
   const char *eol_pos;
-  apr_off_t total_parsed = 0;
+  apr_size_t total_parsed = 0;
 
   /* invariant for this call */
   size_t eol_len = strlen(eol);
@@ -880,7 +880,12 @@ static svn_error_t *
 skip_handler_apr(void *baton, apr_size_t *count)
 {
   struct baton_apr *btn = baton;
-  return svn_io_file_seek(btn->file, SEEK_CUR, count, btn->pool);
+  apr_off_t offset = *count;
+
+  SVN_ERR(svn_io_file_seek(btn->file, SEEK_CUR, &offset, btn->pool));
+  *count = offset;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
