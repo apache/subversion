@@ -1191,6 +1191,28 @@ translated_stream_read(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_skip_fn_t. */
+static svn_error_t *
+translated_stream_skip(void *baton,
+                       apr_size_t *count)
+{
+  struct translated_stream_baton *b = baton;
+  apr_size_t total_bytes_read = 0;
+  apr_size_t bytes_read;
+  char buffer[SVN__STREAM_CHUNK_SIZE];
+  svn_error_t *err = SVN_NO_ERROR;
+
+  while ((total_bytes_read < *count) && !err)
+    {
+      bytes_read = sizeof(buffer) < *count ? sizeof(buffer) : *count;
+      err = translated_stream_read(baton, buffer, &bytes_read);
+      total_bytes_read += bytes_read;
+    }
+
+  *count = total_bytes_read;
+  return err;
+}
+
 /* Implements svn_write_fn_t. */
 static svn_error_t *
 translated_stream_write(void *baton,
@@ -1292,34 +1314,6 @@ translated_stream_seek(void *baton, svn_stream_mark_t *mark)
     SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool));
 
   SVN_ERR(svn_stream_seek(b->stream, mt->mark));
-
-  /* Restore translation state, avoiding new allocations. */
-  *b->in_baton = *mt->saved_baton.in_baton;
-  *b->out_baton = *mt->saved_baton.out_baton;
-  b->written = mt->saved_baton.written;
-  svn_stringbuf_setempty(b->readbuf);
-  svn_stringbuf_appendbytes(b->readbuf, mt->saved_baton.readbuf->data, 
-                            mt->saved_baton.readbuf->len);
-  b->readbuf_off = mt->saved_baton.readbuf_off;
-  memcpy(b->buf, mt->saved_baton.buf, SVN__TRANSLATION_BUF_SIZE);
-
-  return SVN_NO_ERROR;
-}
-
-/* Implements svn_io_move_mark_fn_t. */
-static svn_error_t *
-translated_stream_move_mark(void *baton, 
-                            svn_stream_mark_t *mark, 
-                            apr_off_t delta)
-{
-  struct translated_stream_baton *b = baton;
-  mark_translated_t *mt = (mark_translated_t *)mark;
-
-  /* Flush output buffer if necessary. */
-  if (b->written)
-    SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool));
-
-  SVN_ERR(svn_stream_move_mark(b->stream, mt->mark, delta));
 
   /* Restore translation state, avoiding new allocations. */
   *b->in_baton = *mt->saved_baton.in_baton;
@@ -1439,12 +1433,12 @@ svn_subst_stream_translated(svn_stream_t *stream,
 
   /* Setup the stream methods */
   svn_stream_set_read(s, translated_stream_read);
+  svn_stream_set_skip(s, translated_stream_skip);
   svn_stream_set_write(s, translated_stream_write);
   svn_stream_set_close(s, translated_stream_close);
   svn_stream_set_reset(s, translated_stream_reset);
   svn_stream_set_mark(s, translated_stream_mark);
   svn_stream_set_seek(s, translated_stream_seek);
-  svn_stream_set_move_mark(s, translated_stream_move_mark);
   svn_stream_set_buffered(s, translated_stream_buffered);
 
   return s;

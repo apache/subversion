@@ -741,6 +741,12 @@ typedef svn_error_t *(*svn_read_fn_t)(void *baton,
                                       char *buffer,
                                       apr_size_t *len);
 
+/** Skip data handler function for a generic stream.  @see svn_stream_t.
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_skip_fn_t)(void *baton,
+                                      apr_size_t *count);
+
 /** Write handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_write_fn_t)(void *baton,
                                        const char *data,
@@ -780,15 +786,6 @@ typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton,
 typedef svn_error_t *(*svn_io_seek_fn_t)(void *baton,
                                          svn_stream_mark_t *mark);
 
-/** Mark movement handler function for a generic stream. @see svn_stream_t 
- * and svn_stream_move_mark().
- *
- * @since New in 1.7.
- */
-typedef svn_error_t *(*svn_io_move_mark_fn_t)(void *baton,
-                                              svn_stream_mark_t *mark,
-                                              apr_off_t delta);
-
 /** Buffer test handler function for a generic stream. @see svn_stream_t 
  * and svn_stream_buffered().
  *
@@ -810,6 +807,14 @@ svn_stream_set_baton(svn_stream_t *stream,
 void
 svn_stream_set_read(svn_stream_t *stream,
                     svn_read_fn_t read_fn);
+
+/** Set @a stream's skip function to @a skip_fn
+ *
+ * @since New in 1.7
+ */
+void
+svn_stream_set_skip(svn_stream_t *stream,
+                    svn_skip_fn_t skip_fn);
 
 /** Set @a stream's write function to @a write_fn */
 void
@@ -844,14 +849,6 @@ svn_stream_set_mark(svn_stream_t *stream,
 void
 svn_stream_set_seek(svn_stream_t *stream,
                     svn_io_seek_fn_t seek_fn);
-
-/** Set @a stream's move mark function to @a move_mark_fn
- *
- * @since New in 1.7.
- */
-void
-svn_stream_set_move_mark(svn_stream_t *stream,
-                         svn_io_move_mark_fn_t move_mark_fn);
 
 /** Set @a stream's buffer test function to @a buffered_fn
  *
@@ -1089,6 +1086,11 @@ svn_stream_read(svn_stream_t *stream,
                 char *buffer,
                 apr_size_t *len);
 
+/** Skip data from a generic stream. @see svn_stream_t. */
+svn_error_t *
+svn_stream_skip(svn_stream_t *stream,
+                apr_size_t *count);
+
 /** Write to a generic stream. @see svn_stream_t. */
 svn_error_t *
 svn_stream_write(svn_stream_t *stream,
@@ -1141,18 +1143,6 @@ svn_stream_mark(svn_stream_t *stream,
  */
 svn_error_t *
 svn_stream_seek(svn_stream_t *stream, svn_stream_mark_t *mark);
-
-/** Move a @a mark for a generic @a stream by delta.
- * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
- * if the stream doesn't implement seeking.
- *
- * @see svn_stream_mark()
- * @since New in 1.7.
- */
-svn_error_t *
-svn_stream_move_mark(svn_stream_t *stream, 
-                     svn_stream_mark_t *mark, 
-                     apr_off_t delta);
 
 /** Return whether this generic @a stream uses internal buffering.
  * This may be used to work around subtle differences between buffered
