@@ -876,7 +876,7 @@ insert_working_node(void *baton,
 
   /* We cannot insert a WORKING_NODE row at the wcroot.  */
   /* ### actually, with per-dir DB, we can... */
-#if 0
+#ifdef SVN_WC__SINGLE_DB
   SVN_ERR_ASSERT(*piwb->local_relpath != '\0');
 #endif
   if (*piwb->local_relpath == '\0')
