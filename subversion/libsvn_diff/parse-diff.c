@@ -21,7 +21,6 @@
  * ====================================================================
  */
 
-#include <limits.h>  /* for ULONG_MAX */
 #include <stdlib.h>
 #include <string.h>
 
