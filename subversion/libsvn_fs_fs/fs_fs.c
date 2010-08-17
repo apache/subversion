@@ -3776,13 +3776,14 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
         SVN_ERR(svn_file_handle_cache__close(rep_state->file));
     }
 
-  /* Read both fulltexts and construct a delta. */
+  /* Read both fulltexts and construct a delta.  The checksum for stream_p
+     will not be used by the callers.  Thus, don't calculate it. */
   if (source)
     SVN_ERR(read_representation(&source_stream, fs, source->data_rep, pool));
   else
     source_stream = svn_stream_empty(pool);
   SVN_ERR(read_representation(&target_stream, fs, target->data_rep, pool));
-  svn_txdelta(stream_p, source_stream, target_stream, pool);
+  svn_txdelta_unchecked(stream_p, source_stream, target_stream, pool);
 
   return SVN_NO_ERROR;
 }

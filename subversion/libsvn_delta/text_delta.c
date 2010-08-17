@@ -57,7 +57,7 @@ struct txdelta_baton {
   svn_filesize_t pos;           /* Offset of next read in source file. */
   char *buf;                    /* Buffer for input data. */
 
-  svn_checksum_ctx_t *context;  /* Context for computing the checksum. */
+  svn_checksum_ctx_t *context;  /* Context for computing the checksum. May be NULL. */
   svn_checksum_t *checksum;     /* If non-NULL, the checksum of TARGET. */
 
   apr_pool_t *result_pool;      /* For results (e.g. checksum) */
@@ -368,6 +368,13 @@ txdelta_md5_digest(void *baton)
 }
 
 
+static const unsigned char *
+txdelta_no_digest(void *baton)
+{
+  return NULL;
+}
+
+
 svn_error_t *
 svn_txdelta_run(svn_stream_t *source,
                 svn_stream_t *target,
@@ -438,6 +445,26 @@ svn_txdelta(svn_txdelta_stream_t **stream,
 
   *stream = svn_txdelta_stream_create(b, txdelta_next_window,
                                       txdelta_md5_digest, pool);
+}
+
+void
+svn_txdelta_unchecked(svn_txdelta_stream_t **stream,
+                      svn_stream_t *source,
+                      svn_stream_t *target,
+                      apr_pool_t *pool)
+{
+  struct txdelta_baton *b = apr_pcalloc(pool, sizeof(*b));
+
+  b->source = source;
+  b->target = target;
+  b->more_source = TRUE;
+  b->more = TRUE;
+  b->buf = apr_palloc(pool, 2 * SVN_DELTA_WINDOW_SIZE);
+  b->context = NULL;
+  b->result_pool = pool;
+
+  *stream = svn_txdelta_stream_create(b, txdelta_next_window,
+                                      txdelta_no_digest, pool);
 }
 
 

@@ -362,6 +362,21 @@ svn_txdelta(svn_txdelta_stream_t **stream,
             svn_stream_t *target,
             apr_pool_t *pool);
 
+/** Just like @ref svn_txdelta except that no checksum is being created.
+ * When calling @ref svn_txdelta_md5_digest with @a *stream, it will
+ * return @c NULL.
+ *
+ * Use this function only if the @a source stream comes from a trustworthy,
+ * i.e. already checksummed or to be checksummed, source.
+ *
+ * @since New in 1.7.
+ */
+void
+svn_txdelta_unchecked(svn_txdelta_stream_t **stream,
+                      svn_stream_t *source,
+                      svn_stream_t *target,
+                      apr_pool_t *pool);
+
 
 /**
  * Return a writable stream which, when fed target data, will send
