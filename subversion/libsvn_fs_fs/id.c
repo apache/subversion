@@ -359,9 +359,9 @@ deserialize_id_private(void *buffer, id_private_t **pvt)
 
   /* fixup the sub-structure itself */
   private = *pvt;
-  svn_temp_deserializer__resolve(buffer, (void**)&private->node_id);
-  svn_temp_deserializer__resolve(buffer, (void**)&private->copy_id);
-  svn_temp_deserializer__resolve(buffer, (void**)&private->txn_id);
+  svn_temp_deserializer__resolve(private, (void**)&private->node_id);
+  svn_temp_deserializer__resolve(private, (void**)&private->copy_id);
+  svn_temp_deserializer__resolve(private, (void**)&private->txn_id);
 }
 
 /* Deserialize an ID inside the BUFFER.
@@ -382,6 +382,6 @@ svn_fs_fs__id_deserialize(void *buffer, svn_fs_id_t **id)
   (*id)->vtable = &id_vtable;
 
   /* handle sub-structures */
-  deserialize_id_private(buffer, (id_private_t **)&(*id)->fsap_data);
+  deserialize_id_private(*id, (id_private_t **)&(*id)->fsap_data);
 }
 
