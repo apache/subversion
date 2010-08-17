@@ -2932,15 +2932,6 @@ svn_io_file_read_full2(apr_file_t *file, void *buf,
 
 
 svn_error_t *
-svn_io_file_read_full(apr_file_t *file, void *buf,
-                      apr_size_t nbytes, apr_size_t *bytes_read,
-                      apr_pool_t *pool)
-{
-  return svn_io_file_read_full2(file, buf, nbytes, bytes_read, FALSE, pool);
-}
-
-
-svn_error_t *
 svn_io_file_seek(apr_file_t *file, apr_seek_where_t where,
                  apr_off_t *offset, apr_pool_t *pool)
 {
