@@ -902,21 +902,21 @@ get_file_offset(apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
 }
 
 
-/* Check that BUF, a buffer of text from format file PATH, contains
-   only digits, raising error SVN_ERR_BAD_VERSION_FILE_FORMAT if not.
+/* Check that BUF, a nul-terminated buffer of text from format file PATH,
+   contains only digits at OFFSET and beyond, raising an error if not.
 
    Uses POOL for temporary allocation. */
 static svn_error_t *
-check_format_file_buffer_numeric(const char *buf, const char *path,
-                                 apr_pool_t *pool)
+check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
+                                 const char *path, apr_pool_t *pool)
 {
   const char *p;
 
-  for (p = buf; *p; p++)
+  for (p = buf + offset; *p; p++)
     if (!apr_isdigit(*p))
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-        _("Format file '%s' contains an unexpected non-digit"),
-        svn_dirent_local_style(path, pool));
+        _("Format file '%s' contains unexpected non-digit '%c' within '%s'"),
+        svn_dirent_local_style(path, pool), *p, buf);
 
   return SVN_NO_ERROR;
 }
@@ -970,7 +970,7 @@ read_format(int *pformat, int *max_files_per_dir,
   SVN_ERR(err);
 
   /* Check that the first line contains only digits. */
-  SVN_ERR(check_format_file_buffer_numeric(buf, path, pool));
+  SVN_ERR(check_format_file_buffer_numeric(buf, 0, path, pool));
   *pformat = atoi(buf);
 
   /* Set the default values for anything that can be set via an option. */
@@ -1001,7 +1001,7 @@ read_format(int *pformat, int *max_files_per_dir,
           if (strncmp(buf+7, "sharded ", 8) == 0)
             {
               /* Check that the argument is numeric. */
-              SVN_ERR(check_format_file_buffer_numeric(buf+15, path, pool));
+              SVN_ERR(check_format_file_buffer_numeric(buf, 15, path, pool));
               *max_files_per_dir = atoi(buf+15);
               continue;
             }
