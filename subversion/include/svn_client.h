@@ -2142,6 +2142,10 @@ typedef svn_error_t *(*svn_client_status_func_t)(
  * definition, and with #svn_wc_notify_status_completed
  * after each.
  *
+ * If @a depth_as_sticky is set and @a depth is not
+ * #svn_depth_unknown, then the status is calculated as if depth_is_sticky
+ * was passed to an equivalent update command.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose statuses are
  * reported; that is, don't report status about any item unless
@@ -2162,6 +2166,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
+                   svn_boolean_t depth_as_sticky,
                    const apr_array_header_t *changelists,
                    svn_client_status_func_t status_func,
                    void *status_baton,
@@ -2169,7 +2174,8 @@ svn_client_status5(svn_revnum_t *result_rev,
 
 /**
  * Same as svn_client_status5(), but using #svn_wc_status_func3_t
- * instead of #svn_wc_status_func4_t.
+ * instead of #svn_wc_status_func4_t and depth_as_sticky set to FALSE.
+ * (
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.

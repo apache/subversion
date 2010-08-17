@@ -1698,8 +1698,8 @@ svn_client_status4(svn_revnum_t *result_rev,
                                        status_baton };
 
   return svn_client_status5(result_rev, ctx, path, revision, depth, get_all,
-                            update, no_ignore, ignore_externals, changelists,
-                            status4_wrapper_func, &swb, pool);
+                            update, no_ignore, ignore_externals, FALSE,
+                            changelists, status4_wrapper_func, &swb, pool);
 }
 
 struct status3_wrapper_baton

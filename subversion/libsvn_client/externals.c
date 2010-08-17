@@ -1380,7 +1380,7 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
           SVN_ERR(svn_client_status5(NULL, ctx, fullpath,
                                      &(external->revision),
                                      depth, get_all, update,
-                                     no_ignore, FALSE, NULL,
+                                     no_ignore, FALSE, FALSE, NULL,
                                      status_func, status_baton,
                                      iterpool));
         }
