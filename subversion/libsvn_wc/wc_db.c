@@ -165,11 +165,12 @@ typedef struct insert_base_baton_t {
 
 
 typedef struct {
-  /* common to all insertions into WORKING */
+  /* common to all insertions into WORKING (including NODE_DATA) */
   svn_wc__db_status_t presence;
   svn_wc__db_kind_t kind;
   apr_int64_t wc_id;
   const char *local_relpath;
+  apr_int64_t op_depth;
 
   /* common to all "normal" presence insertions */
   const apr_hash_t *props;
@@ -763,6 +764,53 @@ blank_iwb(insert_working_baton_t *piwb)
   /* ORIGINAL_REPOS_ID and ORIGINAL_REVNUM could use some kind of "nil"
      value, but... meh. We'll avoid them if ORIGINAL_REPOS_RELPATH==NULL.  */
 }
+
+/* */
+static svn_error_t *
+copy_working_from_base(void *baton,
+                       svn_sqlite__db_t *sdb,
+                       apr_pool_t *scratch_pool)
+{
+  const insert_working_baton_t *piwb = baton;
+  svn_sqlite__stmt_t *stmt;
+
+#ifdef SVN_WC__NODE_DATA
+  /* Insert NODE_DATA stuff */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                         STMT_INSERT_WORKING_NODE_DATA_FROM_BASE_NODE_1));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isti", piwb->wc_id,
+                            piwb->local_relpath,
+                            presence_map, piwb->presence,
+                            piwb->op_depth));
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+#if 0
+  /* This doesn't work yet, due to the fact that other constraints
+     are active on the WORKING NODE table while we haven't removed the
+     NODE_TABLE columns. */
+
+  /* Insert WORKING_NODE stuff */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                         STMT_INSERT_WORKING_NODE_DATA_FROM_BASE_NODE_2));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", piwb->wc_id, piwb->local_relpath));
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+#endif
+#endif
+
+  /* Run the sequence below instead, which copies all the columns, including
+     those with the restrictions
+
+     ### REMOVE when fully migrating to NODE_DATA */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_INSERT_WORKING_NODE_FROM_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ist", piwb->wc_id, piwb->local_relpath,
+                            presence_map, piwb->presence));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 insert_incomplete_working_children(svn_sqlite__db_t *sdb,
@@ -4621,6 +4669,8 @@ db_working_actual_remove(svn_wc__db_t *db,
 }
 
 
+
+
 /* Insert a working node for LOCAL_ABSPATH with presence=STATUS. */
 static svn_error_t *
 db_working_insert(svn_wc__db_status_t status,
@@ -4631,6 +4681,9 @@ db_working_insert(svn_wc__db_status_t status,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
+#ifdef SVN_WC__NODE_DATA
+  insert_working_baton_t iwb;
+#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
@@ -4638,11 +4691,19 @@ db_working_insert(svn_wc__db_status_t status,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_INSERT_WORKING_NODE_FROM_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ist", pdh->wcroot->wc_id, local_relpath,
-                            presence_map, status));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  /* Update WORKING_NODE and NODE_DATA transactionally */
+  blank_iwb(&iwb);
+
+  iwb.wc_id = pdh->wcroot->wc_id;
+  iwb.local_relpath = local_relpath;
+  iwb.presence = status;
+  /* ### NODE_DATA we temporary store 1 or 2 */
+  iwb.op_depth = (*local_relpath == '\0') ? 1 : 2;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       copy_working_from_base, &iwb,
+                                       scratch_pool));
+
 
   flush_entries(pdh);
 
@@ -4656,13 +4717,16 @@ db_working_insert(svn_wc__db_status_t status,
       VERIFY_USABLE_PDH(pdh);
 
       /* ### Should the parent stub have a full row like this? */
-      SVN_ERR(svn_sqlite__get_statement(
-                &stmt, pdh->wcroot->sdb,
-                STMT_INSERT_WORKING_NODE_FROM_BASE_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "ist",
-                                pdh->wcroot->wc_id, local_relpath,
-                                presence_map, status));
-      SVN_ERR(svn_sqlite__step_done(stmt));
+      blank_iwb(&iwb);
+
+      iwb.wc_id = pdh->wcroot->wc_id;
+      iwb.local_relpath = local_relpath;
+      iwb.presence = status;
+      iwb.op_depth = 2; /* the stub is a child */
+
+      SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                           copy_working_from_base, &iwb,
+                                           scratch_pool));
 
       flush_entries(pdh);
     }
