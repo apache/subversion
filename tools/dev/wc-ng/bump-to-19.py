@@ -4,7 +4,21 @@
    1.7-dev format 19 by migrating data from multiple DBs to a single DB.
 
    Usage: bump-to-19.py WC_ROOT_DIR
-   where WC_ROOT_DIR is the path to the WC root directory."""
+   where WC_ROOT_DIR is the path to the WC root directory.
+   
+   WARNING: Currently it merges ALL sub-dir WC dirs into the root, including
+   'external' WCs and unrelated WCs, which will break those."""
+
+# TODO: Check that the root and sub-dir DBs are at format 18.
+
+# TODO: Don't walk into unrelated subdir WCs or 'external' WCs.
+#
+#   Bert says: To find the children of a directory in a more robust way you
+#   need to parse the presence+kind in the parent dir for both BASE and
+#   WORKING. Excluded and not present are the most interesting statee in the
+#   parent. Handling keep-local and deleting the dirs on the upgrade + all
+#   the obstruction cases will make the final code much harder.
+
 
 import sys, os, sqlite3
 
@@ -223,6 +237,10 @@ def bump_wc_format_number(wc_root_path):
 
 
 if __name__ == '__main__':
+
+  if len(sys.argv) != 2:
+    print __doc__
+    sys.exit(1)
 
   wc_root_path = sys.argv[1]
   print "merging subdir DBs into single DB '" + wc_root_path + "'"
