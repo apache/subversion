@@ -499,21 +499,16 @@ open_file(const char *path,
   struct dir_baton *pb = parent_baton;
   const char *copyfrom_path = NULL;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
-  apr_array_header_t *compose_path;
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
-
-  compose_path = apr_array_make(pool, 2, sizeof(const char *));
 
   /* If the parent directory has explicit copyfrom path and rev,
      record the same for this one. */
   if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev))
     {
-      APR_ARRAY_PUSH(compose_path, const char *) = pb->copyfrom_path;
-      APR_ARRAY_PUSH(compose_path, const char *) =
-        svn_relpath_basename(path, pool);
-      copyfrom_path = svn_path_compose(compose_path, pool);
+      copyfrom_path = svn_relpath_join(svn_relpath_basename(path, pool),
+                                       pb->copyfrom_path, pool);
       copyfrom_rev = pb->copyfrom_rev;
     }
 
