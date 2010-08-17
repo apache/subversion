@@ -482,6 +482,11 @@ WHERE wc_id = ?1 AND local_dir_relpath LIKE ?2 ESCAPE '#';
 /* translated_size and last_mod_time are not mentioned here because they will
    be tweaked after the working-file is installed.
    ### what to do about file_external?  */
+/* ### NODE_DATA the fields 'presence', 'kind', 'properties', 'changed_rev',
+   'changed_date', 'changed_author', 'depth', 'symlink_target' - but not:
+   'repos_id', 'repos_relpath', 'dav_cache' - will move to the NODE_DATA
+   table, meaning we can't use this query anymore; we need 2, wrapped in a
+   transaction. */
 INSERT OR REPLACE INTO BASE_NODE (
   wc_id, local_relpath, parent_relpath, presence, kind, revnum, changed_rev,
   changed_author, properties, repos_id, repos_relpath, checksum, changed_date,
@@ -496,6 +501,25 @@ INSERT INTO WORKING_NODE (
 SELECT wc_id, local_relpath, parent_relpath, ?3 AS presence, kind, checksum,
     translated_size, changed_rev, changed_date, changed_author, depth,
     symlink_target, last_mod_time FROM BASE_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_WORKING_NODE_DATA_FROM_BASE_NODE_1
+/* ### NODE_DATA  This statement and the statement below (_2) need to
+   be executed in a single transaction */
+INSERT INTO NODE_DATA (
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
+    changed_revision, changed_date, changed_author, depth, symlink_target )
+SELECT wc_id, local_relpath, ?4 as op_depth, parent_relpath, ?3 AS presence,
+       kind, checksum, changed_revision, changed_date,
+       changed_author, depth, symlink_target
+FROM NODE_DATA
+WHERE wc_id = ?1 AND local_relpath = ?2 and op_depth = 0;
+
+-- STMT_INSERT_WORKING_NODE_DATA_FROM_BASE_NODE_2
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, translated_size, last_mod_time )
+SELECT wc_id, local_relpath, parent_relpath, translated_size, last_mod_time
+FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE_NODE
