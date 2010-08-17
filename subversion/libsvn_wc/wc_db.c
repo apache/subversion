@@ -4681,9 +4681,7 @@ db_working_insert(svn_wc__db_status_t status,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
-#ifdef SVN_WC__NODE_DATA
   insert_working_baton_t iwb;
-#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
