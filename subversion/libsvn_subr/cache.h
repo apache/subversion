@@ -48,6 +48,14 @@ typedef struct {
                        void *baton,
                        apr_pool_t *pool);
 
+  svn_error_t *(*get_partial)(void **value,
+                              svn_boolean_t *found,
+                              void *cache_implementation,
+                              const void *key,
+                              svn_cache__partial_getter_func_t func,
+                              void *baton,
+                              apr_pool_t *pool);
+
   svn_boolean_t (*is_cachable)(void *cache_implementation,
                                apr_size_t size);
 } svn_cache__vtable_t;

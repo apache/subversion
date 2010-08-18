@@ -864,6 +864,48 @@ membuffer_cache_get(svn_membuffer_t *cache,
   return unlock_cache(cache, err);
 }
 
+svn_error_t* 
+membuffer_cache_get_partial(svn_membuffer_t *cache,
+                            const void *key,
+                            apr_size_t key_len,
+                            void **item,
+                            svn_cache__partial_getter_func_t deserializer,
+                            void *baton,
+                            apr_pool_t *pool)
+{
+  apr_uint32_t group_index;
+  unsigned char to_find[KEY_SIZE];
+  entry_t *entry;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  group_index = get_group_index(cache, key, key_len, to_find, pool);
+
+  SVN_ERR(lock_cache(cache));
+
+  entry = find_entry(cache, group_index, to_find, FALSE);
+  cache->total_reads++;
+  if (entry == NULL)
+    {
+      *item = NULL;
+    }
+  else
+    {
+      entry->hit_count++;
+      cache->hit_count++;
+      cache->total_hits++;
+
+      err = deserializer(item,
+                         (const char*)cache->data + entry->offset,
+                         entry->size,
+                         baton,
+                         pool);
+    }
+
+  /* done here -> unlock the cache
+   */
+  return unlock_cache(cache, err);
+}
+
 /* Implement the svn_cache__t interface on top of a shared membuffer cache.
  *
  * Because membuffer caches tend to be very large, there will be rather few
@@ -1051,6 +1093,39 @@ svn_membuffer_cache_iter(svn_boolean_t *completed,
                           _("Can't iterate a membuffer-based cache"));
 }
 
+static svn_error_t *
+svn_membuffer_cache_get_partial(void **value_p,
+                                svn_boolean_t *found,
+                                void *cache_void,
+                                const void *key,
+                                svn_cache__partial_getter_func_t func,
+                                void *baton,
+                                apr_pool_t *pool)
+{
+  svn_membuffer_cache_t *cache = cache_void;
+
+  void *full_key;
+  apr_size_t full_key_len;
+
+  combine_key(cache->prefix,
+              sizeof(cache->prefix),
+              key,
+              cache->key_len,
+              &full_key,
+              &full_key_len,
+              pool);
+
+  SVN_ERR(membuffer_cache_get_partial(cache->membuffer,
+                                      full_key,
+                                      full_key_len,
+                                      value_p,
+                                      func,
+                                      baton,
+                                      pool));
+  *found = *value_p != NULL;
+  return SVN_NO_ERROR;
+}
+
 static svn_boolean_t
 svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
 {
@@ -1067,6 +1142,7 @@ static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_get,
   svn_membuffer_cache_set,
   svn_membuffer_cache_iter,
+  svn_membuffer_cache_get_partial,
   svn_membuffer_cache_is_cachable
 };
 
