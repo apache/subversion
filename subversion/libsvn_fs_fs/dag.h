@@ -297,6 +297,17 @@ svn_error_t *svn_fs_fs__dag_dir_entries(apr_hash_t **entries_p,
                                         apr_pool_t *pool,
                                         apr_pool_t *node_pool);
 
+/* Fetches the NODE's entries and returns a copy of the entry selected
+   by the key value given in NAME and set *DIRENT to a copy of that
+   entry. If such entry was found, the copy will be allocated in POOL.
+   Otherwise, the *DIRENT will be set to NULL. NODE_POOL is used for
+   any allocation of memory that needs to live as long as NODE lives.
+ */
+svn_error_t * svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
+                                       dag_node_t *node,
+                                       const char* name,
+                                       apr_pool_t *pool,
+                                       apr_pool_t *node_pool);
 
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
    from POOL.  NODE must be a mutable directory.  ID can refer to a
