@@ -3508,7 +3508,7 @@ enum svn_wc_status_kind
     /** text or props have been modified */
     svn_wc_status_modified,
 
-    /** local mods received repos mods */
+    /** local mods received repos mods (### unused) */
     svn_wc_status_merged,
 
     /** local mods received conflicting repos mods */
