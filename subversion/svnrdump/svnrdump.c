@@ -64,8 +64,7 @@ static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
     { "load", load_cmd, { "l" },
       N_("usage: svnrdump load URL\n\n"
          "Load a 'dumpfile' given on stdin to a repository "
-         "at remote URL.\n"
-         "## This feature is not yet available.\n"),
+         "at remote URL.\n"),
       { 0 } },
     { "help", 0, { "?", "h" },
       N_("usage: svnrdump help [SUBCOMMAND...]\n\n"
