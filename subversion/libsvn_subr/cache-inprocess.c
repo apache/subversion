@@ -207,7 +207,7 @@ inprocess_cache_get(void **value_p,
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_entry *entry;
-  svn_error_t *err = SVN_NO_ERROR;
+  char* buffer;
 
   SVN_ERR(lock_cache(cache));
 
@@ -220,13 +220,23 @@ inprocess_cache_get(void **value_p,
 
   move_page_to_front(cache, entry->page);
 
+  /* duplicate the buffer entry */
+  buffer = apr_palloc(pool, entry->size);
+  memcpy(buffer, entry->value, entry->size);
+
+  /* the cache is no longer being accessed */
+  SVN_ERR(unlock_cache(cache, SVN_NO_ERROR));
+
+  /* deserialize the buffer content. Usually, this will directly
+     modify the buffer content directly.
+   */
   *found = TRUE;
   if (entry->value)
-    err = cache->deserialize_func(value_p, entry->value, entry->size, pool);
+    return cache->deserialize_func(value_p, buffer, entry->size, pool);
   else
     *value_p = NULL;
 
-  return unlock_cache(cache, err);
+  return unlock_cache(cache, SVN_NO_ERROR);
 }
 
 /* Removes PAGE from the LRU list, removes all of its entries from

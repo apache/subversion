@@ -750,13 +750,12 @@ membuffer_cache_set(svn_membuffer_t *cache,
   entry_t *entry;
   char *buffer;
   apr_size_t size;
-  svn_error_t *err;
 
   /* find the entry group that will hold the key.
    */
   group_index = get_group_index(cache, key, key_len, to_find, pool);
   if (group_index == -1)
-    return err;
+    return SVN_NO_ERROR;
 
   /* Serialize data data.
    */
@@ -818,7 +817,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
   apr_uint32_t group_index;
   unsigned char to_find[KEY_SIZE];
   entry_t *entry;
-  svn_error_t *err = SVN_NO_ERROR;
+  char* buffer;
 
   /* find the entry group that will hold the key.
    */
@@ -842,26 +841,23 @@ membuffer_cache_get(svn_membuffer_t *cache,
       /* no such entry found.
        */
       *item = NULL;
-    }
-  else
-    {
-      /* update hit statistics
-       */
-      entry->hit_count++;
-      cache->hit_count++;
-      cache->total_hits++;
-
-      /* re-construct the original data object from its serialized form.
-       */
-      err = deserializer(item,
-                         (const char*)cache->data + entry->offset,
-                         entry->size,
-                         pool);
+      return unlock_cache(cache, SVN_NO_ERROR);
     }
 
-  /* done here -> unlock the cache
+  buffer = apr_palloc(pool, entry->size);
+  memcpy(buffer, (const char*)cache->data + entry->offset, entry->size);
+
+  /* update hit statistics
    */
-  return unlock_cache(cache, err);
+  entry->hit_count++;
+  cache->hit_count++;
+  cache->total_hits++;
+
+  SVN_ERR(unlock_cache(cache, SVN_NO_ERROR));
+
+  /* re-construct the original data object from its serialized form.
+   */
+  return deserializer(item, buffer, entry->size, pool);
 }
 
 svn_error_t* 
@@ -1157,7 +1153,7 @@ serialize_svn_stringbuf(char **buffer,
   svn_stringbuf_t *value_str = item;
 
   *buffer = value_str->data;
-  *buffer_size = value_str->len;
+  *buffer_size = value_str->len + 1;
 
   return SVN_NO_ERROR;
 }
@@ -1170,7 +1166,13 @@ deserialize_svn_stringbuf(void **item,
                           apr_size_t buffer_size,
                           apr_pool_t *pool)
 {
-  *item = svn_string_ncreate(buffer, buffer_size, pool);
+  svn_string_t *value_str = apr_palloc(pool, sizeof(svn_string_t));
+
+  value_str->data = (char*)buffer;
+  value_str->len = buffer_size-1;
+
+  *item = value_str;
+
   return SVN_NO_ERROR;
 }
 

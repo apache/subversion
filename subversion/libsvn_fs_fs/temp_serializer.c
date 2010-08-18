@@ -492,9 +492,7 @@ svn_fs_fs__deserialize_txdelta_window(void **item,
 
   /* Copy the _full_ buffer as it also contains the sub-structures. */
   svn_fs_fs__txdelta_cached_window_t *window_info =
-      apr_palloc(pool, buffer_size);
-
-  memcpy(window_info, buffer, buffer_size);
+      (svn_fs_fs__txdelta_cached_window_t *)buffer;
 
   /* pointer reference fixup */
   svn_temp_deserializer__resolve(window_info,
@@ -536,11 +534,12 @@ svn_fs_fs__deserialize_manifest(void **out,
                                 apr_size_t data_len,
                                 apr_pool_t *pool)
 {
-  apr_array_header_t *manifest = apr_array_make(pool,
-                                                data_len / sizeof(apr_off_t),
-                                                sizeof(apr_off_t));
-  memcpy(manifest->elts, data, data_len);
+  apr_array_header_t *manifest = apr_array_make(pool, 1, sizeof(apr_off_t));
+
   manifest->nelts = data_len / sizeof(apr_off_t);
+  manifest->nalloc = data_len / sizeof(apr_off_t);
+  manifest->elts = (char*)data;
+
   *out = manifest;
 
   return SVN_NO_ERROR;
@@ -581,8 +580,7 @@ svn_fs_fs__deserialize_id(void **out,
                           apr_pool_t *pool)
 {
   /* Copy the _full_ buffer as it also contains the sub-structures. */
-  svn_fs_id_t *id = apr_palloc(pool, data_len);
-  memcpy(id, data, data_len);
+  svn_fs_id_t *id = (svn_fs_id_t *)data;
 
   /* fixup of all pointers etc. */
   svn_fs_fs__id_deserialize(id, &id);
@@ -629,8 +627,7 @@ svn_fs_fs__deserialize_node_revision(void **item,
                                      apr_pool_t *pool)
 {
   /* Copy the _full_ buffer as it also contains the sub-structures. */
-  node_revision_t *noderev = apr_palloc(pool, buffer_size);
-  memcpy(noderev, buffer, buffer_size);
+  node_revision_t *noderev = (node_revision_t *)buffer;
 
   /* fixup of all pointers etc. */
   svn_fs_fs__noderev_deserialize(noderev, &noderev);
@@ -670,8 +667,7 @@ svn_fs_fs__deserialize_dir_entries(void **out,
                                    apr_pool_t *pool)
 {
   /* Copy the _full_ buffer as it also contains the sub-structures. */
-  hash_data_t *hash_data = apr_palloc(pool, data_len);
-  memcpy(hash_data, data, data_len);
+  hash_data_t *hash_data = (hash_data_t *)data;
 
   /* reconstruct the hash from the serialized data */
   *out = deserialize_dir(hash_data, hash_data, pool);
