@@ -507,8 +507,8 @@ open_file(const char *path,
      record the same for this one. */
   if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev))
     {
-      copyfrom_path = svn_relpath_join(svn_relpath_basename(path, pool),
-                                       pb->copyfrom_path, pool);
+      copyfrom_path = svn_relpath_join(pb->copyfrom_path,
+                                       svn_relpath_basename(path, pool), pool);
       copyfrom_rev = pb->copyfrom_rev;
     }
 
