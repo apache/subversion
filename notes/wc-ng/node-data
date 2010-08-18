@@ -1,0 +1,255 @@
+NODE_DATA Design (Sheffield 2010-08-18)
+=======================================
+
+Essentially it replaces BASE_NODE and WORKING_NODE by combining all
+the existing columns with a new op_depth column where op_depth == 0 is
+the old BASE_NODE and op_depth != 0 is the old WORKING_NODE.
+
+  Category     Columns
+
+  indexing:    wc_id, local_relpath, parent_relpath, op_depth
+  status:      presence
+  node-rev:    repos_id, repos_relpath, revnum
+  content:     kind, properties, depth, target, checksum
+  last-change: changed_rev, changed_date, changed_author
+  wc-cache:    translated_size, last_mod_time
+  misc:        dav_cache, file_external
+
+When op_depth == 0 the node-rev columns represent the checked-out
+repository node, otherwise they represent the copyfrom node.
+
+Presence has the same six values as BASE_NODE/WORKING_NODE: normal,
+incomplete, absent, excluded, not-present, base-deleted.  There are
+some presence/op_depth constraints, e.g. base-deleted is not valid for
+op_depth 0 and absent is not valid for op_depth != 0.
+
+The wc-cache values are only valid for the greatest op_depth for any
+local_relpath.  This is acceptable partly because the overhead of
+having them in a separate table (which would need to include wc_id and
+local_relpath) offsets the redundancy of having them at all op_depth.
+
+Basic Delete/Copy
+-----------------
+
+Key:
+n normal
+b base-deleted
+p not-present
++ operation root (op_depth == number of components in local_relpath)
+~ operation pseudo-root (revnum != revnum of parent)
+* not expected on disk
+
+Checkout/update:
+             
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n
+ f1                n
+ f2                n
+ A1/               n
+    f1             n
+    g1             n
+ A2/               n
+    B1/            n
+       f1          n
+       h1          n
+
+
+Delete f1, add f3, delete A2/B1:
+
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n
+ f1*               n      b+
+ f2                n
+ f3                       n+
+ A1/               n
+    f1             n
+    g1             n
+ A2/               n
+    B1/*           n             b+
+       f1*         n             b
+       h1*         n             b
+
+Copy A1 to A2/B1 (a replace):
+
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n
+ f1*               n      b+
+ f2                n
+ f3                       n+
+ A1/               n
+    f1             n
+    g1             n
+ A2/               n
+    B1/            n             n+
+       f1          n             n
+       h1*         n             b
+       g1          n             n
+
+
+Delete A2/B1/f1, add A2/B1/C1, A2/B1/C1/f1:
+
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n
+ f1*               n      b+
+ f2                n
+ f3                       n+
+ A1/               n
+    f1             n
+    g1             n
+ A2/               n
+    B1/            n             n+
+       f1*         n             n      b+
+       h1*         n             b
+       g1          n             n
+       C1/                              n+
+          f1                                 n+
+
+Copy f2 to A2/B1/f1 (a replace):
+
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n
+ f1*               n      b+
+ f2                n
+ f3                       n+
+ A1/               n
+    f1             n
+    g1             n
+ A2/               n
+    B1/            n             n+
+       f1          n             n      n+
+       h1*         n             b
+       g1          n             n
+       C1/                              n+
+          f1                                 n+
+
+
+Copy A1 to A2/C1/D1:
+
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n
+ f1*               n      b+
+ f2                n
+ f3                       n+
+ A1/               n
+    f1             n
+    g1             n
+ A2/               n
+    B1/            n             n+
+       f1          n             n      n+
+       h1*         n             b
+       g1          n             n
+       C1/                              n+
+          f1                                   n+
+          D1/                                  n+
+             f1                                n
+             g1                                n
+
+
+Handling Mixed Revisions
+========================
+
+Checkout/update/edit/delete/commit:
+
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n 3
+ A1/               n 3
+    f1             n 3
+    f2*            n 3    b
+    f3*            p
+    B1/            n 5
+       f1          n 5
+       h1          n 7
+
+Copy A1 to A2:
+
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n 3
+ A1/               n 3
+    f1             n 3
+    f2*            n 3    b
+    f3*            p
+    B1/            n 5
+       f1          n 5
+       h1          n 7
+ A2/                      n+3
+    f1                    n 3
+    f2*                   p
+    f3*                   p
+    B1/                   n~5
+       f1                 n 5
+       h1                 n~7
+
+Where revnum != revnum of parent the node is pseudo-root and must be
+added during commit (the FS layer converts to a replace if required,
+see issue 3314).
+
+Delete Storage Optimisation
+---------------------------
+
+Rather than store deletes as a layer with a new op_depth we could
+store them in the nearest existing layer, using a delete flag.  This
+is because delete doesn't need to store anything other than the fact
+of the delete.  This would make each op_depth layer correspond to an
+add/copy onto a deleted node or as a new node.  This would remove the
+base-deleted presence value.
+
+Checkout/update/copy A1 to A3/A1:
+             
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n
+ A1/               n
+    B1/            n
+       f1          n
+ A2/               n
+ A3/               n
+    A1/                          n+
+       B1/                       n
+          f1                     n
+
+Delete A2/B2/B1:
+
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n
+ A1/               n
+    B1/            n
+       f1          n
+ A2/               n
+ A3/               n
+    A1/                          n+
+       B1/*                      nd
+          f1*                    nd
+
+Copy A2 to A3/A1/A2:
+
+Local_Relpath   NODE_DATA
+                   0      1      2      3      4
+------------------------------------------------
+/                  n
+ A1/               n
+    B1/            n
+       f1          n
+ A2/               n
+ A3/               n
+    A1/                          n+
+       B1/                       nd     n
+          f1*                    nd
