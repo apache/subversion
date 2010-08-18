@@ -179,7 +179,7 @@ replay_revend(svn_revnum_t revision,
   /* No resources left to free. */
   struct replay_baton *rb = replay_baton;
   if (! rb->quiet)
-    svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu\n", revision);
+    svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n", revision);
   return SVN_NO_ERROR;
 }
 
@@ -288,7 +288,7 @@ replay_revisions(svn_ra_session_t *session, const char *url,
                                &(propstring->len)));
       SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
       if (! quiet)
-        svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu\n", start_revision);
+        svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n", start_revision);
 
       start_revision++;
     }

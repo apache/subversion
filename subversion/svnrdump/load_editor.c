@@ -44,7 +44,8 @@ commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
                 apr_pool_t *pool)
 {
-  SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld\n",
+  /* ### Don't print directly; generate a notification. */
+  SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld.\n",
                              commit_info->revision));
   return SVN_NO_ERROR;
 }
@@ -452,7 +453,8 @@ close_revision(void *baton)
 
   /* Fake revision 0 */
   if (rb->rev == 0)
-    SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0\n"));
+    /* ### Don't print directly; generate a notification. */
+    SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0.\n"));
   else if (commit_editor)
     {
       /* Close all pending open directories, and then close the edit
