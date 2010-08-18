@@ -611,6 +611,10 @@ typedef struct svn_commit_info_t
   /** error message from post-commit hook, or NULL. */
   const char *post_commit_err;
 
+  /** repository root, may be @c NULL if unknown.
+      @since New in 1.7. */
+  const char *repos_root;
+
 } svn_commit_info_t;
 
 
