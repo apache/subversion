@@ -143,3 +143,11 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context);
  */
 void
 svn_temp_deserializer__resolve(void *buffer, void **ptr);
+
+/**
+ * Similar to @ref svn_temp_deserializer__resolve but instead of modifying
+ * the buffer content, the resulting pointer is passed back to the caller
+ * a the return value.
+ */
+const void *
+svn_temp_deserializer__ptr(const void *buffer, const void **ptr);

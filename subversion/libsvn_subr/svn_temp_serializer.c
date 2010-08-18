@@ -286,3 +286,11 @@ svn_temp_deserializer__resolve(void *buffer, void **ptr)
       *ptr = NULL;
     }
 }
+
+const void *
+svn_temp_deserializer__ptr(const void *buffer, const void **ptr)
+{
+  return (apr_size_t)*ptr == 0
+      ? NULL
+      : (const char*)buffer + (apr_size_t)*ptr;
+}
