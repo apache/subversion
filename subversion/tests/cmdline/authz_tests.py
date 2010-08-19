@@ -37,6 +37,7 @@ from svntest.main import server_authz_has_aliases
 # (abbreviation)
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
@@ -1021,6 +1022,9 @@ def wc_wc_copy_revert(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', sbox.ospath('A2'))
   
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1051,7 +1055,8 @@ test_list = [ None,
                    svntest.main.is_ra_type_file),
               Skip(multiple_matches, svntest.main.is_ra_type_file),
               Skip(wc_wc_copy, svntest.main.is_ra_type_file),
-              XFail(Skip(wc_wc_copy_revert, svntest.main.is_ra_type_file)),
+              Wimp('Needs single-db', Skip(wc_wc_copy_revert,
+                                           svntest.main.is_ra_type_file)),
              ]
 
 if __name__ == '__main__':

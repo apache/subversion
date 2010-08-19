@@ -579,6 +579,9 @@ class State:
         # DELETED node lives.
         if entry.deleted and entry.schedule != 1:
           continue
+        # entries that are ABSENT don't show up in status
+        if entry.absent:
+          continue
         if name and entry.kind == 2:
           # stub subdirectory. leave a "missing" StateItem in here. note
           # that we can't put the status as "! " because that gets tweaked
