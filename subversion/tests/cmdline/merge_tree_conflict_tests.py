@@ -1296,6 +1296,7 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
 
   # local tree missing (via shell delete), incoming leaf edit
 
+  sbox.build()
   expected_output = wc.State('', {
   })
 
@@ -1322,6 +1323,19 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
     'DDD/D1/D2'         : Item(status='  '),
     'DDD/D1/D2/D3'      : Item(status='  '),
     })
+
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_status.tweak('D/D1',            wc_rev=3, entry_rev='?')
+    expected_status.tweak('DF/D1',           wc_rev=3, entry_rev='?')
+    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
+    expected_status.tweak('DD/D1',           wc_rev=3, entry_rev='?')
+    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
+    expected_status.tweak('DDF/D1',          wc_rev=3, entry_rev='?')
+    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
+    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
+    expected_status.tweak('DDD/D1',          wc_rev=3, entry_rev='?')
+    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
+    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
@@ -1356,6 +1370,7 @@ def tree_conflicts_merge_del_onto_missing(sbox):
 
   # local tree missing (via shell delete), incoming leaf edit
 
+  sbox.build()
   expected_output = wc.State('', {
   })
 
@@ -1382,6 +1397,19 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     'DDD/D1/D2'         : Item(status='  '),
     'DDD/D1/D2/D3'      : Item(status='  '),
     })
+
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_status.tweak('D/D1',            wc_rev=3)
+    expected_status.tweak('DF/D1',           wc_rev=3)
+    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
+    expected_status.tweak('DD/D1',           wc_rev=3)
+    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
+    expected_status.tweak('DDF/D1',          wc_rev=3)
+    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
+    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
+    expected_status.tweak('DDD/D1',          wc_rev=3)
+    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
+    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
