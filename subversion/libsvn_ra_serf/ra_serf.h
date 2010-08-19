@@ -994,7 +994,7 @@ typedef svn_error_t *
                                   const char *name, apr_ssize_t name_len,
                                   const svn_string_t *val,
                                   apr_pool_t *pool);
-void
+svn_error_t *
 svn_ra_serf__walk_all_paths(apr_hash_t *props,
                             svn_revnum_t rev,
                             svn_ra_serf__path_rev_walker_t walker,
