@@ -2174,8 +2174,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
 /**
  * Same as svn_client_status5(), but using #svn_wc_status_func3_t
- * instead of #svn_wc_status_func4_t and depth_as_sticky set to FALSE.
- * (
+ * instead of #svn_wc_status_func4_t and depth_as_sticky set to TRUE.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.

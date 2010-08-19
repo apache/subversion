@@ -1698,7 +1698,7 @@ svn_client_status4(svn_revnum_t *result_rev,
                                        status_baton };
 
   return svn_client_status5(result_rev, ctx, path, revision, depth, get_all,
-                            update, no_ignore, ignore_externals, FALSE,
+                            update, no_ignore, ignore_externals, TRUE,
                             changelists, status4_wrapper_func, &swb, pool);
 }
 
