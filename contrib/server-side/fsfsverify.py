@@ -675,11 +675,13 @@ class NodeRev(object):
       elif field == 'pred':
         self.pred = NodeId(value)
       elif field == 'text':
-        (rev, offset, length, size, digest) = value.split(' ')
-        rev = int(rev)
-        offset = int(offset)
-        length = int(length)
-        size = int(size)
+        values = value.split(' ')
+        rev = int(values[0])
+        offset = int(values[1])
+        length = int(values[2])
+        size = int(values[3])
+        digest = values[4]
+        # TODO SHA1 digest
 
         if rev != currentRev:
           contentType = None
