@@ -488,6 +488,8 @@ static svn_error_t *
 parse_prop_name(const char **prop_name, const char *header, 
                 const char *indicator, apr_pool_t *result_pool)
 {
+  /* ### This can fail if the filename cannot be represented in the current
+   * ### locale's encoding. */
   SVN_ERR(svn_utf_cstring_to_utf8(prop_name,
                                   header + strlen(indicator),
                                   result_pool));
@@ -660,6 +662,9 @@ parse_next_hunk(svn_hunk_t **hunk,
         }
       else
         {
+          /* ### Add an is_hunk_header() helper function that returns
+           * ### the proper atat string? Then we could collapse the
+           * ### following two if-clauses. */
           if (starts_with(line->data, text_atat))
             {
               /* Looks like we have a hunk header, try to rip it apart. */
@@ -788,27 +793,30 @@ close_hunk(const svn_hunk_t *hunk)
   return SVN_NO_ERROR;
 }
 
+/* Possible states of the diff header parser. */
 enum parse_state
 {
-   state_start,
-   state_git_diff_seen,
-  /* if we have an add || del || cp src+dst || mv src+dst */
-   state_git_tree_seen, 
-   state_git_minus_seen,
-   state_git_plus_seen,
-   state_move_from_seen,
-   state_copy_from_seen,
-   state_minus_seen,
-   state_unidiff_found,
-   state_add_seen,
-   state_del_seen,
-   state_git_header_found
+   state_start,           /* initial */
+   state_git_diff_seen,   /* diff --git */
+   state_git_tree_seen,   /* a tree operation, rather then content change */
+   state_git_minus_seen,  /* --- /dev/null; or --- a/ */
+   state_git_plus_seen,   /* +++ /dev/null; or +++ a/ */
+   state_move_from_seen,  /* rename from foo.c */
+   state_copy_from_seen,  /* copy from foo.c */
+   state_minus_seen,      /* --- foo.c */
+   state_unidiff_found,   /* valid start of a regular unidiff header */
+   state_add_seen,        /* ### unused? */
+   state_del_seen,        /* ### unused? */
+   state_git_header_found /* valid start of a --git diff header */
 };
 
+/* Data type describing a valid state transition of the parser. */
 struct transition
 {
   const char *expected_input;
   enum parse_state required_state;
+
+  /* A callback called upon each parser state transition. */
   svn_error_t *(*fn)(enum parse_state *new_state, const char *input, 
                      svn_patch_t *patch, apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
@@ -825,6 +833,8 @@ grab_filename(const char **file_name, const char *line, apr_pool_t *result_pool,
   /* Grab the filename and encode it in UTF-8. */
   /* TODO: Allow specifying the patch file's encoding.
    *       For now, we assume its encoding is native. */
+  /* ### This can fail if the filename cannot be represented in the current
+   * ### locale's encoding. */
   SVN_ERR(svn_utf_cstring_to_utf8(&utf8_path,
                                   line,
                                   scratch_pool));
@@ -896,6 +906,8 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
    */
 
   /* Our line should look like this: 'git --diff a/path b/path'. 
+   * ### Not diff --git a/path b/path ?
+   *
    * If we find any deviations from that format, we return with state reset
    * to start.
    */
@@ -1010,7 +1022,7 @@ git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
    * the rest of the line which we can discard. */
   char *tab = strchr(line, '\t');
   if (tab)
-    *tab = '\0';
+    *tab = '\0'; /* ### indirectly modifying LINE, which is const */
 
   if (starts_with(line, "+++ /dev/null"))
     SVN_ERR(grab_filename(&patch->new_filename, "/dev/null",
@@ -1023,7 +1035,7 @@ git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
-/* Parse the 'move from ' line of a git extended unidiff. */
+/* Parse the 'rename from ' line of a git extended unidiff. */
 static svn_error_t *
 git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
@@ -1035,7 +1047,7 @@ git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
-/* Parse the 'move to ' line fo a git extended unidiff. */
+/* Parse the 'rename to ' line fo a git extended unidiff. */
 static svn_error_t *
 git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
@@ -1082,6 +1094,8 @@ git_new_file(enum parse_state *new_state, const char *line, svn_patch_t *patch,
 {
   patch->operation = svn_diff_op_added;
 
+  /* Filename already retrieved from diff --git header. */
+
   *new_state = state_git_tree_seen;
   return SVN_NO_ERROR;
 }
@@ -1092,6 +1106,8 @@ git_deleted_file(enum parse_state *new_state, const char *line, svn_patch_t *pat
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch->operation = svn_diff_op_deleted;
+
+  /* Filename already retrieved from diff --git header. */
 
   *new_state = state_git_tree_seen;
   return SVN_NO_ERROR;
@@ -1148,6 +1164,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
     {
       {"--- ",          state_start,            diff_minus},
       {"+++ ",          state_minus_seen,       diff_plus},
+      /* ### Not "diff --git"? */
       {"git --diff",    state_start,            git_start},
       {"--- a/",        state_git_diff_seen,    git_minus},
       {"--- a/",        state_git_tree_seen,    git_minus},
