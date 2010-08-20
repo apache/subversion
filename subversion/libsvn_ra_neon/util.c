@@ -148,6 +148,7 @@ typedef struct
   svn_boolean_t contains_error;
 } multistatus_baton_t;
 
+/* Implements svn_ra_neon__startelm_cb_t. */
 static svn_error_t *
 start_207_element(int *elem, void *baton, int parent,
                   const char *nspace, const char *name, const char **atts)
@@ -193,6 +194,7 @@ start_207_element(int *elem, void *baton, int parent,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra_neon__endelm_cb_t . */
 static svn_error_t *
 end_207_element(void *baton, int state,
                 const char *nspace, const char *name)
@@ -269,23 +271,23 @@ end_207_element(void *baton, int state,
 }
 
 
-static ne_xml_parser *
+/* Create a status parser attached to the request REQ.  Detected errors
+   will be returned there. */
+static void
 multistatus_parser_create(svn_ra_neon__request_t *req)
 {
   multistatus_baton_t *b = apr_pcalloc(req->pool, sizeof(*b));
-  ne_xml_parser *multistatus_parser =
-    svn_ra_neon__xml_parser_create(req, ne_accept_207,
-                                   start_207_element,
-                                   svn_ra_neon__xml_collect_cdata,
-                                   end_207_element, b);
+
+  svn_ra_neon__xml_parser_create(req, ne_accept_207,
+                                 start_207_element,
+                                 svn_ra_neon__xml_collect_cdata,
+                                 end_207_element, b);
   b->cdata = svn_stringbuf_create("", req->pool);
   b->description = svn_stringbuf_create("", req->pool);
   b->req = req;
 
   b->propname = svn_stringbuf_create("", req->pool);
   b->propstat_description = svn_stringbuf_create("", req->pool);
-
-  return multistatus_parser;
 }
 
 
@@ -1341,9 +1343,7 @@ svn_ra_neon__simple_request(int *code,
 
   SVN_ERR(svn_ra_neon__request_create(&req, ras, method, url, pool));
 
-  /* we don't need the status parser: it's attached to the request
-     and detected errors will be returned there... */
-  (void) multistatus_parser_create(req);
+  multistatus_parser_create(req);
 
   /* svn_ra_neon__request_dispatch() adds the custom error response
      reader.  Neon will take care of the Content-Length calculation */
