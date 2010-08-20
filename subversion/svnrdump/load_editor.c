@@ -539,6 +539,10 @@ drive_dumpstream_loader(svn_stream_t *stream,
   struct parse_baton *pb;
   pb = parse_baton;
 
+  /* ### TODO: Figure out if we're allowed to set revprops before
+     ### we're too late and mess up the repository. svnsync uses some
+     ### sort of locking mechanism. */
+
   SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
   SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,
                                       NULL, NULL, pool));
