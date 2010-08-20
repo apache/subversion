@@ -5,11 +5,11 @@
 
    Usage: bump-to-19.py WC_ROOT_DIR
    where WC_ROOT_DIR is the path to the WC root directory.
-   
+
+   Skips non-WC dirs and WC dirs that are not at format 18.
+
    WARNING: Currently it merges ALL sub-dir WC dirs into the root, including
    'external' WCs and unrelated WCs, which will break those."""
-
-# TODO: Check that the root and sub-dir DBs are at format 18.
 
 # TODO: Don't walk into unrelated subdir WCs or 'external' WCs.
 #
@@ -18,6 +18,8 @@
 #   WORKING. Excluded and not present are the most interesting statee in the
 #   parent. Handling keep-local and deleting the dirs on the upgrade + all
 #   the obstruction cases will make the final code much harder.
+
+# TODO: Detect '_svn' as an alternative to '.svn'.
 
 
 import sys, os, sqlite3
@@ -30,8 +32,20 @@ def db_path(wc_path):
 def pristine_path(wc_path):
   return os.path.join(wc_path, dot_svn, 'pristine')
 
-class NotASubversionWC:
-  pass
+class NotASubversionWC(Exception):
+  def __init__(self, wc_path):
+    self.wc_path = wc_path
+  def __str__(self):
+    return "not a Subversion WC: '" + self.wc_path +  "'"
+
+class WrongFormatException(Exception):
+  def __init__(self, wc_dir, format):
+    self.wc_dir = wc_dir
+    self.format = format
+  def __str__(self):
+    return "format is " + str(self.format) + " not 18: '" + self.wc_dir + "'"
+
+
 
 STMT_COPY_BASE_NODE_TABLE_TO_WCROOT_DB1 = \
   "INSERT OR REPLACE INTO root.BASE_NODE ( " \
@@ -128,7 +142,7 @@ def copy_db_rows_to_wcroot(wc_subdir_relpath):
   try:
     db = sqlite3.connect(db_path(wc_subdir_path))
   except:
-    raise NotASubversionWC
+    raise NotASubversionWC(wc_subdir_path)
   c = db.cursor()
 
   c.execute("ATTACH '" + db_path(wc_root_path) + "' AS 'root'")
@@ -200,7 +214,7 @@ def migrate_wc_subdirs(wc_root_path):
       dirs.remove(dot_svn)
     except ValueError:
       # a non-WC dir: don't walk into any subdirectories
-      print "skipped: not a WC dir: '" + dir_path + "'"
+      print "skipped: ", NotASubversionWC(dir_path)
       del dirs[:]
       continue
 
@@ -209,7 +223,9 @@ def migrate_wc_subdirs(wc_root_path):
       wc_subdir_path = os.path.join(dir_path, dir)
       if wc_subdir_path.startswith('./'):
         wc_subdir_path = wc_subdir_path[2:]
+
       try:
+        check_wc_format_number(wc_subdir_path)
         print "moving data from subdir '" + wc_subdir_path + "'"
         copy_db_rows_to_wcroot(wc_subdir_path)
         print "deleting DB ... ",
@@ -217,19 +233,40 @@ def migrate_wc_subdirs(wc_root_path):
         print "moving pristines ... ",
         move_and_shard_pristine_files(wc_subdir_path, '.')
         print "done"
-      except NotASubversionWC:
-        print "skipped: no WC DB found: '" + wc_subdir_path + "'"
-        # a non-WC dir: don't walk into it
+      except (WrongFormatException, NotASubversionWC), e:
+        print "skipped:", e
+        # don't walk into it
         dirs.remove(dir)
+        continue
 
   os.chdir(old_cwd)
 
 
-def bump_wc_format_number(wc_root_path):
-  """Bump the WC format number of the WC dir WC_ROOT_PATH to 19."""
+def check_wc_format_number(wc_path):
+  """Check that the WC format of the WC dir WC_PATH is 18.
+      Raise a WrongFormatException if not."""
 
-  root_db_path = os.path.join(wc_root_path, dot_svn, 'wc.db')
-  db = sqlite3.connect(root_db_path)
+  try:
+    db = sqlite3.connect(db_path(wc_path))
+  except sqlite3.OperationalError:
+    raise NotASubversionWC(wc_path)
+  c = db.cursor()
+  c.execute("PRAGMA user_version;")
+  format = c.fetchone()[0]
+  db.commit()
+  db.close()
+
+  if format != 18:
+    raise WrongFormatException(wc_path, format)
+
+
+def bump_wc_format_number(wc_path):
+  """Bump the WC format number of the WC dir WC_PATH to 19."""
+
+  try:
+    db = sqlite3.connect(db_path(wc_path))
+  except sqlite3.OperationalError:
+    raise NotASubversionWC(wc_path)
   c = db.cursor()
   c.execute("PRAGMA user_version = 19;")
   db.commit()
@@ -243,6 +280,13 @@ if __name__ == '__main__':
     sys.exit(1)
 
   wc_root_path = sys.argv[1]
+
+  try:
+    check_wc_format_number(wc_root_path)
+  except (WrongFormatException, NotASubversionWC), e:
+    print "error:", e
+    sys.exit(1)
+
   print "merging subdir DBs into single DB '" + wc_root_path + "'"
   shard_pristine_files(wc_root_path)
   migrate_wc_subdirs(wc_root_path)
