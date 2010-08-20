@@ -1420,9 +1420,7 @@ svn_wc__upgrade_sdb(int *result_format,
         /* ### TODO: Either upgrade to single-DB format here, or quit
          * at format 18 and ask the user to run the external script
          * 'tools/dev/wc-ng/bump-to-19.py'. */
-        break;
-
-        /* FALLTHROUGH  */
+        break; /* not FALLTHROUGH  */
 #endif
 
       /* ### future bumps go here.  */
