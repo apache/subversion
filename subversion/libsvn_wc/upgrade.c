@@ -1378,7 +1378,6 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 16;
         /* FALLTHROUGH  */
 
-#if (SVN_WC__VERSION > 16)
       case 16:
         {
           const char *pristine_dir;
@@ -1396,9 +1395,7 @@ svn_wc__upgrade_sdb(int *result_format,
 
         *result_format = 17;
         /* FALLTHROUGH  */
-#endif
 
-#if (SVN_WC__VERSION > 17)
       case 17:
         {
           struct bump_to_18_baton b18;
@@ -1413,7 +1410,6 @@ svn_wc__upgrade_sdb(int *result_format,
 
         *result_format = 18;
         /* FALLTHROUGH  */
-#endif
 
 #if (SVN_WC__VERSION > 18)
       case 18:
