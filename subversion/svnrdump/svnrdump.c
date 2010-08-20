@@ -393,17 +393,6 @@ static svn_error_t *
 load_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   opt_baton_t *opt_baton = baton;
-  svn_boolean_t can_set_revprops = FALSE;
-
-  SVN_ERR(svn_ra_has_capability(opt_baton->session, &can_set_revprops,
-                                "commit-revprops", pool));
-  if(!can_set_revprops)
-    return
-      svn_error_create
-      (SVN_ERR_REPOS_DISABLED_FEATURE, NULL,
-       _("Repository has not been enabled to accept revision propchanges;\n"
-         "ask the administrator to create a pre-revprop-change hook"));
-
   SVN_ERR(load_revisions(opt_baton->session, opt_baton->url,
                          opt_baton->quiet, pool));  
   return SVN_NO_ERROR;
