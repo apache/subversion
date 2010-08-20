@@ -599,8 +599,11 @@ with_some_lock(svn_fs_t *fs,
 
   if (!err)
     {
-      SVN_ERR(update_min_unpacked_rev(fs, pool));
-      SVN_ERR(update_min_unpacked_revprop(fs, pool));
+      fs_fs_data_t *ffd = fs->fsap_data;
+      if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+        SVN_ERR(update_min_unpacked_rev(fs, pool));
+      if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+        SVN_ERR(update_min_unpacked_revprop(fs, pool));
       err = body(baton, subpool);
     }
 
@@ -2789,7 +2792,6 @@ set_revision_proplist(svn_fs_t *fs,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(update_min_unpacked_revprop(fs, pool));
   if (ffd->format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT ||
       rev >= ffd->min_unpacked_revprop)
     {
