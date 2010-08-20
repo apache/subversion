@@ -54,14 +54,14 @@ enum svn_svnrdump__longopt_t
 
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
   {
-    { "dump", dump_cmd, { "d" },
+    { "dump", dump_cmd, { 0 },
       N_("usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
          "Dump revisions LOWER to UPPER of repository at remote URL "
          "to stdout in a 'dumpfile' portable format.\n"
          "If omitted, LOWER defaults to zero and UPPER to the latest "
          "latest revision.\n"),
       { 0 } },
-    { "load", load_cmd, { "l" },
+    { "load", load_cmd, { 0 },
       N_("usage: svnrdump load URL\n\n"
          "Load a 'dumpfile' given on stdin to a repository "
          "at remote URL.\n"),
