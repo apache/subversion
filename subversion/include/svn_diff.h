@@ -796,24 +796,30 @@ typedef enum svn_diff_operation_kind_e
  *   - modified text   The result of patching the original text.
  *
  * For example, consider a hunk with the following diff text:
+ * <pre>
  *   @@ -1,5 +1,5 @@
  *    #include <stdio.h>
  *    int main(int argc, char *argv[]) {
  *   -        printf("Hello World!\n");
  *   +        printf("I like Subversion!\n");
  *    }
+ * </pre>
  *
  * The original text of this hunk is:
+ * <pre>
  *   #include <stdio.h>
  *   int main(int argc, char *argv[]) {
  *           printf("Hello World!\n");
  *   }
+ * </pre>
  *
  * And the modified text is:
+ * <pre>
  *   #include <stdio.h>
  *   int main(int argc, char *argv[]) {
  *           printf("I like Subversion!\n");
  *   }
+ * </pre>
  *
  * @see svn_diff_hunk_readline_diff_text()
  * @see svn_diff_hunk_readline_original_text()
