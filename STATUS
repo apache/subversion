@@ -234,14 +234,17 @@ Candidate changes:
    Votes:
      +1: danielsh, jerenkrantz
 
- * r879757, r880320
+ * r879757, r880320, r943796
    Let ra_serf work with current serf releases.
    Justification:
      Having a dud client is bad. This seems to be the minimal required changes.
    Backport branch:
      ^/subversion/branches/1.6.x-r879757
    Notes:
-     r879757 is the main fix.  r880320 is a follow up fix.
+     r879757 is the main fix.  r880320 is a follow up fix.  r943796 ensures
+     connection resets are treated the same.
+     This change passes davautocheck as of serf trunk (serf 0.6.1 is *not*
+     sufficient; a newer release should be).
    Votes:
      +1: jerenkrantz
 
