@@ -2603,7 +2603,8 @@ def patch_add_path_with_props(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({'new': Item(contents="This is the file 'new'\n", 
                                  props={'added' : added_prop_contents})})
-  expected_disk.add({'X': Item(props={'added' : added_prop_contents})})
+  expected_disk.add({'X': Item(contents="",
+                               props={'added' : added_prop_contents})})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'new': Item(status='A ', wc_rev='0')})
   expected_status.add({'X': Item(status='A ', wc_rev='0')})
@@ -3001,7 +3002,7 @@ test_list = [ None,
               patch_with_properties,
               patch_same_twice,
               XFail(patch_dir_properties),
-              XFail(patch_add_path_with_props),
+              patch_add_path_with_props,
               patch_prop_offset,
               patch_prop_with_fuzz,
             ]

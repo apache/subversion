@@ -1881,9 +1881,11 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       else if (patched_file.size == 0 && working_file.size == 0)
         {
           /* The target was empty or non-existent to begin with
-           * and nothing has changed by patching.
-           * Report this as skipped if it didn't exist. */
-          if (target->kind_on_disk == svn_node_none)
+           * and no content was changed by patching.
+           * Report this as skipped if it didn't exist, unless in the special
+           * case of adding an empty file which has properties set on it. */
+          if (target->kind_on_disk == svn_node_none &&
+              ! target->has_prop_changes)
             target->skipped = TRUE;
         }
       else if (patched_file.size > 0 && working_file.size == 0)
@@ -2169,7 +2171,12 @@ install_patched_prop_targets(patch_target_t *target,
   apr_pool_t *iterpool;
 
   if (dry_run)
-    return SVN_NO_ERROR;
+    {
+      if (! target->has_text_changes && target->kind_on_disk == svn_node_none)
+        target->added = TRUE;
+
+      return SVN_NO_ERROR;
+    }
 
   iterpool = svn_pool_create(scratch_pool);
 
@@ -2226,6 +2233,25 @@ install_patched_prop_targets(patch_target_t *target,
       while (! eof);
 
       svn_stream_close(patched_stream);
+
+      /* If the patch target doesn't exist yet, the patch wants to add an
+       * empty file with properties set on it. So create an empty file and
+       * add it to version control.
+       *
+       * ### How can we tell whether the patch really wanted to create
+       * ### an empty directory? */
+      if (! target->has_text_changes && target->kind_on_disk == svn_node_none)
+        {
+          SVN_ERR(svn_io_file_create(target->local_abspath, "", scratch_pool));
+          SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->local_abspath,
+                              svn_depth_infinity,
+                              NULL, SVN_INVALID_REVNUM,
+                              ctx->cancel_func,
+                              ctx->cancel_baton,
+                              NULL, NULL, /* suppress notification */
+                              iterpool));
+          target->added = TRUE;
+        }
 
       /* ### How should we handle SVN_ERR_ILLEGAL_TARGET and
        * ### SVN_ERR_BAD_MIME_TYPE?
