@@ -303,10 +303,19 @@ static const svn_ra_serf__dav_props_t href_props[] =
 
 /** Serf utility functions **/
 
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+apr_status_t
+svn_ra_serf__conn_setup(apr_socket_t *sock,
+                        serf_bucket_t **read_bkt,
+                        serf_bucket_t **write_bkt,
+                        void *baton,
+                        apr_pool_t *pool);
+#else
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool);
+#endif
 
 serf_bucket_t*
 svn_ra_serf__accept_response(serf_request_t *request,

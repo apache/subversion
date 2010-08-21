@@ -222,35 +222,56 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
   return SVN_NO_ERROR;
 }
 
+
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+/* This ugly ifdef construction can be cleaned up as soon as serf >= 0.4
+   gets the minimum supported serf version! */
+
+/* svn_ra_serf__conn_setup is a callback for serf. This function 
+   creates a read bucket and will wrap the write bucket if SSL
+   is needed. */
+apr_status_t
+svn_ra_serf__conn_setup(apr_socket_t *sock,
+                        serf_bucket_t **read_bkt,
+                        serf_bucket_t **write_bkt,
+                        void *baton,
+                        apr_pool_t *pool)
+{
+  serf_bucket_t *wb = NULL;
+#else
+/* This is the old API, for compatibility with serf
+   versions <= 0.3. */
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool)
 {
-  serf_bucket_t *bucket;
+#endif
+  serf_bucket_t *rb = NULL;
   svn_ra_serf__connection_t *conn = baton;
-
-  bucket = serf_context_bucket_socket_create(conn->session->context,
-                                             sock, conn->bkt_alloc);
-
+  
+  rb = serf_context_bucket_socket_create(conn->session->context,
+                                         sock, conn->bkt_alloc);
+  
   if (conn->using_ssl)
     {
-      bucket = serf_bucket_ssl_decrypt_create(bucket, conn->ssl_context,
-                                              conn->bkt_alloc);
+      /* input stream */
+      rb = serf_bucket_ssl_decrypt_create(rb, conn->ssl_context,
+                                          conn->bkt_alloc);
       if (!conn->ssl_context)
         {
-          conn->ssl_context = serf_bucket_ssl_decrypt_context_get(bucket);
-
+          conn->ssl_context = serf_bucket_ssl_encrypt_context_get(rb);
+  
           serf_ssl_client_cert_provider_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert,
                                             conn, conn->session->pool);
           serf_ssl_client_cert_password_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert_pw,
                                             conn, conn->session->pool);
-
           serf_ssl_server_cert_callback_set(conn->ssl_context,
                                             ssl_server_cert,
                                             conn);
+
           /* See if the user wants us to trust "default" openssl CAs. */
           if (conn->session->trust_default_ca)
             {
@@ -270,10 +291,22 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
                 }
             }
         }
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+        /* output stream */
+        *write_bkt = serf_bucket_ssl_encrypt_create(*write_bkt, conn->ssl_context,
+                                                  conn->bkt_alloc);
+#endif
     }
 
-  return bucket;
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+  *read_bkt = rb;
+
+  return APR_SUCCESS;
 }
+#else  
+  return rb;
+}
+#endif
 
 serf_bucket_t*
 svn_ra_serf__accept_response(serf_request_t *request,
@@ -481,6 +514,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
   if (conn->session->proxy_auth_protocol)
     conn->session->proxy_auth_protocol->setup_request_func(conn, hdrs_bkt);
 
+#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
   /* Set up SSL if we need to */
   if (conn->using_ssl)
     {
@@ -498,6 +532,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
                                             conn, conn->session->pool);
         }
     }
+#endif
 
   /* Set up Proxy settings */
   if (conn->session->using_proxy)
