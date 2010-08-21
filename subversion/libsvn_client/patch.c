@@ -2257,7 +2257,10 @@ install_patched_prop_targets(patch_target_t *target,
        * ### SVN_ERR_BAD_MIME_TYPE?
        *
        * ### stsp: I'd say skip the target, patch is illegal.
-       * ###       Revert any changes already made to file content, too! */
+       * ###       We should verify all modified prop hunk texts using
+       * ###       svn_wc_canonicalize_svn_prop() before starting
+       * ###       the patching process, to skip the target as early
+       * ###       as possible. */
       SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
                                prop_target->name,
                                svn_string_create_from_buf(prop_content, 
