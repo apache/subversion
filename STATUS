@@ -201,19 +201,6 @@ Candidate changes:
     Votes:
       +1: rhuijben, jerenkrantz (ENOCARE re: 12/39)
 
- * r980811, r981449
-   Improve handling of missing fsfs.conf during svnadmin hotcopy.
-   Justification:
-     People are complaining. There's Debian bug reports and whatnot.
-     See http://svn.haxx.se/dev/archive-2010-07/0471.shtml and follow-ups.
-   Notes:
-     r980811 is the actual fix
-     r981449 is a follow-up which fixes an error leak
-   Backport branch:
-     ^/subversion/branches/1.6.x-r980811
-   Votes:
-     +1: stsp, rhuijben, jerenkrantz
-
  * r981921
    fsfs: make rev files read-only.
    Justification:
@@ -341,3 +328,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r980811, r981449
+   Improve handling of missing fsfs.conf during svnadmin hotcopy.
+   Justification:
+     People are complaining. There's Debian bug reports and whatnot.
+     See http://svn.haxx.se/dev/archive-2010-07/0471.shtml and follow-ups.
+   Notes:
+     r980811 is the actual fix
+     r981449 is a follow-up which fixes an error leak
+   Backport branch:
+     ^/subversion/branches/1.6.x-r980811
+   Votes:
+     +1: stsp, rhuijben, jerenkrantz
