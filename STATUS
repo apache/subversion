@@ -143,7 +143,7 @@ Candidate changes:
      due to stale lock information (which is, thankfully, ignored as
      irrelevant rather than escalated as an error condition).
    Votes:
-     +1: cmpilato
+     +1: cmpilato, jerenkrantz
 
  * r958024, r961055, r964167
    Fix issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo for
@@ -172,7 +172,7 @@ Candidate changes:
      r964767 is the actual fix. r965405 is the test for the fix and r965469
      and r965508 are the follow up commits to enhance the fix.
    Votes:
-     +1: stylesen
+     +1: stylesen, jerenkrantz
      
  * r979045
    Teach mod_dav_svn to pass a base_checksum to libsvn_ra_neon's update
@@ -190,7 +190,7 @@ Candidate changes:
      The mod_dav_svn change needs a small backport fix as the brigade
      functions are not available in 1.6.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, jerenkrantz
 
   * r979429
     Teach libsvn_ra_serf how to parse the md5-checksum for passing it
@@ -199,7 +199,7 @@ Candidate changes:
       Without this fix the most important broken working copy detection
       checksum isn't used by users of libsvn_ra_serf.     
     Votes:
-      +1: rhuijben
+      +1: rhuijben, jerenkrantz (ENOCARE re: 12/39)
 
  * r980811, r981449
    Improve handling of missing fsfs.conf during svnadmin hotcopy.
@@ -212,7 +212,7 @@ Candidate changes:
    Backport branch:
      ^/subversion/branches/1.6.x-r980811
    Votes:
-     +1: stsp, rhuijben
+     +1: stsp, rhuijben, jerenkrantz
 
  * r981921
    fsfs: make rev files read-only.
@@ -224,14 +224,15 @@ Candidate changes:
    Backport branch:
      ^/subversion/branches/1.6.x-r981921
    Votes:
-     +1: danielsh
+     +1: danielsh, jerenkrantz
 
  * r984928, r984931
-   Fix an assertion seen in the wild.
+   Fix an URL canonicalization assertion seen in the wild (kde.org).
    Notes:
+    r984928 is the main fix.
     r984931 is an obvious fix (edits a comment).
    Votes:
-     +1: danielsh
+     +1: danielsh, jerenkrantz
 
  * r879757, r880320
    Let ra_serf work with current serf releases.
