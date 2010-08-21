@@ -1688,8 +1688,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       if (! rb->receiving_all)
         break;
 
+      base_checksum = svn_xml_get_attr_value("base-checksum", atts);
+
       SVN_ERR((*rb->editor->apply_textdelta)(rb->file_baton,
-                                             NULL, /* ### base_checksum */
+                                             base_checksum,
                                              rb->file_pool,
                                              &(rb->whandler),
                                              &(rb->whandler_baton)));
