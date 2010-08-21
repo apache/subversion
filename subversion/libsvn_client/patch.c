@@ -2200,7 +2200,7 @@ install_patched_prop_targets(patch_target_t *target,
           SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
                                    prop_target->name, NULL, 
                                    TRUE /* skip_checks */,
-                                   NULL, NULL,
+                                   NULL, NULL, /* suppress notification */
                                    iterpool));
           continue;
         }
