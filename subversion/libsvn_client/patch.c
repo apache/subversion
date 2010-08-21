@@ -197,10 +197,10 @@ typedef struct patch_target_t {
   /* True if the target has the executable bit set. */
   svn_boolean_t executable;
 
-  /* True if the patch changes the text of the target */
+  /* True if the patch changed the text of the target. */
   svn_boolean_t has_text_changes;
 
-  /* True if the patch changes any of the properties of the target */
+  /* True if the patch changed any of the properties of the target. */
   svn_boolean_t has_prop_changes;
 
   /* All the information that is specific to the content of the target. */
