@@ -233,6 +233,17 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r879757, r880320
+   Let ra_serf work with current serf releases.
+   Justification:
+     Having a dud client is bad. This seems to be the minimal required changes.
+   Backport branch:
+     ^/subversion/branches/1.6.x-r879757
+   Notes:
+     r879757 is the main fix.  r880320 is a follow up fix.
+   Votes:
+     +1: jerenkrantz
+
 Veto-blocked changes:
 =====================
 
