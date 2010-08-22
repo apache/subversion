@@ -91,6 +91,25 @@ svn_fs__commit_obliteration_txn(svn_revnum_t rev,
                                 apr_pool_t *pool);
 
 
+/* Access the process-global (singleton) membuffer cache. The first call
+ * will automatically allocate the cache using the current cache config.
+ * NULL will be returned if the desired cache size is 0.
+ *
+ * @since New in 1.7.
+ */
+struct svn_membuffer_t *
+svn_fs__get_global_membuffer_cache(void);
+
+/* Access the process-global (singleton) open file handle cache. The first
+ * call will automatically allocate the cache using the current cache config.
+ * Even for file handle limit of 0, a cache object will be returned.
+ *
+ * @since New in 1.7.
+ */
+struct svn_file_handle_cache_t *
+svn_fs__get_global_file_handle_cache(void);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

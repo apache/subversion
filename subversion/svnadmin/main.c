@@ -45,10 +45,6 @@
 
 #include "svn_private_config.h"
 
-#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
-#include "libsvn_fs_fs/fs_fs.h"
-#endif
-
 
 
 /*** Code. ***/
@@ -326,7 +322,6 @@ static const apr_getopt_option_t options_table[] =
      N_("use format compatible with Subversion versions\n"
         "                             earlier than 1.7")},
 
-#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
     {"memory-cache-size",     'M', 1,
      N_("size of the extra in-memory cache in MB used to\n"
         "                             minimize redundant operations. Default: 256.\n"
@@ -336,7 +331,6 @@ static const apr_getopt_option_t options_table[] =
      N_("maximum number of files kept open after usage\n"
         "                             to reduce OS and I/O overhead. Default: 64.\n"
         "                             [used for FSFS repositories only]")},
-#endif
 
     {NULL}
   };
@@ -1687,7 +1681,8 @@ main(int argc, const char *argv[])
             = 0x100000 * apr_strtoi64(opt_arg, NULL, 0);
         break;
       case 'F':
-        opt_state.open_file_count = apr_strtoi64(opt_arg, NULL, 0);
+        opt_state.open_file_count 
+            = (apr_size_t)apr_strtoi64(opt_arg, NULL, 0);
         break;
       case svnadmin__version:
         opt_state.version = TRUE;
@@ -1891,11 +1886,10 @@ main(int argc, const char *argv[])
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
-#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
-  /* Configure FSFS caches for maximum efficiency with svnadmin.
+  /* Configure FS caches for maximum efficiency with svnadmin.
    * Also, apply the respective command line parameters, if given. */
   {
-    svn_fs_fs__cache_config_t settings = *svn_fs_fs__get_cache_config();
+    svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
 
     settings.cache_size = opt_state.memory_cache_size;
     settings.file_handle_count = opt_state.open_file_count;
@@ -1903,9 +1897,8 @@ main(int argc, const char *argv[])
     settings.cache_txdeltas = TRUE;
     settings.single_threaded = TRUE;
 
-    svn_fs_fs__set_cache_config(&settings);
+    svn_fs_set_cache_config(&settings);
   }
-#endif
 
   /* Run the subcommand. */
   err = (*subcommand->cmd_func)(os, &opt_state, pool);

@@ -57,11 +57,6 @@
 
 #include "server.h"
 
-#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
-#include "libsvn_fs_fs/fs_fs.h"
-#endif
-
-
 /* The strategy for handling incoming connections.  Some of these may be
    unavailable due to platform limitations. */
 enum connection_handling_mode {
@@ -199,7 +194,6 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         " 9 .. maximum compresssion]")},
 
-#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
     {"memory-cache-size", 'M', 1, 
      N_("size of the extra in-memory cache in MB used to\n"
         "                             "
@@ -217,7 +211,6 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is 64 and 16 for non-threaded mode.\n"
         "                             "
         "[used for FSFS repositories only]")},
-#endif
 
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
@@ -463,8 +456,8 @@ int main(int argc, const char *argv[])
   params.authzdb = NULL;
   params.compression_level = SVNDIFF1_COMPRESS_LEVEL;
   params.log_file = NULL;
-  params.memory_cache_size = -1;
-  params.open_file_count = -1;
+  params.memory_cache_size = (apr_uint64_t)-1;
+  params.open_file_count = (apr_size_t)-1;
 
   while (1)
     {
@@ -577,7 +570,7 @@ int main(int argc, const char *argv[])
           break;
 
         case 'F':
-          params.open_file_count = apr_strtoi64(arg, NULL, 0);
+          params.open_file_count = (apr_size_t)apr_strtoi64(arg, NULL, 0);
           break;
 
 #ifdef WIN32
@@ -827,13 +820,12 @@ int main(int argc, const char *argv[])
     winservice_running();
 #endif
 
-#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
-  /* Configure FSFS caches for maximum efficiency with svnserve. 
+  /* Configure FS caches for maximum efficiency with svnserve. 
    * For pre-forked (i.e. multi-processed) mode of operation,
    * keep the per-process caches smaller than the default.
    * Also, apply the respective command line parameters, if given. */
   {
-    svn_fs_fs__cache_config_t settings = *svn_fs_fs__get_cache_config();
+    svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
 
     if (params.memory_cache_size != -1)
       settings.cache_size = params.memory_cache_size;
@@ -849,9 +841,8 @@ int main(int argc, const char *argv[])
     settings.cache_txdeltas = FALSE;
     settings.single_threaded = handling_mode != connection_mode_thread;
 
-    svn_fs_fs__set_cache_config(&settings);
+    svn_fs_set_cache_config(&settings);
   }
-#endif
 
   while (1)
     {

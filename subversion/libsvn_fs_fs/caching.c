@@ -67,96 +67,6 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
-/* The cache settings as a process-wide singleton.
- */
-static svn_fs_fs__cache_config_t cache_settings =
-  {
-    /* default configuration:
-     */
-    0x8000000,   /* 128 MB for caches */
-    16,          /* up to 16 files kept open */
-    FALSE,       /* don't cache fulltexts */
-    FALSE,       /* don't cache text deltas */
-    FALSE        /* assume multi-threaded operation */
-  };
-
-/* Get the current FSFS cache configuration. */
-const svn_fs_fs__cache_config_t *
-svn_fs_fs__get_cache_config(void)
-{
-  return &cache_settings;
-}
-
-/* Access the process-global (singleton) membuffer cache. The first call
- * will automatically allocate the cache using the current cache config.
- * NULL will be returned if the desired cache size is 0.
- */
-static svn_membuffer_t *
-get_global_membuffer_cache(void)
-{
-  static svn_membuffer_t *cache = NULL;
-
-  apr_uint64_t cache_size = cache_settings.cache_size;
-  if (!cache && cache_size)
-    {
-      /* auto-allocate cache*/
-      apr_allocator_t *allocator = NULL;
-      apr_pool_t *pool = NULL;
-
-      if (apr_allocator_create(&allocator))
-        return NULL;
-
-      /* Ensure that we free partially allocated data if we run OOM
-       * before the cache is complete: If the cache cannot be allocated
-       * in its full size, the create() function will clear the pool
-       * explicitly. The allocator will make sure that any memory no
-       * longer used by the pool will actually be returned to the OS.
-       */
-      apr_allocator_max_free_set(allocator, 1);
-      pool = svn_pool_create_ex(NULL, allocator);
-
-      svn_cache__membuffer_cache_create
-          (&cache,
-           cache_size,
-           cache_size / 16,
-           ! svn_fs_fs__get_cache_config()->single_threaded,
-           pool);
-    }
-
-  return cache;
-}
-
-/* Access the process-global (singleton) open file handle cache. The first
- * call will automatically allocate the cache using the current cache config.
- * Even for file handle limit of 0, a cache object will be returned.
- */
-static svn_file_handle_cache_t *
-get_global_file_handle_cache(void)
-{
-  static svn_file_handle_cache_t *cache = NULL;
-
-  if (!cache)
-    svn_file_handle_cache__create_cache(&cache,
-                                        cache_settings.file_handle_count,
-                                        !cache_settings.single_threaded,
-                                        svn_pool_create(NULL));
-
-  return cache;
-}
-
-void 
-svn_fs_fs__set_cache_config(const svn_fs_fs__cache_config_t *settings)
-{
-  cache_settings = *settings;
-
-  /* Allocate global membuffer cache as a side-effect.
-   * Only the first call will actually take affect. */
-  get_global_membuffer_cache();
-
-  /* Same for the file handle cache. */
-  get_global_file_handle_cache();
-}
-
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs,
                              apr_pool_t *pool)
@@ -179,9 +89,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    * id_private_t + 3 strings for value, and the cache_entry); the
    * default pool size is 8192, so about a hundred should fit
    * comfortably. */
-  if (get_global_membuffer_cache())
+  if (svn_fs__get_global_membuffer_cache())
     SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_root_id_cache),
-                                              get_global_membuffer_cache(),
+                                              svn_fs__get_global_membuffer_cache(),
                                               svn_fs_fs__serialize_id,
                                               svn_fs_fs__deserialize_id,
                                               sizeof(svn_revnum_t),
@@ -201,9 +111,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
    * let's put 16 on a page. */
-  if (get_global_membuffer_cache())
+  if (svn_fs__get_global_membuffer_cache())
     SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_node_cache),
-                                              get_global_membuffer_cache(),
+                                              svn_fs__get_global_membuffer_cache(),
                                               svn_fs_fs__dag_serialize,
                                               svn_fs_fs__dag_deserialize,
                                               APR_HASH_KEY_STRING,
@@ -222,9 +132,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
 
   /* Very rough estimate: 1K per directory. */
-  if (get_global_membuffer_cache())
+  if (svn_fs__get_global_membuffer_cache())
     SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->dir_cache),
-                                              get_global_membuffer_cache(),
+                                              svn_fs__get_global_membuffer_cache(),
                                               svn_fs_fs__serialize_dir_entries,
                                               svn_fs_fs__deserialize_dir_entries,
                                               APR_HASH_KEY_STRING,
@@ -244,9 +154,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   /* Only 16 bytes per entry (a revision number + the corresponding offset).
      Since we want ~8k pages, that means 512 entries per page. */
-  if (get_global_membuffer_cache())
+  if (svn_fs__get_global_membuffer_cache())
     SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->packed_offset_cache),
-                                              get_global_membuffer_cache(),
+                                              svn_fs__get_global_membuffer_cache(),
                                               svn_fs_fs__serialize_manifest,
                                               svn_fs_fs__deserialize_manifest,
                                               sizeof(svn_revnum_t),
@@ -276,11 +186,11 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                                      NULL),
                                          fs->pool));
     }
-  else if (get_global_membuffer_cache() && 
-           svn_fs_fs__get_cache_config()->cache_fulltexts)
+  else if (svn_fs__get_global_membuffer_cache() && 
+           svn_fs_get_cache_config()->cache_fulltexts)
     {
       SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->fulltext_cache),
-                                                get_global_membuffer_cache(),
+                                                svn_fs__get_global_membuffer_cache(),
                                                 /* Values are svn_string_t */
                                                 NULL, NULL,
                                                 APR_HASH_KEY_STRING,
@@ -298,15 +208,15 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
             warn_on_cache_errors, fs, pool));
 
   /* initialize file handle cache as configured */
-  ffd->file_handle_cache = get_global_file_handle_cache();
+  ffd->file_handle_cache = svn_fs__get_global_file_handle_cache();
 
   /* initialize txdelta window cache, if that has been enabled */
-  if (get_global_membuffer_cache() &&
-      svn_fs_fs__get_cache_config()->cache_txdeltas)
+  if (svn_fs__get_global_membuffer_cache() &&
+      svn_fs_get_cache_config()->cache_txdeltas)
     {
       SVN_ERR(svn_cache__create_membuffer_cache
                 (&(ffd->txdelta_window_cache),
-                 get_global_membuffer_cache(),
+                 svn_fs__get_global_membuffer_cache(),
                  svn_fs_fs__serialize_txdelta_window,
                  svn_fs_fs__deserialize_txdelta_window,
                  APR_HASH_KEY_STRING,
@@ -323,10 +233,10 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                          warn_on_cache_errors, fs, pool));
 
   /* initialize node revision cache, if caching has been enabled */
-  if (get_global_membuffer_cache())
+  if (svn_fs__get_global_membuffer_cache())
     {
       SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->node_revision_cache),
-                                                get_global_membuffer_cache(),
+                                                svn_fs__get_global_membuffer_cache(),
                                                 svn_fs_fs__serialize_node_revision,
                                                 svn_fs_fs__deserialize_node_revision,
                                                 APR_HASH_KEY_STRING,
