@@ -27,6 +27,10 @@ AC_DEFUN(SVN_LIB_SERF,
 [
   serf_found=no
 
+  serf_check_major=0
+  serf_check_minor=3
+  serf_check_patch=1
+
   AC_ARG_WITH(serf,AS_HELP_STRING([--with-serf=PREFIX],
                                   [Serf WebDAV client library]),
   [
@@ -40,7 +44,16 @@ AC_DEFUN(SVN_LIB_SERF,
       AC_CHECK_HEADERS(serf.h,[
         save_ldflags="$LDFLAGS"
         LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
-        AC_CHECK_LIB(serf-0, serf_context_create,[serf_found="yes"], ,
+        AC_CHECK_LIB(serf-0, serf_context_create,[
+          AC_TRY_COMPILE([
+#include <stdlib.h>
+#include "serf.h"
+],[
+#if ! SERF_VERSION_AT_LEAST($serf_check_major, $serf_check_minor, $serf_check_patch)
+#error Serf version too old: want $serf_check_major.$serf_check_minor.$serf_check_patch, got SERF_VERSION_STRING
+#endif
+], [serf_found=yes], [AC_MSG_WARN([Serf version too old: need $serf_check_major.$serf_check_minor.$serf_check_patch])
+        serf_found=no])], ,
           $SVN_APRUTIL_LIBS $SVN_APR_LIBS -lz)
         LDFLAGS="$save_ldflags"])
       CPPFLAGS="$save_cppflags"
