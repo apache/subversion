@@ -44,6 +44,7 @@
 #include "svn_sorts.h"
 #include "svn_version.h"
 #include "svn_props.h"
+#include "svn_ctype.h"
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_dirent_uri.h"
