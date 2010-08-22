@@ -1099,7 +1099,7 @@ svn_fs_fs__dag_serialize(char **data,
   if (node->node_revision && !svn_fs_fs__dag_check_mutable(node))
     svn_fs_fs__noderev_serialize(context, &node->node_revision);
   else
-    svn_temp_serializer__set_NULL(context,
+    svn_temp_serializer__set_null(context,
                                   (const void * const *)&node->node_revision);
 
   /* serialize other sub-structures */

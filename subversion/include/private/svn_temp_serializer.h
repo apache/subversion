@@ -122,7 +122,7 @@ svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
  * source structure.
  */
 void
-svn_temp_serializer__set_NULL(svn_temp_serializer__context_t *context,
+svn_temp_serializer__set_null(svn_temp_serializer__context_t *context,
                               const void * const * ptr);
 
 /**
