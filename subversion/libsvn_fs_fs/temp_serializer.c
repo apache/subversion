@@ -253,9 +253,10 @@ typedef struct hash_data_t
 } hash_data_t;
 
 int
-compare_dirent_id_names(svn_fs_dirent_t **lhs, svn_fs_dirent_t **rhs)
+compare_dirent_id_names(const void *lhs, const void *rhs)
 {
-  return strcmp((*lhs)->name, (*rhs)->name);
+  return strcmp((*(svn_fs_dirent_t **)lhs)->name, 
+                (*(svn_fs_dirent_t **)rhs)->name);
 }
 
 /* Utility function to serialize the ENTRIES into a new serialization
@@ -284,7 +285,7 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
   qsort(hash_data.entries,
         count,
         sizeof(*hash_data.entries),
-        (comparison_fn_t)compare_dirent_id_names);
+        compare_dirent_id_names);
 
   /* serialize that aux. structure into a new  */
   context = svn_temp_serializer__init(&hash_data,
