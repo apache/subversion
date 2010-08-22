@@ -272,7 +272,7 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
 
   /* calculate sizes */
   apr_size_t count = apr_hash_count(entries);
-  apr_size_t entries_len = sizeof(svn_fs_dirent_t*[count]);
+  apr_size_t entries_len = count * sizeof(svn_fs_dirent_t*[1]);
 
   /* copy the hash entries to an auxilliary struct of known layout */
   hash_data.count = count;
@@ -422,7 +422,7 @@ serialize_txdelta_ops(svn_temp_serializer__context_t *context,
   /* the ops form a simple chunk of memory with no further references */
   svn_temp_serializer__push(context,
                             (const void * const *)ops,
-                            sizeof(svn_txdelta_op_t[count]));
+                            count * sizeof(svn_txdelta_op_t[1]));
   svn_temp_serializer__pop(context);
 }
 
