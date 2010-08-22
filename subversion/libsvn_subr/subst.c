@@ -1196,7 +1196,6 @@ static svn_error_t *
 translated_stream_skip(void *baton,
                        apr_size_t *count)
 {
-  struct translated_stream_baton *b = baton;
   apr_size_t total_bytes_read = 0;
   apr_size_t bytes_read;
   char buffer[SVN__STREAM_CHUNK_SIZE];
