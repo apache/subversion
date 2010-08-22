@@ -143,6 +143,7 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
 {
   apr_size_t ptr_offset;
   apr_size_t target_offset;
+  apr_size_t *target_ptr;
 
   /* if *source_pointer is the root struct, there will be no parent structure
    * to relate it to */
@@ -160,7 +161,7 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
   assert(context->buffer->len > ptr_offset);
 
   /* use the serialized pointer as a storage for the offset */
-  apr_size_t *target_ptr = (apr_size_t*)(context->buffer->data + ptr_offset);
+  target_ptr = (apr_size_t*)(context->buffer->data + ptr_offset);
 
   /* store the current buffer length because that's where we will append
    * the serialized data of the sub-struct or string */
