@@ -82,6 +82,7 @@ xml_parser_create(svn_ra_neon__request_t *req)
  * for our custom error parser - could use the ne_basic.h interfaces.
  */
 
+/* List of XML elements expected in 207 Multi-Status responses. */
 static const svn_ra_neon__xml_elm_t multistatus_elements[] =
   { { "DAV:", "multistatus", ELEM_multistatus, 0 },
     { "DAV:", "response", ELEM_response, 0 },
@@ -99,6 +100,21 @@ static const svn_ra_neon__xml_elm_t multistatus_elements[] =
   };
 
 
+/* Sparse matrix listing the permitted child elements of each element.
+
+   The permitted direct children of the element named in the first column are
+   the elements named in the remainder of the row.
+
+   There may be any number of rows, and any number of columns in each row; any
+   non-positive value (such as SVN_RA_NEON__XML_INVALID) serves as a sentinel.
+
+   The last element in a row is returned if the head-of-row element is found
+   with a child that's not listed in the remainder of the row.  The singleton
+   element of the last (sentinel) row is returned if a tag-with-children is
+   found that isn't the head of any row.
+
+   See validate_element().
+ */
 static const int multistatus_nesting_table[][5] =
   { { ELEM_root, ELEM_multistatus, SVN_RA_NEON__XML_INVALID },
     { ELEM_multistatus, ELEM_response, ELEM_responsedescription,
@@ -115,6 +131,11 @@ static const int multistatus_nesting_table[][5] =
   };
 
 
+/* PARENT and CHILD are enum values of ELEM_* type.
+   Return a positive integer if CHILD is a valid direct child of PARENT, and
+   a negative integer (SVN_RA_NEON__XML_INVALID or SVN_RA_NEON__XML_DECLINE,
+   at the moment) otherwise.
+ */
 static int
 validate_element(int parent, int child)
 {

@@ -57,6 +57,7 @@ extern "C" {
 #define SVN_RA_NEON__XML_CDATA   (1<<1)
 #define SVN_RA_NEON__XML_COLLECT ((1<<2) | SVN_RA_NEON__XML_CDATA)
 
+/* ### Related to anonymous enum below? */
 typedef int svn_ra_neon__xml_elmid;
 
 /** XML element */
@@ -739,6 +740,7 @@ svn_ra_neon__check_parse_error(const char *method,
                                ne_xml_parser *xml_parser,
                                const char *url);
 
+/* ### Related to svn_ra_neon__xml_elmid? */
 /* ### add SVN_RA_NEON_ to these to prefix conflicts with (sys) headers? */
 enum {
   /* Redefine Neon elements */
