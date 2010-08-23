@@ -479,7 +479,6 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                                       scratch_pool),
                     FALSE, NULL, NULL, scratch_pool));
 
-#if (SVN_WC__VERSION >= 18)
   /* Remove the old properties files... whole directories at a time.  */
   svn_error_clear(svn_io_remove_dir2(
                     svn_wc__adm_child(wcroot_abspath,
@@ -506,7 +505,6 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                                       PROP_REVERT_FOR_DIR,
                                       scratch_pool),
                      TRUE, scratch_pool));
-#endif
 
 #if 0
   /* ### this checks for a write-lock, and we are not (always) taking out
