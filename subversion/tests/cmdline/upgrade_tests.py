@@ -37,6 +37,7 @@ import tarfile
 import tempfile
 
 import svntest
+from svntest import wc
 
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
@@ -91,6 +92,13 @@ def check_format(sbox, expected_format):
     if dot_svn in dirs:
       dirs.remove(dot_svn)
 
+def check_pristine(sbox, files):
+  for file in files:
+    file_path = sbox.ospath(file)
+    file_text = open(file_path, 'r').read()
+    file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
+    if (file_text != file_pristine):
+      raise svntest.Failure("pristine mismatch for '%d'" % (file))
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   dot_svn = svntest.main.get_admin_name()
@@ -202,6 +210,7 @@ def basic_upgrade(sbox):
   # Now check the contents of the working copy
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  check_pristine(sbox, ['iota', 'A/mu'])
 
 def upgrade_with_externals(sbox):
   "upgrade with externals"
@@ -220,6 +229,8 @@ def upgrade_with_externals(sbox):
 
   # Actually check the format number of the upgraded working copy
   check_format(sbox, get_current_format())
+  check_pristine(sbox, ['iota', 'A/mu',
+                        'A/D/x/lambda', 'A/D/x/E/alpha'])
 
 def upgrade_1_5_body(sbox, subcommand):
   replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
@@ -240,6 +251,7 @@ def upgrade_1_5_body(sbox, subcommand):
   # Now check the contents of the working copy
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  check_pristine(sbox, ['iota', 'A/mu'])
 
 
 def upgrade_1_5(sbox):

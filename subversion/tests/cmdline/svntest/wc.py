@@ -842,7 +842,11 @@ def text_base_path(file_path):
     c.execute("""select checksum from base_node
                  where local_relpath = '""" + relpath + """'""")
     checksum = c.fetchone()[0]
-  if checksum is None or checksum[0:6] != "$sha1$":
+  if checksum is not None and checksum[0:6] == "$md5 $":
+    c.execute("""select checksum from pristine
+                 where md5_checksum = '""" + checksum + """'""")
+    checksum = c.fetchone()[0]
+  if checksum is None:
     raise svntest.Failure("No SHA1 checksum for " + relpath)
   db.close()
 
