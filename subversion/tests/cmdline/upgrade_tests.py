@@ -98,7 +98,7 @@ def check_pristine(sbox, files):
     file_text = open(file_path, 'r').read()
     file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
     if (file_text != file_pristine):
-      raise svntest.Failure("pristine mismatch for '%d'" % (file))
+      raise svntest.Failure("pristine mismatch for '%s'" % (file))
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   dot_svn = svntest.main.get_admin_name()
