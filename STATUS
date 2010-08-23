@@ -160,20 +160,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r964767, r965405, r965469, r965508
-   Fix for issue #3683 "Escape unsafe charaters in a URL during export".
-   Justification:
-     This makes svn export more user friendly, by not forcing the user
-     to manually encode the URLs before doing an export.
-   Branch:
-     The new API code changes in trunk requires a backport branch.
-     ^/subversion/branches/1.6.x-issue3683
-   Notes:
-     r964767 is the actual fix. r965405 is the test for the fix and r965469
-     and r965508 are the follow up commits to enhance the fix.
-   Votes:
-     +1: stylesen, jerenkrantz
-     
  * r979045
    Teach mod_dav_svn to pass a base_checksum to libsvn_ra_neon's update
    editor. This enhances the early detection of broken working copies,
@@ -330,3 +316,17 @@ Approved changes:
       checksum isn't used by users of libsvn_ra_serf.
     Votes:
       +1: rhuijben, jerenkrantz (ENOCARE re: 12/39), lgo
+
+ * r964767, r965405, r965469, r965508
+   Fix for issue #3683 "Escape unsafe charaters in a URL during export".
+   Justification:
+     This makes svn export more user friendly, by not forcing the user
+     to manually encode the URLs before doing an export.
+   Branch:
+     The new API code changes in trunk requires a backport branch.
+     ^/subversion/branches/1.6.x-issue3683
+   Notes:
+     r964767 is the actual fix. r965405 is the test for the fix and r965469
+     and r965508 are the follow up commits to enhance the fix.
+   Votes:
+     +1: stylesen, jerenkrantz, lgo
