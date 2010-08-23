@@ -101,10 +101,10 @@ SVNClient *SVNClient::getCppObject(jobject jthis)
     return (cppAddr == 0 ? NULL : reinterpret_cast<SVNClient *>(cppAddr));
 }
 
-void SVNClient::dispose(jobject jthis)
+void SVNClient::dispose()
 {
     static jfieldID fid = 0;
-    SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNClient");
+    SVNBase::dispose(&fid, JAVA_PACKAGE"/SVNClient");
 }
 
 jstring SVNClient::getAdminDirectoryName()

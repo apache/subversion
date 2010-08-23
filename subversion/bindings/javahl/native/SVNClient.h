@@ -210,7 +210,7 @@ class SVNClient :public SVNBase
                      bool ignoreAncestry, DiffSummaryReceiver &receiver);
 
   const char *getLastPath();
-  void dispose(jobject jthis);
+  void dispose();
   static SVNClient *getCppObject(jobject jthis);
   SVNClient();
   virtual ~SVNClient();
