@@ -98,9 +98,21 @@ current (1.6.x) behaviour.
   |                      |                      |                      |
   | update               | ?                    | ?                    |
   |                      |                      |                      |
-  | switch               | Can switch a WC root | No UI exists for an  |
-  |                      |   but it's not then  |   external outside   |
-  |                      |   recorded as such.  |   of a WC.           |
+  | switch               | ?                    | ?                    |
+  |                      |                      |                      |
+  | merge (tracking)     | Skip it; track it as | Just skip it; no     |
+  |                      | skipped.             | tracking needed.     |
+  |                      |                      |                      |
+  | ...                  |                      |                      |
+  |                      |                      |                      |
+  +----------------------+----------------------+----------------------+
+
+Behaviour differences when the target is the switched/external node or
+somewhere inside it:
+
+  +----------------------+----------------------+----------------------+
+  |                      | switched             | external             |
+  +----------------------+----------------------+----------------------+
   |                      |                      |                      |
   | ...                  |                      |                      |
   |                      |                      |                      |
