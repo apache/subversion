@@ -681,11 +681,12 @@ values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
 update actual_node set tree_conflict_data = null;
 
 -- STMT_SELECT_ALL_FILES
+/* Should this select on wc_id as well? */
 SELECT local_relpath FROM BASE_NODE
-WHERE kind = 'file'
+WHERE kind = 'file' AND parent_relpath = ?1
 UNION
 SELECT local_relpath FROM WORKING_NODE
-WHERE kind = 'file';
+WHERE kind = 'file' AND parent_relpath = ?1;
 
 -- STMT_PLAN_PROP_UPGRADE
 SELECT 0, presence, wc_id FROM BASE_NODE WHERE local_relpath = ?1

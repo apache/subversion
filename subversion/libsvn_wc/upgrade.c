@@ -342,34 +342,34 @@ get_versioned_subdirs(apr_array_header_t **children,
 }
 
 
-/* Return in CHILDREN, the list of all versioned *files* in SDB.
-   These files' existence on disk is not tested.
+/* Return in CHILDREN the names of all versioned *files* in SDB that
+   are children of PARENT_RELPATH.  These files' existence on disk is
+   not tested.
 
-   This set of children is intended for props/text-base upgrades.
-   Subdirectory's properties exist in the subdirs. Non-files have no
-   text bases.
+   This set of children is intended for property upgrades.
+   Subdirectory's properties exist in the subdirs.
 
    Note that this uses just the SDB to locate children, which means
-   that the children must have been upgraded to wc-ng format. Also note
-   that this returns *all* files found in SDB. Typically, this is just
-   one directory's worth since it won't be run on a single-db.  */
+   that the children must have been upgraded to wc-ng format. */
 static svn_error_t *
 get_versioned_files(const apr_array_header_t **children,
+                    const char *parent_relpath,
                     svn_sqlite__db_t *sdb,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  apr_array_header_t *child_relpaths;
+  apr_array_header_t *child_names;
   svn_boolean_t have_row;
 
   /* ### just select 'file' children. do we need 'symlink' in the future?  */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ALL_FILES));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", parent_relpath));
 
   /* ### 10 is based on Subversion's average of 8.5 files per versioned
      ### directory in its repository. maybe use a different value? or
      ### count rows first?  */
-  child_relpaths = apr_array_make(result_pool, 10, sizeof(const char *));
+  child_names = apr_array_make(result_pool, 10, sizeof(const char *));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
@@ -377,12 +377,13 @@ get_versioned_files(const apr_array_header_t **children,
       const char *local_relpath = svn_sqlite__column_text(stmt, 0,
                                                           result_pool);
 
-      APR_ARRAY_PUSH(child_relpaths, const char *) = local_relpath;
+      APR_ARRAY_PUSH(child_names, const char *)
+        = svn_relpath_basename(local_relpath, result_pool);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
-  *children = child_relpaths;
+  *children = child_names;
 
   return svn_error_return(svn_sqlite__reset(stmt));
 }
@@ -915,7 +916,8 @@ bump_to_16(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 /* Migrate the properties for one node (LOCAL_ABSPATH).  */
 static svn_error_t *
-migrate_node_props(const char *wcroot_abspath,
+migrate_node_props(const char *old_wcroot_abspath,
+                   const char *new_wcroot_abspath,
                    const char *name,
                    svn_sqlite__db_t *sdb,
                    int original_format,
@@ -927,24 +929,26 @@ migrate_node_props(const char *wcroot_abspath,
   apr_hash_t *base_props;
   apr_hash_t *revert_props;
   apr_hash_t *working_props;
+  const char *dir_relpath = svn_dirent_skip_ancestor(new_wcroot_abspath,
+                                                     old_wcroot_abspath);
 
   if (*name == '\0')
     {
-      base_abspath = svn_wc__adm_child(wcroot_abspath, PROP_BASE_FOR_DIR,
-                                       scratch_pool);
-      revert_abspath = svn_wc__adm_child(wcroot_abspath, PROP_REVERT_FOR_DIR,
-                                         scratch_pool);
-      working_abspath = svn_wc__adm_child(wcroot_abspath, PROP_WORKING_FOR_DIR,
-                                          scratch_pool);
+      base_abspath = svn_wc__adm_child(old_wcroot_abspath,
+                                       PROP_BASE_FOR_DIR, scratch_pool);
+      revert_abspath = svn_wc__adm_child(old_wcroot_abspath,
+                                         PROP_REVERT_FOR_DIR, scratch_pool);
+      working_abspath = svn_wc__adm_child(old_wcroot_abspath,
+                                          PROP_WORKING_FOR_DIR, scratch_pool);
     }
   else
     {
       const char *basedir_abspath;
       const char *propsdir_abspath;
 
-      propsdir_abspath = svn_wc__adm_child(wcroot_abspath, PROPS_SUBDIR,
+      propsdir_abspath = svn_wc__adm_child(old_wcroot_abspath, PROPS_SUBDIR,
                                            scratch_pool);
-      basedir_abspath = svn_wc__adm_child(wcroot_abspath, PROP_BASE_SUBDIR,
+      basedir_abspath = svn_wc__adm_child(old_wcroot_abspath, PROP_BASE_SUBDIR,
                                           scratch_pool);
 
       base_abspath = svn_dirent_join(basedir_abspath,
@@ -977,7 +981,8 @@ migrate_node_props(const char *wcroot_abspath,
                         scratch_pool, scratch_pool));
 
   return svn_error_return(svn_wc__db_upgrade_apply_props(
-                            sdb, wcroot_abspath, name,
+                            sdb, new_wcroot_abspath,
+                            svn_relpath_join(dir_relpath, name, scratch_pool),
                             base_props, revert_props, working_props,
                             original_format,
                             scratch_pool));
@@ -986,7 +991,8 @@ migrate_node_props(const char *wcroot_abspath,
 
 /* */
 static svn_error_t *
-migrate_props(const char *wcroot_abspath,
+migrate_props(const char *old_wcroot_abspath,
+              const char *new_wcroot_abspath,
               svn_sqlite__db_t *sdb,
               int original_format,
               apr_pool_t *scratch_pool)
@@ -1013,22 +1019,25 @@ migrate_props(const char *wcroot_abspath,
   */
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const char *dir_relpath = svn_dirent_skip_ancestor(new_wcroot_abspath,
+                                                     old_wcroot_abspath);
   int i;
 
   /* Migrate the props for "this dir".  */
-  SVN_ERR(migrate_node_props(wcroot_abspath, "", sdb, original_format,
-                             iterpool));
+  SVN_ERR(migrate_node_props(old_wcroot_abspath, new_wcroot_abspath, "", sdb,
+                             original_format, iterpool));
 
   /* Iterate over all the files in this SDB.  */
-  SVN_ERR(get_versioned_files(&children, sdb, scratch_pool, iterpool));
+  SVN_ERR(get_versioned_files(&children, dir_relpath, sdb, scratch_pool,
+                              iterpool));
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(migrate_node_props(wcroot_abspath, name, sdb, original_format,
-                                 iterpool));
+      SVN_ERR(migrate_node_props(old_wcroot_abspath, new_wcroot_abspath,
+                                 name, sdb, original_format, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1053,8 +1062,8 @@ bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* ### no schema changes (yet)... */
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_18));
 
-  SVN_ERR(migrate_props(b18->wcroot_abspath, sdb, b18->original_format,
-                        scratch_pool));
+  SVN_ERR(migrate_props(b18->wcroot_abspath, b18->wcroot_abspath, sdb,
+                        b18->original_format, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1311,14 +1320,13 @@ upgrade_to_wcng(svn_wc__db_t *db,
   SVN_ERR(migrate_text_bases(dir_abspath, data->root_abspath, data->sdb,
                              scratch_pool));
 
-#if (SVN_WC__VERSION >= 18)
   /* Upgrade all the properties (including "this dir").
 
      Note: this must come AFTER the entries have been migrated into the
      database. The upgrade process needs the children in BASE_NODE and
      WORKING_NODE, and to examine the resultant WORKING state.  */
-  SVN_ERR(migrate_props(dir_abspath, data->sdb, old_format, scratch_pool));
-#endif
+  SVN_ERR(migrate_props(dir_abspath, data->root_abspath, data->sdb, old_format,
+                        scratch_pool));
 
   /* All done. DB should finalize the upgrade process now.  */
   SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, data->sdb, scratch_pool));
