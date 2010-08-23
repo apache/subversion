@@ -1342,12 +1342,18 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* Zap all the obsolete files. This removes the old-style lock file.
      In single-db we should postpone this until we have processed all
      entries files into the single-db, otherwise an interrupted
-     upgrade is nasty.  Perhaps add a wq item?  Perhaps we should
-     remove the lock so that the user doesn't have to use 1.6 to
-     cleanup? */
+     upgrade is nasty.  Perhaps add a wq item?  If we do postpone then
+     perhaps we should still remove the lock otherwise the user has to
+     use 1.6 to cleanup. */
   wipe_obsolete_files(dir_abspath, scratch_pool);
 
-  /* ### need to (eventually) delete the .svn subdir.  */
+#ifdef SVN_WC__SINGLE_DB
+  /* Remove the admin dir in subdirectories of the root. */
+  if (strcmp(data->root_abspath, dir_abspath))
+    svn_error_clear(svn_io_remove_dir2(svn_wc__adm_child(dir_abspath, NULL,
+                                                         scratch_pool),
+                                       FALSE, NULL, NULL, scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }
