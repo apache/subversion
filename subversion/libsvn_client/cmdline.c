@@ -125,11 +125,14 @@ check_root_url_of_target(const char **root_url,
        * If the target itself is a URL to a repository that does not exist,
        * that's fine, too. The callers will deal with this argument in an
        * appropriate manter if it does not make any sense.
+       *
+       * Also tolerate locally added targets ("bad revision" error).
        */
       if ((err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
           || (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-          || (err->apr_err == SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED))
+          || (err->apr_err == SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED)
+          || (err->apr_err == SVN_ERR_CLIENT_BAD_REVISION))
         {
           svn_error_clear(err);
           return SVN_NO_ERROR;

@@ -15764,6 +15764,113 @@ def copy_causes_phantom_eol_conflict(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1, 1)
   
+
+#----------------------------------------------------------------------
+def merge_into_locally_added_file(sbox):
+  "merge into locally added file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  pi_path = sbox.ospath("A/D/G/pi")
+  new_path = sbox.ospath("A/D/G/new")
+
+  shutil.copy(pi_path, new_path)
+  svntest.main.file_append(pi_path, "foo\n")
+  sbox.simple_commit(); # r2
+
+  sbox.simple_add(new_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/D/G/new' : Item(status='G '),
+    })
+  expected_mergeinfo_output = wc.State(wc_dir, {
+    'A/D/G/new'   : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({ 'A/D/G/new' : Item(status='A ', wc_rev=0)})
+  expected_status.tweak('A/D/G/pi', wc_rev=2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nfoo\n")
+  expected_disk.add({'A/D/G/new' : Item("This is the file 'pi'.\nfoo\n",
+                     props={SVN_PROP_MERGEINFO : '/A/D/G/pi:2'})})
+  expected_skip = wc.State(wc_dir, {})
+
+  svntest.actions.run_and_verify_merge(wc_dir, '1', '2',
+                                       sbox.repo_url + '/A/D/G/pi', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       True, True, new_path)
+  sbox.simple_commit()
+
+#----------------------------------------------------------------------
+def merge_into_locally_added_directory(sbox):
+  "merge into locally added directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  G_path = sbox.ospath("A/D/G")
+  pi_path = sbox.ospath("A/D/G/pi")
+  new_dir_path = sbox.ospath("A/D/new_dir")
+
+  svntest.main.file_append(pi_path, "foo\n")
+  sbox.simple_commit(); # r2
+
+  os.mkdir(new_dir_path)
+  svntest.main.file_append(os.path.join(new_dir_path, 'pi'),
+                           "This is the file 'pi'.\n")
+  svntest.main.file_append(os.path.join(new_dir_path, 'rho'),
+                           "This is the file 'rho'.\n")
+  svntest.main.file_append(os.path.join(new_dir_path, 'tau'),
+                           "This is the file 'tau'.\n")
+  sbox.simple_add(new_dir_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/D/new_dir/pi' : Item(status='G '),
+    })
+  expected_mergeinfo_output = wc.State(wc_dir, {
+    'A/D/new_dir'   : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({ 'A/D/new_dir' : Item(status='A ', wc_rev=0)})
+  expected_status.add({ 'A/D/new_dir/pi' : Item(status='A ', wc_rev=0)})
+  expected_status.add({ 'A/D/new_dir/rho' : Item(status='A ', wc_rev=0)})
+  expected_status.add({ 'A/D/new_dir/tau' : Item(status='A ', wc_rev=0)})
+  expected_status.tweak('A/D/G/pi', wc_rev=2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nfoo\n")
+  expected_disk.add({'A/D/new_dir' :
+                       Item(props={SVN_PROP_MERGEINFO : '/A/D/G:2'})})
+  expected_disk.add({'A/D/new_dir/pi' :
+                     Item(contents="This is the file 'pi'.\nfoo\n")})
+  expected_disk.add({'A/D/new_dir/rho' :
+                     Item(contents="This is the file 'rho'.\n")})
+  expected_disk.add({'A/D/new_dir/tau' :
+                     Item(contents="This is the file 'tau'.\n")})
+  expected_skip = wc.State(wc_dir, {})
+
+  svntest.actions.run_and_verify_merge(wc_dir, '1', '2',
+                                       sbox.repo_url + '/A/D/G', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       True, True, new_dir_path)
+  sbox.simple_commit()
+
 ########################################################################
 # Run the tests
 
@@ -15951,6 +16058,8 @@ test_list = [ None,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
               record_only_merge_creates_self_referential_mergeinfo,
               copy_causes_phantom_eol_conflict,
+              merge_into_locally_added_file,
+              merge_into_locally_added_directory,
              ]
 
 if __name__ == '__main__':

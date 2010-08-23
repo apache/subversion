@@ -3367,6 +3367,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
       svn_revnum_t target_rev;
       svn_opt_revision_t peg_revision;
       apr_pool_t *sesspool = NULL;
+      svn_error_t *err;
 
       /* Assert that we have sane input. */
       SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start)
@@ -3374,9 +3375,26 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                  && (start > end));
 
       peg_revision.kind = svn_opt_revision_working;
-      SVN_ERR(svn_client__derive_location(&url, &target_rev, target_abspath,
-                                          &peg_revision, ra_session,
-                                          ctx, result_pool, scratch_pool));
+      err = svn_client__derive_location(&url, &target_rev, target_abspath,
+                                        &peg_revision, ra_session,
+                                        ctx, result_pool, scratch_pool);
+
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED)
+            {
+              /* We've been asked to operate on a target which has no location
+               * in the repository. Either it's unversioned (but attempts to
+               * merge into unversioned targets should not get as far as here),
+               * or it is locally added, in which case the target's implicit
+               * mergeinfo is empty. */
+              svn_error_clear(err);
+              *implicit_mergeinfo = apr_hash_make(result_pool);
+              return SVN_NO_ERROR;
+            }
+          else
+            return svn_error_return(err);
+        }
 
       if (target_rev <= end)
         {
