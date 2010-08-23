@@ -208,7 +208,7 @@ def basic_reintegrate(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
 
   # Test issue #3640:
   # 
@@ -267,7 +267,7 @@ def basic_reintegrate(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_MOVED_path)
 
 #----------------------------------------------------------------------
 def reintegrate_with_rename(sbox):
@@ -509,7 +509,7 @@ def reintegrate_with_rename(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
 
   # Finally, commit the result of the merge (r10).
   expected_output = wc.State(wc_dir, {
@@ -642,7 +642,7 @@ def reintegrate_branch_never_merged_to(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
 
   # Finally, commit the result of the merge (r9).
   expected_output = wc.State(wc_dir, {
@@ -670,7 +670,7 @@ def reintegrate_fail_on_modified_wc(sbox):
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
     ".*Cannot reintegrate into a working copy that has local modifications.*",
-    None, None, None, None, True, False, '--reintegrate')
+    None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
 def reintegrate_fail_on_mixed_rev_wc(sbox):
@@ -693,7 +693,7 @@ def reintegrate_fail_on_mixed_rev_wc(sbox):
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
     ".*Cannot reintegrate into mixed-revision working copy.*",
-    None, None, None, None, True, False, '--reintegrate')
+    None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
 def reintegrate_fail_on_switched_wc(sbox):
@@ -738,7 +738,7 @@ def reintegrate_fail_on_switched_wc(sbox):
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
     ".*Cannot reintegrate into a working copy with a switched subtree.*",
-    None, None, None, None, True, False, '--reintegrate')
+    None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3603 'allow reintegrate merges into WCs with
@@ -816,7 +816,7 @@ def reintegrate_on_shallow_wc(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
   # Now revert the reintegrate and make a second change on the
   # branch in r4, but this time change a subtree that corresponds
@@ -848,7 +848,7 @@ def reintegrate_on_shallow_wc(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
 def reintegrate_fail_on_stale_source(sbox):
@@ -925,7 +925,7 @@ def reintegrate_fail_on_stale_source(sbox):
                                        expected_status,
                                        expected_skip,
                                        [], None, None, None, None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
 def merge_file_with_space_in_its_path(sbox):
@@ -1176,7 +1176,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
   # Make some more changes to A_COPY so that the same revisions have *not*
   # been uniformly applied from A to A_COPY.  In this case the reintegrate
@@ -1429,7 +1429,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
 def multiple_reintegrates_from_the_same_branch(sbox):
@@ -1589,7 +1589,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 1, '--reintegrate')
+                                       None, 1, 1, '--reintegrate', A_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      "2nd Reintegrate feature branch back to 'A'",
                                      wc_dir)
@@ -1745,7 +1745,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0, '--reintegrate')
+                                       None, 1, 0, '--reintegrate', A2_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3577 '1.7 subtree mergeinfo recording breaks reintegrate'.
@@ -1876,7 +1876,7 @@ def reintegrate_with_subtree_merges(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
@@ -2070,7 +2070,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo

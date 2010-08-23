@@ -1639,7 +1639,7 @@ def merge_skips_obstructions(sbox):
                                        expected_status.copy(wc_dir),
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 0, '--ignore-ancestry')
+                                       1, 0, '--ignore-ancestry', wc_dir)
 
 #----------------------------------------------------------------------
 # At one time, a merge that added items with the same name as missing
@@ -1734,7 +1734,7 @@ def merge_into_missing(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       0, 0, '--dry-run')
+                                       0, 0, '--dry-run', F_path)
 
   expected_status = wc.State(F_path, {
     ''      : Item(status=' M', wc_rev=1),
@@ -3023,7 +3023,7 @@ def property_merge_undo_redo(sbox):
                                        None, None, # no B singleton handler
                                        1, # check props
                                        0, # dry_run
-                                       '--ignore-ancestry')
+                                       '--ignore-ancestry', wc_dir)
 
 
 
@@ -3407,7 +3407,7 @@ def merge_ignore_whitespace(sbox):
                                        expected_skip,
                                        None, None, None, None, None,
                                        0, 0,
-                                       '-x', '-w')
+                                       '-x', '-w', wc_dir)
 
 #----------------------------------------------------------------------
 # use -x --ignore-eol-style option for ignoring eolstyle during merge
@@ -3489,7 +3489,7 @@ def merge_ignore_eolstyle(sbox):
                                        expected_skip,
                                        None, None, None, None, None,
                                        0, 0,
-                                       '-x', '--ignore-eol-style')
+                                       '-x', '--ignore-eol-style', wc_dir)
 
 #----------------------------------------------------------------------
 # eol-style handling during merge with conflicts, scenario 1:
@@ -5028,7 +5028,8 @@ def mergeinfo_elision(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 1, '--record-only')
+                                       None, 1, 1, '--record-only',
+                                       A_COPY_path)
 
   # Reverse merge r5 out of A_COPY/B/E/beta.  The mergeinfo on
   # A_COPY/B/E/beta which previously elided will now return,
@@ -7102,7 +7103,7 @@ def merge_with_depth_files(sbox):
                                        expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1, 1,
-                                       '--depth', 'files')
+                                       '--depth', 'files', Acopy_path)
 
 #----------------------------------------------------------------------
 # Test for issue #2976 Subtrees can lose non-inheritable ranges.
@@ -7197,7 +7198,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
                                        expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1, 1,
-                                       '--depth', 'immediates')
+                                       '--depth', 'immediates', D_COPY_path)
 
   # Repeat the previous merge but at default depth of infinity.  The change
   # to A_COPY/D/H/omega should now happen and the non-inheritable ranges on
@@ -7467,7 +7468,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
                                        expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1, 1,
-                                       '--depth', 'empty')
+                                       '--depth', 'empty', H_COPY_2_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m',
                                      'log msg', wc_dir);
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
@@ -8697,7 +8698,8 @@ def propchange_of_subdir_raises_conflict(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '--depth', 'files')
+                                       1, 1, '--depth', 'files',
+                                       A_COPY_B_path)
 
   # Merge /A/B to /A_COPY/B ie., r1 to r3 with infinite depth
   expected_output = wc.State(A_COPY_B_path, {
@@ -8920,7 +8922,8 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '--depth', 'immediates')
+                                       1, 1, '--depth', 'immediates',
+                                       A_COPY_B_path)
 
   # Merge /A/B to /A_COPY/B ie., r1 to r3 with infinite depth
   expected_output = wc.State(A_COPY_B_path, {
@@ -9141,7 +9144,7 @@ def ignore_ancestry_and_mergeinfo(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None, 1, 1,
-                                       '--ignore-ancestry')
+                                       '--ignore-ancestry', A_COPY_B_path)
 
 #----------------------------------------------------------------------
 def merge_from_renamed_branch_fails_while_avoiding_repeat_merge(sbox):
@@ -13593,7 +13596,7 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
                                        expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1, 0,
-                                       '-c3,7')
+                                       '-c3,7', H_COPY_path)
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[-7]],
@@ -14737,7 +14740,7 @@ def record_only_merge(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None, 1, 0,
-                                       '--record-only')
+                                       '--record-only', A2_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3514 'svn merge --accept [ base | theirs-full ]
@@ -14833,7 +14836,8 @@ def merge_automatic_conflict_resolution(sbox):
                                        svntest.tree.detect_conflict_files,
                                        list(psi_conflict_support_files),
                                        None, None, 1, 1,
-                                       '--accept', 'postpone')
+                                       '--accept', 'postpone',
+                                       A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
 
@@ -14851,7 +14855,8 @@ def merge_automatic_conflict_resolution(sbox):
                                        expected_skip,
                                        None, None, None,
                                        None, None, 1, 0,
-                                       '--accept', 'mine-conflict')
+                                       '--accept', 'mine-conflict',
+                                       A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
   svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
@@ -14864,7 +14869,8 @@ def merge_automatic_conflict_resolution(sbox):
                                        expected_skip,
                                        None, None, None,
                                        None, None, 1, 0,
-                                       '--accept', 'mine-full')
+                                       '--accept', 'mine-full',
+                                       A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
 
@@ -14882,7 +14888,8 @@ def merge_automatic_conflict_resolution(sbox):
                                        expected_skip,
                                        None, None, None,
                                        None, None, 1, 0,
-                                       '--accept', 'theirs-conflict')
+                                       '--accept', 'theirs-conflict',
+                                       A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
   # Issue #3514 fails here with an error similar to:
@@ -14921,7 +14928,8 @@ def merge_automatic_conflict_resolution(sbox):
                                        expected_skip,
                                        None, None, None,
                                        None, None, 1, 0,
-                                       '--accept', 'theirs-full')
+                                       '--accept', 'theirs-full',
+                                       A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
   # Test --accept base
@@ -14945,7 +14953,8 @@ def merge_automatic_conflict_resolution(sbox):
                                        expected_skip,
                                        None, None, None,
                                        None, None, 1, 0,
-                                       '--accept', 'base')
+                                       '--accept', 'base',
+                                       A_COPY_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3440 'Skipped paths get incorrect override mergeinfo
@@ -15533,7 +15542,8 @@ def immediate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '--depth', 'immediates')
+                                       1, 1, '--depth', 'immediates',
+                                       B_COPY_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3646 'cyclic --record-only merges create self-referential
@@ -15627,7 +15637,7 @@ def record_only_merge_creates_self_referential_mergeinfo(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None, None, 1, 1,
-                                       '--record-only')
+                                       '--record-only', A_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3657 'phantom svn:eol-style changes cause spurious merge
