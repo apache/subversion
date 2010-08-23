@@ -675,7 +675,8 @@ typedef svn_error_t * (*svn_ra_neon__endelm_cb_t)(void *baton,
  * Register a pool cleanup on the pool of REQ to clean up any allocated
  * Neon resources.
  *
- * ACCPT indicates whether the parser wants read the response body
+ * Return the new parser.  Also attach it to REQ if ACCPT is non-null.
+ * ACCPT indicates whether the parser wants to read the response body
  * or not.  Pass NULL for ACCPT when you don't want the returned parser
  * to be attached to REQ.
  */
