@@ -194,15 +194,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, jerenkrantz
 
-  * r979429
-    Teach libsvn_ra_serf how to parse the md5-checksum for passing it
-    to update editors.
-    Justification:
-      Without this fix the most important broken working copy detection
-      checksum isn't used by users of libsvn_ra_serf.     
-    Votes:
-      +1: rhuijben, jerenkrantz (ENOCARE re: 12/39)
-
  * r981921
    fsfs: make rev files read-only.
    Justification:
@@ -235,7 +226,7 @@ Candidate changes:
      This change passes davautocheck as of serf trunk (serf 0.6.1 is *not*
      sufficient; a newer release should be).
    Votes:
-     +1: jerenkrantz
+     +1: jerenkrantz, lgo
 
 Veto-blocked changes:
 =====================
@@ -330,3 +321,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+  * r979429
+    Teach libsvn_ra_serf how to parse the md5-checksum for passing it
+    to update editors.
+    Justification:
+      Without this fix the most important broken working copy detection
+      checksum isn't used by users of libsvn_ra_serf.
+    Votes:
+      +1: rhuijben, jerenkrantz (ENOCARE re: 12/39), lgo
