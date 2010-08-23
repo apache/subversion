@@ -299,6 +299,7 @@ multistatus_parser_create(svn_ra_neon__request_t *req)
 {
   multistatus_baton_t *b = apr_pcalloc(req->pool, sizeof(*b));
 
+  /* Create a parser, attached to REQ. (Ignore the return value.) */
   svn_ra_neon__xml_parser_create(req, ne_accept_207,
                                  start_207_element,
                                  svn_ra_neon__xml_collect_cdata,
@@ -426,6 +427,10 @@ compressed_body_reader_cleanup(void *baton)
   return APR_SUCCESS;
 }
 
+/* Attach READER as a response reader for the request REQ, with the
+ * acceptance function ACCPT.  The response body data will be decompressed,
+ * if compressed, before being passed to READER.  USERDATA will be passed as
+ * the first argument to the acceptance and reader callbacks. */
 static void
 attach_ne_body_reader(svn_ra_neon__request_t *req,
                       ne_accept_response accpt,
