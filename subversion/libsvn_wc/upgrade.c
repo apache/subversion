@@ -1061,14 +1061,15 @@ bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 
 static svn_error_t *
-migrate_text_bases(const char *wcroot_abspath,
+migrate_text_bases(const char *old_wcroot_abspath,
+                   const char *new_wcroot_abspath,
                    svn_sqlite__db_t *sdb,
                    apr_pool_t *scratch_pool)
 {
   apr_hash_t *dirents;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
-  const char *text_base_dir = svn_wc__adm_child(wcroot_abspath,
+  const char *text_base_dir = svn_wc__adm_child(old_wcroot_abspath,
                                                 TEXT_BASE_SUBDIR,
                                                 scratch_pool);
 
@@ -1116,7 +1117,7 @@ migrate_text_bases(const char *wcroot_abspath,
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
       SVN_ERR(svn_wc__db_pristine_get_future_path(&pristine_path,
-                                                  wcroot_abspath,
+                                                  new_wcroot_abspath,
                                                   sha1_checksum,
                                                   iterpool, iterpool));
 
@@ -1144,7 +1145,8 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
 
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
-  SVN_ERR(migrate_text_bases(wcroot_abspath, sdb, scratch_pool));
+  SVN_ERR(migrate_text_bases(wcroot_abspath, wcroot_abspath, sdb,
+                             scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1306,7 +1308,8 @@ upgrade_to_wcng(svn_wc__db_t *db,
                                                  scratch_pool));
     }
 
-  SVN_ERR(migrate_text_bases(dir_abspath, data->sdb, scratch_pool));
+  SVN_ERR(migrate_text_bases(dir_abspath, data->root_abspath, data->sdb,
+                             scratch_pool));
 
 #if (SVN_WC__VERSION >= 18)
   /* Upgrade all the properties (including "this dir").
