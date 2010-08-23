@@ -1650,13 +1650,16 @@ insert_base_node(svn_sqlite__db_t *sdb,
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->revision));
 
+#ifndef SVN_WC__SINGLE_DB
   /* ### in per-subdir operation, if we're about to write a directory and
      ### it is *not* "this dir", then we're writing a row in the parent
      ### directory about the child. note that in the kind.  */
-  /* ### kind might be "symlink" or "unknown" */
   if (base_node->kind == svn_node_dir && *base_node->local_relpath != '\0')
     SVN_ERR(svn_sqlite__bind_text(stmt, 8, "subdir"));
-  else if (base_node->kind == svn_node_none)
+  else
+#endif
+  /* ### kind might be "symlink" or "unknown" */
+  if (base_node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, "unknown"));
   else
     SVN_ERR(svn_sqlite__bind_text(stmt, 8,
@@ -2032,11 +2035,26 @@ write_entry(svn_wc__db_t *db,
         {
           base_node->kind = entry->kind;
 
-          if (entry->incomplete)
+#ifdef SVN_WC__SINGLE_DB
+          /* All subdirs are initially incomplete, they stop being
+             incomplete when the entries file in the subdir is
+             upgraded and remain incomplete if that doesn't happen. */
+          if (entry->kind == svn_node_dir
+              && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
             {
-              /* ### nobody should have set the presence.  */
-              SVN_ERR_ASSERT(base_node->presence == svn_wc__db_status_normal);
               base_node->presence = svn_wc__db_status_incomplete;
+            }
+          else
+#endif
+            {
+
+              if (entry->incomplete)
+                {
+                  /* ### nobody should have set the presence.  */
+                  SVN_ERR_ASSERT(base_node->presence
+                                 == svn_wc__db_status_normal);
+                  base_node->presence = svn_wc__db_status_incomplete;
+                }
             }
         }
 
@@ -2228,6 +2246,7 @@ struct entries_write_baton
   apr_int64_t repos_id;
   apr_int64_t wc_id;
   const char *local_abspath;
+  const char *root_abspath;
   apr_hash_t *entries;
 };
 
@@ -2241,6 +2260,7 @@ entries_write_new_cb(void *baton,
   struct entries_write_baton *ewb = baton;
   svn_wc__db_t *db = ewb->db;
   const char *local_abspath = ewb->local_abspath;
+  const char *root_abspath = ewb->root_abspath;
   const svn_wc_entry_t *this_dir;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -2260,7 +2280,9 @@ entries_write_new_cb(void *baton,
 
   /* Write out "this dir" */
   SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id, repos_root,
-                      this_dir, SVN_WC_ENTRY_THIS_DIR, local_abspath,
+                      this_dir,
+                      svn_dirent_skip_ancestor(root_abspath, local_abspath),
+                      local_abspath,
                       this_dir, FALSE, FALSE, iterpool));
 
   for (hi = apr_hash_first(scratch_pool, ewb->entries); hi;
@@ -2280,7 +2302,9 @@ entries_write_new_cb(void *baton,
          use this function for upgrading old working copies. */
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
       SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id, repos_root,
-                          this_entry, name, child_abspath, this_dir,
+                          this_entry,
+                          svn_dirent_skip_ancestor(root_abspath, child_abspath),
+                          child_abspath, this_dir,
                           FALSE, TRUE,
                           iterpool));
     }
@@ -2296,6 +2320,7 @@ svn_wc__write_upgraded_entries(svn_wc__db_t *db,
                                apr_int64_t repos_id,
                                apr_int64_t wc_id,
                                const char *local_abspath,
+                               const char *root_abspath,
                                apr_hash_t *entries,
                                apr_pool_t *scratch_pool)
 {
@@ -2305,6 +2330,7 @@ svn_wc__write_upgraded_entries(svn_wc__db_t *db,
   ewb.repos_id = repos_id;
   ewb.wc_id = wc_id;
   ewb.local_abspath = local_abspath;
+  ewb.root_abspath = root_abspath;
   ewb.entries = entries;
 
   /* Run this operation in a transaction to speed up SQLite.

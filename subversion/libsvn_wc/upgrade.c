@@ -1169,6 +1169,7 @@ bump_to_XXX(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 struct upgrade_data_t {
   svn_sqlite__db_t *sdb;
+  const char *root_abspath;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
 };
@@ -1278,11 +1279,13 @@ upgrade_to_wcng(svn_wc__db_t *db,
                                            scratch_pool));
       SVN_ERR(svn_wc__db_wclock_obtain(db, dir_abspath, 0, FALSE,
                                        scratch_pool));
+      data->root_abspath = apr_pstrdup(result_pool, dir_abspath);
     }
  
   SVN_ERR(svn_wc__write_upgraded_entries(db, data->sdb,
                                          data->repos_id, data->wc_id,
-                                         dir_abspath, entries,
+                                         dir_abspath, data->root_abspath,
+                                         entries,
                                          scratch_pool));
 
   /***** WC PROPS *****/
