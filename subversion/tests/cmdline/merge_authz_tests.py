@@ -393,7 +393,8 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0, '-c5', '-c8')
+                                       None, 1, 0, '-c5', '-c8',
+                                       A_COPY_2_H_path)
 
   # Test issue #2829 'Improve handling for skipped paths encountered
   # during a merge'
@@ -697,7 +698,7 @@ def reintegrate_fails_if_no_root_access(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
   
 ########################################################################
 # Run the tests
