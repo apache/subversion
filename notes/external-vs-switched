@@ -52,22 +52,24 @@ Differences in WC State
 
 This table documents the differences in WC state at a high level.
 
-  +----------------------+----------------------+----------------------+
-  |                      | switched             | external             |
-  +----------------------+----------------------+----------------------+
-  |                      |                      |                      |
-  | WC path affected     | Existing child       | Non-existent child   |
-  |                      |   of a versioned dir |   or grandchild etc. |
-  |                      |                      |   of a versioned dir |
-  |                      |                      |                      |
-  | Target URL           | Same repo            | Same or other repo   |
-  |                      |                      |                      |
-  | Pinned to a revision | No [2]               | Optional; recorded   |
-  |                      |                      |   in 'svn:externals' |
-  |                      |                      |                      |
-  | Initial depth        | Set by "switch" cmd  | Infinity             |
-  |                      |                      |                      |
-  +----------------------+----------------------+----------------------+
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      | switched             | external (file)      | external (dir)       |
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      |                      |                      |                      |
+  | WC path affected     | Existing child       | Non-existent child   | Non-existent child   |
+  |                      | of a versioned dir   | of a versioned dir   | or grandchild etc.   |
+  |                      |                      |                      | of a versioned dir   |
+  |                      |                      |                      |                      |
+  | Resulting WC         | Same WC              | Same WC              | Separate WC          |
+  |                      |                      |                      |                      |
+  | Target URL           | Same repo            | Same repo            | Same or other repo   |
+  |                      |                      |                      |                      |
+  | Pinned to a revision | No [2]               | Optional; recorded   | Optional; recorded   |
+  |                      |                      | on the node itself   | in 'svn:externals'   |
+  |                      |                      |                      |                      |
+  | Initial depth        | Set by "switch" cmd  | n/a                  | Infinity             |
+  |                      |                      |                      |                      |
+  +----------------------+----------------------+----------------------+----------------------+
 
 ### Anything else?
 
@@ -81,42 +83,43 @@ current (1.6.x) behaviour.
 
 ### We'll need some test scripts to help gather this data.
 
-  +----------------------+----------------------+----------------------+
-  |                      | switched             | external             |
-  +----------------------+----------------------+----------------------+
-  |                      |                      |                      |
-  | recursive descent,   | yes                  | optional             |
-  |   in general         |                      |                      |
-  |                      |                      |                      |
-  | status               | report & descend     | report [& descend]   |
-  |                      |                      |                      |
-  | propget/list/etc.    | ?                    | ?                    |
-  |                      |                      |                      |
-  | diff                 | ?                    | ?                    |
-  |                      |                      |                      |
-  | commit               | descend              | [descend?]           |
-  |                      |                      |                      |
-  | update               | ?                    | ?                    |
-  |                      |                      |                      |
-  | switch               | ?                    | ?                    |
-  |                      |                      |                      |
-  | merge (tracking)     | Skip it; track it as | Just skip it; no     |
-  |                      | skipped.             | tracking needed.     |
-  |                      |                      |                      |
-  | ...                  |                      |                      |
-  |                      |                      |                      |
-  +----------------------+----------------------+----------------------+
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      | switched             | external (file)      | external (dir)       |
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      |                      |                      |                      |
+  | recursive descent,   | descend              | descend              | optional             |
+  |   in general         |                      |                      |                      |
+  |                      |                      |                      |                      |
+  | status               | report & descend     | report 'X' & status  | report [& descend]   |
+  |                      |                      |                      |                      |
+  | propget/list/etc.    | descend              | descend              | skip                 |
+  |                      |                      |                      |                      |
+  | diff                 | descend              | descend              | skip                 |
+  |                      |                      |                      |                      |
+  | commit               | descend              | descend              | skip [5]             |
+  |                      |                      |                      |                      |
+  | update               | descend              | descend              | descend (optional)   |
+  |                      | (in-line)            | (in-line)            | (afterwards)         |
+  |                      |                      |                      |                      |
+  | switch               | ?                    | ?                    | descend [6]          |
+  |                      |                      |                      |                      |
+  | merge (tracking)     | Skip it; track it as | Skip it; track it as | Just skip it; no     |
+  |                      | skipped.             | skipped.             | tracking needed.     |
+  |                      |                      |                      |                      |
+  | ...                  |                      |                      |                      |
+  |                      |                      |                      |                      |
+  +----------------------+----------------------+----------------------+----------------------+
 
 Behaviour differences when the target is the switched/external node or
 somewhere inside it:
 
-  +----------------------+----------------------+----------------------+
-  |                      | switched             | external             |
-  +----------------------+----------------------+----------------------+
-  |                      |                      |                      |
-  | ...                  |                      |                      |
-  |                      |                      |                      |
-  +----------------------+----------------------+----------------------+
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      | switched             | external (file)      | external (dir)       |
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      |                      |                      |                      |
+  | ...                  |                      |                      |                      |
+  |                      |                      |                      |                      |
+  +----------------------+----------------------+----------------------+----------------------+
 
 We ought to think about the UI and design a set of useful and consistent
 behaviours.  But that's out of scope here; this document focuses on the
@@ -143,3 +146,9 @@ Footnotes
       revision number" if present.  But that need not necessarily be an
       exception: we might choose to define that functionality on all WC
       nodes but only use it on 'external' nodes.
+
+  [5] Bert says: "except for some buggy behavior relying on passing a
+      limiting depth".
+
+  [6] Bert says: "externals definitions are normally updated after a
+      switch by handling the svn:externals property changes".
