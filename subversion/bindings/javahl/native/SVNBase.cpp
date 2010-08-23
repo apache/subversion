@@ -29,6 +29,7 @@
 
 SVNBase::SVNBase()
 {
+  jthis = NULL;
 }
 
 SVNBase::~SVNBase()
@@ -44,6 +45,7 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
                                      const char *className)
 {
   JNIEnv *env = JNIUtil::getEnv();
+
   findCppAddrFieldID(fid, className, env);
   if (*fid == 0)
     {
@@ -52,7 +54,18 @@ jlong SVNBase::findCppAddrForJObject(jobject jthis, jfieldID *fid,
   else
     {
       jlong cppAddr = env->GetLongField(jthis, *fid);
-      return (JNIUtil::isJavaExceptionThrown() ? 0 : cppAddr);
+      if (JNIUtil::isJavaExceptionThrown())
+        return 0;
+
+      /* jthis is not guaranteed to be the same between JNI invocations, so
+         we do a little dance here and store the updated version in our
+         object for this invocation.
+
+         findCppAddrForJObject() is, by necessity, called before any other
+         methods on the C++ object, so by doing this we can guarantee a valid
+         jthis pointer for subsequent uses. */
+      (reinterpret_cast<SVNBase *> (cppAddr))->jthis = jthis;
+      return cppAddr;
     }
 }
 
@@ -65,15 +78,17 @@ void SVNBase::finalize()
   JNIUtil::enqueueForDeletion(this);
 }
 
-void SVNBase::dispose(jobject jthis, jfieldID *fid, const char *className)
+void SVNBase::dispose(jfieldID *fid, const char *className)
 {
+  jobject my_jthis = this->jthis;
+
   delete this;
   JNIEnv *env = JNIUtil::getEnv();
   SVNBase::findCppAddrFieldID(fid, className, env);
   if (*fid == 0)
     return;
 
-  env->SetLongField(jthis, *fid, 0);
+  env->SetLongField(my_jthis, *fid, 0);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 }
