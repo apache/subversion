@@ -911,7 +911,12 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
   If DRY_RUN is set then a --dry-run merge will be carried out first and
   the output compared with that of the full merge.
 
-  Return if successful, raise on failure."""
+  Return if successful, raise on failure.
+
+  *ARGS are any extra optional args to the merge subcommand.
+  NOTE: If *ARGS is specified at all, an explicit target path must be passed
+  in *ARGS as well. This allows the caller to merge into single items inside
+  the working copy, but still verify the entire working copy dir. """
 
   merge_command = [ "merge" ]
   if url2:
@@ -920,7 +925,8 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
     if not (rev1 is None and rev2 is None):
       merge_command.append("-r" + str(rev1) + ":" + str(rev2))
     merge_command.append(url1)
-  merge_command.append(dir)
+  if len(args) == 0:
+    merge_command.append(dir)
   merge_command = tuple(merge_command)
 
   if dry_run:
