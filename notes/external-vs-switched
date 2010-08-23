@@ -13,8 +13,11 @@ In both cases:
 
   * An 'external' or 'switched' WC node is a file or a directory (tree).
 
-  * An 'external' or 'switched' WC node is an immediate child of a
-    versioned WC directory. [3]
+  * An 'external' or 'switched' WC node lives somewhere inside a
+    versioned WC directory.  (A switched node is always an immediate
+    child of a versioned directory [3].  An external dir can be at a
+    deeper level, with one or more levels of unversioned directory in
+    between, but that doesn't currently work for file externals.)
 
   * An 'external' or 'switched' WC node is attached to a repository
     location other than the one implied by its WC parent directory.
@@ -54,6 +57,8 @@ This table documents the differences in WC state at a high level.
   +----------------------+----------------------+----------------------+
   |                      |                      |                      |
   | WC path affected     | Existing child       | Non-existent child   |
+  |                      |   of a versioned dir |   or grandchild etc. |
+  |                      |                      |   of a versioned dir |
   |                      |                      |                      |
   | Target URL           | Same repo            | Same or other repo   |
   |                      |                      |                      |
