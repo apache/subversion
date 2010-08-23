@@ -8316,6 +8316,11 @@ do_merge(apr_hash_t **modified_subtrees,
 
   SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
                            pool));
+  if (target_kind != svn_node_dir && target_kind != svn_node_file)
+    return svn_error_return(svn_error_createf(
+                              SVN_ERR_ILLEGAL_TARGET, NULL,
+                              _("Merge target '%s' does not exist in the "
+                                "working copy"), target_abspath));
 
   /* Ensure a known depth. */
   if (depth == svn_depth_unknown)
@@ -8693,12 +8698,18 @@ merge_locked(const char *source1,
   apr_pool_t *sesspool;
   svn_boolean_t same_repos;
   const char *source_repos_uuid1, *source_repos_uuid2;
+  svn_node_kind_t target_kind;
 
-  /* Sanity check our input -- we require specified revisions. */
+  /* Sanity check our input -- we require specified revisions,
+   * and either 2 paths or 2 URLs. */
   if ((revision1->kind == svn_opt_revision_unspecified)
       || (revision2->kind == svn_opt_revision_unspecified))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                             _("Not all required revisions are specified"));
+  if (svn_path_is_url(source1) != svn_path_is_url(source2))
+    return svn_error_return(svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                             _("Merge sources must both be "
+                                               "either paths or URLs")));
 
   /* ### FIXME: This function really ought to do a history check on
      the left and right sides of the merge source, and -- if one is an
@@ -8725,6 +8736,14 @@ merge_locked(const char *source1,
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
                              svn_dirent_local_style(source2, scratch_pool));
+
+  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
+                           scratch_pool));
+  if (target_kind != svn_node_dir && target_kind != svn_node_file)
+    return svn_error_return(svn_error_createf(
+                              SVN_ERR_ILLEGAL_TARGET, NULL,
+                              _("Merge target '%s' does not exist in the "
+                                "working copy"), target_abspath));
 
   /* Determine the working copy target's repository root URL. */
   working_rev.kind = svn_opt_revision_working;
@@ -10216,6 +10235,7 @@ merge_peg_locked(const char *source,
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
   svn_boolean_t same_repos;
+  svn_node_kind_t target_kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
@@ -10226,6 +10246,14 @@ merge_peg_locked(const char *source,
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
                              svn_dirent_local_style(source, scratch_pool));
+
+  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
+                           scratch_pool));
+  if (target_kind != svn_node_dir && target_kind != svn_node_file)
+    return svn_error_return(svn_error_createf(
+                              SVN_ERR_ILLEGAL_TARGET, NULL,
+                              _("Merge target '%s' does not exist in the "
+                                "working copy"), target_abspath));
 
   /* Determine the working copy target's repository root URL. */
   working_rev.kind = svn_opt_revision_working;
