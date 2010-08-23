@@ -398,6 +398,34 @@ def export_HEADplus1_fails(sbox):
                                      'export', sbox.repo_url, sbox.wc_dir,
                                      '-r', 38956)
 
+# This is test for issue #3683 - 'Escape unsafe charaters in a URL during
+# export'
+def export_with_url_unsafe_characters(sbox):
+  "export file with URL unsafe characters"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3683 ##
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Define the paths
+  url_unsafe_path = os.path.join(wc_dir, 'A', 'test- @#$&.txt')
+  url_unsafe_path_url = sbox.repo_url + '/A/test- @#$&.txt@'
+  export_target = os.path.join(wc_dir, 'test- @#$&.txt')
+
+  # Create the file with special name and commit it.
+  svntest.main.file_write(url_unsafe_path, 'This is URL unsafe path file.')
+  svntest.main.run_svn(None, 'add', url_unsafe_path + '@')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', 'log msg',
+                                     '--quiet', wc_dir)
+
+  # Export the file and verify it.
+  svntest.actions.run_and_verify_svn(None, None, [], 'export',
+                                     url_unsafe_path_url, export_target + '@')
+
+  if not os.path.exists(export_target):
+    raise svntest.Failure("export did not fetch file with URL unsafe path")
+
 ########################################################################
 # Run the tests
 
@@ -421,6 +449,7 @@ test_list = [ None,
               export_with_state_deleted,
               export_creates_intermediate_folders,
               export_HEADplus1_fails,
+              export_with_url_unsafe_characters,
              ]
 
 if __name__ == '__main__':

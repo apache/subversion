@@ -61,7 +61,6 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
 /* Attempt to transform URL_IN, which is a URL-like user input, into a
  * valid URL:
  *   - escape IRI characters and some other non-URI characters
- *   - check that only valid URI characters remain
  *   - check that no back-path ("..") components are present
  *   - canonicalize the separator ("/") characters
  * URL_IN is in UTF-8 encoding and has no peg revision specifier.
