@@ -23,8 +23,6 @@
 
 package org.apache.subversion.javahl.callback;
 
-import java.util.Date;
-
 import org.apache.subversion.javahl.CommitInfo;
 
 /**
