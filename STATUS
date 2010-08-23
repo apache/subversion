@@ -307,12 +307,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-  * r979429
-    Teach libsvn_ra_serf how to parse the md5-checksum for passing it
-    to update editors.
-    Justification:
-      Without this fix the most important broken working copy detection
-      checksum isn't used by users of libsvn_ra_serf.
-    Votes:
-      +1: rhuijben, jerenkrantz (ENOCARE re: 12/39), lgo
