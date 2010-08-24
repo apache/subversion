@@ -325,12 +325,10 @@ void SVNClient::remove(Targets &targets, const char *message, bool force,
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
 
-    ctx->commit_callback2 = CommitCallback::callback;
-    ctx->commit_baton = callback;
-
     SVN_JNI_ERR(svn_client_delete4(targets2, force, keep_local,
-                                   revprops.hash(requestPool), ctx,
-                                   requestPool.pool()), );
+                                   revprops.hash(requestPool),
+                                   CommitCallback::callback, callback,
+                                   ctx, requestPool.pool()), );
 }
 
 void SVNClient::revert(const char *path, svn_depth_t depth,
@@ -423,14 +421,12 @@ void SVNClient::commit(Targets &targets, const char *message,
     if (ctx == NULL)
         return;
 
-    ctx->commit_callback2 = CommitCallback::callback;
-    ctx->commit_baton = callback;
-
     SVN_JNI_ERR(svn_client_commit5(targets2, depth,
                                    noUnlock, keepChangelist,
                                    changelists.array(requestPool),
-                                   revprops.hash(requestPool), ctx,
-                                   requestPool.pool()),
+                                   revprops.hash(requestPool),
+                                   CommitCallback::callback, callback,
+                                   ctx, requestPool.pool()),
                 );
 }
 
@@ -456,13 +452,11 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     if (ctx == NULL)
         return;
 
-    ctx->commit_callback2 = CommitCallback::callback;
-    ctx->commit_baton = callback;
-
     SVN_JNI_ERR(svn_client_copy6(srcs, destinationPath.c_str(),
                                  copyAsChild, makeParents, ignoreExternals,
-                                 revprops.hash(requestPool), ctx,
-                                 requestPool.pool()), );
+                                 revprops.hash(requestPool),
+                                 CommitCallback::callback, callback,
+                                 ctx, requestPool.pool()), );
 }
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
@@ -482,12 +476,10 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     if (ctx == NULL)
         return;
 
-    ctx->commit_callback2 = CommitCallback::callback;
-    ctx->commit_baton = callback;
-
     SVN_JNI_ERR(svn_client_move6((apr_array_header_t *) srcs,
                                  destinationPath.c_str(), force, moveAsChild,
-                                 makeParents, revprops.hash(requestPool), ctx,
+                                 makeParents, revprops.hash(requestPool),
+                                 CommitCallback::callback, callback, ctx,
                                  requestPool.pool()), );
 }
 
@@ -499,15 +491,13 @@ void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents,
     if (ctx == NULL)
         return;
 
-    ctx->commit_callback2 = CommitCallback::callback;
-    ctx->commit_baton = callback;
-
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
 
     SVN_JNI_ERR(svn_client_mkdir4(targets2, makeParents,
-                                  revprops.hash(requestPool), ctx,
-                                  requestPool.pool()), );
+                                  revprops.hash(requestPool),
+                                  CommitCallback::callback, callback,
+                                  ctx, requestPool.pool()), );
 }
 
 void SVNClient::cleanup(const char *path)
@@ -621,13 +611,11 @@ void SVNClient::doImport(const char *path, const char *url,
     if (ctx == NULL)
         return;
 
-    ctx->commit_callback2 = CommitCallback::callback;
-    ctx->commit_baton = callback;
-
     SVN_JNI_ERR(svn_client_import4(intPath.c_str(), intUrl.c_str(), depth,
                                    noIgnore, ignoreUnknownNodeTypes,
-                                   revprops.hash(requestPool), ctx,
-                                   requestPool.pool()), );
+                                   revprops.hash(requestPool),
+                                   CommitCallback::callback, callback, 
+                                   ctx, requestPool.pool()), );
 }
 
 jobject
@@ -951,13 +939,11 @@ void SVNClient::propertySet(const char *path, const char *name,
     if (ctx == NULL)
         return;
 
-    ctx->commit_callback2 = CommitCallback::callback;
-    ctx->commit_baton = callback;
-
     SVN_JNI_ERR(svn_client_propset4(name, val, intPath.c_str(),
                                     depth, force, SVN_INVALID_REVNUM,
                                     changelists.array(requestPool),
                                     revprops.hash(requestPool),
+                                    CommitCallback::callback, callback,
                                     ctx, requestPool.pool()), );
 }
 

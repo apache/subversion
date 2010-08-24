@@ -124,6 +124,8 @@ svn_cl__import(apr_getopt_t *os,
                               opt_state->no_ignore,
                               opt_state->force,
                               opt_state->revprop_table,
+                              svn_cl__print_commit_info,
+                              NULL,
                               ctx,
                               pool), pool));
 

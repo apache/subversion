@@ -138,6 +138,8 @@ path_driver_cb_func(void **dir_baton,
 static svn_error_t *
 delete_urls(const apr_array_header_t *paths,
             const apr_hash_t *revprop_table,
+            svn_commit_callback2_t commit_callback,
+            void *commit_baton,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
 {
@@ -237,8 +239,8 @@ delete_urls(const apr_array_header_t *paths,
   /* Fetch RA commit editor */
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    ctx->commit_callback2,
-                                    ctx->commit_baton,
+                                    commit_callback,
+                                    commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
@@ -315,6 +317,8 @@ svn_client_delete4(const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_boolean_t keep_local,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -338,7 +342,8 @@ svn_client_delete4(const apr_array_header_t *paths,
 
   if (is_url)
     {
-      SVN_ERR(delete_urls(paths, revprop_table, ctx, pool));
+      SVN_ERR(delete_urls(paths, revprop_table, commit_callback, commit_baton,
+                          ctx, pool));
     }
   else
     {
