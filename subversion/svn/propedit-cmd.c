@@ -283,9 +283,6 @@ svn_cl__propedit(apr_getopt_t *os,
             : svn_dirent_local_style(target, subpool);
           cib.target_local = target_local;
 
-          ctx->commit_callback2 = commit_info_handler;
-          ctx->commit_baton = &cib;
-
           /* ...and re-set the property's value accordingly. */
           if (edited_propval && !svn_string_compare(propval, edited_propval))
             {
@@ -302,6 +299,7 @@ svn_cl__propedit(apr_getopt_t *os,
               err = svn_client_propset4(pname_utf8, edited_propval, target,
                                         svn_depth_empty, opt_state->force,
                                         base_rev, NULL, opt_state->revprop_table,
+                                        commit_info_handler, &cib,
                                         ctx, subpool);
               if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,

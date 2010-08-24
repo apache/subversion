@@ -948,17 +948,6 @@ typedef struct svn_client_ctx_t
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
 
-  /** A commit callback to call when a commit succeeds.
-   * @note There is no @a commit_callback member; this is named
-   * @a commit_callback2 to reflect its type.
-   * 
-   * @since New in 1.7.
-   */
-  svn_commit_callback2_t commit_callback2;
-
-  /** Callback baton for #commit_callback2. */
-  void *commit_baton;
-
 } svn_client_ctx_t;
 
 /** Initialize a client context.
@@ -1486,9 +1475,9 @@ svn_client_add(const char *path,
  * @a ctx->notify_baton2 and the path of the new directory.  Note that this is
  * only called for items added to the working copy.
  *
- * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
- * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
- * #svn_commit_info_t for the commit.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
  *
  * @since New in 1.7.
  */
@@ -1496,12 +1485,14 @@ svn_error_t *
 svn_client_mkdir4(const apr_array_header_t *paths,
                   svn_boolean_t make_parents,
                   const apr_hash_t *revprop_table,
+                  svn_commit_callback2_t commit_callback,
+                  void *commit_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
 /**
  * Similar to svn_client_mkdir4(), but returns the @a commit_info_p directly,
- * rather than through @a ctx->commit_callback2.
+ * rather than through @a commit_callback.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1589,9 +1580,9 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the deleted
  * item.
  *
- * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
- * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
- * #svn_commit_info_t for the commit.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
  *
  * @since New in 1.7.
  */
@@ -1600,12 +1591,14 @@ svn_client_delete4(const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_boolean_t keep_local,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_delete4(), but returns the @a commit_info_p directly,
- * rather than through @a ctx->commit_callback2.
+ * rather than through @a commit_callback.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -1712,9 +1705,9 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
- * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
- * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
- * #svn_commit_info_t for the commit.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
  *
  * @since New in 1.7.
  */
@@ -1725,12 +1718,14 @@ svn_client_import4(const char *path,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_import4(), but returns the @a commit_info_p directly,
- * rather than through @a ctx->commit_callback2.
+ * rather than through @a commit_callback.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -1836,9 +1831,9 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Use @a pool for any temporary allocations.
  *
- * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
- * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
- * #svn_commit_info_t for the commit.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
  *
  * @since New in 1.7.
  */
@@ -1849,12 +1844,14 @@ svn_client_commit5(const apr_array_header_t *targets,
                    svn_boolean_t keep_changelists,
                    const apr_array_header_t *changelists,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_commit5(), but returns the @a commit_info_p directly,
- * rather than through @a ctx->commit_callback2.
+ * rather than through @a commit_callback.
  *
  * Also, if no error is returned and @a (*commit_info_p)->revision is set to
  * #SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
@@ -3644,9 +3641,9 @@ typedef struct svn_client_copy_source_t
  * for each item added at the new location, passing the new, relative path of
  * the added item.
  *
- * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
- * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
- * #svn_commit_info_t for the commit.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
  *
  * @since New in 1.7.
  */
@@ -3657,12 +3654,14 @@ svn_client_copy6(const apr_array_header_t *sources,
                  svn_boolean_t make_parents,
                  svn_boolean_t ignore_externals,
                  const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_copy6(), but returns the @a commit_info_p directly,
- * rather than through @a ctx->commit_callback2.
+ * rather than through @a commit_callback.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -3831,9 +3830,9 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *
  * ### Is this really true?  What about svn_wc_notify_commit_replaced()? ###
  *
- * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
- * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
- * #svn_commit_info_t for the commit.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
  *
  * @since New in 1.7.
  */
@@ -3844,12 +3843,14 @@ svn_client_move6(const apr_array_header_t *src_paths,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
                  const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_move6(), but returns the @a commit_info_p directly,
- * rather than through @a ctx->commit_callback2.
+ * rather than through @a commit_callback.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -4001,9 +4002,9 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
- * If @a ctx->commit_callback2 is non-NULL, then for each successful commit,
- * call @a ctx->commit_callback2 with @a ctx->commit_baton and a
- * #svn_commit_info_t for the commit.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
  *
  * Use @a pool for all memory allocation.
  *
@@ -4018,12 +4019,14 @@ svn_client_propset4(const char *propname,
                     svn_revnum_t base_revision_for_url,
                     const apr_array_header_t *changelists,
                     const apr_hash_t *revprop_table,
+                    svn_commit_callback2_t commit_callback,
+                    void *commit_baton, 
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
 /**
  * Similar to svn_client_propset4(), but returns the @a commit_info_p directly,
- * rather than through @a ctx->commit_callback2.
+ * rather than through @a commit_callback.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.

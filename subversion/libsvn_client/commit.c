@@ -676,6 +676,8 @@ svn_client_import4(const char *path,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -765,8 +767,7 @@ svn_client_import4(const char *path,
   while ((err = get_ra_editor(&ra_session,
                               &editor, &edit_baton, ctx, url, base_dir_abspath,
                               log_msg, NULL, revprop_table, FALSE, NULL, TRUE,
-                              ctx->commit_callback2, ctx->commit_baton,
-                              subpool)));
+                              commit_callback, commit_baton, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
   if (new_entries->nelts)
@@ -1036,6 +1037,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                    svn_boolean_t keep_changelists,
                    const apr_array_header_t *changelists,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -1197,8 +1200,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                                      pool)))
     goto cleanup;
 
-  cb.original_callback = ctx->commit_callback2;
-  cb.original_baton = ctx->commit_baton;
+  cb.original_callback = commit_callback;
+  cb.original_baton = commit_baton;
   cb.info = &commit_info;
   cb.pool = pool;
 
