@@ -2056,6 +2056,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
 
 svn_error_t *
 svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
+                                   const char *dir_relpath,
                                    apr_hash_t *cache_values,
                                    apr_pool_t *scratch_pool);
 

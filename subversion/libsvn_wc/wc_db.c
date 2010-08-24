@@ -6904,6 +6904,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
 
 svn_error_t *
 svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
+                                   const char *dir_relpath,
                                    apr_hash_t *cache_values,
                                    apr_pool_t *scratch_pool)
 {
@@ -6921,10 +6922,13 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *local_relpath = svn__apr_hash_index_key(hi);
+      const char *name = svn__apr_hash_index_key(hi);
       apr_hash_t *props = svn__apr_hash_index_val(hi);
+      const char *local_relpath;
 
       svn_pool_clear(iterpool);
+
+      local_relpath = svn_relpath_join(dir_relpath, name, iterpool);
 
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
       SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, iterpool));
