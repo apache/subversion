@@ -1303,6 +1303,8 @@ upgrade_to_wcng(svn_wc__db_t *db,
   if (old_format != SVN_WC__WCPROPS_LOST)
     {
       apr_hash_t *all_wcprops;
+      const char *dir_relpath = svn_dirent_skip_ancestor(data->root_abspath,
+                                                         dir_abspath);
 
       if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
         SVN_ERR(read_many_wcprops(&all_wcprops, dir_abspath,
@@ -1311,8 +1313,8 @@ upgrade_to_wcng(svn_wc__db_t *db,
         SVN_ERR(read_wcprops(&all_wcprops, dir_abspath,
                              scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_wc__db_upgrade_apply_dav_cache(data->sdb, all_wcprops,
-                                                 scratch_pool));
+      SVN_ERR(svn_wc__db_upgrade_apply_dav_cache(data->sdb, dir_relpath,
+                                                 all_wcprops, scratch_pool));
     }
 
   SVN_ERR(migrate_text_bases(dir_abspath, data->root_abspath, data->sdb,
