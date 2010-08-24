@@ -413,6 +413,8 @@ def basic_upgrade_1_0(sbox):
   svntest.actions.run_and_verify_info(expected_infos,
                                       os.path.join(sbox.wc_dir, 'DELETED'))
 
+  check_pristine(sbox, ['iota', 'A/mu', 'A/D/H/zeta'])
+
 # Helper function for the x3 tests.
 def do_x3_upgrade(sbox):
   # Attempt to use the working copy, this should give an error
