@@ -1718,13 +1718,16 @@ insert_working_node(svn_sqlite__db_t *sdb,
   else if (working_node->presence == svn_wc__db_status_excluded)
     SVN_ERR(svn_sqlite__bind_text(stmt, 4, "excluded"));
 
+#ifndef SVN_WC__SINGLE_DB
   /* ### in per-subdir operation, if we're about to write a directory and
      ### it is *not* "this dir", then we're writing a row in the parent
      ### directory about the child. note that in the kind.  */
   if (working_node->kind == svn_node_dir
       && *working_node->local_relpath != '\0')
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, "subdir"));
-  else if (working_node->kind == svn_node_none)
+  else
+#endif
+  if (working_node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, "unknown"));
   else
     SVN_ERR(svn_sqlite__bind_text(stmt, 5,
@@ -2171,6 +2174,17 @@ write_entry(svn_wc__db_t *db,
                                        svn_checksum_md5,
                                        entry->checksum, scratch_pool));
 
+#ifdef SVN_WC__SINGLE_DB
+      /* All subdirs start of incomplete, and stop being incomplete
+         when the entries file in the subdir is upgraded. */
+      if (entry->kind == svn_node_dir
+          && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
+        {
+          working_node->presence = svn_wc__db_status_incomplete;
+          working_node->kind = svn_node_dir;
+        }
+      else
+#endif
       if (entry->schedule == svn_wc_schedule_delete)
         {
           if (entry->incomplete)
