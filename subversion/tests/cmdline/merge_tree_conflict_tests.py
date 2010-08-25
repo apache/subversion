@@ -799,9 +799,9 @@ leaf_edit = svntest.actions.deep_trees_leaf_edit
 tree_del = svntest.actions.deep_trees_tree_del
 leaf_del = svntest.actions.deep_trees_leaf_del
 
-state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-state_after_tree_del = svntest.actions.deep_trees_after_tree_del
+disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
+disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
+disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
 
 deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
 
@@ -824,7 +824,7 @@ def tree_conflicts_on_merge_local_ci_4_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -861,7 +861,7 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -900,7 +900,7 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_leaf_edit
+  expected_disk = disk_after_leaf_edit
 
   # We should detect 6 tree conflicts, and nothing should be deleted (when
   # we skip tree conflict victims).
@@ -998,7 +998,7 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1145,7 +1145,7 @@ def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_leaf_edit
+  expected_disk = disk_after_leaf_edit
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1303,7 +1303,7 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
   expected_output = wc.State('', {
   })
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev=3),
@@ -1377,7 +1377,7 @@ def tree_conflicts_merge_del_onto_missing(sbox):
   expected_output = wc.State('', {
   })
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev=3),
