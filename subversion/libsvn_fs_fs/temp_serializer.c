@@ -272,7 +272,7 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
 
   /* calculate sizes */
   apr_size_t count = apr_hash_count(entries);
-  apr_size_t entries_len = count * sizeof(svn_fs_dirent_t*[1]);
+  apr_size_t entries_len = count * sizeof(svn_fs_dirent_t*);
 
   /* copy the hash entries to an auxilliary struct of known layout */
   hash_data.count = count;
@@ -287,7 +287,8 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
         sizeof(*hash_data.entries),
         compare_dirent_id_names);
 
-  /* serialize that aux. structure into a new  */
+  /* Serialize that aux. structure into a new one. Also, provide a good
+   * estimate for the size of the buffer that we will need. */
   context = svn_temp_serializer__init(&hash_data,
                                       sizeof(hash_data),
                                       50 + count * 200 + entries_len,
@@ -419,10 +420,10 @@ serialize_txdelta_ops(svn_temp_serializer__context_t *context,
   if (*ops == NULL)
     return;
 
-  /* the ops form a simple chunk of memory with no further references */
+  /* the ops form a contiguous chunk of memory with no further references */
   svn_temp_serializer__push(context,
                             (const void * const *)ops,
-                            count * sizeof(svn_txdelta_op_t[1]));
+                            count * sizeof(svn_txdelta_op_t));
   svn_temp_serializer__pop(context);
 }
 
