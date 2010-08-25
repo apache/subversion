@@ -50,7 +50,7 @@ AC_DEFUN(SVN_LIB_SERF,
 #include "serf.h"
 ],[
 #if ! SERF_VERSION_AT_LEAST($serf_check_major, $serf_check_minor, $serf_check_patch)
-#error Serf version too old: want $serf_check_major.$serf_check_minor.$serf_check_patch, got SERF_VERSION_STRING
+#error Serf version too old: need $serf_check_major.$serf_check_minor.$serf_check_patch
 #endif
 ], [serf_found=yes], [AC_MSG_WARN([Serf version too old: need $serf_check_major.$serf_check_minor.$serf_check_patch])
         serf_found=no])], ,
