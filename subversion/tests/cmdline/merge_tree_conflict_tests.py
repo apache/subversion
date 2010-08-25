@@ -803,6 +803,25 @@ disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
 disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
 disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
 
+if svntest.main.wc_is_singledb(''):
+  disk_after_tree_del_no_ci = svntest.wc.State('', {
+    'F'                 : Item(),
+    'D'                 : Item(),
+    'DF'                : Item(),
+    'DD'                : Item(),
+    'DDF'               : Item(),
+    'DDD'               : Item(),
+    })
+else:
+  disk_after_tree_del_no_ci = svntest.wc.State('', {
+    'F'                 : Item(),
+    'D/D1'              : Item(),
+    'DF/D1'             : Item(),
+    'DD/D1/D2'          : Item(),
+    'DDF/D1/D2'         : Item(),
+    'DDD/D1/D2/D3'      : Item(),
+    })
+
 deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
 
 j = os.path.join
@@ -1037,14 +1056,7 @@ def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_tree_del_no_ci
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1090,14 +1102,7 @@ def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_tree_del_no_ci
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1248,14 +1253,7 @@ def tree_conflicts_on_merge_no_local_ci_6(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_tree_del_no_ci
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
