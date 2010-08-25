@@ -115,12 +115,12 @@ get_username(svn_ra_session_t *session,
   if (*sess->username)
     {
       SVN_ERR(svn_fs_create_access(&access_ctx, sess->username,
-                                   pool));
+                                   session->pool));
       SVN_ERR(svn_fs_set_access(sess->fs, access_ctx));
 
       /* Make sure this context is disassociated when the pool gets
          destroyed. */
-      apr_pool_cleanup_register(pool, sess->fs, cleanup_access,
+      apr_pool_cleanup_register(session->pool, sess->fs, cleanup_access,
                                 apr_pool_cleanup_null);
     }
 
