@@ -15822,16 +15822,16 @@ def merge_into_locally_added_directory(sbox):
   pi_path = sbox.ospath("A/D/G/pi")
   new_dir_path = sbox.ospath("A/D/new_dir")
 
-  svntest.main.file_append(pi_path, "foo\n")
+  svntest.main.file_append_binary(pi_path, "foo\n")
   sbox.simple_commit(); # r2
 
   os.mkdir(new_dir_path)
-  svntest.main.file_append(os.path.join(new_dir_path, 'pi'),
-                           "This is the file 'pi'.\n")
-  svntest.main.file_append(os.path.join(new_dir_path, 'rho'),
-                           "This is the file 'rho'.\n")
-  svntest.main.file_append(os.path.join(new_dir_path, 'tau'),
-                           "This is the file 'tau'.\n")
+  svntest.main.file_append_binary(os.path.join(new_dir_path, 'pi'),
+                                  "This is the file 'pi'.\n")
+  svntest.main.file_append_binary(os.path.join(new_dir_path, 'rho'),
+                                  "This is the file 'rho'.\n")
+  svntest.main.file_append_binary(os.path.join(new_dir_path, 'tau'),
+                                  "This is the file 'tau'.\n")
   sbox.simple_add(new_dir_path)
 
   expected_output = wc.State(wc_dir, {
