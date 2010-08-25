@@ -3404,6 +3404,8 @@ locate_copyfrom(svn_stream_t **new_base_contents,
         svn_error_clear(err);
         return SVN_NO_ERROR;
       }
+    else
+      SVN_ERR(err);
 
     /* Check if we have an added node with the right copyfrom information, as
        this is what you would see on a file move. */
