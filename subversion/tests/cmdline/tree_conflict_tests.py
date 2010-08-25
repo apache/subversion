@@ -1134,7 +1134,10 @@ def query_absent_tree_conflicted_dir(sbox):
   ## svn: Expected node '/.../tree_conflict_tests-20/A/C' to be added.
 
   # using status:
-  run_and_verify_status(C_C_path, None)
+  expected_output = wc.State(wc_dir, {
+    'A/C/C' : Item(status='? ', treeconflict='C'),
+    })
+  run_and_verify_status(C_C_path, expected_output)
 
   # using info:
   run_and_verify_svn(None, None, [], 'info', C_C_path)
@@ -1264,7 +1267,7 @@ test_list = [ None,
               XFail(force_del_tc_inside),
               XFail(keep_local_del_tc_is_target),
               XFail(force_del_tc_is_target),
-              XFail(query_absent_tree_conflicted_dir),
+              query_absent_tree_conflicted_dir,
               XFail(up_add_onto_add_revert),
               XFail(lock_update_only),
              ]
