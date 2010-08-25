@@ -803,6 +803,26 @@ disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
 disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
 disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
 
+def disk_after_tree_del_no_ci(wc_dir):
+  if svntest.main.wc_is_singledb(wc_dir):
+    return svntest.wc.State('', {
+      'F'                 : Item(),
+      'D'                 : Item(),
+      'DF'                : Item(),
+      'DD'                : Item(),
+      'DDF'               : Item(),
+      'DDD'               : Item(),
+    })
+  else:
+    return svntest.wc.State('', {
+      'F'                 : Item(),
+      'D/D1'              : Item(),
+      'DF/D1'             : Item(),
+      'DD/D1/D2'          : Item(),
+      'DDF/D1/D2'         : Item(),
+      'DDD/D1/D2/D3'      : Item(),
+    })
+
 deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
 
 j = os.path.join
@@ -1032,19 +1052,14 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
 def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
   "tree conflicts 4.1: tree del (no ci), leaf edit"
 
+  sbox.build()
+
   # use case 4, as in notes/tree-conflicts/use-cases.txt
   # 4.1) local tree delete, incoming leaf edit
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_tree_del_no_ci(sbox.wc_dir)
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1086,18 +1101,13 @@ def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
 def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
   "tree conflicts 4.2: tree del (no ci), leaf del"
 
+  sbox.build()
+
   # 4.2) local tree delete, incoming leaf delete
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_tree_del_no_ci(sbox.wc_dir)
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1243,19 +1253,14 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
 def tree_conflicts_on_merge_no_local_ci_6(sbox):
   "tree conflicts 6: tree del (no ci), tree del"
 
+  sbox.build()
+
   # use case 6, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_tree_del_no_ci(sbox.wc_dir)
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
