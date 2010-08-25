@@ -2357,7 +2357,7 @@ add_directory(const char *path,
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
       status = svn_wc__db_status_normal;
-      conflicted = FALSE;
+      conflicted = TRUE;  /* TRUE here causes us to check for a conflict */
 
       versioned_locally_and_present = FALSE;
     }
@@ -3811,7 +3811,7 @@ add_file(const char *path,
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
       status = svn_wc__db_status_normal;
-      conflicted = FALSE;
+      conflicted = TRUE;  /* TRUE here causes us to check for a conflict */
 
       versioned_locally_and_present = FALSE;
     }
