@@ -3394,7 +3394,7 @@ def diff_git_format_wc_wc(sbox):
                            "working copy", copyfrom=lambda_path)
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
-                                     '--git-diff', wc_dir)
+                                     '--git', wc_dir)
 
 def diff_git_format_url_wc(sbox):
   "create a diff in git unidiff format for url-wc"
@@ -3433,7 +3433,7 @@ def diff_git_format_url_wc(sbox):
   ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
-                                     '--git-diff',
+                                     '--git',
                                      '--old', repo_url + '@1', '--new',
                                      wc_dir)
 
@@ -3473,7 +3473,7 @@ def diff_git_format_url_url(sbox):
   ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
-                                     '--git-diff', 
+                                     '--git', 
                                      '--old', repo_url + '@1', '--new',
                                      repo_url + '@2')
 
@@ -3641,7 +3641,7 @@ def diff_git_empty_files(sbox):
                            delete=True, text_changes=False)
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
-                                     '--git-diff', wc_dir)
+                                     '--git', wc_dir)
 
 
 ########################################################################
