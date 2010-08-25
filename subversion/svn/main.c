@@ -543,7 +543,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    committed, are immediately removed from the working copy\n"
      "    unless the --keep-local option is given.\n"
      "    PATHs that are, or contain, unversioned or modified items will\n"
-     "    not be removed unless the --force option is given.\n"
+     "    not be removed unless the --force or --keep-local option is given.\n"
      "\n"
      "  2. Each item specified by a URL is deleted from the repository\n"
      "    via an immediate commit.\n"),
