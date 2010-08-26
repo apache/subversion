@@ -1264,52 +1264,28 @@ check_paths(svn_boolean_t *is_repos1,
   return SVN_NO_ERROR;
 }
 
-/** Helper structure filled by diff_prepare_repos_repos */
-struct diff_repos_repos_t
-{
-  /* URL created from path1 */
-  const char *url1;
-
-  /* URL created from path2 */
-  const char *url2;
-
-  /* The BASE_PATH for the diff */
-  const char *base_path;
-
-  /* url1 and url2 are the same */
-  svn_boolean_t same_urls;
-
-  /* Revision of url1 */
-  svn_revnum_t rev1;
-
-  /* Revision of url2 */
-  svn_revnum_t rev2;
-
-  /* Anchor based on url1 */
-  const char *anchor1;
-
-  /* Anchor based on url2 */
-  const char *anchor2;
-
-  /* Target based on url1 */
-  const char *target1;
-
-  /* Target based on url2 */
-  const char *target2;
-
-  /* RA session pointing at anchor1. */
-  svn_ra_session_t *ra_session;
-};
-
-/** Helper function: prepare a repos repos diff. Fills DRR
- * structure. */
+/** Prepare a repos repos diff based on information in PARAMS.
+ * Return URLs and peg revisions in *URL1, *REV1 and in *URL2, *REV2.
+ * Return suitable anchors in *ANCHOR1 and *ANCHOR2, and targets in
+ * *TARGET1 and *TARGET2, based on *URL1 and *URL2.
+ * Set *BASE_PATH corresponding to the URL opened in the new *RA_SESSION
+ * which is pointing at *ANCHOR1.
+ * Use client context CTX. Do all allocations in POOL. */
 static svn_error_t *
 diff_prepare_repos_repos(const struct diff_parameters *params,
-                         struct diff_repos_repos_t *drr,
+                         const char **url1,
+                         const char **url2,
+                         const char **base_path,
+                         svn_revnum_t *rev1,
+                         svn_revnum_t *rev2,
+                         const char **anchor1,
+                         const char **anchor2,
+                         const char **target1,
+                         const char **target2,
+                         svn_ra_session_t **ra_session,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session;
   svn_node_kind_t kind1, kind2;
   const char *params_path2_abspath;
   const char *params_path1_abspath;
@@ -1327,22 +1303,21 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
     params_path1_abspath = params->path1;
 
   /* Figure out URL1 and URL2. */
-  SVN_ERR(convert_to_url(&drr->url1, ctx->wc_ctx, params_path1_abspath,
+  SVN_ERR(convert_to_url(url1, ctx->wc_ctx, params_path1_abspath,
                          pool, pool));
-  SVN_ERR(convert_to_url(&drr->url2, ctx->wc_ctx, params_path2_abspath,
+  SVN_ERR(convert_to_url(url2, ctx->wc_ctx, params_path2_abspath,
                          pool, pool));
-  drr->same_urls = (strcmp(drr->url1, drr->url2) == 0);
 
   /* We need exactly one BASE_PATH, so we'll let the BASE_PATH
      calculated for PATH2 override the one for PATH1 (since the diff
      will be "applied" to URL2 anyway). */
-  drr->base_path = NULL;
-  if (strcmp(drr->url1, params->path1) != 0)
-    drr->base_path = params->path1;
-  if (strcmp(drr->url2, params->path2) != 0)
-    drr->base_path = params->path2;
+  *base_path = NULL;
+  if (strcmp(*url1, params->path1) != 0)
+    *base_path = params->path1;
+  if (strcmp(*url2, params->path2) != 0)
+    *base_path = params->path2;
 
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, drr->url2,
+  SVN_ERR(svn_client__open_ra_session_internal(ra_session, NULL, *url2,
                                                NULL, NULL, FALSE,
                                                TRUE, ctx, pool));
 
@@ -1352,59 +1327,58 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
     {
       svn_opt_revision_t *start_ignore, *end_ignore;
 
-      SVN_ERR(svn_client__repos_locations(&drr->url1, &start_ignore,
-                                          &drr->url2, &end_ignore,
-                                          ra_session,
+      SVN_ERR(svn_client__repos_locations(url1, &start_ignore,
+                                          url2, &end_ignore,
+                                          *ra_session,
                                           params->path2,
                                           params->peg_revision,
                                           params->revision1,
                                           params->revision2,
                                           ctx, pool));
-      /* Reparent the session, since drr->url2 might have changed as a result
+      /* Reparent the session, since *URL2 might have changed as a result
          the above call. */
-      SVN_ERR(svn_ra_reparent(ra_session, drr->url2, pool));
+      SVN_ERR(svn_ra_reparent(*ra_session, *url2, pool));
     }
 
   /* Resolve revision and get path kind for the second target. */
-  SVN_ERR(svn_client__get_revision_number(&drr->rev2, NULL, ctx->wc_ctx,
-           (params->path2 == drr->url2) ? NULL : params_path2_abspath,
-           ra_session, params->revision2, pool));
-  SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev2, &kind2, pool));
+  SVN_ERR(svn_client__get_revision_number(rev2, NULL, ctx->wc_ctx,
+           (params->path2 == *url2) ? NULL : params_path2_abspath,
+           *ra_session, params->revision2, pool));
+  SVN_ERR(svn_ra_check_path(*ra_session, "", *rev2, &kind2, pool));
   if (kind2 == svn_node_none)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
        _("'%s' was not found in the repository at revision %ld"),
-       drr->url2, drr->rev2);
+       *url2, *rev2);
 
   /* Do the same for the first target. */
-  SVN_ERR(svn_ra_reparent(ra_session, drr->url1, pool));
-  SVN_ERR(svn_client__get_revision_number(&drr->rev1, NULL, ctx->wc_ctx,
-           (strcmp(params->path1, drr->url1) == 0) ? NULL : params_path1_abspath,
-           ra_session, params->revision1, pool));
-  SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev1, &kind1, pool));
+  SVN_ERR(svn_ra_reparent(*ra_session, *url1, pool));
+  SVN_ERR(svn_client__get_revision_number(rev1, NULL, ctx->wc_ctx,
+           (strcmp(params->path1, *url1) == 0) ? NULL : params_path1_abspath,
+           *ra_session, params->revision1, pool));
+  SVN_ERR(svn_ra_check_path(*ra_session, "", *rev1, &kind1, pool));
   if (kind1 == svn_node_none)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
        _("'%s' was not found in the repository at revision %ld"),
-       drr->url1, drr->rev1);
+       *url1, *rev1);
 
   /* Choose useful anchors and targets for our two URLs. */
-  drr->anchor1 = drr->url1;
-  drr->anchor2 = drr->url2;
-  drr->target1 = "";
-  drr->target2 = "";
+  *anchor1 = *url1;
+  *anchor2 = *url2;
+  *target1 = "";
+  *target2 = "";
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
-      svn_uri_split(&drr->anchor1, &drr->target1, drr->url1, pool);
-      drr->target1 = svn_path_uri_decode(drr->target1, pool);
-      svn_uri_split(&drr->anchor2, &drr->target2, drr->url2, pool);
-      drr->target2 = svn_path_uri_decode(drr->target2, pool);
-      if (drr->base_path)
-        drr->base_path = svn_dirent_dirname(drr->base_path, pool);
-      SVN_ERR(svn_ra_reparent(ra_session, drr->anchor1, pool));
+      svn_uri_split(anchor1, target1, *url1, pool);
+      *target1 = svn_path_uri_decode(*target1, pool);
+      svn_uri_split(anchor2, target2, *url2, pool);
+      *target2 = svn_path_uri_decode(*target2, pool);
+      if (*base_path)
+        *base_path = svn_dirent_dirname(*base_path, pool);
+      SVN_ERR(svn_ra_reparent(*ra_session, *anchor1, pool));
     }
 
-  drr->ra_session = ra_session;
   return SVN_NO_ERROR;
 }
 
@@ -1544,44 +1518,56 @@ diff_repos_repos(const struct diff_parameters *diff_param,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
 
-  struct diff_repos_repos_t drr;
+  const char *url1;
+  const char *url2;
+  const char *base_path;
+  svn_revnum_t rev1;
+  svn_revnum_t rev2;
+  const char *anchor1;
+  const char *anchor2;
+  const char *target1;
+  const char *target2;
+  svn_ra_session_t *ra_session;
 
   /* Prepare info for the repos repos diff. */
-  SVN_ERR(diff_prepare_repos_repos(diff_param, &drr, ctx, pool));
+  SVN_ERR(diff_prepare_repos_repos(diff_param,
+                                   &url1, &url2, &base_path, &rev1, &rev2,
+                                   &anchor1, &anchor2, &target1, &target2,
+                                   &ra_session, ctx, pool));
 
   /* Get actual URLs. */
-  callback_baton->orig_path_1 = drr.url1;
-  callback_baton->orig_path_2 = drr.url2;
+  callback_baton->orig_path_1 = url1;
+  callback_baton->orig_path_2 = url2;
 
   /* Get numeric revisions. */
-  callback_baton->revnum1 = drr.rev1;
-  callback_baton->revnum2 = drr.rev2;
+  callback_baton->revnum1 = rev1;
+  callback_baton->revnum2 = rev2;
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
      contents.  */
   SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, NULL,
-                                               drr.anchor1, NULL, NULL, FALSE,
+                                               anchor1, NULL, NULL, FALSE,
                                                TRUE, ctx, pool));
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
   SVN_ERR(svn_client__get_diff_editor
-          (drr.base_path ? drr.base_path : "",
+          (base_path ? base_path : "",
            NULL, callbacks, callback_baton, diff_param->depth,
-           FALSE /* doesn't matter for diff */, extra_ra_session, drr.rev1,
+           FALSE /* doesn't matter for diff */, extra_ra_session, rev1,
            NULL /* no notify_func */, NULL /* no notify_baton */,
            ctx->cancel_func, ctx->cancel_baton,
            &diff_editor, &diff_edit_baton, pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
-          (drr.ra_session, &reporter, &reporter_baton, drr.rev2, drr.target1,
+          (ra_session, &reporter, &reporter_baton, rev2, target1,
            diff_param->depth, diff_param->ignore_ancestry, TRUE,
-           drr.url2, diff_editor, diff_edit_baton, pool));
+           url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR(reporter->set_path(reporter_baton, "", drr.rev1,
+  SVN_ERR(reporter->set_path(reporter_baton, "", rev1,
                              svn_depth_infinity,
                              FALSE, NULL,
                              pool));
@@ -1820,32 +1806,44 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
 
-  struct diff_repos_repos_t drr;
+  const char *url1;
+  const char *url2;
+  const char *base_path;
+  svn_revnum_t rev1;
+  svn_revnum_t rev2;
+  const char *anchor1;
+  const char *anchor2;
+  const char *target1;
+  const char *target2;
+  svn_ra_session_t *ra_session;
 
   /* Prepare info for the repos repos diff. */
-  SVN_ERR(diff_prepare_repos_repos(diff_param, &drr, ctx, pool));
+  SVN_ERR(diff_prepare_repos_repos(diff_param,
+                                   &url1, &url2, &base_path, &rev1, &rev2,
+                                   &anchor1, &anchor2, &target1, &target2,
+                                   &ra_session, ctx, pool));
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used to get the kind of deleted paths.  */
   SVN_ERR(svn_client__open_ra_session_internal(&extra_ra_session, NULL,
-                                               drr.anchor1, NULL, NULL, FALSE,
+                                               anchor1, NULL, NULL, FALSE,
                                                TRUE, ctx, pool));
 
   /* Set up the repos_diff editor. */
   SVN_ERR(svn_client__get_diff_summarize_editor
-          (drr.target2, summarize_func,
-           summarize_baton, extra_ra_session, drr.rev1, ctx->cancel_func,
+          (target2, summarize_func,
+           summarize_baton, extra_ra_session, rev1, ctx->cancel_func,
            ctx->cancel_baton, &diff_editor, &diff_edit_baton, pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
-          (drr.ra_session, &reporter, &reporter_baton, drr.rev2, drr.target1,
+          (ra_session, &reporter, &reporter_baton, rev2, target1,
            diff_param->depth, diff_param->ignore_ancestry,
-           FALSE /* do not create text delta */, drr.url2, diff_editor,
+           FALSE /* do not create text delta */, url2, diff_editor,
            diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR(reporter->set_path(reporter_baton, "", drr.rev1,
+  SVN_ERR(reporter->set_path(reporter_baton, "", rev1,
                              svn_depth_infinity,
                              FALSE, NULL, pool));
   return reporter->finish_report(reporter_baton, pool);
