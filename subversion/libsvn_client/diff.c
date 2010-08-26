@@ -773,7 +773,8 @@ diff_content_changed(const char *path,
                                    diff_cmd_baton->options.for_internal,
                                    subpool));
 
-      if (svn_diff_contains_diffs(diff) || diff_cmd_baton->force_empty)
+      if (svn_diff_contains_diffs(diff) || diff_cmd_baton->force_empty ||
+          diff_cmd_baton->use_git_diff_format)
         {
           /* Print out the diff header. */
           SVN_ERR(svn_stream_printf_from_utf8
@@ -846,11 +847,12 @@ diff_content_changed(const char *path,
           }
 
           /* Output the actual diff */
-          SVN_ERR(svn_diff_file_output_unified3
-                  (os, diff, tmpfile1, tmpfile2, label1, label2,
-                   diff_cmd_baton->header_encoding, rel_to_dir,
-                   diff_cmd_baton->options.for_internal->show_c_function,
-                   subpool));
+          if (svn_diff_contains_diffs(diff) || diff_cmd_baton->force_empty)
+            SVN_ERR(svn_diff_file_output_unified3
+                    (os, diff, tmpfile1, tmpfile2, label1, label2,
+                     diff_cmd_baton->header_encoding, rel_to_dir,
+                     diff_cmd_baton->options.for_internal->show_c_function,
+                     subpool));
 
           /* We have a printed a diff for this path, mark it as visited. */
           apr_hash_set(diff_cmd_baton->visited_paths, path,
@@ -1200,6 +1202,9 @@ struct diff_parameters
   /* Don't follow copyfrom when diffing copies. */
   svn_boolean_t show_copies_as_adds;
 
+  /* Are we producing a git-style diff? */
+  svn_boolean_t use_git_diff_format;
+
   /* Changelists of interest */
   const apr_array_header_t *changelists;
 };
@@ -1461,6 +1466,7 @@ diff_wc_wc(const char *path1,
            svn_depth_t depth,
            svn_boolean_t ignore_ancestry,
            svn_boolean_t show_copies_as_adds,
+           svn_boolean_t use_git_diff_format,
            const apr_array_header_t *changelists,
            const svn_wc_diff_callbacks4_t *callbacks,
            struct diff_cmd_baton *callback_baton,
@@ -1509,9 +1515,8 @@ diff_wc_wc(const char *path1,
                        path1,
                        callbacks, callback_baton,
                        depth,
-                       ignore_ancestry,
-                       show_copies_as_adds,
-                       changelists,
+                       ignore_ancestry, show_copies_as_adds,
+                       use_git_diff_format, changelists,
                        ctx->cancel_func, ctx->cancel_baton,
                        pool));
   return SVN_NO_ERROR;
@@ -1607,6 +1612,7 @@ diff_repos_wc(const char *path1,
               svn_depth_t depth,
               svn_boolean_t ignore_ancestry,
               svn_boolean_t show_copies_as_adds,
+              svn_boolean_t use_git_diff_format,
               const apr_array_header_t *changelists,
               const svn_wc_diff_callbacks4_t *callbacks,
               struct diff_cmd_baton *callback_baton,
@@ -1692,6 +1698,7 @@ diff_repos_wc(const char *path1,
                                   depth,
                                   ignore_ancestry,
                                   show_copies_as_adds,
+                                  use_git_diff_format,
                                   rev2_is_base,
                                   reverse,
                                   changelists,
@@ -1761,6 +1768,7 @@ do_diff(const struct diff_parameters *diff_param,
                                 FALSE, diff_param->depth,
                                 diff_param->ignore_ancestry,
                                 diff_param->show_copies_as_adds,
+                                diff_param->use_git_diff_format,
                                 diff_param->changelists,
                                 callbacks, callback_baton, ctx, pool));
         }
@@ -1775,6 +1783,7 @@ do_diff(const struct diff_parameters *diff_param,
                                 TRUE, diff_param->depth,
                                 diff_param->ignore_ancestry,
                                 diff_param->show_copies_as_adds,
+                                diff_param->use_git_diff_format,
                                 diff_param->changelists,
                                 callbacks, callback_baton, ctx, pool));
         }
@@ -1785,6 +1794,7 @@ do_diff(const struct diff_parameters *diff_param,
                              diff_param->depth,
                              diff_param->ignore_ancestry,
                              diff_param->show_copies_as_adds,
+                             diff_param->use_git_diff_format,
                              diff_param->changelists,
                              callbacks, callback_baton, ctx, pool));
         }
@@ -2003,6 +2013,7 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = no_diff_deleted;
   diff_params.show_copies_as_adds = show_copies_as_adds;
+  diff_params.use_git_diff_format = use_git_diff_format;
   diff_params.changelists = changelists;
 
   /* setup callback and baton */
