@@ -214,6 +214,13 @@ Candidate changes:
    Votes:
      +1: jerenkrantz, lgo
 
+ * r989658
+   SVNPathAuthz short_circuit ignores the authz path rules with repo prefix.
+   Justification:
+     Having broken authz is bad.
+   Votes:
+     +1: kameshj
+
 Veto-blocked changes:
 =====================
 
