@@ -802,26 +802,8 @@ leaf_del = svntest.actions.deep_trees_leaf_del
 disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
 disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
 disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
-
-def disk_after_tree_del_no_ci(wc_dir):
-  if svntest.main.wc_is_singledb(wc_dir):
-    return svntest.wc.State('', {
-      'F'                 : Item(),
-      'D'                 : Item(),
-      'DF'                : Item(),
-      'DD'                : Item(),
-      'DDF'               : Item(),
-      'DDD'               : Item(),
-    })
-  else:
-    return svntest.wc.State('', {
-      'F'                 : Item(),
-      'D/D1'              : Item(),
-      'DF/D1'             : Item(),
-      'DD/D1/D2'          : Item(),
-      'DDF/D1/D2'         : Item(),
-      'DDD/D1/D2/D3'      : Item(),
-    })
+disk_after_leaf_del_no_ci = svntest.actions.deep_trees_after_leaf_del_no_ci
+disk_after_tree_del_no_ci = svntest.actions.deep_trees_after_tree_del_no_ci
 
 deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
 
@@ -970,14 +952,7 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D'                 : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1'             : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2'         : Item(),
-    })
+  expected_disk = disk_after_leaf_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1204,14 +1179,7 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_leaf_del_no_ci(sbox.wc_dir)
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
