@@ -938,47 +938,12 @@ diff_file_added(const char *local_dir_abspath,
      user see that *something* happened. */
   diff_cmd_baton->force_empty = TRUE;
 
-  /* ### We still can't detect moves without extending the parameters of
-   * ### file_added(). The *right* thing to do is propably to extend
-   * ### svn_wc_diff_callbacks4_t with file_copied() and file_moved(). */
   if (tmpfile1 && copyfrom_path)
-    {
-      const char *repos_relpath;
-      char *ancestor_of_path;
-      const char *local_abspath;
-      int offset;
-      svn_diff_operation_kind_t op_kind = svn_diff_op_copied;
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-      SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath, 
-                                             diff_cmd_baton->wc_ctx,
-                                             local_abspath, scratch_pool,
-                                             scratch_pool));
-
-      /* We need to determine if the copyfrom_path is within scope of the
-       * diff we're producing. If not we'll just mark it as an add.
-       * Determining scope involves checking two things; the dir we executed
-       * the command from (orig_path2) and the target of the command (path).
-       *
-       * ### We'll do the same thing for moves but then we'll have to
-       * ### consider the scope of both the delete-half and the add-half. */
-      ancestor_of_path = apr_pstrdup(scratch_pool, repos_relpath);
-
-      offset = strlen(repos_relpath) - strlen(path) 
-                 + strlen(diff_cmd_baton->orig_path_2);
-
-      ancestor_of_path[offset] = '\0';
-
-      if (strncmp(copyfrom_path, ancestor_of_path, strlen(ancestor_of_path)))
-        op_kind = svn_diff_op_added;
-                                             
-      SVN_ERR(diff_content_changed(path,
-                                   tmpfile1, tmpfile2, rev1, rev2,
-                                   mimetype1, mimetype2,
-                                   op_kind, copyfrom_path,
-                                   diff_baton));
-    }
+    SVN_ERR(diff_content_changed(path,
+                                 tmpfile1, tmpfile2, rev1, rev2,
+                                 mimetype1, mimetype2,
+                                 svn_diff_op_copied, copyfrom_path,
+                                 diff_baton));
   else if (tmpfile1)
     SVN_ERR(diff_content_changed(path,
                                  tmpfile1, tmpfile2, rev1, rev2,
