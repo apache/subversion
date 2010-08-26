@@ -1209,50 +1209,47 @@ struct diff_parameters
   const apr_array_header_t *changelists;
 };
 
-/** Helper structure: filled by check_paths() */
-struct diff_paths
-{
-  /* path1 can only be found in the repository? */
-  svn_boolean_t is_repos1;
 
-  /* path2 can only be found in the repository? */
-  svn_boolean_t is_repos2;
-};
-
-
-/** Check if paths are urls and if the revisions are local, and, for
-    pegged revisions, ensure that at least one revision is non-local.
-    Fills the PATHS structure. */
+/** Check if paths PATH1 and PATH2 are urls and if the revisions REVISION1
+ *  and REVISION2 are local. If PEG_REVISION is not unspecified, ensure that
+ *  at least one of the two revisions is non-local.
+ *  If PATH1 can only be found in the repository, set *IS_REPOS1 to TRUE.
+ *  If PATH2 can only be found in the repository, set *IS_REPOS2 to TRUE. */ 
 static svn_error_t *
-check_paths(const struct diff_parameters *params,
-            struct diff_paths *paths)
+check_paths(svn_boolean_t *is_repos1,
+            svn_boolean_t *is_repos2,
+            const char *path1,
+            const char *path2,
+            const svn_opt_revision_t *revision1,
+            const svn_opt_revision_t *revision2,
+            const svn_opt_revision_t *peg_revision)
 {
   svn_boolean_t is_local_rev1, is_local_rev2;
 
   /* Verify our revision arguments in light of the paths. */
-  if ((params->revision1->kind == svn_opt_revision_unspecified)
-      || (params->revision2->kind == svn_opt_revision_unspecified))
+  if ((revision1->kind == svn_opt_revision_unspecified)
+      || (revision2->kind == svn_opt_revision_unspecified))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                             _("Not all required revisions are specified"));
 
   /* Revisions can be said to be local or remote.  BASE and WORKING,
      for example, are local.  */
   is_local_rev1 =
-    ((params->revision1->kind == svn_opt_revision_base)
-     || (params->revision1->kind == svn_opt_revision_working));
+    ((revision1->kind == svn_opt_revision_base)
+     || (revision1->kind == svn_opt_revision_working));
   is_local_rev2 =
-    ((params->revision2->kind == svn_opt_revision_base)
-     || (params->revision2->kind == svn_opt_revision_working));
+    ((revision2->kind == svn_opt_revision_base)
+     || (revision2->kind == svn_opt_revision_working));
 
-  if (params->peg_revision->kind != svn_opt_revision_unspecified)
+  if (peg_revision->kind != svn_opt_revision_unspecified)
     {
       if (is_local_rev1 && is_local_rev2)
         return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                 _("At least one revision must be non-local "
                                   "for a pegged diff"));
 
-      paths->is_repos1 = ! is_local_rev1;
-      paths->is_repos2 = ! is_local_rev2;
+      *is_repos1 = ! is_local_rev1;
+      *is_repos2 = ! is_local_rev2;
     }
   else
     {
@@ -1260,8 +1257,8 @@ check_paths(const struct diff_parameters *params,
          URLs.  We don't do that here, though.  We simply record that it
          needs to be done, which is information that helps us choose our
          diff helper function.  */
-      paths->is_repos1 = ! is_local_rev1 || svn_path_is_url(params->path1);
-      paths->is_repos2 = ! is_local_rev2 || svn_path_is_url(params->path2);
+      *is_repos1 = ! is_local_rev1 || svn_path_is_url(path1);
+      *is_repos2 = ! is_local_rev2 || svn_path_is_url(path2);
     }
 
   return SVN_NO_ERROR;
@@ -1748,14 +1745,18 @@ do_diff(const struct diff_parameters *diff_param,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
-  struct diff_paths diff_paths;
+  svn_boolean_t is_repos1;
+  svn_boolean_t is_repos2;
 
   /* Check if paths/revisions are urls/local. */
-  SVN_ERR(check_paths(diff_param, &diff_paths));
+  SVN_ERR(check_paths(&is_repos1, &is_repos2,
+                      diff_param->path1, diff_param->path2,
+                      diff_param->revision1, diff_param->revision2,
+                      diff_param->peg_revision));
 
-  if (diff_paths.is_repos1)
+  if (is_repos1)
     {
-      if (diff_paths.is_repos2)
+      if (is_repos2)
         {
           SVN_ERR(diff_repos_repos(diff_param, callbacks, callback_baton,
                                    ctx, pool));
@@ -1775,7 +1776,7 @@ do_diff(const struct diff_parameters *diff_param,
     }
   else /* path1 is a working copy path */
     {
-      if (diff_paths.is_repos2)
+      if (is_repos2)
         {
           SVN_ERR(diff_repos_wc(diff_param->path2, diff_param->revision2,
                                 diff_param->peg_revision,
@@ -1858,12 +1859,16 @@ do_diff_summarize(const struct diff_parameters *diff_param,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  struct diff_paths diff_paths;
+  svn_boolean_t is_repos1;
+  svn_boolean_t is_repos2;
 
   /* Check if paths/revisions are urls/local. */
-  SVN_ERR(check_paths(diff_param, &diff_paths));
+  SVN_ERR(check_paths(&is_repos1, &is_repos2,
+                      diff_param->path1, diff_param->path2,
+                      diff_param->revision1, diff_param->revision2,
+                      diff_param->peg_revision));
 
-  if (diff_paths.is_repos1 && diff_paths.is_repos2)
+  if (is_repos1 && is_repos2)
     return diff_summarize_repos_repos(diff_param, summarize_func,
                                       summarize_baton, ctx, pool);
   else
