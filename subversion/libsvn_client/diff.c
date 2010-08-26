@@ -2100,6 +2100,7 @@ svn_client_diff_summarize2(const char *path1,
   svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
 
+  /* ### CHANGELISTS parameter isn't used */
   return do_diff_summarize(summarize_func, summarize_baton, ctx,
                            path1, path2, revision1, revision2, &peg_revision,
                            depth, ignore_ancestry, pool);
@@ -2118,6 +2119,7 @@ svn_client_diff_summarize_peg2(const char *path,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
+  /* ### CHANGELISTS parameter isn't used */
   return do_diff_summarize(summarize_func, summarize_baton, ctx,
                            path, path, start_revision, end_revision,
                            peg_revision, depth, ignore_ancestry, pool);
