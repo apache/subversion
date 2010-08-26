@@ -1172,44 +1172,6 @@ convert_to_url(const char **url,
   return SVN_NO_ERROR;
 }
 
-/** Helper structure: for passing around the diff parameters */
-struct diff_parameters
-{
-  /* First input path */
-  const char *path1;
-
-  /* Revision of first input path */
-  const svn_opt_revision_t *revision1;
-
-  /* Second input path */
-  const char *path2;
-
-  /* Revision of second input path */
-  const svn_opt_revision_t *revision2;
-
-  /* Peg revision */
-  const svn_opt_revision_t *peg_revision;
-
-  /* Desired depth */
-  svn_depth_t depth;
-
-  /* Ignore ancestry */
-  svn_boolean_t ignore_ancestry;
-
-  /* Ignore deleted */
-  svn_boolean_t no_diff_deleted;
-
-  /* Don't follow copyfrom when diffing copies. */
-  svn_boolean_t show_copies_as_adds;
-
-  /* Are we producing a git-style diff? */
-  svn_boolean_t use_git_diff_format;
-
-  /* Changelists of interest */
-  const apr_array_header_t *changelists;
-};
-
-
 /** Check if paths PATH1 and PATH2 are urls and if the revisions REVISION1
  *  and REVISION2 are local. If PEG_REVISION is not unspecified, ensure that
  *  at least one of the two revisions is non-local.
@@ -1801,10 +1763,16 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
 
 /* Perform a diff summary between two repository paths. */
 static svn_error_t *
-diff_summarize_repos_repos(const struct diff_parameters *diff_param,
-                           svn_client_diff_summarize_func_t summarize_func,
+diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
                            void *summarize_baton,
                            svn_client_ctx_t *ctx,
+                           const char *path1,
+                           const char *path2,
+                           const svn_opt_revision_t *revision1,
+                           const svn_opt_revision_t *revision2,
+                           const svn_opt_revision_t *peg_revision,
+                           svn_depth_t depth,
+                           svn_boolean_t ignore_ancestry,
                            apr_pool_t *pool)
 {
   svn_ra_session_t *extra_ra_session;
@@ -1830,12 +1798,8 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   SVN_ERR(diff_prepare_repos_repos(&url1, &url2, &base_path, &rev1, &rev2,
                                    &anchor1, &anchor2, &target1, &target2,
                                    &ra_session, ctx,
-                                   diff_param->path1,
-                                   diff_param->path2,
-                                   diff_param->revision1,
-                                   diff_param->revision2,
-                                   diff_param->peg_revision,
-                                   pool));
+                                   path1, path2, revision1, revision2,
+                                   peg_revision, pool));
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used to get the kind of deleted paths.  */
@@ -1852,7 +1816,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
           (ra_session, &reporter, &reporter_baton, rev2, target1,
-           diff_param->depth, diff_param->ignore_ancestry,
+           depth, ignore_ancestry,
            FALSE /* do not create text delta */, url2, diff_editor,
            diff_edit_baton, pool));
 
@@ -1865,24 +1829,30 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
 
 /* This is basically just the guts of svn_client_diff_summarize[_peg]2(). */
 static svn_error_t *
-do_diff_summarize(const struct diff_parameters *diff_param,
-                  svn_client_diff_summarize_func_t summarize_func,
+do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
                   void *summarize_baton,
                   svn_client_ctx_t *ctx,
+                  const char *path1,
+                  const char *path2,
+                  const svn_opt_revision_t *revision1,
+                  const svn_opt_revision_t *revision2,
+                  const svn_opt_revision_t *peg_revision,
+                  svn_depth_t depth,
+                  svn_boolean_t ignore_ancestry,
                   apr_pool_t *pool)
 {
   svn_boolean_t is_repos1;
   svn_boolean_t is_repos2;
 
   /* Check if paths/revisions are urls/local. */
-  SVN_ERR(check_paths(&is_repos1, &is_repos2,
-                      diff_param->path1, diff_param->path2,
-                      diff_param->revision1, diff_param->revision2,
-                      diff_param->peg_revision));
+  SVN_ERR(check_paths(&is_repos1, &is_repos2, path1, path2,
+                      revision1, revision2, peg_revision));
 
   if (is_repos1 && is_repos2)
-    return diff_summarize_repos_repos(diff_param, summarize_func,
-                                      summarize_baton, ctx, pool);
+    return diff_summarize_repos_repos(summarize_func, summarize_baton, ctx,
+                                      path1, path2, revision1, revision2,
+                                      peg_revision, depth, ignore_ancestry,
+                                      pool);
   else
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                             _("Summarizing diff can only compare repository "
@@ -2126,25 +2096,13 @@ svn_client_diff_summarize2(const char *path1,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  struct diff_parameters diff_params;
-
   /* We will never do a pegged diff from here. */
   svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
 
-  /* fill diff_param */
-  diff_params.path1 = path1;
-  diff_params.revision1 = revision1;
-  diff_params.path2 = path2;
-  diff_params.revision2 = revision2;
-  diff_params.peg_revision = &peg_revision;
-  diff_params.depth = depth;
-  diff_params.ignore_ancestry = ignore_ancestry;
-  diff_params.no_diff_deleted = FALSE;
-  diff_params.changelists = changelists;
-
-  return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
-                           ctx, pool);
+  return do_diff_summarize(summarize_func, summarize_baton, ctx,
+                           path1, path2, revision1, revision2, &peg_revision,
+                           depth, ignore_ancestry, pool);
 }
 
 svn_error_t *
@@ -2160,21 +2118,9 @@ svn_client_diff_summarize_peg2(const char *path,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
-  struct diff_parameters diff_params;
-
-  /* fill diff_param */
-  diff_params.path1 = path;
-  diff_params.revision1 = start_revision;
-  diff_params.path2 = path;
-  diff_params.revision2 = end_revision;
-  diff_params.peg_revision = peg_revision;
-  diff_params.depth = depth;
-  diff_params.ignore_ancestry = ignore_ancestry;
-  diff_params.no_diff_deleted = FALSE;
-  diff_params.changelists = changelists;
-
-  return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
-                           ctx, pool);
+  return do_diff_summarize(summarize_func, summarize_baton, ctx,
+                           path, path, start_revision, end_revision,
+                           peg_revision, depth, ignore_ancestry, pool);
 }
 
 svn_client_diff_summarize_t *
