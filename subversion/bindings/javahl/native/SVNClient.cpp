@@ -30,6 +30,7 @@
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
 #include "ConflictResolverCallback.h"
+#include "ClientContext.h"
 #include "ProgressListener.h"
 #include "Prompter.h"
 #include "Pool.h"
@@ -70,27 +71,13 @@
 #include <sstream>
 
 
-struct log_msg_baton
-{
-    const char *message;
-    CommitMessage *messageHandler;
-};
-
 SVNClient::SVNClient()
+    : context()
 {
-    m_notify2 = NULL;
-    m_progressListener = NULL;
-    m_prompter = NULL;
-    m_commitMessage = NULL;
-    m_conflictResolver = NULL;
 }
 
 SVNClient::~SVNClient()
 {
-    delete m_notify2;
-    delete m_progressListener;
-    delete m_prompter;
-    delete m_conflictResolver;
 }
 
 SVNClient *SVNClient::getCppObject(jobject jthis)
@@ -138,7 +125,7 @@ void SVNClient::list(const char *url, Revision &revision,
                      ListCallback *callback)
 {
     SVN::Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -170,7 +157,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
     callback->setWcCtx(ctx->wc_ctx);
@@ -190,22 +177,6 @@ SVNClient::status(const char *path, svn_depth_t depth,
                                    requestPool.pool()), );
 }
 
-void SVNClient::username(const char *pi_username)
-{
-    m_userName = (pi_username == NULL ? "" : pi_username);
-}
-
-void SVNClient::password(const char *pi_password)
-{
-    m_passWord = (pi_password == NULL ? "" : pi_password);
-}
-
-void SVNClient::setPrompt(Prompter *prompter)
-{
-    delete m_prompter;
-    m_prompter = prompter;
-}
-
 void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             std::vector<RevisionRange> &logRanges,
                             bool stopOnCopy, bool discoverPaths,
@@ -216,7 +187,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
 
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -277,7 +248,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     SVN_JNI_ERR(path.error_occured(), -1);
     svn_revnum_t rev;
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return -1;
 
@@ -295,30 +266,12 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     return rev;
 }
 
-void SVNClient::notification2(ClientNotifyCallback *notify2)
-{
-    delete m_notify2;
-    m_notify2 = notify2;
-}
-
-void SVNClient::setConflictResolver(ConflictResolverCallback *conflictResolver)
-{
-    delete m_conflictResolver;
-    m_conflictResolver = conflictResolver;
-}
-
-void SVNClient::setProgressListener(ProgressListener *listener)
-{
-    delete m_progressListener;
-    m_progressListener = listener;
-}
-
 void SVNClient::remove(Targets &targets, const char *message, bool force,
                        bool keep_local, RevpropTable &revprops,
                        CommitCallback *callback)
 {
     SVN::Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(message);
+    svn_client_ctx_t *ctx = context.getContext(message);
     if (ctx == NULL)
         return;
 
@@ -338,7 +291,7 @@ void SVNClient::revert(const char *path, svn_depth_t depth,
 
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -360,7 +313,7 @@ void SVNClient::add(const char *path,
 
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -376,7 +329,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 {
     SVN::Pool requestPool;
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     apr_array_header_t *revs;
     if (ctx == NULL)
         return NULL;
@@ -417,7 +370,7 @@ void SVNClient::commit(Targets &targets, const char *message,
     SVN::Pool requestPool;
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
-    svn_client_ctx_t *ctx = getContext(message);
+    svn_client_ctx_t *ctx = context.getContext(message);
     if (ctx == NULL)
         return;
 
@@ -448,7 +401,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     Path destinationPath(destPath);
     SVN_JNI_ERR(destinationPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(message);
+    svn_client_ctx_t *ctx = context.getContext(message);
     if (ctx == NULL)
         return;
 
@@ -472,7 +425,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     Path destinationPath(destPath);
     SVN_JNI_ERR(destinationPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(message);
+    svn_client_ctx_t *ctx = context.getContext(message);
     if (ctx == NULL)
         return;
 
@@ -487,7 +440,7 @@ void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents,
                       RevpropTable &revprops, CommitCallback *callback)
 {
     SVN::Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(message);
+    svn_client_ctx_t *ctx = context.getContext(message);
     if (ctx == NULL)
         return;
 
@@ -507,7 +460,7 @@ void SVNClient::cleanup(const char *path)
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -521,7 +474,7 @@ void SVNClient::resolve(const char *path, svn_depth_t depth,
     SVN_JNI_NULL_PTR_EX(path, "path", );
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -542,7 +495,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
     Path destinationPath(destPath);
     SVN_JNI_ERR(destinationPath.error_occured(), -1);
     svn_revnum_t rev;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return -1;
 
@@ -575,7 +528,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
     SVN_JNI_ERR(intPath.error_occured(), -1);
 
     svn_revnum_t rev;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return -1;
 
@@ -607,7 +560,7 @@ void SVNClient::doImport(const char *path, const char *url,
     Path intUrl(url);
     SVN_JNI_ERR(intUrl.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(message);
+    svn_client_ctx_t *ctx = context.getContext(message);
     if (ctx == NULL)
         return;
 
@@ -622,7 +575,7 @@ jobject
 SVNClient::suggestMergeSources(const char *path, Revision &pegRevision)
 {
     SVN::Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return NULL;
 
@@ -653,7 +606,7 @@ void SVNClient::merge(const char *path1, Revision &revision1,
     Path srcPath2 = path2;
     SVN_JNI_ERR(srcPath2.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -679,7 +632,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
     Path srcPath(path);
     SVN_JNI_ERR(srcPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -734,7 +687,7 @@ void SVNClient::mergeReintegrate(const char *path, Revision &pegRevision,
     Path srcPath(path);
     SVN_JNI_ERR(srcPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -751,7 +704,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
     SVN::Pool requestPool;
     JNIEnv *env = JNIUtil::getEnv();
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return NULL;
 
@@ -828,7 +781,7 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
 {
     SVN::Pool requestPool;
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -868,7 +821,7 @@ jbyteArray SVNClient::propertyGet(const char *path, const char *name,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), NULL);
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return NULL;
 
@@ -904,7 +857,7 @@ void SVNClient::properties(const char *path, Revision &revision,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -935,7 +888,7 @@ void SVNClient::propertySet(const char *path, const char *name,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -967,7 +920,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
         SVN_JNI_NULL_PTR_EX(target2, "target2", );
 
     SVN_JNI_NULL_PTR_EX(outfileName, "outfileName", );
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -1094,7 +1047,7 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
     SVN_JNI_NULL_PTR_EX(target1, "target1", );
     SVN_JNI_NULL_PTR_EX(target2, "target2", );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -1123,7 +1076,7 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
 
     SVN_JNI_NULL_PTR_EX(target, "target", );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -1140,178 +1093,6 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                DiffSummaryReceiver::summarize,
                                                &receiver, ctx,
                                                requestPool.pool()), );
-}
-
-svn_client_ctx_t *SVNClient::getContext(const char *message)
-{
-    SVN::Pool *requestPool = JNIUtil::getRequestPool();
-    apr_pool_t *pool = requestPool->pool();
-    svn_auth_baton_t *ab;
-    svn_client_ctx_t *ctx;
-    SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
-
-    const char *configDir = m_configDir.c_str();
-    if (m_configDir.length() == 0)
-        configDir = NULL;
-    SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir, pool), NULL);
-    svn_config_t *config = (svn_config_t *) apr_hash_get(ctx->config,
-                                                         SVN_CONFIG_CATEGORY_CONFIG,
-                                                         APR_HASH_KEY_STRING);
-
-    /* The whole list of registered providers */
-    apr_array_header_t *providers;
-
-    /* Populate the registered providers with the platform-specific providers */
-    SVN_JNI_ERR(svn_auth_get_platform_specific_client_providers(&providers,
-                                                                config,
-                                                                pool),
-                NULL);
-
-    /* Use the prompter (if available) to prompt for password and cert
-     * caching. */
-    svn_auth_plaintext_prompt_func_t plaintext_prompt_func = NULL;
-    void *plaintext_prompt_baton = NULL;
-    svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func;
-    void *plaintext_passphrase_prompt_baton = NULL;
-
-    if (m_prompter != NULL)
-    {
-        plaintext_prompt_func = Prompter::plaintext_prompt;
-        plaintext_prompt_baton = m_prompter;
-        plaintext_passphrase_prompt_func = Prompter::plaintext_passphrase_prompt;
-        plaintext_passphrase_prompt_baton = m_prompter;
-    }
-
-    /* The main disk-caching auth providers, for both
-     * 'username/password' creds and 'username' creds.  */
-    svn_auth_provider_object_t *provider;
-
-    svn_auth_get_simple_provider2(&provider, plaintext_prompt_func,
-                                  plaintext_prompt_baton, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    svn_auth_get_username_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    /* The server-cert, client-cert, and client-cert-password providers. */
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "windows",
-                                                        "ssl_server_trust",
-                                                        pool),
-                NULL);
-
-    if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    svn_auth_get_ssl_client_cert_pw_file_provider2(&provider,
-                        plaintext_passphrase_prompt_func,
-                        plaintext_passphrase_prompt_baton, pool);
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-    if (m_prompter != NULL)
-    {
-        /* Two basic prompt providers: username/password, and just username.*/
-        provider = m_prompter->getProviderSimple();
-
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-        provider = m_prompter->getProviderUsername();
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-        /* Three ssl prompt providers, for server-certs, client-certs,
-         * and client-cert-passphrases.  */
-        provider = m_prompter->getProviderServerSSLTrust();
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-        provider = m_prompter->getProviderClientSSL();
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-        provider = m_prompter->getProviderClientSSLPassword();
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    }
-
-    /* Build an authentication baton to give to libsvn_client. */
-    svn_auth_open(&ab, providers, pool);
-
-    /* Place any default --username or --password credentials into the
-     * auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
-    if (!m_userName.empty())
-        svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                               m_userName.c_str());
-    if (!m_passWord.empty())
-        svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                               m_passWord.c_str());
-
-    ctx->auth_baton = ab;
-    ctx->notify_func = NULL;
-    ctx->notify_baton = NULL;
-    ctx->log_msg_func3 = getCommitMessage;
-    ctx->log_msg_baton3 = getCommitMessageBaton(message);
-    ctx->cancel_func = checkCancel;
-    m_cancelOperation = false;
-    ctx->cancel_baton = this;
-    ctx->notify_func2= ClientNotifyCallback::notify;
-    ctx->notify_baton2 = m_notify2;
-
-    ctx->progress_func = ProgressListener::progress;
-    ctx->progress_baton = m_progressListener;
-
-    if (m_conflictResolver)
-    {
-        ctx->conflict_func = ConflictResolverCallback::resolveConflict;
-        ctx->conflict_baton = m_conflictResolver;
-    }
-
-    return ctx;
-}
-
-svn_error_t *
-SVNClient::getCommitMessage(const char **log_msg,
-                            const char **tmp_file,
-                            const apr_array_header_t *commit_items,
-                            void *baton,
-                            apr_pool_t *pool)
-{
-    *log_msg = NULL;
-    *tmp_file = NULL;
-    log_msg_baton *lmb = (log_msg_baton *) baton;
-
-    if (lmb && lmb->messageHandler)
-    {
-        jstring jmsg = lmb->messageHandler->getCommitMessage(commit_items);
-        if (jmsg != NULL)
-        {
-            JNIStringHolder msg(jmsg);
-            *log_msg = apr_pstrdup(pool, msg);
-        }
-        return SVN_NO_ERROR;
-    }
-    else if (lmb && lmb->message)
-    {
-        *log_msg = apr_pstrdup(pool, lmb->message);
-        return SVN_NO_ERROR;
-    }
-
-    return SVN_NO_ERROR;
-}
-
-void *SVNClient::getCommitMessageBaton(const char *message)
-{
-    if (message != NULL || m_commitMessage)
-    {
-        log_msg_baton *baton = (log_msg_baton *)
-            apr_palloc(JNIUtil::getRequestPool()->pool(), sizeof(*baton));
-
-        baton->message = message;
-        baton->messageHandler = m_commitMessage;
-
-        return baton;
-    }
-    return NULL;
 }
 
 jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
@@ -1440,7 +1221,7 @@ svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
     }
     else
     {
-        svn_client_ctx_t *ctx = getContext(NULL);
+        svn_client_ctx_t *ctx = context.getContext(NULL);
         if (ctx == NULL)
             return NULL;
 
@@ -1464,7 +1245,7 @@ jbyteArray SVNClient::revProperty(const char *path,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), NULL);
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return NULL;
 
@@ -1509,7 +1290,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
     Path intTo(to);
     SVN_JNI_ERR(intTo.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -1529,7 +1310,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -1543,47 +1324,11 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
         );
 }
 
-void SVNClient::setConfigDirectory(const char *configDir)
-{
-    // A change to the config directory may necessitate creation of
-    // the config templates.
-    SVN::Pool requestPool;
-    SVN_JNI_ERR(svn_config_ensure(configDir, requestPool.pool()), );
-
-    m_configDir = (configDir == NULL ? "" : configDir);
-}
-
-const char *SVNClient::getConfigDirectory()
-{
-    return m_configDir.c_str();
-}
-
-void SVNClient::commitMessageHandler(CommitMessage *commitMessage)
-{
-    delete m_commitMessage;
-    m_commitMessage = commitMessage;
-}
-
-void SVNClient::cancelOperation()
-{
-    m_cancelOperation = true;
-}
-
-svn_error_t *SVNClient::checkCancel(void *cancelBaton)
-{
-    SVNClient *that = (SVNClient*)cancelBaton;
-    if (that->m_cancelOperation)
-        return svn_error_create(SVN_ERR_CANCELLED, NULL,
-                                _("Operation canceled"));
-    else
-        return SVN_NO_ERROR;
-}
-
 void SVNClient::addToChangelist(Targets &srcPaths, const char *changelist,
                                 svn_depth_t depth, StringArray &changelists)
 {
     SVN::Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
 
     const apr_array_header_t *srcs = srcPaths.array(requestPool);
     SVN_JNI_ERR(srcPaths.error_occured(), );
@@ -1597,7 +1342,7 @@ void SVNClient::removeFromChangelists(Targets &srcPaths, svn_depth_t depth,
                                       StringArray &changelists)
 {
     SVN::Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
 
     const apr_array_header_t *srcs = srcPaths.array(requestPool);
     SVN_JNI_ERR(srcPaths.error_occured(), );
@@ -1613,7 +1358,7 @@ void SVNClient::getChangelists(const char *rootPath,
                                ChangelistCallback *callback)
 {
     SVN::Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
 
     SVN_JNI_ERR(svn_client_get_changelists(rootPath,
                                            changelists.array(requestPool),
@@ -1627,7 +1372,7 @@ void SVNClient::lock(Targets &targets, const char *comment, bool force)
     SVN::Pool requestPool;
     const apr_array_header_t *targetsApr = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
 
     SVN_JNI_ERR(svn_client_lock(targetsApr, comment, force, ctx,
                                 requestPool.pool()), );
@@ -1639,7 +1384,7 @@ void SVNClient::unlock(Targets &targets, bool force)
 
     const apr_array_header_t *targetsApr = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     SVN_JNI_ERR(svn_client_unlock((apr_array_header_t*)targetsApr, force,
                                   ctx, requestPool.pool()), );
 }
@@ -1654,7 +1399,7 @@ void SVNClient::setRevProperty(const char *path,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -1693,7 +1438,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     SVN_JNI_ERR(intPath.error_occured(), NULL);
 
     int wc_format;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return NULL;
     SVN_JNI_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, intPath.c_str(),
@@ -1752,7 +1497,7 @@ void SVNClient::upgrade(const char *path)
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -1770,7 +1515,7 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), NULL);
 
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     const char *URL;
     svn_revnum_t set_rev;
     SVN_JNI_ERR(svn_client_url_from_path2(&URL, intPath.c_str(), ctx,
@@ -1803,7 +1548,7 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
     SVN::Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -1828,7 +1573,7 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
     SVN_JNI_NULL_PTR_EX(targetPath, "targetPath", );
 
     SVN::Pool requestPool;
-    svn_client_ctx_t *ctx = getContext(NULL);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
@@ -1844,4 +1589,10 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
                                  PatchCallback::callback, callback,
                                  ctx, requestPool.pool(),
                                  requestPool.pool()), );
+}
+
+ClientContext &
+SVNClient::getClientContext()
+{
+    return context;
 }

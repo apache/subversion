@@ -213,7 +213,7 @@ Java_org_apache_subversion_javahl_SVNClient_username
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->username(username);
+  cl->getClientContext().username(username);
 }
 
 JNIEXPORT void JNICALL
@@ -237,7 +237,7 @@ Java_org_apache_subversion_javahl_SVNClient_password
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->password(password);
+  cl->getClientContext().password(password);
 }
 
 JNIEXPORT void JNICALL
@@ -255,7 +255,7 @@ Java_org_apache_subversion_javahl_SVNClient_setPrompt
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->setPrompt(prompter);
+  cl->getClientContext().setPrompt(prompter);
 }
 
 JNIEXPORT void JNICALL
@@ -360,7 +360,7 @@ Java_org_apache_subversion_javahl_SVNClient_notification2
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->notification2(notify2);
+  cl->getClientContext().notification2(notify2);
 }
 
 JNIEXPORT void JNICALL
@@ -379,7 +379,7 @@ Java_org_apache_subversion_javahl_SVNClient_setConflictResolver
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->setConflictResolver(listener);
+  cl->getClientContext().setConflictResolver(listener);
 }
 
 JNIEXPORT void JNICALL
@@ -398,7 +398,7 @@ Java_org_apache_subversion_javahl_SVNClient_setProgressCallback
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->setProgressListener(listener);
+  cl->getClientContext().setProgressListener(listener);
 }
 
 JNIEXPORT void JNICALL
@@ -417,7 +417,7 @@ Java_org_apache_subversion_javahl_SVNClient_commitMessageHandler
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->commitMessageHandler(commitMessage);
+  cl->getClientContext().commitMessageHandler(commitMessage);
 }
 
 JNIEXPORT void JNICALL
@@ -1588,7 +1588,7 @@ Java_org_apache_subversion_javahl_SVNClient_setConfigDirectory
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->setConfigDirectory(configDir);
+  cl->getClientContext().setConfigDirectory(configDir);
 }
 
 JNIEXPORT jstring JNICALL
@@ -1603,7 +1603,7 @@ Java_org_apache_subversion_javahl_SVNClient_getConfigDirectory
       return NULL;
     }
 
-  const char *configDir = cl->getConfigDirectory();
+  const char *configDir = cl->getClientContext().getConfigDirectory();
   return JNIUtil::makeJString(configDir);
 }
 
@@ -1618,7 +1618,7 @@ Java_org_apache_subversion_javahl_SVNClient_cancelOperation
       JNIUtil::throwError("bad C++ this");
       return;
     }
-  cl->cancelOperation();
+  cl->getClientContext().cancelOperation();
 }
 
 JNIEXPORT void JNICALL
