@@ -1501,18 +1501,24 @@ diff_wc_wc(const char *path1,
 
 /* Perform a diff between two repository paths.
 
-   DIFF_PARAM.PATH1 and DIFF_PARAM.PATH2 may be either URLs or the working
-   copy paths. DIFF_PARAM.REVISION1 and DIFF_PARAM.REVISION2 are their
-   respective revisions. If DIFF_PARAM.PEG_REVISION is specified,
-   DIFF_PARAM.PATH2 is the path at the peg revision, and the actual two
-   paths compared are determined by following copy history from PATH2.
+   PATH1 and PATH2 may be either URLs or the working copy paths.
+   REVISION1 and REVISION2 are their respective revisions.
+   If PEG_REVISION is specified, PATH2 is the path at the peg revision,
+   and the actual two paths compared are determined by following copy
+   history from PATH2.
 
    All other options are the same as those passed to svn_client_diff5(). */
 static svn_error_t *
-diff_repos_repos(const struct diff_parameters *diff_param,
-                 const svn_wc_diff_callbacks4_t *callbacks,
+diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
                  struct diff_cmd_baton *callback_baton,
                  svn_client_ctx_t *ctx,
+                 const char *path1,
+                 const char *path2,
+                 const svn_opt_revision_t *revision1,
+                 const svn_opt_revision_t *revision2,
+                 const svn_opt_revision_t *peg_revision,
+                 svn_depth_t depth,
+                 svn_boolean_t ignore_ancestry,
                  apr_pool_t *pool)
 {
   svn_ra_session_t *extra_ra_session;
@@ -1537,12 +1543,8 @@ diff_repos_repos(const struct diff_parameters *diff_param,
   /* Prepare info for the repos repos diff. */
   SVN_ERR(diff_prepare_repos_repos(&url1, &url2, &base_path, &rev1, &rev2,
                                    &anchor1, &anchor2, &target1, &target2,
-                                   &ra_session, ctx,
-                                   diff_param->path1,
-                                   diff_param->path2,
-                                   diff_param->revision1,
-                                   diff_param->revision2,
-                                   diff_param->peg_revision,
+                                   &ra_session, ctx, path1, path2,
+                                   revision1, revision2, peg_revision,
                                    pool));
 
   /* Get actual URLs. */
@@ -1564,7 +1566,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
      Otherwise, we just use "". */
   SVN_ERR(svn_client__get_diff_editor
           (base_path ? base_path : "",
-           NULL, callbacks, callback_baton, diff_param->depth,
+           NULL, callbacks, callback_baton, depth,
            FALSE /* doesn't matter for diff */, extra_ra_session, rev1,
            NULL /* no notify_func */, NULL /* no notify_baton */,
            ctx->cancel_func, ctx->cancel_baton,
@@ -1573,7 +1575,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
           (ra_session, &reporter, &reporter_baton, rev2, target1,
-           diff_param->depth, diff_param->ignore_ancestry, TRUE,
+           depth, ignore_ancestry, TRUE,
            url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
@@ -1754,8 +1756,15 @@ do_diff(const struct diff_parameters *diff_param,
     {
       if (is_repos2)
         {
-          SVN_ERR(diff_repos_repos(diff_param, callbacks, callback_baton,
-                                   ctx, pool));
+          SVN_ERR(diff_repos_repos(callbacks, callback_baton, ctx,
+                                   diff_param->path1,
+                                   diff_param->path2,
+                                   diff_param->revision1,
+                                   diff_param->revision2,
+                                   diff_param->peg_revision,
+                                   diff_param->depth,
+                                   diff_param->ignore_ancestry,
+                                   pool));
         }
       else /* path2 is a working copy path */
         {
