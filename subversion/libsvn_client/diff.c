@@ -803,7 +803,7 @@ diff_content_changed(const char *path,
                 SVN_ERR(print_git_diff_header_copied(
                                               os,
                                               diff_cmd_baton->header_encoding,
-                                              copyfrom_path, path, subpool));
+                                              path, copyfrom_path, subpool));
                 label1 = diff_label(apr_psprintf(subpool, "a/%s", path1), rev1,
                                     subpool);
                 label2 = diff_label(apr_psprintf(subpool, "b/%s", path2), rev2,
