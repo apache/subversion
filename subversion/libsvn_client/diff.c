@@ -1737,45 +1737,43 @@ diff_repos_wc(const char *path1,
 
 /* This is basically just the guts of svn_client_diff[_peg]5(). */
 static svn_error_t *
-do_diff(const struct diff_parameters *diff_param,
-        const svn_wc_diff_callbacks4_t *callbacks,
+do_diff(const svn_wc_diff_callbacks4_t *callbacks,
         struct diff_cmd_baton *callback_baton,
         svn_client_ctx_t *ctx,
+        const char *path1,
+        const char *path2,
+        const svn_opt_revision_t *revision1,
+        const svn_opt_revision_t *revision2,
+        const svn_opt_revision_t *peg_revision,
+        svn_depth_t depth,
+        svn_boolean_t ignore_ancestry,
+        svn_boolean_t show_copies_as_adds,
+        svn_boolean_t use_git_diff_format,
+        const apr_array_header_t *changelists,
         apr_pool_t *pool)
 {
   svn_boolean_t is_repos1;
   svn_boolean_t is_repos2;
 
   /* Check if paths/revisions are urls/local. */
-  SVN_ERR(check_paths(&is_repos1, &is_repos2,
-                      diff_param->path1, diff_param->path2,
-                      diff_param->revision1, diff_param->revision2,
-                      diff_param->peg_revision));
+  SVN_ERR(check_paths(&is_repos1, &is_repos2, path1, path2,
+                      revision1, revision2, peg_revision));
 
   if (is_repos1)
     {
       if (is_repos2)
         {
           SVN_ERR(diff_repos_repos(callbacks, callback_baton, ctx,
-                                   diff_param->path1,
-                                   diff_param->path2,
-                                   diff_param->revision1,
-                                   diff_param->revision2,
-                                   diff_param->peg_revision,
-                                   diff_param->depth,
-                                   diff_param->ignore_ancestry,
+                                   path1, path2, revision1, revision2,
+                                   peg_revision, depth, ignore_ancestry,
                                    pool));
         }
       else /* path2 is a working copy path */
         {
-          SVN_ERR(diff_repos_wc(diff_param->path1, diff_param->revision1,
-                                diff_param->peg_revision,
-                                diff_param->path2, diff_param->revision2,
-                                FALSE, diff_param->depth,
-                                diff_param->ignore_ancestry,
-                                diff_param->show_copies_as_adds,
-                                diff_param->use_git_diff_format,
-                                diff_param->changelists,
+          SVN_ERR(diff_repos_wc(path1, revision1, peg_revision,
+                                path2, revision2, FALSE, depth,
+                                ignore_ancestry, show_copies_as_adds,
+                                use_git_diff_format, changelists,
                                 callbacks, callback_baton, ctx, pool));
         }
     }
@@ -1783,25 +1781,17 @@ do_diff(const struct diff_parameters *diff_param,
     {
       if (is_repos2)
         {
-          SVN_ERR(diff_repos_wc(diff_param->path2, diff_param->revision2,
-                                diff_param->peg_revision,
-                                diff_param->path1, diff_param->revision1,
-                                TRUE, diff_param->depth,
-                                diff_param->ignore_ancestry,
-                                diff_param->show_copies_as_adds,
-                                diff_param->use_git_diff_format,
-                                diff_param->changelists,
+          SVN_ERR(diff_repos_wc(path2, revision2, peg_revision,
+                                path1, revision1, TRUE, depth,
+                                ignore_ancestry, show_copies_as_adds,
+                                use_git_diff_format, changelists,
                                 callbacks, callback_baton, ctx, pool));
         }
       else /* path2 is a working copy path */
         {
-          SVN_ERR(diff_wc_wc(diff_param->path1, diff_param->revision1,
-                             diff_param->path2, diff_param->revision2,
-                             diff_param->depth,
-                             diff_param->ignore_ancestry,
-                             diff_param->show_copies_as_adds,
-                             diff_param->use_git_diff_format,
-                             diff_param->changelists,
+          SVN_ERR(diff_wc_wc(path1, revision1, path2, revision2,
+                             depth, ignore_ancestry, show_copies_as_adds,
+                             use_git_diff_format, changelists,
                              callbacks, callback_baton, ctx, pool));
         }
     }
@@ -2021,27 +2011,12 @@ svn_client_diff5(const apr_array_header_t *options,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  struct diff_parameters diff_params;
-
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks4_t diff_callbacks;
 
   /* We will never do a pegged diff from here. */
   svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
-
-  /* fill diff_param */
-  diff_params.path1 = path1;
-  diff_params.revision1 = revision1;
-  diff_params.path2 = path2;
-  diff_params.revision2 = revision2;
-  diff_params.peg_revision = &peg_revision;
-  diff_params.depth = depth;
-  diff_params.ignore_ancestry = ignore_ancestry;
-  diff_params.no_diff_deleted = no_diff_deleted;
-  diff_params.show_copies_as_adds = show_copies_as_adds;
-  diff_params.use_git_diff_format = use_git_diff_format;
-  diff_params.changelists = changelists;
 
   /* setup callback and baton */
   diff_callbacks.file_changed = diff_file_changed;
@@ -2073,7 +2048,10 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.visited_paths = apr_hash_make(pool);
 
-  return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
+  return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
+                 path1, path2, revision1, revision2, &peg_revision,
+                 depth, ignore_ancestry, show_copies_as_adds,
+                 use_git_diff_format, changelists, pool);
 }
 
 svn_error_t *
@@ -2096,22 +2074,8 @@ svn_client_diff_peg5(const apr_array_header_t *options,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  struct diff_parameters diff_params;
-
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks4_t diff_callbacks;
-
-  /* fill diff_param */
-  diff_params.path1 = path;
-  diff_params.revision1 = start_revision;
-  diff_params.path2 = path;
-  diff_params.revision2 = end_revision;
-  diff_params.peg_revision = peg_revision;
-  diff_params.depth = depth;
-  diff_params.ignore_ancestry = ignore_ancestry;
-  diff_params.no_diff_deleted = no_diff_deleted;
-  diff_params.show_copies_as_adds = show_copies_as_adds;
-  diff_params.changelists = changelists;
 
   /* setup callback and baton */
   diff_callbacks.file_changed = diff_file_changed;
@@ -2143,7 +2107,10 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.visited_paths = apr_hash_make(pool);
 
-  return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
+  return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
+                 path, path, start_revision, end_revision, peg_revision,
+                 depth, ignore_ancestry, show_copies_as_adds,
+                 use_git_diff_format, changelists, pool);
 }
 
 svn_error_t *
