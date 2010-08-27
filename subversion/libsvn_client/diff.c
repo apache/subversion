@@ -433,12 +433,32 @@ diff_label(const char *path,
   return label;
 }
 
-
-
+/* ### forward declaration */
+static svn_error_t *
+print_git_diff_header(svn_stream_t *os,
+                      const char **label1, const char **label2,
+                      svn_diff_operation_kind_t operation,
+                      const char *path,
+                      const char *path1,
+                      const char *path2,
+                      svn_revnum_t rev1,
+                      svn_revnum_t rev2,
+                      const char *copyfrom_path,
+                      const char *header_encoding,
+                      svn_ra_session_t *ra_session,
+                      svn_wc_context_t *wc_ctx,
+                      apr_pool_t *scratch_pool);
 
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
-   passed to svn_client_diff5, which is probably stdout. */
+   passed to svn_client_diff5, which is probably stdout.
+
+   ### FIXME needs proper docstring
+   
+   If USE_GIT_DIFF_FORMAT is TRUE, pring git diff headers, which always
+   show paths relative to the repository root. RA_SESSION and WC_CTX are
+   needed to normalize paths relative the repository root, and are ignored
+   if USE_GIT_DIFF_FORMAT is FALSE. */
 static svn_error_t *
 display_prop_diffs(const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
@@ -451,47 +471,83 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    apr_file_t *file,
                    const char *relative_to_dir,
                    svn_boolean_t show_diff_header,
+                   svn_boolean_t use_git_diff_format,
+                   svn_ra_session_t *ra_session,
+                   svn_wc_context_t *wc_ctx,
                    apr_pool_t *pool)
 {
   int i;
+  const char *path1 = apr_pstrdup(pool, orig_path1);
+  const char *path2 = apr_pstrdup(pool, orig_path2);
 
   /* If we're creating a diff on the wc root, path would be empty. */
   if (path[0] == '\0')
     path = apr_psprintf(pool, ".");
 
-    if (show_diff_header)
-      {
-        const char *path1 = orig_path1;
-        const char *path2 = orig_path2;
-        const char *label1;
-        const char *label2;
+  if (show_diff_header)
+    SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
+                                         relative_to_dir, pool));
 
-        SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
-                                             relative_to_dir, pool));
+  if (use_git_diff_format)
+    {
+      SVN_ERR(adjust_relative_to_repos_root(&path1, path, orig_path1,
+                                            ra_session, wc_ctx,
+                                            svn_path_is_url(path1) &&
+                                              svn_path_is_url(path2),
+                                            pool));
+      SVN_ERR(adjust_relative_to_repos_root(&path2, path, orig_path2,
+                                            ra_session, wc_ctx,
+                                            svn_path_is_url(path1) &&
+                                              svn_path_is_url(path2),
+                                            pool));
+    }
 
-        label1 = diff_label(path1, rev1, pool);
-        label2 = diff_label(path2, rev2, pool);
+  if (show_diff_header)
+    {
+      const char *label1;
+      const char *label2;
+      const char *adjusted_path1 = apr_pstrdup(pool, path1);
+      const char *adjusted_path2 = apr_pstrdup(pool, path2);
 
-        /* ### Should we show the paths in platform specific format,
-         * ### diff_content_changed() does not! */
+      SVN_ERR(adjust_paths_for_diff_labels(&path, &adjusted_path1,
+                                           &adjusted_path2,
+                                           relative_to_dir, pool));
 
-        SVN_ERR(file_printf_from_utf8 (file, encoding,
-                                       "Index: %s" APR_EOL_STR 
-                                       "%s" APR_EOL_STR, 
-                                       path,
-                                       equal_string));
+      label1 = diff_label(adjusted_path1, rev1, pool);
+      label2 = diff_label(adjusted_path2, rev2, pool);
 
-        SVN_ERR(file_printf_from_utf8(file, encoding,
-                                            "--- %s" APR_EOL_STR
-                                            "+++ %s" APR_EOL_STR,
-                                            label1,
-                                            label2));
-      }
+      /* ### Should we show the paths in platform specific format,
+       * ### diff_content_changed() does not! */
+
+      SVN_ERR(file_printf_from_utf8(file, encoding,
+                                    "Index: %s" APR_EOL_STR 
+                                    "%s" APR_EOL_STR, 
+                                    path, equal_string));
+
+      if (use_git_diff_format)
+        {
+          svn_stream_t *os;
+
+          os = svn_stream_from_aprfile2(file, TRUE, pool);
+          SVN_ERR(print_git_diff_header(os, &label1, &label2,
+                                        svn_diff_op_modified, path,
+                                        orig_path1, orig_path2,
+                                        rev1, rev2, NULL,
+                                        encoding, ra_session, wc_ctx, pool));
+          SVN_ERR(svn_stream_close(os));
+        }
+
+      SVN_ERR(file_printf_from_utf8(file, encoding,
+                                          "--- %s" APR_EOL_STR
+                                          "+++ %s" APR_EOL_STR,
+                                          label1,
+                                          label2));
+    }
 
   SVN_ERR(file_printf_from_utf8(file, encoding,
                                 _("%sProperty changes on: %s%s"),
                                 APR_EOL_STR,
-                                path,
+                                use_git_diff_format ? path1 : path,
                                 APR_EOL_STR));
 
   SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
@@ -861,6 +917,9 @@ diff_props_changed(const char *local_dir_abspath,
                                  diff_cmd_baton->outfile,
                                  diff_cmd_baton->relative_to_dir,
                                  show_diff_header,
+                                 diff_cmd_baton->use_git_diff_format,
+                                 diff_cmd_baton->ra_session,
+                                 diff_cmd_baton->wc_ctx,
                                  subpool));
 
       /* We've printed the diff header so now we can mark the path as
