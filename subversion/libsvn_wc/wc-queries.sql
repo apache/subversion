@@ -609,6 +609,9 @@ SELECT 0 FROM BASE_NODE WHERE wc_id = ?1 AND local_relpath = ?2
 UNION
 SELECT 1 FROM WORKING_NODE WHERE wc_id = ?1 AND local_relpath = ?2;
 
+
+/* ### Why can't this query not just use the BASE repository
+   location values, instead of taking 3 additional parameters?! */
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE
 INSERT OR REPLACE INTO WORKING_NODE (
     wc_id, local_relpath, parent_relpath, presence, kind, checksum,
@@ -621,6 +624,31 @@ SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, ?5 AS presence, kind,
     ?7 AS copyfrom_repos_path, ?8 AS copyfrom_revnum FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+
+-- STMT_INSERT_WORKING_NODE_DATA_COPY_FROM_BASE_1
+INSERT OR REPLACE INTO NODE_DATA (
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
+    changed_revision, changed_date, changed_author, depth, symlink_target,
+    properties, original_repos_id, original_repos_path, original_revision )
+SELECT n.wc_id, ?3 AS local_relpath, ?4 AS op_depth, ?5 AS parent_relpath,
+       ?6 AS presence, n.kind, n.checksum, n.changed_revision, n.changed_date,
+       n.changed_author, n.depth, n.symlink_target, n.properties,
+       ?7 AS original_repos_id, ?8 AS original_repos_path,
+       ?9 AS original_revision
+FROM BASE_NODE AS b INNER JOIN NODE_DATA AS n
+     ON b.wc_id = n.wc_id
+     AND b.local_relpath = n.local_relpath
+     AND n.op_depth = 0
+WHERE n.wc_id = ?1 AND n.local_relpath = ?2;
+
+-- STMT_INSERT_WORKING_NODE_DATA_COPY_FROM_BASE_2
+INSERT OR REPLACE INTO WORKING_NODE (
+   wc_id, local_relpath, parent_relpath, translated_size, last_mod_time )
+SELECT wc_id, local_relpath, parent_relpath, translated_size, last_mod_time
+FROM BASE_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING
 INSERT OR REPLACE INTO WORKING_NODE (
     wc_id, local_relpath, parent_relpath, presence, kind, checksum,
@@ -631,6 +659,34 @@ SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, ?5 AS presence, kind,
     checksum, translated_size, changed_rev, changed_date, changed_author, depth,
     symlink_target, last_mod_time, properties, ?6 AS copyfrom_repos_id,
     ?7 AS copyfrom_repos_path, ?8 AS copyfrom_revnum FROM WORKING_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+
+-- STMT_INSERT_WORKING_NODE_DATA_COPY_FROM_WORKING_1
+INSERT OR REPLACE INTO NODE_DATA (
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
+    changed_revision, changed_date, changed_author, depth, symlink_target,
+    properties, original_repos_id, original_repos_path, original_revision )
+SELECT n.wc_id, ?3 AS local_relpath, ?4 AS op_depth, ?5 AS parent_relpath,
+       ?6 AS presence, n.kind, n.checksum, n.changed_revision, n.changed_date,
+       n.changed_author, n.depth, n.symlink_target, n.properties,
+       ?7 AS original_repos_id, ?8 AS original_repos_path,
+       ?9 as original_revision
+FROM WORKING_NODE AS w INNER JOIN NODE_DATA AS n
+     ON w.wc_id = n.wc_id
+     AND w.local_relpath = n.local_relpath
+WHERE w.wc_id = ?1 AND w.local_relpath = ?2
+ORDER BY n.op_depth
+LIMIT 1;
+
+-- STMT_INSERT_WORKING_NODE_DATA_COPY_FROM_WORKING_2
+/* ### there's probably no need to set translated_size and last_mod_time,
+   they are probably set again later (after re-expanding the base) */
+INSERT OR REPLACE INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, translated_size, last_mod_time )
+SELECT wc_id, ?3 as local_relpath, ?4 as parent_relpath,
+       translated_size, last_mod_time
+FROM WORKING_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE

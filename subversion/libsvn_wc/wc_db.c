@@ -3351,6 +3351,49 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
         }
       SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifdef SVN_WC__NODE_DATA
+
+      if (have_work)
+        SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                         STMT_INSERT_WORKING_NODE_DATA_COPY_FROM_WORKING_1));
+      else
+        SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                          STMT_INSERT_WORKING_NODE_DATA_COPY_FROM_BASE_1));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "issist",
+                    src_pdh->wcroot->wc_id, src_relpath,
+                    dst_relpath,
+                    (children == NULL) ? (apr_int64_t)2 :
+                                (apr_int64_t)1, /* no directory or stub */
+                    dst_parent_relpath,
+                    presence_map, dst_status));
+
+      if (copyfrom_relpath)
+        {
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 7, copyfrom_id));
+          SVN_ERR(svn_sqlite__bind_text(stmt, 8, copyfrom_relpath));
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 9, copyfrom_rev));
+        }
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+#if 0
+      /* ### NODE_DATA the section below can only be enabled once we stop
+         running STMT_INSERT_WORKING_NODE_COPY_FROM_{BASE,WORKING} above */
+      if (have_work)
+        SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                            STMT_INSERT_WORKING_NODE_DATA_COPY_FROM_WORKING_2));
+      else
+        SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                            STMT_INSERT_WORKING_NODE_DATA_COPY_FROM_BASE_2));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isss",
+                                src_pdh->wcroot->wc_id, src_relpath,
+                                dst_relpath, dst_parent_relpath));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+#endif
+
       /* ### Copying changelist is OK for a move but what about a copy? */
       SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
                                   STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE));
