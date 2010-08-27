@@ -534,6 +534,34 @@ SELECT wc_id, local_relpath, parent_relpath, 'normal', kind, checksum,
     repos_relpath, revnum FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+
+-- STMT_INSERT_WORKING_NODE_DATA_NORMAL_FROM_BASE_NODE_1
+INSERT INTO NODE_DATA (
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
+    changed_revision, changed_date, changed_author, depth, symlink_target,
+    properties, original_repos_id, original_repos_path, original_revision )
+SELECT n.wc_id, n.local_relpath, ?3 as op_depth, n.parent_relpath, 'normal',
+    n.kind,
+    n.checksum, n.changed_revision, n.changed_date, n.changed_author, n.depth,
+    n.symlink_target, n.properties, b.repos_id as original_repos_id,
+    b.repos_relpath as original_repos_relpath, b.revnum as original_revision
+FROM BASE_NODE as b INNER JOIN NODE_DATA as n
+     ON b.wc_id = n.wc_id
+     AND b.local_relpath = n.local_relpath
+     AND n.op_depth = 0
+WHERE n.wc_id = ?1 AND n.local_relpath = ?2;
+
+
+-- STMT_INSERT_WORKING_NODE_DATA_NORMAL_FROM_BASE_NODE_2
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, translated_size, last_mod_time )
+SELECT wc_id, local_relpath, parent_relpath, translated_size, last_mod_time
+FROM BASE_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+
+
+
 -- STMT_INSERT_WORKING_NODE_NOT_PRESENT_FROM_BASE_NODE
 INSERT INTO WORKING_NODE (
     wc_id, local_relpath, parent_relpath, presence, kind, changed_rev,

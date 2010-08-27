@@ -812,6 +812,7 @@ copy_working_from_base(void *baton,
 }
 
 
+
 static svn_error_t *
 insert_incomplete_working_children(svn_sqlite__db_t *sdb,
                                    apr_int64_t wc_id,
@@ -8836,6 +8837,34 @@ make_copy_txn(void *baton,
                                 mcb->local_relpath));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+      SVN_ERR(svn_sqlite__get_statement(
+                    &stmt, sdb,
+                    STMT_INSERT_WORKING_NODE_DATA_NORMAL_FROM_BASE_NODE_1));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                mcb->pdh->wcroot->wc_id,
+                                mcb->local_relpath,
+                                (*mcb->local_relpath == '\0') ? 1 : 2));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+#if 0
+      /* ### NODE_DATA  we can't enable the bit below until we stop
+         running STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE_NODE above */
+      SVN_ERR(svn_sqlite__get_statement(
+                 &stmt, sdb,
+                 STMT_INSERT_WORKING_NODE_DATA_NORMAL_FROM_BASE_NODE_2));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                mcb->pdh->wcroot->wc_id,
+                                mcb->local_relpath));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+#endif
+
     }
   else if (add_working_not_present)
     {
@@ -8944,6 +8973,32 @@ make_copy_txn(void *baton,
           SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                     pdh->wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+          SVN_ERR(svn_sqlite__get_statement(
+                        &stmt, sdb,
+                        STMT_INSERT_WORKING_NODE_DATA_NORMAL_FROM_BASE_NODE_1));
+
+          SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                    pdh->wcroot->wc_id, local_relpath,
+                                    (apr_int64_t)2));
+
+          SVN_ERR(svn_sqlite__step_done(stmt));
+
+#if 0
+      /* ### NODE_DATA  we can't enable the bit below until we stop
+         running STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE_NODE above */
+          SVN_ERR(svn_sqlite__get_statement(
+                       &stmt, sdb,
+                       STMT_INSERT_WORKING_NODE_DATA_NORMAL_FROM_BASE_NODE_2));
+
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    pdh->wcroot->wc_id, local_relpath));
+
+          SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+#endif
+
         }
       else if (add_working_not_present)
         {
