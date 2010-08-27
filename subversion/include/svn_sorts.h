@@ -76,10 +76,10 @@ typedef struct svn_sort__item_t {
  * @c apr_array_header_t.  For example, to convert hash @a hsh to a sorted
  * array, do this:
  *
- * @verbatim
-     apr_array_header_t *hdr;
-     hdr = svn_sort__hash (hsh, @c svn_sort_compare_items_as_paths, pool);
-   @endverbatim
+ * @code
+     apr_array_header_t *array;
+     array = svn_sort__hash(hsh, svn_sort_compare_items_as_paths, pool);
+   @endcode
  */
 int
 svn_sort_compare_items_as_paths(const svn_sort__item_t *a,

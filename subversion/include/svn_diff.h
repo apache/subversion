@@ -376,7 +376,7 @@ typedef struct svn_diff_file_options_t
   /** Whether to treat all end-of-line markers the same when comparing lines.
    * The default is @c FALSE. */
   svn_boolean_t ignore_eol_style;
-  /** Whether the '@@' lines of the unified diff output should include a prefix
+  /** Whether the "@@" lines of the unified diff output should include a prefix
     * of the nearest preceding line that starts with a character that might be
     * the initial character of a C language identifier.  The default is
     * @c FALSE.
@@ -796,30 +796,30 @@ typedef enum svn_diff_operation_kind_e
  *   - modified text   The result of patching the original text.
  *
  * For example, consider a hunk with the following diff text:
- * <pre>
- *   @@ -1,5 +1,5 @@
- *    #include <stdio.h>
- *    int main(int argc, char *argv[]) {
- *   -        printf("Hello World!\n");
- *   +        printf("I like Subversion!\n");
- *    }
- * </pre>
+ *
+ * @verbatim
+     @@ -1,5 +1,5 @@
+      #include <stdio.h>
+      int main(int argc, char *argv[]) {
+     -        printf("Hello World!\n");
+     +        printf("I like Subversion!\n");
+      } @endverbatim
  *
  * The original text of this hunk is:
- * <pre>
- *   #include <stdio.h>
- *   int main(int argc, char *argv[]) {
- *           printf("Hello World!\n");
- *   }
- * </pre>
+ *
+ * @verbatim
+     #include <stdio.h>
+     int main(int argc, char *argv[]) {
+             printf("Hello World!\n");
+     } @endverbatim
  *
  * And the modified text is:
- * <pre>
- *   #include <stdio.h>
- *   int main(int argc, char *argv[]) {
- *           printf("I like Subversion!\n");
- *   }
- * </pre>
+ *
+ * @verbatim
+     #include <stdio.h>
+     int main(int argc, char *argv[]) {
+             printf("I like Subversion!\n");
+     } @endverbatim
  *
  * @see svn_diff_hunk_readline_diff_text()
  * @see svn_diff_hunk_readline_original_text()
@@ -886,53 +886,53 @@ svn_diff_hunk_readline_modified_text(const svn_hunk_t *hunk,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Reset the diff text of @a hunk so it can be read again from the start.
+/** Reset the diff text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
 svn_error_t *
 svn_diff_hunk_reset_diff_text(const svn_hunk_t *hunk);
 
-/* Reset the original text of @a hunk so it can be read again from the start.
+/** Reset the original text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
 svn_error_t *
 svn_diff_hunk_reset_original_text(const svn_hunk_t *hunk);
 
-/* Reset the modified text of @a hunk so it can be read again from the start.
+/** Reset the modified text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
 svn_error_t *
 svn_diff_hunk_reset_modified_text(const svn_hunk_t *hunk);
 
-/* Return the line offset of the original hunk text,
+/** Return the line offset of the original hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
 svn_diff_hunk_get_original_start(const svn_hunk_t *hunk);
 
-/* Return the number of lines in the original @a hunk text,
+/** Return the number of lines in the original @a hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
 svn_diff_hunk_get_original_length(const svn_hunk_t *hunk);
 
-/* Return the line offset of the modified @a hunk text,
+/** Return the line offset of the modified @a hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
 svn_diff_hunk_get_modified_start(const svn_hunk_t *hunk);
 
-/* Return the number of lines in the modified @a hunk text,
+/** Return the number of lines in the modified @a hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
 svn_diff_hunk_get_modified_length(const svn_hunk_t *hunk);
 
-/* Return the number of lines of leading context of @a hunk,
+/** Return the number of lines of leading context of @a hunk,
  * i.e. the number of lines starting with ' ' before the first line
  * that starts with a '+' or '-'.
  * @since New in 1.7. */
 svn_linenum_t
 svn_diff_hunk_get_leading_context(const svn_hunk_t *hunk);
 
-/* Return the number of lines of trailing context of @a hunk,
+/** Return the number of lines of trailing context of @a hunk,
  * i.e. the number of lines starting with ' ' after the last line
  * that starts with a '+' or '-'.
  * @since New in 1.7. */
