@@ -484,10 +484,6 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   if (path[0] == '\0')
     path = apr_psprintf(pool, ".");
 
-  if (show_diff_header)
-    SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
-                                         relative_to_dir, pool));
-
   if (use_git_diff_format)
     {
       SVN_ERR(adjust_relative_to_repos_root(&path1, path, orig_path1,
