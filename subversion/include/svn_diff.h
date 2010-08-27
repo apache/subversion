@@ -826,7 +826,7 @@ typedef enum svn_diff_operation_kind_e
  * @see svn_diff_hunk_readline_modified_text()
  *
  * @since New in 1.7. */
-typedef struct svn_hunk_t svn_hunk_t;
+typedef struct svn_diff_hunk_t svn_diff_hunk_t;
 
 /**
  * Allocate @a *stringbuf in @a result_pool, and read into it one line
@@ -844,7 +844,7 @@ typedef struct svn_hunk_t svn_hunk_t;
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_diff_text(const svn_hunk_t *hunk,
+svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
                                  svn_stringbuf_t **stringbuf,
                                  const char **eol,
                                  svn_boolean_t *eof,
@@ -860,11 +860,11 @@ svn_diff_hunk_readline_diff_text(const svn_hunk_t *hunk,
  * and @a eol is not NULL, @a *eol is set to NULL.
  * Temporary allocations will be performed in @a scratch_pool.
  *
- * @see svn_hunk_t
+ * @see svn_diff_hunk_t
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_original_text(const svn_hunk_t *hunk,
+svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
@@ -875,11 +875,11 @@ svn_diff_hunk_readline_original_text(const svn_hunk_t *hunk,
  * Like svn_diff_hunk_readline_original_text(), but it returns lines from
  * the modified text of the hunk.
  *
- * @see svn_hunk_t
+ * @see svn_diff_hunk_t
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_modified_text(const svn_hunk_t *hunk,
+svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
@@ -889,55 +889,55 @@ svn_diff_hunk_readline_modified_text(const svn_hunk_t *hunk,
 /** Reset the diff text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
 svn_error_t *
-svn_diff_hunk_reset_diff_text(const svn_hunk_t *hunk);
+svn_diff_hunk_reset_diff_text(const svn_diff_hunk_t *hunk);
 
 /** Reset the original text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
 svn_error_t *
-svn_diff_hunk_reset_original_text(const svn_hunk_t *hunk);
+svn_diff_hunk_reset_original_text(const svn_diff_hunk_t *hunk);
 
 /** Reset the modified text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
 svn_error_t *
-svn_diff_hunk_reset_modified_text(const svn_hunk_t *hunk);
+svn_diff_hunk_reset_modified_text(const svn_diff_hunk_t *hunk);
 
 /** Return the line offset of the original hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_original_start(const svn_hunk_t *hunk);
+svn_diff_hunk_get_original_start(const svn_diff_hunk_t *hunk);
 
 /** Return the number of lines in the original @a hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_original_length(const svn_hunk_t *hunk);
+svn_diff_hunk_get_original_length(const svn_diff_hunk_t *hunk);
 
 /** Return the line offset of the modified @a hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_modified_start(const svn_hunk_t *hunk);
+svn_diff_hunk_get_modified_start(const svn_diff_hunk_t *hunk);
 
 /** Return the number of lines in the modified @a hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_modified_length(const svn_hunk_t *hunk);
+svn_diff_hunk_get_modified_length(const svn_diff_hunk_t *hunk);
 
 /** Return the number of lines of leading context of @a hunk,
  * i.e. the number of lines starting with ' ' before the first line
  * that starts with a '+' or '-'.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_leading_context(const svn_hunk_t *hunk);
+svn_diff_hunk_get_leading_context(const svn_diff_hunk_t *hunk);
 
 /** Return the number of lines of trailing context of @a hunk,
  * i.e. the number of lines starting with ' ' after the last line
  * that starts with a '+' or '-'.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_trailing_context(const svn_hunk_t *hunk);
+svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk);
 
 /**
  * Data type to manage parsing of properties in patches.
@@ -950,8 +950,8 @@ typedef struct svn_prop_patch_t {
   svn_diff_operation_kind_t operation;
 
   /**
-   * An array containing an svn_hunk_t object for each hunk parsed from the
-   * patch associated with our property name */
+   * An array containing an svn_diff_hunk_t object for each hunk parsed
+   * from the patch associated with our property name */
   apr_array_header_t *hunks;
 } svn_prop_patch_t;
 
@@ -974,7 +974,7 @@ typedef struct svn_patch_t {
   const char *new_filename;
 
   /**
-   * An array containing an svn_hunk_t object for each hunk parsed
+   * An array containing an svn_diff_hunk_t object for each hunk parsed
    * from the patch. */
   apr_array_header_t *hunks;
 

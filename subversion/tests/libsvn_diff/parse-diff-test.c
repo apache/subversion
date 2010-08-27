@@ -276,7 +276,7 @@ create_patch_file(apr_file_t **patch_file, const char *fname,
  * If ORIGINAL is TRUE, read the original hunk text; else, read the
  * modified hunk text. */
 static svn_error_t *
-check_content(svn_hunk_t *hunk, svn_boolean_t original,
+check_content(svn_diff_hunk_t *hunk, svn_boolean_t original,
               const char *expected, apr_pool_t *pool)
 {
   svn_stream_t *exp;
@@ -330,7 +330,7 @@ test_parse_unidiff(apr_pool_t *pool)
   for (i = 0; i < 2; i++)
     {
       svn_patch_t *patch;
-      svn_hunk_t *hunk;
+      svn_diff_hunk_t *hunk;
       apr_off_t pos;
 
       svn_pool_clear(iterpool);
@@ -349,7 +349,7 @@ test_parse_unidiff(apr_pool_t *pool)
       SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
       SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
-      hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+      hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
       SVN_ERR(check_content(hunk, ! reverse,
                             "This is the file 'gamma'." NL,
                             pool));
@@ -375,7 +375,7 @@ test_parse_unidiff(apr_pool_t *pool)
         }
       SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
-      hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+      hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
       SVN_ERR(check_content(hunk, ! reverse,
                             "This is the file 'gamma'." NL
                             "some less bytes to 'gamma'" NL,
@@ -398,7 +398,7 @@ test_parse_git_diff(apr_pool_t *pool)
 
   apr_file_t *patch_file;
   svn_patch_t *patch;
-  svn_hunk_t *hunk;
+  svn_diff_hunk_t *hunk;
   const char *fname = "test_parse_git_diff.patch";
 
   SVN_ERR(create_patch_file(&patch_file, fname, git_unidiff, pool));
@@ -425,7 +425,7 @@ test_parse_git_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_modified);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
-  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'gamma'." NL,
@@ -470,7 +470,7 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
 
   apr_file_t *patch_file;
   svn_patch_t *patch;
-  svn_hunk_t *hunk;
+  svn_diff_hunk_t *hunk;
   const char *fname = "test_parse_git_tree_and_text_diff.patch";
 
   SVN_ERR(create_patch_file(&patch_file, fname, git_tree_and_text_unidiff,
@@ -487,7 +487,7 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
-  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'iota'." NL,
@@ -509,7 +509,7 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_moved);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
-  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'mu'." NL,
@@ -530,7 +530,7 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
-  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "",
@@ -550,7 +550,7 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_deleted);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
-  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'lambda'." NL,
@@ -568,7 +568,7 @@ test_bad_git_diff_headers(apr_pool_t *pool)
 {
   apr_file_t *patch_file;
   svn_patch_t *patch;
-  svn_hunk_t *hunk;
+  svn_diff_hunk_t *hunk;
   const char *fname = "test_bad_git_diff_header.patch";
 
   SVN_ERR(create_patch_file(&patch_file, fname, bad_git_diff_header,
@@ -584,7 +584,7 @@ test_bad_git_diff_headers(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
-  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'iota'." NL,
@@ -606,7 +606,7 @@ test_parse_property_diff(apr_pool_t *pool)
   apr_file_t *patch_file;
   svn_patch_t *patch;
   svn_prop_patch_t *prop_patch;
-  svn_hunk_t *hunk;
+  svn_diff_hunk_t *hunk;
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_diff.patch";
 
@@ -630,7 +630,7 @@ test_parse_property_diff(apr_pool_t *pool)
   hunks = prop_patch->hunks;
 
   SVN_TEST_ASSERT(hunks->nelts == 1);
-  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "value" NL,
@@ -649,7 +649,7 @@ test_parse_property_diff(apr_pool_t *pool)
   hunks = prop_patch->hunks;
 
   SVN_TEST_ASSERT(hunks->nelts == 1);
-  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "",
@@ -667,7 +667,7 @@ test_parse_property_diff(apr_pool_t *pool)
   hunks = prop_patch->hunks;
 
   SVN_TEST_ASSERT(hunks->nelts == 2);
-  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "value" NL
@@ -683,7 +683,7 @@ test_parse_property_diff(apr_pool_t *pool)
                         "context" NL,
                         pool));
 
-  hunk = APR_ARRAY_IDX(hunks, 1 , svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(hunks, 1 , svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "context" NL
@@ -708,7 +708,7 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
   apr_file_t *patch_file;
   svn_patch_t *patch;
   svn_prop_patch_t *prop_patch;
-  svn_hunk_t *hunk;
+  svn_diff_hunk_t *hunk;
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_and_text_diff.patch";
 
@@ -726,7 +726,7 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(apr_hash_count(patch->prop_patches) == 1);
 
   /* Check contents of text hunk */
-  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "This is the file 'iota'." NL,
@@ -744,7 +744,7 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
 
   hunks = prop_patch->hunks;
   SVN_TEST_ASSERT(hunks->nelts == 1);
-  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "",
@@ -763,7 +763,7 @@ test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
   svn_patch_t *patch;
   apr_file_t *patch_file;
   svn_prop_patch_t *prop_patch;
-  svn_hunk_t *hunk;
+  svn_diff_hunk_t *hunk;
   apr_array_header_t *hunks;
   const char *fname = "test_parse_diff_symbols_in_prop_unidiff.patch";
 
@@ -787,7 +787,7 @@ test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
 
   hunks = prop_patch->hunks;
   SVN_TEST_ASSERT(hunks->nelts == 1);
-  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "",
@@ -806,7 +806,7 @@ test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
 
   hunks = prop_patch->hunks;
   SVN_TEST_ASSERT(hunks->nelts == 1);
-  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "--- iota" NL
@@ -823,7 +823,7 @@ test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
   SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_modified);
   hunks = prop_patch->hunks;
   SVN_TEST_ASSERT(hunks->nelts == 2);
-  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "## -1,2 +1,2 ##" NL
@@ -839,7 +839,7 @@ test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
                         "Modified: prop_mod" NL,
                         pool));
 
-  hunk = APR_ARRAY_IDX(hunks, 1 , svn_hunk_t *);
+  hunk = APR_ARRAY_IDX(hunks, 1 , svn_diff_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
                         "context" NL

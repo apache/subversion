@@ -38,7 +38,7 @@
 #define starts_with(str, start)  \
   (strncmp((str), (start), strlen(start)) == 0)
 
-struct svn_hunk_t {
+struct svn_diff_hunk_t {
   /* Hunk texts (see include/svn_diff.h). */
   svn_stream_t *diff_text;
   svn_stream_t *original_text;
@@ -60,55 +60,55 @@ struct svn_hunk_t {
 };
 
 svn_error_t *
-svn_diff_hunk_reset_diff_text(const svn_hunk_t *hunk)
+svn_diff_hunk_reset_diff_text(const svn_diff_hunk_t *hunk)
 {
   return svn_error_return(svn_stream_reset(hunk->diff_text));
 }
 
 svn_error_t *
-svn_diff_hunk_reset_original_text(const svn_hunk_t *hunk)
+svn_diff_hunk_reset_original_text(const svn_diff_hunk_t *hunk)
 {
   return svn_error_return(svn_stream_reset(hunk->original_text));
 }
 
 svn_error_t *
-svn_diff_hunk_reset_modified_text(const svn_hunk_t *hunk)
+svn_diff_hunk_reset_modified_text(const svn_diff_hunk_t *hunk)
 {
   return svn_error_return(svn_stream_reset(hunk->modified_text));
 }
 
 svn_linenum_t
-svn_diff_hunk_get_original_start(const svn_hunk_t *hunk)
+svn_diff_hunk_get_original_start(const svn_diff_hunk_t *hunk)
 {
   return hunk->original_start;
 }
 
 svn_linenum_t
-svn_diff_hunk_get_original_length(const svn_hunk_t *hunk)
+svn_diff_hunk_get_original_length(const svn_diff_hunk_t *hunk)
 {
   return hunk->original_length;
 }
 
 svn_linenum_t
-svn_diff_hunk_get_modified_start(const svn_hunk_t *hunk)
+svn_diff_hunk_get_modified_start(const svn_diff_hunk_t *hunk)
 {
   return hunk->modified_start;
 }
 
 svn_linenum_t
-svn_diff_hunk_get_modified_length(const svn_hunk_t *hunk)
+svn_diff_hunk_get_modified_length(const svn_diff_hunk_t *hunk)
 {
   return hunk->modified_length;
 }
 
 svn_linenum_t
-svn_diff_hunk_get_leading_context(const svn_hunk_t *hunk)
+svn_diff_hunk_get_leading_context(const svn_diff_hunk_t *hunk)
 {
   return hunk->leading_context;
 }
 
 svn_linenum_t
-svn_diff_hunk_get_trailing_context(const svn_hunk_t *hunk)
+svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk)
 {
   return hunk->trailing_context;
 }
@@ -181,7 +181,7 @@ parse_range(svn_linenum_t *start, svn_linenum_t *length, char *range)
  * If REVERSE is TRUE, invert the hunk header while parsing it.
  * Do all allocations in POOL. */
 static svn_boolean_t
-parse_hunk_header(const char *header, svn_hunk_t *hunk,
+parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
                   const char *atat, svn_boolean_t reverse, apr_pool_t *pool)
 {
   const char *p;
@@ -406,7 +406,7 @@ hunk_readline(svn_stream_t *stream,
 }
 
 svn_error_t *
-svn_diff_hunk_readline_original_text(const svn_hunk_t *hunk,
+svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
@@ -419,7 +419,7 @@ svn_diff_hunk_readline_original_text(const svn_hunk_t *hunk,
 }
 
 svn_error_t *
-svn_diff_hunk_readline_modified_text(const svn_hunk_t *hunk,
+svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
@@ -432,14 +432,14 @@ svn_diff_hunk_readline_modified_text(const svn_hunk_t *hunk,
 }
 
 svn_error_t *
-svn_diff_hunk_readline_diff_text(const svn_hunk_t *hunk,
+svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
                                  svn_stringbuf_t **stringbuf,
                                  const char **eol,
                                  svn_boolean_t *eof,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_hunk_t dummy;
+  svn_diff_hunk_t dummy;
   svn_stringbuf_t *line;
 
   SVN_ERR(svn_stream_readline_detect_eol(hunk->diff_text, &line, eol, eof,
@@ -510,7 +510,7 @@ parse_prop_name(const char **prop_name, const char *header,
  * recognized as context lines.  Allocate results in
  * RESULT_POOL.  Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
-parse_next_hunk(svn_hunk_t **hunk,
+parse_next_hunk(svn_diff_hunk_t **hunk,
                 svn_boolean_t *is_property,
                 const char **prop_name,
                 svn_diff_operation_kind_t *prop_operation,
@@ -771,8 +771,8 @@ parse_next_hunk(svn_hunk_t **hunk,
 static int
 compare_hunks(const void *a, const void *b)
 {
-  const svn_hunk_t *ha = *((const svn_hunk_t **)a);
-  const svn_hunk_t *hb = *((const svn_hunk_t **)b);
+  const svn_diff_hunk_t *ha = *((const svn_diff_hunk_t **)a);
+  const svn_diff_hunk_t *hb = *((const svn_diff_hunk_t **)b);
 
   if (ha->original_start < hb->original_start)
     return -1;
@@ -785,7 +785,7 @@ compare_hunks(const void *a, const void *b)
  * Ensure that all streams which were opened for HUNK are closed.
  */
 static svn_error_t *
-close_hunk(const svn_hunk_t *hunk)
+close_hunk(const svn_diff_hunk_t *hunk)
 {
   SVN_ERR(svn_stream_close(hunk->original_text));
   SVN_ERR(svn_stream_close(hunk->modified_text));
@@ -1116,7 +1116,7 @@ git_deleted_file(enum parse_state *new_state, const char *line, svn_patch_t *pat
 /* Add a HUNK associated with the property PROP_NAME to PATCH. */
 static svn_error_t *
 add_property_hunk(svn_patch_t *patch, const char *prop_name, 
-                  svn_hunk_t *hunk, svn_diff_operation_kind_t operation,
+                  svn_diff_hunk_t *hunk, svn_diff_operation_kind_t operation,
                   apr_pool_t *result_pool)
 {
   svn_prop_patch_t *prop_patch;
@@ -1129,13 +1129,14 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
       prop_patch = apr_palloc(result_pool, sizeof(svn_prop_patch_t));
       prop_patch->name = prop_name;
       prop_patch->operation = operation;
-      prop_patch->hunks = apr_array_make(result_pool, 1, sizeof(svn_hunk_t *));
+      prop_patch->hunks = apr_array_make(result_pool, 1,
+                                         sizeof(svn_diff_hunk_t *));
 
       apr_hash_set(patch->prop_patches, prop_name, APR_HASH_KEY_STRING,
                    prop_patch);
     }
 
-  APR_ARRAY_PUSH(prop_patch->hunks, svn_hunk_t *) = hunk;
+  APR_ARRAY_PUSH(prop_patch->hunks, svn_diff_hunk_t *) = hunk;
 
   return SVN_NO_ERROR;
 }
@@ -1275,14 +1276,15 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
     }
   else
     {
-      svn_hunk_t *hunk;
+      svn_diff_hunk_t *hunk;
       svn_boolean_t is_property;
       const char *last_prop_name;
       const char *prop_name;
       svn_diff_operation_kind_t prop_operation;
 
       /* Parse hunks. */
-      (*patch)->hunks = apr_array_make(result_pool, 10, sizeof(svn_hunk_t *));
+      (*patch)->hunks = apr_array_make(result_pool, 10,
+                                       sizeof(svn_diff_hunk_t *));
       (*patch)->prop_patches = apr_hash_make(result_pool);
       do
         {
@@ -1304,7 +1306,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
             }
           else if (hunk)
             {
-              APR_ARRAY_PUSH((*patch)->hunks, svn_hunk_t *) = hunk;
+              APR_ARRAY_PUSH((*patch)->hunks, svn_diff_hunk_t *) = hunk;
               last_prop_name = NULL;
             }
 
@@ -1335,7 +1337,8 @@ svn_diff_close_patch(const svn_patch_t *patch)
 
   for (i = 0; i < patch->hunks->nelts; i++)
     {
-      const svn_hunk_t *hunk = APR_ARRAY_IDX(patch->hunks, i, svn_hunk_t *);
+      const svn_diff_hunk_t *hunk = APR_ARRAY_IDX(patch->hunks, i,
+                                                  svn_diff_hunk_t *);
       SVN_ERR(close_hunk(hunk));
     }
 
