@@ -7210,7 +7210,8 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
      merge target, with no pre-existing explicit mergeinfo, during a --depth
      immediates merge).  Stash those that are inoperative at any depth in
      INOPERATIVE_IMMEDIATE_CHILDREN. */
-  if (!merge_b->record_only && range.start <= range.end)
+  if (!merge_b->record_only && range.start <= range.end
+      && depth == svn_depth_immediates)
     SVN_ERR(get_inoperative_immediate_children(
       &inoperative_immediate_children,
       notify_b->children_with_mergeinfo,
