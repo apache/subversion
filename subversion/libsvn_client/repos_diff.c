@@ -241,11 +241,10 @@ make_dir_baton(const char *path,
 static struct file_baton *
 make_file_baton(const char *path,
                 svn_boolean_t added,
-                void *edit_baton,
+                struct edit_baton *edit_baton,
                 apr_pool_t *pool)
 {
   struct file_baton *file_baton = apr_pcalloc(pool, sizeof(*file_baton));
-  struct edit_baton *eb = edit_baton;
 
   file_baton->edit_baton = edit_baton;
   file_baton->added = added;
@@ -253,7 +252,7 @@ make_file_baton(const char *path,
   file_baton->skip = FALSE;
   file_baton->pool = pool;
   file_baton->path = apr_pstrdup(pool, path);
-  file_baton->wcpath = svn_dirent_join(eb->target, path, pool);
+  file_baton->wcpath = svn_dirent_join(edit_baton->target, path, pool);
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   return file_baton;
@@ -460,7 +459,7 @@ open_root(void *edit_baton,
  * reporting all files as deleted.  Part of a workaround for issue 2333.
  *
  * DIR is a repository path relative to the URL in RA_SESSION.  REVISION
- * may be NULL, in which case it defaults to HEAD.  EB is the
+ * must be a valid revision number, not SVN_INVALID_REVNUM.  EB is the
  * overall crawler editor baton.  If CANCEL_FUNC is not NULL, then it
  * should refer to a cancellation function (along with CANCEL_BATON).
  */
@@ -477,6 +476,8 @@ diff_deleted_dir(const char *dir,
   apr_hash_t *dirents;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
