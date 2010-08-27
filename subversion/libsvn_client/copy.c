@@ -445,12 +445,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
 
 static svn_error_t *
-wc_to_wc_copy(const apr_array_header_t *copy_pairs,
-              const char *dst_path,
-              svn_boolean_t is_move,
-              svn_boolean_t make_parents,
-              svn_client_ctx_t *ctx,
-              apr_pool_t *pool)
+verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
+                        svn_boolean_t make_parents,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool)
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -507,11 +505,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   svn_pool_destroy(iterpool);
 
-  /* Copy or move all targets. */
-  if (is_move)
-    return do_wc_to_wc_moves(copy_pairs, dst_path, ctx, pool);
-  else
-    return do_wc_to_wc_copies(copy_pairs, ctx, pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -2155,9 +2149,14 @@ try_copy(const apr_array_header_t *sources,
   /* Now, call the right handler for the operation. */
   if ((! srcs_are_urls) && (! dst_is_url))
     {
-      return svn_error_return(
-        wc_to_wc_copy(copy_pairs, dst_path_in, is_move, make_parents, ctx,
-                      pool));
+      SVN_ERR(verify_wc_srcs_and_dsts(copy_pairs, make_parents, ctx, pool));
+
+      /* Copy or move all targets. */
+      if (is_move)
+        return svn_error_return(do_wc_to_wc_moves(copy_pairs, dst_path_in, ctx,
+                                                  pool));
+      else
+        return svn_error_return(do_wc_to_wc_copies(copy_pairs, ctx, pool));
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
