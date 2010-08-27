@@ -560,8 +560,6 @@ FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 
-
-
 -- STMT_INSERT_WORKING_NODE_NOT_PRESENT_FROM_BASE_NODE
 INSERT INTO WORKING_NODE (
     wc_id, local_relpath, parent_relpath, presence, kind, changed_rev,
@@ -571,6 +569,28 @@ SELECT wc_id, local_relpath, parent_relpath, 'not-present', kind, changed_rev,
     changed_date, changed_author, repos_id,
     repos_relpath, revnum FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+
+-- STMT_INSERT_WORKING_NODE_DATA_NOT_PRESENT_FROM_BASE_NODE_1
+INSERT INTO NODE_DATA (
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind,
+    changed_revision, changed_date, changed_author, original_repos_id,
+    original_repos_path, original_revision )
+SELECT wc_id, local_relpath, ?3 as op_depth, parent_relpath, 'not-present',
+       kind, changed_rev, changed_date, changed_author, repos_id,
+       repos_relpath, revnum
+FROM BASE_NODE as b INNER JOIN NODE_DATA as n
+     ON b.local_relpath = n.local_relpath
+     AND b.wc_id = n.wc_id
+     AND n.op_depth = 0
+WHERE n.wc_id = ?1 AND n.local_relpath = ?2;
+
+
+-- STMT_INSERT_WORKING_NODE_DATA_NOT_PRESENT_FROM_BASE_NODE_2
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath)
+VALUES (?1, ?2, ?3);
+
 
 -- ### the statement below should be setting copyfrom_revision!
 -- STMT_UPDATE_COPYFROM
