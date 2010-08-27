@@ -110,7 +110,7 @@ create_item_baton(struct edit_baton *edit_baton,
 /* Make sure that this item baton contains a summarize struct.
  * If it doesn't before this call, allocate a new struct in the item's pool,
  * initializing the diff kind to normal.
- * All other fields are also initialized from IB to to NULL/invalid values. */
+ * All other fields are also initialized from IB or to NULL/invalid values. */
 static void
 ensure_summarize(struct item_baton *ib)
 {
