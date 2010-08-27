@@ -15484,7 +15484,7 @@ def foreign_repos_del_and_props(sbox):
 # Test for issue #3642 'immediate depth merges don't create proper subtree
 # mergeinfo'. See http://subversion.tigris.org/issues/show_bug.cgi?id=3642
 def immediate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
-  "no spurious mergeinfo from immediate depth merges "
+  "no spurious mergeinfo from immediate depth merges"
 
   sbox.build()
   wc_dir = sbox.wc_dir
