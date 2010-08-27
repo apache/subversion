@@ -1091,6 +1091,9 @@ diff_content_changed(const char *path,
                        APR_HASH_KEY_STRING, path);
 
         }
+
+      /* Close the stream (flush) */
+      SVN_ERR(svn_stream_close(os));
     }
 
   /* ### todo: someday we'll need to worry about whether we're going
