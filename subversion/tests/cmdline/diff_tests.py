@@ -3645,7 +3645,53 @@ def diff_git_empty_files(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
                                      '--git', wc_dir)
 
+def diff_git_with_props(sbox):
+  "create a diff in git format showing prop changes"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  new_path = os.path.join(wc_dir, 'new')
+  svntest.main.file_write(iota_path, "")
 
+  # Now commit the local mod, creating rev 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota' : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  svntest.main.file_write(new_path, "")
+  svntest.main.run_svn(None, 'add', new_path)
+  svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', new_path)
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Id', iota_path)
+
+  expected_output = make_git_diff_header(new_path, "new", "revision 0", 
+                                         "working copy", 
+                                         add=True, text_changes=False) + [
+      "\n",
+      "Property changes on: new\n",
+      "___________________________________________________________________\n",
+      "Added: svn:eol-style\n",
+      "## -0,0 +1 ##\n",
+      "+native\n",
+  ] + make_git_diff_header(iota_path, "iota", "revision 1", "working copy", 
+                           text_changes=False) + [
+      "\n",
+      "Property changes on: iota\n",
+      "___________________________________________________________________\n",
+      "Added: svn:keywords\n",
+      "## -0,0 +1 ##\n",
+      "+Id\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+                                     '--git', wc_dir)
 ########################################################################
 #Run the tests
 
@@ -3708,6 +3754,7 @@ test_list = [ None,
               diff_prop_missing_context,
               diff_prop_multiple_hunks,
               diff_git_empty_files,
+              diff_git_with_props,
               ]
 
 if __name__ == '__main__':
