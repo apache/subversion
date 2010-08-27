@@ -549,6 +549,51 @@ def x3_1_6_12(sbox):
 
   do_x3_upgrade(sbox)
 
+def missing_dirs(sbox):
+  "missing directories and obstructing files"
+
+  # tarball wc looks like:
+  #   svn co URL wc
+  #   svn cp wc/A/B wc/A/B_new
+  #   rm -rf wc/A/B/E wc/A/D wc/A/B_new/E wc/A/B_new/F
+  #   touch wc/A/D wc/A/B_new/F
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'missing-dirs.tar.bz2')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='  ', wc_rev='1'),
+      'A/mu'              : Item(status='  ', wc_rev='1'),
+      'A/C'               : Item(status='  ', wc_rev='1'),
+      'A/D'               : Item(status='~ ', wc_rev='?'),
+      'A/B'               : Item(status='  ', wc_rev='1'),
+      'A/B/F'             : Item(status='  ', wc_rev='1'),
+      'A/B/E'             : Item(status='! ', wc_rev='?'),
+      'A/B/lambda'        : Item(status='  ', wc_rev='1'),
+      'iota'              : Item(status='  ', wc_rev='1'),
+      'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
+      'A/B_new/E'         : Item(status='! ', wc_rev='?'),
+      'A/B_new/F'         : Item(status='~ ', wc_rev='?'),
+      'A/B_new/lambda'    : Item(status='  ', wc_rev='-', copied='+'),
+    })
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_status.tweak('A/D', 'A/B_new/F', status='! ')
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  
+def missing_dirs2(sbox):
+  "missing directories and obstructing dirs"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'missing-dirs.tar.bz2')
+  os.remove(sbox.ospath('A/D'))
+  os.remove(sbox.ospath('A/B_new/F'))
+  os.mkdir(sbox.ospath('A/D'))
+  os.mkdir(sbox.ospath('A/B_new/F'))
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
 
 ########################################################################
 # Run the tests
@@ -567,6 +612,8 @@ test_list = [ None,
               XFail(x3_1_4_0),
               x3_1_4_6,
               x3_1_6_12,
+              missing_dirs,
+              XFail(missing_dirs2),
              ]
 
 
