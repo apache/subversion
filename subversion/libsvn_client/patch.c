@@ -48,7 +48,7 @@
 
 typedef struct hunk_info_t {
   /* The hunk. */
-  const svn_hunk_t *hunk;
+  const svn_diff_hunk_t *hunk;
 
   /* The line where the hunk matched in the target file. */
   svn_linenum_t matched_line;
@@ -792,7 +792,7 @@ seek_to_line(target_content_info_t *content_info, svn_linenum_t line,
  * Do temporary allocations in POOL. */
 static svn_error_t *
 match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
-           const svn_hunk_t *hunk, int fuzz, 
+           const svn_diff_hunk_t *hunk, int fuzz,
            svn_boolean_t ignore_whitespace,
            svn_boolean_t match_modified, apr_pool_t *pool)
 {
@@ -921,7 +921,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
 static svn_error_t *
 scan_for_match(svn_linenum_t *matched_line, 
                target_content_info_t *content_info,
-               const svn_hunk_t *hunk, svn_boolean_t match_first,
+               const svn_diff_hunk_t *hunk, svn_boolean_t match_first,
                svn_linenum_t upper_line, int fuzz, 
                svn_boolean_t ignore_whitespace,
                svn_boolean_t match_modified,
@@ -993,7 +993,7 @@ scan_for_match(svn_linenum_t *matched_line,
 static svn_error_t *
 match_existing_target(svn_boolean_t *match,
                       target_content_info_t *content_info,
-                      const svn_hunk_t *hunk,
+                      const svn_diff_hunk_t *hunk,
                       svn_stream_t *stream,
                       apr_pool_t *scratch_pool)
 {
@@ -1058,7 +1058,7 @@ match_existing_target(svn_boolean_t *match,
 static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               target_content_info_t *content_info,
-              const svn_hunk_t *hunk, int fuzz, 
+              const svn_diff_hunk_t *hunk, int fuzz,
               svn_boolean_t ignore_whitespace,
               svn_boolean_t is_prop_hunk,
               svn_cancel_func_t cancel_func, void *cancel_baton,
@@ -1649,7 +1649,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   /* Match hunks. */
   for (i = 0; i < patch->hunks->nelts; i++)
     {
-      svn_hunk_t *hunk;
+      svn_diff_hunk_t *hunk;
       hunk_info_t *hi;
       int fuzz = 0;
 
@@ -1658,7 +1658,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       if (cancel_func)
         SVN_ERR((cancel_func)(cancel_baton));
 
-      hunk = APR_ARRAY_IDX(patch->hunks, i, svn_hunk_t *);
+      hunk = APR_ARRAY_IDX(patch->hunks, i, svn_diff_hunk_t *);
 
       /* Determine the line the hunk should be applied at.
        * If no match is found initially, try with fuzz. */
@@ -1730,7 +1730,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
       for (i = 0; i < prop_patch->hunks->nelts; i++)
         {
-          svn_hunk_t *hunk;
+          svn_diff_hunk_t *hunk;
           hunk_info_t *hi;
           int fuzz = 0;
 
@@ -1739,7 +1739,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           if (cancel_func)
             SVN_ERR((cancel_func)(cancel_baton));
 
-          hunk = APR_ARRAY_IDX(prop_patch->hunks, i, svn_hunk_t *);
+          hunk = APR_ARRAY_IDX(prop_patch->hunks, i, svn_diff_hunk_t *);
 
           /* Determine the line the hunk should be applied at.
            * If no match is found initially, try with fuzz. */
