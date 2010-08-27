@@ -52,20 +52,21 @@ def make_diff_header(path, old_tag, new_tag):
     "+++ " + path_as_shown + "\t(" + new_tag + ")\n",
     ]
 
-def make_git_diff_header(path, old_tag, new_tag, add=False, src_label=None,
+def make_git_diff_header(target_path, repos_relpath,
+                         old_tag, new_tag, add=False, src_label=None,
                          dst_label=None, delete=False, text_changes=True,
-                         cp=False, mv=False, copyfrom=None):
-  """ Generate the expected 'git diff' header for file PATH, with its old
-  and new versions described in parentheses by OLD_TAG and NEW_TAG.
+                         cp=False, mv=False, copyfrom_path=None):
+  """ Generate the expected 'git diff' header for file TARGET_PATH.
+  REPOS_RELPATH is the location of the path relative to the repository root.
+  The old and new versions ("revision X", or "working copy") must be
+  specified in OLD_TAG and NEW_TAG.
   SRC_LABEL and DST_LABEL are paths or urls that are added to the diff
   labels if we're diffing against the repository. ADD, DELETE, CP and MV
-  denotes the operations performed on the file. COPYFROM is the source of a
-  copy or move.  Return the header as an array of newline-terminated
+  denotes the operations performed on the file. COPYFROM_PATH is the source
+  of a copy or move.  Return the header as an array of newline-terminated
   strings."""
 
-  path_as_shown = path.replace('\\', '/')
-  if copyfrom:
-    copyfrom_as_shown = copyfrom.replace('\\', '/')
+  path_as_shown = target_path.replace('\\', '/')
   if src_label:
     src_label = src_label.replace('\\', '/')
     src_label = '\t(.../' + src_label + ')'
@@ -81,59 +82,59 @@ def make_git_diff_header(path, old_tag, new_tag, add=False, src_label=None,
     output = [
       "Index: " + path_as_shown + "\n",
       "===================================================================\n",
-      "diff --git a/" + path_as_shown + " b/" + path_as_shown + "\n",
+      "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
       "new file mode 10644\n",
     ]
     if text_changes:
       output.extend([
         "--- /dev/null\t(" + old_tag + ")\n",
-        "+++ b/" + path_as_shown + dst_label + "\t(" + new_tag + ")\n"
+        "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n"
       ])
   elif delete:
     output = [
       "Index: " + path_as_shown + "\n",
       "===================================================================\n",
-      "diff --git a/" + path_as_shown + " b/" + path_as_shown + "\n",
+      "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
       "deleted file mode 10644\n",
     ]
     if text_changes:
       output.extend([
-        "--- a/" + path_as_shown + src_label + "\t(" + old_tag + ")\n",
+        "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
         "+++ /dev/null\t(" + new_tag + ")\n"
       ])
   elif cp:
     output = [
       "Index: " + path_as_shown + "\n",
       "===================================================================\n",
-      "diff --git a/" + copyfrom_as_shown + " b/" + path_as_shown + "\n",
-      "copy from " + copyfrom_as_shown + "\n",
-      "copy to " + path_as_shown + "\n",
+      "diff --git a/" + copyfrom_path + " b/" + repos_relpath + "\n",
+      "copy from " + copyfrom_path + "\n",
+      "copy to " + repos_relpath + "\n",
     ]
     if text_changes:
       output.extend([
-        "--- a/" + copyfrom_as_shown + src_label + "\t(" + old_tag + ")\n",
+        "--- a/" + copyfrom_path + src_label + "\t(" + old_tag + ")\n",
         "+++ b/" + path_as_shown + "\t(" + new_tag + ")\n"
       ])
   elif mv:
     return [
       "Index: " + path_as_shown + "\n",
       "===================================================================\n",
-      "diff --git a/" + copyfrom_as_shown + " b/" + path_as_shown + "\n",
-      "rename from " + copyfrom_as_shown + "\n",
-      "rename to " + path_as_shown + "\n",
+      "diff --git a/" + copyfrom_path + " b/" + path_as_shown + "\n",
+      "rename from " + copyfrom_path + "\n",
+      "rename to " + repos_relpath + "\n",
     ]
     if text_changes:
       output.extend([
-        "--- a/" + copyfrom_as_shown + src_label + "\t(" + old_tag + ")\n",
-        "+++ b/" + path_as_shown + "\t(" + new_tag + ")\n"
+        "--- a/" + copyfrom_path + src_label + "\t(" + old_tag + ")\n",
+        "+++ b/" + repos_relpath + "\t(" + new_tag + ")\n"
       ])
   else:
     output = [
       "Index: " + path_as_shown + "\n",
       "===================================================================\n",
-      "diff --git a/" + path_as_shown + " b/" + path_as_shown + "\n",
-      "--- a/" + path_as_shown + src_label + "\t(" + old_tag + ")\n",
-      "+++ b/" + path_as_shown + dst_label + "\t(" + new_tag + ")\n",
+      "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
+      "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
+      "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n",
     ]
   return output
 
@@ -3376,22 +3377,26 @@ def diff_git_format_wc_wc(sbox):
 
   ### We're not testing moved paths
 
-  expected_output = make_git_diff_header(mu_path, "revision 1", 
+  expected_output = make_git_diff_header(lambda_copied_path,
+                                         "A/B/lambda_copied",
+                                         "revision 1", "working copy",
+                                         copyfrom_path="A/B/lambda", cp=True,
+                                         text_changes=False) \
+  + make_git_diff_header(mu_path, "A/mu", "revision 1", 
                                          "working copy", 
                                          delete=True) + [
     "@@ -1 +0,0 @@\n",
     "-This is the file 'mu'.\n",
-  ] + make_git_diff_header(new_path, "revision 0", "working copy", 
-                           add=True) + [
+  ] + make_git_diff_header(new_path, "new", "revision 0",
+                           "working copy", add=True) + [
     "@@ -0,0 +1 @@\n",
     "+This is the file 'new'.\n",
-  ] +  make_git_diff_header(iota_path, "revision 1", 
+  ] +  make_git_diff_header(iota_path, "iota", "revision 1", 
                             "working copy") + [
     "@@ -1 +1,2 @@\n",
     " This is the file 'iota'.\n",
     "+Changed 'iota'.\n",
-  ] + make_git_diff_header(lambda_copied_path, "revision 1",
-                           "working copy", copyfrom=lambda_path)
+  ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
                                      '--git', wc_dir)
@@ -3414,19 +3419,16 @@ def diff_git_format_url_wc(sbox):
   svntest.main.run_svn(None, 'commit', '-m', 'Committing changes', wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
 
-  expected_output = make_git_diff_header(new_path, "revision 0", "revision 2", 
-                                         dst_label=wc_dir, add=True) + [
+  expected_output = make_git_diff_header(new_path, "new", "revision 0",
+                                         "revision 2", add=True) + [
     "@@ -0,0 +1 @@\n",
     "+This is the file 'new'.\n",
-  ] + make_git_diff_header(mu_path, "revision 1", 
-                           "working copy", 
-                           src_label=repo_url,
+  ] + make_git_diff_header(mu_path, "A/mu", "revision 1", "working copy", 
                            delete=True) + [
     "@@ -1 +0,0 @@\n",
     "-This is the file 'mu'.\n",
-  ] +  make_git_diff_header(iota_path, "revision 1", 
-                            "working copy", src_label=repo_url,
-                            dst_label=wc_dir) + [
+  ] +  make_git_diff_header(iota_path, "iota", "revision 1", 
+                            "working copy") + [
     "@@ -1 +1,2 @@\n",
     " This is the file 'iota'.\n",
     "+Changed 'iota'.\n",
@@ -3456,16 +3458,16 @@ def diff_git_format_url_url(sbox):
   svntest.main.run_svn(None, 'commit', '-m', 'Committing changes', wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
 
-  expected_output = make_git_diff_header("A/mu", "revision 1", 
+  expected_output = make_git_diff_header("A/mu", "A/mu", "revision 1", 
                                          "revision 2", 
                                          delete=True) + [
     "@@ -1 +0,0 @@\n",
     "-This is the file 'mu'.\n",
-    ] + make_git_diff_header("new", "revision 0", "revision 2", 
-                              add=True) + [
+    ] + make_git_diff_header("new", "new", "revision 0", "revision 2", 
+                             add=True) + [
     "@@ -0,0 +1 @@\n",
     "+This is the file 'new'.\n",
-  ] +  make_git_diff_header("iota", "revision 1", 
+  ] +  make_git_diff_header("iota", "iota", "revision 1", 
                             "revision 2") + [
     "@@ -1 +1,2 @@\n",
     " This is the file 'iota'.\n",
@@ -3634,10 +3636,10 @@ def diff_git_empty_files(sbox):
   svntest.main.run_svn(None, 'add', new_path)
   svntest.main.run_svn(None, 'rm', iota_path)
 
-  expected_output = make_git_diff_header(new_path, "revision 0", 
+  expected_output = make_git_diff_header(new_path, "new", "revision 0", 
                                          "working copy", 
                                          add=True, text_changes=False) + [
-  ] + make_git_diff_header(new_path, "revision 2", "working copy", 
+  ] + make_git_diff_header(iota_path, "iota", "revision 2", "working copy", 
                            delete=True, text_changes=False)
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
@@ -3700,12 +3702,12 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
-              XFail(diff_git_format_wc_wc),
+              diff_git_format_wc_wc,
               diff_git_format_url_wc,
               diff_git_format_url_url,
               diff_prop_missing_context,
               diff_prop_multiple_hunks,
-              XFail(diff_git_empty_files),
+              diff_git_empty_files,
               ]
 
 if __name__ == '__main__':

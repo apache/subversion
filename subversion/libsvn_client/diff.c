@@ -190,6 +190,140 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
 }
 
+/* Adjust PATH_OR_URL to be relative to the repository root, using RA_SESSION
+ * and WC_CTX, and return the result in *ADJUSTED_PATH.
+ * ORIG_TARGET is one of the original targets passed to the diff command,
+ * and may be used to derive leading path components missing from PATH_OR_URL.
+ * Do all allocations in POOL. */
+static svn_error_t *
+adjust_relative_to_repos_root(const char **adjusted_path,
+                              const char *path_or_url,
+                              const char *orig_target,
+                              svn_ra_session_t *ra_session,
+                              svn_wc_context_t *wc_ctx,
+                              svn_boolean_t is_repos_repos_diff,
+                              apr_pool_t *pool)
+{
+  const char *local_abspath;
+  const char *repos_root_url;
+  const char *node_url;
+
+  if (ra_session)
+    {
+      const char *wc_root_abspath;
+      svn_boolean_t wc_root_found;
+      apr_pool_t *iterpool;
+
+      if (is_repos_repos_diff)
+        {
+          /* Ask the repository for the adjusted path. */
+          if (svn_path_is_url(path_or_url))
+            {
+              SVN_ERR(svn_ra_get_path_relative_to_root(ra_session,
+                                                       adjusted_path,
+                                                       path_or_url, pool));
+            }
+          else
+            {
+              const char *orig_anchor;
+
+              SVN_ERR(svn_ra_get_path_relative_to_root(ra_session,
+                                                       &orig_anchor,
+                                                       orig_target, pool));
+              *adjusted_path = svn_relpath_join(orig_anchor, path_or_url, pool);
+            }
+
+          return SVN_NO_ERROR;
+        }
+
+      /* Now deal with the repos->wc and wc->repos cases, where PATH_OR_URL
+       * is a path. The path can either be pointing inside a working copy,
+       * (or be a working copy root), or it is relative to the URL of the
+       * original target. */
+
+      /* Check if the path is pointing to or is inside a working copy. */
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
+      wc_root_abspath = local_abspath;
+      wc_root_found = FALSE;
+      iterpool = svn_pool_create(pool);
+      while (! wc_root_found && *wc_root_abspath)
+        {
+          svn_error_t *err;
+
+          svn_pool_clear(iterpool);
+
+          err = svn_wc_is_wc_root2(&wc_root_found, wc_ctx, wc_root_abspath,
+                                   iterpool);
+          if (err)
+            {
+              /* Ignore all errors. It could be no working copy, or a missing
+               * item, or permission denied -- whatever. We don't care,
+               * because if all we get is errors, the path is most certainly
+               * unrelated to a working copy. */
+              svn_error_clear(err);
+            }
+          if (svn_dirent_is_root(wc_root_abspath, strlen(wc_root_abspath)))
+            break;
+          if (! wc_root_found)
+            wc_root_abspath = svn_dirent_dirname(wc_root_abspath, pool);
+        }
+      svn_pool_destroy(iterpool);
+
+      if (wc_root_found)
+        {
+          const char *wc_url;
+          const char *wc_anchor;
+          const char *in_wc_relpath;
+
+          /* The path is inside a working copy, so it's anchored beneath
+           * the URL corresponding to the working copy.
+           * ### Is it possible that we find a working copy by accident? */
+          SVN_ERR(svn_wc__node_get_url(&wc_url, wc_ctx, wc_root_abspath,
+                                       pool, pool));
+          SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &wc_anchor,
+                                                   wc_url, pool));
+          in_wc_relpath = svn_dirent_is_child(wc_root_abspath, local_abspath,
+                                              pool);
+          *adjusted_path = svn_relpath_join(wc_anchor, in_wc_relpath, pool);
+        }
+      else
+        {
+          const char *orig_anchor;
+          const char *orig_abspath;
+
+          /* The path is not inside an existing WC, so it's anchored
+           * beneath the original target. */
+          if (! svn_path_is_url(orig_target))
+            {
+              SVN_ERR(svn_dirent_get_absolute(&orig_abspath, orig_target,
+                                              pool));
+              SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
+                                                  wc_ctx, orig_abspath,
+                                                  TRUE, TRUE, pool, pool));
+              SVN_ERR(svn_wc__node_get_url(&orig_target, wc_ctx, orig_abspath,
+                                           pool, pool));
+            }
+          SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &orig_anchor,
+                                                   orig_target, pool));
+          *adjusted_path = svn_relpath_join(orig_anchor, path_or_url, pool);
+        }
+    }
+  else
+    {
+      /* We're doing a WC-WC diff, so we can retreive all information we
+       * need from the working copy. */
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
+      SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
+                                          wc_ctx, local_abspath,
+                                          TRUE, TRUE, pool, pool));
+      SVN_ERR(svn_wc__node_get_url(&node_url, wc_ctx, local_abspath, pool,
+                                   pool));
+      *adjusted_path = svn_uri_is_child(repos_root_url, node_url, pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Adjust PATH, ORIG_PATH_1 and ORIG_PATH_2, representing the changed file
  * and the two original targets passed to the diff command, to handle the
  * case when we're dealing with different anchors. RELATIVE_TO_DIR is the
@@ -529,9 +663,11 @@ print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding,
 
 /* Print a git diff header showing the OPERATION to the stream OS using
  * HEADER_ENCODING. Return suitable diff labels for the git diff in *LABEL1
- * and *LABEL2. PATH is the path being diffed, PATH1 and PATH2 are the paths
- * passed to the original diff command. REV1 and REV2 are revisions being
- * diffed. COPYFROM_PATH indicates where the diffed item was copied from.
+ * and *LABEL2. PATH is the path being diffed, ORIG_TARGET1 and ORIG_TARGET2
+ * are the paths passed to the original diff command. REV1 and REV2 are
+ * revisions being diffed. COPYFROM_PATH indicates where the diffed item
+ * was copied from. RA_SESSION and WC_CTX are used to adjust paths in the
+ * headers to be relative to the repository root.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 print_git_diff_header(svn_stream_t *os,
@@ -544,54 +680,68 @@ print_git_diff_header(svn_stream_t *os,
                       svn_revnum_t rev2,
                       const char *copyfrom_path,
                       const char *header_encoding,
+                      svn_ra_session_t *ra_session,
+                      svn_wc_context_t *wc_ctx,
                       apr_pool_t *scratch_pool)
 {
-  /* Add git headers and adjust the labels. 
-   * ### Once we're using the git format everywhere, we can create
-   * ### one func that sets the correct labels in one place. */
+  const char *repos_relpath1;
+  const char *repos_relpath2;
+
+  SVN_ERR(adjust_relative_to_repos_root(&repos_relpath1, path, path1,
+                                        ra_session, wc_ctx,
+                                        svn_path_is_url(path1) &&
+                                          svn_path_is_url(path2),
+                                        scratch_pool));
+  SVN_ERR(adjust_relative_to_repos_root(&repos_relpath2, path, path2,
+                                        ra_session, wc_ctx,
+                                        svn_path_is_url(path1) &&
+                                          svn_path_is_url(path2),
+                                        scratch_pool));
+
   if (operation == svn_diff_op_deleted)
     {
       SVN_ERR(print_git_diff_header_deleted(os, header_encoding,
-                                            path, scratch_pool));
-      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", path1), rev1,
-                          scratch_pool);
+                                            repos_relpath2, scratch_pool));
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
+                           rev1, scratch_pool);
       *label2 = diff_label("/dev/null", rev2, scratch_pool);
 
     }
   else if (operation == svn_diff_op_copied)
     {
       SVN_ERR(print_git_diff_header_copied(os, header_encoding,
-                                           path, copyfrom_path, scratch_pool));
-      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", path1), rev1,
-                           scratch_pool);
-      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", path2), rev2,
-                           scratch_pool);
+                                           repos_relpath2, copyfrom_path,
+                                           scratch_pool));
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", copyfrom_path),
+                           rev1, scratch_pool);
+      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
+                           rev2, scratch_pool);
     }
   else if (operation == svn_diff_op_added)
     {
       SVN_ERR(print_git_diff_header_added(os, header_encoding,
-                                          path, scratch_pool));
+                                          repos_relpath2, scratch_pool));
       *label1 = diff_label("/dev/null", rev1, scratch_pool);
-      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", path2), rev2,
-                           scratch_pool);
+      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
+                           rev2, scratch_pool);
     }
   else if (operation == svn_diff_op_modified)
     {
       SVN_ERR(print_git_diff_header_modified(os, header_encoding,
-                                             path, scratch_pool));
-      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", path1), rev1,
-                           scratch_pool);
-      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", path2), rev2,
-                           scratch_pool);
+                                             repos_relpath2, scratch_pool));
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath2),
+                           rev1, scratch_pool);
+      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
+                           rev2, scratch_pool);
     }
   else if (operation == svn_diff_op_moved)
     {
       SVN_ERR(print_git_diff_header_moved(os, header_encoding,
-                                          copyfrom_path, path, scratch_pool));
-      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", path1), rev1,
-                           scratch_pool);
-      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", path2), rev2,
-                           scratch_pool);
+                                          path, copyfrom_path, scratch_pool));
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", copyfrom_path),
+                           rev1, scratch_pool);
+      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
+                           rev2, scratch_pool);
     }
 
   /* ### Print git headers for renames, too, in the future. */
@@ -658,9 +808,13 @@ struct diff_cmd_baton {
      relative to for output generation (see issue #2723). */
   const char *relative_to_dir;
 
+  /* Whether we're producing a git-style diff. */
   svn_boolean_t use_git_diff_format;
 
   svn_wc_context_t *wc_ctx;
+
+  /* The RA session used during diffs involving the repository. */
+  svn_ra_session_t *ra_session;
 
   /* A hashtable using the visited paths as keys. 
    * ### This is needed for us to know if we need to print a diff header for
@@ -756,8 +910,8 @@ diff_content_changed(const char *path,
 
   /* Generate the diff headers. */
 
-  path1 = diff_cmd_baton->orig_path_1;
-  path2 = diff_cmd_baton->orig_path_2;
+  path1 = apr_pstrdup(subpool, diff_cmd_baton->orig_path_1);
+  path2 = apr_pstrdup(subpool, diff_cmd_baton->orig_path_2);
 
   SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
                                        rel_to_dir, subpool));
@@ -856,9 +1010,13 @@ diff_content_changed(const char *path,
 
           if (diff_cmd_baton->use_git_diff_format)
             SVN_ERR(print_git_diff_header(os, &label1, &label2, operation,
-                                          path, path1, path2, rev1, rev2,
+                                          path, diff_cmd_baton->orig_path_1,
+                                          diff_cmd_baton->orig_path_2,
+                                          rev1, rev2,
                                           copyfrom_path,
                                           diff_cmd_baton->header_encoding,
+                                          diff_cmd_baton->ra_session,
+                                          diff_cmd_baton->wc_ctx,
                                           subpool));
 
           /* Output the actual diff */
@@ -1532,6 +1690,8 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   callback_baton->revnum1 = rev1;
   callback_baton->revnum2 = rev2;
 
+  callback_baton->ra_session = ra_session;
+
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
      contents.  */
@@ -1661,6 +1821,7 @@ diff_repos_wc(const char *path1,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, anchor_url,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
+  callback_baton->ra_session = ra_session;
 
   SVN_ERR(svn_wc_get_diff_editor6(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
@@ -2032,6 +2193,7 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.visited_paths = apr_hash_make(pool);
+  diff_cmd_baton.ra_session = NULL;
 
   return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
                  path1, path2, revision1, revision2, &peg_revision,
@@ -2091,6 +2253,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.visited_paths = apr_hash_make(pool);
+  diff_cmd_baton.ra_session = NULL;
 
   return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
                  path, path, start_revision, end_revision, peg_revision,
