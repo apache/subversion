@@ -1254,7 +1254,7 @@ typedef struct svn_wc_notify_t {
    * @since New in 1.7 */
   svn_revnum_t old_revision;
 
-  /* These fields are used by svn patch to identify the
+  /** These fields are used by svn patch to identify the
    * hunk the notification is for. They are line-based
    * offsets and lengths parsed from the unidiff hunk header.
    * @since New in 1.7. */
@@ -1263,11 +1263,11 @@ typedef struct svn_wc_notify_t {
   svn_linenum_t hunk_modified_start;
   svn_linenum_t hunk_modified_length;
 
-  /* The line at which a hunk was matched (and applied).
+  /** The line at which a hunk was matched (and applied).
    * @since New in 1.7. */
   svn_linenum_t hunk_matched_line;
 
-  /* The fuzz factor the hunk was applied with.
+  /** The fuzz factor the hunk was applied with.
    * @since New in 1.7 */
   int hunk_fuzz;
 
@@ -1424,11 +1424,11 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
  */
 typedef enum svn_wc_conflict_action_t
 {
-  svn_wc_conflict_action_edit,    /* attempting to change text or props */
-  svn_wc_conflict_action_add,     /* attempting to add object */
-  svn_wc_conflict_action_delete,  /* attempting to delete object */
-  svn_wc_conflict_action_replace  /* attempting to replace object,
-                                     @since New in 1.7 */
+  svn_wc_conflict_action_edit,    /**< attempting to change text or props */
+  svn_wc_conflict_action_add,     /**< attempting to add object */
+  svn_wc_conflict_action_delete,  /**< attempting to delete object */
+  svn_wc_conflict_action_replace  /**< attempting to replace object,
+                                       @since New in 1.7 */
 } svn_wc_conflict_action_t;
 
 
@@ -2070,20 +2070,20 @@ svn_wc__conflict_description2_dup(
  */
 typedef enum svn_wc_conflict_choice_t
 {
-  /* Don't resolve the conflict now.  Let libsvn_wc mark the path
+  /** Don't resolve the conflict now.  Let libsvn_wc mark the path
      'conflicted', so user can run 'svn resolved' later. */
   svn_wc_conflict_choose_postpone,
 
-  /* If there were files to choose from, select one as a way of
+  /** If there were files to choose from, select one as a way of
      resolving the conflict here and now.  libsvn_wc will then do the
      work of "installing" the chosen file.
   */
-  svn_wc_conflict_choose_base,            /* original version */
-  svn_wc_conflict_choose_theirs_full,     /* incoming version */
-  svn_wc_conflict_choose_mine_full,       /* own version */
-  svn_wc_conflict_choose_theirs_conflict, /* incoming (for conflicted hunks) */
-  svn_wc_conflict_choose_mine_conflict,   /* own (for conflicted hunks) */
-  svn_wc_conflict_choose_merged           /* merged version */
+  svn_wc_conflict_choose_base,            /**< original version */
+  svn_wc_conflict_choose_theirs_full,     /**< incoming version */
+  svn_wc_conflict_choose_mine_full,       /**< own version */
+  svn_wc_conflict_choose_theirs_conflict, /**< incoming (for conflicted hunks) */
+  svn_wc_conflict_choose_mine_conflict,   /**< own (for conflicted hunks) */
+  svn_wc_conflict_choose_merged           /**< merged version */
 
 } svn_wc_conflict_choice_t;
 
@@ -4409,7 +4409,7 @@ svn_wc_delete(const char *path,
  * and anything below it will be scheduled for addition inside the parent
  * working copy as a copy of the original location. The separate working
  * copy will be integrated by this step. In this case, which is only used
- * by code like that of 'svn cp URL@rev path' @a copyfrom_url and
+ * by code like that of "svn cp URL@rev path" @a copyfrom_url and
  * @a copyfrom_rev MUST BE the the url and revision of @a local_abspath
  * in the separate working copy.
  *
