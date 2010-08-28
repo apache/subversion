@@ -377,24 +377,6 @@ diff_label(const char *path,
   return label;
 }
 
-/* ### forward declaration */
-static svn_error_t *
-print_git_diff_header(svn_stream_t *os,
-                      const char **label1, const char **label2,
-                      svn_diff_operation_kind_t operation,
-                      const char *path,
-                      const char *path1,
-                      const char *path2,
-                      svn_revnum_t rev1,
-                      svn_revnum_t rev2,
-                      const char *copyfrom_path,
-                      const char *header_encoding,
-                      svn_ra_session_t *ra_session,
-                      svn_wc_context_t *wc_ctx,
-                      const char *wc_root_abspath,
-                      apr_pool_t *scratch_pool);
-
-
 /* Print a git diff header for an addition within a diff between PATH1 and
  * PATH2 to the stream OS using HEADER_ENCODING.
  * All allocations are done in RESULT_POOL. */
