@@ -220,7 +220,7 @@ adjust_relative_to_repos_root(const char **adjusted_path,
       return SVN_NO_ERROR;
     }
 
-  /* Now deal with the repos-repos and repos->wc diff cases.
+  /* Now deal with the repos-repos and repos-wc diff cases.
    * We need to make PATH appear as a child of ORIG_TARGET.
    * ORIG_TARGET is either a URL or a path to a working copy. First,
    * find out what ORIG_TARGET looks like relative to the repository root.*/
@@ -239,7 +239,7 @@ adjust_relative_to_repos_root(const char **adjusted_path,
 
   /* PATH is either a child of the working copy involved in the diff (in
    * the repos-wc diff case), or it's a relative path we can readily use
-   * (in either the repos-repos or the repos-wc diff cases). */
+   * (in either of the repos-repos and repos-wc diff cases). */
   child_relpath = NULL;
   if (wc_root_abspath)
     {
