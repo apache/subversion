@@ -214,7 +214,7 @@ adjust_relative_to_repos_root(const char **adjusted_path,
 
   if (! ra_session)
     {
-      /* We're doing a WC-WC diff, so we can retreive all information we
+      /* We're doing a WC-WC diff, so we can retrieve all information we
        * need from the working copy. */
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
       SVN_ERR(svn_wc__node_get_repos_relpath(adjusted_path, wc_ctx,
