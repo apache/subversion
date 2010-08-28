@@ -750,7 +750,7 @@ print_git_diff_header(svn_stream_t *os,
       SVN_ERR(print_git_diff_header_modified(os, header_encoding,
                                              repos_relpath1, repos_relpath2,
                                              scratch_pool));
-      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath2),
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
                            rev1, scratch_pool);
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
                            rev2, scratch_pool);
