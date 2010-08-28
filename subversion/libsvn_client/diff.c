@@ -190,18 +190,17 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
 }
 
-/* Adjust PATH_OR_URL to be relative to the repository root beneath
- * ORIG_TARGET, using RA_SESSION and WC_CTX, and return the result
- * in *ADJUSTED_PATH.
+/* Adjust PATH to be relative to the repository root beneath ORIG_TARGET,
+ * using RA_SESSION and WC_CTX, and return the result in *ADJUSTED_PATH.
  * ORIG_TARGET is one of the original targets passed to the diff command,
- * and may be used to derive leading path components missing from PATH_OR_URL.
+ * and may be used to derive leading path components missing from PATH.
  * IS_REPOS_REPOS_DIFF indicates whether we're doing a repos-repos diff.
  * WC_ROOT_ABSPATH is the absolute path to the root directory of a working
  * copy involved in a repos-wc diff, and may be NULL.
  * Do all allocations in POOL. */
 static svn_error_t *
 adjust_relative_to_repos_root(const char **adjusted_path,
-                              const char *path_or_url,
+                              const char *path,
                               const char *orig_target,
                               svn_ra_session_t *ra_session,
                               svn_wc_context_t *wc_ctx,
@@ -217,36 +216,27 @@ adjust_relative_to_repos_root(const char **adjusted_path,
     {
       /* We're doing a WC-WC diff, so we can retreive all information we
        * need from the working copy. */
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
       SVN_ERR(svn_wc__node_get_repos_relpath(adjusted_path, wc_ctx,
                                              local_abspath, pool, pool));
       return SVN_NO_ERROR;
     }
 
-  /* Another easy case: We got a URL, so just ask the RA layer. */
-  if (svn_path_is_url(path_or_url))
-    {
-      SVN_ERR(svn_ra_get_path_relative_to_root(ra_session,
-                                               adjusted_path,
-                                               path_or_url, pool));
-      return SVN_NO_ERROR;
-    }
-
   /* If we're doing a repos-repos diff, there are no local paths involved.
    * Ask the repository how ORIG_TARGET looks relative to the repository root.
-   * PATH_OR_URL is a child of it. */
+   * PATH is a child of it. */
   if (is_repos_repos_diff)
     {
       SVN_ERR(svn_ra_get_path_relative_to_root(ra_session,
                                                &orig_relpath,
                                                orig_target, pool));
-      *adjusted_path = svn_relpath_join(orig_relpath, path_or_url, pool);
+      *adjusted_path = svn_relpath_join(orig_relpath, path, pool);
 
       return SVN_NO_ERROR;
     }
 
   /* Now deal with the repos->wc diff case.
-   * We need to make PATH_OR_URL appear as a child of ORIG_TARGET.
+   * We need to make PATH appear as a child of ORIG_TARGET.
    * ORIG_TARGET is either a URL or a path to a working copy. First,
    * find out what ORIG_TARGET looks like relative to the repository root.*/
   if (svn_path_is_url(orig_target))
@@ -262,16 +252,16 @@ adjust_relative_to_repos_root(const char **adjusted_path,
                                              orig_abspath, pool, pool));
     }
 
-  /* PATH_OR_URL is either a child of the working copy involved in the diff,
+  /* PATH is either a child of the working copy involved in the diff,
    * or it's a relative path we can readily use. */
   child_relpath = NULL;
   if (wc_root_abspath)
     {
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
       child_relpath = svn_dirent_is_child(wc_root_abspath, local_abspath, pool);
     }
   if (child_relpath == NULL)
-    child_relpath = path_or_url;
+    child_relpath = path;
 
   *adjusted_path = svn_relpath_join(orig_relpath, child_relpath, pool);
 
