@@ -113,7 +113,7 @@ def make_git_diff_header(target_path, repos_relpath,
     if text_changes:
       output.extend([
         "--- a/" + copyfrom_path + src_label + "\t(" + old_tag + ")\n",
-        "+++ b/" + path_as_shown + "\t(" + new_tag + ")\n"
+        "+++ b/" + repos_relpath + "\t(" + new_tag + ")\n"
       ])
   elif mv:
     return [
@@ -3368,12 +3368,16 @@ def diff_git_format_wc_wc(sbox):
   new_path = os.path.join(wc_dir, 'new')
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   lambda_copied_path = os.path.join(wc_dir, 'A', 'B', 'lambda_copied')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  alpha_copied_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha_copied')
 
   svntest.main.file_append(iota_path, "Changed 'iota'.\n")
   svntest.main.file_append(new_path, "This is the file 'new'.\n")
   svntest.main.run_svn(None, 'add', new_path)
   svntest.main.run_svn(None, 'rm', mu_path)
   svntest.main.run_svn(None, 'cp', lambda_path, lambda_copied_path)
+  svntest.main.run_svn(None, 'cp', alpha_path, alpha_copied_path)
+  svntest.main.file_append(alpha_copied_path, "This is a copy of 'alpha'.\n")
 
   ### We're not testing moved paths
 
@@ -3382,7 +3386,14 @@ def diff_git_format_wc_wc(sbox):
                                          "revision 1", "working copy",
                                          copyfrom_path="A/B/lambda", cp=True,
                                          text_changes=False) \
-  + make_git_diff_header(mu_path, "A/mu", "revision 1", 
+  + make_git_diff_header(alpha_copied_path, "A/B/E/alpha_copied",
+                         "revision 0", "working copy",
+                         copyfrom_path="A/B/E/alpha", cp=True,
+                         text_changes=True) + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'alpha'.\n",
+    "+This is a copy of 'alpha'.\n",
+  ] + make_git_diff_header(mu_path, "A/mu", "revision 1", 
                                          "working copy", 
                                          delete=True) + [
     "@@ -1 +0,0 @@\n",
