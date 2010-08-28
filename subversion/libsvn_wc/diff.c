@@ -567,7 +567,6 @@ file_diff(struct dir_baton *db,
   svn_boolean_t have_base;
   svn_wc__db_status_t base_status;
   const char *local_abspath;
-  svn_boolean_t modified;
 
   SVN_ERR_ASSERT(! eb->use_text_base);
 
@@ -662,23 +661,19 @@ file_diff(struct dir_baton *db,
         }
     }
 
-  SVN_ERR(svn_wc__internal_text_modified_p(&modified, eb->db,
-                                           local_abspath, FALSE, TRUE,
-                                           pool));
-
  /* Now deal with showing additions, or the add-half of replacements.
   * If the item is schedule-add *with history*, then we usually want
   * to see the usual working vs. text-base comparison, which will show changes
   * made since the file was copied.  But in case we're showing copies as adds,
   * we need to compare the copied file to the empty file. If we're doing a git
-  * diff, and the file was copied but not modified, we need to report the file
-  * as added and diff it against the text base (empty diff), so that a "copied"
-  * git diff header can be generated for it. */
+  * diff, and the file was copied, we need to report the file as added and
+  * diff it against the text base, so that a "copied" git diff header, and
+  * possibly a diff against the copy source, will be generated for it. */
   if ((! replaced && status == svn_wc__db_status_added) ||
      (replaced && ! eb->ignore_ancestry) ||
      ((status == svn_wc__db_status_copied ||
        status == svn_wc__db_status_moved_here) &&
-         (eb->show_copies_as_adds || (eb->use_git_diff_format && ! modified))))
+         (eb->show_copies_as_adds || eb->use_git_diff_format)))
     {
       const char *translated = NULL;
       const char *working_mimetype;
@@ -705,7 +700,8 @@ file_diff(struct dir_baton *db,
       SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL, NULL, path,
                                         (! eb->show_copies_as_adds &&
                                          eb->use_git_diff_format &&
-                                         ! modified) ? textbase : empty_file,
+                                         status != svn_wc__db_status_added) ?
+                                          textbase : empty_file,
                                         translated,
                                         0, revision,
                                         NULL,
@@ -723,9 +719,12 @@ file_diff(struct dir_baton *db,
       const char *working_mimetype;
       apr_hash_t *workingprops;
       apr_array_header_t *propchanges;
+      svn_boolean_t modified;
 
       /* Here we deal with showing pure modifications. */
-
+      SVN_ERR(svn_wc__internal_text_modified_p(&modified, eb->db,
+                                               local_abspath, FALSE, TRUE,
+                                               pool));
       if (modified)
         {
           /* Note that this might be the _second_ time we translate
