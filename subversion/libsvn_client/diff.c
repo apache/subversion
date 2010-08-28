@@ -394,6 +394,187 @@ print_git_diff_header(svn_stream_t *os,
                       const char *wc_root_abspath,
                       apr_pool_t *scratch_pool);
 
+
+/* Print a git diff header for an addition within a diff between PATH1 and
+ * PATH2 to the stream OS using HEADER_ENCODING.
+ * All allocations are done in RESULT_POOL. */
+static svn_error_t *
+print_git_diff_header_added(svn_stream_t *os, const char *header_encoding, 
+                            const char *path1, const char *path2,
+                            apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "diff --git a/%s b/%s%s",
+                                      path1, path2, APR_EOL_STR));
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "new file mode 10644" APR_EOL_STR));
+  return SVN_NO_ERROR;
+}
+
+/* Print a git diff header for a deletion within a diff between PATH1 and
+ * PATH2 to the stream OS using HEADER_ENCODING.
+ * All allocations are done in RESULT_POOL. */
+static svn_error_t *
+print_git_diff_header_deleted(svn_stream_t *os, const char *header_encoding, 
+                              const char *path1, const char *path2,
+                              apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "diff --git a/%s b/%s%s",
+                                      path1, path2, APR_EOL_STR));
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "deleted file mode 10644"
+                                      APR_EOL_STR));
+  return SVN_NO_ERROR;
+}
+
+/* Print a git diff header for a copy from COPYFROM_PATH to PATH to the stream
+ * OS using HEADER_ENCODING. All allocations are done in RESULT_POOL. */
+static svn_error_t *
+print_git_diff_header_copied(svn_stream_t *os, const char *header_encoding, 
+                             const char *copyfrom_path, const char *path,
+                             apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "diff --git a/%s b/%s%s",
+                                      copyfrom_path, path, APR_EOL_STR));
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "copy from %s%s", copyfrom_path,
+                                      APR_EOL_STR));
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "copy to %s%s", path, APR_EOL_STR));
+  return SVN_NO_ERROR;
+}
+
+/* Print a git diff header for a rename from COPYFROM_PATH to PATH to the
+ * stream OS using HEADER_ENCODING. All allocations are done in RESULT_POOL. */
+static svn_error_t *
+print_git_diff_header_renamed(svn_stream_t *os, const char *header_encoding,
+                              const char *copyfrom_path, const char *path,
+                              apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "diff --git a/%s b/%s%s",
+                                      copyfrom_path, path, APR_EOL_STR));
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "rename from %s%s", copyfrom_path, 
+                                      APR_EOL_STR));
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "rename to %s%s", path, APR_EOL_STR));
+  return SVN_NO_ERROR;
+}
+
+/* Print a git diff header for a modification within a diff between PATH1 and
+ * PATH2 to the stream OS using HEADER_ENCODING.
+ * All allocations are done in RESULT_POOL. */
+static svn_error_t *
+print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding, 
+                               const char *path1, const char *path2,
+                               apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+                                      "diff --git a/%s b/%s%s",
+                                      path1, path2, APR_EOL_STR));
+  return SVN_NO_ERROR;
+}
+
+/* Print a git diff header showing the OPERATION to the stream OS using
+ * HEADER_ENCODING. Return suitable diff labels for the git diff in *LABEL1
+ * and *LABEL2. PATH is the path being diffed, ORIG_TARGET1 and ORIG_TARGET2
+ * are the paths passed to the original diff command. REV1 and REV2 are
+ * revisions being diffed. COPYFROM_PATH indicates where the diffed item
+ * was copied from. RA_SESSION and WC_CTX are used to adjust paths in the
+ * headers to be relative to the repository root.
+ * WC_ROOT_ABSPATH is the absolute path to the root directory of a working
+ * copy involved in a repos-wc diff, and may be NULL.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+print_git_diff_header(svn_stream_t *os,
+                      const char **label1, const char **label2,
+                      svn_diff_operation_kind_t operation,
+                      const char *path,
+                      const char *path1,
+                      const char *path2,
+                      svn_revnum_t rev1,
+                      svn_revnum_t rev2,
+                      const char *copyfrom_path,
+                      const char *header_encoding,
+                      svn_ra_session_t *ra_session,
+                      svn_wc_context_t *wc_ctx,
+                      const char *wc_root_abspath,
+                      apr_pool_t *scratch_pool)
+{
+  const char *repos_relpath1;
+  const char *repos_relpath2;
+
+  SVN_ERR(adjust_relative_to_repos_root(&repos_relpath1, path, path1,
+                                        ra_session, wc_ctx,
+                                        svn_path_is_url(path1) &&
+                                          svn_path_is_url(path2),
+                                        wc_root_abspath,
+                                        scratch_pool));
+  SVN_ERR(adjust_relative_to_repos_root(&repos_relpath2, path, path2,
+                                        ra_session, wc_ctx,
+                                        svn_path_is_url(path1) &&
+                                          svn_path_is_url(path2),
+                                        wc_root_abspath,
+                                        scratch_pool));
+
+  if (operation == svn_diff_op_deleted)
+    {
+      SVN_ERR(print_git_diff_header_deleted(os, header_encoding,
+                                            repos_relpath1, repos_relpath2,
+                                            scratch_pool));
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
+                           rev1, scratch_pool);
+      *label2 = diff_label("/dev/null", rev2, scratch_pool);
+
+    }
+  else if (operation == svn_diff_op_copied)
+    {
+      SVN_ERR(print_git_diff_header_copied(os, header_encoding,
+                                           copyfrom_path, repos_relpath2,
+                                           scratch_pool));
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", copyfrom_path),
+                           rev1, scratch_pool);
+      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
+                           rev2, scratch_pool);
+    }
+  else if (operation == svn_diff_op_added)
+    {
+      SVN_ERR(print_git_diff_header_added(os, header_encoding,
+                                          repos_relpath1, repos_relpath2,
+                                          scratch_pool));
+      *label1 = diff_label("/dev/null", rev1, scratch_pool);
+      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
+                           rev2, scratch_pool);
+    }
+  else if (operation == svn_diff_op_modified)
+    {
+      SVN_ERR(print_git_diff_header_modified(os, header_encoding,
+                                             repos_relpath1, repos_relpath2,
+                                             scratch_pool));
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
+                           rev1, scratch_pool);
+      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
+                           rev2, scratch_pool);
+    }
+  else if (operation == svn_diff_op_moved)
+    {
+      SVN_ERR(print_git_diff_header_renamed(os, header_encoding,
+                                            copyfrom_path, repos_relpath2,
+                                            scratch_pool));
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", copyfrom_path),
+                           rev1, scratch_pool);
+      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
+                           rev2, scratch_pool);
+    }
+
+  /* ### Print git headers for renames, too, in the future. */
+
+  return SVN_NO_ERROR;
+}
+
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
    passed to svn_client_diff5, which is probably stdout.
@@ -576,187 +757,6 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
       }
     }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Print a git diff header for an addition within a diff between PATH1 and
- * PATH2 to the stream OS using HEADER_ENCODING.
- * All allocations are done in RESULT_POOL. */
-static svn_error_t *
-print_git_diff_header_added(svn_stream_t *os, const char *header_encoding, 
-                            const char *path1, const char *path2,
-                            apr_pool_t *result_pool)
-{
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "diff --git a/%s b/%s%s",
-                                      path1, path2, APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "new file mode 10644" APR_EOL_STR));
-  return SVN_NO_ERROR;
-}
-
-/* Print a git diff header for a deletion within a diff between PATH1 and
- * PATH2 to the stream OS using HEADER_ENCODING.
- * All allocations are done in RESULT_POOL. */
-static svn_error_t *
-print_git_diff_header_deleted(svn_stream_t *os, const char *header_encoding, 
-                              const char *path1, const char *path2,
-                              apr_pool_t *result_pool)
-{
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "diff --git a/%s b/%s%s",
-                                      path1, path2, APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "deleted file mode 10644"
-                                      APR_EOL_STR));
-  return SVN_NO_ERROR;
-}
-
-/* Print a git diff header for a copy from COPYFROM_PATH to PATH to the stream
- * OS using HEADER_ENCODING. All allocations are done in RESULT_POOL. */
-static svn_error_t *
-print_git_diff_header_copied(svn_stream_t *os, const char *header_encoding, 
-                             const char *copyfrom_path, const char *path,
-                             apr_pool_t *result_pool)
-{
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "diff --git a/%s b/%s%s",
-                                      copyfrom_path, path, APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "copy from %s%s", copyfrom_path,
-                                      APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "copy to %s%s", path, APR_EOL_STR));
-  return SVN_NO_ERROR;
-}
-
-/* Print a git diff header for a rename from COPYFROM_PATH to PATH to the
- * stream OS using HEADER_ENCODING. All allocations are done in RESULT_POOL. */
-static svn_error_t *
-print_git_diff_header_renamed(svn_stream_t *os, const char *header_encoding,
-                              const char *copyfrom_path, const char *path,
-                              apr_pool_t *result_pool)
-{
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "diff --git a/%s b/%s%s",
-                                      copyfrom_path, path, APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "rename from %s%s", copyfrom_path, 
-                                      APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "rename to %s%s", path, APR_EOL_STR));
-  return SVN_NO_ERROR;
-}
-
-/* Print a git diff header for a modification within a diff between PATH1 and
- * PATH2 to the stream OS using HEADER_ENCODING.
- * All allocations are done in RESULT_POOL. */
-static svn_error_t *
-print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding, 
-                               const char *path1, const char *path2,
-                               apr_pool_t *result_pool)
-{
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "diff --git a/%s b/%s%s",
-                                      path1, path2, APR_EOL_STR));
-  return SVN_NO_ERROR;
-}
-
-/* Print a git diff header showing the OPERATION to the stream OS using
- * HEADER_ENCODING. Return suitable diff labels for the git diff in *LABEL1
- * and *LABEL2. PATH is the path being diffed, ORIG_TARGET1 and ORIG_TARGET2
- * are the paths passed to the original diff command. REV1 and REV2 are
- * revisions being diffed. COPYFROM_PATH indicates where the diffed item
- * was copied from. RA_SESSION and WC_CTX are used to adjust paths in the
- * headers to be relative to the repository root.
- * WC_ROOT_ABSPATH is the absolute path to the root directory of a working
- * copy involved in a repos-wc diff, and may be NULL.
- * Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-print_git_diff_header(svn_stream_t *os,
-                      const char **label1, const char **label2,
-                      svn_diff_operation_kind_t operation,
-                      const char *path,
-                      const char *path1,
-                      const char *path2,
-                      svn_revnum_t rev1,
-                      svn_revnum_t rev2,
-                      const char *copyfrom_path,
-                      const char *header_encoding,
-                      svn_ra_session_t *ra_session,
-                      svn_wc_context_t *wc_ctx,
-                      const char *wc_root_abspath,
-                      apr_pool_t *scratch_pool)
-{
-  const char *repos_relpath1;
-  const char *repos_relpath2;
-
-  SVN_ERR(adjust_relative_to_repos_root(&repos_relpath1, path, path1,
-                                        ra_session, wc_ctx,
-                                        svn_path_is_url(path1) &&
-                                          svn_path_is_url(path2),
-                                        wc_root_abspath,
-                                        scratch_pool));
-  SVN_ERR(adjust_relative_to_repos_root(&repos_relpath2, path, path2,
-                                        ra_session, wc_ctx,
-                                        svn_path_is_url(path1) &&
-                                          svn_path_is_url(path2),
-                                        wc_root_abspath,
-                                        scratch_pool));
-
-  if (operation == svn_diff_op_deleted)
-    {
-      SVN_ERR(print_git_diff_header_deleted(os, header_encoding,
-                                            repos_relpath1, repos_relpath2,
-                                            scratch_pool));
-      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
-                           rev1, scratch_pool);
-      *label2 = diff_label("/dev/null", rev2, scratch_pool);
-
-    }
-  else if (operation == svn_diff_op_copied)
-    {
-      SVN_ERR(print_git_diff_header_copied(os, header_encoding,
-                                           copyfrom_path, repos_relpath2,
-                                           scratch_pool));
-      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", copyfrom_path),
-                           rev1, scratch_pool);
-      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
-                           rev2, scratch_pool);
-    }
-  else if (operation == svn_diff_op_added)
-    {
-      SVN_ERR(print_git_diff_header_added(os, header_encoding,
-                                          repos_relpath1, repos_relpath2,
-                                          scratch_pool));
-      *label1 = diff_label("/dev/null", rev1, scratch_pool);
-      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
-                           rev2, scratch_pool);
-    }
-  else if (operation == svn_diff_op_modified)
-    {
-      SVN_ERR(print_git_diff_header_modified(os, header_encoding,
-                                             repos_relpath1, repos_relpath2,
-                                             scratch_pool));
-      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
-                           rev1, scratch_pool);
-      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
-                           rev2, scratch_pool);
-    }
-  else if (operation == svn_diff_op_moved)
-    {
-      SVN_ERR(print_git_diff_header_renamed(os, header_encoding,
-                                            copyfrom_path, repos_relpath2,
-                                            scratch_pool));
-      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", copyfrom_path),
-                           rev1, scratch_pool);
-      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
-                           rev2, scratch_pool);
-    }
-
-  /* ### Print git headers for renames, too, in the future. */
 
   return SVN_NO_ERROR;
 }
