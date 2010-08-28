@@ -1236,11 +1236,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
 
 /* Attempt to write LEN bytes of DATA to STREAM, the underlying file
  * of which is at ABSPATH. Fail if not all bytes could be written to
- * the stream. Do temporary allocations in POOL.
- * ### stsp: Maybe we can remove this? It's only about checking wether
- * ###       all data was written, but we're usually doing buffered I/O
- * ###       anyway so if the disk or filesystem fails we likely won't
- * ###       see the failure right here. I've never seen this error out. */
+ * the stream. Do temporary allocations in POOL. */
 static svn_error_t *
 try_stream_write(svn_stream_t *stream, const char *abspath,
                  const char *data, apr_size_t len, apr_pool_t *pool)
