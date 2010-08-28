@@ -194,7 +194,6 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
  * using RA_SESSION and WC_CTX, and return the result in *ADJUSTED_PATH.
  * ORIG_TARGET is one of the original targets passed to the diff command,
  * and may be used to derive leading path components missing from PATH.
- * IS_REPOS_REPOS_DIFF indicates whether we're doing a repos-repos diff.
  * WC_ROOT_ABSPATH is the absolute path to the root directory of a working
  * copy involved in a repos-wc diff, and may be NULL.
  * Do all allocations in POOL. */
@@ -204,7 +203,6 @@ adjust_relative_to_repos_root(const char **adjusted_path,
                               const char *orig_target,
                               svn_ra_session_t *ra_session,
                               svn_wc_context_t *wc_ctx,
-                              svn_boolean_t is_repos_repos_diff,
                               const char *wc_root_abspath,
                               apr_pool_t *pool)
 {
@@ -222,20 +220,7 @@ adjust_relative_to_repos_root(const char **adjusted_path,
       return SVN_NO_ERROR;
     }
 
-  /* If we're doing a repos-repos diff, there are no local paths involved.
-   * Ask the repository how ORIG_TARGET looks relative to the repository root.
-   * PATH is a child of it. */
-  if (is_repos_repos_diff)
-    {
-      SVN_ERR(svn_ra_get_path_relative_to_root(ra_session,
-                                               &orig_relpath,
-                                               orig_target, pool));
-      *adjusted_path = svn_relpath_join(orig_relpath, path, pool);
-
-      return SVN_NO_ERROR;
-    }
-
-  /* Now deal with the repos->wc diff case.
+  /* Now deal with the repos-repos and repos->wc diff cases.
    * We need to make PATH appear as a child of ORIG_TARGET.
    * ORIG_TARGET is either a URL or a path to a working copy. First,
    * find out what ORIG_TARGET looks like relative to the repository root.*/
@@ -252,8 +237,9 @@ adjust_relative_to_repos_root(const char **adjusted_path,
                                              orig_abspath, pool, pool));
     }
 
-  /* PATH is either a child of the working copy involved in the diff,
-   * or it's a relative path we can readily use. */
+  /* PATH is either a child of the working copy involved in the diff (in
+   * the repos-wc diff case), or it's a relative path we can readily use
+   * (in either the repos-repos or the repos-wc diff cases). */
   child_relpath = NULL;
   if (wc_root_abspath)
     {
@@ -491,14 +477,10 @@ print_git_diff_header(svn_stream_t *os,
 
   SVN_ERR(adjust_relative_to_repos_root(&repos_relpath1, path, path1,
                                         ra_session, wc_ctx,
-                                        svn_path_is_url(path1) &&
-                                          svn_path_is_url(path2),
                                         wc_root_abspath,
                                         scratch_pool));
   SVN_ERR(adjust_relative_to_repos_root(&repos_relpath2, path, path2,
                                         ra_session, wc_ctx,
-                                        svn_path_is_url(path1) &&
-                                          svn_path_is_url(path2),
                                         wc_root_abspath,
                                         scratch_pool));
 
@@ -600,14 +582,10 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     {
       SVN_ERR(adjust_relative_to_repos_root(&path1, path, orig_path1,
                                             ra_session, wc_ctx,
-                                            svn_path_is_url(path1) &&
-                                              svn_path_is_url(path2),
                                             wc_root_abspath,
                                             pool));
       SVN_ERR(adjust_relative_to_repos_root(&path2, path, orig_path2,
                                             ra_session, wc_ctx,
-                                            svn_path_is_url(path1) &&
-                                              svn_path_is_url(path2),
                                             wc_root_abspath,
                                             pool));
     }
