@@ -1614,7 +1614,8 @@ svn_wc_entries_read(apr_hash_t **entries,
 }
 
 
-/* */
+/* No transaction required: called from write_entry which is itself
+   transaction-wrapped. */
 static svn_error_t *
 insert_base_node(svn_sqlite__db_t *sdb,
                  const db_base_node_t *base_node,
@@ -1622,6 +1623,9 @@ insert_base_node(svn_sqlite__db_t *sdb,
 {
   svn_sqlite__stmt_t *stmt;
 
+  /* ### NODE_DATA when switching to NODE_DATA, replace the
+     query below with STMT_INSERT_BASE_NODE_DATA_FOR_ENTRY_1
+     and adjust the parameters bound. Can't do that yet. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_INSERT_BASE_NODE_FOR_ENTRY));
 
@@ -1689,7 +1693,69 @@ insert_base_node(svn_sqlite__db_t *sdb,
                                         scratch_pool));
 
   /* Execute and reset the insert clause. */
-  return svn_error_return(svn_sqlite__insert(NULL, stmt));
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+#ifdef SVN_WC__NODE_DATA
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_INSERT_BASE_NODE_DATA_FOR_ENTRY_2));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, base_node->wc_id));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 2, base_node->local_relpath));
+
+  if (base_node->parent_relpath)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 3, base_node->parent_relpath));
+
+  if (base_node->presence == svn_wc__db_status_not_present)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "not-present"));
+  else if (base_node->presence == svn_wc__db_status_normal)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "normal"));
+  else if (base_node->presence == svn_wc__db_status_absent)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "absent"));
+  else if (base_node->presence == svn_wc__db_status_incomplete)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "incomplete"));
+  else if (base_node->presence == svn_wc__db_status_excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "excluded"));
+
+#ifndef SVN_WC__SINGLE_DB
+  /* ### in per-subdir operation, if we're about to write a directory and
+     ### it is *not* "this dir", then we're writing a row in the parent
+     ### directory about the child. note that in the kind.  */
+  if (base_node->kind == svn_node_dir && *base_node->local_relpath != '\0')
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "subdir"));
+  else
+#endif
+  /* ### kind might be "symlink" or "unknown" */
+  if (base_node->kind == svn_node_none)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "unknown"));
+  else
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5,
+                                  svn_node_kind_to_word(base_node->kind)));
+
+  if (base_node->checksum)
+    SVN_ERR(svn_sqlite__bind_checksum(stmt, 6, base_node->checksum,
+                                      scratch_pool));
+
+  /* ### strictly speaking, changed_rev should be valid for present nodes. */
+  if (SVN_IS_VALID_REVNUM(base_node->changed_rev))
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->changed_rev));
+  if (base_node->changed_date)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 8, base_node->changed_date));
+  if (base_node->changed_author)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 9, base_node->changed_author));
+
+  SVN_ERR(svn_sqlite__bind_text(stmt, 10, svn_depth_to_word(base_node->depth)));
+
+  if (base_node->properties)
+    SVN_ERR(svn_sqlite__bind_properties(stmt, 11, base_node->properties,
+                                        scratch_pool));
+
+  /* Execute and reset the insert clause. */
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+
+#endif
+  return SVN_NO_ERROR;
 }
 
 /* */
