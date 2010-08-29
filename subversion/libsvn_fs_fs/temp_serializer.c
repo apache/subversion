@@ -148,10 +148,10 @@ serialize_svn_string(svn_temp_serializer__context_t *context,
 static void
 deserialize_svn_string(void *buffer, svn_string_t **string)
 {
+  svn_temp_deserializer__resolve(buffer, (void **)string);
   if (*string == NULL)
     return;
 
-  svn_temp_deserializer__resolve(buffer, (void **)string);
   svn_temp_deserializer__resolve(*string, (void **)&(*string)->data);
 }
 
@@ -186,10 +186,10 @@ serialize_checksum(svn_temp_serializer__context_t *context,
 static void
 deserialize_checksum(void *buffer, svn_checksum_t * const *cs)
 {
+  svn_temp_deserializer__resolve(buffer, (void **)cs);
   if (*cs == NULL)
     return;
 
-  svn_temp_deserializer__resolve(buffer, (void **)cs);
   svn_temp_deserializer__resolve(*cs, (void **)&(*cs)->digest);
 }
 
@@ -227,12 +227,12 @@ deserialize_representation(void *buffer,
                            representation_t **representation)
 {
   representation_t *rep;
-  if (*representation == NULL)
-    return;
 
   /* fixup the reference to the representation itself */
   svn_temp_deserializer__resolve(buffer, (void **)representation);
   rep = *representation;
+  if (rep == NULL)
+    return;
 
   /* fixup of sub-structures */
   deserialize_checksum(rep, &rep->md5_checksum);
@@ -387,8 +387,6 @@ svn_fs_fs__noderev_deserialize(void *buffer,
                                node_revision_t **noderev_p)
 {
   node_revision_t *noderev;
-  if (*noderev_p == NULL)
-    return;
 
   /* fixup the reference to the representation itself,
    * if this is part of a parent structure. */
@@ -396,6 +394,8 @@ svn_fs_fs__noderev_deserialize(void *buffer,
     svn_temp_deserializer__resolve(buffer, (void **)noderev_p);
 
   noderev = *noderev_p;
+  if (noderev == NULL)
+    return;
 
   /* fixup of sub-structures */
   svn_fs_fs__id_deserialize(noderev, (svn_fs_id_t **)&noderev->id);

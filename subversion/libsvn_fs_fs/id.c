@@ -369,14 +369,14 @@ deserialize_id_private(void *buffer, id_private_t **pvt)
 void
 svn_fs_fs__id_deserialize(void *buffer, svn_fs_id_t **id)
 {
-  /* no id, no fixup necessary */
-  if (*id == NULL)
-    return;
-
   /* The id maybe all what is in the whole buffer.
    * Don't try to fixup the pointer in that case*/
   if (*id != buffer)
     svn_temp_deserializer__resolve(buffer, (void**)id);
+
+  /* no id, no sub-structure fixup necessary */
+  if (*id == NULL)
+    return;
 
   /* the stored vtable is bogus at best -> set the right one */
   (*id)->vtable = &id_vtable;
