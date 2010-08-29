@@ -440,6 +440,18 @@ get_group_index(svn_membuffer_t *cache,
   return hash % cache->group_count;
 }
 
+/* Reduce the hit count of ENTRY and update the accumunated hit info
+ * in CACHE accordingly.
+ */
+static APR_INLINE void
+let_entry_age(svn_membuffer_t *cache, entry_t *entry)
+{
+  apr_uint32_t hits_removed = (entry->hit_count + 1) >> 1;
+
+  cache->hit_count -= hits_removed;
+  entry->hit_count -= hits_removed;
+}
+
 /* Given the GROUP_INDEX that shall contain an entry with the hash key
  * TO_FIND, find that entry in the specified group. 
  *
@@ -498,21 +510,18 @@ find_entry(svn_membuffer_t *cache,
        */
       if (entry == NULL)
         {
-          for (i = 0; i < GROUP_SIZE; ++i)
-            if (entry == NULL || entry->hit_count > group[i].hit_count)
+          entry = &group[0];
+          for (i = 1; i < GROUP_SIZE; ++i)
+            if (entry->hit_count > group[i].hit_count)
               entry = &group[i];
 
+          /* for the entries that don't have been removed,
+           * reduce their hitcounts to put them at a relative
+           * disadvantage the next time.
+           */
           for (i = 0; i < GROUP_SIZE; ++i)
             if (entry != &group[i])
-              {
-                /* for the entries that don't have been removed,
-                 * reduce their hitcounts to put them at a relative
-                 * disadvantage the next time.
-                 */
-                apr_uint32_t hits_left = entry->hit_count >>= 1;
-                cache->hit_count -= entry->hit_count - hits_left;
-                entry->hit_count = hits_left;
-              }
+              let_entry_age(cache, entry);
 
           drop_entry(cache, entry);
         }
@@ -534,9 +543,7 @@ move_entry(svn_membuffer_t *cache, entry_t *entry)
    * hit count so that its removal gets more likely in the next
    * run unless someone read / hit this entry in the meantime.
    */
-  apr_uint32_t hits_left = entry->hit_count >>= 1;
-  cache->hit_count -= entry->hit_count - hits_left;
-  entry->hit_count = hits_left;
+  let_entry_age(cache, entry);
 
   /* Move the entry to the start of the empty / insertion section 
    * (if it isn't there already) 
@@ -556,19 +563,32 @@ move_entry(svn_membuffer_t *cache, entry_t *entry)
 }
 
 /* If necessary, enlarge the insertion window until it is at least
- * SIZE bytes long. SIZE must not exceed the data buffer size;
+ * SIZE bytes long. SIZE must not exceed the data buffer size.
+ * Return TRUE if enough room could be found or made. A FALSE result
+ * indicates that the respective item shall not be added.
  */
-static void
+static svn_boolean_t
 ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
 {
-  int average_hits;
-  int threashold;
   entry_t *entry;
 
-  /* Make sure that this function actually terminates.
+  /* accumulated size of the entries that have been removed to make
+   * room for the new one.
    */
-  assert(cache->data_size >= size);
+  apr_size_t drop_size = 0;
 
+  /* This loop will eventually terminate because every cache entry
+   * will get dropped eventually:
+   * - hit counts become 0 after the got kept for 32 full scans
+   * - larger elements get dropped as soon as their hit count is 0
+   * - smaller and smaller elements get removed as the average
+   *   entry size drops (average drops by a factor of 8 per scan)
+   * - after no more than 43 full scans, all elements would be removed
+   *
+   * Since size is < 16th of the cache size and about 50% of all
+   * entries get removed by a scan, it is very unlikely that more
+   * than a fractional scan will be necessary.
+   */
   while (1)
     {
       /* first offset behind the insertion window
@@ -580,7 +600,18 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
       /* leave function as soon as the insertion window is large enough
        */
       if (end - cache->current_data >= size)
-        return;
+        return TRUE;
+
+      /* Don't be too eager to cache data. Smaller items will fit into
+       * the cache after dropping a single item. Of the larger ones, we
+       * will only accept about 50%. They are also likely to get evicted
+       * soon due to their notorious low hit counts.
+       *
+       * As long as enough similarly or even larger sized entries already
+       * exist in the cache, a lot less of insert requests will be rejected.
+       */
+      if (2 * drop_size > size)
+        return FALSE;
 
       /* try to enlarge the insertion window
        */
@@ -596,26 +627,46 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
         }
       else
         {
-          /* Roll the dice and determine a threashold somewhere from 0 up
-           * to 2 times the average hit count. 
-           */
-          average_hits = cache->hit_count / cache->used_entries;
-          if (average_hits < 1)
-            average_hits = 1;
-
-          threashold = rand() % (2 * average_hits);
-
-          /* Drop the entry from the end of the insertion window, if it has
-           * been hit less than the threashold. Otherwise, keep it and move
-           * the insertion window one entry further.
-           */
           entry = get_entry(cache, cache->next);
-          if (entry->hit_count >= threashold)
-            move_entry(cache, entry);
+
+          /* Keep that are very small. Those are likely to be data headers
+           * or similar management structures. So, they are probably
+           * important while not occupying much space.
+           * But keep them only as long as they are a minority.
+           */
+          if (   (apr_uint64_t)entry->size * cache->used_entries
+               < cache->data_used / 8)
+            {
+              move_entry(cache, entry);
+            }
           else
-            drop_entry(cache, entry);
+            {
+              /* Roll the dice and determine a threshold somewhere from 0 up
+               * to 2 times the average hit count.
+               */
+              int average_hit_value = cache->hit_count / cache->used_entries;
+              int threshold = (average_hit_value+1) * (rand() % 4096) / 2048;
+
+              /* Drop the entry from the end of the insertion window, if it
+               * has been hit less than the threshold. Otherwise, keep it and
+               * move the insertion window one entry further.
+               */
+              if (entry->hit_count >= threshold)
+                {
+                  move_entry(cache, entry);
+                }
+              else
+                {
+                  drop_size += entry->size;
+                  drop_entry(cache, entry);
+                }
+            }
         }
     }
+
+  /* This will never be reached. But if it was, "can't insert" was the
+   * right answer. */
+  return FALSE;
 }
 
 /* Create a new membuffer cache instance. If the TOTAL_SIZE of the
@@ -775,12 +826,10 @@ membuffer_cache_set(svn_membuffer_t *cache,
    */
   SVN_ERR(lock_cache(cache));
 
-  if (cache->data_size / 4 > size)
+  /* if necessary, enlarge the insertion window.
+   */
+  if (cache->data_size / 4 > size && ensure_data_insertable(cache, size))
     {
-      /* if necessary, enlarge the insertion window.
-       */
-      ensure_data_insertable(cache, size);
-
       /* Remove old data for this key, if it that exists.
        * Get an unused entry for the key and and initialize it with
        * the serialized item's (future) posion within data buffer.
