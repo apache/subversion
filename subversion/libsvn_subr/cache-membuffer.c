@@ -539,6 +539,8 @@ find_entry(svn_membuffer_t *cache,
 static void
 move_entry(svn_membuffer_t *cache, entry_t *entry)
 {
+  apr_size_t size = align_entry(entry->size);
+
   /* This entry survived this cleansing run. Reset half of its
    * hit count so that its removal gets more likely in the next
    * run unless someone read / hit this entry in the meantime.
@@ -546,19 +548,22 @@ move_entry(svn_membuffer_t *cache, entry_t *entry)
   let_entry_age(cache, entry);
 
   /* Move the entry to the start of the empty / insertion section 
-   * (if it isn't there already) 
+   * (if it isn't there already). Size-aligned moves are legal
+   * since all offsets and block sizes share this same aligment.
+   * Size-aligned moves tend to be faster than non-aligned ones
+   * because no "odd" bytes at the end need to special treatment. 
    */
   if (entry->offset != cache->current_data)
     {
       memmove(cache->data + cache->current_data,
               cache->data + entry->offset,
-              entry->size);
+              size);
       entry->offset = cache->current_data;
     }
 
   /* The insertion position is now directly behind this entry.
    */
-  cache->current_data = align_entry(entry->offset + entry->size);
+  cache->current_data = entry->offset + size;
   cache->next = entry->next;
 }
 
@@ -876,7 +881,8 @@ membuffer_cache_get(svn_membuffer_t *cache,
   apr_uint32_t group_index;
   unsigned char to_find[KEY_SIZE];
   entry_t *entry;
-  char* buffer;
+  char *buffer;
+  apr_size_t size;
 
   /* find the entry group that will hold the key.
    */
@@ -903,8 +909,10 @@ membuffer_cache_get(svn_membuffer_t *cache,
       return unlock_cache(cache, SVN_NO_ERROR);
     }
 
-  buffer = apr_palloc(pool, entry->size);
-  memcpy(buffer, (const char*)cache->data + entry->offset, entry->size);
+  size = align_entry(entry->size);
+  buffer = (char *)align_entry
+               ((apr_size_t)apr_palloc(pool, size + ITEM_ALIGNMENT-1));
+  memcpy(buffer, (const char*)cache->data + entry->offset, size);
 
   /* update hit statistics
    */
