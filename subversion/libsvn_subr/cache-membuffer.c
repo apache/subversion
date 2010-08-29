@@ -694,7 +694,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   int i, k;
 
   /* We use this sub-pool to allocate the data buffer and the dictionary
-   * so that we can release that memory easily upon OOM.
+   * so that we can release this memory easily upon OOM.
    */
   apr_pool_t *sub_pool = svn_pool_create(pool);
 
@@ -835,7 +835,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
    */
   if (cache->data_size / 4 > size && ensure_data_insertable(cache, size))
     {
-      /* Remove old data for this key, if it that exists.
+      /* Remove old data for this key, if that exists.
        * Get an unused entry for the key and and initialize it with
        * the serialized item's (future) posion within data buffer.
        */
