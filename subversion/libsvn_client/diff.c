@@ -1849,8 +1849,9 @@ diff_repos_wc(const char *path1,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
   callback_baton->ra_session = ra_session;
-  callback_baton->wc_root_abspath = find_wc_root(anchor_abspath, ctx->wc_ctx,
-                                                 pool, pool);
+  if (use_git_diff_format)
+    callback_baton->wc_root_abspath = find_wc_root(anchor_abspath, ctx->wc_ctx,
+                                                   pool, pool);
 
   SVN_ERR(svn_wc_get_diff_editor6(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
