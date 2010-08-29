@@ -279,6 +279,7 @@ svn_temp_deserializer__resolve(void *buffer, void **ptr)
     {
       /* replace the offset in *ptr with the pointer to buffer[*ptr] */
       (*(const char **)ptr) = (const char*)buffer + (apr_size_t)*ptr;
+      assert(*ptr > buffer);
     }
   else
     {
