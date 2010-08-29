@@ -142,7 +142,6 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
                           const void * const * source_pointer)
 {
   apr_size_t ptr_offset;
-  apr_size_t target_offset;
   apr_size_t *target_ptr;
 
   /* if *source_pointer is the root struct, there will be no parent structure
@@ -150,11 +149,10 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
   if (context->source == NULL)
     return;
 
-  /* relative position of the serialized pointer to the begin of the buffer */
+  /* position of the serialized pointer relative to the begin of the buffer */
   ptr_offset = (const char *)source_pointer
              - (const char *)context->source->source_struct
              + context->source->target_offset;
-  target_offset = context->buffer->len - context->source->target_offset;
 
   /* the offset must be within the serialized data. Otherwise, you forgot
    * to serialize the respective sub-struct. */
@@ -165,7 +163,9 @@ store_current_end_pointer(svn_temp_serializer__context_t *context,
 
   /* store the current buffer length because that's where we will append
    * the serialized data of the sub-struct or string */
-  *target_ptr = *source_pointer == NULL ? 0 : target_offset;
+  *target_ptr = *source_pointer == NULL 
+              ? 0
+              : context->buffer->len - context->source->target_offset;
 }
 
 /* Begin serialization of a referenced sub-structure within the
@@ -247,7 +247,7 @@ svn_temp_serializer__set_null(svn_temp_serializer__context_t *context,
   /* there must be a parent structure */
   assert(context->source);
 
-  /* relative position of the serialized pointer to the begin of the buffer */
+  /* position of the serialized pointer relative to the begin of the buffer */
   offset = (const char *)ptr
          - (const char *)context->source->source_struct
          + context->source->target_offset;
