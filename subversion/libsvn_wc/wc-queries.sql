@@ -748,6 +748,22 @@ insert or replace into working_node (
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
   ?15, ?16, ?17, ?18, ?19, ?20);
 
+-- STMT_INSERT_WORKING_NODE_DATA_1
+insert or replace into node_data (
+  wc_id, local_relpath, op_depth, parent_relpath, presence, kind,
+  original_repos_id, original_repos_path, original_revision, checksum,
+  changed_revision, changed_date, changed_author, depth, properties,
+  symlink_target )
+values (?1,  ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9,
+        ?10, ?11, ?12, ?13, ?14, ?15, ?16 );
+
+-- STMT_INSERT_WORKING_NODE_DATA_2
+insert or replace into working_node (
+  wc_id, local_relpath, parent_relpath, moved_here, moved_to, translated_size,
+  last_mod_time, keep_local )
+values (?1,  ?2, ?3, ?4, ?5, ?6, ?7, ?8 );
+
+
 -- STMT_INSERT_ACTUAL_NODE
 insert or replace into actual_node (
   wc_id, local_relpath, parent_relpath, properties, conflict_old,
