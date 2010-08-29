@@ -1121,14 +1121,12 @@ svn_fs_fs__dag_deserialize(void **out,
                            apr_size_t data_len,
                            apr_pool_t *pool)
 {
-  dag_node_t *node;
+  dag_node_t *node = (dag_node_t *)data;
   if (data_len == 0)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Empty noderev in cache"));
 
   /* Copy the _full_ buffer as it also contains the sub-structures. */
-  node = apr_pcalloc(pool, data_len);
-  memcpy(node, data, data_len);
   node->fs = NULL;
 
   /* fixup all references to sub-structures */
