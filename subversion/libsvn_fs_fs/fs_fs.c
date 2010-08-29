@@ -2792,7 +2792,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   svn_file_handle_cache__handle_t *revision_file;
   apr_file_t *apr_rev_file;
   apr_off_t root_offset;
-  svn_fs_id_t *root_id;
+  svn_fs_id_t *root_id = NULL;
   svn_boolean_t is_cached;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
@@ -3931,7 +3931,7 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  const char *unparsed_id;
+  const char *unparsed_id = NULL;
   apr_hash_t *unparsed_entries, *parsed_entries;
 
   /* Are we looking for an immutable directory?  We could try the
