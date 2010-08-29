@@ -278,7 +278,7 @@ unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
  * for the given IDX.
  */
 static APR_INLINE entry_t *
-get_entry(svn_membuffer_t *cache, apr_size_t idx)
+get_entry(svn_membuffer_t *cache, apr_uint32_t idx)
 {
   return &cache->directory[idx / GROUP_SIZE][idx % GROUP_SIZE];
 }
@@ -288,7 +288,7 @@ get_entry(svn_membuffer_t *cache, apr_size_t idx)
 static APR_INLINE apr_uint32_t
 get_index(svn_membuffer_t *cache, entry_t *entry)
 {
-  return entry - (entry_t *)cache->directory;
+  return (apr_uint32_t)(entry - (entry_t *)cache->directory);
 }
 
 /* Remove the used ENTRY from the CACHE, i.e. make it "unused".
@@ -655,9 +655,18 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   if (directory_size < sizeof(entry_group_t))
     directory_size = sizeof(entry_group_t);
 
-  /* allocate buffers and initialize cache members
+  /* to keep the entries small, we use 32 bit indices only
+   * -> we need to ensure that no more then 4G entries exist
    */
   c->group_count = directory_size / sizeof (entry_group_t);
+  if (c->group_count >= (APR_UINT32_MAX / GROUP_SIZE))
+    {
+      c->group_count = (APR_UINT32_MAX / GROUP_SIZE) - 1;
+      directory_size = c->group_count * sizeof (entry_group_t);
+    }
+
+  /* allocate buffers and initialize cache members
+   */
   c->directory = apr_palloc(sub_pool, c->group_count * sizeof(entry_group_t));
   c->first = -1;
   c->last = -1;
@@ -727,6 +736,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   *cache = c;
   return SVN_NO_ERROR;
 }
+
 
 /* Try to insert the ITEM and use the KEY to unqiuely identify it.
  * However, there is no guarantee that it will actually be put into
@@ -953,6 +963,7 @@ typedef struct svn_membuffer_cache_t
    * but not too frequently.
    */
   int alloc_counter;
+
 } svn_membuffer_cache_t;
 
 /* After an estimated ALLOCATIONS_PER_POOL_CLEAR allocations, we should
@@ -1126,10 +1137,12 @@ static svn_boolean_t
 svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
 {
   /* Don't allow extremely large element sizes. Otherwise, the cache
-   * might by thrashed by a few extremely large entries.
+   * might by thrashed by a few extremely large entries. And the size
+   * must be small enough to be stored in a 32 bit value.
    */
   svn_membuffer_cache_t *cache = cache_void;
-  return size < cache->membuffer->data_size / 16;
+  return (size < cache->membuffer->data_size / 16)
+      && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
 }
 
 /* the v-table for membuffer-based caches
@@ -1170,7 +1183,6 @@ deserialize_svn_stringbuf(void **item,
 
   value_str->data = (char*)buffer;
   value_str->len = buffer_size-1;
-
   *item = value_str;
 
   return SVN_NO_ERROR;
