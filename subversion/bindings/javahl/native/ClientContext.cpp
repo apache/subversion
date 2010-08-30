@@ -32,7 +32,7 @@
 #include "JNICriticalSection.h"
 
 #include "Prompter.h"
-#include "ClientNotifyCallback.h"
+#include "CreateJ.h"
 #include "ProgressListener.h"
 #include "CommitMessage.h"
 #include "ConflictResolverCallback.h"
@@ -44,14 +44,41 @@ struct log_msg_baton
     CommitMessage *messageHandler;
 };
 
-ClientContext::ClientContext()
-    : m_notify2(NULL),
-      m_progressListener(NULL),
+ClientContext::ClientContext(jobject jsvnclient)
+    : m_progressListener(NULL),
       m_prompter(NULL),
       m_commitMessage(NULL),
       m_conflictResolver(NULL)
 {
+    JNIEnv *env = JNIUtil::getEnv();
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
+
+    /* Grab a global reference to the Java object embedded in the parent Java
+       object. */
+    static jfieldID ctxFieldID = 0;
+    if (ctxFieldID == 0)
+    {
+        jclass clazz = env->GetObjectClass(jsvnclient);
+        if (JNIUtil::isJavaExceptionThrown())
+            return;
+
+        ctxFieldID = env->GetFieldID(clazz, "clientContext",
+                                "L"JAVA_PACKAGE"/SVNClient$ClientContext;");
+        if (JNIUtil::isJavaExceptionThrown() || ctxFieldID == 0)
+            return;
+
+        env->DeleteLocalRef(clazz);
+    }
+
+    jobject jctx = env->GetObjectField(jsvnclient, ctxFieldID);
+    if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+    m_jctx = env->NewGlobalRef(jctx);
+    if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+    env->DeleteLocalRef(jctx);
 
     /* Create a long-lived client context object in the global pool. */
     SVN_JNI_ERR(svn_client_create_context(&persistentCtx, JNIUtil::getPool()),
@@ -64,17 +91,20 @@ ClientContext::ClientContext()
     persistentCtx->log_msg_func3 = getCommitMessage;
     persistentCtx->cancel_func = checkCancel;
     persistentCtx->cancel_baton = this;
-    persistentCtx->notify_func2= ClientNotifyCallback::notify;
+    persistentCtx->notify_func2= notify;
+    persistentCtx->notify_baton2 = m_jctx;
     persistentCtx->progress_func = ProgressListener::progress;
 }
 
 ClientContext::~ClientContext()
 {
-    delete m_notify2;
     delete m_progressListener;
     delete m_prompter;
     delete m_commitMessage;
     delete m_conflictResolver;
+
+    JNIEnv *env = JNIUtil::getEnv();
+    env->DeleteGlobalRef(m_jctx);
 }
 
 svn_client_ctx_t *
@@ -184,7 +214,6 @@ ClientContext::getContext(const char *message)
 
     ctx->auth_baton = ab;
     ctx->log_msg_baton3 = getCommitMessageBaton(message);
-    ctx->notify_baton2 = m_notify2;
     m_cancelOperation = false;
 
     ctx->progress_baton = m_progressListener;
@@ -264,13 +293,6 @@ ClientContext::setPrompt(Prompter *prompter)
 }
 
 void
-ClientContext::notification2(ClientNotifyCallback *notify2)
-{
-    delete m_notify2;
-    m_notify2 = notify2;
-}
-
-void
 ClientContext::setConflictResolver(ConflictResolverCallback *conflictResolver)
 {
     delete m_conflictResolver;
@@ -323,4 +345,38 @@ ClientContext::checkCancel(void *cancelBaton)
                                 _("Operation canceled"));
     else
         return SVN_NO_ERROR;
+}
+
+void
+ClientContext::notify(void *baton,
+                      const svn_wc_notify_t *notify,
+                      apr_pool_t *pool)
+{
+  jobject jctx = (jobject) baton;
+  JNIEnv *env = JNIUtil::getEnv();
+
+  static jmethodID mid = 0;
+  if (mid == 0)
+    {
+      jclass clazz = env->GetObjectClass(jctx);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      mid = env->GetMethodID(clazz, "onNotify",
+                             "(L"JAVA_PACKAGE"/ClientNotifyInformation;)V");
+      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
+        return;
+
+      env->DeleteLocalRef(clazz);
+    }
+
+  jobject jInfo = CreateJ::ClientNotifyInformation(notify, pool);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  env->CallVoidMethod(jctx, mid, jInfo);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  env->DeleteLocalRef(jInfo);
 }

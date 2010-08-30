@@ -26,7 +26,6 @@
 
 #include "SVNClient.h"
 #include "JNIUtil.h"
-#include "ClientNotifyCallback.h"
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
 #include "ConflictResolverCallback.h"
@@ -71,8 +70,8 @@
 #include <sstream>
 
 
-SVNClient::SVNClient()
-    : context()
+SVNClient::SVNClient(jobject jthis_in)
+    : context(jthis_in)
 {
 }
 

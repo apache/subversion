@@ -50,13 +50,13 @@ class ClientContext
 {
  private:
   svn_client_ctx_t *persistentCtx;
+  jobject m_jctx;
 
   std::string m_userName;
   std::string m_passWord;
   std::string m_configDir;
 
   Prompter *m_prompter;
-  ClientNotifyCallback *m_notify2;
   ConflictResolverCallback *m_conflictResolver;
   ProgressListener *m_progressListener;
   bool m_cancelOperation;
@@ -77,7 +77,7 @@ class ClientContext
    */
   void *getCommitMessageBaton(const char *message);
  public:
-  ClientContext();
+  ClientContext(jobject jsvnclient);
   ~ClientContext();
 
   static svn_error_t *checkCancel(void *cancelBaton);
@@ -87,7 +87,6 @@ class ClientContext
   void username(const char *pi_username);
   void password(const char *pi_password);
   void setPrompt(Prompter *prompter);
-  void notification2(ClientNotifyCallback *notify2);
   void setConflictResolver(ConflictResolverCallback *conflictResolver);
   void setProgressListener(ProgressListener *listener);
   void commitMessageHandler(CommitMessage *commitMessage);
@@ -100,6 +99,9 @@ class ClientContext
    * specified location.
    */
   void setConfigDirectory(const char *configDir);
+
+  static void notify(void *baton, const svn_wc_notify_t *notify,
+                     apr_pool_t *pool);
 };
 
 #endif // CLIENTCONTEXT_H
