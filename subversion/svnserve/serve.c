@@ -1670,8 +1670,6 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
-  apr_uint64_t send_copyfrom_param;
-  svn_boolean_t send_copyfrom_args;
 
   /* Parse the arguments. */
   if (params->nelts == 5)
@@ -1684,11 +1682,10 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else
     {
-      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbcb?w?B",
+      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbcb?w",
                                      &rev, &target, &recurse,
                                      &ignore_ancestry, &versus_url,
-                                     &text_deltas, &depth_word, 
-                                     &send_copyfrom_param));
+                                     &text_deltas, &depth_word));
     }
   target = svn_uri_canonicalize(target, pool);
   versus_url = svn_uri_canonicalize(versus_url, pool);
@@ -1697,9 +1694,6 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     depth = svn_depth_from_word(depth_word);
   else
     depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
-
-  send_copyfrom_args = (send_copyfrom_param == SVN_RA_SVN_UNSPECIFIED_NUMBER) ?
-      FALSE : (svn_boolean_t) send_copyfrom_param;
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
@@ -1714,8 +1708,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     svn_revnum_t from_rev;
     SVN_ERR(accept_report(NULL, &from_rev,
                           conn, pool, b, rev, target, versus_path,
-                          text_deltas, depth, send_copyfrom_args, 
-                          ignore_ancestry));
+                          text_deltas, depth, FALSE, ignore_ancestry));
     SVN_ERR(log_command(b, conn, pool, "%s",
                         svn_log__diff(full_path, from_rev, versus_path,
                                       rev, depth, ignore_ancestry,

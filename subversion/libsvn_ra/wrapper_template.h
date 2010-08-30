@@ -361,7 +361,7 @@ static svn_error_t *compat_do_diff(void *session_baton,
   svn_depth_t depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(VTBL.do_diff(session_baton, &reporter3, &baton3, revision,
-                       diff_target, depth, FALSE, ignore_ancestry, TRUE,
+                       diff_target, depth, ignore_ancestry, TRUE,
                        versus_url, diff_editor, diff_baton, pool));
 
   compat_wrap_reporter(reporter, report_baton, reporter3, baton3, pool);
