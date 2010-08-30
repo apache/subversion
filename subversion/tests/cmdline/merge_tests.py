@@ -1652,6 +1652,8 @@ def merge_into_missing(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  
+  single_db = svntest.main.wc_is_singledb(wc_dir)
 
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   F_url = sbox.repo_url + '/A/B/F'
@@ -1715,14 +1717,21 @@ def merge_into_missing(sbox):
     ''      : Item(status='  ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
     'Q'     : Item(status='! ', wc_rev='?'),
-# In some intermediate WC-NG state (since r937468) this was:
-#   'Q'     : Item(status='! ', wc_rev='2', entry_rev='?'),
-# but the expected value is now back what it was.
     })
   expected_skip = wc.State(F_path, {
     'Q'   : Item(),
     'foo' : Item(),
     })
+    
+  if single_db:
+    # Revision not lost
+    expected_status.tweak('Q', wc_rev=2)
+    # Missing data still available
+    expected_status.add({
+      'Q/R'      : Item(status='! ', wc_rev='3'),
+      'Q/R/bar'  : Item(status='! ', wc_rev='3'),
+      'Q/baz'    : Item(status='! ', wc_rev='3'),
+    })    
 
   ### Need to real and dry-run separately since real merge notifies Q
   ### twice!
@@ -1740,14 +1749,23 @@ def merge_into_missing(sbox):
     ''      : Item(status=' M', wc_rev=1),
     'foo'   : Item(status='!M', wc_rev=2),
     'Q'     : Item(status='! ', wc_rev='?'),
-# In some intermediate WC-NG state (since r937468) this was:
-#   'Q'     : Item(status='! ', wc_rev='2', entry_rev='?'),
-# but the expected value is now back what it was.
     })
   expected_mergeinfo_output = wc.State(F_path, {
     ''    : Item(status=' U'),
     'foo' : Item(status=' U'), # Mergeinfo is set on missing/obstructed files.
     })
+    
+  if single_db:
+    # Revision is known and we can record mergeinfo
+    expected_status.tweak('Q', wc_rev='2', entry_rev='?')
+    expected_mergeinfo_output.add({'Q' : Item(status=' U')})
+    # Missing data still available
+    expected_status.add({
+      'Q/R'      : Item(status='! ', wc_rev='3'),
+      'Q/R/bar'  : Item(status='! ', wc_rev='3'),
+      'Q/baz'    : Item(status='! ', wc_rev='3'),
+    })    
+
   svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url, None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -1774,10 +1792,18 @@ def merge_into_missing(sbox):
     'A/B/F'     : Item(status=' M', wc_rev=1),
     'A/B/F/foo' : Item(status='!M', wc_rev=2),
     'A/B/F/Q'   : Item(status='! ', wc_rev='?'),
-# In some intermediate WC-NG state (since r937468) this was:
-#  'A/B/F/Q'   : Item(status='! ', wc_rev='2', entry_rev='?'),
-# but the expected value is now back what it was.
     })
+  if single_db:
+    # Revision known and mergeinfo recorded
+    expected_status.tweak('A/B/F/Q', wc_rev='2')
+    # Missing data still available
+    expected_status.add({
+      'A/B/F/Q'        : Item(status='! ', wc_rev='2'),
+      'A/B/F/Q/baz'    : Item(status='! ', wc_rev='3'),
+      'A/B/F/Q/R'      : Item(status='! ', wc_rev='3'),
+      'A/B/F/Q/R/bar'  : Item(status='! ', wc_rev='3'),
+    })
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
