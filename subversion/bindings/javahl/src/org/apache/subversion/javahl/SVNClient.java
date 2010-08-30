@@ -189,7 +189,10 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void setProgressCallback(ProgressCallback listener);
+    public void setProgressCallback(ProgressCallback listener)
+    {
+        clientContext.listener = listener;
+    }
 
     /**
      * @since 1.0
@@ -647,14 +650,21 @@ public class SVNClient implements ISVNClient
      * persist in this object, such as notification handlers.
      */
     private class ClientContext
-        implements ClientNotifyCallback
+        implements ClientNotifyCallback, ProgressCallback
     {
         public ClientNotifyCallback notify = null;
+        public ProgressCallback listener = null;
 
         public void onNotify(ClientNotifyInformation notifyInfo)
         {
             if (notify != null)
                 notify.onNotify(notifyInfo);
+        }
+
+        public void onProgress(ProgressEvent event)
+        {
+            if (listener != null)
+                listener.onProgress(event);
         }
     }
 }

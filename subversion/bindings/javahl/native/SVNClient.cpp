@@ -30,7 +30,6 @@
 #include "DiffSummaryReceiver.h"
 #include "ConflictResolverCallback.h"
 #include "ClientContext.h"
-#include "ProgressListener.h"
 #include "Prompter.h"
 #include "Pool.h"
 #include "Targets.h"

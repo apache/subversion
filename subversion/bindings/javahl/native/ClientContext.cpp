@@ -33,7 +33,6 @@
 
 #include "Prompter.h"
 #include "CreateJ.h"
-#include "ProgressListener.h"
 #include "CommitMessage.h"
 #include "ConflictResolverCallback.h"
 
@@ -45,8 +44,7 @@ struct log_msg_baton
 };
 
 ClientContext::ClientContext(jobject jsvnclient)
-    : m_progressListener(NULL),
-      m_prompter(NULL),
+    : m_prompter(NULL),
       m_commitMessage(NULL),
       m_conflictResolver(NULL)
 {
@@ -93,12 +91,12 @@ ClientContext::ClientContext(jobject jsvnclient)
     persistentCtx->cancel_baton = this;
     persistentCtx->notify_func2= notify;
     persistentCtx->notify_baton2 = m_jctx;
-    persistentCtx->progress_func = ProgressListener::progress;
+    persistentCtx->progress_func = progress;
+    persistentCtx->progress_baton = m_jctx;
 }
 
 ClientContext::~ClientContext()
 {
-    delete m_progressListener;
     delete m_prompter;
     delete m_commitMessage;
     delete m_conflictResolver;
@@ -216,8 +214,6 @@ ClientContext::getContext(const char *message)
     ctx->log_msg_baton3 = getCommitMessageBaton(message);
     m_cancelOperation = false;
 
-    ctx->progress_baton = m_progressListener;
-
     if (m_conflictResolver)
     {
         ctx->conflict_func = ConflictResolverCallback::resolveConflict;
@@ -300,13 +296,6 @@ ClientContext::setConflictResolver(ConflictResolverCallback *conflictResolver)
 }
 
 void
-ClientContext::setProgressListener(ProgressListener *listener)
-{
-    delete m_progressListener;
-    m_progressListener = listener;
-}
-
-void
 ClientContext::setConfigDirectory(const char *configDir)
 {
     // A change to the config directory may necessitate creation of
@@ -379,4 +368,52 @@ ClientContext::notify(void *baton,
     return;
 
   env->DeleteLocalRef(jInfo);
+}
+
+void
+ClientContext::progress(apr_off_t progressVal, apr_off_t total,
+                        void *baton, apr_pool_t *pool)
+{
+  jobject jctx = (jobject) baton;
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  static jmethodID mid = 0;
+  if (mid == 0)
+    {
+      jclass clazz = env->GetObjectClass(jctx);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+
+      mid = env->GetMethodID(clazz, "onProgress",
+                             "(L"JAVA_PACKAGE"/ProgressEvent;)V");
+      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
+        POP_AND_RETURN_NOTHING();
+    }
+
+  static jmethodID midCT = 0;
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressEvent");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  if (midCT == 0)
+    {
+      midCT = env->GetMethodID(clazz, "<init>", "(JJ)V");
+      if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
+        POP_AND_RETURN_NOTHING();
+    }
+
+  // Call the Java method.
+  jobject jevent = env->NewObject(clazz, midCT,
+                                  (jlong) progressVal, (jlong) total);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  env->CallVoidMethod(jctx, mid, jevent);
+  
+  POP_AND_RETURN_NOTHING();
 }
