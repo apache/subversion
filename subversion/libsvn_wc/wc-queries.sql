@@ -347,8 +347,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 -- STMT_UPDATE_NODE_WORKING_EXCLUDED
 UPDATE NODE_DATA SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2 AND
-      op_depth IN (SELECT MAX(op_depth) FROM NODE_DATA
-                   WHERE wc_id = ?1 AND local_relpath = ?2);
+      op_depth IN (SELECT op_depth FROM NODE_DATA
+                   WHERE wc_id = ?1 AND local_relpath = ?2
+                   ORDER BY op_depth DECSC
+                   LIMIT 1);
 
 -- STMT_UPDATE_BASE_PRESENCE
 update base_node set presence= ?3
