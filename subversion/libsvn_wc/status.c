@@ -1627,8 +1627,10 @@ make_dir_baton(void **dir_baton,
      our purposes includes being an external or ignored item). */
   if (status_in_parent
       && (status_in_parent->node_status != svn_wc_status_unversioned)
+#ifndef SVN_WC__SINGLE_DB
       && (status_in_parent->node_status != svn_wc_status_missing)
       && (status_in_parent->node_status != svn_wc_status_obstructed)
+#endif
       && (status_in_parent->node_status != svn_wc_status_external)
       && (status_in_parent->node_status != svn_wc_status_ignored)
       && (status_in_parent->kind == svn_node_dir)
@@ -1811,9 +1813,11 @@ handle_statii(struct edit_baton *eb,
 
       /* Now, handle the status.  We don't recurse for svn_depth_immediates
          because we already have the subdirectories' statii. */
-      if (status->node_status != svn_wc_status_obstructed
+      if (status->versioned && status->kind == svn_node_dir
+#ifndef SVN_WC__SINGLE_DB
+          && status->node_status != svn_wc_status_obstructed
           && status->node_status != svn_wc_status_missing
-          && status->versioned && status->kind == svn_node_dir
+#endif
           && (depth == svn_depth_unknown
               || depth == svn_depth_infinity))
         {
