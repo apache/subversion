@@ -49,6 +49,8 @@ class CommitMessage;
 class ClientContext
 {
  private:
+  svn_client_ctx_t *persistentCtx;
+
   std::string m_userName;
   std::string m_passWord;
   std::string m_configDir;
