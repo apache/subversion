@@ -927,7 +927,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
   return deserializer(item, buffer, entry->size, pool);
 }
 
-svn_error_t* 
+static svn_error_t *
 membuffer_cache_get_partial(svn_membuffer_t *cache,
                             const void *key,
                             apr_size_t key_len,
