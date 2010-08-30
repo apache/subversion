@@ -1255,6 +1255,7 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
                                 void **report_baton,
                                 svn_revnum_t rev, const char *target,
                                 svn_depth_t depth,
+                                svn_boolean_t send_copyfrom_args,
                                 svn_boolean_t ignore_ancestry,
                                 svn_boolean_t text_deltas,
                                 const char *versus_url,
@@ -1266,10 +1267,11 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start a diff. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbcbw", rev,
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbcbwb", rev,
                                target, recurse, ignore_ancestry,
                                versus_url, text_deltas,
-                               svn_depth_to_word(depth)));
+                               svn_depth_to_word(depth),
+                               send_copyfrom_args));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
