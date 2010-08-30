@@ -29,6 +29,7 @@
 
 #include "ClientContext.h"
 #include "JNIUtil.h"
+#include "JNICriticalSection.h"
 
 #include "Prompter.h"
 #include "ClientNotifyCallback.h"
@@ -50,6 +51,11 @@ ClientContext::ClientContext()
       m_commitMessage(NULL),
       m_conflictResolver(NULL)
 {
+    JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
+
+    /* Create a long-lived client context object in the global pool. */
+    SVN_JNI_ERR(svn_client_create_context(&persistentCtx, JNIUtil::getPool()),
+                );
 }
 
 ClientContext::~ClientContext()
@@ -67,8 +73,8 @@ ClientContext::getContext(const char *message)
     SVN::Pool *requestPool = JNIUtil::getRequestPool();
     apr_pool_t *pool = requestPool->pool();
     svn_auth_baton_t *ab;
-    svn_client_ctx_t *ctx;
-    SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
+    svn_client_ctx_t *ctx = persistentCtx;
+    //SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
 
     const char *configDir = m_configDir.c_str();
     if (m_configDir.length() == 0)
