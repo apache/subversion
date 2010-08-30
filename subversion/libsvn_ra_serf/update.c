@@ -2626,7 +2626,6 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
                      svn_revnum_t revision,
                      const char *diff_target,
                      svn_depth_t depth,
-                     svn_boolean_t send_copyfrom_args,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t text_deltas,
                      const char *versus_url,
@@ -2639,9 +2638,8 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
                               session->repos_url.path, versus_url, diff_target,
-                              depth, ignore_ancestry, text_deltas, 
-                              send_copyfrom_args, diff_editor, diff_baton, 
-                              pool);
+                              depth, ignore_ancestry, text_deltas, FALSE,
+                              diff_editor, diff_baton, pool);
 }
 
 svn_error_t *

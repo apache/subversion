@@ -820,13 +820,12 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
                                     status_editor, status_baton, pool);
 }
 
-svn_error_t *svn_ra_do_diff4(svn_ra_session_t *session,
+svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              const svn_ra_reporter3_t **reporter,
                              void **report_baton,
                              svn_revnum_t revision,
                              const char *diff_target,
                              svn_depth_t depth,
-                             svn_boolean_t send_copyfrom_args,
                              svn_boolean_t ignore_ancestry,
                              svn_boolean_t text_deltas,
                              const char *versus_url,
@@ -839,7 +838,7 @@ svn_error_t *svn_ra_do_diff4(svn_ra_session_t *session,
   return session->vtable->do_diff(session,
                                   reporter, report_baton,
                                   revision, diff_target,
-                                  depth, send_copyfrom_args, ignore_ancestry,
+                                  depth, ignore_ancestry,
                                   text_deltas, versus_url, diff_editor,
                                   diff_baton, pool);
 }
