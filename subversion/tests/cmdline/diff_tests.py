@@ -3433,7 +3433,7 @@ def diff_git_format_url_wc(sbox):
   svntest.main.run_svn(None, 'cp', alpha_path, alpha_copied_path)
   svntest.main.file_append(alpha_copied_path, "This is a copy of 'alpha'.\n")
 
-  ### We're not testing copied or moved paths
+  ### We're not testing moved paths
 
   svntest.main.run_svn(None, 'commit', '-m', 'Committing changes', wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
@@ -3478,18 +3478,38 @@ def diff_git_format_url_url(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   new_path = os.path.join(wc_dir, 'new')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  lambda_copied_path = os.path.join(wc_dir, 'A', 'B', 'lambda_copied')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  alpha_copied_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha_copied')
+
   svntest.main.file_append(iota_path, "Changed 'iota'.\n")
   svntest.main.file_append(new_path, "This is the file 'new'.\n")
   svntest.main.run_svn(None, 'add', new_path)
   svntest.main.run_svn(None, 'rm', mu_path)
+  svntest.main.run_svn(None, 'cp', lambda_path, lambda_copied_path)
+  svntest.main.run_svn(None, 'cp', alpha_path, alpha_copied_path)
+  svntest.main.file_append(alpha_copied_path, "This is a copy of 'alpha'.\n")
 
-  ### We're not testing copied or moved paths. When we do, we will not be
-  ### able to identify them as copies/moves until we have editor-v2.
+  ### We do not test moved paths. We propably won't be able to track those
+  ### until we have editor-v2.
 
   svntest.main.run_svn(None, 'commit', '-m', 'Committing changes', wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
 
-  expected_output = make_git_diff_header("A/mu", "A/mu", "revision 1", 
+  expected_output = make_git_diff_header(lambda_copied_path,
+                                         "A/B/lambda_copied",
+                                         "revision 1", "revision 2",
+                                         copyfrom_path="A/B/lambda", cp=True,
+                                         text_changes=False) \
+  + make_git_diff_header(alpha_copied_path, "A/B/E/alpha_copied",
+                         "revision 1", "revision 2",
+                         copyfrom_path="A/B/E/alpha", cp=True,
+                         text_changes=True) + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'alpha'.\n",
+    "+This is a copy of 'alpha'.\n",
+  ] +  make_git_diff_header("A/mu", "A/mu", "revision 1", 
                                          "revision 2", 
                                          delete=True) + [
     "@@ -1 +0,0 @@\n",
@@ -3781,7 +3801,7 @@ test_list = [ None,
               XFail(diff_preexisting_rev_against_local_add),
               diff_git_format_wc_wc,
               XFail(diff_git_format_url_wc),
-              diff_git_format_url_url,
+              XFail(diff_git_format_url_url),
               diff_prop_missing_context,
               diff_prop_multiple_hunks,
               diff_git_empty_files,
