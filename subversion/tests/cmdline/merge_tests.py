@@ -37,6 +37,7 @@ Item = wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
+Wimp = svntest.testcase.Wimp
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
@@ -16082,8 +16083,9 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(merge_automatic_conflict_resolution),
               skipped_files_get_correct_mergeinfo,
-              XFail(committed_case_only_move_and_revert,
-                    is_fs_case_insensitive),
+              Wimp("Needs single-db",
+                   committed_case_only_move_and_revert,
+                   is_fs_case_insensitive),
               merge_into_wc_for_deleted_branch,
               foreign_repos_del_and_props,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
