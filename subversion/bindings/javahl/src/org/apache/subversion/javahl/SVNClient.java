@@ -94,6 +94,8 @@ public class SVNClient implements ISVNClient
      */
     protected long cppAddr;
 
+    private ClientContext clientContext = new ClientContext();
+
     /**
      * @since 1.0
      */
@@ -174,7 +176,10 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.2
      */
-    public native void notification2(ClientNotifyCallback notify);
+    public void notification2(ClientNotifyCallback notify)
+    {
+        clientContext.notify = notify;
+    }
 
     /**
      * @since 1.5
@@ -637,4 +642,19 @@ public class SVNClient implements ISVNClient
                              PatchCallback callback)
             throws ClientException;
 
+    /**
+     * A private class to hold the contextual information required to
+     * persist in this object, such as notification handlers.
+     */
+    private class ClientContext
+        implements ClientNotifyCallback
+    {
+        public ClientNotifyCallback notify = null;
+
+        public void onNotify(ClientNotifyInformation notifyInfo)
+        {
+            if (notify != null)
+                notify.onNotify(notifyInfo);
+        }
+    }
 }

@@ -199,7 +199,7 @@ class SVNClient :public SVNBase
   const char *getLastPath();
   void dispose();
   static SVNClient *getCppObject(jobject jthis);
-  SVNClient();
+  SVNClient(jobject jthis_in);
   virtual ~SVNClient();
  private:
   svn_stream_t *createReadStream(apr_pool_t *pool, const char *path,

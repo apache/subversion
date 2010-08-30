@@ -33,7 +33,6 @@
 #include "Revision.h"
 #include "RevisionRange.h"
 #include "EnumMapper.h"
-#include "ClientNotifyCallback.h"
 #include "ConflictResolverCallback.h"
 #include "ProgressListener.h"
 #include "CommitMessage.h"
@@ -62,7 +61,7 @@ Java_org_apache_subversion_javahl_SVNClient_ctNative
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNClient, ctNative);
-  SVNClient *obj = new SVNClient;
+  SVNClient *obj = new SVNClient(jthis);
   return obj->getCppAddr();
 }
 
@@ -343,24 +342,6 @@ Java_org_apache_subversion_javahl_SVNClient_checkout
                       EnumMapper::toDepth(jdepth),
                       jignoreExternals ? true : false,
                       jallowUnverObstructions ? true : false);
-}
-
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_notification2
-(JNIEnv *env, jobject jthis, jobject jnotify2)
-{
-  JNIEntry(SVNClient, notification2);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return;
-    }
-  ClientNotifyCallback *notify2 = ClientNotifyCallback::makeCNotify(jnotify2);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  cl->getClientContext().notification2(notify2);
 }
 
 JNIEXPORT void JNICALL
