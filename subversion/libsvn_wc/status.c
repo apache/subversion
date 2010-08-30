@@ -992,9 +992,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
      ###       (Requires  changes to the test suite)
    */
   if (db_kind == svn_wc__db_kind_dir
-#ifdef SVN_WC__SINGLE_DB
-      && (!dirent || dirent->kind != svn_node_file)
-#else
+#ifndef SVN_WC__SINGLE_DB
       && dirent && dirent->kind == svn_node_dir
 #endif
      )
@@ -1003,12 +1001,15 @@ handle_dir_entry(const struct walk_status_baton *wb,
          we've discovered because we got a THIS_DIR entry. And only descend
          if DEPTH permits it, of course.  */
 
-      if (status != svn_wc__db_status_obstructed
+      if ((depth == svn_depth_unknown
+              || depth == svn_depth_immediates
+              || depth == svn_depth_infinity)
+#ifndef SVN_WC__SINGLE_DB
+          && status != svn_wc__db_status_obstructed
           && status != svn_wc__db_status_obstructed_add
           && status != svn_wc__db_status_obstructed_delete
-          && (depth == svn_depth_unknown
-              || depth == svn_depth_immediates
-              || depth == svn_depth_infinity))
+#endif
+          )
         {
           SVN_ERR(get_dir_status(wb, local_abspath, NULL, FALSE,
                                  dir_repos_root_url, dir_repos_relpath,
