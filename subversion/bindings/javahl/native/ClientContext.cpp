@@ -56,6 +56,16 @@ ClientContext::ClientContext()
     /* Create a long-lived client context object in the global pool. */
     SVN_JNI_ERR(svn_client_create_context(&persistentCtx, JNIUtil::getPool()),
                 );
+
+    /* None of the following members change during the lifetime of
+       this object. */
+    persistentCtx->notify_func = NULL;
+    persistentCtx->notify_baton = NULL;
+    persistentCtx->log_msg_func3 = getCommitMessage;
+    persistentCtx->cancel_func = checkCancel;
+    persistentCtx->cancel_baton = this;
+    persistentCtx->notify_func2= ClientNotifyCallback::notify;
+    persistentCtx->progress_func = ProgressListener::progress;
 }
 
 ClientContext::~ClientContext()
@@ -173,17 +183,10 @@ ClientContext::getContext(const char *message)
                                m_passWord.c_str());
 
     ctx->auth_baton = ab;
-    ctx->notify_func = NULL;
-    ctx->notify_baton = NULL;
-    ctx->log_msg_func3 = getCommitMessage;
     ctx->log_msg_baton3 = getCommitMessageBaton(message);
-    ctx->cancel_func = checkCancel;
-    m_cancelOperation = false;
-    ctx->cancel_baton = this;
-    ctx->notify_func2= ClientNotifyCallback::notify;
     ctx->notify_baton2 = m_notify2;
+    m_cancelOperation = false;
 
-    ctx->progress_func = ProgressListener::progress;
     ctx->progress_baton = m_progressListener;
 
     if (m_conflictResolver)
