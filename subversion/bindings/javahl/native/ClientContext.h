@@ -37,9 +37,7 @@
 #include "JNIStringHolder.h"
 
 class Prompter;
-class ClientNotifyCallback;
 class ConflictResolverCallback;
-class ProgressListener;
 class CommitMessage;
 
 /**
@@ -58,7 +56,6 @@ class ClientContext
 
   Prompter *m_prompter;
   ConflictResolverCallback *m_conflictResolver;
-  ProgressListener *m_progressListener;
   bool m_cancelOperation;
 
   CommitMessage *m_commitMessage;
@@ -88,7 +85,6 @@ class ClientContext
   void password(const char *pi_password);
   void setPrompt(Prompter *prompter);
   void setConflictResolver(ConflictResolverCallback *conflictResolver);
-  void setProgressListener(ProgressListener *listener);
   void commitMessageHandler(CommitMessage *commitMessage);
   void cancelOperation();
   const char *getConfigDirectory();
@@ -102,6 +98,8 @@ class ClientContext
 
   static void notify(void *baton, const svn_wc_notify_t *notify,
                      apr_pool_t *pool);
+  static void progress(apr_off_t progressVal, apr_off_t total,
+                       void *baton, apr_pool_t *pool);
 };
 
 #endif // CLIENTCONTEXT_H

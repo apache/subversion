@@ -34,7 +34,6 @@
 #include "RevisionRange.h"
 #include "EnumMapper.h"
 #include "ConflictResolverCallback.h"
-#include "ProgressListener.h"
 #include "CommitMessage.h"
 #include "Prompter.h"
 #include "Targets.h"
@@ -361,25 +360,6 @@ Java_org_apache_subversion_javahl_SVNClient_setConflictResolver
     return;
 
   cl->getClientContext().setConflictResolver(listener);
-}
-
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_setProgressCallback
-(JNIEnv *env, jobject jthis, jobject jprogressListener)
-{
-  JNIEntry(SVNClient, setProgressCallback);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return;
-    }
-  ProgressListener *listener =
-    ProgressListener::makeCProgressListener(jprogressListener);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  cl->getClientContext().setProgressListener(listener);
 }
 
 JNIEXPORT void JNICALL

@@ -35,9 +35,7 @@
 
 class Revision;
 class RevisionRange;
-class ClientNotifyCallback;
 class ConflictResolverCallback;
-class ProgressListener;
 class Targets;
 class JNIByteArray;
 class Prompter;
