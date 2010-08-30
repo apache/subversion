@@ -155,6 +155,7 @@ typedef struct svn_ra__vtable_t {
                           svn_revnum_t revision,
                           const char *diff_target,
                           svn_depth_t depth,
+                          svn_boolean_t send_copyfrom_args,
                           svn_boolean_t ignore_ancestry,
                           svn_boolean_t text_deltas,
                           const char *versus_url,

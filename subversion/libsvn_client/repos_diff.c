@@ -791,7 +791,9 @@ add_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *b;
 
-  /* ### TODO: support copyfrom? */
+  /* ### TODO: We have copyfrom info, now start recording it!
+   * ### Note that we need to check that copyfrom_revision is within span of
+   * ### the diff operation. */
 
   b = make_file_baton(path, TRUE, pb->edit_baton, pool);
   *file_baton = b;
@@ -957,6 +959,8 @@ close_file(void *file_baton,
   else if (err)
     return svn_error_return(err);
 
+  /* ### Allow copied paths with no text or prop modifications to call
+   * ### file_added()! */
   if (b->path_end_revision || b->propchanges->nelts > 0)
     {
       const char *mimetype1, *mimetype2;

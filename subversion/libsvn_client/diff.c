@@ -1737,9 +1737,10 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
            &diff_editor, &diff_edit_baton, pool));
 
   /* We want to switch our txn into URL2 */
-  SVN_ERR(svn_ra_do_diff3
+  SVN_ERR(svn_ra_do_diff4
           (ra_session, &reporter, &reporter_baton, rev2, target1,
-           depth, ignore_ancestry, TRUE,
+           depth, TRUE /* send_copyfrom_args */,
+           ignore_ancestry, TRUE,
            url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
@@ -1878,11 +1879,12 @@ diff_repos_wc(const char *path1,
   else
     callback_baton->revnum2 = rev;
 
-  SVN_ERR(svn_ra_do_diff3(ra_session,
+  SVN_ERR(svn_ra_do_diff4(ra_session,
                           &reporter, &reporter_baton,
                           rev,
                           target ? svn_path_uri_decode(target, pool) : NULL,
                           depth,
+                          TRUE, /* send_copyfrom_args */
                           ignore_ancestry,
                           TRUE,  /* text_deltas */
                           url1,
@@ -2020,9 +2022,10 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
            ctx->cancel_baton, &diff_editor, &diff_edit_baton, pool));
 
   /* We want to switch our txn into URL2 */
-  SVN_ERR(svn_ra_do_diff3
+  SVN_ERR(svn_ra_do_diff4
           (ra_session, &reporter, &reporter_baton, rev2, target1,
-           depth, ignore_ancestry,
+           depth, TRUE /* send_copyfrom_args */, 
+           ignore_ancestry,
            FALSE /* do not create text delta */, url2, diff_editor,
            diff_edit_baton, pool));
 

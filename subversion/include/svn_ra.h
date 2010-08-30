@@ -1291,8 +1291,30 @@ svn_ra_do_status(svn_ra_session_t *session,
  * needed, and sending too much data back, a pre-1.5 'recurse'
  * directive may be sent to the server, based on @a depth.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_ra_do_diff4(svn_ra_session_t *session,
+                const svn_ra_reporter3_t **reporter,
+                void **report_baton,
+                svn_revnum_t revision,
+                const char *diff_target,
+                svn_depth_t depth,
+                svn_boolean_t send_copyfrom_args,
+                svn_boolean_t ignore_ancestry,
+                svn_boolean_t text_deltas,
+                const char *versus_url,
+                const svn_delta_editor_t *diff_editor,
+                void *diff_baton,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_do_diff4(), but with @c send_copyfrom_args set to
+ * FALSE.
+ *
+ * @deprecated Provided for compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_do_diff3(svn_ra_session_t *session,
                 const svn_ra_reporter3_t **reporter,

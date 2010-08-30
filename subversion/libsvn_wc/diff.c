@@ -1437,7 +1437,9 @@ add_file(const char *path,
   struct file_baton *fb;
   const char *full_path;
 
-  /* ### TODO: support copyfrom? */
+  /* ### TODO: We have copyfrom info, now start recording it! 
+   * ### Note that we need to check that copyfrom_revision is within span of
+   * ### the diff operation. */
 
   full_path = svn_dirent_join(pb->eb->anchor_path, path, file_pool);
   fb = make_file_baton(full_path, TRUE, pb, file_pool);
