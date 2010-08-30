@@ -4786,6 +4786,11 @@ def mergeinfo_inheritance(sbox):
                                         wc_status,
                                         None,
                                         wc_dir)
+                        
+  # In single-db mode you can't create a disconnected working copy by just
+  # copying a subdir                
+  if svntest.main.wc_is_singledb(wc_dir):
+    return
 
   # Copy the subtree A_COPY/B/E from the working copy, making the
   # disconnected WC E_only.
