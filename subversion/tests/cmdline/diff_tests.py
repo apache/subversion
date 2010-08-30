@@ -33,6 +33,7 @@ import svntest
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -3792,7 +3793,8 @@ test_list = [ None,
               XFail(diff_in_renamed_folder),
               diff_with_depth,
               diff_ignore_eolstyle_empty_lines,
-              XFail(diff_backward_repos_wc_copy),
+              SkipUnless(diff_backward_repos_wc_copy,
+                         svntest.main.is_ra_type_dav_neon),
               diff_summarize_xml,
               diff_file_depth_empty,
               diff_wrong_extension_type,
