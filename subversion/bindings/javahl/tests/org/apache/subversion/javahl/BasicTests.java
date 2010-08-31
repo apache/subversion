@@ -1645,8 +1645,7 @@ public class BasicTests extends SVNTests
         assertFalse("failed to remove unmodified file",
                 new File(thisTest.getWorkingCopy(), "A/B/E/alpha").exists());
         file = new File(thisTest.getWorkingCopy(),"A/B/F");
-        assertTrue("removed versioned dir", file.exists()
-                && file.isDirectory());
+        assertFalse("failed to remove versioned dir", file.exists());
         assertFalse("failed to remove unversioned dir",
                 new File(thisTest.getWorkingCopy(), "A/C/Q").exists());
         assertFalse("failed to remove added dir",
