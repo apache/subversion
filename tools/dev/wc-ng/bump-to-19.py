@@ -136,6 +136,10 @@ STMT_COPY_PRISTINE_TABLE_TO_WCROOT_DB = \
   "INSERT OR REPLACE INTO root.PRISTINE " \
   "SELECT * FROM PRISTINE; "
 
+STMT_SELECT_SUBDIR = \
+  "SELECT 1 FROM BASE_NODE WHERE local_relpath=?1 AND kind='subdir'" \
+  "UNION " \
+  "SELECT 0 FROM WORKING_NODE WHERE local_relpath=?1 AND kind='subdir';"
 
 def copy_db_rows_to_wcroot(wc_subdir_relpath):
   """Copy all relevant table rows from the $PWD/WC_SUBDIR_RELPATH/.svn/wc.db
@@ -195,6 +199,21 @@ def move_and_shard_pristine_files(old_wc_path, new_wc_path):
     new = os.path.join(new_pristine_dir, shard, basename)
     os.renames(old, new)
 
+def select_subdir(wc_subdir_path):
+  """ Return True if wc_subdir_path is a known to be a versioned subdir,
+      False otherwise."""
+
+  try:
+    db = sqlite3.connect(db_path(''))
+  except:
+    raise NotASubversionWC(wc_subdir_path)
+  c = db.cursor()
+  c.execute(STMT_SELECT_SUBDIR, (wc_subdir_path,))
+  if c.fetchone() is None:
+    return False
+  else:
+    return True
+  
 
 def migrate_wc_subdirs(wc_root_path):
   """Move Subversion metadata from the admin dir of each subdirectory
@@ -228,6 +247,11 @@ def migrate_wc_subdirs(wc_root_path):
       wc_subdir_path = os.path.join(dir_path, dir)
       if wc_subdir_path.startswith('./'):
         wc_subdir_path = wc_subdir_path[2:]
+
+      if not select_subdir(wc_subdir_path):
+        print "skipped:", wc_subdir_path
+        dirs.remove(dir)
+        continue
 
       try:
         check_wc_format_number(wc_subdir_path)
