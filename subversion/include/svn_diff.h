@@ -1008,11 +1008,12 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
 
 /**
  * Dispose of @a patch, closing any streams used by it.
+ * Use @a scratch_pool for all temporary allocations.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_close_patch(const svn_patch_t *patch);
+svn_diff_close_patch(const svn_patch_t *patch, apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

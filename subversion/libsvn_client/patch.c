@@ -2649,7 +2649,7 @@ apply_patches(void *baton,
               SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
             }
 
-          SVN_ERR(svn_diff_close_patch(patch));
+          SVN_ERR(svn_diff_close_patch(patch, iterpool));
         }
     }
   while (patch);
