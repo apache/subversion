@@ -1059,7 +1059,7 @@ test_list = [ None,
               revert_replaced_with_history_file_2,
               revert_tree_conflicts_in_updated_files,
               revert_add_over_not_present_dir,
-              XFail(revert_added_tree),
+              revert_added_tree,
               XFail(revert_child_of_copy),
              ]
 

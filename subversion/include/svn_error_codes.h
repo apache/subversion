@@ -512,6 +512,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 37,
              "Previous operation was interrupted; run 'svn cleanup'")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_INVALID_OPERATION_DEPTH,
+             SVN_ERR_WC_CATEGORY_START + 38,
+             "This operation can not be performed with just this depth.")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

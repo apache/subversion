@@ -1615,6 +1615,69 @@ revert_entry(svn_depth_t *depth,
   return SVN_NO_ERROR;
 }
 
+/* Verifies if an add (or copy) to LOCAL_ABSPATH can be reverted with depth
+ * DEPTH, without touching nodes that are filtered by DEPTH.
+ *
+ * Use ROOT_ABSPATH for generating error messages.
+ */
+static svn_error_t *
+verify_revert_depth(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    svn_depth_t depth,
+                    const char *root_abspath,
+                    apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *children;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+
+  SVN_ERR_ASSERT(depth >= svn_depth_empty && depth < svn_depth_infinity);
+
+  SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
+                                   scratch_pool, iterpool));
+
+  for (i = 0; i < children->nelts; i++)
+    {
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+      svn_wc__db_status_t status;
+      svn_wc__db_kind_t kind;
+
+      svn_pool_clear(iterpool);
+
+      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
+
+      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, child_abspath, iterpool, iterpool));
+
+      if (status == svn_wc__db_status_not_present
+          || status == svn_wc__db_status_absent
+          || status == svn_wc__db_status_excluded)
+        continue;
+
+      if (depth == svn_depth_empty
+          || (depth == svn_depth_files && kind == svn_wc__db_kind_dir))
+        {
+          return svn_error_createf(
+                        SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
+                        _("Can't revert '%s' with this depth, as that requires"
+                          " reverting '%s'."),
+                        svn_dirent_local_style(root_abspath, iterpool),
+                        svn_dirent_local_style(child_abspath, iterpool));
+        }
+
+      if (kind == svn_wc__db_kind_dir)
+        SVN_ERR(verify_revert_depth(db, child_abspath, svn_depth_empty,
+                                    root_abspath, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
 
 /* This is just the guts of svn_wc_revert4() save that it accepts a
    hash CHANGELIST_HASH whose keys are changelist names instead of an
@@ -1726,6 +1789,24 @@ revert_internal(svn_wc__db_t *db,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot revert '%s': unsupported node kind in working copy"),
        svn_dirent_local_style(local_abspath, pool));
+
+  /* Safeguard 4:  Make sure we don't revert deeper then asked */
+  if (status == svn_wc__db_status_added
+      && db_kind == svn_wc__db_kind_dir
+      && depth >= svn_depth_empty
+      && depth < svn_depth_infinity)
+    {
+      const char *op_root_abspath;
+      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, local_abspath, pool, pool));
+
+      /* If this node is an operation root for a copy/add, then reverting
+         it will change its descendants, if it has any. */
+      if (strcmp(local_abspath, op_root_abspath) == 0)
+        SVN_ERR(verify_revert_depth(db, local_abspath, depth,
+                                    local_abspath, pool));
+    }
 
   /* If the entry passes changelist filtering, revert it!  */
   if (svn_wc__internal_changelist_match(db, local_abspath, changelist_hash,
