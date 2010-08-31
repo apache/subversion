@@ -71,6 +71,19 @@ class ClientContext
    * Produce a baton for the getCommitMessage() callback.
    */
   void *getCommitMessageBaton(const char *message);
+ 
+ protected:
+  static void notify(void *baton, const svn_wc_notify_t *notify,
+                     apr_pool_t *pool);
+  static void progress(apr_off_t progressVal, apr_off_t total,
+                       void *baton, apr_pool_t *pool);
+  static svn_error_t *resolve(svn_wc_conflict_result_t **result,
+                              const svn_wc_conflict_description_t *desc,
+                              void *baton,
+                              apr_pool_t *pool);
+  static svn_wc_conflict_result_t *javaResultToC(jobject result,
+                                                 apr_pool_t *pool);
+
  public:
   ClientContext(jobject jsvnclient);
   ~ClientContext();
@@ -92,17 +105,6 @@ class ClientContext
    * specified location.
    */
   void setConfigDirectory(const char *configDir);
-
-  static void notify(void *baton, const svn_wc_notify_t *notify,
-                     apr_pool_t *pool);
-  static void progress(apr_off_t progressVal, apr_off_t total,
-                       void *baton, apr_pool_t *pool);
-  static svn_error_t *resolve(svn_wc_conflict_result_t **result,
-                              const svn_wc_conflict_description_t *desc,
-                              void *baton,
-                              apr_pool_t *pool);
-  static svn_wc_conflict_result_t *javaResultToC(jobject result,
-                                                 apr_pool_t *pool);
 };
 
 #endif // CLIENTCONTEXT_H
