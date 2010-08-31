@@ -184,7 +184,10 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void setConflictResolver(ConflictResolverCallback listener);
+    public void setConflictResolver(ConflictResolverCallback listener)
+    {
+        clientContext.resolver = listener;
+    }
 
     /**
      * @since 1.5
@@ -650,10 +653,12 @@ public class SVNClient implements ISVNClient
      * persist in this object, such as notification handlers.
      */
     private class ClientContext
-        implements ClientNotifyCallback, ProgressCallback
+        implements ClientNotifyCallback, ProgressCallback,
+            ConflictResolverCallback
     {
         public ClientNotifyCallback notify = null;
         public ProgressCallback listener = null;
+        public ConflictResolverCallback resolver = null;
 
         public void onNotify(ClientNotifyInformation notifyInfo)
         {
@@ -665,6 +670,16 @@ public class SVNClient implements ISVNClient
         {
             if (listener != null)
                 listener.onProgress(event);
+        }
+
+        public ConflictResult resolve(ConflictDescriptor conflict)
+            throws SubversionException
+        {
+            if (resolver != null)
+                return resolver.resolve(conflict);
+            else
+                return new ConflictResult(ConflictResult.Choice.postpone,
+                                          null);
         }
     }
 }

@@ -28,7 +28,6 @@
 #include "JNIUtil.h"
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
-#include "ConflictResolverCallback.h"
 #include "ClientContext.h"
 #include "Prompter.h"
 #include "Pool.h"

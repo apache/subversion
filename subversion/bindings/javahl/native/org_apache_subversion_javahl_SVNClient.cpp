@@ -33,7 +33,6 @@
 #include "Revision.h"
 #include "RevisionRange.h"
 #include "EnumMapper.h"
-#include "ConflictResolverCallback.h"
 #include "CommitMessage.h"
 #include "Prompter.h"
 #include "Targets.h"
@@ -341,25 +340,6 @@ Java_org_apache_subversion_javahl_SVNClient_checkout
                       EnumMapper::toDepth(jdepth),
                       jignoreExternals ? true : false,
                       jallowUnverObstructions ? true : false);
-}
-
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_setConflictResolver
-(JNIEnv *env, jobject jthis, jobject jconflictResolver)
-{
-  JNIEntry(SVNClient, setConflictResolver);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return;
-    }
-  ConflictResolverCallback *listener =
-    ConflictResolverCallback::makeCConflictResolverCallback(jconflictResolver);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  cl->getClientContext().setConflictResolver(listener);
 }
 
 JNIEXPORT void JNICALL

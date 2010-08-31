@@ -37,7 +37,6 @@
 #include "JNIStringHolder.h"
 
 class Prompter;
-class ConflictResolverCallback;
 class CommitMessage;
 
 /**
@@ -55,7 +54,6 @@ class ClientContext
   std::string m_configDir;
 
   Prompter *m_prompter;
-  ConflictResolverCallback *m_conflictResolver;
   bool m_cancelOperation;
 
   CommitMessage *m_commitMessage;
@@ -84,7 +82,6 @@ class ClientContext
   void username(const char *pi_username);
   void password(const char *pi_password);
   void setPrompt(Prompter *prompter);
-  void setConflictResolver(ConflictResolverCallback *conflictResolver);
   void commitMessageHandler(CommitMessage *commitMessage);
   void cancelOperation();
   const char *getConfigDirectory();
@@ -100,6 +97,12 @@ class ClientContext
                      apr_pool_t *pool);
   static void progress(apr_off_t progressVal, apr_off_t total,
                        void *baton, apr_pool_t *pool);
+  static svn_error_t *resolve(svn_wc_conflict_result_t **result,
+                              const svn_wc_conflict_description_t *desc,
+                              void *baton,
+                              apr_pool_t *pool);
+  static svn_wc_conflict_result_t *javaResultToC(jobject result,
+                                                 apr_pool_t *pool);
 };
 
 #endif // CLIENTCONTEXT_H
