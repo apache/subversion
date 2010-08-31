@@ -22,15 +22,21 @@
 # TODO: Detect '_svn' as an alternative to '.svn'.
 
 
-import sys, os, sqlite3
+import sys, os, shutil, sqlite3
 
 dot_svn = '.svn'
+
+def dotsvn_path(wc_path):
+  return os.path.join(wc_path, dot_svn)
 
 def db_path(wc_path):
   return os.path.join(wc_path, dot_svn, 'wc.db')
 
 def pristine_path(wc_path):
   return os.path.join(wc_path, dot_svn, 'pristine')
+
+def tmp_path(wc_path):
+  return os.path.join(wc_path, dot_svn, 'tmp')
 
 class NotASubversionWC(Exception):
   def __init__(self, wc_path):
@@ -197,6 +203,15 @@ def migrate_wc_subdirs(wc_root_path):
   old_cwd = os.getcwd()
   os.chdir(wc_root_path)
 
+  # Keep track of which dirs we've migrated so we can delete their .svn's
+  # afterwards.  Done this way because the tree walking is top-down and if
+  # we deleted the .svn before walking into the subdir, it would look like
+  # an unversioned subdir.
+  migrated_subdirs = []
+
+  # For each directory in the WC, try to migrate each of its subdirs (DIRS).
+  # Done this way because (a) os.walk() gives us lists of subdirs, and (b)
+  # it's easy to skip the WC root dir.
   for dir_path, dirs, files in os.walk('.'):
 
     # don't walk into the '.svn' subdirectory
@@ -216,20 +231,24 @@ def migrate_wc_subdirs(wc_root_path):
 
       try:
         check_wc_format_number(wc_subdir_path)
-        print "moving data from subdir '" + wc_subdir_path + "'"
+        print "migrating '" + wc_subdir_path + "'"
         copy_db_rows_to_wcroot(wc_subdir_path)
-        print "deleting DB ... ",
-        os.remove(db_path(wc_subdir_path))
-        print "moving pristines ... ",
         move_and_shard_pristine_files(wc_subdir_path, '.')
-        if os.path.exists(pristine_path(wc_subdir_path)):
-          os.rmdir(pristine_path(wc_subdir_path))
-        print "done"
+        migrated_subdirs += [wc_subdir_path]
       except (WrongFormatException, NotASubversionWC), e:
         print "skipped:", e
         # don't walk into it
         dirs.remove(dir)
         continue
+
+  # Delete the remaining parts of the migrated .svn dirs
+  for wc_subdir_path in migrated_subdirs:
+    print "deleting " + dotsvn_path(wc_subdir_path)
+    os.remove(db_path(wc_subdir_path))
+    if os.path.exists(pristine_path(wc_subdir_path)):
+      os.rmdir(pristine_path(wc_subdir_path))
+    shutil.rmtree(tmp_path(wc_subdir_path))
+    os.rmdir(dotsvn_path(wc_subdir_path))
 
   os.chdir(old_cwd)
 
