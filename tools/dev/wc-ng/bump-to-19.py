@@ -171,20 +171,6 @@ def copy_db_rows_to_wcroot(wc_subdir_relpath):
   db.close()
 
 
-def shard_pristine_files(wc_path):
-  """Move all pristine text files from 'WC_PATH/.svn/pristine/'
-     into shard directories: 'WC_PATH/.svn/pristine/??/', creating those
-     shard dirs where necessary."""
-
-  pristine_dir = pristine_path(wc_path)
-
-  for basename in os.listdir(pristine_dir):
-    shard = basename[:2]
-    old = os.path.join(pristine_dir, basename)
-    new = os.path.join(pristine_dir, shard, basename)
-    os.renames(old, new)
-
-
 def move_and_shard_pristine_files(old_wc_path, new_wc_path):
   """Move all pristine text files from 'OLD_WC_PATH/.svn/pristine/'
      into 'NEW_WC_PATH/.svn/pristine/??/', creating shard dirs where
@@ -192,6 +178,10 @@ def move_and_shard_pristine_files(old_wc_path, new_wc_path):
 
   old_pristine_dir = pristine_path(old_wc_path)
   new_pristine_dir = pristine_path(new_wc_path)
+
+  if not os.path.exists(old_pristine_dir):
+    # That's fine, assuming there are no pristine texts.
+    return
 
   for basename in os.listdir(old_pristine_dir):
     shard = basename[:2]
@@ -232,6 +222,8 @@ def migrate_wc_subdirs(wc_root_path):
         os.remove(db_path(wc_subdir_path))
         print "moving pristines ... ",
         move_and_shard_pristine_files(wc_subdir_path, '.')
+        if os.path.exists(pristine_path(wc_subdir_path)):
+          os.rmdir(pristine_path(wc_subdir_path))
         print "done"
       except (WrongFormatException, NotASubversionWC), e:
         print "skipped:", e
@@ -288,7 +280,7 @@ if __name__ == '__main__':
     sys.exit(1)
 
   print "merging subdir DBs into single DB '" + wc_root_path + "'"
-  shard_pristine_files(wc_root_path)
+  move_and_shard_pristine_files(wc_root_path, wc_root_path)
   migrate_wc_subdirs(wc_root_path)
   bump_wc_format_number(wc_root_path)
 
