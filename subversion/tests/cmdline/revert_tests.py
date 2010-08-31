@@ -1060,7 +1060,7 @@ test_list = [ None,
               revert_tree_conflicts_in_updated_files,
               revert_add_over_not_present_dir,
               revert_added_tree,
-              XFail(revert_child_of_copy),
+              revert_child_of_copy,
              ]
 
 if __name__ == '__main__':
