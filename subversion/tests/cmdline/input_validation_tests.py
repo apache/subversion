@@ -157,8 +157,7 @@ def invalid_merge_args(sbox):
   for (src, target) in [('iota@HEAD', '^/'), ('iota@BASE', 'file://')]:
     run_and_verify_svn_in_wc(sbox, "svn: Merge sources must both be either "
                              "paths or URLs", 'merge', src, target)
-  run_and_verify_svn_in_wc(sbox, "svn: Merge target.*does not exist in " +
-                           "the working copy",
+  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' does not exist",
                            'merge', 'iota@BASE', 'iota@HEAD', 'nonexistent')
   run_and_verify_svn_in_wc(sbox, "svn: Too many arguments given",
                           'merge', '-c42', '^/A/B', '^/A/C', 'iota')
