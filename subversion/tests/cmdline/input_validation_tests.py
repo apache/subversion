@@ -164,8 +164,7 @@ def invalid_merge_args(sbox):
                           'merge', '-c42', '^/A/B', '^/A/C', 'iota')
   run_and_verify_svn_in_wc(sbox, "svn: Cannot specify a revision range with" +
                            " two URLs", 'merge', '-c42', '^/mu', '^/')
-  run_and_verify_svn_in_wc(sbox, "svn: Merge target.*does not exist in " +
-                           "the working copy",
+  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' does not exist",
                            'merge', '-c42', '^/mu', 'nonexistent')
 
 
