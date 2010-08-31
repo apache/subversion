@@ -50,16 +50,6 @@ extern "C" {
                                                file */
 
 
-/* ### Both SVN_WC__SINGLE_DB and SINGLE_DB are needed for proper use of the
-   ### experimental single-db feature.  They have slightly different meanings,
-   ### which is why there are two contants.  They will both disappear in the
-   ### final 1.7 release, but for now, if you want to use SINGLE_DB, you'll
-   ### need to uncomment the following line. */
-/* #define SVN_WC__SINGLE_DB */
-#ifdef SVN_WC__SINGLE_DB
-#define SINGLE_DB
-#endif
-
 
 /* We can handle this format or anything lower, and we (should) error
  * on anything higher.
@@ -132,12 +122,23 @@ extern "C" {
  * props and prop-base directory (and .svn for the dir itself) into the
  * wc.db file, and then removes the props and prop-base dir.
  *
+ * The change from 18 to 19 introduces the 'single DB' per working copy.
+ * All metadata is held in a single '.svn/wc.db' in the root directory of
+ * the working copy.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 18
+#define SVN_WC__VERSION 19
+
+/* ### SVN_WC__SINGLE_DB and SINGLE_DB were both used in development
+   ### and will both disappear before the final 1.7 release. */
+#if SVN_WC__VERSION >= 19
+#define SVN_WC__SINGLE_DB
+#define SINGLE_DB
+#endif
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */
