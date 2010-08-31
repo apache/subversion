@@ -1458,10 +1458,12 @@ revert_entry(svn_depth_t *depth,
              svn_boolean_t *did_revert,
              apr_pool_t *pool)
 {
-  svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status, base_status;
+  svn_wc__db_kind_t kind, base_kind;
   svn_boolean_t replaced;
   svn_boolean_t have_base;
+  svn_revnum_t base_revision;
+  svn_boolean_t is_add_root;
 
   /* Initialize this even though revert_admin_things() is guaranteed
      to set it, because we don't know that revert_admin_things() will
@@ -1475,14 +1477,37 @@ revert_entry(svn_depth_t *depth,
                                NULL, NULL,
                                db, local_abspath, pool, pool));
 
-  SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath, pool));
+  if (have_base)
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, &base_revision,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     db, local_abspath, pool, pool));
+
+  replaced = (status == svn_wc__db_status_added
+              && have_base
+              && base_status != svn_wc__db_status_not_present);
+
+  if (status == svn_wc__db_status_added)
+    {
+      const char *op_root_abspath;
+      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, local_abspath, pool, pool));
+
+      is_add_root = (strcmp(op_root_abspath, local_abspath) == 0);
+    }
+  else
+#ifdef SVN_WC__SINGLE_DB
+    is_add_root = FALSE;
+#else
+    /* HACK: svn_wc__db_scan_addition doesn't allow this status! */
+    is_add_root = (status == svn_wc__db_status_obstructed_add);
+#endif
 
   /* Additions. */
-  if ((status == svn_wc__db_status_added
-       || status == svn_wc__db_status_obstructed_add)
-      && !replaced)
+  if (!replaced
+      && is_add_root)
     {
-      svn_revnum_t base_revision;
       const char *repos_relpath;
       const char *repos_root_url;
       const char *repos_uuid;
@@ -1494,31 +1519,19 @@ revert_entry(svn_depth_t *depth,
          The code below will then figure out the repository information, so
          that we can later insert a node for the same repository. */
 
-      if (have_base)
+      if (have_base
+          && base_status == svn_wc__db_status_not_present)
         {
-            svn_wc__db_status_t base_status;
-            SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
-                                             &base_revision, &repos_relpath,
-                                             &repos_root_url, &repos_uuid,
-                                             NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL,
+          /* Remember the BASE revision. (already handled)  */
+          /* Remember the repository this node is associated with.  */
+
+          was_not_present = TRUE;
+
+          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                             &repos_root_url,
+                                             &repos_uuid,
                                              db, local_abspath,
                                              pool, pool));
-
-            if (base_status == svn_wc__db_status_not_present)
-            {
-                /* Remember the BASE revision.  */
-                /* Remember the repository this node is associated with.  */
-
-                was_not_present = TRUE;
-
-                if (!repos_root_url)
-                  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                                     &repos_root_url,
-                                                     &repos_uuid,
-                                                     db, local_abspath,
-                                                     pool, pool));
-            }
         }
 
       /* ### much of this is probably bullshit. we should be able to just
@@ -1587,7 +1600,7 @@ revert_entry(svn_depth_t *depth,
                     db, local_abspath,
                     repos_relpath, repos_root_url, repos_uuid,
                     base_revision,
-                    kind,
+                    base_kind,
                     svn_wc__db_status_not_present,
                     NULL, NULL,
                     pool));
@@ -1597,7 +1610,8 @@ revert_entry(svn_depth_t *depth,
   /* Deletions and replacements. */
   else if (status == svn_wc__db_status_normal
            || status == svn_wc__db_status_deleted
-           || replaced)
+           || replaced
+           || (status == svn_wc__db_status_added && !is_add_root))
     {
       /* Revert the prop and text mods (if any). */
       SVN_ERR(revert_admin_things(&reverted, db, local_abspath,

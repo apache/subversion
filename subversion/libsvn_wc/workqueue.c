@@ -183,6 +183,7 @@ run_revert(svn_wc__db_t *db,
   const char *local_abspath;
   svn_boolean_t replaced;
   svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status;
   const char *parent_abspath;
   svn_boolean_t conflicted;
 
@@ -196,7 +197,7 @@ run_revert(svn_wc__db_t *db,
      (yet) allowed. If we read any conflict files, then we (obviously) have
      not removed them from the metadata (yet).  */
   SVN_ERR(svn_wc__db_read_info(
-            NULL, &kind, NULL, NULL, NULL, NULL,
+            &status, &kind, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
             &conflicted, NULL,
@@ -348,8 +349,22 @@ run_revert(svn_wc__db_t *db,
     /* ### A working copy root can't have a working node and trying
        ### to delete it fails because the root doesn't have a stub. */
     if (!is_wc_root)
-      SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
-                                                scratch_pool));
+      {
+        const char *op_root_abspath = NULL;
+
+        /* If the node is not the operation root, we should not delete
+           the working node */
+        if (status == svn_wc__db_status_added)
+          SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
+
+        if (!op_root_abspath
+            || (strcmp(op_root_abspath, local_abspath) == 0))
+          SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
+                                                    scratch_pool));
+      }
   }
 
   return SVN_NO_ERROR;
@@ -368,20 +383,20 @@ verify_pristine_present(svn_wc__db_t *db,
 {
   const svn_checksum_t *base_checksum;
 
-  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   &base_checksum, NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-  if (base_checksum != NULL)
-    return SVN_NO_ERROR;
-
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, &base_checksum,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
+  if (base_checksum != NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   &base_checksum, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
   if (base_checksum != NULL)
     return SVN_NO_ERROR;
 
