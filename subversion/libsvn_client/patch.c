@@ -1094,7 +1094,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
 
               SVN_ERR(match_existing_target(&file_matches, content_info, hunk,
                                             stream, scratch_pool));
-              svn_stream_close(stream);
+              SVN_ERR(svn_stream_close(stream));
 
               if (file_matches)
                 {
@@ -1834,9 +1834,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                * ### stream to read from. Find a better way to store info on
                * ### the existence of the target prop. */
               if (prop_content_info->stream)
-                svn_stream_close(prop_content_info->stream);
+                SVN_ERR(svn_stream_close(prop_content_info->stream));
 
-              svn_stream_close(prop_content_info->patched);
+              SVN_ERR(svn_stream_close(prop_content_info->patched));
             }
 
 
@@ -2228,7 +2228,7 @@ install_patched_prop_targets(patch_target_t *target,
         }
       while (! eof);
 
-      svn_stream_close(patched_stream);
+      SVN_ERR(svn_stream_close(patched_stream));
 
       /* If the patch target doesn't exist yet, the patch wants to add an
        * empty file with properties set on it. So create an empty file and
