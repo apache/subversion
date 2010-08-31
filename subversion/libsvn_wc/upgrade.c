@@ -1486,10 +1486,10 @@ svn_wc__upgrade_sdb(int *result_format,
 
 #if (SVN_WC__VERSION > 18)
       case 18:
-        /* ### TODO: Either upgrade to single-DB format here, or quit
-         * at format 18 and ask the user to run the external script
-         * 'tools/dev/wc-ng/bump-to-19.py'. */
-        break; /* not FALLTHROUGH  */
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("The working copy '%s' is at format 18; "
+                                   "use 'tools/dev/wc-ng/bump-to-19.py' to "
+                                   "upgrade it"), wcroot_abspath);
 #endif
 
       /* ### future bumps go here.  */
