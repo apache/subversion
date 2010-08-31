@@ -4687,12 +4687,12 @@ get_txn_proplist(apr_hash_t *proplist,
 {
   svn_stream_t *stream;
 
-  /* The following error has been observed at least twice in real life when
-   * WANdisco software sends a DAV 'MERGE' command to a Subversion server:
-   * "Can't open file '[...]/db/transactions/props': No such file or directory"
-   * The path should be '[...]/db/transactions/<txn-id>/props'.
-   * The only way that could happen is if txn_id was NULL here. */
-  SVN_ERR_ASSERT(txn_id != NULL);
+  /* Check for issue #3696. (When we find and fix the cause, we can change
+   * this to an assertion.) */
+  if (txn_id == NULL)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Internal error: a null transaction id was "
+                              "passed to get_txn_proplist()"));
 
   /* Open the transaction properties file. */
   SVN_ERR(svn_stream_open_readonly(&stream, path_txn_props(fs, txn_id, pool),
