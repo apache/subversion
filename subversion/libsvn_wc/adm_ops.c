@@ -1641,7 +1641,7 @@ verify_revert_depth(svn_wc__db_t *db,
                     const char *root_abspath,
                     apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *children;
+  const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
