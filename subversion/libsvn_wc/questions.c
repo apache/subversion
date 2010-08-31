@@ -239,7 +239,7 @@ svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                              versioned_file_abspath,
                                              pristine_stream,
                                              compare_textbases,
-                                             FALSE,
+                                             FALSE /* verify_checksum */,
                                              scratch_pool));
 }
 
