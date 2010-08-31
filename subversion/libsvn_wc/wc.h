@@ -71,7 +71,8 @@ extern "C" {
  * == 1.3.x shipped with format 4
  *
  * The change from 4 to 5 was the addition of support for replacing files
- * with history.
+ * with history (the "revert base"). This was introduced in 1.4.0, but
+ # buggy until 1.4.6.
  *
  * The change from 5 to 6 was the introduction of caching of property
  * modification state and certain properties in the entries file.
