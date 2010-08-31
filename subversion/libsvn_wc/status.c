@@ -476,10 +476,11 @@ assemble_status(svn_wc_status3_t **status,
 #endif /* HAVE_SYMLINK */
 
       /* If the entry is a file, check for textual modifications */
-      if ((db_kind == svn_wc__db_kind_file
-           || db_kind == svn_wc__db_kind_symlink)
+      if (node_status != svn_wc_status_missing
+          && (db_kind == svn_wc__db_kind_file
+              || db_kind == svn_wc__db_kind_symlink)
 #ifdef HAVE_SYMLINK
-          && (wc_special == (dirent && dirent->special))
+             && (wc_special == (dirent && dirent->special))
 #endif /* HAVE_SYMLINK */
           )
         {
