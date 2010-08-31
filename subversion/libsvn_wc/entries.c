@@ -2402,8 +2402,8 @@ struct entries_write_baton
   svn_wc__db_t *db;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
-  const char *local_abspath;
-  const char *root_abspath;
+  const char *dir_abspath;
+  const char *new_root_abspath;
   apr_hash_t *entries;
 };
 
@@ -2416,12 +2416,12 @@ entries_write_new_cb(void *baton,
 {
   struct entries_write_baton *ewb = baton;
   svn_wc__db_t *db = ewb->db;
-  const char *local_abspath = ewb->local_abspath;
-  const char *root_abspath = ewb->root_abspath;
+  const char *dir_abspath = ewb->dir_abspath;
+  const char *new_root_abspath = ewb->new_root_abspath;
   const svn_wc_entry_t *this_dir;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  const char *repos_root;
+  const char *repos_root, *old_root_abspath, *dir_relpath;
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
   this_dir = apr_hash_get(ewb->entries, SVN_WC_ENTRY_THIS_DIR,
@@ -2431,15 +2431,24 @@ entries_write_new_cb(void *baton,
   if (! this_dir)
     return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
                              _("No default entry in directory '%s'"),
-                             svn_dirent_local_style(local_abspath,
+                             svn_dirent_local_style(dir_abspath,
                                                     iterpool));
   repos_root = this_dir->repos;
+
+  old_root_abspath = svn_dirent_get_longest_ancestor(dir_abspath,
+                                                     new_root_abspath,
+                                                     scratch_pool);
+
+  SVN_ERR_ASSERT(old_root_abspath[0]);
+
+  dir_relpath = svn_dirent_skip_ancestor(old_root_abspath, dir_abspath);
 
   /* Write out "this dir" */
   SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id, repos_root,
                       this_dir,
-                      svn_dirent_skip_ancestor(root_abspath, local_abspath),
-                      local_abspath,
+                      dir_relpath,
+                      svn_dirent_join(new_root_abspath, dir_relpath,
+                                      scratch_pool),
                       this_dir, FALSE, FALSE, iterpool));
 
   for (hi = apr_hash_first(scratch_pool, ewb->entries); hi;
@@ -2447,7 +2456,7 @@ entries_write_new_cb(void *baton,
     {
       const char *name = svn__apr_hash_index_key(hi);
       const svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
-      const char *child_abspath;
+      const char *child_abspath, *child_relpath;
 
       svn_pool_clear(iterpool);
 
@@ -2457,11 +2466,14 @@ entries_write_new_cb(void *baton,
 
       /* Write the entry. Pass TRUE for create locks, because we still
          use this function for upgrading old working copies. */
-      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
+      child_abspath = svn_dirent_join(dir_abspath, name, iterpool);
+      child_relpath = svn_dirent_skip_ancestor(old_root_abspath, child_abspath);
       SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id, repos_root,
                           this_entry,
-                          svn_dirent_skip_ancestor(root_abspath, child_abspath),
-                          child_abspath, this_dir,
+                          child_relpath,
+                          svn_dirent_join(new_root_abspath, child_relpath,
+                                          scratch_pool),
+                          this_dir,
                           FALSE, TRUE,
                           iterpool));
     }
@@ -2476,8 +2488,8 @@ svn_wc__write_upgraded_entries(svn_wc__db_t *db,
                                svn_sqlite__db_t *sdb,
                                apr_int64_t repos_id,
                                apr_int64_t wc_id,
-                               const char *local_abspath,
-                               const char *root_abspath,
+                               const char *dir_abspath,
+                               const char *new_root_abspath,
                                apr_hash_t *entries,
                                apr_pool_t *scratch_pool)
 {
@@ -2486,8 +2498,8 @@ svn_wc__write_upgraded_entries(svn_wc__db_t *db,
   ewb.db = db;
   ewb.repos_id = repos_id;
   ewb.wc_id = wc_id;
-  ewb.local_abspath = local_abspath;
-  ewb.root_abspath = root_abspath;
+  ewb.dir_abspath = dir_abspath;
+  ewb.new_root_abspath = new_root_abspath;
   ewb.entries = entries;
 
   /* Run this operation in a transaction to speed up SQLite.
