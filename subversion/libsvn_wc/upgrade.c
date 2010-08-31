@@ -1627,6 +1627,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 #ifdef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__db_wclock_release(db, data.root_abspath, scratch_pool));
   SVN_ERR(svn_wc__db_drop_root(db, data.root_abspath, scratch_pool));
+  SVN_ERR(svn_sqlite__close(data.sdb));
   {
     const char *pristine_from = svn_wc__adm_child(data.root_abspath,
                                                   PRISTINE_STORAGE_RELPATH,
