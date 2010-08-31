@@ -24,7 +24,6 @@
 
 import os
 import re
-import string
 
 #
 # This parses the following two types of declarations:
