@@ -8719,6 +8719,14 @@ merge_locked(const char *source1,
   const char *source_repos_uuid1, *source_repos_uuid2;
   svn_node_kind_t target_kind;
 
+  /* Make sure the target is really there. */
+  SVN_ERR(svn_io_check_path(target_abspath, &target_kind, scratch_pool));
+  if (target_kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Path '%s' does not exist"),
+                             svn_dirent_local_style(target_abspath,
+                                                    scratch_pool));
+
   /* Sanity check our input -- we require specified revisions,
    * and either 2 paths or 2 URLs. */
   if ((revision1->kind == svn_opt_revision_unspecified)
@@ -9994,6 +10002,15 @@ merge_reintegrate_locked(const char *source,
   struct get_subtree_mergeinfo_walk_baton wb;
   const char *target_url;
   svn_revnum_t target_base_rev;
+  svn_node_kind_t kind;
+
+  /* Make sure the target is really there. */
+  SVN_ERR(svn_io_check_path(target_abspath, &kind, scratch_pool));
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Path '%s' does not exist"),
+                             svn_dirent_local_style(target_abspath,
+                                                    scratch_pool));
 
   /* Make sure we're dealing with a real URL. */
   SVN_ERR(svn_client_url_from_path2(&url2, source, ctx,
@@ -10257,6 +10274,14 @@ merge_peg_locked(const char *source,
   svn_node_kind_t target_kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
+  
+  /* Make sure the target is really there. */
+  SVN_ERR(svn_io_check_path(target_abspath, &target_kind, scratch_pool));
+  if (target_kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Path '%s' does not exist"),
+                             svn_dirent_local_style(target_abspath,
+                                                    scratch_pool));
 
   /* Make sure we're dealing with a real URL. */
   SVN_ERR(svn_client_url_from_path2(&URL, source, ctx,
