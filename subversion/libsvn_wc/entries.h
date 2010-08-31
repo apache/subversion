@@ -105,7 +105,7 @@ svn_wc__write_upgraded_entries(svn_wc__db_t *db,
                                apr_int64_t repos_id,
                                apr_int64_t wc_id,
                                const char *dir_abspath,
-                               const char *root_abspath,
+                               const char *new_root_abspath,
                                apr_hash_t *entries,
                                apr_pool_t *scratch_pool);
 
