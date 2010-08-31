@@ -33,8 +33,8 @@
 
 #include "Prompter.h"
 #include "CreateJ.h"
+#include "EnumMapper.h"
 #include "CommitMessage.h"
-#include "ConflictResolverCallback.h"
 
 
 struct log_msg_baton
@@ -45,8 +45,7 @@ struct log_msg_baton
 
 ClientContext::ClientContext(jobject jsvnclient)
     : m_prompter(NULL),
-      m_commitMessage(NULL),
-      m_conflictResolver(NULL)
+      m_commitMessage(NULL)
 {
     JNIEnv *env = JNIUtil::getEnv();
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
@@ -93,13 +92,14 @@ ClientContext::ClientContext(jobject jsvnclient)
     persistentCtx->notify_baton2 = m_jctx;
     persistentCtx->progress_func = progress;
     persistentCtx->progress_baton = m_jctx;
+    persistentCtx->conflict_func = resolve;
+    persistentCtx->conflict_baton = m_jctx;
 }
 
 ClientContext::~ClientContext()
 {
     delete m_prompter;
     delete m_commitMessage;
-    delete m_conflictResolver;
 
     JNIEnv *env = JNIUtil::getEnv();
     env->DeleteGlobalRef(m_jctx);
@@ -214,12 +214,6 @@ ClientContext::getContext(const char *message)
     ctx->log_msg_baton3 = getCommitMessageBaton(message);
     m_cancelOperation = false;
 
-    if (m_conflictResolver)
-    {
-        ctx->conflict_func = ConflictResolverCallback::resolveConflict;
-        ctx->conflict_baton = m_conflictResolver;
-    }
-
     return ctx;
 }
 
@@ -286,13 +280,6 @@ ClientContext::setPrompt(Prompter *prompter)
 {
     delete m_prompter;
     m_prompter = prompter;
-}
-
-void
-ClientContext::setConflictResolver(ConflictResolverCallback *conflictResolver)
-{
-    delete m_conflictResolver;
-    m_conflictResolver = conflictResolver;
 }
 
 void
@@ -416,4 +403,119 @@ ClientContext::progress(apr_off_t progressVal, apr_off_t total,
   env->CallVoidMethod(jctx, mid, jevent);
   
   POP_AND_RETURN_NOTHING();
+}
+
+svn_error_t *
+ClientContext::resolve(svn_wc_conflict_result_t **result,
+                       const svn_wc_conflict_description_t *desc,
+                       void *baton,
+                       apr_pool_t *pool)
+{
+  jobject jctx = (jobject) baton;
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  static jmethodID mid = 0;
+  if (mid == 0)
+    {
+      jclass clazz = env->GetObjectClass(jctx);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN(SVN_NO_ERROR);
+
+      mid = env->GetMethodID(clazz, "resolve",
+                             "(L"JAVA_PACKAGE"/ConflictDescriptor;)"
+                             "L"JAVA_PACKAGE"/ConflictResult;");
+      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
+        POP_AND_RETURN(SVN_NO_ERROR);
+    }
+
+  // Create an instance of the conflict descriptor.
+  jobject jdesc = CreateJ::ConflictDescriptor(desc);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN(SVN_NO_ERROR);
+
+  // Invoke the Java conflict resolver callback method using the descriptor.
+  jobject jresult = env->CallObjectMethod(jctx, mid, jdesc);
+  if (JNIUtil::isJavaExceptionThrown())
+    {
+      // If an exception is thrown by our conflict resolver, remove it
+      // from the JNI env, and convert it into a Subversion error.
+      const char *msg = JNIUtil::thrownExceptionToCString();
+      svn_error_t *err = svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                          NULL, msg);
+      env->PopLocalFrame(NULL);
+      return err;
+    }
+
+  *result = javaResultToC(jresult, pool);
+  if (*result == NULL)
+    {
+      // Unable to convert the result into a C representation.
+      env->PopLocalFrame(NULL);
+      return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL, NULL);
+    }
+
+  env->PopLocalFrame(NULL);
+  return SVN_NO_ERROR;
+}
+
+svn_wc_conflict_result_t *
+ClientContext::javaResultToC(jobject jresult, apr_pool_t *pool)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  static jmethodID getChoice = 0;
+  static jmethodID getMergedPath = 0;
+
+  jclass clazz = NULL;
+  if (getChoice == 0 || getMergedPath == 0)
+    {
+      clazz = env->FindClass(JAVA_PACKAGE "/ConflictResult");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  if (getChoice == 0)
+    {
+      getChoice = env->GetMethodID(clazz, "getChoice",
+                                   "()L"JAVA_PACKAGE"/ConflictResult$Choice;");
+      if (JNIUtil::isJavaExceptionThrown() || getChoice == 0)
+        POP_AND_RETURN_NULL;
+    }
+  if (getMergedPath == 0)
+    {
+      getMergedPath = env->GetMethodID(clazz, "getMergedPath",
+                                       "()Ljava/lang/String;");
+      if (JNIUtil::isJavaExceptionThrown() || getMergedPath == 0)
+        POP_AND_RETURN_NULL;
+    }
+
+  jobject jchoice = env->CallObjectMethod(jresult, getChoice);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jmergedPath = (jstring) env->CallObjectMethod(jresult, getMergedPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  JNIStringHolder mergedPath(jmergedPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  svn_wc_conflict_result_t *result =
+         svn_wc_create_conflict_result(EnumMapper::toConflictChoice(jchoice),
+                                       mergedPath.pstrdup(pool),
+                                       pool);
+
+  env->PopLocalFrame(NULL);
+  return result;
 }

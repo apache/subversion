@@ -35,7 +35,6 @@
 
 class Revision;
 class RevisionRange;
-class ConflictResolverCallback;
 class Targets;
 class JNIByteArray;
 class Prompter;
