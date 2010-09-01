@@ -1055,8 +1055,8 @@ test_list = [ None,
                    svntest.main.is_ra_type_file),
               Skip(multiple_matches, svntest.main.is_ra_type_file),
               Skip(wc_wc_copy, svntest.main.is_ra_type_file),
-              Wimp('Needs single-db', Skip(wc_wc_copy_revert,
-                                           svntest.main.is_ra_type_file)),
+              Skip(wc_wc_copy_revert,
+                   svntest.main.is_ra_type_file),
              ]
 
 if __name__ == '__main__':
