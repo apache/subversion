@@ -9395,6 +9395,7 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
 }
 
 
+#ifndef SVN_WC__SINGLE_DB
 svn_error_t *
 svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
                                      const char *local_abspath,
@@ -9432,6 +9433,7 @@ svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 svn_error_t *
 svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
