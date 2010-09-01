@@ -777,7 +777,9 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.remove(new HashSet<String>(Arrays.asList(paths)),
-                              message, force, keepLocal, revpropTable,
+                              force, keepLocal, revpropTable,
+                              message == null ? cachedHandler
+                                    : new ConstMsg(message),
                               null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -952,11 +954,14 @@ public class SVNClient implements SVNClientInterface
                 };
 
             aSVNClient.commit(new HashSet<String>(Arrays.asList(paths)),
-                              message, Depth.toADepth(depth), noUnlock,
+                              Depth.toADepth(depth), noUnlock,
                               keepChangelist,
                               changelists == null ? null
                                 : Arrays.asList(changelists),
-                              revpropTable, callback);
+                              revpropTable,
+                              message == null ? cachedHandler
+                                    : new ConstMsg(message),
+                              callback);
             return revList[0];
         }
         catch (org.apache.subversion.javahl.ClientException ex)

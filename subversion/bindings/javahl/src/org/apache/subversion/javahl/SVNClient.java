@@ -210,21 +210,10 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void remove(Set<String> paths, String message, boolean force,
-                       boolean keepLocal,
-                       Map<String, String> revpropTable,
-                       CommitCallback callback)
-            throws ClientException
-    {
-        remove(paths, force, keepLocal, revpropTable, new ConstMsg(message),
-               callback);
-    }
-
-    private native void remove(Set<String> paths, boolean force,
-                               boolean keepLocal,
-                               Map<String, String> revpropTable,
-                               CommitMessage handler,
-                               CommitCallback callback)
+    public native void remove(Set<String> paths, boolean force,
+                              boolean keepLocal,
+                              Map<String, String> revpropTable,
+                              CommitMessage handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -253,23 +242,11 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void commit(Set<String> paths, String message, Depth depth,
-                       boolean noUnlock, boolean keepChangelist,
-                       Collection<String> changelists,
-                       Map<String, String> revpropTable,
-                       CommitCallback callback)
-            throws ClientException
-    {
-        commit(paths, depth, noUnlock, keepChangelist, changelists,
-               revpropTable, new ConstMsg(message), callback);
-    }
-
-    private native void commit(Set<String> paths, Depth depth,
-                               boolean noUnlock, boolean keepChangelist,
-                               Collection<String> changelists,
-                               Map<String, String> revpropTable,
-                               CommitMessage handler,
-                               CommitCallback callback)
+    public native void commit(Set<String> paths, Depth depth, boolean noUnlock,
+                              boolean keepChangelist,
+                              Collection<String> changelists,
+                              Map<String, String> revpropTable,
+                              CommitMessage handler, CommitCallback callback)
             throws ClientException;
 
     /**
