@@ -68,20 +68,6 @@ message_from_skel(const svn_skel_t *skel,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
-static svn_error_t *
-load_actual_props(apr_hash_t **props,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_read_props(props, db, local_abspath,
-                                result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Given a *SINGLE* property conflict in PROP_SKEL, generate a message
    for it, and write it to STREAM, along with a trailing EOL sequence.
 
@@ -1707,8 +1693,8 @@ svn_wc__get_actual_props(apr_hash_t **props,
   /* ### perform some state checking. for example, locally-deleted nodes
      ### should not have any ACTUAL props.  */
 
-  return svn_error_return(load_actual_props(props, db, local_abspath,
-                                            result_pool, scratch_pool));
+  return svn_error_return(svn_wc__db_read_props(props, db, local_abspath,
+                                                result_pool, scratch_pool));
 }
 
 
@@ -2136,8 +2122,8 @@ svn_wc__internal_propset(svn_wc__db_t *db,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(load_actual_props(&prophash, db, local_abspath,
-                              scratch_pool, scratch_pool),
+  SVN_ERR_W(svn_wc__db_read_props(&prophash, db, local_abspath,
+                                  scratch_pool, scratch_pool),
             _("Failed to load current properties"));
 
   /* If we're changing this file's list of expanded keywords, then
@@ -2440,8 +2426,8 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
       if (baseprops == NULL)
         baseprops = apr_hash_make(scratch_pool);
 
-      SVN_ERR(load_actual_props(&actual_props, db, local_abspath,
-                                result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
+                                    result_pool, scratch_pool));
       /* ### be wary. certain nodes don't have ACTUAL props either. we
          ### may want to raise an error. or maybe that is a deletion of
          ### any potential pristine props?  */
