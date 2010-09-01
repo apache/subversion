@@ -2457,11 +2457,11 @@ def merge_dir_replace(sbox):
   expected_status = wc.State(C_path, {
     ''    : Item(status=' M', wc_rev=3),
     'foo' : Item(status='R ', wc_rev='-', copied='+'),
-    'foo/new file 2' : Item(status='D ', wc_rev='-', copied='+'),
-    'foo/file foo'       : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/bar'            : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/bar/new file 3' : Item(status='A ', wc_rev='-', copied='+'),
-    'foo/new file'   : Item(status='D ', wc_rev='-', copied='+'),
+    'foo/new file 2' : Item(status='D ', wc_rev='3'),
+    'foo/file foo'       : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/bar'            : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/bar/new file 3' : Item(status='  ', wc_rev='-', copied='+'),
+    'foo/new file'   : Item(status='D ', wc_rev='3'),
     })
   expected_skip = wc.State(C_path, { })
   svntest.actions.run_and_verify_merge(C_path, '2', '5', F_url, None,
@@ -2480,9 +2480,6 @@ def merge_dir_replace(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'                    : Item(verb='Sending'),
     'A/C/foo'                : Item(verb='Replacing'),
-    'A/C/foo/file foo'       : Item(verb='Adding'),
-    'A/C/foo/bar'            : Item(verb='Adding'),
-    'A/C/foo/bar/new file 3' : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -15952,8 +15949,8 @@ test_list = [ None,
               SkipUnless(cherry_pick_text_conflict,
                          server_has_mergeinfo),
               merge_file_replace,
-              XFail(SkipUnless(merge_dir_replace,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_dir_replace,
+                         server_has_mergeinfo),
               merge_dir_and_file_replace,
               merge_file_replace_to_mixed_rev_wc,
               SkipUnless(merge_ignore_whitespace,
