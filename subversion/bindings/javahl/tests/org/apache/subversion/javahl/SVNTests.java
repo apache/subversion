@@ -779,7 +779,7 @@ class SVNTests extends TestCase
      * internal class to receive the request for the log messages to check if
      * the expected commit items are presented
      */
-    class MyCommitMessage implements CommitMessage
+    class MyCommitMessage implements CommitMessageCallback
     {
         /**
          * Retrieve a commit message from the user based on the items

@@ -210,7 +210,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void remove(Set<String> path, boolean force, boolean keepLocal,
-                Map<String, String> revpropTable, CommitMessage handler,
+                Map<String, String> revpropTable, CommitMessageCallback handler,
                 CommitCallback callback)
             throws ClientException;
 
@@ -278,7 +278,7 @@ public interface ISVNClient
      */
     void commit(Set<String> path, Depth depth, boolean noUnlock,
                 boolean keepChangelist, Collection<String> changelists,
-                Map<String, String> revpropTable, CommitMessage handler,
+                Map<String, String> revpropTable, CommitMessageCallback handler,
                 CommitCallback callback)
             throws ClientException;
 
@@ -303,7 +303,7 @@ public interface ISVNClient
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
               boolean ignoreExternals, Map<String, String> revpropTable,
-              CommitMessage handler, CommitCallback callback)
+              CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -327,7 +327,7 @@ public interface ISVNClient
     void move(Set<String> srcPaths, String destPath, boolean force,
               boolean moveAsChild, boolean makeParents,
               Map<String, String> revpropTable,
-              CommitMessage handler, CommitCallback callback)
+              CommitMessageCallback handler, CommitCallback callback)
         throws ClientException;
 
     /**
@@ -344,7 +344,7 @@ public interface ISVNClient
      */
     void mkdir(Set<String> path, boolean makeParents,
                Map<String, String> revpropTable,
-               CommitMessage handler, CommitCallback callback)
+               CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -427,7 +427,7 @@ public interface ISVNClient
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
                   Map<String, String> revpropTable,
-                  CommitMessage handler, CommitCallback callback)
+                  CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**

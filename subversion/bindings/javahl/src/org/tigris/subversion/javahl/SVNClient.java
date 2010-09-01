@@ -719,7 +719,7 @@ public class SVNClient implements SVNClientInterface
     public void commitMessageHandler(CommitMessage messageHandler)
     {
         class MyCommitMessageHandler
-            implements org.apache.subversion.javahl.CommitMessage
+            implements org.apache.subversion.javahl.callback.CommitMessageCallback
         {
             private CommitMessage messageHandler;
 
@@ -752,7 +752,7 @@ public class SVNClient implements SVNClientInterface
         cachedHandler = new MyCommitMessageHandler(messageHandler);
     }
 
-    private org.apache.subversion.javahl.CommitMessage cachedHandler = null;
+    private org.apache.subversion.javahl.callback.CommitMessageCallback cachedHandler = null;
 
     /**
      * @deprecated Use {@link #remove(String[], String, boolean, boolean, Map)}
@@ -2627,7 +2627,7 @@ public class SVNClient implements SVNClientInterface
     }
 
     private class ConstMsg
-        implements org.apache.subversion.javahl.CommitMessage
+        implements org.apache.subversion.javahl.callback.CommitMessageCallback
     {
         private String message;
 

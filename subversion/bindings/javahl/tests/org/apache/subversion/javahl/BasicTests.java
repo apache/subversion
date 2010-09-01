@@ -3543,7 +3543,7 @@ public class BasicTests extends SVNTests
         }
     }
 
-    private class ConstMsg implements CommitMessage
+    private class ConstMsg implements CommitMessageCallback
     {
         private String message;
 
