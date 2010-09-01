@@ -447,8 +447,7 @@ assemble_status(svn_wc_status3_t **status,
           SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
                                                  scratch_pool, scratch_pool));
 
-          if (props != NULL && apr_hash_count(props) > 0)
-            has_props = TRUE;
+          has_props = (props != NULL && apr_hash_count(props) > 0);
         }
       if (has_props)
         prop_status = svn_wc_status_normal;
