@@ -1340,14 +1340,17 @@ public class BasicTests extends SVNTests
                       false, null, null);
         removeDirOrFile(new File(thisTest.getWorkingCopy(), "A/B/E"));
         thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.deleted);
-        thisTest.getWc().removeItem("A/B/E/alpha");
-        thisTest.getWc().removeItem("A/B/E/beta");
+        thisTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.deleted);
+        thisTest.getWc().setItemTextStatus("A/B/E/beta", Status.Kind.deleted);
 
         // test the status of the working copy
         thisTest.checkStatus();
 
-        // revert A/B/E -> this will not resurect it
+        // revert A/B/E -> this will resurect it
         client.revert(thisTest.getWCPath()+"/A/B/E", Depth.infinity, null);
+        thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.normal);
+        thisTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.normal);
+        thisTest.getWc().setItemTextStatus("A/B/E/beta", Status.Kind.normal);
 
         // test the status of the working copy
         thisTest.checkStatus();
