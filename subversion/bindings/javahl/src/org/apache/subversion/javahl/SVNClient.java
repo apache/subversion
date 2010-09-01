@@ -370,23 +370,11 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void doImport(String path, String url, String message,
-                         Depth depth, boolean noIgnore,
-                         boolean ignoreUnknownNodeTypes,
-                         Map<String, String> revpropTable,
-                         CommitCallback callback)
-            throws ClientException
-    {
-        doImport(path, url, depth, noIgnore, ignoreUnknownNodeTypes,
-                 revpropTable, new ConstMsg(message), callback);
-    }
-
-    private native void doImport(String path, String url,
-                                 Depth depth, boolean noIgnore,
-                                 boolean ignoreUnknownNodeTypes,
-                                 Map<String, String> revpropTable,
-                                 CommitMessage handler,
-                                 CommitCallback callback)
+    public native void doImport(String path, String url, Depth depth,
+                                boolean noIgnore,
+                                boolean ignoreUnknownNodeTypes,
+                                Map<String, String> revpropTable,
+                                CommitMessage handler, CommitCallback callback)
             throws ClientException;
 
     /**
