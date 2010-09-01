@@ -59,11 +59,11 @@ static const char *unidiff =
 static const char *git_unidiff =
   "Index: A/mu (deleted)"                                               NL
   "===================================================================" NL
-  "git --diff a/A/mu b/A/mu"                                            NL
+  "diff --git a/A/mu b/A/mu"                                            NL
   "deleted file mode 100644"                                            NL
   "Index: A/C/gamma"                                                    NL
   "===================================================================" NL
-  "git --diff a/A/C/gamma b/A/C/gamma"                                  NL
+  "diff --git a/A/C/gamma b/A/C/gamma"                                  NL
   "--- a/A/C/gamma\t(revision 2)"                                       NL
   "+++ b/A/C/gamma\t(working copy)"                                     NL
   "@@ -1 +1,2 @@"                                                       NL
@@ -71,19 +71,19 @@ static const char *git_unidiff =
   "+some more bytes to 'gamma'"                                         NL
   "Index: iota"                                                         NL
   "===================================================================" NL
-  "git --diff a/iota b/iota.copied"                                     NL
+  "diff --git a/iota b/iota.copied"                                     NL
   "copy from iota"                                                      NL
   "copy to iota.copied"                                                 NL
   "Index: new"                                                          NL
   "===================================================================" NL
-  "git --diff a/new b/new"                                              NL
+  "diff --git a/new b/new"                                              NL
   "new file mode 100644"                                                NL
   ""                                                                    NL;
 
 static const char *git_tree_and_text_unidiff =
   "Index: iota.copied"                                                  NL
   "===================================================================" NL
-  "git --diff a/iota b/iota.copied"                                     NL
+  "diff --git a/iota b/iota.copied"                                     NL
   "copy from iota"                                                      NL
   "copy to iota.copied"                                                 NL
   "--- a/iota\t(revision 2)"                                            NL
@@ -93,7 +93,7 @@ static const char *git_tree_and_text_unidiff =
   "+some more bytes to 'iota'"                                          NL
   "Index: A/mu.moved"                                                   NL
   "===================================================================" NL
-  "git --diff a/A/mu b/A/mu.moved"                                      NL
+  "diff --git a/A/mu b/A/mu.moved"                                      NL
   "rename from A/mu"                                                    NL
   "rename to A/mu.moved"                                                NL
   "--- a/A/mu\t(revision 2)"                                            NL
@@ -103,7 +103,7 @@ static const char *git_tree_and_text_unidiff =
   "+some more bytes to 'mu'"                                            NL
   "Index: new"                                                          NL
   "===================================================================" NL
-  "git --diff a/new b/new"                                              NL
+  "diff --git a/new b/new"                                              NL
   "new file mode 100644"                                                NL
   "--- /dev/null\t(revision 0)"                                         NL
   "+++ b/new\t(working copy)"                                           NL
@@ -111,7 +111,7 @@ static const char *git_tree_and_text_unidiff =
   "+This is the file 'new'."                                            NL
   "Index: A/B/lambda"                                                   NL
   "===================================================================" NL
-  "git --diff a/A/B/lambda b/A/B/lambda"                                NL
+  "diff --git a/A/B/lambda b/A/B/lambda"                                NL
   "deleted file mode 100644"                                            NL
   "--- a/A/B/lambda\t(revision 2)"                                      NL
   "+++ /dev/null\t(working copy)"                                       NL
@@ -124,22 +124,22 @@ static const char *git_tree_and_text_unidiff =
 static const char *bad_git_diff_header =
   "Index: iota.copied"                                                  NL
   "===================================================================" NL
-  "git --diff a/foo1 b/"                                                NL
-  "git --diff a/foo2 b"                                                 NL
-  "git --diff a/foo3 "                                                  NL
-  "git --diff a/foo3 "                                                  NL
-  "git --diff foo4 b/foo4"                                              NL
-  "git --diff a/foo5 b/foo5"                                            NL
+  "diff --git a/foo1 b/"                                                NL
+  "diff --git a/foo2 b"                                                 NL
+  "diff --git a/foo3 "                                                  NL
+  "diff --git a/foo3 "                                                  NL
+  "diff --git foo4 b/foo4"                                              NL
+  "diff --git a/foo5 b/foo5"                                            NL
   "random noise"                                                        NL
   "copy from foo5"                                                      NL
   "copy to foo5"                                                        NL
-  "git --diff a/foo6 b/foo6"                                            NL
+  "diff --git a/foo6 b/foo6"                                            NL
   "copy from foo6"                                                      NL
   "random noise"                                                        NL
   "copy to foo6"                                                        NL
-  "git --diff a/foo6 b/foo6"                                            NL
+  "diff --git a/foo6 b/foo6"                                            NL
   "copy from foo6"                                                      NL
-  "git --diff a/iota b/iota.copied"                                     NL
+  "diff --git a/iota b/iota.copied"                                     NL
   "copy from iota"                                                      NL
   "copy to iota.copied"                                                 NL
   "@@ -1 +1,2 @@"                                                       NL
@@ -236,13 +236,13 @@ static const char *bad_git_diff_header =
 
   /* A unidiff containing paths with spaces. */
   static const char *path_with_spaces_unidiff =
-  "git --diff a/path 1 b/path 1"                                        NL
+  "diff --git a/path 1 b/path 1"                                        NL
   "new file mode 100644"                                                NL
-  "git --diff a/path one 1 b/path one 1"                                NL
+  "diff --git a/path one 1 b/path one 1"                                NL
   "new file mode 100644"                                                NL
-  "git --diff a/dir/ b/path b/dir/ b/path"                              NL
+  "diff --git a/dir/ b/path b/dir/ b/path"                              NL
   "new file mode 100644"                                                NL
-  "git --diff a/ b/path 1 b/ b/path 1"                                  NL
+  "diff --git a/ b/path 1 b/ b/path 1"                                  NL
   "new file mode 100644"                                                NL;
 
 
