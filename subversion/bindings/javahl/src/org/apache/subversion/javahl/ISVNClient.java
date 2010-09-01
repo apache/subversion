@@ -218,8 +218,8 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void remove(Set<String> path, String message, boolean force,
-                boolean keepLocal, Map<String, String> revpropTable,
+    void remove(Set<String> path, boolean force, boolean keepLocal,
+                Map<String, String> revpropTable, CommitMessage handler,
                 CommitCallback callback)
             throws ClientException;
 
@@ -285,10 +285,9 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void commit(Set<String> path, String message, Depth depth,
-                boolean noUnlock, boolean keepChangelist,
-                Collection<String> changelists,
-                Map<String, String> revpropTable,
+    void commit(Set<String> path, Depth depth, boolean noUnlock,
+                boolean keepChangelist, Collection<String> changelists,
+                Map<String, String> revpropTable, CommitMessage handler,
                 CommitCallback callback)
             throws ClientException;
 
