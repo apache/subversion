@@ -200,15 +200,31 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.0
      */
-    public native void commitMessageHandler(CommitMessage messageHandler);
+    public void commitMessageHandler(CommitMessage messageHandler)
+    {
+        this.messageHandler = messageHandler;
+    }
+
+    private CommitMessage messageHandler = null;
 
     /**
      * @since 1.5
      */
-    public native void remove(Set<String> paths, String message, boolean force,
-                              boolean keepLocal,
-                              Map<String, String> revpropTable,
-                              CommitCallback callback)
+    public void remove(Set<String> paths, String message, boolean force,
+                       boolean keepLocal,
+                       Map<String, String> revpropTable,
+                       CommitCallback callback)
+            throws ClientException
+    {
+        remove(paths, force, keepLocal, revpropTable, new ConstMsg(message),
+               callback);
+    }
+
+    private native void remove(Set<String> paths, boolean force,
+                               boolean keepLocal,
+                               Map<String, String> revpropTable,
+                               CommitMessage handler,
+                               CommitCallback callback)
             throws ClientException;
 
     /**
@@ -237,40 +253,87 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void commit(Set<String> paths, String message, Depth depth,
-                              boolean noUnlock, boolean keepChangelist,
-                              Collection<String> changelists,
-                              Map<String, String> revpropTable,
-                              CommitCallback callback)
+    public void commit(Set<String> paths, String message, Depth depth,
+                       boolean noUnlock, boolean keepChangelist,
+                       Collection<String> changelists,
+                       Map<String, String> revpropTable,
+                       CommitCallback callback)
+            throws ClientException
+    {
+        commit(paths, depth, noUnlock, keepChangelist, changelists,
+               revpropTable, new ConstMsg(message), callback);
+    }
+
+    private native void commit(Set<String> paths, Depth depth,
+                               boolean noUnlock, boolean keepChangelist,
+                               Collection<String> changelists,
+                               Map<String, String> revpropTable,
+                               CommitMessage handler,
+                               CommitCallback callback)
             throws ClientException;
 
     /**
      * @since 1.7
      */
-    public native void copy(List<CopySource> sources, String destPath,
-                            String message, boolean copyAsChild,
-                            boolean makeParents, boolean ignoreExternals,
-                            Map<String, String> revpropTable,
-                            CommitCallback callback)
+    public void copy(List<CopySource> sources, String destPath,
+                     String message, boolean copyAsChild,
+                     boolean makeParents, boolean ignoreExternals,
+                     Map<String, String> revpropTable,
+                     CommitCallback callback)
+            throws ClientException
+    {
+        copy(sources, destPath, copyAsChild, makeParents, ignoreExternals,
+             revpropTable, new ConstMsg(message), callback);
+    }
+
+    private native void copy(List<CopySource> sources, String destPath,
+                             boolean copyAsChild,
+                             boolean makeParents, boolean ignoreExternals,
+                             Map<String, String> revpropTable,
+                             CommitMessage handler,
+                             CommitCallback callback)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void move(Set<String> srcPaths, String destPath,
-                            String message, boolean force, boolean moveAsChild,
-                            boolean makeParents,
-                            Map<String, String> revpropTable,
-                            CommitCallback callback)
-            throws ClientException;
+    public void move(Set<String> srcPaths, String destPath,
+                     String message, boolean force, boolean moveAsChild,
+                     boolean makeParents,
+                     Map<String, String> revpropTable,
+                     CommitCallback callback)
+            throws ClientException
+    {
+        move(srcPaths, destPath, force, moveAsChild, makeParents,
+             revpropTable, new ConstMsg(message), callback);
+    }
 
-    /**
-     * @since 1.5
-     */
-    public native void mkdir(Set<String> paths, String message,
+    private native void move(Set<String> srcPaths, String destPath,
+                             boolean force, boolean moveAsChild,
                              boolean makeParents,
                              Map<String, String> revpropTable,
+                             CommitMessage handler,
                              CommitCallback callback)
+            throws ClientException;
+
+    /**
+     * @since 1.5
+     */
+    public void mkdir(Set<String> paths, String message,
+                      boolean makeParents,
+                      Map<String, String> revpropTable,
+                      CommitCallback callback)
+            throws ClientException
+    {
+        mkdir(paths, makeParents, revpropTable, new ConstMsg(message),
+              callback);
+    }
+
+    private native void mkdir(Set<String> paths,
+                              boolean makeParents,
+                              Map<String, String> revpropTable,
+                              CommitMessage handler,
+                              CommitCallback callback)
             throws ClientException;
 
     /**
@@ -307,11 +370,23 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void doImport(String path, String url, String message,
-                                Depth depth, boolean noIgnore,
-                                boolean ignoreUnknownNodeTypes,
-                                Map<String, String> revpropTable,
-                                CommitCallback callback)
+    public void doImport(String path, String url, String message,
+                         Depth depth, boolean noIgnore,
+                         boolean ignoreUnknownNodeTypes,
+                         Map<String, String> revpropTable,
+                         CommitCallback callback)
+            throws ClientException
+    {
+        doImport(path, url, depth, noIgnore, ignoreUnknownNodeTypes,
+                 revpropTable, new ConstMsg(message), callback);
+    }
+
+    private native void doImport(String path, String url,
+                                 Depth depth, boolean noIgnore,
+                                 boolean ignoreUnknownNodeTypes,
+                                 Map<String, String> revpropTable,
+                                 CommitMessage handler,
+                                 CommitCallback callback)
             throws ClientException;
 
     /**
@@ -680,6 +755,27 @@ public class SVNClient implements ISVNClient
             else
                 return new ConflictResult(ConflictResult.Choice.postpone,
                                           null);
+        }
+    }
+
+    private class ConstMsg
+        implements CommitMessage
+    {
+        private String message;
+
+        public ConstMsg(String message)
+        {
+            this.message = message;
+        }
+
+        public String getLogMessage(Set<CommitItem> items)
+        {
+            if (message != null)
+                return message;
+            else if (messageHandler != null)
+                return messageHandler.getLogMessage(items);
+            else
+                return null;
         }
     }
 }

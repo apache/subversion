@@ -56,22 +56,6 @@ class ClientContext
   Prompter *m_prompter;
   bool m_cancelOperation;
 
-  CommitMessage *m_commitMessage;
-
-  /**
-   * Implements the svn_client_get_commit_log3_t API.
-   */
-  static svn_error_t *getCommitMessage(const char **log_msg,
-                                       const char **tmp_file,
-                                       const apr_array_header_t *
-                                       commit_items,
-                                       void *baton,
-                                       apr_pool_t *pool);
-  /**
-   * Produce a baton for the getCommitMessage() callback.
-   */
-  void *getCommitMessageBaton(const char *message);
- 
  protected:
   static void notify(void *baton, const svn_wc_notify_t *notify,
                      apr_pool_t *pool);
@@ -90,12 +74,11 @@ class ClientContext
 
   static svn_error_t *checkCancel(void *cancelBaton);
 
-  svn_client_ctx_t *getContext(const char *message);
+  svn_client_ctx_t *getContext(CommitMessage *message);
 
   void username(const char *pi_username);
   void password(const char *pi_password);
   void setPrompt(Prompter *prompter);
-  void commitMessageHandler(CommitMessage *commitMessage);
   void cancelOperation();
   const char *getConfigDirectory();
 
