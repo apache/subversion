@@ -5636,6 +5636,52 @@ def add_moved_file_has_props(sbox):
   # This shouldn't show property modifications, but at r982550 it did.
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+# Test for receiving modified properties on added files that were originally
+# moved from somewhere else. (Triggers locate_copyfrom behavior). This is
+# an extended variant that has another property change on the new path
+def add_moved_file_has_props2(sbox):
+  """update adding moved node receives 2* props"""
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  G = os.path.join(os.path.join(wc_dir, 'A', 'D', 'G'))
+  pi  = os.path.join(G, 'pi')
+  G_new = os.path.join(wc_dir, 'G_new')
+
+  # Give pi some property
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'native', pi)
+  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'added eol-style')
+
+  svntest.actions.run_and_verify_svn(None, 'At revision 2.', [], 'up', wc_dir)
+
+  # Now move pi to a different place
+  svntest.main.run_svn(None, 'mkdir', G_new)
+  svntest.main.run_svn(None, 'mv', pi, G_new)
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'CR', os.path.join(G_new, 'pi'))
+
+  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'Moved pi to G_new')
+
+  svntest.actions.run_and_verify_svn(None, 'At revision 3.', [], 'up', wc_dir)
+
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/D/G/pi')
+  expected_status.add({
+    'G_new'    : Item (status='  ', wc_rev=3),
+    'G_new/pi' : Item (status='  ', wc_rev=3),
+  })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.main.run_svn(None, 'up', '-r', '0', G_new)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # This shouldn't show local modifications, but currently it
+  # shows a property conflict on G_new/pi.
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 #######################################################################
 # Run the tests
@@ -5706,6 +5752,7 @@ test_list = [ None,
               XFail(update_empty_hides_entries),
               mergeinfo_updates_merge_with_local_mods,
               add_moved_file_has_props,
+              XFail(add_moved_file_has_props2),
              ]
 
 if __name__ == '__main__':
