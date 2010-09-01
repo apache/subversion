@@ -263,7 +263,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     return rev;
 }
 
-void SVNClient::remove(Targets &targets, const char *message, bool force,
+void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
                        bool keep_local, RevpropTable &revprops,
                        CommitCallback *callback)
 {
@@ -359,7 +359,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
     return jrevs;
 }
 
-void SVNClient::commit(Targets &targets, const char *message,
+void SVNClient::commit(Targets &targets, CommitMessage *message,
                        svn_depth_t depth, bool noUnlock, bool keepChangelist,
                        StringArray &changelists, RevpropTable &revprops,
                        CommitCallback *callback)
@@ -381,9 +381,9 @@ void SVNClient::commit(Targets &targets, const char *message,
 }
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
-                     const char *message, bool copyAsChild, bool makeParents,
-                     bool ignoreExternals, RevpropTable &revprops,
-                     CommitCallback *callback)
+                     CommitMessage *message, bool copyAsChild,
+                     bool makeParents, bool ignoreExternals,
+                     RevpropTable &revprops, CommitCallback *callback)
 {
     SVN::Pool requestPool;
 
@@ -410,7 +410,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 }
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
-                     const char *message, bool force, bool moveAsChild,
+                     CommitMessage *message, bool force, bool moveAsChild,
                      bool makeParents, RevpropTable &revprops,
                      CommitCallback *callback)
 {
@@ -433,8 +433,9 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
                                  requestPool.pool()), );
 }
 
-void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents,
-                      RevpropTable &revprops, CommitCallback *callback)
+void SVNClient::mkdir(Targets &targets, CommitMessage *message,
+                      bool makeParents, RevpropTable &revprops,
+                      CommitCallback *callback)
 {
     SVN::Pool requestPool;
     svn_client_ctx_t *ctx = context.getContext(message);
@@ -545,7 +546,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 }
 
 void SVNClient::doImport(const char *path, const char *url,
-                         const char *message, svn_depth_t depth,
+                         CommitMessage *message, svn_depth_t depth,
                          bool noIgnore, bool ignoreUnknownNodeTypes,
                          RevpropTable &revprops, CommitCallback *callback)
 {

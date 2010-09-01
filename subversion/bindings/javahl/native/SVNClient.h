@@ -103,7 +103,7 @@ class SVNClient :public SVNBase
              bool ignoreAncestry, bool dryRun, bool recordOnly);
   void mergeReintegrate(const char *path, Revision &pegRevision,
                         const char *localPath, bool dryRun);
-  void doImport(const char *path, const char *url, const char *message,
+  void doImport(const char *path, const char *url, CommitMessage *message,
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes,
                 RevpropTable &revprops, CommitCallback *callback);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
@@ -117,16 +117,16 @@ class SVNClient :public SVNBase
   void resolve(const char *path, svn_depth_t depth,
                svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
-  void mkdir(Targets &targets, const char *message, bool makeParents,
+  void mkdir(Targets &targets, CommitMessage *message, bool makeParents,
              RevpropTable &revprops, CommitCallback *callback);
   void move(Targets &srcPaths, const char *destPath,
-            const char *message, bool force, bool moveAsChild,
+            CommitMessage *message, bool force, bool moveAsChild,
             bool makeParents, RevpropTable &revprops, CommitCallback *callback);
   void copy(CopySources &copySources, const char *destPath,
-            const char *message, bool copyAsChild, bool makeParents,
+            CommitMessage *message, bool copyAsChild, bool makeParents,
             bool ignoreExternals, RevpropTable &revprops,
             CommitCallback *callback);
-  void commit(Targets &targets, const char *message, svn_depth_t depth,
+  void commit(Targets &targets, CommitMessage *message, svn_depth_t depth,
               bool noUnlock, bool keepChangelist,
               StringArray &changelists, RevpropTable &revprops,
               CommitCallback *callback);
@@ -136,7 +136,7 @@ class SVNClient :public SVNBase
   void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
            bool add_parents);
   void revert(const char *path, svn_depth_t depth, StringArray &changelists);
-  void remove(Targets &targets, const char *message, bool force,
+  void remove(Targets &targets, CommitMessage *message, bool force,
               bool keep_local, RevpropTable &revprops,
               CommitCallback *callback);
   jlong checkout(const char *moduleName, const char *destPath,

@@ -44,8 +44,7 @@ struct log_msg_baton
 };
 
 ClientContext::ClientContext(jobject jsvnclient)
-    : m_prompter(NULL),
-      m_commitMessage(NULL)
+    : m_prompter(NULL)
 {
     JNIEnv *env = JNIUtil::getEnv();
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
@@ -85,7 +84,7 @@ ClientContext::ClientContext(jobject jsvnclient)
        this object. */
     persistentCtx->notify_func = NULL;
     persistentCtx->notify_baton = NULL;
-    persistentCtx->log_msg_func3 = getCommitMessage;
+    persistentCtx->log_msg_func3 = CommitMessage::callback;
     persistentCtx->cancel_func = checkCancel;
     persistentCtx->cancel_baton = this;
     persistentCtx->notify_func2= notify;
@@ -99,14 +98,13 @@ ClientContext::ClientContext(jobject jsvnclient)
 ClientContext::~ClientContext()
 {
     delete m_prompter;
-    delete m_commitMessage;
 
     JNIEnv *env = JNIUtil::getEnv();
     env->DeleteGlobalRef(m_jctx);
 }
 
 svn_client_ctx_t *
-ClientContext::getContext(const char *message)
+ClientContext::getContext(CommitMessage *message)
 {
     SVN::Pool *requestPool = JNIUtil::getRequestPool();
     apr_pool_t *pool = requestPool->pool();
@@ -211,56 +209,10 @@ ClientContext::getContext(const char *message)
                                m_passWord.c_str());
 
     ctx->auth_baton = ab;
-    ctx->log_msg_baton3 = getCommitMessageBaton(message);
+    ctx->log_msg_baton3 = message;
     m_cancelOperation = false;
 
     return ctx;
-}
-
-svn_error_t *
-ClientContext::getCommitMessage(const char **log_msg,
-                                const char **tmp_file,
-                                const apr_array_header_t *commit_items,
-                                void *baton,
-                                apr_pool_t *pool)
-{
-    *log_msg = NULL;
-    *tmp_file = NULL;
-    log_msg_baton *lmb = (log_msg_baton *) baton;
-
-    if (lmb && lmb->messageHandler)
-    {
-        jstring jmsg = lmb->messageHandler->getCommitMessage(commit_items);
-        if (jmsg != NULL)
-        {
-            JNIStringHolder msg(jmsg);
-            *log_msg = apr_pstrdup(pool, msg);
-        }
-        return SVN_NO_ERROR;
-    }
-    else if (lmb && lmb->message)
-    {
-        *log_msg = apr_pstrdup(pool, lmb->message);
-        return SVN_NO_ERROR;
-    }
-
-    return SVN_NO_ERROR;
-}
-
-void *
-ClientContext::getCommitMessageBaton(const char *message)
-{
-    if (message != NULL || m_commitMessage)
-    {
-        log_msg_baton *baton = (log_msg_baton *)
-            apr_palloc(JNIUtil::getRequestPool()->pool(), sizeof(*baton));
-
-        baton->message = message;
-        baton->messageHandler = m_commitMessage;
-
-        return baton;
-    }
-    return NULL;
 }
 
 void
@@ -297,13 +249,6 @@ const char *
 ClientContext::getConfigDirectory()
 {
     return m_configDir.c_str();
-}
-
-void
-ClientContext::commitMessageHandler(CommitMessage *commitMessage)
-{
-    delete m_commitMessage;
-    m_commitMessage = commitMessage;
 }
 
 void
