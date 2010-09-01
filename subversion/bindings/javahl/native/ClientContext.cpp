@@ -37,12 +37,6 @@
 #include "CommitMessage.h"
 
 
-struct log_msg_baton
-{
-    const char *message;
-    CommitMessage *messageHandler;
-};
-
 ClientContext::ClientContext(jobject jsvnclient)
     : m_prompter(NULL)
 {
