@@ -819,6 +819,7 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
   return SVN_NO_ERROR;
 }
 
+#ifndef SVN_WC__SINGLE_DB
 svn_error_t *
 svn_wc__node_is_status_obstructed(svn_boolean_t *is_obstructed,
                                   svn_wc_context_t *wc_ctx,
@@ -841,6 +842,7 @@ svn_wc__node_is_status_obstructed(svn_boolean_t *is_obstructed,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 svn_error_t *
 svn_wc__node_is_status_absent(svn_boolean_t *is_absent,
