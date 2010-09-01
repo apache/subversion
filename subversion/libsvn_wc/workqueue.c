@@ -1456,9 +1456,11 @@ log_do_committed(svn_wc__db_t *db,
       return SVN_NO_ERROR;
   }
 
+#ifndef SVN_WC__SINGLE_DB
   /* Make sure we have a parent stub in a clean/unmodified state.  */
   SVN_ERR(svn_wc__db_temp_set_parent_stub_to_normal(db, local_abspath,
                                                     TRUE, scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }

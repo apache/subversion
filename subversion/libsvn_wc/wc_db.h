@@ -2443,6 +2443,7 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                                      const char *prej_basename,
                                                      apr_pool_t *scratch_pool);
 
+#ifndef SVN_WC__SINGLE_DB
 /* Ensure that the parent stub of LOCAL_ABSPATH contains a BASE_NODE record with
    a normal status and optionally remove the WORKING_NODE record for the node;
    this assumes that the parent directory is in the incomplete state, or the
@@ -2456,6 +2457,7 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
                                           const char *local_abspath,
                                           svn_boolean_t delete_working,
                                           apr_pool_t *scratch_pool);
+#endif
 
 /* Sets a base nodes revision and/or repository relative path. If
    LOCAL_ABSPATH's rev (REV) is valid, set is revision and if SET_REPOS_RELPATH
