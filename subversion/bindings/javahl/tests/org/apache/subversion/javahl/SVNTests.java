@@ -272,7 +272,6 @@ class SVNTests extends TestCase
     {
         this.client = new SVNClient();
         this.client.notification2(new MyNotifier());
-        this.client.commitMessageHandler(new MyCommitMessage());
         this.client.setPrompt(new DefaultPromptUserPassword());
         this.client.username("jrandom");
         this.client.setProgressCallback(new DefaultProgressListener());

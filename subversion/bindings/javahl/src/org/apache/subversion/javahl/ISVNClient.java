@@ -198,15 +198,6 @@ public interface ISVNClient
     void setProgressCallback(ProgressCallback listener);
 
     /**
-     * Sets the commit message handler. This allows more complex commit message
-     * with the list of the elements to be commited as input.
-     * @param messageHandler    callback for entering commit messages
-     *                          if this is set the message parameter is ignored.
-     * @since 1.0
-     */
-    void commitMessageHandler(CommitMessage messageHandler);
-
-    /**
      * Sets a file for deletion.
      * @param path      path or url to be deleted
      * @param message   if path is a url, this will be the commit message.
@@ -309,10 +300,10 @@ public interface ISVNClient
      * @throws ClientException If the copy operation fails.
      * @since 1.7
      */
-    void copy(List<CopySource> sources, String destPath, String message,
+    void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
               boolean ignoreExternals, Map<String, String> revpropTable,
-              CommitCallback callback)
+              CommitMessage handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -333,9 +324,10 @@ public interface ISVNClient
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
-    void move(Set<String> srcPaths, String destPath, String message,
-              boolean force, boolean moveAsChild, boolean makeParents,
-              Map<String, String> revpropTable, CommitCallback callback)
+    void move(Set<String> srcPaths, String destPath, boolean force,
+              boolean moveAsChild, boolean makeParents,
+              Map<String, String> revpropTable,
+              CommitMessage handler, CommitCallback callback)
         throws ClientException;
 
     /**
@@ -350,8 +342,9 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void mkdir(Set<String> path, String message, boolean makeParents,
-               Map<String, String> revpropTable, CommitCallback callback)
+    void mkdir(Set<String> path, boolean makeParents,
+               Map<String, String> revpropTable,
+               CommitMessage handler, CommitCallback callback)
             throws ClientException;
 
     /**

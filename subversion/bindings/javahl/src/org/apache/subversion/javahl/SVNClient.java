@@ -198,16 +198,6 @@ public class SVNClient implements ISVNClient
     }
 
     /**
-     * @since 1.0
-     */
-    public void commitMessageHandler(CommitMessage messageHandler)
-    {
-        this.messageHandler = messageHandler;
-    }
-
-    private CommitMessage messageHandler = null;
-
-    /**
      * @since 1.5
      */
     public native void remove(Set<String> paths, boolean force,
@@ -252,65 +242,29 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.7
      */
-    public void copy(List<CopySource> sources, String destPath,
-                     String message, boolean copyAsChild,
-                     boolean makeParents, boolean ignoreExternals,
-                     Map<String, String> revpropTable,
-                     CommitCallback callback)
-            throws ClientException
-    {
-        copy(sources, destPath, copyAsChild, makeParents, ignoreExternals,
-             revpropTable, new ConstMsg(message), callback);
-    }
-
-    private native void copy(List<CopySource> sources, String destPath,
-                             boolean copyAsChild,
-                             boolean makeParents, boolean ignoreExternals,
-                             Map<String, String> revpropTable,
-                             CommitMessage handler,
-                             CommitCallback callback)
+    public native void copy(List<CopySource> sources, String destPath,
+                            boolean copyAsChild, boolean makeParents,
+                            boolean ignoreExternals,
+                            Map<String, String> revpropTable,
+                            CommitMessage handler, CommitCallback callback)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void move(Set<String> srcPaths, String destPath,
-                     String message, boolean force, boolean moveAsChild,
-                     boolean makeParents,
-                     Map<String, String> revpropTable,
-                     CommitCallback callback)
-            throws ClientException
-    {
-        move(srcPaths, destPath, force, moveAsChild, makeParents,
-             revpropTable, new ConstMsg(message), callback);
-    }
-
-    private native void move(Set<String> srcPaths, String destPath,
-                             boolean force, boolean moveAsChild,
-                             boolean makeParents,
-                             Map<String, String> revpropTable,
-                             CommitMessage handler,
-                             CommitCallback callback)
+    public native void move(Set<String> srcPaths, String destPath,
+                            boolean force, boolean moveAsChild,
+                            boolean makeParents,
+                            Map<String, String> revpropTable,
+                            CommitMessage handler, CommitCallback callback)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void mkdir(Set<String> paths, String message,
-                      boolean makeParents,
-                      Map<String, String> revpropTable,
-                      CommitCallback callback)
-            throws ClientException
-    {
-        mkdir(paths, makeParents, revpropTable, new ConstMsg(message),
-              callback);
-    }
-
-    private native void mkdir(Set<String> paths,
-                              boolean makeParents,
-                              Map<String, String> revpropTable,
-                              CommitMessage handler,
-                              CommitCallback callback)
+    public native void mkdir(Set<String> paths, boolean makeParents,
+                             Map<String, String> revpropTable,
+                             CommitMessage handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -720,27 +674,6 @@ public class SVNClient implements ISVNClient
             else
                 return new ConflictResult(ConflictResult.Choice.postpone,
                                           null);
-        }
-    }
-
-    private class ConstMsg
-        implements CommitMessage
-    {
-        private String message;
-
-        public ConstMsg(String message)
-        {
-            this.message = message;
-        }
-
-        public String getLogMessage(Set<CommitItem> items)
-        {
-            if (message != null)
-                return message;
-            else if (messageHandler != null)
-                return messageHandler.getLogMessage(items);
-            else
-                return null;
         }
     }
 }
