@@ -525,19 +525,7 @@ assemble_status(svn_wc_status3_t **status,
         text_status = svn_wc_status_modified;
     }
 
-  /* While tree conflicts aren't stored on the node themselves, check
-     explicitly for tree conflicts to allow our users to ignore this detail */
-  if (!conflicted)
-    {
-      const svn_wc_conflict_description2_t *tree_conflict;
-
-      SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict,
-                                               db, local_abspath,
-                                               scratch_pool, scratch_pool));
-
-      conflicted = (tree_conflict != NULL);
-    }
-  else
+  if (conflicted)
     {
       svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
 
