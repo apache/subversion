@@ -6,20 +6,17 @@
    Usage: bump-to-19.py WC_ROOT_DIR
    where WC_ROOT_DIR is the path to the WC root directory.
 
-   Skips non-WC dirs and WC dirs that are not at format 18.
-
-   WARNING: Currently it merges ALL sub-dir WC dirs into the root, including
-   'external' WCs and unrelated WCs, which will break those."""
-
-# TODO: Don't walk into unrelated subdir WCs or 'external' WCs.
-#
-#   Bert says: To find the children of a directory in a more robust way you
-#   need to parse the presence+kind in the parent dir for both BASE and
-#   WORKING. Excluded and not present are the most interesting statee in the
-#   parent. Handling keep-local and deleting the dirs on the upgrade + all
-#   the obstruction cases will make the final code much harder.
+   Skips non-WC dirs and WC dirs that are not at format 18."""
 
 # TODO: Detect '_svn' as an alternative to '.svn'.
+
+# TODO: Probably should remove any directory that is in state to-be-deleted
+#       and doesn't have its 'keep_local' flag set.  Otherwise it will
+#       become unversioned after commit, whereas format-18 and earlier would
+#       have deleted it after commit.  Before deleting we should check there
+#       are no unversioned things inside, and maybe even check for "local
+#       mods" even though that's logically impossible.  On the other hand
+#       it's not a big deal for the user to clean these up manually.
 
 
 import sys, os, shutil, sqlite3
