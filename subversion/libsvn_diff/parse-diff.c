@@ -709,7 +709,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               *prop_operation = svn_diff_op_modified;
             }
           else if (starts_with(line->data, minus)
-                   || starts_with(line->data, "git --diff "))
+                   || starts_with(line->data, "diff --git "))
             /* This could be a header of another patch. Bail out. */
             break;
         }
@@ -905,8 +905,7 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
    * such substitution then the whole pathname is put in double quotes.
    */
 
-  /* Our line should look like this: 'git --diff a/path b/path'. 
-   * ### Not diff --git a/path b/path ?
+  /* Our line should look like this: 'diff --git a/path b/path'. 
    *
    * If we find any deviations from that format, we return with state reset
    * to start.
@@ -942,9 +941,9 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   /* By now, we know that we have a line on the form '--git diff a/.+ b/.+'
    * We only need the filenames when we have deleted or added empty
    * files. In those cases the old_path and new_path is identical on the
-   * '--git diff' line.  For all other cases we fetch the filenames from
+   * 'diff --git' line.  For all other cases we fetch the filenames from
    * other header lines. */ 
-  old_path_start = line + strlen("--git diff a/");
+  old_path_start = line + strlen("diff --git a/");
   new_path_end = line + strlen(line);
   new_path_start = old_path_start;
 
@@ -1165,8 +1164,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
     {
       {"--- ",          state_start,            diff_minus},
       {"+++ ",          state_minus_seen,       diff_plus},
-      /* ### Not "diff --git"? */
-      {"git --diff",    state_start,            git_start},
+      {"diff --git",    state_start,            git_start},
       {"--- a/",        state_git_diff_seen,    git_minus},
       {"--- a/",        state_git_tree_seen,    git_minus},
       {"--- /dev/null", state_git_tree_seen,    git_minus},
