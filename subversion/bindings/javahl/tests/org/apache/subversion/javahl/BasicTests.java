@@ -807,7 +807,7 @@ public class BasicTests extends SVNTests
         Set<String> urls = new HashSet<String>(2);
         urls.add(thisTest.getUrl() + "/Y");
         urls.add(thisTest.getUrl() + "/Y/Z");
-        client.mkdir(urls, "log_msg", false, null, null);
+        client.mkdir(urls, false, null, new ConstMsg("log_msg"), null);
 
         // add the new directories the expected working copy layout
         thisTest.getWc().addItem("Y", null);
@@ -857,7 +857,7 @@ public class BasicTests extends SVNTests
         }
         client.copy(sources,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, true, false, false, null, null);
+                    true, false, false, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -873,9 +873,9 @@ public class BasicTests extends SVNTests
         wcSource.add(new CopySource(new File(thisTest.getWorkingCopy(),
                                         "A/B").getPath(), Revision.WORKING,
                                     Revision.WORKING));
-        client.copy(wcSource,
-                    thisTest.getUrl() + "/parent/A/B",
-                    "Copy WC to URL", true, true, false, null, null);
+        client.copy(wcSource, thisTest.getUrl() + "/parent/A/B",
+                    true, true, false, null,
+                    new ConstMsg("Copy WC to URL"), null);
 
         // update the WC to get new folder and confirm the copy
         assertEquals("wrong revision number from update",
@@ -919,7 +919,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, false, true, false, null, null);
+                    false, true, false, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -1332,7 +1332,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // create & add the directory X
-        client.mkdir(thisTest.getWCPathSet("/X"), null, false, null, null);
+        client.mkdir(thisTest.getWCPathSet("/X"), false, null, null, null);
         thisTest.getWc().addItem("X", null);
         thisTest.getWc().setItemTextStatus("X", Status.Kind.added);
 
@@ -1456,7 +1456,7 @@ public class BasicTests extends SVNTests
         file = new File(thisTest.getWCPath(), "A/B/X");
         pathSet.clear();
         pathSet.add(file.getAbsolutePath());
-        client.mkdir(pathSet, null, false, null, null);
+        client.mkdir(pathSet, false, null, null, null);
         thisTest.getWc().addItem("A/B/X", null);
         thisTest.getWc().setItemTextStatus("A/B/X", Status.Kind.added);
 
@@ -1473,7 +1473,7 @@ public class BasicTests extends SVNTests
         file = new File(thisTest.getWCPath(), "A/B/Y");
         pathSet.clear();
         pathSet.add(file.getAbsolutePath());
-        client.mkdir(pathSet, null, false, null, null);
+        client.mkdir(pathSet, false, null, null, null);
         thisTest.getWc().addItem("A/B/Y", null);
         thisTest.getWc().setItemTextStatus("A/B/Y", Status.Kind.added);
 
@@ -2613,7 +2613,7 @@ public class BasicTests extends SVNTests
                               NodeKind.none, CommitItemStateFlags.Add);
         Set<String> paths = new HashSet<String>(1);
         paths.add(thisTest.getUrl() + "/branches");
-        client.mkdir(paths, "log_msg", false, null, null);
+        client.mkdir(paths, false, null, new ConstMsg("log_msg"), null);
 
         // copy A to branches (r3)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches/A",
@@ -2622,7 +2622,8 @@ public class BasicTests extends SVNTests
         srcs.add(new CopySource(thisTest.getUrl() + "/A", Revision.HEAD,
                                 Revision.HEAD));
         client.copy(srcs, thisTest.getUrl() + "/branches/A",
-                    "create A branch", true, false, false, null, null);
+                    true, false, false, null,
+                    new ConstMsg("create A branch"), null);
 
         // update the WC (to r3) so that it has the branches folder
         client.update(thisTest.getWCPathSet(), Revision.HEAD,
@@ -3087,7 +3088,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, false, true, false, null, null);
+                    false, true, false, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,

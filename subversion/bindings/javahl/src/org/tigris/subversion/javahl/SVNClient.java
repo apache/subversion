@@ -749,8 +749,6 @@ public class SVNClient implements SVNClientInterface
             }
         }
 
-        aSVNClient.commitMessageHandler(new MyCommitMessageHandler(
-                                                            messageHandler));
         cachedHandler = new MyCommitMessageHandler(messageHandler);
     }
 
@@ -989,8 +987,11 @@ public class SVNClient implements SVNClientInterface
                 aCopySources.add(src.toApache());
             }
 
-            aSVNClient.copy(aCopySources, destPath, message, copyAsChild,
-                            makeParents, ignoreExternals, revpropTable, null);
+            aSVNClient.copy(aCopySources, destPath, copyAsChild,
+                            makeParents, ignoreExternals, revpropTable,
+                            message == null ? cachedHandler
+                                : new ConstMsg(message),
+                            null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1037,8 +1038,11 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.move(new HashSet<String>(Arrays.asList(srcPaths)),
-                            destPath, message, force, moveAsChild,
-                            makeParents, revpropTable, null);
+                            destPath, force, moveAsChild, makeParents,
+                            revpropTable,
+                            message == null ? cachedHandler
+                                : new ConstMsg(message),
+                            null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1082,7 +1086,10 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.mkdir(new HashSet<String>(Arrays.asList(paths)),
-                             message, makeParents, revpropTable, null);
+                             makeParents, revpropTable,
+                             message == null ? cachedHandler
+                                : new ConstMsg(message),
+                             null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
