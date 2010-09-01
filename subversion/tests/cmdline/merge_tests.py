@@ -41,7 +41,6 @@ Wimp = svntest.testcase.Wimp
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from svntest.main import is_fs_case_insensitive
 from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
@@ -16083,9 +16082,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(merge_automatic_conflict_resolution),
               skipped_files_get_correct_mergeinfo,
-              Wimp("Needs single-db",
-                   committed_case_only_move_and_revert,
-                   is_fs_case_insensitive),
+              committed_case_only_move_and_revert,
               merge_into_wc_for_deleted_branch,
               foreign_repos_del_and_props,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
