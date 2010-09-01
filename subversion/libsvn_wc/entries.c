@@ -2796,6 +2796,7 @@ svn_wc_walk_entries3(const char *path,
        walk_baton, pool);
 }
 
+#ifndef SVN_WC__SINGLE_DB
 svn_error_t *
 svn_wc__temp_mark_missing_not_present(const char *local_abspath,
                                       svn_wc_context_t *wc_ctx,
@@ -2844,3 +2845,4 @@ svn_wc__temp_mark_missing_not_present(const char *local_abspath,
                              "path is marked 'missing'"),
                            svn_dirent_local_style(local_abspath, scratch_pool));
 }
+#endif
