@@ -194,7 +194,6 @@ def mergeinfo_and_skipped_paths(sbox):
     'B/E'       : Item(),
     'D/H/omega' : Item(),
     })
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_path, '4', '8',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -273,7 +272,6 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/G'       : Item(),
     'D/H/psi'   : Item(),
     })
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -338,7 +336,6 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(),
     })
   expected_skip = wc.State(A_COPY_3_path, {'B/E' : Item()})
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_3_path, '5', '7',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -378,7 +375,6 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_skip = wc.State(A_COPY_2_H_path, {
     'psi'   : Item(),
     })
-  saved_cwd = os.getcwd()
   # Note we don't bother checking expected mergeinfo output because the
   # multiple merges being performed here, -c5 and -c8, will result in
   # first ' U' and then ' G' mergeinfo notifications.  Our expected
@@ -442,7 +438,6 @@ def mergeinfo_and_skipped_paths(sbox):
                    props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:8-9'}),
     })
   expected_skip = wc.State(A_COPY_2_H_path, {})
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
                                        sbox.repo_url + '/A/D/H', None,
                                        expected_output,
