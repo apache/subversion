@@ -1667,9 +1667,12 @@ verify_revert_depth(svn_wc__db_t *db,
                                    NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
+      /* Not-here and deleted nodes won't be reverted by reverting an operation
+         on a parent, so we can just skip them for the depth check. */
       if (status == svn_wc__db_status_not_present
           || status == svn_wc__db_status_absent
-          || status == svn_wc__db_status_excluded)
+          || status == svn_wc__db_status_excluded
+          || status == svn_wc__db_status_deleted)
         continue;
 
       if (depth == svn_depth_empty
