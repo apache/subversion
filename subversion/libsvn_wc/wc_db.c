@@ -2937,12 +2937,16 @@ temp_cross_db_copy(svn_wc__db_t *db,
   svn_boolean_t have_row;
   svn_depth_t depth;
 
+#ifdef SVN_WC__SINGLE_DB
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
                  || kind == svn_wc__db_kind_dir
-#ifndef SVN_WC__SINGLE_DB
-                 || kind == svn_wc__db_kind_subdir
-#endif
                  );
+#else
+  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
+                 || kind == svn_wc__db_kind_dir
+                 || kind == svn_wc__db_kind_subdir
+                 );
+#endif
 
   SVN_ERR(svn_wc__db_read_info(NULL /* status */,
                                NULL /* kind */,
