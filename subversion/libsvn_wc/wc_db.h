@@ -2389,11 +2389,13 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
                                   apr_pool_t *scratch_pool);
 
 
+#ifndef SVN_WC__SINGLE_DB
 /* Remove a stray "subdir" record in the BASE_NODE table.  */
 svn_error_t *
 svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
                                      const char *local_abspath,
                                      apr_pool_t *scratch_pool);
+#endif
 
 /* Set file external information on LOCAL_ABSPATH to REPOS_RELPATH
    at PEG_REV with revision REV*/
