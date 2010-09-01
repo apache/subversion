@@ -162,6 +162,7 @@ typedef enum {
        deletion, or incomplete status. */
     svn_wc__db_kind_unknown,
 
+#ifndef SVN_WC__SINGLE_DB
     /* This directory node is a placeholder; the actual information is
        held within the subdirectory.
 
@@ -170,6 +171,7 @@ typedef enum {
 
        ### only used with per-dir .svn subdirectories.  */
     svn_wc__db_kind_subdir
+#endif
 
 } svn_wc__db_kind_t;
 
@@ -2218,28 +2220,6 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
                                  const char *local_dir_abspath,
                                  apr_pool_t *scratch_pool);
 
-
-/* A temporary API similar to svn_wc__db_base_add_directory() and
-   svn_wc__db_base_add_file(), in that it adds a subdirectory to the given
-   DB.  * Arguments are the same as those to svn_wc__db_base_add_directory().
-
-   Note: Since the subdir node type is a fiction created to satisfy our
-   current backward-compat hacks, this is a temporary API expected to
-   disappear with that node type does.
-*/
-svn_error_t *
-svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *repos_relpath,
-                                const char *repos_root_url,
-                                const char *repos_uuid,
-                                svn_revnum_t revision,
-                                const apr_hash_t *props,
-                                svn_revnum_t changed_rev,
-                                apr_time_t changed_date,
-                                const char *changed_author,
-                                svn_depth_t depth,
-                                apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,

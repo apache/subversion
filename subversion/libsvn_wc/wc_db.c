@@ -202,7 +202,9 @@ static const svn_token_map_t kind_map[] = {
   { "file", svn_wc__db_kind_file },
   { "dir", svn_wc__db_kind_dir },
   { "symlink", svn_wc__db_kind_symlink },
+#ifndef SVN_WC__SINGLE_DB
   { "subdir", svn_wc__db_kind_subdir },
+#endif
   { "unknown", svn_wc__db_kind_unknown },
   { NULL }
 };
@@ -1853,6 +1855,8 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
 
   flush_entries(pdh);
 
+#ifndef SVN_WC__SINGLE_DB
+  /* Add a parent stub.  */
   if (*local_relpath == '\0')
     {
       SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
@@ -1879,66 +1883,9 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
 
       flush_entries(pdh);
     }
+#endif
+
   return SVN_NO_ERROR;
-}
-
-
-/* ### temp API.  Remove before release. */
-svn_error_t *
-svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *repos_relpath,
-                                const char *repos_root_url,
-                                const char *repos_uuid,
-                                svn_revnum_t revision,
-                                const apr_hash_t *props,
-                                svn_revnum_t changed_rev,
-                                apr_time_t changed_date,
-                                const char *changed_author,
-                                svn_depth_t depth,
-                                apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  apr_int64_t repos_id;
-  insert_base_baton_t ibb;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
-  SVN_ERR_ASSERT(repos_uuid != NULL);
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  SVN_ERR_ASSERT(props != NULL);
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
-
-  ibb.status = svn_wc__db_status_normal;
-  ibb.kind = svn_wc__db_kind_subdir;
-  ibb.wc_id = pdh->wcroot->wc_id;
-  ibb.local_relpath = local_relpath;
-  ibb.repos_id = repos_id;
-  ibb.repos_relpath = repos_relpath;
-  ibb.revision = revision;
-
-  ibb.props = NULL;
-  ibb.changed_rev = changed_rev;
-  ibb.changed_date = changed_date;
-  ibb.changed_author = changed_author;
-
-  ibb.children = NULL;
-  ibb.depth = depth;
-
-  /* ### no children, conflicts, or work items to install in a txn... */
-
-  return svn_error_return(insert_base_node(&ibb, pdh->wcroot->sdb,
-                                           scratch_pool));
 }
 
 
@@ -2061,15 +2008,18 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 
       if (kind)
         {
+#ifndef SVN_WC__SINGLE_DB
           if (node_kind == svn_wc__db_kind_subdir)
             *kind = svn_wc__db_kind_dir;
           else
+#endif
             *kind = node_kind;
         }
       if (status)
         {
           *status = svn_sqlite__column_token(stmt, 2, presence_map);
 
+#ifndef SVN_WC__SINGLE_DB
           if (node_kind == svn_wc__db_kind_subdir
               && *status == svn_wc__db_status_normal)
             {
@@ -2079,6 +2029,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                  in some way. Inform the caller.  */
               *status = svn_wc__db_status_obstructed;
             }
+#endif
         }
       if (revision)
         {
@@ -2244,15 +2195,18 @@ svn_wc__db_base_get_info_from_parent(svn_wc__db_status_t *status,
 
       if (kind)
         {
+#ifndef SVN_WC__SINGLE_DB
           if (node_kind == svn_wc__db_kind_subdir)
             *kind = svn_wc__db_kind_dir;
           else
+#endif
             *kind = node_kind;
         }
       if (status)
         {
           *status = svn_sqlite__column_token(stmt, 2, presence_map);
 
+#ifndef SVN_WC__SINGLE_DB
           if (node_kind == svn_wc__db_kind_subdir
               && *status == svn_wc__db_status_normal)
             {
@@ -2262,6 +2216,7 @@ svn_wc__db_base_get_info_from_parent(svn_wc__db_status_t *status,
                  in some way. Inform the caller.  */
               *status = svn_wc__db_status_obstructed;
             }
+#endif
         }
       if (revision)
         {
@@ -2984,7 +2939,10 @@ temp_cross_db_copy(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file
                  || kind == svn_wc__db_kind_dir
-                 || kind == svn_wc__db_kind_subdir);
+#ifndef SVN_WC__SINGLE_DB
+                 || kind == svn_wc__db_kind_subdir
+#endif
+                 );
 
   SVN_ERR(svn_wc__db_read_info(NULL /* status */,
                                NULL /* kind */,
@@ -5125,6 +5083,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               /* && *status != svn_wc__db_status_incomplete */)
                              || !*have_work);
 
+#ifndef SVN_WC__SINGLE_DB
               if (node_kind == svn_wc__db_kind_subdir
                   && *status == svn_wc__db_status_normal)
                 {
@@ -5135,6 +5094,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      this value with a proper status.  */
                   *status = svn_wc__db_status_obstructed;
                 }
+#endif
             }
 
           if (*have_work)
@@ -5164,37 +5124,43 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      deletion has occurred because this node has been moved
                      away, or it is a regular deletion. Also note that the
                      deletion could be of the BASE tree, or a child of
-                     something that has been copied/moved here.
+                     something that has been copied/moved here. */
 
-                     If we're looking at the data in the parent, then
+#ifndef SVN_WC__SINGLE_DB
+                  /* If we're looking at the data in the parent, then
                      something has obstructed the child data. Inform
                      the caller.  */
                   if (node_kind == svn_wc__db_kind_subdir)
                     *status = svn_wc__db_status_obstructed_delete;
                   else
+#endif
                     *status = svn_wc__db_status_deleted;
                 }
               else /* normal */
                 {
                   /* The caller should scan upwards to detect whether this
                      addition has occurred because of a simple addition,
-                     a copy, or is the destination of a move.
+                     a copy, or is the destination of a move. */
 
-                     If we're looking at the data in the parent, then
+#ifndef SVN_WC__SINGLE_DB
+                  /* If we're looking at the data in the parent, then
                      something has obstructed the child data. Inform
                      the caller.  */
                   if (node_kind == svn_wc__db_kind_subdir)
                     *status = svn_wc__db_status_obstructed_add;
                   else
+#endif
                     *status = svn_wc__db_status_added;
                 }
             }
         }
       if (kind)
         {
+#ifndef SVN_WC__SINGLE_DB
           if (node_kind == svn_wc__db_kind_subdir)
             *kind = svn_wc__db_kind_dir;
           else
+#endif
             *kind = node_kind;
         }
       if (revision)
@@ -5272,7 +5238,10 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       if (depth)
         {
           if (node_kind != svn_wc__db_kind_dir
-                && node_kind != svn_wc__db_kind_subdir)
+#ifndef SVN_WC__SINGLE_DB
+                && node_kind != svn_wc__db_kind_subdir
+#endif
+              )
             {
               *depth = svn_depth_unknown;
             }
@@ -6619,6 +6588,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                      svn_dirent_local_style(local_abspath,
                                                             scratch_pool));
 
+#ifndef SVN_WC__SINGLE_DB
           /* ### in per-dir operation, it is possible that we just fetched
              ### the parent stub. examine the KIND field.
              ###
@@ -6630,6 +6600,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                                               kind_map);
             SVN_ERR_ASSERT(kind != svn_wc__db_kind_subdir);
           }
+#endif
 
           /* Provide the default status; we'll override as appropriate. */
           if (status)
