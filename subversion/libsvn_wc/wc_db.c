@@ -525,8 +525,10 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
                    svn_boolean_t verify_parent_stub,
                    apr_pool_t *scratch_pool)
 {
+#ifndef SVN_WC__SINGLE_DB
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
+#endif
 
   SVN_ERR(svn_wc__db_pdh_navigate_to_parent(parent_pdh,
                                             db,
