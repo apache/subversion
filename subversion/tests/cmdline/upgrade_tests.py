@@ -595,6 +595,36 @@ def missing_dirs2(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
 
+def delete_and_keep_local(sbox):
+  "check status delete and delete --keep-local"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'wc-delete.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='0'),
+      'Normal'            : Item(status='  ', wc_rev='1'),
+      'Deleted-Keep-Local': Item(status='D ', wc_rev='1'),
+      'Deleted'           : Item(status='D ', wc_rev='1'),
+  })
+
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+  # Deleted-Keep-Local should still exist after the upgrade
+  if not os.path.exists(os.path.join(sbox.wc_dir, 'Deleted-Keep-Local')):
+    raise svntest.Failure('wc/Deleted-Keep-Local should exist')
+
+  # Deleted-Keep-Local should be removed after the upgrade as it was
+  # schedule delete and doesn't contain unversioned changes.
+  if os.path.exists(os.path.join(sbox.wc_dir, 'Deleted')):
+    raise svntest.Failure('wc/Deleted should not exist')
+
+
+
 ########################################################################
 # Run the tests
 
@@ -614,6 +644,7 @@ test_list = [ None,
               x3_1_6_12,
               missing_dirs,
               XFail(missing_dirs2),
+              XFail(delete_and_keep_local),
              ]
 
 
