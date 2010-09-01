@@ -444,18 +444,11 @@ assemble_status(svn_wc_status3_t **status,
         {
           apr_hash_t *props;
         
-          SVN_ERR(svn_wc__get_pristine_props(&props, db, local_abspath,
-                                             scratch_pool, scratch_pool));
-        
+          SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
+                                                 scratch_pool, scratch_pool));
+
           if (props != NULL && apr_hash_count(props) > 0)
             has_props = TRUE;
-          else
-            {
-              SVN_ERR(svn_wc__get_actual_props(&props, db, local_abspath,
-                                               scratch_pool, scratch_pool));
-
-              has_props = (props != NULL && apr_hash_count(props) > 0);
-            }
         }
       if (has_props)
         prop_status = svn_wc_status_normal;
