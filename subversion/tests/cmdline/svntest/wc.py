@@ -825,8 +825,9 @@ def text_base_path(file_path):
   while True:
     db_path = os.path.join(root_path, dot_svn, 'wc.db')
     try:
-      db = svntest.sqlite3.connect(db_path)
-      break
+      if os.path.exists(db_path):
+        db = svntest.sqlite3.connect(db_path)
+        break
     except: pass
     head, tail = os.path.split(root_path)
     if head == root_path:
