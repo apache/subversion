@@ -69,20 +69,6 @@ message_from_skel(const svn_skel_t *skel,
                   apr_pool_t *scratch_pool);
 
 static svn_error_t *
-load_pristine_props(apr_hash_t **props,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_read_pristine_props(props, db, local_abspath,
-                                         result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 load_actual_props(apr_hash_t **props,
                   svn_wc__db_t *db,
                   const char *local_abspath,
@@ -174,8 +160,8 @@ immediate_install_props(svn_wc__db_t *db,
   apr_hash_t *base_props;
 
   /* ### no pristines should be okay.  */
-  SVN_ERR_W(load_pristine_props(&base_props, db, local_abspath,
-                                scratch_pool, scratch_pool),
+  SVN_ERR_W(svn_wc__db_read_pristine_props(&base_props, db, local_abspath,
+                                           scratch_pool, scratch_pool),
             _("Failed to load pristine properties"));
 
   /* Check if the props are modified. If no changes, then wipe out
@@ -1809,7 +1795,8 @@ svn_wc__get_pristine_props(apr_hash_t **props,
   /* status: normal, moved_here, copied, deleted  */
 
   /* After the above checks, these pristines should always be present.  */
-  return svn_error_return(load_pristine_props(props, db, local_abspath,
+  return svn_error_return(
+               svn_wc__db_read_pristine_props(props, db, local_abspath,
                                               result_pool, scratch_pool));
 }
 
@@ -2438,8 +2425,8 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
 
   /* ### if pristines are not defined, then should this raise an error,
      ### or use an empty set?  */
-  SVN_ERR(load_pristine_props(&baseprops, db, local_abspath,
-                              result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_props(&baseprops, db, local_abspath,
+                                         result_pool, scratch_pool));
 
   if (original_props != NULL)
     *original_props = baseprops;
