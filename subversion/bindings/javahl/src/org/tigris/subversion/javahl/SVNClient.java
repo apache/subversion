@@ -716,11 +716,18 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.0
      */
-    public void commitMessageHandler(final CommitMessage messageHandler)
+    public void commitMessageHandler(CommitMessage messageHandler)
     {
         class MyCommitMessageHandler
             implements org.apache.subversion.javahl.CommitMessage
         {
+            private CommitMessage messageHandler;
+
+            public MyCommitMessageHandler(CommitMessage messageHandler)
+            {
+                this.messageHandler = messageHandler;
+            }
+
             public String getLogMessage(
                 Set<org.apache.subversion.javahl.CommitItem> elementsToBeCommited)
             {
@@ -742,8 +749,12 @@ public class SVNClient implements SVNClientInterface
             }
         }
 
-        aSVNClient.commitMessageHandler(new MyCommitMessageHandler());
+        aSVNClient.commitMessageHandler(new MyCommitMessageHandler(
+                                                            messageHandler));
+        cachedHandler = new MyCommitMessageHandler(messageHandler);
     }
+
+    private org.apache.subversion.javahl.CommitMessage cachedHandler = null;
 
     /**
      * @deprecated Use {@link #remove(String[], String, boolean, boolean, Map)}
@@ -1246,8 +1257,10 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.doImport(path, url, message, Depth.toADepth(depth),
+            aSVNClient.doImport(path, url, Depth.toADepth(depth),
                                 noIgnore, ignoreUnknownNodeTypes, revpropTable,
+                                message == null ? cachedHandler
+                                    : new ConstMsg(message),
                                 null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -2598,6 +2611,23 @@ public class SVNClient implements SVNClientInterface
         public void onSummary(org.apache.subversion.javahl.DiffSummary summary)
         {
             callback.onSummary(new DiffSummary(summary));
+        }
+    }
+
+    private class ConstMsg
+        implements org.apache.subversion.javahl.CommitMessage
+    {
+        private String message;
+
+        ConstMsg(String message)
+        {
+            this.message = message;
+        }
+
+        public String getLogMessage(
+                    Set<org.apache.subversion.javahl.CommitItem> items)
+        {
+            return message;
         }
     }
 }

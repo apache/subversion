@@ -237,7 +237,8 @@ class SVNTests extends TestCase
         addExpectedCommitItem(greekFiles.getAbsolutePath(), null, null,
                               NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
-                        null, Depth.infinity, false, false, null, null);
+                        Depth.infinity, false, false, null, 
+                        new MyCommitMessage(), null);
         admin.dump(greekRepos, new FileOutputStream(greekDump),
                    null, null, false, false, null);
     }

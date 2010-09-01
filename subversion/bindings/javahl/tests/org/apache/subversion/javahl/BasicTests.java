@@ -1751,9 +1751,9 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(),
                 null, "new_file", NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(file.getAbsolutePath(),
-                thisTest.getUrl()+"/dirA/dirB/new_file",
-                "log message for new import", Depth.infinity,
-                false, false, null, null);
+                thisTest.getUrl()+"/dirA/dirB/new_file", Depth.infinity,
+                false, false, null,
+                new ConstMsg("log message for new import"), null);
 
         // delete new_file
         file.delete();
@@ -1918,8 +1918,8 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(),
                 null, "dir", NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(dir.getAbsolutePath(), thisTest.getUrl()+"/dir",
-                "log message for import", Depth.infinity,
-                false, false, null, null);
+                Depth.infinity, false, false, null,
+                new ConstMsg("log message for import"), null);
 
         // remove dir
         removeDirOrFile(dir);
@@ -3525,6 +3525,21 @@ public class BasicTests extends SVNTests
         public Status[] getStatusArray()
         {
             return statuses.toArray(new Status[statuses.size()]);
+        }
+    }
+
+    private class ConstMsg implements CommitMessage
+    {
+        private String message;
+
+        ConstMsg(String message)
+        {
+            this.message = message;
+        }
+
+        public String getLogMessage(Set<CommitItem> items)
+        {
+            return message;
         }
     }
 
