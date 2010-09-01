@@ -626,6 +626,14 @@ init_patch_target(patch_target_t **patch_target,
                                                    scratch_pool));
         }
 
+      /* ### Is it ok to set target->added here? Isn't the target supposed to
+       * ### be marked as added after it's been proven that it can be added?
+       * ### One alternative is to include a git_added flag. Or maybe we
+       * ### should have kept the patch field in patch_target_t? Then we
+       * ### could have checked for target->patch->operation == added */
+      if (patch->operation == svn_diff_op_added)
+        target->added = TRUE;
+
       SVN_ERR(svn_stream_open_unique(&patched_raw,
                                      &target->patched_path, NULL,
                                      remove_tempfiles ?
@@ -1879,9 +1887,11 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           /* The target was empty or non-existent to begin with
            * and no content was changed by patching.
            * Report this as skipped if it didn't exist, unless in the special
-           * case of adding an empty file which has properties set on it. */
-          if (target->kind_on_disk == svn_node_none &&
-              ! target->has_prop_changes)
+           * case of adding an empty file which has properties set on it or
+           * adding an empty file with a 'git diff' */
+          if (target->kind_on_disk == svn_node_none 
+              && ! target->has_prop_changes
+              && ! target->added)
             target->skipped = TRUE;
         }
       else if (patched_file.size > 0 && working_file.size == 0)
@@ -2232,11 +2242,14 @@ install_patched_prop_targets(patch_target_t *target,
 
       /* If the patch target doesn't exist yet, the patch wants to add an
        * empty file with properties set on it. So create an empty file and
-       * add it to version control.
+       * add it to version control. But if the patch was in the 'git format'
+       * then the file has already been added.
        *
        * ### How can we tell whether the patch really wanted to create
        * ### an empty directory? */
-      if (! target->has_text_changes && target->kind_on_disk == svn_node_none)
+      if (! target->has_text_changes 
+          && target->kind_on_disk == svn_node_none
+          && ! target->added)
         {
           SVN_ERR(svn_io_file_create(target->local_abspath, "", scratch_pool));
           SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->local_abspath,
@@ -2633,7 +2646,7 @@ apply_patches(void *baton,
 
               if (! target->skipped)
                 {
-                  if (target->has_text_changes)
+                  if (target->has_text_changes || target->added)
                     SVN_ERR(install_patched_target(target, btn->abs_wc_path,
                                                    btn->ctx, btn->dry_run,
                                                    iterpool));
