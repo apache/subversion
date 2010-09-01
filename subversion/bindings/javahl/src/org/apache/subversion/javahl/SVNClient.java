@@ -203,7 +203,7 @@ public class SVNClient implements ISVNClient
     public native void remove(Set<String> paths, boolean force,
                               boolean keepLocal,
                               Map<String, String> revpropTable,
-                              CommitMessage handler, CommitCallback callback)
+                              CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -236,7 +236,7 @@ public class SVNClient implements ISVNClient
                               boolean keepChangelist,
                               Collection<String> changelists,
                               Map<String, String> revpropTable,
-                              CommitMessage handler, CommitCallback callback)
+                              CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -246,7 +246,7 @@ public class SVNClient implements ISVNClient
                             boolean copyAsChild, boolean makeParents,
                             boolean ignoreExternals,
                             Map<String, String> revpropTable,
-                            CommitMessage handler, CommitCallback callback)
+                            CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -256,7 +256,7 @@ public class SVNClient implements ISVNClient
                             boolean force, boolean moveAsChild,
                             boolean makeParents,
                             Map<String, String> revpropTable,
-                            CommitMessage handler, CommitCallback callback)
+                            CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -264,7 +264,7 @@ public class SVNClient implements ISVNClient
      */
     public native void mkdir(Set<String> paths, boolean makeParents,
                              Map<String, String> revpropTable,
-                             CommitMessage handler, CommitCallback callback)
+                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -305,7 +305,7 @@ public class SVNClient implements ISVNClient
                                 boolean noIgnore,
                                 boolean ignoreUnknownNodeTypes,
                                 Map<String, String> revpropTable,
-                                CommitMessage handler, CommitCallback callback)
+                                CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**

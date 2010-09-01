@@ -21,16 +21,18 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.callback;
 
 import java.util.Set;
+
+import org.apache.subversion.javahl.CommitItem;
 
 /**
  * This is callback interface which has to implemented by the client
  * to receive which files will be commited and to enter the log
  * message.
  */
-public interface CommitMessage
+public interface CommitMessageCallback
 {
     /**
      * Retrieve a commit message from the user based on the items to
