@@ -266,13 +266,25 @@ def migrate_wc_subdirs(wc_root_path):
         continue
 
   # Delete the remaining parts of the migrated .svn dirs
+  # Make a note of any problems in deleting.
+  failed_delete_subdirs = []
   for wc_subdir_path in migrated_subdirs:
     print "deleting " + dotsvn_path(wc_subdir_path)
-    os.remove(db_path(wc_subdir_path))
-    if os.path.exists(pristine_path(wc_subdir_path)):
-      os.rmdir(pristine_path(wc_subdir_path))
-    shutil.rmtree(tmp_path(wc_subdir_path))
-    os.rmdir(dotsvn_path(wc_subdir_path))
+    try:
+      os.remove(db_path(wc_subdir_path))
+      if os.path.exists(pristine_path(wc_subdir_path)):
+        os.rmdir(pristine_path(wc_subdir_path))
+      shutil.rmtree(tmp_path(wc_subdir_path))
+      os.rmdir(dotsvn_path(wc_subdir_path))
+    except Exception, e:
+      print e
+      failed_delete_subdirs += [wc_subdir_path]
+
+  # Notify any problems in deleting
+  if failed_delete_subdirs:
+    print "Failed to delete the following directories. Please delete them manually."
+    for wc_subdir_path in failed_delete_subdirs:
+      print "  " + dotsvn_path(wc_subdir_path)
 
   os.chdir(old_cwd)
 
