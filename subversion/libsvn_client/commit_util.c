@@ -859,7 +859,7 @@ harvest_committables(apr_hash_t *committables,
                      and depth says not to go there. */
                   continue;
                 }
-#if 0  /* not required with SINGLE_DB */
+#ifndef SVN_WC__SINGLE_DB
               else
                 {
                   svn_boolean_t obstructed;
@@ -898,7 +898,7 @@ harvest_committables(apr_hash_t *committables,
                         }
                     }
                 }
-#endif  /* not required with SINGLE_DB */
+#endif
             }
 
           {

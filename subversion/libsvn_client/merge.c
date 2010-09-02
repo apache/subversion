@@ -438,7 +438,7 @@ obstructed_or_missing(svn_wc_notify_state_t *obstr_state,
                                              pool));
       if (is_deleted)
         {
-#if 0  /* not required with SINGLE_DB */
+#ifndef SVN_WC__SINGLE_DB
           /* ### While we are not at single-db: detect missing .svn dirs.
              ### Once we switch to single db expected kind should be always
              ### none, just like for files */
@@ -457,7 +457,7 @@ obstructed_or_missing(svn_wc_notify_state_t *obstr_state,
                 }
             }
           else
-#endif  /* not required with SINGLE_DB */
+#endif
             kind_expected = svn_node_none;
         }
     }
@@ -5353,9 +5353,9 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   svn_boolean_t is_present;
   svn_boolean_t deleted;
   svn_boolean_t absent;
-#if 0  /* not required with SINGLE_DB */
+#ifndef SVN_WC__SINGLE_DB
   svn_boolean_t obstructed;
-#endif  /* not required with SINGLE_DB */
+#endif
   svn_boolean_t immediate_child_dir;
 
   /* TODO(#2843) How to deal with a excluded item on merge? */
@@ -5367,20 +5367,20 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   if (!is_present)
     return SVN_NO_ERROR;
 
-#if 0  /* not required with SINGLE_DB */
+#ifndef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed, wb->ctx->wc_ctx,
                                             local_abspath, scratch_pool));
-#endif  /* not required with SINGLE_DB */
+#endif
   SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wb->ctx->wc_ctx,
                                          local_abspath, scratch_pool));
   SVN_ERR(svn_wc__node_is_status_absent(&absent, wb->ctx->wc_ctx,
                                         local_abspath, scratch_pool));
 
-#if 0  /* not required with SINGLE_DB */
+#ifndef SVN_WC__SINGLE_DB
    if (obstructed || deleted || absent)
 #else
    if (deleted || absent)
-#endif  /* not required with SINGLE_DB */
+#endif
     {
       propval = NULL;
       switched = FALSE;
