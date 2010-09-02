@@ -44,6 +44,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* ### Temporary.  Also defined in subversion/libsvn_wc/wc.h.  To build
+ *     multi-DB mode, undefine this in both places. */
+#define SVN_WC__SINGLE_DB
+
+
 /** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
  * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
  * All temporary allocations are done in * @a scratch_pool.
@@ -394,7 +399,7 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
 
-#if 0  /* not required with SINGLE_DB */
+#ifndef SVN_WC__SINGLE_DB
 /**
  * Set @a *is_obstructed to whether @a local_abspath is obstructed, using
  * @a wc_ctx.  If @a local_abspath is not in the working copy, return
@@ -406,7 +411,7 @@ svn_wc__node_is_status_obstructed(svn_boolean_t *is_obstructed,
                                   svn_wc_context_t *wc_ctx,
                                   const char *local_abspath,
                                   apr_pool_t *scratch_pool);
-#endif  /* not required with SINGLE_DB */
+#endif
 
 /**
  * Set @a *is_absent to whether @a local_abspath is absent, using
@@ -684,7 +689,7 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              apr_pool_t *scratch_pool);
 
 
-#if 0  /* not required with SINGLE_DB */
+#ifndef SVN_WC__SINGLE_DB
 /** Mark missing, deleted directory @a local_abspath as 'not-present'
  * in its parent's list of entries.
  *
@@ -695,7 +700,7 @@ svn_error_t *
 svn_wc__temp_mark_missing_not_present(const char *local_abspath,
                                       svn_wc_context_t *wc_ctx,
                                       apr_pool_t *scratch_pool);
-#endif  /* not required with SINGLE_DB */
+#endif
 
 /**
  * Register @a local_abspath as a new file external aimed at

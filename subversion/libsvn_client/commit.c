@@ -929,7 +929,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   svn_boolean_t loop_recurse = FALSE;
   svn_boolean_t remove_lock;
 
-#if 0  /* not required with SINGLE_DB */
+#ifndef SVN_WC__SINGLE_DB
   /* Is it a missing, deleted directory?
 
      ### Temporary: once we centralise this sort of node is just a
@@ -946,7 +946,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
         return svn_wc__temp_mark_missing_not_present(item->path,
                                                      wc_ctx, scratch_pool);
     }
-#endif  /* not required with SINGLE_DB */
+#endif
 
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
       && (item->kind == svn_node_dir)
