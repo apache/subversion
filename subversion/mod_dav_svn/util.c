@@ -647,6 +647,9 @@ request_body_to_string(svn_string_t **request_str,
           return HTTP_REQUEST_ENTITY_TOO_LARGE;
         }
     }
+  else
+    content_length = 0;
+
   if (limit_req_body && (limit_req_body < content_length))
     {
       ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
