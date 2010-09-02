@@ -1220,10 +1220,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
   apr_hash_t *entries;
   svn_wc_entry_t *this_dir;
 
-#ifndef SVN_WC__SINGLE_DB
-  SVN_ERR_ASSERT(!data->sdb);
-#endif
-
   /* Don't try to mess with the WC if there are old log files left. */
 
   /* Is the (first) log file present?  */
@@ -1278,7 +1274,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
 
   if (!data->sdb)
     {
-#ifdef SVN_WC__SINGLE_DB
       const char *root_adm_abspath;
 
       /* In root wc construst path to temporary root wc/.svn/wcng/.svn
@@ -1289,9 +1284,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
       root_adm_abspath = svn_wc__adm_child(data->root_abspath, "",
                                            scratch_pool);
       SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
-#else
-      data->root_abspath = apr_pstrdup(result_pool, dir_abspath);
-#endif
 
       /* Create an empty sqlite database for this directory. */
       SVN_ERR(svn_wc__db_upgrade_begin(&data->sdb,
@@ -1355,16 +1347,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* All done. DB should finalize the upgrade process now.  */
   SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, data->sdb, scratch_pool));
 
-  /* All subdir access batons (and locks!) will be closed. Of course, they
-     should have been closed/unlocked just after their own upgrade process
-     has run.  */
-  /* ### well, actually.... we don't recursively delete subdir locks here,
-     ### we rely upon their own upgrade processes to do it. */
-#ifndef SVN_WC__SINGLE_DB
-  SVN_ERR(svn_wc__db_wclock_release(db, dir_abspath, scratch_pool));
-  data->sdb = NULL;
-#endif
-
   /* Zap all the obsolete files. This removes the old-style lock file.
      In single-db we should postpone this until we have processed all
      entries files into the single-db, otherwise an interrupted
@@ -1373,13 +1355,11 @@ upgrade_to_wcng(svn_wc__db_t *db,
      use 1.6 to cleanup. */
   wipe_obsolete_files(dir_abspath, scratch_pool);
 
-#ifdef SVN_WC__SINGLE_DB
   /* Remove the admin dir in subdirectories of the root. */
   if (!svn_dirent_is_ancestor(dir_abspath, data->root_abspath))
     svn_error_clear(svn_io_remove_dir2(svn_wc__adm_child(dir_abspath, NULL,
                                                          scratch_pool),
                                        FALSE, NULL, NULL, scratch_pool));
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -1654,7 +1634,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                                notify_func, notify_baton,
                                scratch_pool));
 
-#ifdef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__db_wclock_release(db, data.root_abspath, scratch_pool));
   SVN_ERR(svn_wc__db_drop_root(db, data.root_abspath, scratch_pool));
   SVN_ERR(svn_sqlite__close(data.sdb));
@@ -1678,7 +1657,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_io_remove_dir2(data.root_abspath, FALSE, NULL, NULL,
                                scratch_pool));
   }
-#endif
 
   SVN_ERR(svn_wc__db_close(db));
 
