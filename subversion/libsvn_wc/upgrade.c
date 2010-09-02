@@ -1504,9 +1504,14 @@ upgrade_working_copy(svn_wc__db_t *db,
                                      iterpool));
 
   if (old_format >= SVN_WC__WC_NG_VERSION)
-    return svn_error_create(
-      SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-      _("Upgrade can only be used on the root of a pre-1.7 working copy."));
+    {
+      if (notify_func)
+        notify_func(notify_baton,
+                    svn_wc_create_notify(dir_abspath, svn_wc_notify_skip,
+                                         iterpool),
+                iterpool);
+      return SVN_NO_ERROR;
+    }
 
   /* At present upgrade_to_wcng removes the entries file so get the
      children before calling it. */
@@ -1602,9 +1607,10 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                           scratch_pool, scratch_pool));
 
   if (!is_old_wcroot(local_abspath, scratch_pool))
-    return svn_error_create(
+    return svn_error_createf(
       SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-      _("Upgrade can only be used on the root of a pre-1.7 working copy."));
+      _("Cannot upgrade '%s' as it is not a pre-1.7 working copy root"),
+      svn_dirent_local_style(local_abspath, scratch_pool));
 
   /* Upgrade this directory and/or its subdirectories.  */
   SVN_ERR(upgrade_working_copy(db, local_abspath,
