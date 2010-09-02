@@ -15873,7 +15873,7 @@ def merge_with_os_deleted_subtrees(sbox):
   if sys.platform == 'win32':
     re_sep = '\\\\'
   else:
-    re_sep = os.pathsep
+    re_sep = os.sep
 
   # Common part of the expected error message for all cases we will test.
   err_re = "svn: Merge tracking not allowed with missing subtrees; " + \
