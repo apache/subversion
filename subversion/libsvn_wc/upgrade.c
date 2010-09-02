@@ -1583,6 +1583,44 @@ upgrade_working_copy(svn_wc__db_t *db,
 }
 
 
+/* Return TRUE if LOCAL_ABSPATH is a pre-1.7 working copy root, FALSE
+   otherwise. */
+static svn_boolean_t
+is_old_wcroot(const char *local_abspath,
+              apr_pool_t *scratch_pool)
+{
+  apr_hash_t *entries;
+  const char *parent_abspath, *name;
+  svn_wc_entry_t *entry;
+  svn_error_t *err = svn_wc__read_entries_old(&entries, local_abspath,
+                                              scratch_pool, scratch_pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+
+  svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
+
+  err = svn_wc__read_entries_old(&entries, parent_abspath,
+                                 scratch_pool, scratch_pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return TRUE;
+    }
+
+  entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+  if (!entry
+      || entry->absent
+      || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+    {
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
 svn_error_t *
 svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
@@ -1596,9 +1634,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db;
   struct upgrade_data_t data = { NULL };
-#if 0
-  svn_boolean_t is_wcroot;
-#endif
 
   /* We need a DB that does not attempt an auto-upgrade, nor require
      running a stale work queue. We'll handle everything manually.  */
@@ -1606,15 +1641,10 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                           NULL /* ### config */, FALSE, FALSE,
                           scratch_pool, scratch_pool));
 
-  /* ### this expects a wc-ng working copy. sigh. fix up soonish...  */
-#if 0
-  SVN_ERR(svn_wc__strictly_is_wc_root(&is_wcroot, wc_ctx, local_abspath,
-                                      scratch_pool));
-  if (!is_wcroot)
+  if (!is_old_wcroot(local_abspath, scratch_pool))
     return svn_error_create(
       SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-      _("'svn upgrade' can only be run from the root of the working copy."));
-#endif
+      _("Upgrade can only be used on the root of a pre-1.7 working copy."));
 
   /* Upgrade this directory and/or its subdirectories.  */
   SVN_ERR(upgrade_working_copy(db, local_abspath,
