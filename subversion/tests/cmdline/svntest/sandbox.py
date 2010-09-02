@@ -65,7 +65,7 @@ class Sandbox:
       self.authz_file = os.path.join(svntest.main.work_dir, "authz")
       tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
       open(tmp_authz_file, 'w').write("[/]\n* = rw\n")
-      os.rename(tmp_authz_file, self.authz_file)
+      shutil.move(tmp_authz_file, self.authz_file)
 
     # For svnserve tests we have a per-repository authz file, and it
     # doesn't need to be there in order for things to work, so we don't
