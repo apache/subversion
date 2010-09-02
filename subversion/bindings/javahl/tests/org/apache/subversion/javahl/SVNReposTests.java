@@ -37,13 +37,13 @@ import java.util.Map;
  *
  * More methodes for testing are still needed
  */
-public class SVNAdminTests extends SVNTests
+public class SVNReposTests extends SVNTests
 {
-    public SVNAdminTests()
+    public SVNReposTests()
     {
     }
 
-    public SVNAdminTests(String name)
+    public SVNReposTests(String name)
     {
         super(name);
     }

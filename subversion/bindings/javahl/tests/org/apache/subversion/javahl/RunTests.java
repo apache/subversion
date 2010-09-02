@@ -91,7 +91,7 @@ public class RunTests
             if (testCases == null || testCases.length == 0)
             {
                 // Add default test suites.
-                suite.addTestSuite(SVNAdminTests.class);
+                suite.addTestSuite(SVNReposTests.class);
                 suite.addTestSuite(BasicTests.class);
             }
             else
