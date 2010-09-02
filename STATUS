@@ -221,6 +221,16 @@ Candidate changes:
    Votes:
      +1: kameshj
 
+ * r991973
+   Fix issue #3700, "commit with --depth=empty can corrupt 1.6.x working copy"
+   Justification:
+     Corrupted working copies are evil.
+   Notes:
+     This is a 1.6.x-only fix, trunk isn't affected.
+     The branch is ^/subversion/branches/1.6.x-issue3700
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
