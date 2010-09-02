@@ -52,7 +52,9 @@ public class SVNClient implements SVNClientInterface
     public SVNClient()
     {
         aSVNClient = new org.apache.subversion.javahl.SVNClient();
-        cppAddr = aSVNClient.getCppAddr();
+        /* This is a bogus value, there really shouldn't be any reason
+           for a user of this class to care.  You've been warned. */
+        cppAddr = 0xdeadbeef;
     }
 
      /**
