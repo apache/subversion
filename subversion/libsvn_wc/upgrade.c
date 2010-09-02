@@ -281,60 +281,36 @@ maybe_add_subdir(apr_array_header_t *subdirs,
 }
 
 
-/* Return in CHILDREN, the list of all versioned subdirectories which also
-   exist on disk as directories.  */
+/* Return in CHILDREN, the list of all 1.6 versioned subdirectories
+   which also exist on disk as directories.  */
 static svn_error_t *
 get_versioned_subdirs(apr_array_header_t **children,
-                      svn_wc__db_t *db,
                       const char *dir_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  int wc_format;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
 
   *children = apr_array_make(result_pool, 10, sizeof(const char *));
 
-  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, dir_abspath, iterpool));
-  if (wc_format >= SVN_WC__WC_NG_VERSION)
+  SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
+                                   scratch_pool, iterpool));
+  for (hi = apr_hash_first(scratch_pool, entries);
+       hi;
+       hi = apr_hash_next(hi))
     {
-      const apr_array_header_t *all_children;
-      int i;
+      const char *name = svn__apr_hash_index_key(hi);
 
-      SVN_ERR(svn_wc__db_read_children(&all_children, db, dir_abspath,
-                                       scratch_pool, scratch_pool));
-      for (i = 0; i < all_children->nelts; ++i)
-        {
-          const char *name = APR_ARRAY_IDX(all_children, i, const char *);
+      /* skip "this dir"  */
+      if (*name == '\0')
+        continue;
 
-          svn_pool_clear(iterpool);
+      svn_pool_clear(iterpool);
 
-          SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
-                                   result_pool, iterpool));
-        }
-    }
-  else
-    {
-      apr_hash_t *entries;
-      apr_hash_index_t *hi;
-
-      SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
-                                       scratch_pool, iterpool));
-      for (hi = apr_hash_first(scratch_pool, entries);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *name = svn__apr_hash_index_key(hi);
-
-          /* skip "this dir"  */
-          if (*name == '\0')
-            continue;
-
-          svn_pool_clear(iterpool);
-
-          SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
-                                   result_pool, iterpool));
-        }
+      SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
+                               result_pool, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1527,14 +1503,19 @@ upgrade_working_copy(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_temp_get_format(&old_format, db, dir_abspath,
                                      iterpool));
 
-  SVN_ERR(get_versioned_subdirs(&subdirs, db, dir_abspath,
+  if (old_format >= SVN_WC__WC_NG_VERSION)
+    return svn_error_create(
+      SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+      _("Upgrade can only be used on the root of a pre-1.7 working copy."));
+
+  /* At present upgrade_to_wcng removes the entries file so get the
+     children before calling it. */
+  SVN_ERR(get_versioned_subdirs(&subdirs, dir_abspath,
                                 scratch_pool, iterpool));
 
-  /* Upgrade this directory first. */
-  if (old_format < SVN_WC__WC_NG_VERSION)
-    SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format,
-                            repos_info_func, repos_info_baton,
-                            repos_cache, data, scratch_pool, iterpool));
+  SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format,
+                          repos_info_func, repos_info_baton,
+                          repos_cache, data, scratch_pool, iterpool));
 
   if (notify_func)
     notify_func(notify_baton,
@@ -1542,7 +1523,6 @@ upgrade_working_copy(svn_wc__db_t *db,
                                      iterpool),
                 iterpool);
 
-  /* Now recurse. */
   for (i = 0; i < subdirs->nelts; ++i)
     {
       const char *child_abspath = APR_ARRAY_IDX(subdirs, i, const char *);
