@@ -29,6 +29,7 @@ import java.io.FileInputStream;
 import java.io.OutputStream;
 import java.io.InputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Map;
 
 /**
@@ -66,8 +67,8 @@ public class SVNAdminTests extends SVNTests
         admin.setRevProp(thisTest.getRepository(), Revision.getInstance(0),
                          "svn:log", MSG, false, false);
         Map<String, byte[]> pdata = client.revProperties(
-                                      makeReposUrl(thisTest.getRepository()),
-                                      Revision.getInstance(0));
+                           makeReposUrl(thisTest.getRepository()).toString(),
+                           Revision.getInstance(0));
         assertNotNull("expect non null rev props");
         String logMessage = new String(pdata.get("svn:log"));
         assertEquals("expect rev prop change to take effect", MSG, logMessage);
@@ -107,7 +108,7 @@ public class SVNAdminTests extends SVNTests
         // makes repos with nothing in it
         OneTest thisTest = new OneTest(false,false);
         // verify zero revisions in new repos
-        String repoUrl = makeReposUrl(thisTest.getRepository());
+        URI repoUrl = makeReposUrl(thisTest.getRepository());
         final Info2[] infoHolder = new Info2[1];
         InfoCallback mycallback = new InfoCallback()
         {
@@ -116,7 +117,7 @@ public class SVNAdminTests extends SVNTests
                 infoHolder[0] = info;
             }
         };
-        client.info2(repoUrl, Revision.HEAD, Revision.HEAD,
+        client.info2(repoUrl.toString(), Revision.HEAD, Revision.HEAD,
                 Depth.immediates, null, mycallback);
         assertNotNull("expect info callback", infoHolder[0]);
         assertEquals("expect zero revisions in new repository",
@@ -131,7 +132,7 @@ public class SVNAdminTests extends SVNTests
                    input, true, true, false, false, null, null);
         // should have two revs after the load
         infoHolder[0] = null;
-        client.info2(repoUrl, Revision.HEAD, Revision.HEAD,
+        client.info2(repoUrl.toString(), Revision.HEAD, Revision.HEAD,
                      Depth.immediates, null, mycallback);
         assertEquals("expect two revisions after load()",
                      2L, infoHolder[0].getLastChangedRev());

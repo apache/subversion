@@ -27,8 +27,9 @@ import org.apache.subversion.javahl.callback.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -236,7 +237,8 @@ class SVNTests extends TestCase
         admin.create(greekRepos, true,false, null, this.fsType);
         addExpectedCommitItem(greekFiles.getAbsolutePath(), null, null,
                               NodeKind.none, CommitItemStateFlags.Add);
-        client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
+        client.doImport(greekFiles.getAbsolutePath(),
+                       makeReposUrl(greekRepos).toString(),
                         Depth.infinity, false, false, null, 
                         new MyCommitMessage(), null);
         admin.dump(greekRepos, new FileOutputStream(greekDump),
@@ -418,14 +420,22 @@ class SVNTests extends TestCase
      * Create the url for the repository to be used for the tests.
      * @param file  the directory of the repository
      * @return the URL for the repository
+     * @throws SubversionException 
      */
-    protected String makeReposUrl(File file)
+    protected URI makeReposUrl(File file) throws SubversionException
     {
-        // split the common part of the root directory
-        String path = file.getAbsolutePath()
-            .substring(this.rootDir.getAbsolutePath().length() + 1);
-        // append to the root url
-        return rootUrl + path.replace(File.separatorChar, '/');
+       try
+       {
+            // split the common part of the root directory
+            String path = file.getAbsolutePath()
+                 .substring(this.rootDir.getAbsolutePath().length() + 1);
+            // append to the root url
+            return new URI(rootUrl + path.replace(File.separatorChar, '/'));
+       }
+       catch (URISyntaxException ex)
+       {
+           throw new SubversionException(ex.getMessage());
+       }
     }
 
     /**
@@ -507,7 +517,7 @@ class SVNTests extends TestCase
         /**
          * the url of the repository (used by SVNClient)
          */
-        protected String url;
+        protected URI url;
 
         /**
          * the expected layout of the working copy after the next subversion
@@ -660,7 +670,7 @@ class SVNTests extends TestCase
          * Returns the url of repository
          * @return  the url
          */
-        public String getUrl()
+        public URI getUrl()
         {
             return url;
         }
@@ -719,12 +729,12 @@ class SVNTests extends TestCase
             throws SubversionException, IOException
         {
             // build a clean working directory
-            String uri = makeReposUrl(repos);
+            URI uri = makeReposUrl(repos);
             workingCopy = new File(workingCopies, this.testName);
             removeDirOrFile(workingCopy);
             // checkout the repository
-            client.checkout(uri, workingCopy.getAbsolutePath(), null, null,
-                    Depth.infinity, false, false);
+            client.checkout(uri.toString(), workingCopy.getAbsolutePath(),
+                   null, null, Depth.infinity, false, false);
             // sanity check the working with its expected status
             checkStatus();
             return workingCopy;
