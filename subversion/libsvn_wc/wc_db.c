@@ -3805,7 +3805,7 @@ set_props_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, spb->props, scratch_pool));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
-  if (affected_rows == 1)
+  if (affected_rows == 1 || !spb->props)
     return SVN_NO_ERROR; /* We are done */
 
   /* We have to insert a row in ACTUAL */
@@ -9570,6 +9570,12 @@ svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                         STMT_UPDATE_ACTUAL_TEXT_CONFLICTS));
     }
+  else if (old_basename == NULL
+           && new_basename == NULL
+           && wrk_basename == NULL)
+    {
+      return SVN_NO_ERROR; /* We don't have to add anything */
+    }
   else
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -9625,6 +9631,8 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                         STMT_UPDATE_ACTUAL_PROPERTY_CONFLICTS));
     }
+  else if (!prej_basename)
+    return SVN_NO_ERROR;
   else
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
