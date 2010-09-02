@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import java.net.URI;
+
 /**
  * This class describes a item which will be commited.
  */
@@ -55,12 +57,12 @@ public class CommitItem implements java.io.Serializable
     /**
      * the url of the item
      */
-    String url;
+    URI url;
 
     /**
      * the source of the copy
      */
-    String copyUrl;
+    URI copyUrl;
 
     /**
      * the revision
@@ -76,7 +78,7 @@ public class CommitItem implements java.io.Serializable
      * @param cu    copy source url
      * @param r     revision number
      */
-    public CommitItem(String p, NodeKind nk, int sf, String u, String cu, long r)
+    public CommitItem(String p, NodeKind nk, int sf, URI u, URI cu, long r)
     {
         path = p;
         nodeKind = nk;
@@ -125,7 +127,7 @@ public class CommitItem implements java.io.Serializable
      * Returns the url of the item
      * @return url
      */
-    public String getUrl()
+    public URI getUrl()
     {
         return url;
     }
@@ -134,7 +136,7 @@ public class CommitItem implements java.io.Serializable
      * Returns the source url if the item is copied
      * @return source url
      */
-    public String getCopyUrl()
+    public URI getCopyUrl()
     {
         return copyUrl;
     }
