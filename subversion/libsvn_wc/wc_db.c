@@ -1583,6 +1583,58 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
   return SVN_NO_ERROR;
 }
 
+struct with_sqlite_lock_baton
+{
+  svn_wc__db_t *db;
+  svn_wc__db_sqlite_lock_cb lock_cb;
+  void *lock_baton;
+};
+
+static svn_error_t *
+call_sqlite_lock_cb(void *baton,
+                    svn_sqlite__db_t *sdb,
+                    apr_pool_t *scratch_pool)
+{
+  struct with_sqlite_lock_baton *lb = baton;
+
+  return svn_error_return(lb->lock_cb(lb->db, lb->lock_baton, scratch_pool));
+}
+
+svn_error_t *
+svn_wc__db_with_sqlite_lock(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            svn_wc__db_sqlite_lock_cb lock_cb,
+                            void *cb_baton,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *unused_relpath;
+  struct with_sqlite_lock_baton baton;
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &unused_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  /* Can't use VERIFY_USABLE_PDH, as this should be usable to detect
+     where call upgrade */
+
+  if (pdh->wcroot == NULL || !pdh->wcroot->sdb)
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                             _("The node '%s' is not in a workingcopy."),
+                             svn_dirent_local_style(wri_abspath,
+                                                    scratch_pool));
+
+  baton.db = db;
+  baton.lock_cb = lock_cb;
+  baton.lock_baton = cb_baton;
+
+  return svn_error_return(
+            svn_sqlite__with_lock(pdh->wcroot->sdb,
+                                  call_sqlite_lock_cb,
+                                  &baton,
+                                  scratch_pool));
+}
+
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const char *local_abspath,
