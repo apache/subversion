@@ -5852,28 +5852,26 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   if (apr_hash_count(wb.missing_subtrees))
     {
       apr_hash_index_t *hi;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      const char *missing_subtree_err_str = NULL;
-      
-      for (hi = apr_hash_first(iterpool, wb.missing_subtrees);
+      svn_stringbuf_t *missing_subtree_err_buf =
+        svn_stringbuf_create(_("Merge tracking not allowed with missing "
+                               "subtrees; try restoring these items "
+                               "first:\n"), scratch_pool);
+
+      iterpool = svn_pool_create(scratch_pool);
+
+      for (hi = apr_hash_first(scratch_pool, wb.missing_subtrees);
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *missing_abspath = svn__apr_hash_index_key(hi);
-
-          missing_subtree_err_str = apr_psprintf(
-            scratch_pool, "%s%s\n",
-            missing_subtree_err_str ? missing_subtree_err_str : "",
-            svn_dirent_local_style(missing_abspath, scratch_pool));
+          svn_pool_clear(iterpool);
+          svn_stringbuf_appendcstr(missing_subtree_err_buf,
+                                   svn_dirent_local_style(
+                                     svn__apr_hash_index_key(hi), iterpool));
+          svn_stringbuf_appendcstr(missing_subtree_err_buf, "\n");
         }
 
-      if (missing_subtree_err_str)
-        return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE,
-                                 NULL,
-                                 _("Merge tracking not allowed with missing "
-                                   "subtrees; try restoring these items "
-                                   "first:\n%s"),
-                                 missing_subtree_err_str);
+    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE,
+                            NULL, missing_subtree_err_buf->data);
   }
 
   /* This pool is only needed across all the callbacks to detect
