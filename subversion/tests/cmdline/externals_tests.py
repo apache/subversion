@@ -1512,6 +1512,64 @@ def merge_target_with_externals(sbox):
      "    /A-branch:8\n"],
     [], 'pg', svntest.main.SVN_PROP_MERGEINFO, '-vR', wc_dir)
 
+def update_modify_file_external(sbox):
+  "update that modifies a file external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Setup A/external as file external to A/mu
+  externals_prop = "^/A/mu external\n"
+  change_external(sbox.ospath('A'), externals_prop)
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/external'      : Item(status='E '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A'          : Item(props={'svn:externals':externals_prop}),
+    'A/external' : Item("This is the file 'mu'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/external' : Item(status='  ', wc_rev='2', switched='X'),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+  # Modify A/mu
+  svntest.main.file_append(sbox.ospath('A/mu'), 'appended mu text')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status.tweak('A/mu', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Update to modify the file external, this asserts in update_editor.c
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/external'      : Item(status='E '),
+    })
+  expected_disk.tweak('A/mu', 'A/external',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/external' : Item(status='  ', wc_rev='3', switched='X'),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
 ########################################################################
 # Run the tests
 
@@ -1542,6 +1600,7 @@ test_list = [ None,
               relegate_external,
               wc_repos_file_externals,
               merge_target_with_externals,
+              XFail(update_modify_file_external),
              ]
 
 if __name__ == '__main__':
