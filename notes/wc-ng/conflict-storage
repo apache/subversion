@@ -48,6 +48,16 @@ equivalent in wc-ng conflict storage (such as paths to temporary files),
 but this information can be deduced from the information stored
 (e.g. conflict-old and friends; foo.r42 is now 'foo' + '.r' + left_rev)
 
+### BH: We have to store the exact name of the conflict marker files. If we
+### just 'guess' how conflict markers are named by using their revision
+### numbers, we can't handle situations where there are existing files with
+### these names. The WC-1.0 code uses a unique name function to generate a
+### unique marker file name which happens to match this pattern if there are
+### no conflicts, but sometimes explicitly preserves the existing file
+### extension to help diff tools. (See 'preserved-conflict-file-exts' in our
+### config). I think we can move the names of the markers into the skel and/or
+### keep them in their own columns. (These names are needed on filling a
+### svn_wc_entry_t)
 
 Operation skel
 --------------
