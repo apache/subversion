@@ -363,7 +363,7 @@ find_first(svn_file_handle_cache_t *cache, const char *name)
 
   /* the index must contain only used entries, i.e. those that actually
    * contain an open APR file handle. */
-  assert (!result || result->file);
+  assert(!result || result->file);
   return result;
 }
 
@@ -552,7 +552,7 @@ open_entry(svn_file_handle_cache__handle_t **f,
            apr_pool_t *pool)
 {
   /* any entry can be handed out to the application only once at any time */
-  assert (! entry->open_handle);
+  assert(!entry->open_handle);
 
   /* the entry will no longer be idle */
   remove_from_list(&cache->idle_entries, &entry->idle_link);
