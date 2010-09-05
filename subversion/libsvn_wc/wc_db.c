@@ -9764,7 +9764,7 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, base));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
-#ifdef NODE_DATA
+#ifdef SVN_WC__NODE_DATA
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                        STMT_DELETE_NODE_DATA_WORKING));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, base));
@@ -9772,23 +9772,22 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
 #endif
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_UPDATE_BASE_PRESENCE_KIND));
-  SVN_ERR(svn_sqlite__bindf(stmt, "istt", pdh->wcroot->wc_id, base,
-                            presence_map, svn_wc__db_status_normal,
-                            kind_map, svn_wc__db_kind_subdir));
-#ifdef NODE_DATA
-  /* When activating this bit, I get test failures;
-     working copies seem to get disconnected from their parents...
-     Need to investigate */
+#ifdef SVN_WC__NODE_DATA
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_UPDATE_NODE_BASE_PRESENCE_KIND));
   SVN_ERR(svn_sqlite__bindf(stmt, "istt", pdh->wcroot->wc_id, base,
                             presence_map, svn_wc__db_status_normal,
                             kind_map, svn_wc__db_kind_subdir));
+
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 #endif
 
 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_BASE_PRESENCE_KIND));
+  SVN_ERR(svn_sqlite__bindf(stmt, "istt", pdh->wcroot->wc_id, base,
+                            presence_map, svn_wc__db_status_normal,
+                            kind_map, svn_wc__db_kind_subdir));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   if (affected_rows == 0)
