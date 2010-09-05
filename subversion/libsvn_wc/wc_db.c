@@ -6040,6 +6040,33 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifdef SVN_WC__NODE_DATA
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
+                                    STMT_APPLY_CHANGES_TO_BASE_NODE_DATA));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issttisb",
+                            cb->pdh->wcroot->wc_id, cb->local_relpath,
+                            parent_relpath,
+                            presence_map, new_presence,
+                            kind_map, new_kind,
+                            (apr_int64_t)cb->changed_rev,
+                            cb->changed_author,
+                            prop_blob.data, prop_blob.len));
+
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 9, cb->new_checksum,
+                                    scratch_pool));
+  if (cb->changed_date > 0)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 10, cb->changed_date));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 11, new_depth_str));
+  /* ### 12. target.  */
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 12, cb->new_dav_cache,
+                                      scratch_pool));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+#endif
+
+
   if (have_work)
     {
       /* Get rid of the WORKING_NODE row.  */
