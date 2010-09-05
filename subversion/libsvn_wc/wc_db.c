@@ -9805,6 +9805,25 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
                                      svn_wc__db_kind_subdir));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_INSERT_NODE_DATA));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id, base,
+                                (apr_int64_t) 0 /* BASE */
+                                ));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 4, ""));
+      SVN_ERR(svn_sqlite__bind_token(stmt, 5, presence_map,
+                                     svn_wc__db_status_normal));
+      SVN_ERR(svn_sqlite__bind_token(stmt, 6, kind_map,
+                                     svn_wc__db_kind_subdir));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+#endif
+
     }
   SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));
   return SVN_NO_ERROR;
@@ -9989,6 +10008,26 @@ set_new_dir_to_incomplete_baton_txn(void *baton,
     SVN_ERR(svn_sqlite__bind_text(stmt, 7, svn_depth_to_word(dtb->depth)));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+#ifdef SVN_WC__NODE_DATA
+
+  /* Insert the incomplete base node */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
+                                    STMT_INSERT_BASE_NODE_DATA_INCOMPLETE_DIR));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", dtb->pdh->wcroot->wc_id,
+                            dtb->local_relpath,
+                            parent_relpath));
+
+  /* If depth is not unknown: record depth */
+  if (dtb->depth >= svn_depth_empty && dtb->depth <= svn_depth_infinity)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, svn_depth_to_word(dtb->depth)));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+#endif
+
+
 
   return SVN_NO_ERROR;
 }
