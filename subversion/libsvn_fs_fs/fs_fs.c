@@ -3194,8 +3194,9 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->filehandle_pool = svn_pool_create(pool);
 
   if (fulltext_cache_key)
-    b->current_fulltext = svn_stringbuf_create_ensure(rep->expanded_size,
-                                                      b->filehandle_pool);
+    b->current_fulltext = svn_stringbuf_create_ensure
+                            ((apr_size_t)rep->expanded_size,
+                             b->filehandle_pool);
   else
     b->current_fulltext = NULL;
 
@@ -3410,7 +3411,8 @@ get_combined_window(svn_txdelta_window_t **result,
 static svn_boolean_t
 fulltext_size_is_cachable(fs_fs_data_t *ffd, svn_filesize_t size)
 {
-  return svn_cache__is_cachable(ffd->fulltext_cache, size);
+  return (size < APR_SIZE_MAX)
+      && svn_cache__is_cachable(ffd->fulltext_cache, (apr_size_t)size);
 }
 
 /* Store fulltext in RB in the fulltext cache used by said RB. Items that

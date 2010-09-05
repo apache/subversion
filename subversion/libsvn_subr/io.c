@@ -388,7 +388,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
       /* Increase the chance that rand() will return something truely
          independent from what others get or do. */
       if (i == 2)
-        srand(apr_time_now());
+        srand((unsigned int)apr_time_now());
 
       /* Special case the first attempt -- if we can avoid having a
          generated numeric portion at all, that's best.  So first we

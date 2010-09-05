@@ -113,10 +113,18 @@
  */
 #define CACHE_SEGMENTS 16
 
+/* Invalid index reference value. Equivalent to APR_UINT32_T(-1)
+ */
+#define NO_INDEX APR_UINT32_MAX
+
+/* Invalid buffer offset reference value. Equivalent to APR_UINT32_T(-1)
+ */
+#define NO_OFFSET APR_UINT64_MAX 
+
 /* A single dictionary entry. Since they are allocated statically, these
  * entries can either be in use or in used state. An entry is unused, iff 
- * the offset member is -1. In that case, it must not be linked in the list 
- * of used entries.
+ * the offset member is NO_OFFSET. In that case, it must not be linked in
+ * the list of used entries.
  */
 typedef struct entry_t
 {
@@ -124,8 +132,8 @@ typedef struct entry_t
    */
   unsigned char key [KEY_SIZE];
 
-  /* If -1, the entry is not in used. Otherwise, it is the offset of the
-   * cached item's serialized data within the data buffer.
+  /* If NO_OFFSET, the entry is not in used. Otherwise, it is the offset
+   * of the cached item's serialized data within the data buffer.
    */
   apr_uint64_t offset;
 
@@ -140,15 +148,15 @@ typedef struct entry_t
   apr_uint32_t hit_count;
 
   /* Reference to the next used entry in the order defined by offset.
-   * -1 indicates the end of the list; this entry must be referenced
-   * by the caches membuffer_cache_t.last member. -1 also implies that
-   * the data buffer is not used beyond offset+size.
+   * NO_INDEX indicates the end of the list; this entry must be referenced
+   * by the caches membuffer_cache_t.last member. NO_INDEX also implies
+   * that the data buffer is not used beyond offset+size.
    * Only valid for used entries.
    */
   apr_uint32_t next;
 
   /* Reference to the previous used entry in the order defined by offset.
-   * -1 indicates the end of the list; this entry must be referenced
+   * NO_INDEX indicates the end of the list; this entry must be referenced
    * by the caches membuffer_cache_t.first member.
    * Only valid for used entries.
    */
@@ -172,18 +180,20 @@ struct svn_membuffer_t
   apr_uint32_t group_count;
 
   /* Reference to the first (defined by the order content in the data
-   * buffer) dictionary entry used by any data item. -1 for an empty cache.
+   * buffer) dictionary entry used by any data item. 
+   * NO_INDEX for an empty cache.
    */
   apr_uint32_t first;
 
   /* Reference to the last (defined by the order content in the data
-   * buffer) dictionary entry used by any data item. -1 for an empty cache.
+   * buffer) dictionary entry used by any data item.
+   * NO_INDEX for an empty cache.
    */
   apr_uint32_t last;
 
   /* Reference to the first (defined by the order content in the data
    * buffer) used dictionary entry behind the insertion position 
-   * (current_data). If -1, the data buffer is free starting at the
+   * (current_data). If NO_INDEX, the data buffer is free starting at the
    * current_data offset.
    */
   apr_uint32_t next;
@@ -243,13 +253,13 @@ struct svn_membuffer_t
 #endif
 };
 
-/* Align ADDRESS to the next ITEM_ALIGNMENT boundary.
+/* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
  */
-static APR_INLINE apr_uint64_t 
-align_entry(apr_uint64_t address)
-{
-  return (address + ITEM_ALIGNMENT-1) & -ITEM_ALIGNMENT;
-}
+#define ALIGN_VALUE(value) ((value + ITEM_ALIGNMENT-1) & -ITEM_ALIGNMENT) 
+
+/* Align POINTER value to the next ITEM_ALIGNMENT boundary.
+ */
+#define ALIGN_POINTER(pointer) ((void*)ALIGN_VALUE((apr_size_t)pointer))
 
 /* Acquire the cache mutex, if necessary.
  */
@@ -315,7 +325,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
 
   /* Only valid to be called for used entries.
    */
-  assert(entry->offset != -1);
+  assert(entry->offset != NO_OFFSET);
 
   /* update global cache usage counters
    */
@@ -332,7 +342,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
       {
         /* insertion window starts right behind the entry to remove
          */
-        if (entry->previous == -1)
+        if (entry->previous == NO_INDEX)
           {
             /* remove the first entry -> insertion may start at pos 0, now */
             cache->current_data = 0;
@@ -341,26 +351,26 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
           {
             /* insertion may start right behind the previous entry */
             entry_t *previous = get_entry(cache, entry->previous);
-            cache->current_data = align_entry(  previous->offset 
+            cache->current_data = ALIGN_VALUE(  previous->offset 
                                               + previous->size);
           }
       }
 
   /* unlink it from the chain of used entries
    */
-  if (entry->previous == -1)
+  if (entry->previous == NO_INDEX)
     cache->first = entry->next;
   else
     get_entry(cache, entry->previous)->next = entry->next;
 
-  if (entry->next == -1)
+  if (entry->next == NO_INDEX)
     cache->last = entry->previous;
   else
     get_entry(cache, entry->next)->previous = entry->previous;
 
   /* Mark the entry as unused.
    */
-  entry->offset = -1;
+  entry->offset = NO_OFFSET;
 }
 
 /* Insert ENTRY into the chain of used dictionary entries. The entry's
@@ -371,12 +381,14 @@ static void
 insert_entry(svn_membuffer_t *cache, entry_t *entry)
 {
   apr_uint32_t idx = get_index(cache, entry);
-  entry_t *next = cache->next == -1 ? NULL : get_entry(cache, cache->next);
+  entry_t *next = cache->next == NO_INDEX
+                ? NULL
+                : get_entry(cache, cache->next);
 
   /* The entry must start at the beginning of the insertion window.
    */
   assert(entry->offset == cache->current_data);
-  cache->current_data = align_entry(entry->offset + entry->size);
+  cache->current_data = ALIGN_VALUE(entry->offset + entry->size);
 
   /* update global cache usage counters
    */
@@ -387,11 +399,11 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
   /* update entry chain
    */
   entry->next = cache->next;
-  if (cache->first == -1)
+  if (cache->first == NO_INDEX)
     {
       /* insert as the first entry and only in the chain
        */
-      entry->previous = -1;
+      entry->previous = NO_INDEX;
       cache->last = idx;
       cache->first = idx;
     }
@@ -412,7 +424,7 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
       entry->previous = next->previous;
       next->previous = idx;
 
-      if (entry->previous != -1)
+      if (entry->previous != NO_INDEX)
         get_entry(cache, entry->previous)->next = idx;
       else
         cache->first = idx;
@@ -440,7 +452,7 @@ get_group_index(svn_membuffer_t **cache,
   if (err != NULL)
   {
     svn_error_clear(err);
-    return -1;
+    return NO_INDEX;
   }
 
   memcpy(to_find, checksum->digest, APR_MD5_DIGESTSIZE);
@@ -498,7 +510,7 @@ find_entry(svn_membuffer_t *cache,
   /* try to find the matching entry 
    */
   for (i = 0; i < GROUP_SIZE; ++i)
-    if (group[i].offset != -1 && 
+    if (group[i].offset != NO_OFFSET && 
         !memcmp(to_find, group[i].key, sizeof(to_find)))
       {
         /* found it
@@ -517,7 +529,7 @@ find_entry(svn_membuffer_t *cache,
       /* look for an empty entry and return that ...
        */
       for (i = 0; i < GROUP_SIZE; ++i)
-        if (group[i].offset == -1)
+        if (group[i].offset == NO_OFFSET)
           {
             entry = &group[i];
             break;
@@ -556,7 +568,7 @@ find_entry(svn_membuffer_t *cache,
 static void
 move_entry(svn_membuffer_t *cache, entry_t *entry)
 {
-  apr_size_t size = align_entry(entry->size);
+  apr_size_t size = ALIGN_VALUE(entry->size);
 
   /* This entry survived this cleansing run. Reset half of its
    * hit count so that its removal gets more likely in the next
@@ -593,6 +605,8 @@ static svn_boolean_t
 ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
 {
   entry_t *entry;
+  apr_uint64_t average_hit_value;
+  apr_uint64_t threshold;
 
   /* accumulated size of the entries that have been removed to make
    * room for the new one.
@@ -615,7 +629,7 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
     {
       /* first offset behind the insertion window
        */
-      apr_uint64_t end = cache->next == -1
+      apr_uint64_t end = cache->next == NO_INDEX
                        ? cache->data_size
                        : get_entry(cache, cache->next)->offset;
 
@@ -637,7 +651,7 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
 
       /* try to enlarge the insertion window
        */
-      if (cache->next == -1)
+      if (cache->next == NO_INDEX)
         {
           /* We reached the end of the data buffer; restart at the beginning.
            * Due to the randomized nature of our LFU implementation, very
@@ -666,8 +680,8 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
               /* Roll the dice and determine a threshold somewhere from 0 up
                * to 2 times the average hit count.
                */
-              int average_hit_value = cache->hit_count / cache->used_entries;
-              int threshold = (average_hit_value+1) * (rand() % 4096) / 2048;
+              average_hit_value = cache->hit_count / cache->used_entries;
+              threshold = (average_hit_value+1) * (rand() % 4096) / 2048;
 
               /* Drop the entry from the end of the insertion window, if it
                * has been hit less than the threshold. Otherwise, keep it and
@@ -711,6 +725,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   svn_membuffer_t *c = apr_palloc(pool, CACHE_SEGMENTS * sizeof(*c));
   apr_uint32_t seg;
   apr_uint32_t group_count;
+  apr_uint64_t data_size;
 
   /* We use this sub-pool to allocate the data buffer and the dictionary
    * so that we can release this memory easily upon OOM.
@@ -735,6 +750,12 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   if (directory_size < sizeof(entry_group_t))
     directory_size = sizeof(entry_group_t);
 
+  /* limit the data size to what we can address
+   */
+  data_size = total_size - directory_size;
+  if (data_size > APR_SIZE_MAX)
+    data_size = APR_SIZE_MAX;
+
   /* to keep the entries small, we use 32 bit indices only
    * -> we need to ensure that no more then 4G entries exist
    */
@@ -752,13 +773,13 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].group_count = group_count;
       c[seg].directory =
           apr_palloc(sub_pool, group_count * sizeof(entry_group_t));
-      c[seg].first = -1;
-      c[seg].last = -1;
-      c[seg].next = -1;
+      c[seg].first = NO_INDEX;
+      c[seg].last = NO_INDEX;
+      c[seg].next = NO_INDEX;
 
-      c[seg].data_size = total_size - directory_size;
+      c[seg].data_size = data_size;
       c[seg].data = apr_palloc(sub_pool, c[seg].data_size);
-      c[seg].data = (unsigned char *)align_entry((apr_uint64_t)c[seg].data);
+      c[seg].data = (unsigned char *)ALIGN_POINTER(c[seg].data);
       c[seg].data_size -= ITEM_ALIGNMENT;
       c[seg].current_data = 0;
       c[seg].data_used = 0;
@@ -854,7 +875,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
   /* find the entry group that will hold the key.
    */
   group_index = get_group_index(&cache, key, key_len, to_find, pool);
-  if (group_index == -1)
+  if (group_index == NO_INDEX)
     return SVN_NO_ERROR;
 
   /* Serialize data data.
@@ -921,7 +942,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
   /* find the entry group that will hold the key.
    */
   group_index = get_group_index(&cache, key, key_len, to_find, pool);
-  if (group_index == -1)
+  if (group_index == NO_INDEX)
     {
       /* Some error occured, return "item not found".
        */
@@ -943,9 +964,8 @@ membuffer_cache_get(svn_membuffer_t *cache,
       return unlock_cache(cache, SVN_NO_ERROR);
     }
 
-  size = align_entry(entry->size);
-  buffer = (char *)align_entry
-               ((apr_size_t)apr_palloc(pool, size + ITEM_ALIGNMENT-1));
+  size = ALIGN_VALUE(entry->size);
+  buffer = (char *)ALIGN_POINTER(apr_palloc(pool, size + ITEM_ALIGNMENT-1));
   memcpy(buffer, (const char*)cache->data + entry->offset, size);
 
   /* update hit statistics
