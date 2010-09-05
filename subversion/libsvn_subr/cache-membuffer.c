@@ -74,13 +74,19 @@
  * window comes by. As a result, frequently used entries are likely not
  * to be dropped until they get not used for a while. Also, even a cache
  * thrashing situation about 50% of the content survives every 50% of the
- * cache being re-written with new entries.
+ * cache being re-written with new entries. For details on the fine-
+ * tuning involved, see the comments in ensure_data_insertable().
  *
  * To limit the entry size and management overhead, the actual item keys
  * will not be stored but only their MD5 checksums, instead. This is
  * reasonably safe to do since users have only limited control over the
  * full keys, even if these are folder paths. So, it is very hard to
  * construct colliding keys.
+ *
+ * All access to the cached data needs to be serialized. Because we want
+ * to scale well despite that bottleneck, we simply segment the cache into
+ * CACHE_SEGMENTS independent caches. Items will be multiplexed based on
+ * their hash key.
  */
 
 /* A 4-way associative cache seems to be the best compromise between 
@@ -98,6 +104,14 @@
  * Must be a power of 2.
  */
 #define ITEM_ALIGNMENT 16
+
+/* Number of cache segements. Keep this a power of two and below 257.
+ * To support maximum of N processors, a value of N^2 will give almost
+ * perfect scaling, 2*N will make it saturate around N threads.
+ * Don't use large values here because small caches severely limit the
+ * size of items that can be cached.
+ */
+#define CACHE_SEGMENTS 16
 
 /* A single dictionary entry. Since they are allocated statically, these
  * entries can either be in use or in used state. An entry is unused, iff 
@@ -405,11 +419,11 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
     }
 }
 
-/* Map a KEY of length LEN to the group that shall contain the respective 
- * item. Return the hash value in TO_FIND. Returns -1 upon error.
+/* Map a KEY of length LEN to the CACHE and group that shall contain the
+ * respective item. Return the hash value in TO_FIND. Returns -1 upon error.
  */
 static apr_uint32_t
-get_group_index(svn_membuffer_t *cache,
+get_group_index(svn_membuffer_t **cache,
                 const void *key,
                 apr_size_t len,
                 unsigned char *to_find,
@@ -431,13 +445,16 @@ get_group_index(svn_membuffer_t *cache,
 
   memcpy(to_find, checksum->digest, APR_MD5_DIGESTSIZE);
 
+  /* select the cache segment to use */
+  *cache = &(*cache)[to_find[0] % CACHE_SEGMENTS];
+
   /* Get the group that *must* contain the entry. Fold the hash value 
    * just to be sure (it should not be necessary for perfect hashes).
    */
   for (i = 0; i < sizeof(to_find) / sizeof(apr_uint32_t); ++i)
     hash += ((apr_uint32_t*)to_find)[i] ^ ((hash >> 19) || (hash << 13));
 
-  return hash % cache->group_count;
+  return hash % (*cache)->group_count;
 }
 
 /* Reduce the hit count of ENTRY and update the accumunated hit info
@@ -690,13 +707,20 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   svn_boolean_t thread_safe,
                                   apr_pool_t *pool)
 {
-  svn_membuffer_t *c = apr_palloc(pool, sizeof(*c));
-  int i, k;
+  /* allocate cache as an array of segments / cache objects */
+  svn_membuffer_t *c = apr_palloc(pool, CACHE_SEGMENTS * sizeof(*c));
+  apr_uint32_t seg;
+  apr_uint32_t group_count;
 
   /* We use this sub-pool to allocate the data buffer and the dictionary
    * so that we can release this memory easily upon OOM.
    */
   apr_pool_t *sub_pool = svn_pool_create(pool);
+
+  /* Split total cache size into segments of equal size
+   */
+  total_size /= CACHE_SEGMENTS;
+  directory_size /= CACHE_SEGMENTS;
 
   /* prevent pathological conditions: ensure a certain minimum cache size 
    */
@@ -714,80 +738,90 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   /* to keep the entries small, we use 32 bit indices only
    * -> we need to ensure that no more then 4G entries exist
    */
-  c->group_count = directory_size / sizeof (entry_group_t);
-  if (c->group_count >= (APR_UINT32_MAX / GROUP_SIZE))
+  group_count = directory_size / sizeof (entry_group_t);
+  if (group_count >= (APR_UINT32_MAX / GROUP_SIZE))
     {
-      c->group_count = (APR_UINT32_MAX / GROUP_SIZE) - 1;
-      directory_size = c->group_count * sizeof (entry_group_t);
+      group_count = (APR_UINT32_MAX / GROUP_SIZE) - 1;
+      directory_size = group_count * sizeof (entry_group_t);
     }
 
-  /* allocate buffers and initialize cache members
-   */
-  c->directory = apr_palloc(sub_pool, c->group_count * sizeof(entry_group_t));
-  c->first = -1;
-  c->last = -1;
-  c->next = -1;
+  for (seg = 0; seg < CACHE_SEGMENTS; ++seg)
+    {
+      /* allocate buffers and initialize cache members
+      */
+      c[seg].group_count = group_count;
+      c[seg].directory =
+          apr_palloc(sub_pool, group_count * sizeof(entry_group_t));
+      c[seg].first = -1;
+      c[seg].last = -1;
+      c[seg].next = -1;
 
-  c->data_size = total_size - directory_size;
-  c->data = apr_palloc(sub_pool, c->data_size);
-  c->data = (unsigned char *)align_entry((apr_uint64_t)c->data);
-  c->data_size -= ITEM_ALIGNMENT;
-  c->current_data = 0;
-  c->data_used = 0;
+      c[seg].data_size = total_size - directory_size;
+      c[seg].data = apr_palloc(sub_pool, c[seg].data_size);
+      c[seg].data = (unsigned char *)align_entry((apr_uint64_t)c[seg].data);
+      c[seg].data_size -= ITEM_ALIGNMENT;
+      c[seg].current_data = 0;
+      c[seg].data_used = 0;
 
-  c->used_entries = 0;
-  c->hit_count = 0;
-  c->total_reads = 0;
-  c->total_writes = 0;
-  c->total_hits = 0;
+      c[seg].used_entries = 0;
+      c[seg].hit_count = 0;
+      c[seg].total_reads = 0;
+      c[seg].total_writes = 0;
+      c[seg].total_hits = 0;
 
-  /* were allocations successful? 
-   * If not, initialize a minimal cache structure.
-   */
-  if (c->data == NULL || c->directory == NULL)
-  {
-    /* in case we successfully allocated one part of the cache 
-     * make sure we release it asap.
-     */
-    svn_pool_destroy(sub_pool);
+      /* were allocations successful?
+       * If not, initialize a minimal cache structure.
+       */
+      if (c[seg].data == NULL || c[seg].directory == NULL)
+        {
+          /* in case we successfully allocated one part of the cache
+           * make sure we release it asap.
+           */
+          svn_pool_destroy(sub_pool);
 
-    c->group_count = 1;
-    c->data_size = 0;
+          c[seg].group_count = 1;
+          c[seg].data_size = 0;
 
-    if (c->directory == NULL)
-      c->directory = apr_palloc(pool, sizeof(entry_group_t));
+          if (c[seg].directory == NULL)
+            c[seg].directory = apr_palloc(pool, sizeof(entry_group_t));
 
-    /* if that modest allocation failed as well, we definitly are OOM. */
-    if (c->directory == NULL)
-      return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
-  }
+          /* if that modest allocation failed as well, we definitly are OOM.
+           */
+          if (c[seg].directory == NULL)
+            return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
+        }
 
-  /* initialize directory entries as "unused"
-   */
-  for (i = 0; i < c->group_count; ++i)
-    for (k = 0; k < GROUP_SIZE; ++k)
-      c->directory[i][k].offset = -1;
+      /* initialize directory entries as "unused"
+       */
+      memset(c[seg].directory,
+             0xff,
+             (apr_size_t)c->group_count * sizeof(entry_group_t));
+
+      /* this may fail on exotic platforms (1s complement) only */
+      assert(c[seg].directory[0][0].offset == -1);
 
 #if APR_HAS_THREADS
-  /* A lock for intra-process synchronization to the cache, or NULL if
-  * the cache's creator doesn't feel the cache needs to be
-  * thread-safe. */
+      /* A lock for intra-process synchronization to the cache, or NULL if
+      * the cache's creator doesn't feel the cache needs to be
+      * thread-safe. */
 
-  c->mutex = NULL;
-  if (thread_safe)
-    {
-      apr_status_t status = apr_thread_mutex_create(&(c->mutex),
-                                                    APR_THREAD_MUTEX_DEFAULT,
-                                                    pool);
-      if (status)
-        return svn_error_wrap_apr(status, _("Can't create cache mutex"));
-    }
+      c[seg].mutex = NULL;
+      if (thread_safe)
+        {
+          apr_status_t status =
+              apr_thread_mutex_create(&(c[seg].mutex),
+                                      APR_THREAD_MUTEX_DEFAULT,
+                                      pool);
+          if (status)
+            return svn_error_wrap_apr(status, _("Can't create cache mutex"));
+        }
 #else
-  if (thread_safe)
-    return svn_error_wrap_apr(APR_ENOTIMPL, _("APR doesn't support threads"));
+      if (thread_safe)
+        return svn_error_wrap_apr(APR_ENOTIMPL, _("APR doesn't support threads"));
 #endif
+    }
 
-  /* done here 
+  /* done here
    */
   *cache = c;
   return SVN_NO_ERROR;
@@ -819,7 +853,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
   /* find the entry group that will hold the key.
    */
-  group_index = get_group_index(cache, key, key_len, to_find, pool);
+  group_index = get_group_index(&cache, key, key_len, to_find, pool);
   if (group_index == -1)
     return SVN_NO_ERROR;
 
@@ -886,7 +920,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
 
   /* find the entry group that will hold the key.
    */
-  group_index = get_group_index(cache, key, key_len, to_find, pool);
+  group_index = get_group_index(&cache, key, key_len, to_find, pool);
   if (group_index == -1)
     {
       /* Some error occured, return "item not found".
@@ -941,7 +975,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
   entry_t *entry;
   svn_error_t *err = SVN_NO_ERROR;
 
-  group_index = get_group_index(cache, key, key_len, to_find, pool);
+  group_index = get_group_index(&cache, key, key_len, to_find, pool);
 
   SVN_ERR(lock_cache(cache));
 
@@ -1198,7 +1232,7 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
    * must be small enough to be stored in a 32 bit value.
    */
   svn_membuffer_cache_t *cache = cache_void;
-  return (size < cache->membuffer->data_size / 16)
+  return (size < cache->membuffer->data_size / 4 / CACHE_SEGMENTS)
       && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
 }
 
