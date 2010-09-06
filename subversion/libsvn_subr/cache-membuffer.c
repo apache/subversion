@@ -711,7 +711,7 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
  * for the DICTIONARY_SIZE. THREAD_SAFE may be FALSE, if there will
  * be no concurrent acccess to the CACHE returned.
  *
- * All allocations, in particular the data buffer and dictionary will 
+ * All allocations, in particular the data buffer and dictionary will
  * be made from POOL.
  */
 svn_error_t *
@@ -737,7 +737,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   total_size /= CACHE_SEGMENTS;
   directory_size /= CACHE_SEGMENTS;
 
-  /* prevent pathological conditions: ensure a certain minimum cache size 
+  /* prevent pathological conditions: ensure a certain minimum cache size
    */
   if (total_size < 2 * sizeof(entry_group_t))
     total_size = 2 * sizeof(entry_group_t);
@@ -759,17 +759,17 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   /* to keep the entries small, we use 32 bit indices only
    * -> we need to ensure that no more then 4G entries exist
    */
-  group_count = directory_size / sizeof (entry_group_t);
+  group_count = directory_size / sizeof(entry_group_t);
   if (group_count >= (APR_UINT32_MAX / GROUP_SIZE))
     {
       group_count = (APR_UINT32_MAX / GROUP_SIZE) - 1;
-      directory_size = group_count * sizeof (entry_group_t);
+      directory_size = group_count * sizeof(entry_group_t);
     }
 
   for (seg = 0; seg < CACHE_SEGMENTS; ++seg)
     {
       /* allocate buffers and initialize cache members
-      */
+       */
       c[seg].group_count = group_count;
       c[seg].directory =
           apr_palloc(sub_pool, group_count * sizeof(entry_group_t));
@@ -778,7 +778,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].next = NO_INDEX;
 
       c[seg].data_size = data_size;
-      c[seg].data = apr_palloc(sub_pool, c[seg].data_size);
+      c[seg].data = apr_palloc(sub_pool, (apr_size_t)data_size);
       c[seg].data = (unsigned char *)ALIGN_POINTER(c[seg].data);
       c[seg].data_size -= ITEM_ALIGNMENT;
       c[seg].current_data = 0;
@@ -823,8 +823,8 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
 #if APR_HAS_THREADS
       /* A lock for intra-process synchronization to the cache, or NULL if
-      * the cache's creator doesn't feel the cache needs to be
-      * thread-safe. */
+       * the cache's creator doesn't feel the cache needs to be
+       * thread-safe. */
 
       c[seg].mutex = NULL;
       if (thread_safe)
