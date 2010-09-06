@@ -394,7 +394,7 @@ static svn_error_t *custom_get_request(svn_ra_neon__session_t *ras,
       delta_base = NULL;
     }
 
-  request = svn_ra_neon__request_create(ras, "GET", url, pool);
+  SVN_ERR(svn_ra_neon__request_create(&request, ras, "GET", url, pool));
 
   if (delta_base)
     {
@@ -1097,7 +1097,8 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
      PROPFINDs. */
   if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
     {
-      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, latest_revnum, pool));
+      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, 
+                                                 latest_revnum, pool));
       if (! SVN_IS_VALID_REVNUM(*latest_revnum))
         return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                 _("The OPTIONS response did not include "
@@ -1111,7 +1112,6 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
                                              ras, ras->root.path,
                                              SVN_INVALID_REVNUM, pool));
     }
-  SVN_ERR(svn_ra_neon__maybe_store_auth_info(ras, pool));
 
   return NULL;
 }
@@ -1713,8 +1713,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       if (! rb->receiving_all)
         break;
 
+      base_checksum = svn_xml_get_attr_value("base-checksum", atts);
+
       SVN_ERR((*rb->editor->apply_textdelta)(rb->file_baton,
-                                             NULL, /* ### base_checksum */
+                                             base_checksum,
                                              rb->file_pool,
                                              &(rb->whandler),
                                              &(rb->whandler_baton)));
@@ -2439,8 +2441,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
          _("REPORT response handling failed to complete the editor drive"));
     }
 
-  /* store auth info if we can. */
-  return svn_ra_neon__maybe_store_auth_info(rb->ras, pool);
+  return SVN_NO_ERROR;
 }
 
 static const svn_ra_reporter3_t ra_neon_reporter = {

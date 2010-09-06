@@ -331,6 +331,7 @@ svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
 
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
+                  const char **corrected_url,
                   const char *repos_URL,
                   const svn_ra_callbacks2_t *callbacks,
                   void *callback_baton,
@@ -341,6 +342,9 @@ svn_ra_serf__open(svn_ra_session_t *session,
   svn_ra_serf__session_t *serf_sess;
   apr_uri_t url;
   const char *client_string = NULL;
+
+  if (corrected_url)
+    *corrected_url = NULL;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   serf_sess->pool = svn_pool_create(pool);
@@ -452,7 +456,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  return svn_ra_serf__exchange_capabilities(serf_sess, pool);
+  return svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
 }
 
 static svn_error_t *
@@ -541,8 +545,9 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                                       propfind_path, rev, "0", all_props,
                                       pool));
 
-  svn_ra_serf__walk_all_props(props, propfind_path, rev,
-                              svn_ra_serf__set_bare_props, *ret_props, pool);
+  SVN_ERR(svn_ra_serf__walk_all_props(props, propfind_path, rev,
+                                      svn_ra_serf__set_bare_props, *ret_props,
+                                      pool));
 
   return SVN_NO_ERROR;
 }
@@ -801,13 +806,13 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
           return SVN_NO_ERROR;
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
   entry = apr_pcalloc(pool, sizeof(*entry));
 
-  svn_ra_serf__walk_all_props(props, path, fetched_rev, dirent_walker, entry,
-                              pool);
+  SVN_ERR(svn_ra_serf__walk_all_props(props, path, fetched_rev, dirent_walker,
+                                      entry, pool));
 
   *dirent = entry;
 
@@ -902,8 +907,8 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       dirent_walk.base_paths = apr_hash_make(pool);
       dirent_walk.orig_path = svn_uri_canonicalize(path, pool);
 
-      svn_ra_serf__walk_all_paths(props, revision, path_dirent_walker,
-                                  &dirent_walk, pool);
+      SVN_ERR(svn_ra_serf__walk_all_paths(props, revision, path_dirent_walker,
+                                          &dirent_walk, pool));
 
       *dirents = dirent_walk.base_paths;
     }
@@ -920,9 +925,9 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       /* Check if the path is really a directory. */
       SVN_ERR(resource_is_directory (props, path, revision));
 
-      svn_ra_serf__walk_all_props(props, path, revision,
-                                  svn_ra_serf__set_flat_props,
-                                  *ret_props, pool);
+      SVN_ERR(svn_ra_serf__walk_all_props(props, path, revision,
+                                          svn_ra_serf__set_flat_props,
+                                          *ret_props, pool));
     }
 
   return SVN_NO_ERROR;

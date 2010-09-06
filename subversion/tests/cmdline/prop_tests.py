@@ -1944,20 +1944,32 @@ def obstructed_subdirs(sbox):
                              expected_disk.old_tree())
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/C', status='! ', wc_rev='?')
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_status.tweak('A/C', status='! ', wc_rev='1')
+  else:
+    expected_status.tweak('A/C', status='! ', wc_rev='?')
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Drop an empty file there to obstruct the now-deleted subdir
   open(C_path, 'w')
 
-  expected_disk.add({'A/C': Item(contents='')})
+  # Single-DB doesn't lose properties
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.add({'A/C': Item(contents='', props={'red': 'blue'})})
+    expected_status.tweak('A/C', status='~ ', wc_rev='1')
+  else:
+    expected_disk.add({'A/C': Item(contents='')})
+
+    # NOTE: r943346 fixes a problem with reporter processing, which
+    #   is necessary for this status to complete properly.
+    expected_status.tweak('A/C', status='~ ', wc_rev='?')
+
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
   svntest.tree.compare_trees("disk", actual_disk_tree,
                              expected_disk.old_tree())
 
-  # NOTE: r943346 fixes a problem with reporter processing, which
-  #   is necessary for this status to complete properly.
-  expected_status.tweak('A/C', status='~ ', wc_rev='?')
+  
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 

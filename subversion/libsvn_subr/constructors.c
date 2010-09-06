@@ -54,6 +54,8 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
   dst_commit_info->revision = src_commit_info->revision;
   dst_commit_info->post_commit_err = src_commit_info->post_commit_err
     ? apr_pstrdup(pool, src_commit_info->post_commit_err) : NULL;
+  dst_commit_info->repos_root = src_commit_info->repos_root
+    ? apr_pstrdup(pool, src_commit_info->repos_root) : NULL;
 
   return dst_commit_info;
 }

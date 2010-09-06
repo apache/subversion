@@ -408,7 +408,7 @@ svn_ra_serf__handle_client_cert_pw(void *data,
  *
  * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
  */
-void
+svn_error_t *
 svn_ra_serf__setup_serf_req(serf_request_t *request,
                             serf_bucket_t **req_bkt, serf_bucket_t **hdrs_bkt,
                             svn_ra_serf__connection_t *conn,
@@ -444,19 +444,20 @@ typedef svn_error_t *
                                 apr_pool_t *pool);
 
 /* Callback for when a request body is needed. */
-typedef serf_bucket_t*
-(*svn_ra_serf__request_body_delegate_t)(void *baton,
+typedef svn_error_t *
+(*svn_ra_serf__request_body_delegate_t)(serf_bucket_t **body_bkt,
+                                        void *baton,
                                         serf_bucket_alloc_t *alloc,
                                         apr_pool_t *pool);
 
 /* Callback for when request headers are needed. */
-typedef apr_status_t
+typedef svn_error_t *
 (*svn_ra_serf__request_header_delegate_t)(serf_bucket_t *headers,
                                           void *baton,
                                           apr_pool_t *pool);
 
 /* Callback for when a response has an error. */
-typedef apr_status_t
+typedef svn_error_t *
 (*svn_ra_serf__response_error_t)(serf_request_t *request,
                                  serf_bucket_t *response,
                                  int status_code,
@@ -623,6 +624,10 @@ struct svn_ra_serf__xml_parser_t {
    */
   int *status_code;
 
+  /* If non-NULL, this is the value of the response's Location header.
+   */
+  const char *location;
+
   /* If non-NULL, this value will be set to TRUE when the response is
    * completed.
    */
@@ -685,6 +690,10 @@ typedef struct svn_ra_serf__simple_request_context_t {
 
   /* The HTTP status line of the response */
   const char *reason;
+
+  /* The Location header value of the response, or NULL if there
+     wasn't one. */
+  const char *location;
 
   /* This value is set to TRUE when the response is completed. */
   svn_boolean_t done;
@@ -774,6 +783,13 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
                                       serf_bucket_t *response,
                                       void *baton,
                                       apr_pool_t *pool);
+
+/* Return the value of the RESPONSE's Location header if any, or NULL
+ * otherwise.  All allocations will be made in POOL.
+ */
+const char *
+svn_ra_serf__response_get_location(serf_bucket_t *response,
+                                   apr_pool_t *pool);
 
 /** XML helper functions. **/
 
@@ -963,7 +979,7 @@ typedef svn_error_t *
                                  const svn_string_t *val,
                                  apr_pool_t *pool);
 
-void
+svn_error_t *
 svn_ra_serf__walk_all_props(apr_hash_t *props,
                             const char *name,
                             svn_revnum_t rev,
@@ -978,7 +994,7 @@ typedef svn_error_t *
                                   const char *name, apr_ssize_t name_len,
                                   const svn_string_t *val,
                                   apr_pool_t *pool);
-void
+svn_error_t *
 svn_ra_serf__walk_all_paths(apr_hash_t *props,
                             svn_revnum_t rev,
                             svn_ra_serf__path_rev_walker_t walker,
@@ -1359,11 +1375,20 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          apr_pool_t *pool);
 
 /* Exchange capabilities with the server, by sending an OPTIONS
-   request announcing the client's capabilities, and by filling
-   SERF_SESS->capabilities with the server's capabilities as read
-   from the response headers.  Use POOL only for temporary allocation. */
+ * request announcing the client's capabilities, and by filling
+ * SERF_SESS->capabilities with the server's capabilities as read from
+ * the response headers.  Use POOL only for temporary allocation.
+ *
+ * If the CORRECTED_URL is non-NULL, allow the OPTIONS response to
+ * report a server-dictated redirect or relocation (HTTP 301 or 302
+ * error codes), setting *CORRECTED_URL to the value of the corrected
+ * repository URL.  Otherwise, such responses from the server will
+ * generate an error.  (In either case, no capabilities are exchanged
+ * if there is, in fact, such a response from the server.)
+ */
 svn_error_t *
 svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
+                                   const char **corrected_url,
                                    apr_pool_t *pool);
 
 /* Implements the has_capability RA layer function. */
@@ -1498,11 +1523,14 @@ svn_ra_serf__encode_auth_header(const char *protocol,
 /*** General utility functions ***/
 
 /**
- * Convert an HTTP status code resulting from a WebDAV request to the relevant
- * error code.
+ * Convert an HTTP STATUS_CODE resulting from a WebDAV request against
+ * PATH to the relevant error code.  Use the response-supplied LOCATION
+ * where it necessary.
  */
 svn_error_t *
-svn_ra_serf__error_on_status(int status_code, const char *path);
+svn_ra_serf__error_on_status(int status_code,
+                             const char *path,
+                             const char *location);
 
 #ifdef __cplusplus
 }

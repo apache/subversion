@@ -35,6 +35,7 @@ import svntest
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -575,8 +576,7 @@ def add_recursive_already_versioned(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
+  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some files, then schedule them for addition
   delta_path = sbox.ospath('delta')
@@ -706,7 +706,7 @@ test_list = [ None,
               SkipUnless(revert_add_executable, svntest.main.is_posix_os),
               revert_delete_files,
               revert_delete_dirs,
-              XFail(unschedule_missing_added),
+              unschedule_missing_added,
               delete_missing,
               revert_inside_newly_added_dir,
               status_add_deleted_directory,

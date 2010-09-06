@@ -18,13 +18,9 @@
 # under the License.
 #
 #
-import tempfile, urllib
+import os.path, sys, tempfile, urllib
 from svn import core, repos
-
-try:
-  from io import StringIO
-except ImportError:
-  from StringIO import StringIO
+from StringIO import StringIO
 
 class Temper(object):
   """Class to simplify allocation and cleanup of dummy Subversion
@@ -49,21 +45,31 @@ class Temper(object):
     self._cleanup_list.append((temp_dir_name, core.svn_io_remove_dir))
     return temp_dir_name
 
-  def alloc_repo(self, suffix = ""):
-    """Creates an empty repository. Returns a tuple of its handle, path and
+  def alloc_empty_repo(self, suffix = ""):
+    """Create an empty repository. Returns a tuple of its handle, path and
        file: URI in canonical internal form."""
     temp_path = tempfile.mkdtemp(suffix)
     repo_path = core.svn_dirent_internal_style(temp_path)
-    repo_uri = core.svn_uri_canonicalize(Temper._file_uri_for_path(temp_path))
+    repo_uri = core.svn_uri_canonicalize(file_uri_for_path(temp_path))
     handle = repos.create(repo_path, None, None, None, None)
     self._cleanup_list.append((repo_path, repos.svn_repos_delete))
     return (handle, repo_path, repo_uri)
-    
-  @classmethod
-  def _file_uri_for_path(cls, path):
-    uri_path = urllib.pathname2url(path)
 
-    # pathname2url claims to return the path part of the URI, but on Windows
-    # it returns both the authority and path parts for no reason, which
-    # means we have to trim the leading slashes to "normalize" the result.
-    return 'file:///' + uri_path.lstrip('/')
+  def alloc_known_repo(self, repo_id, suffix = ""):
+    """Create a temporary repository and fill it with the contents of the
+       specified dump. repo_id is the path to the dump, relative to the script's
+       location. Returns the same as alloc_empty_repo."""
+    dump_path = os.path.join(os.path.dirname(sys.argv[0]), repo_id)
+    (handle, repo_path, repo_uri) = self.alloc_empty_repo(suffix=suffix)
+    repos.svn_repos_load_fs2(handle, open(dump_path, 'rb'), StringIO(),
+                             repos.load_uuid_default, None, False, False, None)
+    return (handle, repo_path, repo_uri)
+    
+def file_uri_for_path(path):
+  """Return the file: URI corresponding to the given path."""
+  uri_path = urllib.pathname2url(path)
+
+  # pathname2url claims to return the path part of the URI, but on Windows
+  # it returns both the authority and path parts for no reason, which
+  # means we have to trim the leading slashes to "normalize" the result.
+  return 'file:///' + uri_path.lstrip('/')

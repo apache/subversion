@@ -290,53 +290,6 @@ make_dir_baton(const char *path,
 }
 
 
-/* For each property in PROPHASH, write headers containing MD5 and SHA1
- * checksums of property content to STREAM.
- * Do temporary allocations in SCRATCH_POOL. */
-static svn_error_t *
-write_prop_content_checksums(svn_stream_t *stream,
-                             apr_hash_t *prophash,
-                             apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool;
-
-  iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, prophash);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      svn_checksum_t *checksum;
-      const char *hex_digest;
-      const char *propname;
-      svn_string_t *propval;
-
-      svn_pool_clear(iterpool);
-
-      propname = svn__apr_hash_index_key(hi);
-      propval = svn__apr_hash_index_val(hi);
-
-      SVN_ERR(svn_checksum(&checksum, svn_checksum_md5,
-                           propval->data, propval->len, iterpool));
-      hex_digest = svn_checksum_to_cstring(checksum, iterpool);
-      if (hex_digest)
-        SVN_ERR(svn_stream_printf(stream, iterpool,
-                                  SVN_REPOS_DUMPFILE_PROP_CONTENT_MD5
-                                  ": (%s) %s\n", propname, hex_digest));
-      SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1,
-                           propval->data, propval->len, iterpool));
-      hex_digest = svn_checksum_to_cstring(checksum, iterpool);
-      if (hex_digest)
-        SVN_ERR(svn_stream_printf(stream, iterpool,
-                                  SVN_REPOS_DUMPFILE_PROP_CONTENT_SHA1
-                                  ": (%s) %s\n", propname, hex_digest));
-    }
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* This helper is the main "meat" of the editor -- it does all the
    work of writing a node record.
 
@@ -614,7 +567,6 @@ dump_node(struct edit_baton *eb,
       SVN_ERR(svn_stream_printf(eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
                                 ": %" APR_SIZE_T_FMT "\n", proplen));
-      SVN_ERR(write_prop_content_checksums(eb->stream, prophash, pool));
     }
 
   /* If we are supposed to dump text, write out a text length header
@@ -1046,7 +998,6 @@ write_revision_record(svn_stream_t *stream,
                             SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
                             ": %" APR_SIZE_T_FMT "\n",
                             encoded_prophash->len));
-  SVN_ERR(write_prop_content_checksums(stream, props, pool));
 
   /* Write out a regular Content-length header for the benefit of
      non-Subversion RFC-822 parsers. */

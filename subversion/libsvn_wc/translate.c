@@ -43,7 +43,6 @@
 #include "adm_files.h"
 #include "translate.h"
 #include "props.h"
-#include "lock.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"

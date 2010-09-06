@@ -90,16 +90,6 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
                                    apr_pool_t *scratch_pool);
 
 
-/* Set *PROP_PATH to PATH's PROPS_KIND properties file.
-   PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. Valid values for NODE_KIND are svn_node_dir
-   and svn_node_file. */
-svn_error_t *svn_wc__prop_path(const char **prop_path,
-                               const char *path,
-                               svn_wc__db_kind_t node_kind,
-                               svn_wc__props_kind_t props_kind,
-                               apr_pool_t *pool);
-
 /* Set *RESULT_ABSPATH to the absolute path to a readable file containing
    the WC-1 "normal text-base" of LOCAL_ABSPATH in DB.
 
@@ -224,9 +214,13 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/* Blow away the admistrative directory associated with DIR_ABSPATH */
+/* Blow away the admistrative directory associated with DIR_ABSPATH.
+   For single-db this doesn't perform actual work unless the wcroot is passed.
+ */
 svn_error_t *svn_wc__adm_destroy(svn_wc__db_t *db,
                                  const char *dir_abspath,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
                                  apr_pool_t *scratch_pool);
 
 

@@ -223,14 +223,7 @@ io_check_path(const char *path,
 
   if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
-  else if (APR_STATUS_IS_ENOTDIR(apr_err)
-#ifdef WIN32
-           /* On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
-            * invalid-pathname error but not this one, so we include it. */
-           /* ### This fix should go into APR. */
-           || (APR_TO_OS_ERROR(apr_err) == ERROR_INVALID_NAME)
-#endif
-           )
+  else if (SVN__APR_STATUS_IS_ENOTDIR(apr_err))
     *kind = svn_node_none;
   else if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't check path '%s'"),
@@ -2151,14 +2144,7 @@ svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
 
   if (err && ignore_enoent && 
       (APR_STATUS_IS_ENOENT(err->apr_err)
-       || APR_STATUS_IS_ENOTDIR(err->apr_err)
-#ifdef WIN32
-           /* On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
-            * invalid-pathname error but not this one, so we include it. */
-           /* ### This fix should go into APR. */
-           || (APR_TO_OS_ERROR(err->apr_err) == ERROR_INVALID_NAME)
-#endif
-      ))
+       || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
       svn_error_clear(err);
       dirent = svn_io_dirent2_create(result_pool);

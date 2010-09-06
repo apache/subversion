@@ -1086,6 +1086,11 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_patch_hunk_already_applied,
 
+  /** The server has instructed the client to follow a URL
+   * redirection.
+   * @since New in 1.7. */
+  svn_wc_notify_url_redirect
+
 } svn_wc_notify_action_t;
 
 
@@ -1249,7 +1254,7 @@ typedef struct svn_wc_notify_t {
    * @since New in 1.7 */
   svn_revnum_t old_revision;
 
-  /* These fields are used by svn patch to identify the
+  /** These fields are used by svn patch to identify the
    * hunk the notification is for. They are line-based
    * offsets and lengths parsed from the unidiff hunk header.
    * @since New in 1.7. */
@@ -1258,11 +1263,11 @@ typedef struct svn_wc_notify_t {
   svn_linenum_t hunk_modified_start;
   svn_linenum_t hunk_modified_length;
 
-  /* The line at which a hunk was matched (and applied).
+  /** The line at which a hunk was matched (and applied).
    * @since New in 1.7. */
   svn_linenum_t hunk_matched_line;
 
-  /* The fuzz factor the hunk was applied with.
+  /** The fuzz factor the hunk was applied with.
    * @since New in 1.7 */
   int hunk_fuzz;
 
@@ -1419,11 +1424,11 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
  */
 typedef enum svn_wc_conflict_action_t
 {
-  svn_wc_conflict_action_edit,    /* attempting to change text or props */
-  svn_wc_conflict_action_add,     /* attempting to add object */
-  svn_wc_conflict_action_delete,  /* attempting to delete object */
-  svn_wc_conflict_action_replace  /* attempting to replace object,
-                                     @since New in 1.7 */
+  svn_wc_conflict_action_edit,    /**< attempting to change text or props */
+  svn_wc_conflict_action_add,     /**< attempting to add object */
+  svn_wc_conflict_action_delete,  /**< attempting to delete object */
+  svn_wc_conflict_action_replace  /**< attempting to replace object,
+                                       @since New in 1.7 */
 } svn_wc_conflict_action_t;
 
 
@@ -2065,20 +2070,20 @@ svn_wc__conflict_description2_dup(
  */
 typedef enum svn_wc_conflict_choice_t
 {
-  /* Don't resolve the conflict now.  Let libsvn_wc mark the path
+  /** Don't resolve the conflict now.  Let libsvn_wc mark the path
      'conflicted', so user can run 'svn resolved' later. */
   svn_wc_conflict_choose_postpone,
 
-  /* If there were files to choose from, select one as a way of
+  /** If there were files to choose from, select one as a way of
      resolving the conflict here and now.  libsvn_wc will then do the
      work of "installing" the chosen file.
   */
-  svn_wc_conflict_choose_base,            /* original version */
-  svn_wc_conflict_choose_theirs_full,     /* incoming version */
-  svn_wc_conflict_choose_mine_full,       /* own version */
-  svn_wc_conflict_choose_theirs_conflict, /* incoming (for conflicted hunks) */
-  svn_wc_conflict_choose_mine_conflict,   /* own (for conflicted hunks) */
-  svn_wc_conflict_choose_merged           /* merged version */
+  svn_wc_conflict_choose_base,            /**< original version */
+  svn_wc_conflict_choose_theirs_full,     /**< incoming version */
+  svn_wc_conflict_choose_mine_full,       /**< own version */
+  svn_wc_conflict_choose_theirs_conflict, /**< incoming (for conflicted hunks) */
+  svn_wc_conflict_choose_mine_conflict,   /**< own (for conflicted hunks) */
+  svn_wc_conflict_choose_merged           /**< merged version */
 
 } svn_wc_conflict_choice_t;
 
@@ -2709,13 +2714,20 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
                        svn_wc_adm_access_t *adm_access,
                        apr_pool_t *pool);
 
-
 /** Set @a *modified_p to non-zero if @a path's properties are modified
  * with regard to the base revision, else set @a modified_p to zero.
  * @a adm_access must be an access baton for @a path.
  *
- * If you want to use this with a post-wc-ng working copy, just call
- * svn_wc_get_prop_diffs2() and examine the output.
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_props_modified_p2(svn_boolean_t *modified_p,
+                         svn_wc_context_t* wc_ctx,
+                         const char *local_abspath,
+                          apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_props_modified_p2(), but with a relative path and
+ * adm_access baton.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -3496,7 +3508,7 @@ enum svn_wc_status_kind
     /** text or props have been modified */
     svn_wc_status_modified,
 
-    /** local mods received repos mods */
+    /** local mods received repos mods (### unused) */
     svn_wc_status_merged,
 
     /** local mods received conflicting repos mods */
@@ -4215,12 +4227,15 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * is used for accessing the working copy and must contain a write lock for
  * the parent directory of @a dst_abspath,
  *
+ * If metadata_only is TRUE then this a database only operation and
+ * the working directories and files are not copied.
+ *
  * @a src_abspath must be a file or directory under version control;
  * the parent of @a dst_abspath must be a directory under version control
  * in the same working copy; @a dst_abspath will be the name of the copied
- * item, and it must not exist already.  Note that when @a src points to a
- * versioned file, the working file doesn't necessarily exist in which case
- * its text-base is used instead.
+ * item, and it must not exist already if metadata_only is FALSE.  Note that
+ * when @a src points to a versioned file, the working file doesn't
+ * necessarily exist in which case its text-base is used instead.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -4235,7 +4250,7 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * @par Important:
  * This is a variant of svn_wc_add4().  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
- * removed with svn_client_revert2().
+ * removed with svn_client_revert4().
  *
  * @since New in 1.7.
  */
@@ -4243,6 +4258,7 @@ svn_error_t *
 svn_wc_copy3(svn_wc_context_t *wc_ctx,
              const char *src_abspath,
              const char *dst_abspath,
+             svn_boolean_t metadata_only,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
              svn_wc_notify_func2_t notify_func,
@@ -4393,7 +4409,7 @@ svn_wc_delete(const char *path,
  * and anything below it will be scheduled for addition inside the parent
  * working copy as a copy of the original location. The separate working
  * copy will be integrated by this step. In this case, which is only used
- * by code like that of 'svn cp URL@rev path' @a copyfrom_url and
+ * by code like that of "svn cp URL@rev path" @a copyfrom_url and
  * @a copyfrom_rev MUST BE the the url and revision of @a local_abspath
  * in the separate working copy.
  *
@@ -5947,6 +5963,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * appear as a diff against their copy source, or whether such paths will
  * appear as if they were newly added in their entirety.
  *
+ * If @a use_git_diff_format is TRUE, copied paths will be treated as added
+ * if they weren't modified after being copied. This allows the callbacks
+ * to generate appropriate --git diff headers for such files.
+ *
  * If @a use_text_base is TRUE, then compare the repository against
  * the working copy's text-base files, rather than the working files.
  *
@@ -5975,6 +5995,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
                         svn_boolean_t show_copies_as_adds,
+                        svn_boolean_t use_git_diff_format,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         const apr_array_header_t *changelists,
@@ -5986,7 +6007,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
 /**
  * Similar to svn_wc_get_diff_editor6(), but with an
  * #svn_wc_diff_callbacks3_t instead of #svn_wc_diff_callbacks4_t,
- * and @a show_copies_as_adds set to @c FALSE.
+ * @a show_copies_as_adds, and @a use_git_diff_format set to @c FALSE.
  *
  * @since New in 1.6.
  *
@@ -6128,6 +6149,10 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * appear as a diff against their copy source, or whether such paths will
  * appear as if they were newly added in their entirety.
  *
+ * If @a use_git_diff_format is TRUE, copied paths will be treated as added
+ * if they weren't modified after being copied. This allows the callbacks
+ * to generate appropriate --git diff headers for such files.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
@@ -6148,6 +6173,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              svn_boolean_t show_copies_as_adds,
+             svn_boolean_t use_git_diff_format,
              const apr_array_header_t *changelists,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
@@ -6155,8 +6181,9 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
 
 /**
  * Similar to svn_wc_diff6(), but with a #svn_wc_diff_callbacks3_t argument
- * instead of #svn_wc_diff_callbacks4_t, and @a show_copies_as_adds set to
- * @c FALSE. It also doesn't allow specifying a cancel function.
+ * instead of #svn_wc_diff_callbacks4_t, @a show_copies_as_adds,
+ * and @a use_git_diff_format set to * @c FALSE.
+ * It also doesn't allow specifying a cancel function.
  *
  * @since New in 1.6.
  *
@@ -6948,6 +6975,23 @@ svn_wc_revert(const char *path,
               void *notify_baton,
               apr_pool_t *pool);
 
+/**
+ * Restores a missing node, @a local_abspath using the @a wc_ctx. Records
+ * the new last modified time of the file for status processing.
+ *
+ * If @a use_commit_times is TRUE, then set restored files' timestamps
+ * to their last-commit-times.
+ *
+ * ### Before Single-DB this function can only restore missing files.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_restore(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t use_commit_times,
+               apr_pool_t *scratch_pool);
+
 
 /* Tmp files */
 
@@ -7013,15 +7057,17 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  * @c SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_file itself
  * if @c SVN_WC_TRANSLATE_FROM_NF is specified.
  *
- * Output files are created in the temp file area belonging to
- * @a versioned_file.  By default they will be deleted at pool cleanup.
- *
- * If @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP is specified, the default
- * pool cleanup handler to remove @a *xlated_path is not registered.
+ * If a new output file is created, it is created in the temp file area
+ * belonging to @a versioned_file.  By default it will be deleted at pool
+ * cleanup.  If @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP is specified, the
+ * default pool cleanup handler to remove @a *xlated_path is not registered.
+ * If the input file is returned as the output, its lifetime is not
+ * specified.
  *
  * If an error is returned, the effect on @a *xlated_path is undefined.
  *
  * @since New in 1.4
+ * @deprecated Provided for compatibility with the 1.6 API
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -7062,6 +7108,7 @@ svn_wc_translated_file(const char **xlated_p,
  * svn_wc_translated_file().
  *
  * @since New in 1.5.
+ * @deprecated Provided for compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *

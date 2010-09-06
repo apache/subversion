@@ -2323,10 +2323,6 @@ svn_repos_node_from_baton(void *edit_baton);
 /** @since New in 1.5. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  \
                                         SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
-/** @since New in 1.7. */
-#define SVN_REPOS_DUMPFILE_PROP_CONTENT_MD5          "Prop-content-md5"
-/** @since New in 1.7. */
-#define SVN_REPOS_DUMPFILE_PROP_CONTENT_SHA1         "Prop-content-sha1"
 
 /**
  * Verify the contents of the file system in @a repos.

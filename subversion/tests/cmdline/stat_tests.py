@@ -39,6 +39,7 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
+UnorderedOutput = svntest.verify.UnorderedOutput
 
 
 
@@ -166,6 +167,7 @@ def status_type_change(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
+  single_db = svntest.main.wc_is_singledb(wc_dir)
 
   os.chdir(wc_dir)
 
@@ -175,39 +177,96 @@ def status_type_change(sbox):
   os.rename('A', 'iota')
   os.rename('was_iota', 'A')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A)", line):
-      raise svntest.Failure
+  if single_db:
+    expected_output = [
+        '~       A\n',
+        '!       A/mu\n',
+        '!       A/B\n',
+        '!       A/B/lambda\n',
+        '!       A/B/E\n',
+        '!       A/B/E/alpha\n',
+        '!       A/B/E/beta\n',
+        '!       A/B/F\n',
+        '!       A/C\n',
+        '!       A/D\n',
+        '!       A/D/gamma\n',
+        '!       A/D/G\n',
+        '!       A/D/G/rho\n',
+        '!       A/D/G/pi\n',
+        '!       A/D/G/tau\n',
+        '!       A/D/H\n',
+        '!       A/D/H/chi\n',
+        '!       A/D/H/omega\n',
+        '!       A/D/H/psi\n',
+        '~       iota\n',
+    ]
+
+    expected_output = [s.replace('/', os.path.sep) for s in expected_output]
+  else:
+    expected_output = [
+        '~       A\n',
+        '~       iota\n',
+    ]
+
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
   # Now change the file that is obstructing the versioned dir into an
   # unversioned dir.
   os.remove('A')
   os.mkdir('A')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A)", line):
-      raise svntest.Failure
+  if single_db:
+    # A is a directory again, so it is no longer missing, but it's
+    # descendants are
+    expected_output = [
+        '!       A/mu\n',
+        '!       A/B\n',
+        '!       A/B/lambda\n',
+        '!       A/B/E\n',
+        '!       A/B/E/alpha\n',
+        '!       A/B/E/beta\n',
+        '!       A/B/F\n',
+        '!       A/C\n',
+        '!       A/D\n',
+        '!       A/D/gamma\n',
+        '!       A/D/G\n',
+        '!       A/D/G/rho\n',
+        '!       A/D/G/pi\n',
+        '!       A/D/G/tau\n',
+        '!       A/D/H\n',
+        '!       A/D/H/chi\n',
+        '!       A/D/H/omega\n',
+        '!       A/D/H/psi\n',
+        '~       iota\n',
+    ]
+    # Fix separator for Windows
+    expected_output = [s.replace('/', os.path.sep) for s in expected_output]
+  else:
+    # A misses its administrative area, so it is missing
+    expected_output = [
+        '~       A\n',
+        '~       iota\n',
+    ]
+
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
   # Now change the versioned dir that is obstructing the file into an
   # unversioned dir.
   svntest.main.safe_rmtree('iota')
   os.mkdir('iota')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A)", line):
-      raise svntest.Failure
+  if not svntest.main.wc_is_singledb('.'):
+    # A misses its administrative area, so it is still missing and
+    # iota is still obstructed
+    expected_output = [
+        '~       A\n',
+        '~       iota\n',
+    ]
+
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
 #----------------------------------------------------------------------
 
@@ -216,6 +275,7 @@ def status_type_change_to_symlink(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
+  single_db = svntest.main.wc_is_singledb(wc_dir)
 
   os.chdir(wc_dir)
 
@@ -225,13 +285,28 @@ def status_type_change_to_symlink(sbox):
   svntest.main.safe_rmtree('A/D')
   os.symlink('bar', 'A/D')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A/D)", line):
-      raise svntest.Failure
+  if single_db:
+    expected_output = [
+        '~       A/D\n',
+        '!       A/D/gamma\n',
+        '!       A/D/G\n',
+        '!       A/D/G/rho\n',
+        '!       A/D/G/pi\n',
+        '!       A/D/G/tau\n',
+        '!       A/D/H\n',
+        '!       A/D/H/chi\n',
+        '!       A/D/H/omega\n',
+        '!       A/D/H/psi\n',
+        '~       iota\n',
+        ]
+  else:
+    expected_output = [
+        '~       A/D\n',
+        '~       iota\n',
+      ]
+
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
   # "valid" symlinks
   os.remove('iota')
@@ -239,13 +314,8 @@ def status_type_change_to_symlink(sbox):
   os.symlink('A/mu', 'iota')
   os.symlink('C', 'A/D')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A/D)", line):
-      raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
 #----------------------------------------------------------------------
 # Regression test for revision 3686.
@@ -366,7 +436,7 @@ def status_nonrecursive_update_different_cwd(sbox):
 
   os.chdir('A')
   svntest.actions.run_and_verify_svn(None,
-                                     expected_output,
+                                     UnorderedOutput(expected_output),
                                      [],
                                      'status', '-v', '-N', '-u', 'C')
 
@@ -378,7 +448,7 @@ def status_nonrecursive_update_different_cwd(sbox):
 
   os.chdir('C')
   svntest.actions.run_and_verify_svn(None,
-                                     expected_output,
+                                     UnorderedOutput(expected_output),
                                      [],
                                      'status', '-v', '-N', '-u', '.')
 
@@ -803,8 +873,11 @@ def missing_dir_in_anchor(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # At one point this caused a "foo not locked" error
+  is_singledb = svntest.main.wc_is_singledb(foo_path)
   svntest.main.safe_rmtree(foo_path)
   expected_status.tweak('foo', status='! ', wc_rev='?')
+  if is_singledb:
+    expected_status.tweak('foo', entry_status='A ', entry_rev='0')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
@@ -907,25 +980,55 @@ def status_missing_dir(sbox):
   # ok, blow away the A/D/G directory
   svntest.main.safe_rmtree(a_d_g)
 
-  expected = svntest.verify.UnorderedOutput(["!       " + a_d_g + "\n"])
-  svntest.actions.run_and_verify_svn(None, expected, [], "status", wc_dir)
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected = [
+                 '!       A/D/G\n',
+                 '!       A/D/G/rho\n',
+                 '!       A/D/G/pi\n',
+                 '!       A/D/G/tau\n',
+               ]
+    expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
+                 for s in expected ]
+  else:
+    expected = ["!       " + a_d_g + "\n"]
 
-  expected = svntest.verify.UnorderedOutput(
-         ["        *            " + os.path.join(a_d_g, "pi") + "\n",
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
+                                     "status", wc_dir)
+
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected = [
+          "!                1   " + a_d_g + "\n",
+          "!                1   " + os.path.join(a_d_g, "rho") + "\n",
+          "!                1   " + os.path.join(a_d_g, "pi") + "\n",
+          "!                1   " + os.path.join(a_d_g, "tau") + "\n",
+          "Status against revision:      1\n" ]
+  else:
+    expected = [
+          "        *            " + os.path.join(a_d_g, "pi") + "\n",
           "        *            " + os.path.join(a_d_g, "rho") + "\n",
           "        *            " + os.path.join(a_d_g, "tau") + "\n",
           "!       *       ?    " + a_d_g + "\n",
           "        *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
-          "Status against revision:      1\n" ])
+          "Status against revision:      1\n" ]
 
   # now run status -u, we should be able to do this without crashing
-  svntest.actions.run_and_verify_svn(None, expected, [],
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
                                      "status", "-u", wc_dir)
 
   # Finally run an explicit status request directly on the missing directory.
-  svntest.actions.run_and_verify_svn(None,
-                                     ["!       " + a_d_g + "\n"],
-                                     [], "status", a_d_g)
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected = [
+                  "!       A/D/G\n",
+                  "!       A/D/G/rho\n",
+                  "!       A/D/G/pi\n",
+                  "!       A/D/G/tau\n",
+               ]
+    expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
+                 for s in expected ]
+  else:
+    expected = ["!       " + a_d_g + "\n"]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
+                                     "status", a_d_g)
 
 def status_add_plus_conflict(sbox):
   "status on conflicted added file"
@@ -1488,6 +1591,8 @@ def status_dash_u_deleted_directories(sbox):
                                      "status", "-u", "B")
 
   # again, but now from inside B, should give the same output
+  if not os.path.exists('B'):
+    os.mkdir('B')
   os.chdir("B")
   expected = svntest.verify.UnorderedOutput(
          ["D                1   %s\n" % ".",
@@ -1545,7 +1650,35 @@ def status_dash_u_type_change(sbox):
   svntest.main.safe_rmtree('A')
   os.mkdir('A')
 
-  expected = svntest.verify.UnorderedOutput(
+  if svntest.main.wc_is_singledb('.'):
+    output =[
+               "!                1   A/mu\n",
+               "!                1   A/B\n",
+               "!                1   A/B/lambda\n",
+               "!                1   A/B/E\n",
+               "!                1   A/B/E/alpha\n",
+               "!                1   A/B/E/beta\n",
+               "!                1   A/B/F\n",
+               "!                1   A/C\n",
+               "!                1   A/D\n",
+               "!                1   A/D/gamma\n",
+               "!                1   A/D/G\n",
+               "!                1   A/D/G/rho\n",
+               "!                1   A/D/G/pi\n",
+               "!                1   A/D/G/tau\n",
+               "!                1   A/D/H\n",
+               "!                1   A/D/H/chi\n",
+               "!                1   A/D/H/omega\n",
+               "!                1   A/D/H/psi\n",
+               "~                1   iota\n",
+               "Status against revision:      1\n"
+            ]
+
+    expected = svntest.verify.UnorderedOutput(
+                        [s.replace('/', os.path.sep)
+                            for s in  output])
+  else:
+    expected = svntest.verify.UnorderedOutput(
          ["~                1   iota\n",
           "~               ?    A\n",
           "Status against revision:      1\n" ])

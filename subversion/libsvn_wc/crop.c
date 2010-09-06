@@ -85,12 +85,13 @@ crop_children(svn_wc__db_t *db,
                                NULL,
                                db, local_abspath, pool, iterpool));
 
+  if (dir_depth == svn_depth_unknown)
+    dir_depth = svn_depth_infinity;
+
   /* Update the depth of target first, if needed. */
   if (dir_depth > depth)
-    {
-      SVN_ERR(svn_wc__db_temp_op_set_dir_depth(db, local_abspath, depth,
-                                               iterpool));
-    }
+    SVN_ERR(svn_wc__db_temp_op_set_dir_depth(db, local_abspath, depth,
+                                             iterpool));
 
   /* Looping over current directory's SVN entries: */
   SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath, pool,
@@ -250,7 +251,9 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
         SVN_ERR_MALFUNCTION();
 
       case svn_wc__db_status_added:
+#ifndef SVN_WC__SINGLE_DB
       case svn_wc__db_status_obstructed_add:
+#endif
         /* Would have to check parents if we want to allow this */
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Cannot exclude '%s': it is to be added "
@@ -258,7 +261,9 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
       case svn_wc__db_status_deleted:
+#ifndef SVN_WC__SINGLE_DB
       case svn_wc__db_status_obstructed_delete:
+#endif
         /* Would have to check parents if we want to allow this */
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Cannot exclude '%s': it is to be deleted "
@@ -268,7 +273,9 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 
       case svn_wc__db_status_normal:
       case svn_wc__db_status_incomplete:
+#ifndef SVN_WC__SINGLE_DB
       case svn_wc__db_status_obstructed:
+#endif
       default:
         break; /* Ok to exclude */
     }
@@ -356,16 +363,22 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
                                svn_dirent_local_style(local_abspath,
                                                       scratch_pool));
 
-    if (status == svn_wc__db_status_deleted ||
-        status == svn_wc__db_status_obstructed_delete)
+    if (status == svn_wc__db_status_deleted
+#ifndef SVN_WC__SINGLE_DB
+        || status == svn_wc__db_status_obstructed_delete
+#endif
+        )
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("Cannot crop '%s': it is going to be removed "
                                  "from repository. Try commit instead"),
                                svn_dirent_local_style(local_abspath,
                                                       scratch_pool));
 
-    if (status == svn_wc__db_status_added ||
-        status == svn_wc__db_status_obstructed_add)
+    if (status == svn_wc__db_status_added
+#ifndef SVN_WC__SINGLE_DB
+        || status == svn_wc__db_status_obstructed_add
+#endif
+        )
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("Cannot crop '%s': it is to be added "
                                  "to the repository. Try commit instead"),

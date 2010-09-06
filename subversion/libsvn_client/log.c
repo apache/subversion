@@ -391,8 +391,17 @@ svn_client_log5(const apr_array_header_t *targets,
         {
           /* We have some paths, let's use them. Start after the URL.  */
           for (i = 1; i < targets->nelts; i++)
-            APR_ARRAY_PUSH(condensed_targets, const char *) =
-                APR_ARRAY_IDX(targets, i, const char *);
+            {
+              const char *target;
+
+              target = APR_ARRAY_IDX(targets, i, const char *);
+              if (svn_path_is_url(target) || svn_dirent_is_absolute(target))
+                return svn_error_return(svn_error_createf(
+                                          SVN_ERR_ILLEGAL_TARGET, NULL,
+                                          _("'%s' is not a relative path"),
+                                          target));
+              APR_ARRAY_PUSH(condensed_targets, const char *) = target;
+            }
         }
       else
         {

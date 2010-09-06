@@ -116,9 +116,10 @@ svn_client__derive_location(const char **url,
     {
       if (ra_session == NULL)
         {
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, *url, NULL,
-                                                       NULL, FALSE, TRUE, ctx,
-                                                       scratch_pool));
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
+                                                       *url, NULL, NULL,
+                                                       FALSE, TRUE,
+                                                       ctx, scratch_pool));
         }
       SVN_ERR(svn_client__get_revision_number(peg_revnum, NULL, ctx->wc_ctx,
                                               NULL, ra_session, peg_revision,

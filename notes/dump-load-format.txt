@@ -23,8 +23,6 @@ following:
 [Text-delta-base-sha1: blob]
 [Text-copy-source-sha1: blob]
 [Text-content-sha1: blob]
-[Prop-content-md5: (<property name>) blob]
-[Prop-content-sha1: (<property name>) blob]
 
     The default value for the boolean headers is "false".  If the value is
     set to "true", then the text and property contents will be treated
@@ -52,9 +50,6 @@ Text-delta-base-sha1, Text-copy-source-sha1, and Text-content-sha1 are not
 currently used by the loader.  They are written by 1.6-and-later versions of
 Subversion so that future loaders can optionally choose which checksum to
 use for checking for corruption.
-
-Prop-content-md5 and Prop-content-sha1 are written by 1.7-and-later versions,
-and can optionally be used to verify property content upon loading.
 
 ===== SVN DUMPFILE VERSION 2 FORMAT =====
 

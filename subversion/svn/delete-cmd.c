@@ -47,6 +47,8 @@ svn_cl__delete(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   svn_error_t *err;
+  svn_boolean_t is_url;
+  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -55,7 +57,19 @@ svn_cl__delete(apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
+  /* Check that all targets are of the same type. */
+  is_url = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
+  for (i = 1; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      if (is_url != svn_path_is_url(target))
+        return svn_error_return(
+                 svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                  _("Cannot mix repository and working copy "
+                                    "targets")));
+    }
+
+  if (! is_url)
     {
       ctx->log_msg_func3 = NULL;
       if (opt_state->message || opt_state->filedata || opt_state->revprop_table)
@@ -75,7 +89,8 @@ svn_cl__delete(apr_getopt_t *os,
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
   err = svn_client_delete4(targets, opt_state->force, opt_state->keep_local,
-                           opt_state->revprop_table, ctx, pool);
+                           opt_state->revprop_table, svn_cl__print_commit_info,
+                           NULL, ctx, pool);
   if (err)
     err = svn_cl__may_need_force(err);
 

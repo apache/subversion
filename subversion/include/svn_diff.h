@@ -376,7 +376,7 @@ typedef struct svn_diff_file_options_t
   /** Whether to treat all end-of-line markers the same when comparing lines.
    * The default is @c FALSE. */
   svn_boolean_t ignore_eol_style;
-  /** Whether the '@@' lines of the unified diff output should include a prefix
+  /** Whether the "@@" lines of the unified diff output should include a prefix
     * of the nearest preceding line that starts with a character that might be
     * the initial character of a C language identifier.  The default is
     * @c FALSE.
@@ -796,31 +796,37 @@ typedef enum svn_diff_operation_kind_e
  *   - modified text   The result of patching the original text.
  *
  * For example, consider a hunk with the following diff text:
- *   @@ -1,5 +1,5 @@
- *    #include <stdio.h>
- *    int main(int argc, char *argv[]) {
- *   -        printf("Hello World!\n");
- *   +        printf("I like Subversion!\n");
- *    }
+ *
+ * @verbatim
+     @@ -1,5 +1,5 @@
+      #include <stdio.h>
+      int main(int argc, char *argv[]) {
+     -        printf("Hello World!\n");
+     +        printf("I like Subversion!\n");
+      } @endverbatim
  *
  * The original text of this hunk is:
- *   #include <stdio.h>
- *   int main(int argc, char *argv[]) {
- *           printf("Hello World!\n");
- *   }
+ *
+ * @verbatim
+     #include <stdio.h>
+     int main(int argc, char *argv[]) {
+             printf("Hello World!\n");
+     } @endverbatim
  *
  * And the modified text is:
- *   #include <stdio.h>
- *   int main(int argc, char *argv[]) {
- *           printf("I like Subversion!\n");
- *   }
+ *
+ * @verbatim
+     #include <stdio.h>
+     int main(int argc, char *argv[]) {
+             printf("I like Subversion!\n");
+     } @endverbatim
  *
  * @see svn_diff_hunk_readline_diff_text()
  * @see svn_diff_hunk_readline_original_text()
  * @see svn_diff_hunk_readline_modified_text()
  *
  * @since New in 1.7. */
-typedef struct svn_hunk_t svn_hunk_t;
+typedef struct svn_diff_hunk_t svn_diff_hunk_t;
 
 /**
  * Allocate @a *stringbuf in @a result_pool, and read into it one line
@@ -838,7 +844,7 @@ typedef struct svn_hunk_t svn_hunk_t;
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_diff_text(const svn_hunk_t *hunk,
+svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
                                  svn_stringbuf_t **stringbuf,
                                  const char **eol,
                                  svn_boolean_t *eof,
@@ -854,11 +860,11 @@ svn_diff_hunk_readline_diff_text(const svn_hunk_t *hunk,
  * and @a eol is not NULL, @a *eol is set to NULL.
  * Temporary allocations will be performed in @a scratch_pool.
  *
- * @see svn_hunk_t
+ * @see svn_diff_hunk_t
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_original_text(const svn_hunk_t *hunk,
+svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
@@ -869,69 +875,69 @@ svn_diff_hunk_readline_original_text(const svn_hunk_t *hunk,
  * Like svn_diff_hunk_readline_original_text(), but it returns lines from
  * the modified text of the hunk.
  *
- * @see svn_hunk_t
+ * @see svn_diff_hunk_t
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_modified_text(const svn_hunk_t *hunk,
+svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Reset the diff text of @a hunk so it can be read again from the start.
+/** Reset the diff text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
 svn_error_t *
-svn_diff_hunk_reset_diff_text(const svn_hunk_t *hunk);
+svn_diff_hunk_reset_diff_text(const svn_diff_hunk_t *hunk);
 
-/* Reset the original text of @a hunk so it can be read again from the start.
+/** Reset the original text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
 svn_error_t *
-svn_diff_hunk_reset_original_text(const svn_hunk_t *hunk);
+svn_diff_hunk_reset_original_text(const svn_diff_hunk_t *hunk);
 
-/* Reset the modified text of @a hunk so it can be read again from the start.
+/** Reset the modified text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
 svn_error_t *
-svn_diff_hunk_reset_modified_text(const svn_hunk_t *hunk);
+svn_diff_hunk_reset_modified_text(const svn_diff_hunk_t *hunk);
 
-/* Return the line offset of the original hunk text,
+/** Return the line offset of the original hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_original_start(const svn_hunk_t *hunk);
+svn_diff_hunk_get_original_start(const svn_diff_hunk_t *hunk);
 
-/* Return the number of lines in the original @a hunk text,
+/** Return the number of lines in the original @a hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_original_length(const svn_hunk_t *hunk);
+svn_diff_hunk_get_original_length(const svn_diff_hunk_t *hunk);
 
-/* Return the line offset of the modified @a hunk text,
+/** Return the line offset of the modified @a hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_modified_start(const svn_hunk_t *hunk);
+svn_diff_hunk_get_modified_start(const svn_diff_hunk_t *hunk);
 
-/* Return the number of lines in the modified @a hunk text,
+/** Return the number of lines in the modified @a hunk text,
  * as parsed from the hunk header.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_modified_length(const svn_hunk_t *hunk);
+svn_diff_hunk_get_modified_length(const svn_diff_hunk_t *hunk);
 
-/* Return the number of lines of leading context of @a hunk,
+/** Return the number of lines of leading context of @a hunk,
  * i.e. the number of lines starting with ' ' before the first line
  * that starts with a '+' or '-'.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_leading_context(const svn_hunk_t *hunk);
+svn_diff_hunk_get_leading_context(const svn_diff_hunk_t *hunk);
 
-/* Return the number of lines of trailing context of @a hunk,
+/** Return the number of lines of trailing context of @a hunk,
  * i.e. the number of lines starting with ' ' after the last line
  * that starts with a '+' or '-'.
  * @since New in 1.7. */
 svn_linenum_t
-svn_diff_hunk_get_trailing_context(const svn_hunk_t *hunk);
+svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk);
 
 /**
  * Data type to manage parsing of properties in patches.
@@ -944,8 +950,8 @@ typedef struct svn_prop_patch_t {
   svn_diff_operation_kind_t operation;
 
   /**
-   * An array containing an svn_hunk_t object for each hunk parsed from the
-   * patch associated with our property name */
+   * An array containing an svn_diff_hunk_t object for each hunk parsed
+   * from the patch associated with our property name */
   apr_array_header_t *hunks;
 } svn_prop_patch_t;
 
@@ -968,12 +974,12 @@ typedef struct svn_patch_t {
   const char *new_filename;
 
   /**
-   * An array containing an svn_hunk_t object for each hunk parsed
+   * An array containing an svn_diff_hunk_t object for each hunk parsed
    * from the patch. */
   apr_array_header_t *hunks;
 
   /**
-   * A hash table keyed by property names containing svn_patch_property_t
+   * A hash table keyed by property names containing svn_prop_patch_t
    * object for each property parsed from the patch. */
   apr_hash_t *prop_patches;
 
@@ -1002,11 +1008,12 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
 
 /**
  * Dispose of @a patch, closing any streams used by it.
+ * Use @a scratch_pool for all temporary allocations.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_close_patch(const svn_patch_t *patch);
+svn_diff_close_patch(const svn_patch_t *patch, apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

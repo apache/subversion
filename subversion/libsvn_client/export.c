@@ -349,21 +349,26 @@ copy_versioned_files(const char *from,
 
   if (from_kind == svn_node_dir)
     {
+      apr_fileperms_t perm = APR_OS_DEFAULT;
+
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
          care. */
 
-      /* Skip retrieving the umask on windows. Apr does not implement setting
+      /* Keep the source directory's permissions if applicable.
+         Skip retrieving the umask on windows. Apr does not implement setting
          filesystem privileges on Windows.
          Retrieving the file permissions with APR_FINFO_PROT | APR_FINFO_OWNER
          is documented to be 'incredibly expensive' */
-#ifdef WIN32
-      err = svn_io_dir_make(to, APR_OS_DEFAULT, pool);
-#else
-      apr_finfo_t finfo;
-      SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
-      err = svn_io_dir_make(to, finfo.protection, pool);
+#ifndef WIN32
+      if (revision->kind == svn_opt_revision_working)
+        {
+          apr_finfo_t finfo;
+          SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
+          perm = finfo.protection;
+        }
 #endif
+      err = svn_io_dir_make(to, perm, pool);
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
@@ -709,8 +714,8 @@ add_file(const char *path,
   struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
   const char *full_path = svn_dirent_join(eb->root_path, path, pool);
 
-  /* path is not canonicalized, i.e. it may still contain spaces etc.
-   * but eb->root_url is */
+  /* PATH is not canonicalized, i.e. it may still contain spaces etc.
+   * but EB->root_url is. */
   const char *full_url = svn_path_url_add_component2(eb->root_url,
                                                      path,
                                                      pool);
@@ -942,6 +947,11 @@ svn_client_export5(svn_revnum_t *result_rev,
   SVN_ERR_ASSERT(peg_revision != NULL);
   SVN_ERR_ASSERT(revision != NULL);
 
+  if (svn_path_is_url(to))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                              _("'%s' is not a local path"),
+                                              to));
+    
   peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision, from);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 

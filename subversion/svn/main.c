@@ -368,7 +368,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("override diff-cmd specified in config file\n"
                        "                             "
                        "[alias: --idiff]")},
-  {"git-diff", opt_use_git_diff_format, 0,
+  {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format\n")},
                   
   /* Long-opt Aliases
@@ -543,7 +543,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    committed, are immediately removed from the working copy\n"
      "    unless the --keep-local option is given.\n"
      "    PATHs that are, or contain, unversioned or modified items will\n"
-     "    not be removed unless the --force option is given.\n"
+     "    not be removed unless the --force or --keep-local option is given.\n"
      "\n"
      "  2. Each item specified by a URL is deleted from the repository\n"
      "    via an immediate commit.\n"),
@@ -934,20 +934,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      A mimetype beginning with 'text/' (or an absent mimetype) is\n"
      "      treated as text.  Anything else is treated as binary.\n"
      "    svn:externals  - A newline separated list of module specifiers,\n"
-     "      each of which consists of a relative directory path, optional\n"
-     "      revision flags and an URL.  The ordering of the three elements\n"
-     "      implements different behavior.  Subversion 1.4 and earlier only\n"
-     "      support the following formats and the URLs cannot have peg\n"
-     "      revisions:\n"
-     "        foo             http://example.com/repos/zig\n"
-     "        foo/bar -r 1234 http://example.com/repos/zag\n"
-     "      Subversion 1.5 and greater support the above formats and the\n"
-     "      following formats where the URLs may have peg revisions:\n"
-     "                http://example.com/repos/zig@42 foo\n"
-     "        -r 1234 http://example.com/repos/zig foo/bar\n"
-     "      Relative URLs are supported in Subversion 1.5 and greater for\n"
-     "      all above formats and are indicated by starting the URL with one\n"
-     "      of the following strings\n"
+     "      each of which consists of a URL and a relative directory path,\n"
+     "      similar to the syntax of the 'svn checkout' command:\n"
+     "        http://example.com/repos/zag foo/bar\n"
+     "      An optional peg revision may be appended to the URL to pin the\n"
+     "      external to a known revision:\n"
+     "        http://example.com/repos/zig@42 foo\n"
+     "      Relative URLs are indicated by starting the URL with one\n"
+     "      of the following strings:\n"
      "        ../  to the parent directory of the extracted external\n"
      "        ^/   to the repository root\n"
      "        //   to the scheme\n"
@@ -956,6 +950,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      'relative_url relative_path' with peg revision support.\n"
      "      Lines in externals definitions starting with the '#' character\n"
      "      are considered comments and are ignored.\n"
+     "      Subversion 1.4 and earlier only support the following formats\n"
+     "      where peg revisions can only be specified using a -r modifier\n"
+     "      and where URLs cannot be relative:\n"
+     "        foo             http://example.com/repos/zig\n"
+     "        foo/bar -r 1234 http://example.com/repos/zag\n"
+     "      Use of these formats is discouraged. They should only be used if\n"
+     "      interoperability with 1.4 clients is desired.\n"
      "    svn:needs-lock - If present, indicates that the file should be locked\n"
      "      before it is modified.  Makes the working copy file read-only\n"
      "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
@@ -1782,6 +1783,7 @@ main(int argc, const char *argv[])
         break;
       case opt_use_git_diff_format:
         opt_state.use_git_diff_format = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -2227,10 +2229,6 @@ main(int argc, const char *argv[])
       if (err)
         return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
-
-  /* Set up our commit callback.  We leave the callback NULL. */
-  if (!opt_state.quiet)
-    ctx->commit_callback2 = svn_cl__print_commit_info;
 
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;

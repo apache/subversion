@@ -1789,6 +1789,7 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                                    depth,
                                    ignore_ancestry,
                                    FALSE,
+                                   FALSE,
                                    use_text_base,
                                    reverse_order,
                                    changelists,
@@ -1939,6 +1940,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
                        b,
                        depth,
                        ignore_ancestry,
+                       FALSE,
                        FALSE,
                        changelists,
                        NULL, NULL,
@@ -2150,13 +2152,19 @@ svn_wc_prop_set3(const char *name,
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access), pool));
 
-  SVN_ERR(svn_wc_prop_set4(wc_ctx, local_abspath, name, value, skip_checks,
-                           notify_func, notify_baton, pool));
+  err = svn_wc_prop_set4(wc_ctx, local_abspath, name, value, skip_checks,
+                         notify_func, notify_baton, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -2324,12 +2332,29 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
+                                         svn_wc__adm_get_db(adm_access), pool));
 
-  return svn_wc__props_modified(modified_p, db, local_abspath, pool);
+  err = svn_wc_props_modified_p2(modified_p,
+                                 wc_ctx,
+                                 local_abspath,
+                                 pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+      *modified_p = FALSE;
+    }
+
+  return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
 
@@ -3625,6 +3650,7 @@ svn_wc_copy2(const char *src,
   SVN_ERR(svn_wc_copy3(wc_ctx,
                        src_abspath,
                        dst_abspath,
+                       FALSE /* metadata_only */, 
                        cancel_func, cancel_baton,
                        notify_func, notify_baton,
                        pool));

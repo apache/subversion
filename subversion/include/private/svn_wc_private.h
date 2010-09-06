@@ -44,6 +44,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* ### Temporary.  Also defined in subversion/libsvn_wc/wc.h.  To build
+ *     multi-DB mode, undefine this in both places. */
+#define SVN_WC__SINGLE_DB
+
+
 /** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
  * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
  * All temporary allocations are done in * @a scratch_pool.
@@ -53,15 +58,6 @@ svn_wc__path_switched(svn_boolean_t *switched,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
-
-
-/* Return the shallowest sufficient @c levels_to_lock value for @a depth;
- * see the @a levels_to_lock parameter of svn_wc_adm_open3() and
- * similar functions for more information.
- */
-#define SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth)              \
-  (((depth) == svn_depth_empty || (depth) == svn_depth_files) \
-   ? 0 : (((depth) == svn_depth_immediates) ? 1 : -1))
 
 
 /* Return TRUE iff CLHASH (a hash whose keys are const char *
@@ -222,7 +218,7 @@ svn_wc__node_get_children(const apr_array_header_t **children,
 
 /**
  * Fetch the repository root information for a given @a local_abspath into
- * @a *repos_root_url and @a repos_uuid. Use @wc_ctx to access the working copy
+ * @a *repos_root_url and @a repos_uuid. Use @a wc_ctx to access the working copy
  * for @a local_abspath, @a scratch_pool for all temporary allocations,
  * @a result_pool for result allocations. Note: the result may be NULL if the
  * given node has no repository root associated with it (e.g. locally added).
@@ -375,8 +371,10 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
                                apr_pool_t *scratch_pool);
 
 /**
- * Recursively call @a walk_callback for all nodes underneath
- * @a local_abspath, restricted by @a walk_depth.
+ * Call @a walk_callback with @a walk_baton for @a local_abspath and all
+ * nodes underneath it, restricted by @a walk_depth.
+ *
+ * If @a show_hidden is true, include hidden nodes, else ignore them.
  */
 svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
@@ -400,18 +398,6 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
-
-/**
- * Set @a *is_obstructed to whether @a local_abspath is obstructed, using
- * @a wc_ctx.  If @a local_abspath is not in the working copy, return
- * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
- * allocations.
- */
-svn_error_t *
-svn_wc__node_is_status_obstructed(svn_boolean_t *is_obstructed,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_absent to whether @a local_abspath is absent, using
@@ -501,7 +487,7 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
  * SVN_INVALID_REVNUM. In case of a replacement, we return the BASE
  * revision. 
  *
- * The @changed_rev is set to the latest committed change to @a
+ * The @a changed_rev is set to the latest committed change to @a
  * local_abspath before or equal to @a revision, unless the node is
  * copied-here or moved-here. Then it is the revision of the latest committed
  * change before or equal to the copyfrom_rev.  NOTE, that we use
@@ -688,25 +674,6 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-
-/** Mark missing, deleted directory @a local_abspath as 'not-present'
- * in its parent's list of entries.
- *
- * Return #SVN_ERR_WC_PATH_FOUND if @a local_abspath isn't actually a
- * missing, deleted directory.
- */
-svn_error_t *
-svn_wc__temp_mark_missing_not_present(const char *local_abspath,
-                                      svn_wc_context_t *wc_ctx,
-                                      apr_pool_t *scratch_pool);
-
-/* Return the @a *keep_local flag for local_abspath. (This flag will
-   go away once we have a consolidated administrative area) */
-svn_error_t *
-svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool);
 
 /**
  * Register @a local_abspath as a new file external aimed at

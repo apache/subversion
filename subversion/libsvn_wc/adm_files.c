@@ -357,13 +357,14 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                "because it has an unexpected status"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
+#ifndef SVN_WC__SINGLE_DB
   else
     /* We know that it is a file, so we can't hit the _obstructed stati.
        Also, we should never see _base_deleted here. */
     SVN_ERR_ASSERT(status != svn_wc__db_status_obstructed
                    && status != svn_wc__db_status_obstructed_add
-                   && status != svn_wc__db_status_obstructed_delete
-                   && status != svn_wc__db_status_base_deleted);
+                   && status != svn_wc__db_status_obstructed_delete);
+#endif
 
   if (sha1_checksum)
     SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
@@ -483,49 +484,6 @@ svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
 }
 
 
-svn_error_t *
-svn_wc__prop_path(const char **prop_path,
-                  const char *path,
-                  svn_wc__db_kind_t node_kind,
-                  svn_wc__props_kind_t props_kind,
-                  apr_pool_t *pool)
-{
-  if (node_kind == svn_wc__db_kind_dir)
-    {
-      static const char * names[] = {
-        SVN_WC__ADM_DIR_PROP_BASE,    /* svn_wc__props_base */
-        SVN_WC__ADM_DIR_PROP_REVERT,  /* svn_wc__props_revert */
-        SVN_WC__ADM_DIR_PROPS         /* svn_wc__props_working */
-      };
-
-      *prop_path = simple_extend(path, FALSE, NULL, names[props_kind], NULL,
-                                 pool);
-    }
-  else  /* It's a file */
-    {
-      static const char * extensions[] = {
-        SVN_WC__BASE_EXT,     /* svn_wc__props_base */
-        SVN_WC__REVERT_EXT,   /* svn_wc__props_revert */
-        SVN_WC__WORK_EXT      /* svn_wc__props_working */
-      };
-
-      static const char * dirs[] = {
-        SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_base */
-        SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_revert */
-        SVN_WC__ADM_PROPS       /* svn_wc__props_working */
-      };
-
-      const char *base_name;
-
-      svn_dirent_split(prop_path, &base_name, path, pool);
-      *prop_path = simple_extend(*prop_path, FALSE, dirs[props_kind],
-                                 base_name, extensions[props_kind], pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /*** Opening and closing files in the adm area. ***/
 
 svn_error_t *
@@ -587,14 +545,6 @@ init_adm_tmp_area(const char *path, apr_pool_t *pool)
   /* SVN_WC__ADM_TMP */
   SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_TMP, FALSE, pool));
 
-#if (SVN_WC__VERSION < 18)
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROP_BASE, TRUE, pool));
-
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
-  SVN_ERR(make_adm_subdir(path, SVN_WC__ADM_PROPS, TRUE, pool));
-#endif
-
   return SVN_NO_ERROR;
 }
 
@@ -618,14 +568,6 @@ init_adm(svn_wc__db_t *db,
                                  APR_OS_DEFAULT, pool));
 
   /** Make subdirectories. ***/
-
-#if (SVN_WC__VERSION < 18)
-  /* SVN_WC__ADM_PROP_BASE */
-  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROP_BASE, FALSE, pool));
-
-  /* SVN_WC__ADM_PROPS */
-  SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PROPS, FALSE, pool));
-#endif
 
   /* SVN_WC__ADM_PRISTINE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PRISTINE, FALSE, pool));
@@ -656,9 +598,11 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             svn_depth_t depth,
                             apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
   int format;
   const char *repos_relpath;
+  svn_wc__db_status_t status;
+  const char *db_repos_relpath, *db_repos_root_url, *db_repos_uuid;
+  svn_revnum_t db_revision;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(url != NULL);
@@ -666,7 +610,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(svn_uri_is_ancestor(repos_root_url, url));
 
-  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, TRUE,
+                                    scratch_pool));
 
   repos_relpath = svn_uri_is_child(repos_root_url, url, scratch_pool);
   if (repos_relpath == NULL)
@@ -681,40 +626,81 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                      repos_relpath, repos_root_url, repos_uuid,
                                      revision, depth, scratch_pool));
 
-  /* Now, get the existing url and repos for PATH. */
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
-                            FALSE, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&status, NULL,
+                               &db_revision, &db_repos_relpath,
+                               &db_repos_root_url, &db_repos_uuid,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
 
-  /* When the directory exists and is scheduled for deletion do not
-   * check the revision or the URL.  The revision can be any
+  /* When the directory exists and is scheduled for deletion or is not-present
+   * do not check the revision or the URL.  The revision can be any
    * arbitrary revision and the URL may differ if the add is
    * being driven from a merge which will have a different URL. */
-  if (entry->schedule != svn_wc_schedule_delete)
+  if (status != svn_wc__db_status_deleted
+      && status != svn_wc__db_status_not_present
+#ifndef SVN_WC__SINGLE_DB
+      && status != svn_wc__db_status_obstructed_delete
+#endif
+      )
     {
-      if (entry->revision != revision)
+      /* ### Should we match copyfrom_revision? */
+      if (db_revision != revision)
         return
           svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                             _("Revision %ld doesn't match existing "
                               "revision %ld in '%s'"),
-                            revision, entry->revision, local_abspath);
+                            revision, db_revision, local_abspath);
+
+      if (!db_repos_root_url)
+        {
+          if (status == svn_wc__db_status_added)
+            SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
+                                             &db_repos_relpath,
+                                             &db_repos_root_url,
+                                             &db_repos_uuid,
+                                             NULL, NULL, NULL, NULL,
+                                             db, local_abspath,
+                                             scratch_pool, scratch_pool));
+          else
+            SVN_ERR(svn_wc__db_scan_base_repos(&db_repos_relpath,
+                                               &db_repos_root_url,
+                                               &db_repos_uuid,
+                                               db, local_abspath,
+                                               scratch_pool, scratch_pool));
+        }
 
       /* The caller gives us a URL which should match the entry. However,
          some callers compensate for an old problem in entry->url and pass
          the copyfrom_url instead. See ^/notes/api-errata/wc002.txt. As
          a result, we allow the passed URL to match copyfrom_url if it
-         does match the entry's primary URL.  */
-      /** ### comparing URLs, should they be canonicalized first? */
-      if (strcmp(entry->url, url) != 0
-          && (entry->copyfrom_url == NULL
-              || strcmp(entry->copyfrom_url, url) != 0)
-          && (!svn_uri_is_ancestor(repos_root_url, entry->url)
-              || strcmp(entry->uuid, repos_uuid) != 0))
+         does not match the entry's primary URL.  */
+      /* ### comparing URLs, should they be canonicalized first? */
+      if (strcmp(db_repos_uuid, repos_uuid)
+          || strcmp(db_repos_root_url, repos_root_url)
+          || !svn_relpath_is_ancestor(db_repos_relpath, repos_relpath))
         {
-          return
-            svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              _("URL '%s' doesn't match existing "
-                                "URL '%s' in '%s'"),
-                              url, entry->url, local_abspath);
+          const char *copyfrom_root_url, *copyfrom_repos_relpath;
+
+          SVN_ERR(svn_wc__internal_get_copyfrom_info(&copyfrom_root_url,
+                                                     &copyfrom_repos_relpath,
+                                                     NULL, NULL, NULL,
+                                                     db, local_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
+
+          if (copyfrom_root_url == NULL
+              || strcmp(copyfrom_root_url, repos_root_url)
+              || strcmp(copyfrom_repos_relpath, repos_relpath))
+            return
+              svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                                _("URL '%s' doesn't match existing "
+                                  "URL '%s' in '%s'"),
+                                url,
+                                svn_uri_join(db_repos_root_url,
+                                             db_repos_relpath, scratch_pool),
+                                local_abspath);
         }
     }
 
@@ -739,23 +725,38 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc__adm_destroy(svn_wc__db_t *db,
                     const char *dir_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
                     apr_pool_t *scratch_pool)
 {
-#ifndef SINGLE_DB
   const char *adm_abspath;
-#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
   SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
+#ifdef SVN_WC__SINGLE_DB
+  SVN_ERR(svn_wc__db_get_wcroot(&adm_abspath, db, dir_abspath,
+                                scratch_pool, scratch_pool));
+#endif
+
+
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock */
   SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, scratch_pool));
 
-#ifndef SINGLE_DB
+#ifndef SVN_WC__SINGLE_DB
   adm_abspath = svn_wc__adm_child(dir_abspath, NULL, scratch_pool);
   SVN_ERR(svn_io_remove_dir2(adm_abspath, FALSE, NULL, NULL, scratch_pool));
+#else
+  /* ### We should check if we are the only user of this DB!!! */
+
+  if (strcmp(adm_abspath, dir_abspath) == 0)
+    SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(adm_abspath, NULL,
+                                                 scratch_pool),
+                               FALSE,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 #endif
 
   return SVN_NO_ERROR;

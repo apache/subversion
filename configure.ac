@@ -153,7 +153,7 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.4.0"
-SQLITE_RECOMMENDED_VER="3.6.17"
+SQLITE_RECOMMENDED_VER="3.7.2"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -900,6 +900,9 @@ AS_HELP_STRING([--enable-maintainer-mode],
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         CFLAGS="-Wold-style-definition $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
+        CFLAGS="-Wno-system-headers $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         AC_LANG_POP([C])

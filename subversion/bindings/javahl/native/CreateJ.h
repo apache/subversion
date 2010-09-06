@@ -65,6 +65,12 @@ class CreateJ
   ReposNotifyInformation(const svn_repos_notify_t *notify, apr_pool_t *pool);
 
   static jobject
+  CommitItem(svn_client_commit_item3_t *item);
+
+  static jobject
+  CommitInfo(const svn_commit_info_t *info);
+
+  static jobject
   RevisionRangeList(apr_array_header_t *ranges);
 
   static jobject

@@ -115,12 +115,12 @@ get_username(svn_ra_session_t *session,
   if (*sess->username)
     {
       SVN_ERR(svn_fs_create_access(&access_ctx, sess->username,
-                                   pool));
+                                   session->pool));
       SVN_ERR(svn_fs_set_access(sess->fs, access_ctx));
 
       /* Make sure this context is disassociated when the pool gets
          destroyed. */
-      apr_pool_cleanup_register(pool, sess->fs, cleanup_access,
+      apr_pool_cleanup_register(session->pool, sess->fs, cleanup_access,
                                 apr_pool_cleanup_null);
     }
 
@@ -437,6 +437,7 @@ ignore_warnings(void *baton,
 
 static svn_error_t *
 svn_ra_local__open(svn_ra_session_t *session,
+                   const char **corrected_url,
                    const char *repos_URL,
                    const svn_ra_callbacks2_t *callbacks,
                    void *callback_baton,
@@ -445,6 +446,10 @@ svn_ra_local__open(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess;
   const char *fs_path;
+
+  /* We don't support redirections in ra-local. */
+  if (corrected_url)
+    *corrected_url = NULL;
 
   /* Allocate and stash the session_sess args we have already. */
   sess = apr_pcalloc(pool, sizeof(*sess));

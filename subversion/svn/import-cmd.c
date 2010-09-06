@@ -100,6 +100,11 @@ svn_cl__import(apr_getopt_t *os,
       url = APR_ARRAY_IDX(targets, 1, const char *);
     }
 
+  if (svn_path_is_url(path))
+    return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                              NULL,
+                                              _("'%s' is not a local path"),
+                                              path));
   if (! svn_path_is_url(url))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -119,6 +124,8 @@ svn_cl__import(apr_getopt_t *os,
                               opt_state->no_ignore,
                               opt_state->force,
                               opt_state->revprop_table,
+                              svn_cl__print_commit_info,
+                              NULL,
                               ctx,
                               pool), pool));
 

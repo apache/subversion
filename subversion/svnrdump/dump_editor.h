@@ -21,7 +21,8 @@
  * @endcopyright
  *
  * @file dump_editor.h
- * @brief The svn_delta_editor_t editor used by svnrdump
+ * @brief The svn_delta_editor_t editor used by svnrdump to dump
+ * revisions.
  */
 
 #ifndef DUMP_EDITOR_H_

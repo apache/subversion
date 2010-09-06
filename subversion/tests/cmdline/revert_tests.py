@@ -740,19 +740,34 @@ def status_of_missing_dir_after_revert(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      A_D_G_path)
 
-  expected_output = svntest.verify.UnorderedOutput(
-    ["D       " + os.path.join(A_D_G_path, "pi") + "\n",
+  deletes = [
+     "D       " + os.path.join(A_D_G_path, "pi") + "\n",
      "D       " + os.path.join(A_D_G_path, "rho") + "\n",
-     "D       " + os.path.join(A_D_G_path, "tau") + "\n"])
+     "D       " + os.path.join(A_D_G_path, "tau") + "\n"
+  ]
+  expected_output = svntest.verify.UnorderedOutput(deletes)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      "status", wc_dir)
 
   svntest.main.safe_rmtree(A_D_G_path)
 
-  expected_output = svntest.verify.UnorderedOutput(
-    ["!       " + A_D_G_path + "\n"])
+  expected_output = ["!       " + A_D_G_path + "\n"]
+
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_output.extend(deletes)
+
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
+
+  # When using single-db, we can get back to the virginal state.
+  if svntest.main.wc_is_singledb(wc_dir):
+    svntest.actions.run_and_verify_svn(None, None, [], "revert",
+                                       "-R", A_D_G_path)
+
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 # Test for issue #2804 with replaced directory
@@ -974,6 +989,49 @@ def revert_add_over_not_present_dir(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def revert_added_tree(sbox):
+  "revert an added tree fails"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', sbox.ospath('X'), sbox.ospath('X/Y'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X'   : Item(status='A ', wc_rev=0),
+    'X/Y' : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Revert is non-recursive and fails, status is unchanged
+  expected_error = '.*Try \'svn revert --depth infinity\'.*'
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'revert', sbox.ospath('X'))
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+def revert_child_of_copy(sbox):
+  "revert a child of a copied directory does nothing"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.ospath('A/B/E'), sbox.ospath('A/B/E2'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/E2'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Revert of child of copy does nothing, status is unchanged
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', sbox.ospath('A/B/E2/beta'))
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -1001,6 +1059,8 @@ test_list = [ None,
               revert_replaced_with_history_file_2,
               revert_tree_conflicts_in_updated_files,
               revert_add_over_not_present_dir,
+              revert_added_tree,
+              revert_child_of_copy,
              ]
 
 if __name__ == '__main__':

@@ -567,7 +567,10 @@ def relocate_deleted_missing_copied(sbox):
     'A/D2/H/omega' : Item(status='  ', wc_rev='-', copied='+'),
     'A/D2/H/psi'   : Item(status='  ', wc_rev='-', copied='+'),
     })
-  expected_status.tweak('A/B/F', status='! ', wc_rev='?')
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_status.tweak('A/B/F', status='! ', wc_rev='1')
+  else:
+    expected_status.tweak('A/B/F', status='! ', wc_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Relocate
@@ -581,20 +584,28 @@ def relocate_deleted_missing_copied(sbox):
 
   # Deleted and missing entries should be preserved, so update should
   # show only A/B/F being reinstated
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/B/F' : Item(status='A '),
-    })
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_output = svntest.wc.State(wc_dir, {
+        'A/B/F' : Item(verb='Restored'),
+        })
+  else:
+    expected_output = svntest.wc.State(wc_dir, {
+        'A/B/F' : Item(status='A '),
+        })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/mu')
   expected_disk.add({
     'A/D2'       : Item(),
     'A/D2/gamma'   : Item("This is the file 'gamma'.\n"),
-    'A/D2/G'       : Item(),
     'A/D2/H'       : Item(),
     'A/D2/H/chi'   : Item("This is the file 'chi'.\n"),
     'A/D2/H/omega' : Item("This is the file 'omega'.\n"),
     'A/D2/H/psi'   : Item("This is the file 'psi'.\n"),
     })
+  if not svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.add({
+        'A/D2/G'       : Item(),
+        })
   expected_status.add({
     'A/B/F'       : Item(status='  ', wc_rev='2'),
     })
@@ -1799,8 +1810,6 @@ def mergeinfo_switch_elision(sbox):
     'F'       : Item(),
     })
   expected_skip = svntest.wc.State(B_COPY_1_path, { })
-  saved_cwd = os.getcwd()
-
   svntest.actions.run_and_verify_merge(B_COPY_1_path, '2', '4',
                                        sbox.repo_url + '/A/B', None,
                                        expected_output,
@@ -1847,8 +1856,6 @@ def mergeinfo_switch_elision(sbox):
     'beta'  : Item("New content"),
     })
   expected_skip = svntest.wc.State(E_COPY_2_path, { })
-  saved_cwd = os.getcwd()
-
   svntest.actions.run_and_verify_merge(E_COPY_2_path, '2', '4',
                                        sbox.repo_url + '/A/B/E', None,
                                        expected_output,
@@ -2465,6 +2472,8 @@ j = os.path.join
 def tree_conflicts_on_switch_1_1(sbox):
   "tree conflicts 1.1: tree del, leaf edit on switch"
 
+  sbox.build()
+
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
 
@@ -2482,6 +2491,10 @@ def tree_conflicts_on_switch_1_1(sbox):
   })
 
   expected_disk = disk_empty_dirs.copy()
+  if  svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_disk.remove('D/D1', 'DF/D1', 'DD/D1', 'DD/D1/D2',
+                         'DDF/D1', 'DDF/D1/D2',
+                         'DDD/D1', 'DDD/D1/D2', 'DDD/D1/D2/D3')
 
   # The files delta, epsilon, and zeta are incoming additions, but since
   # they are all within locally deleted trees they should also be schedule
@@ -2549,6 +2562,8 @@ def tree_conflicts_on_switch_1_1(sbox):
 def tree_conflicts_on_switch_1_2(sbox):
   "tree conflicts 1.2: tree del, leaf del on switch"
 
+  sbox.build()
+
   # 1.2) local tree delete, incoming leaf delete
 
   expected_output = deep_trees_conflict_output.copy()
@@ -2588,6 +2603,10 @@ def tree_conflicts_on_switch_1_2(sbox):
   expected_disk.remove('D/D1',
                        'DD/D1/D2',
                        'DDD/D1/D2/D3')
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_disk.remove('DF/D1', 'DD/D1',
+                         'DDF/D1', 'DDF/D1/D2',
+                         'DDD/D1', 'DDD/D1/D2')
 
   expected_info = {
     'F/alpha' : {

@@ -338,8 +338,8 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
     }
 
   return svn_error_createf(APR_EINVAL, NULL,
-                           "Couldn't get lock on destination repos "
-                           "after %d attempts\n", i);
+                           _("Couldn't get lock on destination repos "
+                             "after %d attempts"), i);
 }
 
 
@@ -387,20 +387,8 @@ with_locked(svn_ra_session_t *session,
   err = func(session, baton, pool);
 
   err2 = svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK, NULL, pool);
-  if (err2 && err)
-    {
-      svn_error_clear(err2); /* XXX what to do here? */
 
-      return err;
-    }
-  else if (err2)
-    {
-      return err2;
-    }
-  else
-    {
-      return err;
-    }
+  return svn_error_compose_create(err, svn_error_return(err2));
 }
 
 
@@ -721,7 +709,7 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* Now fill in our bookkeeping info in the dest repository. */
 
-  SVN_ERR(svn_ra_open3(&from_session, baton->from_url, NULL,
+  SVN_ERR(svn_ra_open4(&from_session, NULL, baton->from_url, NULL,
                        &(baton->source_callbacks), baton,
                        baton->config, pool));
   SVN_ERR(svn_ra_get_repos_root2(from_session, &root_url, pool));
@@ -735,14 +723,11 @@ do_initialize(svn_ra_session_t *to_session,
                                                &server_supports_partial_replay,
                                                SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                                                pool);
-      if (err && err->apr_err == SVN_ERR_UNKNOWN_CAPABILITY)
-        {
-          svn_error_clear(err);
-          server_supports_partial_replay = FALSE;
-        }
+      if (err && err->apr_err != SVN_ERR_UNKNOWN_CAPABILITY)
+        return svn_error_return(err);
 
-      if (!server_supports_partial_replay)
-        return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, NULL,
+      if (err || !server_supports_partial_replay)
+        return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, err,
                                 NULL);
     }
 
@@ -824,7 +809,7 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
                              _("Path '%s' is not a URL"), from_url);
 
   baton = make_subcommand_baton(opt_baton, to_url, from_url, 0, 0, pool);
-  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
+  SVN_ERR(svn_ra_open4(&to_session, NULL, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   if (opt_baton->disable_locking)
@@ -900,7 +885,7 @@ open_source_session(svn_ra_session_t **from_session,
     from_url = from_url_str->data;
 
   /* Open the session to copy the revision data. */
-  SVN_ERR(svn_ra_open3(from_session, from_url, from_uuid_str->data,
+  SVN_ERR(svn_ra_open4(from_session, NULL, from_url, from_uuid_str->data,
                        callbacks, baton, config, pool));
 
   return SVN_NO_ERROR;
@@ -1324,7 +1309,7 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
     }
 
   baton = make_subcommand_baton(opt_baton, to_url, from_url, 0, 0, pool);
-  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
+  SVN_ERR(svn_ra_open4(&to_session, NULL, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   if (opt_baton->disable_locking)
@@ -1560,7 +1545,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
       
   baton = make_subcommand_baton(opt_baton, to_url, from_url,
                                 start_rev, end_rev, pool);
-  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
+  SVN_ERR(svn_ra_open4(&to_session, NULL, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   if (opt_baton->disable_locking)
@@ -1604,7 +1589,7 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
 
   /* Open an RA session to the mirror repository URL. */
   baton = make_subcommand_baton(opt_baton, to_url, NULL, 0, 0, pool);
-  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
+  SVN_ERR(svn_ra_open4(&to_session, NULL, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
 

@@ -126,8 +126,10 @@ end_gls(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_gls_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_gls_body(serf_bucket_t **body_bkt,
+                void *baton,
                 serf_bucket_alloc_t *alloc,
                 apr_pool_t *pool)
 {
@@ -163,7 +165,8 @@ create_gls_body(void *baton,
   svn_ra_serf__add_close_tag_buckets(buckets, alloc,
                                      "S:get-location-segments");
 
-  return buckets;
+  *body_bkt = buckets;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -181,7 +184,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   const char *relative_url, *basecoll_url, *req_url;
-  svn_error_t *err;
+  svn_error_t *err, *err2;
 
   gls_ctx = apr_pcalloc(pool, sizeof(*gls_ctx));
   gls_ctx->path = path;
@@ -230,8 +233,15 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                             _("Location segment report failed on '%s'@'%ld'"),
                               path, peg_revision);
 
-  /* ### Leaks err */
-  SVN_ERR(svn_ra_serf__error_on_status(gls_ctx->status_code, handler->path));
+  err2 = svn_ra_serf__error_on_status(gls_ctx->status_code,
+                                      handler->path,
+                                      parser_ctx->location);
+  if (err2)
+    {
+      /* Prefer err2 to err. */
+      svn_error_clear(err);
+      return err2;
+    }
 
   svn_pool_destroy(gls_ctx->subpool);
 

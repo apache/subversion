@@ -31,10 +31,12 @@
 #include "svn_private_config.h"
 #include <zlib.h>
 
-/* This macro is taken from zlib, and was originally the function
-   compressBound.  It shouldn't ever change, but once every millenium,
-   it may be useful for someone to make sure. */
+/* The zlib compressBound function was not exported until 1.2.0. */
+#if ZLIB_VERNUM >= 0x1200
+#define svnCompressBound(LEN) compressBound(LEN)
+#else
 #define svnCompressBound(LEN) ((LEN) + ((LEN) >> 12) + ((LEN) >> 14) + 11)
+#endif
 
 /* For svndiff1, address/instruction/new data under this size will not
    be compressed using zlib as a secondary compressor.  */

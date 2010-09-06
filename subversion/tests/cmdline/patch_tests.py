@@ -935,9 +935,10 @@ def patch_add_new_dir(sbox):
   patch_file_path = make_patch_path(sbox)
 
   # The first diff is adding 'new' with two missing dirs. The second is
-  # adding 'new' with one missing dir to a 'A' that is locally deleted
-  # (should be skipped). The third is adding 'new' with a directory that
-  # is unversioned (should be skipped as well).
+  # adding 'new' with one missing dir to a 'A/B/E' that is locally deleted
+  # (should be skipped). The third is adding 'new' to 'A/C' that is locally
+  # deleted (should be skipped too). The fourth is adding 'new' with a
+  # directory that is unversioned (should be skipped as well).
   unidiff_patch = [
     "Index: new\n",
     "===================================================================\n",
@@ -947,8 +948,14 @@ def patch_add_new_dir(sbox):
     "+new\n",
     "Index: new\n",
     "===================================================================\n",
-    "--- A/C/Y/new\t(revision 0)\n",
-    "+++ A/C/Y/new\t(revision 0)\n",
+    "--- A/B/E/Y/new\t(revision 0)\n",
+    "+++ A/B/E/Y/new\t(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
+    "Index: new\n",
+    "===================================================================\n",
+    "--- A/C/new\t(revision 0)\n",
+    "+++ A/C/new\t(revision 0)\n",
     "@@ -0,0 +1 @@\n",
     "+new\n",
     "Index: new\n",
@@ -960,37 +967,55 @@ def patch_add_new_dir(sbox):
   ]
 
   C_path = os.path.join(wc_dir, 'A', 'C')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   svntest.actions.run_and_verify_svn("Deleting C failed", None, [],
                                      'rm', C_path)
+  svntest.actions.run_and_verify_svn("Deleting E failed", None, [],
+                                     'rm', E_path)
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  A_C_Y_new_path = os.path.join(wc_dir, 'A', 'C', 'Y', 'new')
+  A_B_E_Y_new_path = os.path.join(wc_dir, 'A', 'B', 'E', 'Y', 'new')
+  A_C_new_path = os.path.join(wc_dir, 'A', 'C', 'new')
   A_Z_new_path = os.path.join(wc_dir, 'A', 'Z', 'new')
   expected_output = [
     'A         %s\n' % os.path.join(wc_dir, 'X'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
-    'Skipped missing target: \'%s\'\n' % A_C_Y_new_path,
+    'Skipped missing target: \'%s\'\n' % A_B_E_Y_new_path,
+    'Skipped missing target: \'%s\'\n' % A_C_new_path,
     'Skipped missing target: \'%s\'\n' % A_Z_new_path,
     'Summary of conflicts:\n',
-    '  Skipped paths: 2\n',
+    '  Skipped paths: 3\n',
   ]
 
   # Create the unversioned obstructing directory
   os.mkdir(os.path.dirname(A_Z_new_path))
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({'X/Y/new': Item(contents='new\n')})
-  expected_disk.add({'A/Z': Item()})
+  expected_disk.add({
+           'X/Y/new'   : Item(contents='new\n'),
+           'A/Z'       : Item()
+  })
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.remove('A/B/E/beta')
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.remove('A/B/E')
+    expected_disk.remove('A/C')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({'X' : Item(status='A ', wc_rev=0)})
-  expected_status.add({'X/Y' : Item(status='A ', wc_rev=0)})
-  expected_status.add({'X/Y/new' : Item(status='A ', wc_rev=0)})
-  expected_status.add({'A/C' : Item(status='D ', wc_rev=1)})
+  expected_status.add({
+           'X'         : Item(status='A ', wc_rev=0),
+           'X/Y'       : Item(status='A ', wc_rev=0),
+           'X/Y/new'   : Item(status='A ', wc_rev=0),
+           'A/B/E'     : Item(status='D ', wc_rev=1),
+           'A/B/E/alpha': Item(status='D ', wc_rev=1),
+           'A/B/E/beta': Item(status='D ', wc_rev=1),
+           'A/C'       : Item(status='D ', wc_rev=1),
+  })
 
-  expected_skip = wc.State('', {A_C_Y_new_path : Item(),
-                                A_Z_new_path : Item() })
+  expected_skip = wc.State('', {A_Z_new_path : Item(),
+                                A_B_E_Y_new_path : Item(),
+                                A_C_new_path : Item()})
 
   svntest.actions.run_and_verify_patch(wc_dir,
                                        os.path.abspath(patch_file_path),
@@ -1081,6 +1106,10 @@ def patch_remove_empty_dirs(sbox):
   expected_disk.remove('A/B/lambda')
   expected_disk.remove('A/B/E/alpha')
   expected_disk.remove('A/B/E/beta')
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.remove('A/B/E')
+    expected_disk.remove('A/B/F')
+    expected_disk.remove('A/B')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'A/D/H/chi' : Item(status='! ', wc_rev=1)})
@@ -2162,7 +2191,6 @@ def patch_no_eol_at_eof(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-### We need to add deletes and adds of properties to this test.
 def patch_with_properties(sbox):
   "patch with properties"
 
@@ -2172,10 +2200,13 @@ def patch_with_properties(sbox):
   patch_file_path = make_patch_path(sbox)
   iota_path = os.path.join(wc_dir, 'iota')
 
-  iota_prop_contents = "This is the property 'iota_prop'.\n"
+  modified_prop_contents = "This is the property 'modified'.\n"
+  deleted_prop_contents = "This is the property 'deleted'.\n"
 
-  # Set iota contents
-  svntest.main.run_svn(None, 'propset', 'prop', iota_prop_contents,
+  # Set iota prop contents
+  svntest.main.run_svn(None, 'propset', 'modified', modified_prop_contents,
+                       iota_path)
+  svntest.main.run_svn(None, 'propset', 'deleted', deleted_prop_contents,
                        iota_path)
   expected_output = svntest.wc.State(wc_dir, {
       'iota'    : Item(verb='Sending'),
@@ -2193,24 +2224,32 @@ def patch_with_properties(sbox):
     "+++ iota\t(working copy)\n",
     "Property changes on: iota\n",
     "-------------------------------------------------------------------\n",
-    "Modified: prop\n",
-    "## -1 +1 ""\n",
-    "-This is the property 'iota_prop'.\n",
-    "+This is the property 'prop'.\n",
+    "Modified: modified\n",
+    "## -1 +1 ##\n",
+    "-This is the property 'modified'.\n",
+    "+The property 'modified' has changed.\n",
+    "Added: added\n",
+    "## -0,0 +1 ##\n",
+    "+This is the property 'added'.\n",
+    "Deleted: deleted\n",
+    "## -1 +0,0 ##\n",
+    "-This is the property 'deleted'.\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  iota_prop_contents = "This is the property 'prop'.\n"
+  modified_prop_contents = "The property 'modified' has changed.\n"
+  added_prop_contents = "This is the property 'added'.\n"
 
   expected_output = [
-    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    ' U        %s\n' % os.path.join(wc_dir, 'iota'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota', props={'prop' : iota_prop_contents})
+  expected_disk.tweak('iota', props={'modified' : modified_prop_contents,
+                                     'added' : added_prop_contents})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status=' M')
+  expected_status.tweak('iota', status=' M', wc_rev='2')
 
   expected_skip = wc.State('', { })
 
@@ -2419,6 +2458,524 @@ def patch_same_twice(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+def patch_dir_properties(sbox):
+  "patch with dir properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  B_path = os.path.join(wc_dir, 'A', 'B')
+
+  modified_prop_contents = "This is the property 'modified'.\n"
+  deleted_prop_contents = "This is the property 'deleted'.\n"
+
+  # Set the properties
+  svntest.main.run_svn(None, 'propset', 'modified', modified_prop_contents,
+                       wc_dir)
+  svntest.main.run_svn(None, 'propset', 'deleted', deleted_prop_contents,
+                       B_path)
+  expected_output = svntest.wc.State(wc_dir, {
+      '.'    : Item(verb='Sending'),
+      'A/B'    : Item(verb='Sending'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', wc_rev=2)
+  expected_status.tweak('A/B', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: .\n",
+    "===================================================================\n",
+    "--- .\t(revision 1)\n",
+    "+++ .\t(working copy)\n",
+    "\n",
+    "Property changes on: .\n",
+    "-------------------------------------------------------------------\n",
+    "Modified: modified\n",
+    "## -1 +1 ##\n",
+    "-This is the property 'modified'.\n",
+    "+The property 'modified' has changed.\n",
+    "Added: svn:ignore\n",
+    "## -0,0 +1,3 ##\n",
+    "+*.o\n",
+    "+.libs\n",
+    "+*.lo\n",
+    "Index: A/B\n",
+    "===================================================================\n",
+    "--- A/B\t(revision 1)\n",
+    "+++ A/B\t(working copy)\n",
+    "\n",
+    "Property changes on: A/B\n",
+    "-------------------------------------------------------------------\n",
+    "Deleted: deleted\n",
+    "## -1 +0,0 ##\n",
+    "-This is the property 'deleted'.\n",
+    "Added: svn:executable\n",
+    "## -0,0 +1 ##\n",
+    "+*\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  modified_prop_contents = "The property 'modified' has changed.\n"
+  ignore_prop_contents = "*.o\n.libs\n*.lo\n"
+
+  ### The output for properties set on illegal targets (i.e. svn:excutable
+  ### on a dir) is still subject to change. We might just want to bail out 
+  ### directly instead of catching the error and use the notify mechanism.
+  expected_output = [
+    ' U        %s\n' % wc_dir,
+    ' U        %s\n' % os.path.join(wc_dir, 'A', 'B'),
+    'Skipped missing target \'svn:executable\' on (\'%s\')' % B_path,
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    '' : Item(props={'modified' : modified_prop_contents,
+                     'svn:ignore' : ignore_prop_contents})
+    })
+  expected_disk.tweak('A/B', props={})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', status=' M')
+  expected_status.tweak('A/B', status=' M')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+def patch_add_path_with_props(sbox):
+  "patch that adds paths with props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Apply patch that adds a file and a dir.
+
+  unidiff_patch = [
+    "Index: new\n",
+    "===================================================================\n",
+    "--- new\t(revision 0)\n",
+    "+++ new\t(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+This is the file 'new'\n",
+    "\n",
+    "Property changes on: new\n",
+    "-------------------------------------------------------------------\n",
+    "Added: added\n",
+    "## -0,0 +1 ##\n",
+    "+This is the property 'added'.\n",
+    "Index: X\n",
+    "===================================================================\n",
+    "--- X\t(revision 0)\n",
+    "+++ X\t(working copy)\n",
+    "\n",
+    "Property changes on: X\n",
+    "-------------------------------------------------------------------\n",
+    "Added: added\n",
+    "## -0,0 +1 ##\n",
+    "+This is the property 'added'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  added_prop_contents = "This is the property 'added'.\n"
+
+  expected_output = [
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'A         %s\n' % os.path.join(wc_dir, 'X'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'new': Item(contents="This is the file 'new'\n", 
+                                 props={'added' : added_prop_contents})})
+  expected_disk.add({'X': Item(contents="",
+                               props={'added' : added_prop_contents})})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'new': Item(status='A ', wc_rev='0')})
+  expected_status.add({'X': Item(status='A ', wc_rev='0')})
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+def patch_prop_offset(sbox):
+  "property patch with offset searching"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  prop1_content = ''.join([
+    "Dear internet user,\n",
+    # The missing line here will cause the first hunk to match early
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "\n",
+    "Again, we wish to congratulate you over your email success in our\n"
+    "computer Balloting.\n",
+  ])
+
+  # prop2's content will make both a late and early match possible.
+  # The hunk to be applied is replicated here for reference:
+  # ## -5,6 +5,7 ##
+  #  property
+  #  property
+  #  property
+  # +x
+  #  property
+  #  property
+  #  property
+  #
+  # This hunk wants to be applied at line 5, but that isn't
+  # possible because line 8 ("zzz") does not match "property".
+  # The early match happens at line 2 (offset 3 = 5 - 2).
+  # The late match happens at line 9 (offset 4 = 9 - 5).
+  # Subversion will pick the early match in this case because it
+  # is closer to line 5.
+  prop2_content = ''.join([
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "zzz\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n"
+  ])
+
+  # Set iota prop contents
+  svntest.main.run_svn(None, 'propset', 'prop1', prop1_content,
+                       iota_path)
+  svntest.main.run_svn(None, 'propset', 'prop2', prop2_content,
+                       iota_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota	(revision XYZ)\n",
+    "+++ iota	(working copy)\n",
+    "\n",
+    "Property changes on: iota\n",
+    "-------------------------------------------------------------------\n",
+    "Modified: prop1\n",
+    "## -6,6 +6,9 ##\n",
+    " through a computer ballot system drawn from over 100,000 company\n",
+    " and 50,000,000 individual email addresses from all over the world.\n",
+    " \n",
+    "+It is a promotional program aimed at encouraging internet users;\n",
+    "+therefore you do not need to buy ticket to enter for it.\n",
+    "+\n",
+    " Your email address drew and have won the sum of  750,000 Euros\n",
+    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    " file with\n",
+    "## -14,11 +17,8 ##\n",
+    "     BATCH NUMBERS :\n",
+    "     EULO/1007/444/606/08;\n",
+    "     SERIAL NUMBER: 45327\n",
+    "-and PROMOTION DATE: 13th June. 2009\n",
+    "+and PROMOTION DATE: 14th June. 2009\n",
+    " \n",
+    " To claim your winning prize, you are to contact the appointed\n",
+    " agent below as soon as possible for the immediate release of your\n",
+    " winnings with the below details.\n",
+    "-\n",
+    "-Again, we wish to congratulate you over your email success in our\n",
+    "-computer Balloting.\n",
+    "Modified: prop2\n",
+    "## -5,6 +5,7 ##\n",
+    " property\n",
+    " property\n",
+    " property\n",
+    "+x\n",
+    " property\n",
+    " property\n",
+    " property\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  prop1_content = ''.join([
+    "Dear internet user,\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "It is a promotional program aimed at encouraging internet users;\n",
+    "therefore you do not need to buy ticket to enter for it.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "These extra lines will cause the second hunk to match late\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 14th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+  ])
+
+  prop2_content = ''.join([
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "x\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "zzz\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+    "property\n",
+  ])
+
+  os.chdir(wc_dir)
+
+  expected_output = [
+    ' U        iota\n',
+    '>         applied hunk ## -6,6 +6,9 ## with offset -1 (prop1)\n',
+    '>         applied hunk ## -14,11 +17,8 ## with offset 4 (prop1)\n',
+    '>         applied hunk ## -5,6 +5,7 ## with offset -3 (prop2)\n',
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', props = {'prop1' : prop1_content,
+                                       'prop2' : prop2_content})
+
+  expected_status = svntest.actions.get_virginal_state('.', 1)
+  expected_status.tweak('iota', status=' M', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch('.', os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+def patch_prop_with_fuzz(sbox):
+  "property patch with fuzz"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # We have replaced a couple of lines to cause fuzz. Those lines contains
+  # the word fuzz
+  prop_contents = ''.join([
+    "Line replaced for fuzz = 1\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "Line replaced for fuzz = 2 with only the second context line changed\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "This line is inserted to cause an offset of +1\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "\n",
+    "Line replaced for fuzz = 2\n",
+    "Line replaced for fuzz = 2\n",
+  ])
+
+  # Set mu prop contents
+  svntest.main.run_svn(None, 'propset', 'prop', prop_contents,
+                       mu_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                      expected_status, None, wc_dir)
+
+  unidiff_patch = [
+    "Index: mu\n",
+    "===================================================================\n",
+    "--- A/mu\t(revision 0)\n",
+    "+++ A/mu\t(revision 0)\n",
+    "\n",
+    "Property changes on: mu\n",
+    "Modified: prop\n",
+    "## -1,6 +1,7 ##\n",
+    " Dear internet user,\n",
+    " \n",
+    " We wish to congratulate you over your email success in our computer\n",
+    "+A new line here\n",
+    " Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    " in which email addresses were used. All participants were selected\n",
+    " through a computer ballot system drawn from over 100,000 company\n",
+    "## -7,7 +8,9 ##\n",
+    " and 50,000,000 individual email addresses from all over the world.\n",
+    " \n",
+    " Your email address drew and have won the sum of  750,000 Euros\n",
+    "+Another new line\n",
+    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "+A third new line\n",
+    " file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "## -19,6 +20,7 ##\n",
+    " To claim your winning prize, you are to contact the appointed\n",
+    " agent below as soon as possible for the immediate release of your\n",
+    " winnings with the below details.\n",
+    "+A fourth new line\n",
+    " \n",
+    " Again, we wish to congratulate you over your email success in our\n"
+    " computer Balloting. [No trailing newline here]"
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  prop_contents = ''.join([
+    "Line replaced for fuzz = 1\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "A new line here\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "Line replaced for fuzz = 2 with only the second context line changed\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "Another new line\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "A third new line\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "This line is inserted to cause an offset of +1\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "A fourth new line\n",
+    "\n",
+    "Line replaced for fuzz = 2\n",
+    "Line replaced for fuzz = 2\n",
+  ])
+
+  expected_output = [
+    ' U        %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    '>         applied hunk ## -1,6 +1,7 ## with fuzz 1 (prop)\n',
+    '>         applied hunk ## -7,7 +8,9 ## with fuzz 2 (prop)\n',
+    '>         applied hunk ## -19,6 +20,7 ## with offset 1 and fuzz 2 (prop)\n',
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', props = {'prop' : prop_contents})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status=' M', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -2442,8 +2999,12 @@ test_list = [ None,
               patch_with_ignore_whitespace,
               patch_replace_locally_deleted_file,
               patch_no_eol_at_eof,
-              XFail(patch_with_properties),
+              patch_with_properties,
               patch_same_twice,
+              XFail(patch_dir_properties),
+              patch_add_path_with_props,
+              patch_prop_offset,
+              patch_prop_with_fuzz,
             ]
 
 if __name__ == '__main__':

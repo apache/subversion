@@ -27,6 +27,7 @@
 
 #include "svn_client.h"
 #include "svn_compat.h"
+#include "svn_dirent_uri.h"
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_error.h"
@@ -351,6 +352,7 @@ log_entry_receiver(void *baton,
                       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
                         {
                           svn_error_clear(err);
+                          parent = svn_uri_dirname(parent, pool);
                           continue;
                         }
                       if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL ||
@@ -362,8 +364,6 @@ log_entry_receiver(void *baton,
                         }
                       return svn_error_return(err);
                     }
-
-                  parent = svn_uri_dirname(parent, pool);
                 }
               svn_pool_destroy(iterpool);
             }
@@ -647,10 +647,13 @@ svn_cl__log(apr_getopt_t *os,
         {
           target = APR_ARRAY_IDX(targets, i, const char *);
 
-          if (svn_path_is_url(target))
-            return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                    _("Only relative paths can be specified "
-                                      "after a URL"));
+          if (svn_path_is_url(target) || target[0] == '/')
+            return svn_error_return(svn_error_createf(
+                                      SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Only relative paths can be specified"
+                                        " after a URL for 'svn log', "
+                                        "but '%s' is not a relative path"),
+                                      target));
         }
     }
 

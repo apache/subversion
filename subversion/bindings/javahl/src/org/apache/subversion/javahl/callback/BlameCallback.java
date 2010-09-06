@@ -26,10 +26,11 @@ package org.apache.subversion.javahl.callback;
 import org.apache.subversion.javahl.ClientException;
 
 import java.util.Map;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * This interface is used to receive every single line for a file on a
- * the SVNClientInterface.blame call.
+ * the {@link ISVNClient#blame} call.
  *
  * @since 1.7
  */
@@ -37,7 +38,7 @@ public interface BlameCallback
 {
     /**
      * the method will be called for every line in a file.
-     * @param line              the line number for this line
+     * @param lineNum           the line number for this line
      * @param revision          the revision of the last change.
      * @param revProps          the revision properties for this revision.
      * @param mergedRevision    the revision of the last merged change.

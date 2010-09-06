@@ -67,7 +67,7 @@ svn_cl__revert(apr_getopt_t *os,
                            opt_state->changelists, ctx, scratch_pool);
 
   if (err
-      && (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+      && (err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH)
       && (! SVN_DEPTH_IS_RECURSIVE(opt_state->depth)))
     {
       err = svn_error_quick_wrap

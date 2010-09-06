@@ -90,6 +90,83 @@ def invalid_wcpath_commit(sbox):
     run_and_verify_svn_in_wc(sbox, "svn: '.*' is a URL, but URLs cannot be " +
                              "commit targets", 'commit', target)
 
+def invalid_copy_sources(sbox):
+  "invalid sources for 'copy'"
+  sbox.build(read_only=True)
+  for (src1, src2) in [("iota", "^/"), ("^/", "iota"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working " +
+                             "copy sources", 'copy', src1, src2, "A")
+
+def invalid_copy_target(sbox):
+  "invalid target for 'copy'"
+  sbox.build(read_only=True)
+  mu_path = os.path.join('A', 'mu')
+  C_path = os.path.join('A', 'C')
+  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' is not a directory",
+                           'copy', mu_path, C_path, "iota")
+
+def invalid_delete_targets(sbox):
+  "invalid targets for 'delete'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                             "copy targets", 'delete', target1, target2)
+
+def invalid_diff_targets(sbox):
+  "invalid targets for 'diff'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                             "copy targets", 'diff', target1, target2)
+  run_and_verify_svn_in_wc(sbox, "svn: Summarizing diff can only compare "
+                           "repository to repository",
+                           'diff', '--summarize', "iota", "A")
+
+def invalid_export_targets(sbox):
+  "invalid targets for 'export'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn: Can't create directory 'iota':.*",
+                           'export', '.', 'iota')
+  for target in ["^/", "file://"]:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 
+                             'export', '.', target)
+
+def invalid_import_args(sbox):
+  "invalid arguments for 'import'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path",
+                           'import', '^/', '^/')
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path",
+                           'import', '^/', 'iota')
+  run_and_verify_svn_in_wc(sbox, "svn: Invalid URL 'iota'",
+                           'import', 'iota', 'iota')
+
+def invalid_log_targets(sbox):
+  "invalid targets for 'log'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [('^/', '/a/b/c'), ('^/', '^/'), ('^/', 'file://')]:
+    run_and_verify_svn_in_wc(sbox, "svn: Only relative paths can be " +
+                             "specified after a URL for 'svn log', but.*is " +
+                             "not a relative path", 'log', target1, target2)
+
+def invalid_merge_args(sbox):
+  "invalid arguments for 'merge'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn: A working copy merge source needs "
+                           "an explicit revision", 'merge', 'iota', '^/')
+  for (src, target) in [('iota@HEAD', '^/'), ('iota@BASE', 'file://')]:
+    run_and_verify_svn_in_wc(sbox, "svn: Merge sources must both be either "
+                             "paths or URLs", 'merge', src, target)
+  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' does not exist",
+                           'merge', 'iota@BASE', 'iota@HEAD', 'nonexistent')
+  run_and_verify_svn_in_wc(sbox, "svn: Too many arguments given",
+                          'merge', '-c42', '^/A/B', '^/A/C', 'iota')
+  run_and_verify_svn_in_wc(sbox, "svn: Cannot specify a revision range with" +
+                           " two URLs", 'merge', '-c42', '^/mu', '^/')
+  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' does not exist",
+                           'merge', '-c42', '^/mu', 'nonexistent')
+
+
 ########################################################################
 # Run the tests
 
@@ -99,6 +176,14 @@ test_list = [ None,
               invalid_wcpath_changelist,
               invalid_wcpath_cleanup,
               invalid_wcpath_commit,
+              invalid_copy_sources,
+              invalid_copy_target,
+              invalid_delete_targets,
+              invalid_diff_targets,
+              invalid_export_targets,
+              invalid_import_args,
+              invalid_log_targets,
+              invalid_merge_args,
              ]
 
 if __name__ == '__main__':

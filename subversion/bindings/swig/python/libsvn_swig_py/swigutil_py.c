@@ -805,6 +805,7 @@ static PyObject *make_ob_##type(void *value) \
 
 DECLARE_SWIG_CONSTRUCTOR(txdelta_window, svn_txdelta_window_dup)
 DECLARE_SWIG_CONSTRUCTOR(log_changed_path, svn_log_changed_path_dup)
+DECLARE_SWIG_CONSTRUCTOR(log_changed_path2, svn_log_changed_path2_dup)
 DECLARE_SWIG_CONSTRUCTOR(wc_status, svn_wc_dup_status)
 DECLARE_SWIG_CONSTRUCTOR(lock, svn_lock_dup)
 DECLARE_SWIG_CONSTRUCTOR(auth_ssl_server_cert_info,
@@ -861,6 +862,42 @@ PyObject *svn_swig_py_changed_path_hash_to_dict(apr_hash_t *hash)
 
       apr_hash_this(hi, &key, NULL, &val);
       value = make_ob_log_changed_path(val);
+      if (value == NULL)
+        {
+            Py_DECREF(dict);
+            return NULL;
+        }
+      if (PyDict_SetItemString(dict, (char *)key, value) == -1)
+        {
+          Py_DECREF(value);
+          Py_DECREF(dict);
+          return NULL;
+        }
+      Py_DECREF(value);
+    }
+
+  return dict;
+}
+
+PyObject *svn_swig_py_changed_path2_hash_to_dict(apr_hash_t *hash)
+{
+  apr_hash_index_t *hi;
+  PyObject *dict;
+
+  if (hash == NULL)
+    Py_RETURN_NONE;
+
+  if ((dict = PyDict_New()) == NULL)
+    return NULL;
+
+  for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      PyObject *value;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      value = make_ob_log_changed_path2(val);
       if (value == NULL)
         {
             Py_DECREF(dict);
@@ -1320,6 +1357,61 @@ commit_item_array_to_list(const apr_array_header_t *array)
 
 /*** Errors ***/
 
+/* Convert a given SubversionException to an svn_error_t. On failure returns
+   NULL and sets a Python exception. */
+static svn_error_t *exception_to_error(PyObject * exc)
+{
+	const char *message, *file = NULL;
+	apr_status_t apr_err;
+	long line = 0;
+	PyObject *apr_err_ob = NULL, *child_ob = NULL, *message_ob = NULL;
+	PyObject *file_ob = NULL, *line_ob = NULL;
+    svn_error_t *rv = NULL, *child = NULL;
+
+	if ((apr_err_ob = PyObject_GetAttrString(exc, "apr_err")) == NULL)
+	    goto finished;
+	apr_err = (apr_status_t) PyInt_AsLong(apr_err_ob);
+	if (PyErr_Occurred()) goto finished;
+
+	if ((message_ob = PyObject_GetAttrString(exc, "message")) == NULL)
+	    goto finished;
+	message = PyString_AsString(message_ob);
+	if (PyErr_Occurred()) goto finished;
+
+	if ((file_ob = PyObject_GetAttrString(exc, "file")) == NULL)
+	    goto finished;
+	if (file_ob != Py_None)
+	    file = PyString_AsString(file_ob);
+	if (PyErr_Occurred()) goto finished;
+
+	if ((line_ob = PyObject_GetAttrString(exc, "line")) == NULL)
+	    goto finished;
+	if (line_ob != Py_None)
+	    line = PyInt_AsLong(line_ob);
+	if (PyErr_Occurred()) goto finished;
+
+	if ((child_ob = PyObject_GetAttrString(exc, "child")) == NULL)
+	    goto finished;
+	/* We could check if the child is a Subversion exception too,
+	   but let's just apply duck typing. */
+	if (child_ob != Py_None)
+	    child = exception_to_error(child_ob);
+	if (PyErr_Occurred()) goto finished;
+
+	rv = svn_error_create(apr_err, child, message);
+	/* Somewhat hacky, but we need to preserve original file/line info. */
+	rv->file = file ? apr_pstrdup(rv->pool, file) : NULL;
+	rv->line = line;
+
+finished:
+	Py_XDECREF(child_ob);
+	Py_XDECREF(line_ob);
+	Py_XDECREF(file_ob);
+	Py_XDECREF(message_ob);
+	Py_XDECREF(apr_err_ob);
+	return rv;
+}
+
 /* If the currently set Python exception is a valid SubversionException,
    clear exception state and transform it into a Subversion error.
    Otherwise, return a Subversion error about an exception in a callback. */
@@ -1327,48 +1419,36 @@ static svn_error_t *callback_exception_error(void)
 {
   PyObject *svn_module = NULL, *svn_exc = NULL;
   PyObject *exc, *exc_type, *exc_traceback;
-  PyObject *message_ob = NULL, *apr_err_ob = NULL;
-  const char *message;
-  int apr_err;
   svn_error_t *rv = NULL;
 
   PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
   if ((svn_module = PyImport_ImportModule("svn.core")) == NULL)
-    goto finished;
-  if ((svn_exc = PyObject_GetAttrString(svn_module, "SubversionException"))
-      == NULL)
-    goto finished;
+      goto finished;
 
-  if (!PyErr_GivenExceptionMatches(exc_type, svn_exc))
+  svn_exc = PyObject_GetAttrString(svn_module, "SubversionException");
+  Py_DECREF(svn_module);
+
+  if (svn_exc == NULL)
+      goto finished;
+
+  if (PyErr_GivenExceptionMatches(exc_type, svn_exc))
+    {
+      rv = exception_to_error(exc);
+    }
+  else
     {
       PyErr_Restore(exc_type, exc, exc_traceback);
-      exc = exc_type = exc_traceback = NULL;
-      goto finished;
+      exc_type = exc = exc_traceback = NULL;
     }
 
-  if ((apr_err_ob = PyObject_GetAttrString(exc, "apr_err")) == NULL)
-    goto finished;
-  apr_err = PyInt_AsLong(apr_err_ob);
-  if (PyErr_Occurred()) goto finished;
-
-  if ((message_ob = PyObject_GetAttrString(exc, "message")) == NULL)
-    goto finished;
-  message = PyString_AsString(message_ob);
-  if (PyErr_Occurred()) goto finished;
-
-  /* A possible improvement here would be to convert the whole
-     SubversionException chain. */
-  rv = svn_error_create(apr_err, NULL, message);
-
 finished:
-  Py_XDECREF(exc);
-  Py_XDECREF(exc_type);
-  Py_XDECREF(exc_traceback);
-  Py_XDECREF(svn_module);
   Py_XDECREF(svn_exc);
-  Py_XDECREF(apr_err_ob);
-  Py_XDECREF(message_ob);
+  Py_XDECREF(exc_type);
+  Py_XDECREF(exc);
+  Py_XDECREF(exc_traceback);
+  /* By now, either rv is set and the exception is cleared, or rv is NULL
+     and an exception is pending (possibly a new one). */
   return rv ? rv : svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, NULL,
                                     "Python callback raised an exception");
 }
@@ -4026,4 +4106,20 @@ svn_swig_py_setup_wc_diff_callbacks2(void **baton,
   callbacks->dir_deleted        = wc_diff_callbacks2_dir_deleted;
   callbacks->dir_props_changed  = wc_diff_callbacks2_dir_props_changed;
   return callbacks;
+}
+
+PyObject *
+svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window,
+                                     swig_type_info * op_type_info,
+                                     PyObject *window_pool)
+{
+  PyObject *result = PyList_New(window->num_ops);
+  int i;
+  
+  for (i = 0; i < window->num_ops; ++i)
+      PyList_SET_ITEM(result, i,
+                      svn_swig_NewPointerObj(window->ops + i, op_type_info,
+                                             window_pool, NULL));
+
+  return result;
 }

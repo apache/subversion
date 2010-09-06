@@ -161,7 +161,7 @@ entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
-pristine_url = None
+pristine_greek_repos_url = None
 
 # Global variable to track all of our options
 options = None
@@ -187,7 +187,7 @@ general_wc_dir = os.path.join(work_dir, "working_copies")
 temp_dir = os.path.join(work_dir, 'local_tmp')
 
 # (derivatives of the tmp dir.)
-pristine_dir = os.path.join(temp_dir, "repos")
+pristine_greek_repos_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 
@@ -268,6 +268,24 @@ def get_admin_name():
     return '_svn'
   else:
     return '.svn'
+
+def wc_is_singledb(wcpath):
+  """Temporary function that checks whether a working copy directory looks
+  like it is part of a single-db working copy."""
+
+  pristine = os.path.join(wcpath, get_admin_name(), 'pristine')
+  if not os.path.exists(pristine):
+    return True
+
+  # Now we must be looking at a multi-db WC dir or the root dir of a
+  # single-DB WC.  Sharded 'pristine' dir => single-db, else => multi-db.
+  for name in os.listdir(pristine):
+    if len(name) == 2:
+      return True
+    elif len(name) == 40:
+      return False
+
+  return False
 
 def get_start_commit_hook_path(repo_dir):
   "Return the path of the start-commit-hook conf file in REPO_DIR."
@@ -577,11 +595,15 @@ def run_svnlook(*varargs):
   list of lines (including line terminators)."""
   return run_command(svnlook_binary, 1, 0, *varargs)
 
-def run_svnrdump(*varargs):
+def run_svnrdump(stdin_input, *varargs):
   """Run svnrdump with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnrdump_binary, 1, 0,
-                     *(_with_auth(_with_config_dir(varargs))))
+  if stdin_input:
+    return run_command_stdin(svnrdump_binary, 0, 1, 0, stdin_input,
+                             *(_with_auth(_with_config_dir(varargs))))
+  else:
+    return run_command(svnrdump_binary, 1, 0,
+                       *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as
@@ -599,9 +621,6 @@ def run_entriesdump(path):
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
                                                         0, 0, None, path)
-  if options.verbose:
-    ### finish the CMD output
-    print
   if exit_code or stderr_lines:
     ### report on this? or continue to just skip it?
     return None
@@ -612,6 +631,13 @@ def run_entriesdump(path):
   exec(''.join([line for line in stdout_lines if not line.startswith("DBG:")]))
   return entries
 
+def run_entriesdump_subdirs(path):
+  """Run the entries-dump helper, returning a list of directory names."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+                                                        0, 0, None, '--subdirs', path)
+  return [line.strip() for line in stdout_lines if not line.startswith("DBG:")]
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
@@ -1166,6 +1192,7 @@ class TestRunner:
                                       str(self.index)
 
     svntest.actions.no_sleep_for_timestamps()
+    svntest.actions.do_relocate_validation()
 
     saved_dir = os.getcwd()
     try:
@@ -1301,7 +1328,7 @@ def _create_parser():
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
-  parser.add_option('-v', '--verbose', action='store_true',
+  parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
                     help='Print binary command-lines (not with --quiet)')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
@@ -1392,7 +1419,7 @@ def run_tests(test_list, serial_only = False):
         appropriate exit code.
   """
 
-  global pristine_url
+  global pristine_greek_repos_url
   global svn_binary
   global svnadmin_binary
   global svnlook_binary
@@ -1456,8 +1483,8 @@ def run_tests(test_list, serial_only = False):
       parser.error("invalid test number, range of numbers, " +
                    "or function '%s'\n" % arg)
 
-  # Calculate pristine_url from test_area_url.
-  pristine_url = options.test_area_url + '/' + pathname2url(pristine_dir)
+  # Calculate pristine_greek_repos_url from test_area_url.
+  pristine_greek_repos_url = options.test_area_url + '/' + pathname2url(pristine_greek_repos_dir)
 
   if options.use_jsvn:
     if options.svn_bin is None:
@@ -1510,7 +1537,7 @@ def run_tests(test_list, serial_only = False):
     create_config_dir(default_config_dir)
 
     # Setup the pristine repository
-    svntest.actions.setup_pristine_repository()
+    svntest.actions.setup_pristine_greek_repository()
 
   # Run the tests.
   exit_code = _internal_run_tests(test_list, testnums, options.parallel)

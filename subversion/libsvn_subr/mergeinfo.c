@@ -2090,6 +2090,58 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_mergeinfo__adjust_mergeinfo_rangelists(svn_mergeinfo_t *adjusted_mergeinfo,
+                                           svn_mergeinfo_t mergeinfo,
+                                           svn_revnum_t offset,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  *adjusted_mergeinfo = apr_hash_make(result_pool);
+
+  if (mergeinfo)
+    {
+      for (hi = apr_hash_first(scratch_pool, mergeinfo);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          int i;
+          const char *path = svn__apr_hash_index_key(hi);
+          apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+          apr_array_header_t *adjusted_rangelist =
+            apr_array_make(result_pool, rangelist->nelts,
+                           sizeof(svn_merge_range_t *));
+
+          for (i = 0; i < rangelist->nelts; i++)
+            {
+              svn_merge_range_t *range =
+                APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+
+              if (range->start + offset > 0 && range->end + offset > 0)
+                {                  
+                  if (range->start + offset < 0)
+                    range->start = 0;
+                  else
+                    range->start = range->start + offset;
+
+                  if (range->end + offset < 0)
+                    range->end = 0;
+                  else
+                    range->end = range->end + offset;
+                  APR_ARRAY_PUSH(adjusted_rangelist, svn_merge_range_t *) =
+                    range;
+                }
+            }
+
+          if (adjusted_rangelist->nelts)
+            apr_hash_set(*adjusted_mergeinfo, apr_pstrdup(result_pool, path),
+                         APR_HASH_KEY_STRING, adjusted_rangelist);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 svn_boolean_t
 svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
                                  apr_pool_t *scratch_pool)

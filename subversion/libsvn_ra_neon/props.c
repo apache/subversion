@@ -1031,14 +1031,54 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
 }
 
 
+/* Helper function for append_setprop() below. */
+static svn_error_t *
+get_encoding_and_cdata(const char **encoding_p,
+                       const char **cdata_p,
+                       const svn_string_t *value,
+                       apr_pool_t *pool)
+{
+  const char *encoding;
+  const char *xml_safe;
+
+  /* Easy out. */
+  if (value == NULL)
+    {
+      *encoding_p = "";
+      *cdata_p = "";
+      return SVN_NO_ERROR;
+    }
+
+  /* If a property is XML-safe, XML-encode it.  Else, base64-encode
+     it. */
+  if (svn_xml_is_xml_safe(value->data, value->len))
+    {
+      svn_stringbuf_t *xml_esc = NULL;
+      svn_xml_escape_cdata_string(&xml_esc, value, pool);
+      xml_safe = xml_esc->data;
+      encoding = "";
+    }
+  else
+    {
+      const svn_string_t *base64ed = svn_base64_encode_string2(value, TRUE,
+                                                               pool);
+      encoding = " V:encoding=\"base64\"";
+      xml_safe = base64ed->data;
+    }
+
+  *encoding_p = encoding;
+  *cdata_p = xml_safe;
+  return SVN_NO_ERROR;
+}
+
 /* Helper function for svn_ra_neon__do_proppatch() below. */
-static void
+static svn_error_t *
 append_setprop(svn_stringbuf_t *body,
                const char *name,
                const svn_string_t *value,
                apr_pool_t *pool)
 {
-  const char *encoding = "";
+  const char *encoding;
   const char *xml_safe;
   const char *xml_tag_name;
 
@@ -1054,36 +1094,13 @@ append_setprop(svn_stringbuf_t *body,
       xml_tag_name = apr_pstrcat(pool, "C:", name, NULL);
     }
 
-  /* If there is no value, just generate an empty tag and get outta
-     here. */
-  if (! value)
-    {
-      svn_stringbuf_appendcstr(body,
-                               apr_psprintf(pool, "<%s />", xml_tag_name));
-      return;
-    }
-
-  /* If a property is XML-safe, XML-encode it.  Else, base64-encode
-     it. */
-  if (svn_xml_is_xml_safe(value->data, value->len))
-    {
-      svn_stringbuf_t *xml_esc = NULL;
-      svn_xml_escape_cdata_string(&xml_esc, value, pool);
-      xml_safe = xml_esc->data;
-    }
-  else
-    {
-      const svn_string_t *base64ed = svn_base64_encode_string2(value, TRUE,
-                                                               pool);
-      encoding = " V:encoding=\"base64\"";
-      xml_safe = base64ed->data;
-    }
+  SVN_ERR(get_encoding_and_cdata(&encoding, &xml_safe, value, pool));
 
   svn_stringbuf_appendcstr(body,
                            apr_psprintf(pool,"<%s %s>%s</%s>",
                                         xml_tag_name, encoding,
                                         xml_safe, xml_tag_name));
-  return;
+  return SVN_NO_ERROR;
 }
 
 
@@ -1124,7 +1141,7 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
           void *val;
           svn_pool_clear(subpool);
           apr_hash_this(hi, &key, NULL, &val);
-          append_setprop(body, key, val, subpool);
+          SVN_ERR(append_setprop(body, key, val, subpool));
         }
       svn_stringbuf_appendcstr(body, "</D:prop></D:set>");
     }
@@ -1138,7 +1155,7 @@ svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
         {
           const char *name = APR_ARRAY_IDX(prop_deletes, n, const char *);
           svn_pool_clear(subpool);
-          append_setprop(body, name, NULL, subpool);
+          SVN_ERR(append_setprop(body, name, NULL, subpool));
         }
       svn_stringbuf_appendcstr(body, "</D:prop></D:remove>");
     }

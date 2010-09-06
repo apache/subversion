@@ -570,7 +570,7 @@ svn_client_info3(const char *abspath_or_url,
                                  url, rev);
 
       /* Open a new RA session to the item's parent. */
-      SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session,
+      SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session, NULL,
                                                    parent_url, NULL,
                                                    NULL, FALSE, TRUE,
                                                    ctx, pool));

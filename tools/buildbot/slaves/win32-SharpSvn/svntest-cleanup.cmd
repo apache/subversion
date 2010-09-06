@@ -51,9 +51,14 @@ POPD
 taskkill /im svn.exe /f 2> nul:
 taskkill /im svnadmin.exe /f 2> nul:
 taskkill /im svnserve.exe /f 2> nul:
+taskkill /im svnrdump.exe /f 2> nul:
+taskkill /im svnsync.exe /f 2> nul:
 taskkill /im httpd.exe /f 2> nul:
 IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
   rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"
 )
+
+del "%TESTDIR%\tests\*.log" 2> nul:
+
 
 exit /B 0

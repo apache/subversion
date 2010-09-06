@@ -28,6 +28,7 @@
 
 #include <mod_dav.h>
 #include <http_protocol.h>
+#include <http_core.h>
 
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -610,4 +611,141 @@ dav_svn__error_response_tag(request_rec *r,
    * ### Use of DONE obviates logging..!
    */
   return DONE;
+}
+
+
+/* Set *REQUEST_STR to a string containing the contents of the body of
+   request R, allocated from POOL.
+
+   NOTE: This was shamelessly stolen and modified from Apache's
+   ap_xml_parse_input().  */
+static int
+request_body_to_string(svn_string_t **request_str,
+                       request_rec *r,
+                       apr_pool_t *pool)
+{
+  apr_bucket_brigade *brigade;
+  int seen_eos;
+  apr_status_t status;
+  apr_off_t total_read = 0;
+  apr_off_t limit_req_body = ap_get_limit_req_body(r);
+  int result = HTTP_BAD_REQUEST;
+  const char *content_length_str;
+  char *endp;
+  apr_off_t content_length;
+  svn_stringbuf_t *buf;
+
+  *request_str = NULL;
+
+  content_length_str = apr_table_get(r->headers_in, "Content-Length");
+  if (content_length_str)
+    {
+      if (apr_strtoff(&content_length, content_length_str, &endp, 10)
+          || endp == content_length_str || *endp || content_length < 0)
+        {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Invalid Content-Length");
+          return HTTP_REQUEST_ENTITY_TOO_LARGE;
+        }
+    }
+  else
+    content_length = 0;
+
+  if (limit_req_body && (limit_req_body < content_length))
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                    "Requested content-length of %" APR_OFF_T_FMT " is larger "
+                    "than the configured limit of %" APR_OFF_T_FMT,
+                    content_length, limit_req_body);
+      return HTTP_REQUEST_ENTITY_TOO_LARGE;
+    }
+
+  if (content_length)
+    {
+      buf = svn_stringbuf_create_ensure(content_length, pool);
+    }
+  else
+    {
+      buf = svn_stringbuf_create("", pool);
+    }
+
+  brigade = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+  seen_eos = 0;
+  total_read = 0;
+
+  do
+    {
+      apr_bucket *bucket;
+
+      status = ap_get_brigade(r->input_filters, brigade, AP_MODE_READBYTES,
+                              APR_BLOCK_READ, 2048);
+      if (status != APR_SUCCESS)
+        goto cleanup;
+
+      for (bucket = APR_BRIGADE_FIRST(brigade);
+           bucket != APR_BRIGADE_SENTINEL(brigade);
+           bucket = APR_BUCKET_NEXT(bucket))
+        {
+          const char *data;
+          apr_size_t len;
+          
+          if (APR_BUCKET_IS_EOS(bucket))
+            {
+              seen_eos = 1;
+              break;
+            }
+          
+          if (APR_BUCKET_IS_METADATA(bucket))
+            continue;
+          
+          status = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
+          if (status != APR_SUCCESS)
+            goto cleanup;
+          
+          total_read += len;
+          if (limit_req_body && total_read > limit_req_body)
+            {
+              ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                            "Request body is larger than the configured "
+                            "limit of %lu", (unsigned long)limit_req_body);
+              result = HTTP_REQUEST_ENTITY_TOO_LARGE;
+              goto cleanup;
+            }
+          
+          svn_stringbuf_appendbytes(buf, data, len);
+        }
+      
+      apr_brigade_cleanup(brigade);
+    }
+  while (!seen_eos);
+
+  apr_brigade_destroy(brigade);
+
+  /* Make an svn_string_t from our svn_stringbuf_t. */
+  *request_str = svn_string_create("", pool);
+  (*request_str)->data = buf->data;
+  (*request_str)->len = buf->len;
+  return OK;
+
+ cleanup:
+  apr_brigade_destroy(brigade);
+  
+  /* Apache will supply a default error, plus the error log above. */
+  return result;
+}
+
+int
+dav_svn__parse_request_skel(svn_skel_t **skel,
+                            request_rec *r,
+                            apr_pool_t *pool)
+{
+  svn_string_t *skel_str;
+  int status;
+
+  *skel = NULL;
+  status = request_body_to_string(&skel_str, r, pool);
+  if (status != OK)
+    return OK;
+
+  *skel = svn_skel__parse(skel_str->data, skel_str->len, pool);
+  return OK;
 }

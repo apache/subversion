@@ -1,5 +1,5 @@
 /*
- * svn_string.h:  routines to manipulate counted-length strings
+ * svn_string.c:  routines to manipulate counted-length strings
  *                (svn_stringbuf_t and svn_string_t) and C strings.
  *
  *

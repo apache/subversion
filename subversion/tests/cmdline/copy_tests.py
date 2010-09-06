@@ -36,6 +36,7 @@ from svntest.main import SVN_PROP_MERGEINFO
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -2460,16 +2461,18 @@ def move_dir_back_and_forth(sbox):
 
   # Move the moved dir: D_moved back to its starting
   # location at A/D.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, None, svntest.verify.AnyOutput,
-    'mv', D_move_path, D_path)
 
-  for line in err:
-    if re.match('.*Cannot copy to .*as it is scheduled for deletion',
-                line, ):
-      return
-  raise svntest.Failure("mv failed but not in the expected way")
+  if svntest.main.wc_is_singledb(wc_dir):
+    # In single-db target is gone on-disk after it was moved away, so this
+    # move works ok
+    expected_err = []
+  else:
+    # In !SINGLE_DB the target of the copy exists on-dir, so svn tries
+    # to move the file below the deleted directory
+    expected_err = '.*Cannot copy to .*as it is scheduled for deletion'
 
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'mv', D_move_path, D_path)
 
 def copy_move_added_paths(sbox):
   "copy and move added paths without commits"
@@ -4767,6 +4770,69 @@ def move_added_nodes(sbox):
   expected_status.add({'X/Z' : Item(status='A ', wc_rev='0')})
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
+def locate_wrong_origin(sbox):
+  "update editor locates invalid file source"
+
+  sbox.build()
+
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  gamma = os.path.join(sbox.wc_dir, 'A/D/gamma')
+
+  D1 = os.path.join(sbox.wc_dir, 'D1')
+  D2 = os.path.join(sbox.wc_dir, 'D2')
+
+  main.run_svn(None, 'mkdir', D1, D2)
+  main.run_svn(None, 'cp', iota, os.path.join(D1, 'iota'))
+  main.run_svn(None, 'cp', gamma, os.path.join(D2, 'iota'))
+
+  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Add 2*iotas in r2')
+  main.run_svn(None, 'rm', D1)
+
+  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Why?')
+
+  main.run_svn(None, 'cp', D2, D1)
+  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Replace one iota')
+
+  # <= 1.6 needs a new checkout here to reproduce, but not since r961831.
+  # so we just perform an update
+  main.run_svn(None, 'up', sbox.wc_dir)
+
+  main.run_svn(None, 'cp', sbox.repo_url + '/D1/iota@2',
+               sbox.repo_url + '/iobeta', '-m', 'Copy iota')
+
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 4)
+  expected_status.add({
+    'D1'                : Item(status='  ', wc_rev='4'),
+    'D1/iota'           : Item(status='  ', wc_rev='4'),
+    'D2'                : Item(status='  ', wc_rev='4'),
+    'D2/iota'           : Item(status='  ', wc_rev='4'),
+  })
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  # The next update receives an add_file('/D1/iota', 2), which it then tries
+  # to locate in the local working copy. It finds a '/D1/iota' in the expected
+  # place, with a last-changed revision of 2 and a local revision of HEAD-1
+  #
+  # locate_copyfrom identifies this file as correct because 
+  #     * last-mod <= 2 and
+  #     * 2 <= REV
+  #
+  # Luckily close_file() receives an expected_checksum which makes us fail, or
+  # we would have a completely broken working copy
+
+  # So this gives a Checksum mismatch error.
+  main.run_svn(None, 'up', sbox.wc_dir)
+
+# This test currently fails, but should work ok once we move to single DB
+def copy_over_deleted_dir(sbox):
+  "copy a directory over a deleted directory"
+  sbox.build(read_only = True)
+
+  main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'A/B'))
+  main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A/D'),
+               os.path.join(sbox.wc_dir, 'A/B'))
+
 
 ########################################################################
 # Run the tests
@@ -4842,7 +4908,7 @@ test_list = [ None,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
-              XFail(allow_unversioned_parent_for_copy_src),
+              allow_unversioned_parent_for_copy_src,
               replaced_local_source_for_incoming_copy,
               unneeded_parents,
               double_parents_with_url,
@@ -4861,7 +4927,11 @@ test_list = [ None,
               copy_dir_with_space,
               changed_data_should_match_checkout,
               XFail(changed_dir_data_should_match_checkout),
-              XFail(move_added_nodes),
+              move_added_nodes,
+              # Serf needs a different testcase for this issue
+              XFail(Skip(locate_wrong_origin,
+                         svntest.main.is_ra_type_dav_serf)),
+              copy_over_deleted_dir,
              ]
 
 if __name__ == '__main__':

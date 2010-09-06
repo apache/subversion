@@ -295,8 +295,10 @@ cdata_getlocks(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t*
-create_getlocks_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_getlocks_body(serf_bucket_t **body_bkt,
+                     void *baton,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
@@ -310,7 +312,8 @@ create_getlocks_body(void *baton,
     "depth", svn_depth_to_word(lock_ctx->requested_depth), NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "S:get-locks-report");
 
-  return buckets;
+  *body_bkt = buckets;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

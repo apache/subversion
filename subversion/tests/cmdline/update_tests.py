@@ -324,17 +324,23 @@ def update_missing(sbox):
   svntest.main.safe_rmtree(E_path)
   svntest.main.safe_rmtree(H_path)
 
+  # In single-db mode all missing items will just be restored
+  if svntest.main.wc_is_singledb(wc_dir):
+    A_or_Restored = Item(verb='Restored')
+  else:
+    A_or_Restored = Item(status='A ')
+
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu'        : Item(verb='Restored'),
     'A/D/G/rho'   : Item(verb='Restored'),
-    'A/B/E' : Item(status='A '),
-    'A/B/E/alpha' : Item(status='A '),
-    'A/B/E/beta' : Item(status='A '),
-    'A/D/H' : Item(status='A '),
-    'A/D/H/chi' : Item(status='A '),
-    'A/D/H/omega' : Item(status='A '),
-    'A/D/H/psi' : Item(status='A '),
+    'A/B/E'       : A_or_Restored,
+    'A/B/E/alpha' : A_or_Restored,
+    'A/B/E/beta'  : A_or_Restored,
+    'A/D/H'       : A_or_Restored,
+    'A/D/H/chi'   : A_or_Restored,
+    'A/D/H/omega' : A_or_Restored,
+    'A/D/H/psi'   : A_or_Restored,
     })
 
   # Create expected disk tree for the update.
@@ -1072,6 +1078,17 @@ def update_deleted_missing_dir(sbox):
     'A/D/H' : Item(status='D '),
     })
 
+  # In single-db mode the missing items are restored before the update
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_output.add({
+      'A/D/H/psi'         : Item(verb='Restored'),
+      'A/D/H/omega'       : Item(verb='Restored'),
+      'A/D/H/chi'         : Item(verb='Restored'),
+      'A/B/E/beta'        : Item(verb='Restored'),
+      'A/B/E/alpha'       : Item(verb='Restored')
+      # A/B/E and A/D/H are also restored, but are then overriden by the delete
+    })
+
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
@@ -1096,6 +1113,12 @@ def update_deleted_missing_dir(sbox):
 
   # This time we're updating the whole working copy
   expected_status.tweak(wc_rev=2)
+
+  # And now we don't expect restore operations
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E' : Item(status='D '),
+    'A/D/H' : Item(status='D '),
+    })
 
   # Do the update, on the whole working copy this time
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1144,12 +1167,23 @@ def another_hudson_problem(sbox):
   # Update missing directory to receive the delete, this should mark G
   # as 'deleted' and should not alter gamma's entry.
 
+  if not svntest.main.wc_is_singledb(wc_dir):
+    expected_output = ['D    '+G_path+'\n',
+                       'Updated to revision 3.\n',
+                       ]
+  else:
+    expected_output = ['Restored \'' + G_path + '\'\n',
+                       'Restored \'' + G_path + os.path.sep + 'pi\'\n',
+                       'Restored \'' + G_path + os.path.sep + 'rho\'\n',
+                       'Restored \'' + G_path + os.path.sep + 'tau\'\n',
+                       'D    '+G_path+'\n',
+                       'Updated to revision 3.\n',
+                       ]
+
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
   svntest.actions.run_and_verify_svn(None,
-                                     ['D    '+G_path+'\n',
-                                      'Updated to revision 3.\n',
-                                      ], [],
+                                     expected_output, [],
                                      'up', G_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
@@ -1554,6 +1588,9 @@ def nested_in_read_only(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  if svntest.main.wc_is_singledb(wc_dir):
+    raise svntest.Skip('Unsupported in single-db')
 
   # Delete/commit a file
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
@@ -4381,6 +4418,8 @@ def tree_conflicts_on_update_1_1(sbox):
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
 
+  sbox.build()
+
   expected_output = deep_trees_conflict_output.copy()
   expected_output.add({
     'DDF/D1/D2'         : Item(status='D '),
@@ -4395,6 +4434,10 @@ def tree_conflicts_on_update_1_1(sbox):
   })
 
   expected_disk = disk_empty_dirs.copy()
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_disk.remove('D/D1', 'DF/D1', 'DD/D1', 'DD/D1/D2',
+                         'DDF/D1', 'DDF/D1/D2',
+                         'DDD/D1', 'DDD/D1/D2', 'DDD/D1/D2/D3')
 
   # The files delta, epsilon, and zeta are incoming additions, but since
   # they are all within locally deleted trees they should also be schedule
@@ -4463,6 +4506,8 @@ def tree_conflicts_on_update_1_2(sbox):
 
   # 1.2) local tree delete, incoming leaf delete
 
+  sbox.build()
+
   expected_output = deep_trees_conflict_output.copy()
   expected_output.add({
     'DDD/D1/D2'         : Item(status='D '),
@@ -4500,6 +4545,10 @@ def tree_conflicts_on_update_1_2(sbox):
   expected_disk.remove('D/D1',
                        'DD/D1/D2',
                        'DDD/D1/D2/D3')
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_disk.remove('DF/D1', 'DD/D1',
+                         'DDF/D1', 'DDF/D1/D2',
+                         'DDD/D1', 'DDD/D1/D2')
 
   expected_info = {
     'F/alpha' : {
@@ -5545,6 +5594,133 @@ def mergeinfo_updates_merge_with_local_mods(sbox):
                                      'pg', SVN_PROP_MERGEINFO, '-R',
                                      A_COPY_path)
 
+#----------------------------------------------------------------------
+# Test for receiving modified properties on added files that were originally
+# moved from somewhere else. (Triggers locate_copyfrom behavior)
+def add_moved_file_has_props(sbox):
+  """update adding moved file receives modified props"""
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  G = os.path.join(os.path.join(wc_dir, 'A', 'D', 'G'))
+  pi  = os.path.join(G, 'pi')
+  G_new = os.path.join(wc_dir, 'G_new')
+
+  # Give pi some property
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'native', pi)
+  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'added eol-style')
+
+  svntest.actions.run_and_verify_svn(None, 'At revision 2.', [], 'up', wc_dir)
+
+  # Now move pi to a different place
+  svntest.main.run_svn(None, 'mkdir', G_new)
+  svntest.main.run_svn(None, 'mv', pi, G_new)
+  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'Moved pi to G_new')
+
+  svntest.actions.run_and_verify_svn(None, 'At revision 3.', [], 'up', wc_dir)
+
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/D/G/pi')
+  expected_status.add({
+    'G_new'    : Item (status='  ', wc_rev=3),
+    'G_new/pi' : Item (status='  ', wc_rev=3),
+  })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.main.run_svn(None, 'up', '-r', '0', G_new)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # This shouldn't show property modifications, but at r982550 it did.
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+#----------------------------------------------------------------------
+# Test for receiving modified properties on added files that were originally
+# moved from somewhere else. (Triggers locate_copyfrom behavior). This is
+# an extended variant that has another property change on the new path
+def add_moved_file_has_props2(sbox):
+  """update adding moved node receives 2* props"""
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  G = os.path.join(os.path.join(wc_dir, 'A', 'D', 'G'))
+  pi  = os.path.join(G, 'pi')
+  G_new = os.path.join(wc_dir, 'G_new')
+
+  # Give pi some property
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'native', pi)
+  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'added eol-style')
+
+  svntest.actions.run_and_verify_svn(None, 'At revision 2.', [], 'up', wc_dir)
+
+  # Now move pi to a different place
+  svntest.main.run_svn(None, 'mkdir', G_new)
+  svntest.main.run_svn(None, 'mv', pi, G_new)
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'CR', os.path.join(G_new, 'pi'))
+
+  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'Moved pi to G_new')
+
+  svntest.actions.run_and_verify_svn(None, 'At revision 3.', [], 'up', wc_dir)
+
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/D/G/pi')
+  expected_status.add({
+    'G_new'    : Item (status='  ', wc_rev=3),
+    'G_new/pi' : Item (status='  ', wc_rev=3),
+  })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.main.run_svn(None, 'up', '-r', '0', G_new)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # This shouldn't show local modifications, but currently it
+  # shows a property conflict on G_new/pi.
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+# A regression test for a 1.7-dev crash upon updating a WC to a different
+# revision when it contained an excluded dir.
+def update_with_excluded_subdir(sbox):
+  """update with an excluded subdir"""
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  G = os.path.join(os.path.join(wc_dir, 'A', 'D', 'G'))
+
+  # Make the directory 'G' excluded.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G' : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, False,
+                                        '--set-depth=exclude', G)
+
+  # Commit a new revision so there is something to update to.
+  svntest.main.run_svn(None, 'mkdir', '-m', '', sbox.repo_url + '/New')
+
+  # Test updating the WC.
+  expected_output = svntest.wc.State(wc_dir, {
+    'New' : Item(status='A ') })
+  expected_disk.add({
+    'New' : Item() })
+  expected_status.add({
+    'New' : Item(status='  ') })
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status)
+
+
 #######################################################################
 # Run the tests
 
@@ -5613,6 +5789,9 @@ test_list = [ None,
               XFail(update_deleted_locked_files),
               XFail(update_empty_hides_entries),
               mergeinfo_updates_merge_with_local_mods,
+              add_moved_file_has_props,
+              XFail(add_moved_file_has_props2),
+              update_with_excluded_subdir,
              ]
 
 if __name__ == '__main__':
