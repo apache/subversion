@@ -9585,6 +9585,24 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                 kind_map, svn_wc__db_kind_file));
 
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+#ifdef SVN_WC__NODE_DATA
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_INSERT_NODE_DATA));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isistt",
+                                pdh->wcroot->wc_id,
+                                local_relpath,
+                                (apr_int64_t)0, /* op_depth == BASE */
+                                svn_relpath_dirname(local_relpath,
+                                                    scratch_pool),
+                                presence_map, svn_wc__db_status_not_present,
+                                kind_map, svn_wc__db_kind_file));
+
+      SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+#endif
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
