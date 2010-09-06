@@ -190,21 +190,22 @@ maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
     }
 }
 
-/* Adjust PATH1 and PATH2, representing the original targets passed to the
- * the diff command, to handle the case when we're dealing with different
- * anchors. PATH represents the file that has changed. RELATIVE_TO_DIR is
- * the directory the diff target should be considered relative to. All
+/* Adjust PATH, ORIG_PATH_1 and ORIG_PATH_2, representing the changed file
+ * and the two original targets passed to the diff command, to handle the
+ * case when we're dealing with different anchors. RELATIVE_TO_DIR is the
+ * directory the diff target should be considered relative to. All
  * allocations are done in POOL. */
 static svn_error_t *
-adjust_paths_for_diff_labels(const char **path1,
-                             const char **path2,
-                             const char *path,
+adjust_paths_for_diff_labels(const char **path,
+                             const char **orig_path_1,
+                             const char **orig_path_2,
                              const char *relative_to_dir,
                              apr_pool_t *pool)
 {
   apr_size_t len;
-  const char *new_path1 = *path1;
-  const char *new_path2 = *path2;
+  const char *new_path = *path;
+  const char *new_path1 = *orig_path_1;
+  const char *new_path2 = *orig_path_2;
 
   /* ### Holy cow.  Due to anchor/target weirdness, we can't
      simply join diff_cmd_baton->orig_path_1 with path, ditto for
@@ -228,31 +229,31 @@ adjust_paths_for_diff_labels(const char **path1,
      a particular style, so not calling svn_dirent_local_style() on the
      paths below.*/
   if (new_path1[0] == '\0')
-    new_path1 = apr_psprintf(pool, "%s", path);
+    new_path1 = apr_psprintf(pool, "%s", new_path);
   else if (new_path1[0] == '/')
-    new_path1 = apr_psprintf(pool, "%s\t(...%s)", path, new_path1);
+    new_path1 = apr_psprintf(pool, "%s\t(...%s)", new_path, new_path1);
   else
-    new_path1 = apr_psprintf(pool, "%s\t(.../%s)", path, new_path1);
+    new_path1 = apr_psprintf(pool, "%s\t(.../%s)", new_path, new_path1);
 
   if (new_path2[0] == '\0')
-    new_path2 = apr_psprintf(pool, "%s", path);
+    new_path2 = apr_psprintf(pool, "%s", new_path);
   else if (new_path2[0] == '/')
-    new_path2 = apr_psprintf(pool, "%s\t(...%s)", path, new_path2);
+    new_path2 = apr_psprintf(pool, "%s\t(...%s)", new_path, new_path2);
   else
-    new_path2 = apr_psprintf(pool, "%s\t(.../%s)", path, new_path2);
+    new_path2 = apr_psprintf(pool, "%s\t(.../%s)", new_path, new_path2);
 
   if (relative_to_dir)
     {
       /* Possibly adjust the paths shown in the output (see issue #2723). */
-      const char *child_path = svn_dirent_is_child(relative_to_dir, path,
+      const char *child_path = svn_dirent_is_child(relative_to_dir, new_path,
                                                    pool);
 
       if (child_path)
-        path = child_path;
-      else if (!svn_path_compare_paths(relative_to_dir, path))
-        path = ".";
+        new_path = child_path;
+      else if (!svn_path_compare_paths(relative_to_dir, new_path))
+        new_path = ".";
       else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir);
+        return MAKE_ERR_BAD_RELATIVE_PATH(new_path, relative_to_dir);
 
       child_path = svn_dirent_is_child(relative_to_dir, new_path1, pool);
 
@@ -272,8 +273,9 @@ adjust_paths_for_diff_labels(const char **path1,
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(new_path2, relative_to_dir);
     }
-  *path1 = new_path1;
-  *path2 = new_path2;
+  *path = new_path;
+  *orig_path_1 = new_path1;
+  *orig_path_2 = new_path2;
 
   return SVN_NO_ERROR;
 }
@@ -319,20 +321,6 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 {
   int i;
 
-  if (relative_to_dir)
-    {
-      /* Possibly adjust the path shown in the output (see issue #2723). */
-      const char *child_path = svn_dirent_is_child(relative_to_dir, path,
-                                                   pool);
-
-      if (child_path)
-        path = child_path;
-      else if (!svn_path_compare_paths(relative_to_dir, path))
-        path = ".";
-      else
-        return MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir);
-    }
-
   /* If we're creating a diff on the wc root, path would be empty. */
   if (path[0] == '\0')
     path = apr_psprintf(pool, ".");
@@ -344,7 +332,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         const char *label1;
         const char *label2;
 
-        SVN_ERR(adjust_paths_for_diff_labels(&path1, &path2, path,
+        SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
                                              relative_to_dir, pool));
 
         label1 = diff_label(path1, rev1, pool);
@@ -699,7 +687,7 @@ diff_content_changed(const char *path,
   path1 = diff_cmd_baton->orig_path_1;
   path2 = diff_cmd_baton->orig_path_2;
 
-  SVN_ERR(adjust_paths_for_diff_labels(&path1, &path2, path,
+  SVN_ERR(adjust_paths_for_diff_labels(&path, &path1, &path2,
                                        rel_to_dir, subpool));
 
   label1 = diff_label(path1, rev1, subpool);

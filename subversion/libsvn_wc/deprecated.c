@@ -42,6 +42,7 @@
 #include "entries.h"
 #include "lock.h"
 #include "props.h"
+#include "translate.h"
 #include "workqueue.h"
 
 #include "svn_private_config.h"
@@ -420,12 +421,14 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_transmit_text_deltas3(tempfile,
-                                       digest ? &new_text_base_md5_checksum
-                                              : NULL,
-                                       NULL, wc_ctx,
-                                       local_abspath, fulltext, editor,
-                                       file_baton, pool, pool));
+  SVN_ERR(svn_wc__internal_transmit_text_deltas(tempfile,
+                                                (digest
+                                                 ? &new_text_base_md5_checksum
+                                                 : NULL),
+                                                NULL, wc_ctx->db,
+                                                local_abspath, fulltext,
+                                                editor, file_baton,
+                                                pool, pool));
 
   if (digest)
     memcpy(digest, new_text_base_md5_checksum->digest, APR_MD5_DIGESTSIZE);
@@ -2216,12 +2219,18 @@ svn_wc_prop_get(const svn_string_t **value,
 
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access), pool));
 
-  SVN_ERR(svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool));
+  err = svn_wc_prop_get2(value, wc_ctx, local_abspath, name, pool, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -3293,19 +3302,14 @@ svn_wc_translated_stream(svn_stream_t **stream,
 {
   const char *local_abspath;
   const char *versioned_abspath;
-  svn_wc_context_t *wc_ctx;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
 
-  SVN_ERR(svn_wc_translated_stream2(stream, wc_ctx, local_abspath,
-                                    versioned_abspath, flags,
-                                    pool, pool));
-
-  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  return svn_error_return(
+    svn_wc__internal_translated_stream(stream, svn_wc__adm_get_db(adm_access),
+                                       local_abspath, versioned_abspath, flags,
+                                       pool, pool));
 }
 
 svn_error_t *
@@ -3319,15 +3323,13 @@ svn_wc_translated_file2(const char **xlated_path,
   const char *versioned_abspath;
   const char *root;
   const char *tmp_root;
-  svn_wc_context_t *wc_ctx;
 
   SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
 
-  SVN_ERR(svn_wc_translated_file3(xlated_path, src, wc_ctx, versioned_abspath,
-                                  flags, NULL, NULL, pool, pool));
+  SVN_ERR(svn_wc__internal_translated_file(xlated_path, src,
+                                           svn_wc__adm_get_db(adm_access),
+                                           versioned_abspath,
+                                           flags, NULL, NULL, pool, pool));
   if (! svn_dirent_is_absolute(versioned_file))
     {
       SVN_ERR(svn_io_temp_dir(&tmp_root, pool));
@@ -3338,7 +3340,7 @@ svn_wc_translated_file2(const char **xlated_path,
         }
     }
 
-  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  return SVN_NO_ERROR;
 }
 
 /*** From relocate.c ***/

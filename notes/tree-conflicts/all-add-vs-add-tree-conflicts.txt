@@ -1,6 +1,6 @@
 This file describes handling of all add-vs.-add tree conflict situations
-on 2010-jul-01. Maybe someone will update it and put another date here some
-day, maybe not.
+on 2010-jul-20 (previously 2010-jul-01, r959735). Maybe someone will update it
+and put another date here some day, maybe not.
 
 Add-vs.-add tree conflicts handling introduces a new meaning for
 svn_wc__db_status_not_present. Apart from the usual "node deleted and
@@ -23,34 +23,32 @@ all add-vs.-add   | incoming ADD of a           | incoming COPY of a          |
 tree conflict     | file    | symlink | dir (2) | file    | symlink | dir (2) |
 situations        |co up sw |co up sw |co up sw |co up sw |co up sw |co up sw |
 ------------------+---------+---------+---------+---------+---------+---------+
-locally      file |?C*?C*?C*|?C*?C*?C*|:( :( :( |?C*?C*?C*|?C*?C*?C*|:( :( :( |
-UNVER-    symlink |?C*?C*?C*|?C*?C*?C*|:( :( :( |?C*?C*?C*|?C*?C*?C*|:( :( :( |
-SIONED        dir |?C*?C*?C*|?C*?C*?C*|:( :( :( |?C*?C*?C*|?C*?C*?C*|:( :( :( |
+locally      file |?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|
+UNVER-    symlink |?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|
+SIONED        dir |?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|
 ------------------+---------+---------+---------+---------+---------+---------+
 locally      file |Ex Ex RC*|RC*RC*RC*|:( :( :( |Ex RC*RC*|RC*RC*RC*|:( :( :( |
 ADDED     symlink |RC*RC*RC*|Ex Ex RC*|:( :( :( |RC*RC*RC*|Ex RC*RC*|:( :( :( |
-          (3) dir |:( :( :( |:( :( :( |Ex Ex Ex |:( :( :( |:( :( :( |Ex Ex Ex |
+          (2) dir |:( :( :( |:( :( :( |Ex Ex Ex |:( :( :( |:( :( :( |Ex Ex Ex |
 ------------------+---------+---------+---------+---------+---------+---------+
 DIFFERENT    file |RC*RC*RC*|RC*RC*RC*|:( :( :( |RC*RC*RC*|RC*RC*RC*|:( :( :( |
 COPY      symlink |RC*RC*RC*|RC*RC*RC*|:( :( :( |RC*RC*RC*|RC*RC*RC*|:( :( :( |
-of a      (3) dir |:( :( :( |:( :( :( |AC AC AC |:( :( :( |:( :( :( |AC AC AC |
+of a      (2) dir |:( :( :( |:( :( :( |AC AC AC |:( :( :( |:( :( :( |AC AC AC |
 ------------------+---------+---------+---------+---------+---------+---------+
 IDENTICAL    file |                             |RC*Ex*RC*|         |         |
 COPY of   symlink |         (see above)         |         |RC*Ex*RC*|         |
-a (1)     (3) dir |                             |         |         |AC AC AC |
+a (1)     (2) dir |                             |         |         |AC AC AC |
 
            
-"*" The cases most recently changed are marked with a * on their right.
+"*" The cases changed in r959735 marked with a * on their right.
+"+" The cases most recently changed are marked with a + on their right.
 
 (1) Where both local and incoming are copies and both copies are from the
 exact same copyfrom URL@REV, the node kinds must also match. The colums
 against incoming simple-add are identical to "different copy" and omitted.
 
-(2) Since this patch only modifies add_file() and close_file() for starters,
-these columns are not affected by this patch.
-
-(3) Since we can only deal with replace-by-different-kind properly after we
-moved to single-db, these rows are not affected by this patch.
+(2) Since we can only deal with replace-by-different-kind properly after we
+moved to single-db, some of these rows/columns are still ':(' or 'AC'.
 
 
 In the table above, each cell shows three letter pairs for,
@@ -91,7 +89,7 @@ The letter pairs are:
 So "Ex Ex RC*" would mean:
  "During checkout and update, the local add is merged with the incoming add.
   During switch, an easily resolvable tree conflict is flagged.
-  This patch only changes the 'switch' behavior."
+  r959735 only changes the 'switch' behavior."
 
 A note on checkout: It *is* possible to checkout a URL onto a working copy of
 the same URL, which can have local adds scheduled. Then, checkout presumably

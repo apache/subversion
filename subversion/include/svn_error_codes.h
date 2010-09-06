@@ -289,13 +289,8 @@ SVN_ERROR_START
              "Unrecognized stream data")
 
   /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_STREAM_RESET_NOT_SUPPORTED,
-             SVN_ERR_STREAM_CATEGORY_START + 3,
-             "Stream doesn't support resetting")
-
-  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
-             SVN_ERR_STREAM_CATEGORY_START + 4,
+             SVN_ERR_STREAM_CATEGORY_START + 3,
              "Stream doesn't support seeking")
 
   /* node errors */
@@ -1312,6 +1307,17 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA,
              SVN_ERR_MISC_CATEGORY_START + 32,
              "Unsupported schema found in SQLite db")
+
+/** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_BUSY,
+             SVN_ERR_MISC_CATEGORY_START + 33,
+             "The SQLite db is busy")
+
+/** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
+             SVN_ERR_MISC_CATEGORY_START + 34,
+             "SQLite busy at transaction rollback; "
+             "resetting all busy SQLite statements to allow rollback")
 
   /* command-line client errors */
 

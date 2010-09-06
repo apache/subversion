@@ -1079,6 +1079,12 @@ class SvnClientTest < Test::Unit::TestCase
     end
   end
 
+=begin
+  We haven't yet figured out what to expect in the case of an obstruction,
+  but it is no longer an error.  Commenting out this test until that
+  decision is made (see issue #3680:
+  http://subversion.tigris.org/issues/show_bug.cgi?id=3680)
+
   def test_cleanup
     log = "sample log"
     file = "sample.txt"
@@ -1124,6 +1130,7 @@ class SvnClientTest < Test::Unit::TestCase
       end
     end
   end
+=end
 
   def test_relocate
     log = "sample log"

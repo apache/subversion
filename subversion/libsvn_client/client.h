@@ -387,23 +387,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
 /* ---------------------------------------------------------------- */
 
-/*** Commit ***/
-
-/* Get the commit_baton to be used in couple with commit_callback. */
-svn_error_t *svn_client__commit_get_baton(void **baton,
-                                          svn_commit_info_t **info,
-                                          apr_pool_t *pool);
-
-/* The commit_callback function for storing svn_client_commit_info_t
-   pointed by commit_baton. If the commit_info supplied by get_baton
-   points to NULL after close_edit, it means the commit is a no-op.
-*/
-svn_error_t *svn_client__commit_callback(const svn_commit_info_t *commit_info,
-                                         void *baton,
-                                         apr_pool_t *pool);
-
-/* ---------------------------------------------------------------- */
-
 /*** Status ***/
 
 /* Verify that the path can be deleted without losing stuff,
@@ -910,12 +893,6 @@ svn_client__condense_commit_items(const char **base_url,
    NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
    common absolute path prefix of the committed paths.  It can be NULL.
 
-   If NEW_TEXT_BASE_ABSPATHS is not NULL, create in the temporary-text-base
-   directory a copy of the working version of each file transmitted, but
-   with keywords and eol translated to repository-normal form, and set
-   *NEW_TEXT_BASE_ABSPATHS to a hash that maps (const char *) paths (from
-   the items' paths) to the (const char *) abspaths of these files.
-
    If MD5_CHECKSUMS is not NULL, set *MD5_CHECKSUMS to a hash containing,
    for each file transmitted, a mapping from the commit-item's (const
    char *) path to the (const svn_checksum_t *) MD5 checksum of its new text
@@ -929,7 +906,6 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **new_text_base_abspaths,
                       apr_hash_t **md5_checksums,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
@@ -999,6 +975,8 @@ svn_client__handle_externals(apr_hash_t *externals_old,
    behaves as for svn_client__handle_externals(), except that ambient
    depths are presumed to be svn_depth_infinity.
 
+   NATIVE_EOL is the value passed as NATIVE_EOL when exporting.
+
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
    is required.
@@ -1011,6 +989,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
                             const char *repos_root_url,
                             svn_depth_t requested_depth,
                             svn_boolean_t is_export,
+                            const char *native_eol,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);

@@ -4,6 +4,8 @@ UUID: 3f6eb9ce-fbb3-4b51-a522-daa270b3ac27
 
 Revision-number: 0
 Prop-content-length: 56
+Prop-content-md5: (svn:date) 926c539862b806f66b9c06493676c629
+Prop-content-sha1: (svn:date) 573810eb9df21b2ed82a1131546acea967158b78
 Content-length: 56
 
 K 8
@@ -14,12 +16,14 @@ PROPS-END
 
 Revision-number: 1
 Prop-content-length: 115
+Prop-content-md5: (svn:log) 4346997c96e47b2f214ae84906a04fd7
+Prop-content-sha1: (svn:log) 02d631ed0cdf29ef714dbd8294fd7da1cc165bcc
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) e795d61fff7f7c25c20803178a00da2b
+Prop-content-sha1: (svn:date) 407b1db5001e0710228ffa60858350c04807c9e4
 Content-length: 115
 
-K 7
-svn:log
-V 17
-Add base folders.
 K 10
 svn:author
 V 3
@@ -28,6 +32,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:05.279494Z
+K 7
+svn:log
+V 17
+Add base folders.
 PROPS-END
 
 Node-path: project1
@@ -68,12 +76,14 @@ PROPS-END
 
 Revision-number: 2
 Prop-content-length: 110
+Prop-content-md5: (svn:log) 2d1e85cf75aeea63b99f623009eb6a4d
+Prop-content-sha1: (svn:log) d9eb7f5f86729ac03c7e0171bb34663a7e1066bb
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) 5d345ba3cfacd2b6e13864183f3381bf
+Prop-content-sha1: (svn:date) 3540287f0f83c8ca30f88eef5e5e63c25f2739f9
 Content-length: 110
 
-K 7
-svn:log
-V 12
-Add folders.
 K 10
 svn:author
 V 3
@@ -82,6 +92,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:06.265712Z
+K 7
+svn:log
+V 12
+Add folders.
 PROPS-END
 
 Node-path: project1/trunk/A
@@ -113,12 +127,14 @@ PROPS-END
 
 Revision-number: 3
 Prop-content-length: 106
+Prop-content-md5: (svn:log) 3505962cba11bb7655d611ab8d0dd5f8
+Prop-content-sha1: (svn:log) 53acc723b0cda36d8dbeaef69fdd04ab04286dab
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) b1adc5df86c72122ceb676d656a13e80
+Prop-content-sha1: (svn:date) f22f40deef795db88a82950ee168dfe37ce4944b
 Content-length: 106
 
-K 7
-svn:log
-V 9
-Add file.
 K 10
 svn:author
 V 3
@@ -127,6 +143,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:07.283685Z
+K 7
+svn:log
+V 9
+Add file.
 PROPS-END
 
 Node-path: project1/trunk/A/B/C/file.txt
@@ -145,12 +165,14 @@ content for file.txt
 
 Revision-number: 4
 Prop-content-length: 117
+Prop-content-md5: (svn:log) 416d5850e22948fb77b09ae08f226c48
+Prop-content-sha1: (svn:log) a238f2952e51a0f67ed790563b0296cc19b4060d
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) 7c24e8c449e29012735cadd320621501
+Prop-content-sha1: (svn:date) cb6ae843cf2ba3e8c173223ab7dd0707a734bcaf
 Content-length: 117
 
-K 7
-svn:log
-V 19
-Add file file2.txt.
 K 10
 svn:author
 V 3
@@ -159,6 +181,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:08.278330Z
+K 7
+svn:log
+V 19
+Add file file2.txt.
 PROPS-END
 
 Node-path: project1/trunk/A/B/C/file2.txt
@@ -177,12 +203,14 @@ content for file2.txt
 
 Revision-number: 5
 Prop-content-length: 127
+Prop-content-md5: (svn:log) dbbba5ba8b0981e95bd3b123e90d188c
+Prop-content-sha1: (svn:log) 4cfa881024df0b37cf93f35e317adf995bcc8aa8
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) ac1adc3a8e8afd515d9f95e8d95093dc
+Prop-content-sha1: (svn:date) 92f8c93d3494b34e3a0daccfe466153f4bc4f665
 Content-length: 127
 
-K 7
-svn:log
-V 29
-move project and modify file.
 K 10
 svn:author
 V 3
@@ -191,6 +219,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:12.238116Z
+K 7
+svn:log
+V 29
+move project and modify file.
 PROPS-END
 
 Node-path: branches
@@ -199,6 +231,8 @@ Node-action: add
 Node-copyfrom-rev: 4
 Node-copyfrom-path: project1/branches
 Prop-content-length: 34
+Prop-content-md5: (svn:mergeinfo) d41d8cd98f00b204e9800998ecf8427e
+Prop-content-sha1: (svn:mergeinfo) da39a3ee5e6b4b0d3255bfef95601890afd80709
 Content-length: 34
 
 K 13
@@ -226,6 +260,8 @@ Node-action: add
 Node-copyfrom-rev: 4
 Node-copyfrom-path: project1/tags
 Prop-content-length: 34
+Prop-content-md5: (svn:mergeinfo) d41d8cd98f00b204e9800998ecf8427e
+Prop-content-sha1: (svn:mergeinfo) da39a3ee5e6b4b0d3255bfef95601890afd80709
 Content-length: 34
 
 K 13
@@ -241,6 +277,8 @@ Node-action: add
 Node-copyfrom-rev: 4
 Node-copyfrom-path: project1/trunk
 Prop-content-length: 34
+Prop-content-md5: (svn:mergeinfo) d41d8cd98f00b204e9800998ecf8427e
+Prop-content-sha1: (svn:mergeinfo) da39a3ee5e6b4b0d3255bfef95601890afd80709
 Content-length: 34
 
 K 13
@@ -266,12 +304,14 @@ extra line of test
 
 Revision-number: 6
 Prop-content-length: 115
+Prop-content-md5: (svn:log) 2ce727e28e0912e75217378c8b321cf9
+Prop-content-sha1: (svn:log) 5b471ab3caf6219f567c6f25cd941bc8bdd0327c
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) dfda2ba5f85be4d81643a4f06862f139
+Prop-content-sha1: (svn:date) f48493f090bb9345229cfea45ae68e39c5831481
 Content-length: 115
 
-K 7
-svn:log
-V 17
-removed project1.
 K 10
 svn:author
 V 3
@@ -280,6 +320,10 @@ K 8
 svn:date
 V 27
 2008-01-02T20:33:14.261412Z
+K 7
+svn:log
+V 17
+removed project1.
 PROPS-END
 
 Node-path: project1

@@ -626,25 +626,26 @@ svn_wc__node_get_info_bits(apr_time_t *text_time,
 
 
 /**
- * Recursively acquire write locks for @a local_abspath if
- * @a anchor_abspath is NULL.  If @a anchor_abspath is not NULL then
- * recursively acquire write locks for the anchor of @a local_abspath
- * and return the anchor path in @a *anchor_abspath.  Use @a wc_ctx
- * for working copy access.
+ * Acquire a recursive write lock for @a local_abspath or if @a lock_anchor
+ * is true, determine if @a local_abspath has an anchor that should be locked
+ * instead. Store the obtained lock in @a wc_ctx.
+ *
+ * If @a lock_root_abspath is not NULL, store the root of the lock in
+ * @a *lock_root_abspath. If @a lock_root_abspath is NULL, then @a
+ * local_abspath must be a versioned directory and @a lock_anchor must be
+ * FALSE.
  *
  * Returns @c SVN_ERR_WC_LOCKED if an existing lock is encountered, in
  * which case any locks acquired will have been released.
  *
- * If @a *anchor_abspath is not NULL it will be set even when
- * SVN_ERR_WC_LOCKED is returned.
- *
- * ### @a anchor_abspath should be removed when we move to centralised
- * ### metadata as it will be unnecessary.
+ * If @a lock_anchor is TRUE and @a lock_root_abspath is not NULL, @a
+ * lock_root_abspath will be set even when SVN_ERR_WC_LOCKED is returned.
  */
 svn_error_t *
-svn_wc__acquire_write_lock(const char **anchor_abspath,
+svn_wc__acquire_write_lock(const char **lock_root_abspath,
                            svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
+                           svn_boolean_t lock_anchor,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
@@ -653,6 +654,9 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
  * Recursively release write locks for @a local_abspath, using @a wc_ctx
  * for working copy access.  Only locks held by @a wc_ctx are released.
  * Locks are not removed if work queue items are present.
+ *
+ * If @a local_abspath is not the root of an owned SVN_ERR_WC_NOT_LOCKED
+ * is returned.
  */
 svn_error_t *
 svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
@@ -668,6 +672,10 @@ typedef svn_error_t *(*svn_wc__with_write_lock_func_t)(void *baton,
 /** Call function @a func while holding a write lock on
  * @a local_abspath. The @a baton, and @a result_pool and
  * @a scratch_pool, is passed @a func.
+ *
+ * If @a lock_anchor is TRUE, determine if @a local_abspath has an anchor
+ * that should be locked instead.
+ *
  * Use @a wc_ctx for working copy access.
  * The lock is guaranteed to be released after @a func returns.
  */
@@ -676,6 +684,7 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              void *baton,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
+                             svn_boolean_t lock_anchor,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 

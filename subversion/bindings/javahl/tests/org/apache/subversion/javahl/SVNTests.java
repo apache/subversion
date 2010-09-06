@@ -47,7 +47,7 @@ class SVNTests extends TestCase
      * our admin object, mostly used for creating,dumping and loading
      * repositories
      */
-    protected ISVNAdmin admin;
+    protected ISVNRepos admin;
 
     /**
      * the subversion client, what we want to test.
@@ -201,11 +201,11 @@ class SVNTests extends TestCase
         if (this.fsType == null)
         {
             this.fsType =
-                System.getProperty("test.fstype", ISVNAdmin.FSFS).toLowerCase();
-            if (!(ISVNAdmin.FSFS.equals(this.fsType) ||
-                  ISVNAdmin.BDB.equals(this.fsType)))
+                System.getProperty("test.fstype", ISVNRepos.FSFS).toLowerCase();
+            if (!(ISVNRepos.FSFS.equals(this.fsType) ||
+                  ISVNRepos.BDB.equals(this.fsType)))
             {
-                this.fsType = ISVNAdmin.FSFS;
+                this.fsType = ISVNRepos.FSFS;
             }
         }
 
@@ -226,7 +226,7 @@ class SVNTests extends TestCase
         createDirectories();
 
         // create and configure the needed subversion objects
-        admin = new SVNAdmin();
+        admin = new SVNRepos();
         initClient();
 
         // build and dump the sample repository

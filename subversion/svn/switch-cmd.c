@@ -145,10 +145,6 @@ svn_cl__switch(apr_getopt_t *os,
   /* Canonicalize the URL. */
   switch_url = svn_uri_canonicalize(switch_url, scratch_pool);
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
-
   /* Deal with depthstuffs. */
   if (opt_state->set_depth != svn_depth_unknown)
     {

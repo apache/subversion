@@ -123,6 +123,7 @@ check_root_url_of_target(const char **root_url,
        * argument.
        */
       if ((err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+          || (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
         {
           svn_error_clear(err);

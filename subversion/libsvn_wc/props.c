@@ -2197,22 +2197,12 @@ svn_wc__internal_propget(const svn_string_t **value,
 {
   apr_hash_t *prophash = NULL;
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
-  svn_wc__db_kind_t wc_kind;
   svn_boolean_t hidden;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(kind != svn_prop_entry_kind);
 
-  SVN_ERR(svn_wc__db_read_kind(&wc_kind, db, local_abspath, TRUE, scratch_pool));
-
-  if (wc_kind == svn_wc__db_kind_unknown)
-    {
-      /* The node is not present, or not really "here". Therefore, the
-         property is not present.  */
-      *value = NULL;
-      return SVN_NO_ERROR;
-    }
-
+  /* This returns SVN_ERR_WC_PATH_NOT_FOUND for unversioned paths for us */
   SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, scratch_pool));
   if (hidden)
     {
@@ -2235,14 +2225,14 @@ svn_wc__internal_propget(const svn_string_t **value,
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      SVN_ERR_W(err, _("Failed to load properties from disk"));
+      SVN_ERR_W(err, _("Failed to load properties"));
     }
   else
     {
       /* regular prop */
       SVN_ERR_W(svn_wc__get_actual_props(&prophash, db, local_abspath,
                                          result_pool, scratch_pool),
-                _("Failed to load properties from disk"));
+                _("Failed to load properties"));
     }
 
   if (prophash)
@@ -2403,12 +2393,38 @@ svn_wc__internal_propset(svn_wc__db_t *db,
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
   svn_wc_notify_action_t notify_action;
   svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status;
+  const char *dir_abspath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* Get the node kind for this path. */
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (kind == svn_wc__db_kind_dir)
+    dir_abspath = local_abspath;
+  else
+    dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
   if (prop_kind == svn_prop_wc_kind)
     return svn_error_return(wcprop_set(db, local_abspath, name, value,
                                        scratch_pool));
+
+  if (status != svn_wc__db_status_normal
+      && status != svn_wc__db_status_added
+      && status != svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+                             _("Can't set properties on '%s':"
+                               " invalid status for updating properties."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* we don't do entry properties here */
   if (prop_kind == svn_prop_entry_kind)
@@ -2417,13 +2433,6 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
   /* Else, handle a regular property: */
 
-  /* Get the node kind for this path. */
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
 
   /* Setting an inappropriate property is not allowed (unless
      overridden by 'skip_checks', in some circumstances).  Deleting an
@@ -2491,12 +2500,19 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                                              APR_HASH_KEY_STRING);
       apr_hash_t *old_keywords, *new_keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&old_keywords, db, local_abspath,
-                                   old_value ? old_value->data : "",
-                                   scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__get_keywords(&new_keywords, db, local_abspath,
-                                   value ? value->data : "",
-                                   scratch_pool, scratch_pool));
+      if (old_value)
+        SVN_ERR(svn_wc__expand_keywords(&old_keywords,
+                                        db, local_abspath, old_value->data,
+                                        scratch_pool, scratch_pool));
+      else
+        old_keywords = apr_hash_make(scratch_pool);
+
+      if (value)
+        SVN_ERR(svn_wc__expand_keywords(&new_keywords,
+                                        db, local_abspath, value->data,
+                                        scratch_pool, scratch_pool));
+      else
+        new_keywords = apr_hash_make(scratch_pool);
 
       if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE,
                                      scratch_pool))

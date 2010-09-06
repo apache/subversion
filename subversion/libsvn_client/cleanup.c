@@ -32,6 +32,7 @@
 #include "svn_client.h"
 #include "svn_config.h"
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "client.h"
 #include "svn_props.h"
@@ -49,6 +50,11 @@ svn_client_cleanup(const char *path,
 {
   const char *local_abspath;
   svn_error_t *err;
+
+  if (svn_path_is_url(path))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                              _("'%s' is not a local path"),
+                                              path));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 

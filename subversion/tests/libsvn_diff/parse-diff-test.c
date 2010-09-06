@@ -148,9 +148,19 @@ static const char *bad_git_diff_header =
   "Property changes on: iota"                                           NL
   "___________________________________________________________________" NL
   "Modified: prop_mod"                                                  NL
-  "## -1 +1 ##"                                                         NL
+  "## -1,4 +1,4 ##"                                                     NL
   "-value"                                                              NL
-  "+new value"                                                          NL;
+  "+new value"                                                          NL
+  " context"                                                            NL
+  " context"                                                            NL
+  " context"                                                            NL
+  "## -10,4 +10,4 ##"                                                   NL
+  " context"                                                            NL
+  " context"                                                            NL
+  " context"                                                            NL
+  "-value"                                                              NL
+  "+new value"                                                          NL
+  ""                                                                    NL;
 
   /* ### Add edge cases like context lines stripped from leading whitespaces
    * ### that starts with 'Added: ', 'Deleted: ' or 'Modified: '. */
@@ -489,6 +499,7 @@ test_parse_property_diff(apr_pool_t *pool)
 {
   apr_file_t *patch_file;
   svn_patch_t *patch;
+  svn_prop_patch_t *prop_patch;
   svn_hunk_t *hunk;
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_diff.patch";
@@ -503,23 +514,15 @@ test_parse_property_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
   SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota"));
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
-  SVN_TEST_ASSERT(apr_hash_count(patch->property_hunks) == 3);
-
-  /* Check the added property */
-  hunks = apr_hash_get(patch->property_hunks, "prop_add", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(hunks->nelts == 1);
-  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
-
-  SVN_ERR(check_content(hunk, TRUE,
-                        "",
-                        pool));
-
-  SVN_ERR(check_content(hunk, FALSE,
-                        "value" NL,
-                        pool));
+  SVN_TEST_ASSERT(apr_hash_count(patch->prop_patches) == 3);
 
   /* Check the deleted property */
-  hunks = apr_hash_get(patch->property_hunks, "prop_del", APR_HASH_KEY_STRING);
+  prop_patch = apr_hash_get(patch->prop_patches, "prop_del",
+                            APR_HASH_KEY_STRING);
+
+  SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_deleted);
+  hunks = prop_patch->hunks;
+
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
 
@@ -529,18 +532,64 @@ test_parse_property_diff(apr_pool_t *pool)
 
   SVN_ERR(check_content(hunk, FALSE,
                         "",
+                        pool));
+
+  /* Check the added property */
+  prop_patch = apr_hash_get(patch->prop_patches, "prop_add",
+                            APR_HASH_KEY_STRING);
+
+  SVN_TEST_ASSERT(!strcmp("prop_add", prop_patch->name));
+  SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_added);
+  hunks = prop_patch->hunks;
+
+  SVN_TEST_ASSERT(hunks->nelts == 1);
+  hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk, TRUE,
+                        "",
+                        pool));
+
+  SVN_ERR(check_content(hunk, FALSE,
+                        "value" NL,
                         pool));
 
   /* Check the modified property */
-  hunks = apr_hash_get(patch->property_hunks, "prop_mod", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(hunks->nelts == 1);
+  prop_patch = apr_hash_get(patch->prop_patches, "prop_mod",
+                            APR_HASH_KEY_STRING);
+
+  SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_modified);
+  hunks = prop_patch->hunks;
+
+  SVN_TEST_ASSERT(hunks->nelts == 2);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
 
   SVN_ERR(check_content(hunk, TRUE,
+                        "value" NL
+                        "context" NL
+                        "context" NL
+                        "context" NL,
+                        pool));
+
+  SVN_ERR(check_content(hunk, FALSE,
+                        "new value" NL
+                        "context" NL
+                        "context" NL
+                        "context" NL,
+                        pool));
+
+  hunk = APR_ARRAY_IDX(hunks, 1 , svn_hunk_t *);
+
+  SVN_ERR(check_content(hunk, TRUE,
+                        "context" NL
+                        "context" NL
+                        "context" NL
                         "value" NL,
                         pool));
 
   SVN_ERR(check_content(hunk, FALSE,
+                        "context" NL
+                        "context" NL
+                        "context" NL
                         "new value" NL,
                         pool));
 
@@ -552,6 +601,7 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
 {
   apr_file_t *patch_file;
   svn_patch_t *patch;
+  svn_prop_patch_t *prop_patch;
   svn_hunk_t *hunk;
   apr_array_header_t *hunks;
   const char *fname = "test_parse_property_and_text_diff.patch";
@@ -567,7 +617,7 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
   SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota"));
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
-  SVN_TEST_ASSERT(apr_hash_count(patch->property_hunks) == 1);
+  SVN_TEST_ASSERT(apr_hash_count(patch->prop_patches) == 1);
 
   /* Check contents of text hunk */
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
@@ -582,7 +632,11 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
                         pool));
 
   /* Check the added property */
-  hunks = apr_hash_get(patch->property_hunks, "prop_add", APR_HASH_KEY_STRING);
+  prop_patch = apr_hash_get(patch->prop_patches, "prop_add",
+                            APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_added);
+
+  hunks = prop_patch->hunks;
   SVN_TEST_ASSERT(hunks->nelts == 1);
   hunk = APR_ARRAY_IDX(hunks, 0 , svn_hunk_t *);
 

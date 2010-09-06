@@ -5725,11 +5725,14 @@ svn_wc_get_pristine_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool);
                           
 
-/** Set @a *value to the value of property @a name for @a path, allocating
- * @a *value in @a pool.  If no such prop, set @a *value to @c NULL.
- * @a name may be a regular or wc property; if it is an entry property,
- * return the error #SVN_ERR_BAD_PROP_KIND.  @a adm_access is an access
- * baton set that contains @a path.
+/** Set @a *value to the value of property @a name for @a local_abspath,
+ * allocating @a *value in @a result_pool.  If no such prop, set @a *value
+ * to @c NULL. @a name may be a regular or wc property; if it is an
+ * entry property, return the error #SVN_ERR_BAD_PROP_KIND.  @a wc_ctx
+ * is used to access the working copy.
+ *
+ * If @a local_abspath is not a versioned path, return
+ * #SVN_ERR_WC_PATH_NOT_FOUND
  *
  * @since New in 1.7.
  */
@@ -5743,6 +5746,8 @@ svn_wc_prop_get2(const svn_string_t **value,
 
 /** Similar to svn_wc_prop_get2(), but with a #svn_wc_adm_access_t /
  * relative path parameter pair.
+ *
+ * When @a path is not versioned, set @a *value to NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
@@ -6984,10 +6989,10 @@ svn_wc_create_tmp_file(apr_file_t **fp,
 
 /* EOL conversion and keyword expansion. */
 
-/** Set @a xlated_abspath to a translated copy of @a src
+/** Set @a xlated_path to a translated copy of @a src
  * or to @a src itself if no translation is necessary.
- * That is, if @a versioned_abspath's properties indicate newline conversion
- * or keyword expansion, point @a *xlated_abspath to a copy of @a src
+ * That is, if @a versioned_file's properties indicate newline conversion or
+ * keyword expansion, point @a *xlated_path to a copy of @a src
  * whose newlines and keywords are converted using the translation
  * as requested by @a flags.
  *
@@ -7004,38 +7009,19 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  * #SVN_WC_TRANSLATE_FORCE_COPY flag in @a flags.
  *
  * This function is generally used to get a file that can be compared
- * meaningfully against @a versioned_abspath's text base, if
- * #SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_abspath itself
- * if #SVN_WC_TRANSLATE_FROM_NF is specified.
+ * meaningfully against @a versioned_file's text base, if
+ * @c SVN_WC_TRANSLATE_TO_NF is specified, against @a versioned_file itself
+ * if @c SVN_WC_TRANSLATE_FROM_NF is specified.
  *
- * The output file is created in the temp file area belonging to
- * @a versioned_abspath. By default it will be deleted at result_pool
- * cleanup. If @a flags includes #SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
- * the default result_pool cleanup handler to remove @a *xlated_abspath is
- * not registered.
+ * Output files are created in the temp file area belonging to
+ * @a versioned_file.  By default they will be deleted at pool cleanup.
  *
- * If an error is returned, the effect on @a *xlated_abspath is undefined.
+ * If @c SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP is specified, the default
+ * pool cleanup handler to remove @a *xlated_path is not registered.
  *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_wc_translated_file3(const char **xlated_abspath,
-                        const char *src,
-                        svn_wc_context_t *wc_ctx,
-                        const char *versioned_abspath,
-                        apr_uint32_t flags,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
-
-
-/** Similar to svn_wc_translated_file3(), but with an adm_access baton
- * and relative paths instead of a wc_context and absolute paths, with
- * a single pool, and no cancellation func/baton.
+ * If an error is returned, the effect on @a *xlated_path is undefined.
  *
- * @since New in 1.4.
- * @deprecated Provided for compatibility with the 1.6 API
+ * @since New in 1.4
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -7061,10 +7047,9 @@ svn_wc_translated_file(const char **xlated_p,
                        apr_pool_t *pool);
 
 
-/** Set @a stream to a stream allocated in @a result_pool, that will
- * translate *to* normal form while reading, or *from* normal form while
- * writing @a local_abspath.  The translation will take the file properties
- * from @a versioned_abspath using @a wc_ctx.
+/** Returns a @a stream allocated in @a pool with access to the given
+ * @a path taking the file properties from @a versioned_file using
+ * @a adm_access.
  *
  * If @a flags includes #SVN_WC_TRANSLATE_FROM_NF, the stream will
  * translate from Normal Form to working copy form while writing to
@@ -7076,24 +7061,7 @@ svn_wc_translated_file(const char **xlated_p,
  * The @a flags are the same constants as those used for
  * svn_wc_translated_file().
  *
- * Use @a scratch_pool for temporary allocations.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_wc_translated_stream2(svn_stream_t **stream,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          const char *versioned_abspath,
-                          apr_uint32_t flags,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
-
-/** Similar to svn_wc_translated_stream2(), but with an adm_access baton
- * and relative paths instead of a wc_context and absolute paths.
- *
  * @since New in 1.5.
- * @deprecated Provided for compatibility with the 1.6 API
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -7111,14 +7079,6 @@ svn_wc_translated_stream(svn_stream_t **stream,
 /** Send the local modifications for versioned file @a local_abspath (with
  * matching @a file_baton) through @a editor, then close @a file_baton
  * afterwards.  Use @a scratch_pool for any temporary allocation.
- *
- * If @a tempfile is non-NULL, make a copy of @a local_abspath with keywords
- * and eol translated to repository-normal form, and set @a *tempfile to the
- * absolute path to this copy, allocated in @a result_pool.  The copy will
- * be in the temporary-text-base directory.  Do not clean up the copy;
- * caller can do that.  (The purpose of handing back the tmp copy is that it
- * is usually about to become the new text base anyway, but the installation
- * of the new text base is outside the scope of this function.)
  *
  * If @a new_text_base_md5_checksum is non-NULL, set
  * @a *new_text_base_md5_checksum to the MD5 checksum of (@a local_abspath
@@ -7143,8 +7103,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_transmit_text_deltas3(const char **tempfile,
-                             const svn_checksum_t **new_text_base_md5_checksum,
+svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
                              const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
@@ -7157,6 +7116,14 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
 /** Similar to svn_wc_transmit_text_deltas3(), but with a relative path
  * and adm_access baton, and the checksum output is an MD5 digest instead of
  * two svn_checksum_t objects.
+ *
+ * If @a tempfile is non-NULL, make a copy of @a path with keywords
+ * and eol translated to repository-normal form, and set @a *tempfile to the
+ * absolute path to this copy, allocated in @a result_pool.  The copy will
+ * be in the temporary-text-base directory.  Do not clean up the copy;
+ * caller can do that.  (The purpose of handing back the tmp copy is that it
+ * is usually about to become the new text base anyway, but the installation
+ * of the new text base is outside the scope of this function.)
  *
  * @since New in 1.4.
  * @deprecated Provided for backwards compatibility with the 1.6 API.

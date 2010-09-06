@@ -4,6 +4,10 @@ UUID: 728f5e1e-a57c-4dd4-8b4f-ca752f5178f3
 
 Revision-number: 0
 Prop-content-length: 75
+Prop-content-md5: (foo) cffe6699435a9042ea1d06ddbcd7853a
+Prop-content-sha1: (foo) 1f39e4f188cddd284d64602cba39c580f5ea4335
+Prop-content-md5: (svn:date) 1b69f2412c6c742c9c7244a61fa18e09
+Prop-content-sha1: (svn:date) 566264fef4d43d78fac5966221a636c01cfb8dd8
 Content-length: 75
 
 K 3
@@ -18,24 +22,32 @@ PROPS-END
 
 Revision-number: 1
 Prop-content-length: 132
+Prop-content-md5: (svn:log) d41d8cd98f00b204e9800998ecf8427e
+Prop-content-sha1: (svn:log) da39a3ee5e6b4b0d3255bfef95601890afd80709
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:mergeinfo) 3b6251fcdc797614cfbc1df34064e3fc
+Prop-content-sha1: (svn:mergeinfo) 545733d85022289004118dd37db90b9df0ffe593
+Prop-content-md5: (svn:date) 65ac64d8cca57d54f7b09789e9e78726
+Prop-content-sha1: (svn:date) e55b50fb4607950d7b8e78092d5771a53bcbdd02
 Content-length: 132
-
-K 7
-svn:log
-V 0
 
 K 10
 svn:author
 V 3
 lgo
-K 13
-svn:mergeinfo
-V 10
-/trunk:1:2
 K 8
 svn:date
 V 27
 2007-12-07T20:53:40.322712Z
+K 7
+svn:log
+V 0
+
+K 13
+svn:mergeinfo
+V 10
+/trunk:1:2
 PROPS-END
 
 Node-path: test.txt
@@ -62,12 +74,14 @@ PROPS-END
 
 Revision-number: 2
 Prop-content-length: 124
+Prop-content-md5: (svn:log) c5f0e220fb8ccf25d10ad241dcfd746d
+Prop-content-sha1: (svn:log) ee00102303d31cafd567cb15853e50132446a55c
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) f3d8837082ca5c8c0a62763b33d0837c
+Prop-content-sha1: (svn:date) 3d7b7e4383358001a010e8d217cc71099a73ac6e
 Content-length: 124
 
-K 7
-svn:log
-V 26
-Import greek tree on trunk
 K 10
 svn:author
 V 3
@@ -76,6 +90,10 @@ K 8
 svn:date
 V 27
 2007-12-07T20:56:45.939703Z
+K 7
+svn:log
+V 26
+Import greek tree on trunk
 PROPS-END
 
 Node-path: trunk/A
@@ -308,12 +326,14 @@ This is the file 'iota'.
 
 Revision-number: 3
 Prop-content-length: 127
+Prop-content-md5: (svn:log) 5c72cafb682cb5732941ad3b4c35ae59
+Prop-content-sha1: (svn:log) 844692fcd525ed0689e8ee0763a0e4561690b43d
+Prop-content-md5: (svn:author) e132f7d4c73fdb84ba5f84bcfdcf90b1
+Prop-content-sha1: (svn:author) 037aa8992b1094819e6c95659c91826248822e75
+Prop-content-md5: (svn:date) 0d8a658946f806a5b815299da6efdfce
+Prop-content-sha1: (svn:date) 788b71e9b4b5c67b0b2135673e76dfa57079ef68
 Content-length: 127
 
-K 7
-svn:log
-V 29
-* trunk/A/D/H/psi: extra line
 K 10
 svn:author
 V 3
@@ -322,6 +342,10 @@ K 8
 svn:date
 V 27
 2007-12-07T21:12:26.232653Z
+K 7
+svn:log
+V 29
+* trunk/A/D/H/psi: extra line
 PROPS-END
 
 Node-path: trunk/A/D/H/psi

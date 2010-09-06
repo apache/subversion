@@ -2162,29 +2162,8 @@ def two_URL_merge_removes_valid_mergefino_from_target(sbox):
   # of mergeinfo showing that the history of A_COPY is now part of A_COPY_2,
   # i.e. '/A_COPY:2-11'
   #
-  # This test is currently marked as XFail because this is not what happens.
-  # Well, actually, all the above *does* happen, but as discussed in
-  # http://svn.haxx.se/dev/archive-2010-05/0292.shtml, the merge removes some
-  # of the valid mergeinfo on A_COPY_2 that describes the sync merge made in
-  # r9:
-  #
-  #   >svn pl -vR A_COPY_2
-  #   Properties on 'A_COPY_2':
-  #     svn:mergeinfo
-  #       /A:9-10
-  #       /A_COPY:2-11
-  #
-  #   >svn diff --depth empty A_COPY_2
-  #
-  #   Property changes on: A_COPY_2
-  #   ___________________________________________________________________
-  #   Modified: svn:mergeinfo
-  #      Reverse-merged /A:r3-8
-  #      Merged /A_COPY:r2-11
-  #
-  # '/A:r3-8' represents valid, operative changes merged from A to A_COPY_2!
-  # If this merge was committed, subsequent merges would try to reapply the
-  # diff, possibly leading to spurious conflicts.
+  # Before issue #3648 was fixed this test failed because the valid mergeinfo
+  # '/A:r3-8' on A_COPY_2 was removed by the merge.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(A_COPY_2_path, {
     ''         : Item(status=' G'),

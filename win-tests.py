@@ -27,7 +27,7 @@ For a list of options, run this script with the --help option.
 # $HeadURL$
 # $LastChangedRevision$
 
-import os, sys
+import os, sys, subprocess
 import filecmp
 import shutil
 import traceback
@@ -76,6 +76,7 @@ def _usage_exit():
   print("  --httpd-daemon         : Run Apache httpd as daemon")
   print("  --httpd-service        : Run Apache httpd as Windows service (default)")
   print("  --http-library         : dav library to use, neon (default) or serf")
+  print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --list                 : print test doc strings only")
   print("  --enable-sasl          : enable Cyrus SASL authentication for")
   print("                           svnserve")
@@ -115,7 +116,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvct:pu:f:',
                         'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
                         'httpd-server', 'http-library=', 'help',
-                        'fsfs-packing', 'fsfs-sharding=',
+                        'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version='])
 if len(args) > 1:
@@ -126,6 +127,7 @@ base_url, fs_type, verbose, cleanup = None, None, None, None
 repo_loc = 'local repository.'
 objdir = 'Debug'
 log = 'tests.log'
+faillog = 'fails.log'
 run_svnserve = None
 svnserve_args = None
 run_httpd = None
@@ -133,6 +135,7 @@ httpd_port = None
 httpd_service = None
 http_library = 'neon'
 list_tests = None
+test_javahl = None
 enable_sasl = None
 svn_bin = None
 parallel = None
@@ -179,6 +182,8 @@ for opt, val in opts:
     fsfs_sharding = int(val)
   elif opt == '--fsfs-packing':
     fsfs_packing = 1
+  elif opt == '--javahl':
+    test_javahl = 1
   elif opt == '--list':
     list_tests = 1
   elif opt == '--enable-sasl':
@@ -222,13 +227,16 @@ if base_url:
   repo_loc = 'remote repository ' + base_url + '.'
   if base_url[:4] == 'http':
     log = 'dav-tests.log'
+    faillog = 'dav-fails.log'
   elif base_url[:3] == 'svn':
     log = 'svn-tests.log'
+    faillog = 'svn-fails.log'
     run_svnserve = 1
   else:
     # Don't know this scheme, but who're we to judge whether it's
     # correct or not?
     log = 'url-tests.log'
+    faillog = 'url-fails.log'
 
 # Have to move the executables where the tests expect them to be
 copied_execs = []   # Store copied exec files to avoid the final dir scan
@@ -638,24 +646,65 @@ else:
 
 print('Testing %s configuration on %s' % (objdir, repo_loc))
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
-import run_tests
-th = run_tests.TestHarness(abs_srcdir, abs_builddir,
-                           os.path.join(abs_builddir, log),
-                           base_url, fs_type, http_library,
-                           server_minor_version, 1, cleanup,
-                           enable_sasl, parallel, config_file,
-                           fsfs_sharding, fsfs_packing,
-                           list_tests, svn_bin)
-old_cwd = os.getcwd()
-try:
-  os.chdir(abs_builddir)
-  failed = th.run(tests_to_run)
-except:
-  os.chdir(old_cwd)
-  raise
-else:
-  os.chdir(old_cwd)
 
+if not test_javahl:
+  import run_tests
+  th = run_tests.TestHarness(abs_srcdir, abs_builddir,
+                             os.path.join(abs_builddir, log),
+                             os.path.join(abs_builddir, faillog),
+                             base_url, fs_type, http_library,
+                             server_minor_version, 1, cleanup,
+                             enable_sasl, parallel, config_file,
+                             fsfs_sharding, fsfs_packing,
+                             list_tests, svn_bin)
+  old_cwd = os.getcwd()
+  try:
+    os.chdir(abs_builddir)
+    failed = th.run(tests_to_run)
+  except:
+    os.chdir(old_cwd)
+    raise
+  else:
+    os.chdir(old_cwd)
+else:
+  failed = False
+  args = (
+          'java.exe',
+          '-Dtest.rootdir=' + os.path.join(abs_builddir, 'javahl'),
+          '-Dtest.srcdir=' + os.path.join(abs_srcdir,
+                                          'subversion/bindings/javahl'),
+          '-Dtest.rooturl=',
+          '-Dtest.fstype=' + fs_type ,
+          '-Dtest.tests=',
+          
+          '-Djava.library.path=' 
+                    + os.path.join(abs_objdir,
+                                   'subversion/bindings/javahl/native'),
+          '-classpath', 
+          os.path.join(abs_srcdir, 'subversion/bindings/javahl/classes') +';' +
+            gen_obj.junit_path
+         )
+  
+  sys.stderr.flush()        
+  print('Running org.apache.subversion tests:')
+  sys.stdout.flush()
+  
+  r = subprocess.call(args + tuple(['org.apache.subversion.javahl.RunTests']))
+  sys.stdout.flush()
+  sys.stderr.flush()
+  if (r != 0):
+    print('[Test runner reported failure]')
+    failed = True
+  
+  print('Running org.tigris.subversion tests:')
+  sys.stdout.flush()
+  r = subprocess.call(args + tuple(['org.tigris.subversion.javahl.RunTests']))
+  sys.stdout.flush()
+  sys.stderr.flush()
+  if (r != 0):
+    print('[Test runner reported failure]')
+    failed = True
+  
 # Stop service daemon, if any
 if daemon:
   del daemon

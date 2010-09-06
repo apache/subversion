@@ -122,6 +122,33 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that describes a moves of
+   a file or directory from SRC_ABSPATH to DST_ABSPATH, ready for
+   storing in the working copy managing DST_ABSPATH.
+
+   Perform temporary allocations in SCRATCH_POOL and *WORK_ITEM in
+   RESULT_POOL.
+*/
+svn_error_t *
+svn_wc__wq_build_file_move(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
+                           const char *src_abspath,
+                           const char *dst_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/* Set *WORK_ITEM to a new work item that describes a copy from
+   SRC_ABSPATH to DST_ABSPATH, while translating the stream using
+   the information from LOCAL_ABSPATH. */
+svn_error_t *
+svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      const char *src_abspath,
+                                      const char *dst_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
 
 /* Set *WORK_ITEM to a new work item that will synchronize the
    target node's readonly and executable flags with the values defined
@@ -162,10 +189,14 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
    LOCAL_ABSPATH into the TRANSLATED_SIZE and LAST_MOD_TIME of the node via
    the svn_wc__db_global_record_fileinfo() function.
 
+   If SET_TIME is not 0, set LOCAL_ABSPATH's last modified time to this
+   time and after that record the actual file time.
+
    ### it is unclear whether this should survive.  */
 svn_error_t *
 svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
                                  const char *local_abspath,
+                                 apr_time_t set_time,
                                  apr_pool_t *result_pool);
 
 

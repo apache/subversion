@@ -1,4 +1,4 @@
-The following people have commit access to the Subversion sources.
+﻿The following people have commit access to the Subversion sources.
 Note that this is not a full list of Subversion's authors, however --
 for that, you'd need to look over the log messages to see all the
 patch contributors.
@@ -29,7 +29,7 @@ Blanket commit access:
            jaa   Jani Averbach <jaa@iki.fi>
     julianfoad   Julian Foad <julian.foad@wandisco.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
-           ehu   Erik Hülsmann <e.huelsmann@gmx.net>
+           ehu   Erik Hülsmann <erik.huelsmann@wandisco.com>
         breser   Ben Reser <ben@reser.org>
           maxb   Max Bowsher <maxb1@ukf.net>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
@@ -143,6 +143,7 @@ Commit access for specific areas:
            esr   Eric S. Raymond <esr@thyrsus.com>           (svncutter)
      gmcdonald   Gavin McDonald <gavin@16degrees.com.au>     (build/hudson,
                                                               tools/buildbot)
+      artagnon   Ramkumar Ramachandra <artagnon@gmail.com>   (svnrdump)
 
   Translation of message files:
 
@@ -178,6 +179,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff 
                                                               br.)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
+       stefan2   Stefan Fuhrmann <stefanfuhrmann@alice-dsl.de> (performance br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

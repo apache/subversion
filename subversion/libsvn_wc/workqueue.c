@@ -41,10 +41,6 @@
 #include "private/svn_skel.h"
 
 
-#define NOT_IMPLEMENTED() \
-  return svn_error__malfunction(TRUE, __FILE__, __LINE__, "Not implemented.")
-
-
 /* Workqueue operation names.  */
 #define OP_REVERT "revert"
 #define OP_PREPARE_REVERT_FILES "prep-rev-files"
@@ -59,6 +55,8 @@
 #define OP_DELETE "delete"
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
+#define OP_FILE_MOVE "file-move"
+#define OP_FILE_COPY_TRANSLATED "file-translate"
 #define OP_SYNC_FILE_FLAGS "sync-file-flags"
 #define OP_PREJ_INSTALL "prej-install"
 #define OP_WRITE_OLD_PROPS "write-old-props"
@@ -75,6 +73,7 @@ struct work_item_dispatch {
   const char *name;
   svn_error_t *(*func)(svn_wc__db_t *db,
                        const svn_skel_t *work_item,
+                       const char *wri_abspath,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);
@@ -204,6 +203,7 @@ maybe_remove_conflict(const char *parent_abspath,
 static svn_error_t *
 run_revert(svn_wc__db_t *db,
            const svn_skel_t *work_item,
+           const char *wri_abspath,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
            apr_pool_t *scratch_pool)
@@ -352,7 +352,7 @@ run_revert(svn_wc__db_t *db,
     }
   else if (kind == svn_wc__db_kind_symlink)
     {
-      NOT_IMPLEMENTED();
+      SVN__NOT_IMPLEMENTED();
     }
 
   if (kind == svn_wc__db_kind_dir)
@@ -578,6 +578,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 static svn_error_t *
 run_prepare_revert_files(svn_wc__db_t *db,
                          const svn_skel_t *work_item,
+                         const char *wri_abspath,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool)
@@ -664,6 +665,7 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
 static svn_error_t *
 run_killme(svn_wc__db_t *db,
            const svn_skel_t *work_item,
+           const char *wri_abspath,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
            apr_pool_t *scratch_pool)
@@ -789,6 +791,7 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 static svn_error_t *
 run_loggy(svn_wc__db_t *db,
           const svn_skel_t *work_item,
+          const char *wri_abspath,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
           apr_pool_t *scratch_pool)
@@ -841,6 +844,7 @@ svn_wc__wq_build_loggy(svn_skel_t **work_item,
 static svn_error_t *
 run_deletion_postcommit(svn_wc__db_t *db,
                         const svn_skel_t *work_item,
+                        const char *wri_abspath,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *scratch_pool)
@@ -1059,7 +1063,11 @@ install_committed_file(svn_boolean_t *overwrote_working,
      * it has the right executable and read_write attributes set.
      */
 
-    SVN_ERR(svn_wc__get_special(&special, db, file_abspath, scratch_pool));
+    SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
+                                       NULL,
+                                       &special,
+                                       db, file_abspath,
+                                       scratch_pool, scratch_pool));
     if (! special && tmp != tmp_wfile)
       SVN_ERR(svn_io_files_contents_same_p(&same, tmp_wfile,
                                            file_abspath, scratch_pool));
@@ -1419,6 +1427,7 @@ log_do_committed(svn_wc__db_t *db,
 static svn_error_t *
 run_postcommit(svn_wc__db_t *db,
                const svn_skel_t *work_item,
+               const char *wri_abspath,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
@@ -1561,6 +1570,7 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 static svn_error_t *
 run_install_properties(svn_wc__db_t *db,
                        const svn_skel_t *work_item,
+                       const char *wri_abspath,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
@@ -1670,6 +1680,7 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
 static svn_error_t *
 run_delete(svn_wc__db_t *db,
            const svn_skel_t *work_item,
+           const char *wri_abspath,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
            apr_pool_t *scratch_pool)
@@ -1754,6 +1765,7 @@ svn_wc__wq_add_delete(svn_wc__db_t *db,
 static svn_error_t *
 run_file_install(svn_wc__db_t *db,
                  const svn_skel_t *work_item,
+                 const char *wri_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -1793,7 +1805,11 @@ run_file_install(svn_wc__db_t *db,
                                        scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(svn_wc__get_special(&special, db, local_abspath, scratch_pool));
+  /* Fetch all the translation bits.  */
+  SVN_ERR(svn_wc__get_translate_info(&style, &eol,
+                                     &keywords,
+                                     &special, db, local_abspath,
+                                     scratch_pool, scratch_pool));
   if (special)
     {
       /* When this stream is closed, the resulting special file will
@@ -1810,12 +1826,6 @@ run_file_install(svn_wc__db_t *db,
       /* No need to set exec or read-only flags on special files.  */
       return SVN_NO_ERROR;
     }
-
-  /* Fetch all the translation bits.  */
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, local_abspath,
-                                scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL,
-                               scratch_pool, scratch_pool));
 
   if (svn_subst_translation_required(style, eol, keywords,
                                      FALSE /* special */,
@@ -1932,6 +1942,7 @@ svn_wc__wq_build_file_install(svn_skel_t **work_item,
 static svn_error_t *
 run_file_remove(svn_wc__db_t *db,
                  const svn_skel_t *work_item,
+                 const char *wri_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -1963,6 +1974,165 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_FILE_MOVE  */
+
+/* Process the OP_FILE_MOVE work item WORK_ITEM.
+ * See svn_wc__wq_build_file_move() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_move(svn_wc__db_t *db,
+                 const svn_skel_t *work_item,
+                 const char *wri_abspath,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *src_abspath, *dst_abspath;
+  svn_error_t *err;
+
+  src_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  dst_abspath = apr_pstrmemdup(scratch_pool, arg1->next->data,
+                               arg1->next->len);
+
+  /* Use svn_io_file_move() instead of svn_io_file_rename() to allow cross
+     device copies. We should not fail in the workqueue. */
+
+  err = svn_io_file_move(src_abspath, dst_abspath, scratch_pool);
+
+  /* If the source is not found, we assume the wq op is already handled */
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err) 
+              || APR_STATUS_IS_ENODIR(err->apr_err)))
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_file_move(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
+                           const char *src_abspath,
+                           const char *dst_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  /* File must exist */
+  SVN_ERR(svn_io_check_path(src_abspath, &kind, result_pool));
+
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' not found"),
+                             svn_dirent_local_style(src_abspath,
+                                                    scratch_pool));
+
+  /* ### Once we move to a central DB we should try making
+     ### src_abspath and dst_abspath relative from the WCROOT. */
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, dst_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, src_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_MOVE, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_FILE_COPY_TRANSLATED */
+
+/* Process the OP_FILE_COPY_TRANSLATED work item WORK_ITEM.
+ * See run_file_copy_translated() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_copy_translated(svn_wc__db_t *db,
+                         const svn_skel_t *work_item,
+                         const char *wri_abspath,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath, *src_abspath, *dst_abspath;
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
+  svn_boolean_t special;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  src_abspath = apr_pstrmemdup(scratch_pool, arg1->next->data,
+                               arg1->next->len);
+  dst_abspath = apr_pstrmemdup(scratch_pool, arg1->next->next->data,
+                                arg1->next->next->len);
+
+  SVN_ERR(svn_wc__get_translate_info(&style, &eol,
+                                     &keywords,
+                                     &special,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_subst_copy_and_translate4(src_abspath, dst_abspath,
+                                        eol, TRUE /* repair */,
+                                        keywords, TRUE /* expand */,
+                                        special,
+                                        cancel_func, cancel_baton,
+                                        scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      const char *src_abspath,
+                                      const char *dst_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  /* File must exist */
+  SVN_ERR(svn_io_check_path(src_abspath, &kind, result_pool));
+
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' not found"),
+                             svn_dirent_local_style(src_abspath,
+                                                    scratch_pool));
+
+  /* ### Once we move to a central DB we should try making
+     ### src_abspath, dst_abspath and info_abspath relative from
+     ### the WCROOT of info_abspath. */
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, dst_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, src_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_COPY_TRANSLATED, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -1974,6 +2144,7 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
 static svn_error_t *
 run_sync_file_flags(svn_wc__db_t *db,
                     const svn_skel_t *work_item,
+                    const char *wri_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
@@ -2011,6 +2182,7 @@ svn_wc__wq_build_sync_file_flags(svn_skel_t **work_item,
 static svn_error_t *
 run_prej_install(svn_wc__db_t *db,
                  const svn_skel_t *work_item,
+                 const char *wri_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -2079,6 +2251,7 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
 static svn_error_t *
 run_write_old_props(svn_wc__db_t *db,
                     const svn_skel_t *work_item,
+                    const char *wri_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
@@ -2157,14 +2330,39 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
 static svn_error_t *
 run_record_fileinfo(svn_wc__db_t *db,
                     const svn_skel_t *work_item,
+                    const char *wri_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
 {
   const svn_skel_t *arg1 = work_item->children->next;
   const char *local_abspath;
+  apr_time_t set_time = 0;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
+  if (arg1->next)
+    set_time = svn_skel__parse_int(arg1->next, scratch_pool);
+
+  if (set_time != 0)
+    {
+      svn_node_kind_t kind;
+      svn_boolean_t is_special;
+
+      /* Do not set the timestamp on special files. */
+      SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special,
+                                        scratch_pool));
+
+      /* Don't set affected time when local_abspath does not exist or is
+         a special file */
+      if (kind == svn_node_file && !is_special)
+        SVN_ERR(svn_io_set_file_affected_time(set_time, local_abspath,
+                                              scratch_pool));
+
+      /* Note that we can't use the value we get here for recording as the
+         filesystem might have a different timestamp granularity */
+    }
+
 
   return svn_error_return(get_and_record_fileinfo(db, local_abspath,
                                                   TRUE /* ignore_enoent */,
@@ -2175,11 +2373,15 @@ run_record_fileinfo(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
                                  const char *local_abspath,
+                                 apr_time_t set_time,
                                  apr_pool_t *result_pool)
 {
   *work_item = svn_skel__make_empty_list(result_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (set_time)
+   svn_skel__prepend_int(set_time, *work_item, result_pool);
 
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
                         *work_item, result_pool);
@@ -2196,6 +2398,7 @@ svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
 static svn_error_t *
 run_set_text_conflict_markers(svn_wc__db_t *db,
                     const svn_skel_t *work_item,
+                    const char *wri_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool)
@@ -2268,6 +2471,7 @@ svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
 static svn_error_t *
 run_set_property_conflict_marker(svn_wc__db_t *db,
                                  const svn_skel_t *work_item,
+                                 const char *wri_abspath,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
                                  apr_pool_t *scratch_pool)
@@ -2346,6 +2550,7 @@ pristine_get_translated(svn_wc__db_t *db,
 static svn_error_t *
 run_pristine_get_translated(svn_wc__db_t *db,
                             const svn_skel_t *work_item,
+                            const char *wri_abspath,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
@@ -2409,6 +2614,8 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_DELETE, run_delete },
   { OP_FILE_INSTALL, run_file_install },
   { OP_FILE_REMOVE, run_file_remove },
+  { OP_FILE_MOVE, run_file_move },
+  { OP_FILE_COPY_TRANSLATED, run_file_copy_translated },
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_WRITE_OLD_PROPS, run_write_old_props },
@@ -2446,7 +2653,7 @@ dispatch_work_item(svn_wc__db_t *db,
 #ifdef DEBUG_WORK_QUEUE
           SVN_DBG(("dispatch: operation='%s'\n", scan->name));
 #endif
-          SVN_ERR((*scan->func)(db, work_item,
+          SVN_ERR((*scan->func)(db, work_item, wri_abspath,
                                 cancel_func, cancel_baton,
                                 scratch_pool));
           break;

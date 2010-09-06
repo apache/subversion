@@ -1806,14 +1806,14 @@ struct hotcopy_ctx_t {
   size_t src_len; /* len of the source path*/
 };
 
-/** Called by (svn_io_dir_walk).
+/** Called by (svn_io_dir_walk2).
  * Copies the repository structure with exception of @c SVN_REPOS__DB_DIR,
  * @c SVN_REPOS__LOCK_DIR and @c SVN_REPOS__FORMAT.
  * Those directories and files are handled separetly.
  * @a baton is a pointer to (struct hotcopy_ctx_t) specifying
  * destination path to copy to and the length of the source path.
  *
- * @copydoc svn_io_dir_walk()
+ * @copydoc svn_io_dir_walk2()
  */
 static svn_error_t *hotcopy_structure(void *baton,
                                       const char *path,
@@ -1910,11 +1910,11 @@ svn_repos_hotcopy(const char *src_path,
 
   hotcopy_context.dest = dst_path;
   hotcopy_context.src_len = strlen(src_path);
-  SVN_ERR(svn_io_dir_walk(src_path,
-                          0,
-                          hotcopy_structure,
-                          &hotcopy_context,
-                          pool));
+  SVN_ERR(svn_io_dir_walk2(src_path,
+                           0,
+                           hotcopy_structure,
+                           &hotcopy_context,
+                           pool));
 
   /* Prepare dst_repos object so that we may create locks,
      so that we may open repository */

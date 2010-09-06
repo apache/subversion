@@ -38,6 +38,7 @@
 #include "svn_config.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -54,7 +55,6 @@ svn_cl__commit(apr_getopt_t *os,
   const char *base_dir;
   svn_config_t *cfg;
   svn_boolean_t no_unlock = FALSE;
-  svn_commit_info_t *commit_info = NULL;
   int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -66,9 +66,10 @@ svn_cl__commit(apr_getopt_t *os,
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       if (svn_path_is_url(target))
-        return svn_error_create(SVN_ERR_WC_BAD_PATH, NULL,
-                                "Must give local path (not URL) as the "
-                                "target of a commit");
+        return svn_error_return(
+                 svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("'%s' is a URL, but URLs cannot be "
+                                     "commit targets"), target));
     }
 
   /* Add "." if user passed 0 arguments. */
@@ -93,10 +94,6 @@ svn_cl__commit(apr_getopt_t *os,
         base_dir = apr_pstrdup(pool, parent_dir);
     }
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
-
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
 
@@ -116,8 +113,7 @@ svn_cl__commit(apr_getopt_t *os,
                                      ctx->config, pool));
 
   /* Commit. */
-  err = svn_client_commit4(&commit_info,
-                           targets,
+  err = svn_client_commit5(targets,
                            opt_state->depth,
                            no_unlock,
                            opt_state->keep_changelists,
@@ -140,8 +136,6 @@ svn_cl__commit(apr_getopt_t *os,
         }
     }
   SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
-  if (! err && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 
   return SVN_NO_ERROR;
 }

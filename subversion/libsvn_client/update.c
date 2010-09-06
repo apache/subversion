@@ -156,9 +156,6 @@ update_internal(svn_revnum_t *result_rev,
                                  pool));
 
           /* Target excluded, we are done now */
-          SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath,
-                                             pool));
-
           return SVN_NO_ERROR;
         }
 
@@ -282,8 +279,6 @@ update_internal(svn_revnum_t *result_rev,
   if (sleep_here)
     svn_io_sleep_for_timestamps(local_abspath, pool);
 
-  SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool));
-
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
     {
@@ -320,31 +315,30 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             apr_pool_t *pool)
 {
   const char *anchor_abspath;
-  svn_error_t *err1, *err2;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (!innerupdate)
-    {
-      SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath, ctx->wc_ctx,
-                                         local_abspath, pool, pool));
-    }
+    SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath,
+                                       ctx->wc_ctx, local_abspath, TRUE,
+                                       pool, pool));
   else
-    {
-      SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx,
-                                         local_abspath, pool, pool));
-      anchor_abspath = local_abspath;
-    }
+    SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath,
+                                       ctx->wc_ctx, local_abspath, FALSE,
+                                       pool, pool));
 
-  err1 = update_internal(result_rev, local_abspath, anchor_abspath,
+  err = update_internal(result_rev, local_abspath, anchor_abspath,
                          revision, depth, depth_is_sticky,
                          ignore_externals, allow_unver_obstructions,
                          timestamp_sleep, send_copyfrom_args,
                          innerupdate, ctx, pool);
 
-  err2 = svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool);
+  err = svn_error_compose_create(
+            err,
+            svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool));
 
-  return svn_error_compose_create(err1, err2);
+  return svn_error_return(err);
 }
 
 

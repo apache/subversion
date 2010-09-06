@@ -660,6 +660,8 @@ class TestFactory:
     del runargs[url_arg.argnr]
 
     wc = wc_arg.wc
+    if not wc:
+      raise Failure("Unexpected argument ordering to factory's 'svn switch'?")
 
     pychdir = self.chdir(do_chdir, wc)
 

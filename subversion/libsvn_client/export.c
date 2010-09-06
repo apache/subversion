@@ -1088,7 +1088,8 @@ svn_client_export5(svn_revnum_t *result_rev,
               SVN_ERR(svn_client__fetch_externals(eb->externals,
                                                   from, to_abspath,
                                                   repos_root_url, depth, TRUE,
-                                                  &use_sleep, ctx, pool));
+                                                  native_eol, &use_sleep,
+                                                  ctx, pool));
             }
         }
       else if (kind == svn_node_none)

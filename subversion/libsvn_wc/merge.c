@@ -134,10 +134,16 @@ detranslate_wc_file(const char **detranslated_abspath,
   const char *eol;
   apr_hash_t *keywords;
   svn_boolean_t special;
+  svn_wc__db_kind_t kind;
+
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, target_abspath, TRUE, scratch_pool));
 
   /* Decide if the merge target currently is a text or binary file. */
-  SVN_ERR(svn_wc__marked_as_binary(&is_binary, target_abspath, db,
-                                   scratch_pool));
+  if (kind == svn_wc__db_kind_file)
+    SVN_ERR(svn_wc__marked_as_binary(&is_binary, target_abspath, db,
+                                     scratch_pool));
+  else
+    is_binary = FALSE;
 
   /* See if we need to do a straight copy:
      - old and new mime-types are binary, or
@@ -159,18 +165,38 @@ detranslate_wc_file(const char **detranslated_abspath,
     {
       /* Old props indicate texty, new props indicate binary:
          detranslate keywords and old eol-style */
-      SVN_ERR(svn_wc__get_keywords(&keywords, db, target_abspath, NULL,
-                                   scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__get_special(&special, db, target_abspath, scratch_pool));
-      SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, target_abspath,
-                                    scratch_pool, scratch_pool));
+      if (kind == svn_wc__db_kind_file)
+        SVN_ERR(svn_wc__get_translate_info(&style, &eol,
+                                           &keywords,
+                                           &special,
+                                           db, target_abspath,
+                                           scratch_pool, scratch_pool));
+      else
+        {
+          special = FALSE;
+          keywords = NULL;
+          eol = NULL;
+          style = svn_subst_eol_style_none;
+        }
     }
   else
     {
       /* New props indicate texty, regardless of old props */
 
       /* In case the file used to be special, detranslate specially */
-      SVN_ERR(svn_wc__get_special(&special, db, target_abspath, scratch_pool));
+      if (kind == svn_wc__db_kind_file)
+        SVN_ERR(svn_wc__get_translate_info(&style, &eol,
+                                           &keywords,
+                                           &special,
+                                           db, target_abspath,
+                                           scratch_pool, scratch_pool));
+      else
+        {
+          special = FALSE;
+          keywords = NULL;
+          eol = NULL;
+          style = svn_subst_eol_style_none;
+        }
 
       if (special)
         {
@@ -187,8 +213,9 @@ detranslate_wc_file(const char **detranslated_abspath,
               svn_subst_eol_style_from_value(&style, &eol, prop->value->data);
             }
           else if (!is_binary)
-            SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, target_abspath,
-                                          scratch_pool, scratch_pool));
+            {
+              /* Already fetched */
+            }
           else
             {
               eol = NULL;
@@ -197,10 +224,7 @@ detranslate_wc_file(const char **detranslated_abspath,
 
           /* In case there were keywords, detranslate with keywords
              (iff we were texty) */
-          if (!is_binary)
-            SVN_ERR(svn_wc__get_keywords(&keywords, db, target_abspath, NULL,
-                                         scratch_pool, scratch_pool));
-          else
+          if (is_binary)
             keywords = NULL;
         }
     }
@@ -439,12 +463,10 @@ save_merge_result(svn_skel_t **work_item,
                                      ".edited",
                                      svn_io_file_del_none,
                                      scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__loggy_translated_file(work_item,
-                                        db, dir_abspath,
-                                        edited_copy_abspath,
-                                        source,
-                                        versioned_abspath,
-                                        result_pool));
+  SVN_ERR(svn_wc__wq_build_file_copy_translated(work_item,
+                                                db, versioned_abspath,
+                                                source, edited_copy_abspath,
+                                                result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -621,6 +643,9 @@ eval_conflict_func_result(svn_skel_t **work_items,
    The translation to working-copy form will be done according to the
    versioned properties of TARGET_ABSPATH that are current when the work
    queue items are executed.
+
+   If target_abspath is not versioned use detranslated_target_abspath
+   as the target file.
 */
 static svn_error_t *
 preserve_pre_merge_files(svn_skel_t **work_items,
@@ -634,6 +659,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
                          const char *left_label,
                          const char *right_label,
                          const char *target_label,
+                         const char *detranslated_target_abspath,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *result_pool,
@@ -643,6 +669,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   const char *dir_abspath, *target_name;
   const char *temp_dir;
   svn_skel_t *work_item;
+  svn_error_t *err;
 
   *work_items = NULL;
 
@@ -705,26 +732,42 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   /* Create LEFT and RIGHT backup files, in expanded form.
      We use TARGET_ABSPATH's current properties to do the translation. */
   /* Derive the basenames of the 3 backup files. */
-  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        *left_copy, tmp_left,
-                                        target_abspath, result_pool));
+  SVN_ERR(svn_wc__wq_build_file_copy_translated(&work_item,
+                                                db, target_abspath,
+                                                tmp_left, *left_copy,
+                                                result_pool, scratch_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
-  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        *right_copy, tmp_right,
-                                        target_abspath, result_pool));
+  SVN_ERR(svn_wc__wq_build_file_copy_translated(&work_item,
+                                                 db, target_abspath,
+                                                 tmp_right, *right_copy,
+                                                 result_pool, scratch_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   /* Back up TARGET_ABSPATH through detranslation/retranslation:
      the new translation properties may not match the current ones */
-  SVN_ERR(svn_wc__internal_translated_file(
+  err = svn_wc__internal_translated_file(
            &detranslated_target_copy, target_abspath, db, target_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
            cancel_func, cancel_baton,
-           scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        *target_copy, detranslated_target_copy,
-                                        target_abspath, result_pool));
+           scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+
+      /* We are merging to a not versioned file, so we have handle
+         this without translation */
+      detranslated_target_copy = detranslated_target_abspath;
+    }
+  else
+    SVN_ERR(err);
+
+  SVN_ERR(svn_wc__wq_build_file_copy_translated(&work_item,
+                                                db, target_abspath,
+                                                detranslated_target_copy,
+                                                *target_copy,
+                                                result_pool, scratch_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   return SVN_NO_ERROR;
@@ -980,6 +1023,7 @@ merge_text_file(svn_skel_t **work_items,
                     db,
                     left_abspath, right_abspath, target_abspath,
                     left_label, right_label, target_label,
+                    detranslated_target_abspath,
                     cancel_func, cancel_baton,
                     result_pool, scratch_pool));
           *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
@@ -1011,7 +1055,9 @@ merge_text_file(svn_skel_t **work_items,
          target file.  This is so we don't try to follow symlinks,
          but the same treatment is probably also appropriate for
          whatever special file types we may invent in the future. */
-      SVN_ERR(svn_wc__get_special(&special, db, target_abspath, pool));
+      SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
+                                         &special, db, target_abspath,
+                                         pool, pool));
       SVN_ERR(svn_io_files_contents_same_p(&same, result_target,
                                            (special ?
                                               detranslated_target_abspath :
@@ -1193,11 +1239,10 @@ merge_binary_file(svn_skel_t **work_items,
                                          target_label,
                                          svn_io_file_del_none,
                                          pool, pool));
-      SVN_ERR(svn_wc__loggy_move(work_items, db,
-                                 merge_dirpath,
-                                 detranslated_target_abspath,
-                                 mine_copy,
-                                 result_pool));
+      SVN_ERR(svn_wc__wq_build_file_move(work_items, db,
+                                         detranslated_target_abspath,
+                                         mine_copy,
+                                         pool, result_pool));
 
       mine_copy = svn_dirent_is_child(merge_dirpath,
                                       mine_copy, pool);

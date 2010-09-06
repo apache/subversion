@@ -85,7 +85,7 @@ get_old_version(int *version,
   return SVN_NO_ERROR;
 }
 
-
+#ifndef SVN_WC__SINGLE_DB
 /* The filesystem has a directory at LOCAL_RELPATH. Examine the metadata
    to determine if a *file* was supposed to be there.
 
@@ -129,6 +129,7 @@ determine_obstructed_file(svn_boolean_t *obstructed_file,
 
   return svn_sqlite__reset(stmt);
 }
+#endif
 
 
 /* */
@@ -325,6 +326,12 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   (*wcroot)->sdb = sdb;
   (*wcroot)->wc_id = wc_id;
   (*wcroot)->format = format;
+#ifdef SVN_WC__SINGLE_DB
+  /* 8 concurrent locks is probably more than a typical wc_ng based svn client
+     uses. */
+  (*wcroot)->owned_locks = apr_array_make(result_pool, 8,
+                                          sizeof(svn_wc__db_wclock_t));
+#endif
 
   /* SDB will be NULL for pre-NG working copies. We only need to run a
      cleanup when the SDB is present.  */
@@ -689,6 +696,7 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
             }
         }
 
+#ifndef SVN_WC__SINGLE_DB
       if (parent_pdh)
         {
           const char *lookfor_relpath = svn_dirent_basename(local_abspath,
@@ -710,6 +718,7 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
               return SVN_NO_ERROR;
             }
         }
+#endif
     }
 
   /* The PDH is complete. Stash it into DB.  */
@@ -769,6 +778,35 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
     }
   while (child_pdh != found_pdh
          && strcmp(child_pdh->local_abspath, local_abspath) != 0);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
+                                  svn_wc__db_t *db,
+                                  svn_wc__db_pdh_t *child_pdh,
+                                  svn_sqlite__mode_t smode,
+                                  apr_pool_t *scratch_pool)
+{
+  const char *parent_abspath;
+  const char *local_relpath;
+
+  if ((*parent_pdh = child_pdh->parent) != NULL
+      && (*parent_pdh)->wcroot != NULL)
+    return SVN_NO_ERROR;
+
+  /* Make sure we don't see the root as its own parent */
+  SVN_ERR_ASSERT(!svn_dirent_is_root(child_pdh->local_abspath,
+                                     strlen(child_pdh->local_abspath)));
+
+  parent_abspath = svn_dirent_dirname(child_pdh->local_abspath, scratch_pool);
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(parent_pdh, &local_relpath, db,
+                              parent_abspath, smode,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(*parent_pdh);
+
+  child_pdh->parent = *parent_pdh;
 
   return SVN_NO_ERROR;
 }

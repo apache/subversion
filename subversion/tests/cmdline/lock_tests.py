@@ -1547,6 +1547,8 @@ def replace_and_propset_locked_path(sbox):
                                      'add', G_path)
   svntest.main.file_append(rho_path, "This is the new file 'rho'.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', rho_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'bar', rho_path)
 
   # And commit G.

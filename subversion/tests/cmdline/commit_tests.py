@@ -1497,8 +1497,10 @@ def commit_multiple_wc_multiple_repos(sbox):
 
   # Commit should fail, since WCs come from different repositories.
   # The exact error message depends on whether or not the tests are
-  # run below a 1.7 working copy
-  error_re = ".*(is not a|Are all targets part of the same) working copy.*"
+  # run below an existing working copy
+  error_re = ( ".*(is not a working copy" +
+                 "|Are all targets part of the same working copy" +
+                 "|was not found).*" )
   svntest.actions.run_and_verify_svn("Expected output on stderr doesn't match",
                                      [], error_re,
                                      'commit', '-m', 'log',
@@ -2659,15 +2661,16 @@ def start_commit_detect_capabilities(sbox):
 def commit_url(sbox):
   "'svn commit SOME_URL' should error"
   sbox.build()
-  wc_dir = sbox.wc_dir
-  repos_url = sbox.repo_url
+  url = sbox.repo_url
 
   # Commit directly to a URL
+  expected_error = ("svn: '" + url + 
+                    "' is a URL, but URLs cannot be commit targets")
   svntest.actions.run_and_verify_commit(None,
                                         None,
                                         None,
-                                        "Must give local path",
-                                        repos_url)
+                                        expected_error,
+                                        url)
 
 # Test for issue #3198
 def commit_added_missing(sbox):

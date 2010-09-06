@@ -168,6 +168,8 @@ SVN_ZLIB_INCLUDES = @SVN_ZLIB_INCLUDES@
 
 MKDIR = @MKDIR@
 
+DOXYGEN = @DOXYGEN@
+
 # The EXTRA_ parameters can be used to pass extra flags at 'make' time.
 CFLAGS = @CFLAGS@ $(EXTRA_CFLAGS)
 CXXFLAGS = @CXXFLAGS@ $(EXTRA_CXXFLAGS)
@@ -534,7 +536,7 @@ check-clean:
 	       subversion/tests/libsvn_wc/fake-wc              \
 	       subversion/tests/libsvn_client/test-patch*      \
 	       subversion/tests/svnserveautocheck.pid          \
-	       tests.log
+	       tests.log fails.log
 
 mkdir-init:
 	@list='$(BUILD_DIRS) $(SCHEMA_DIR) doc';         \
@@ -599,7 +601,7 @@ doc: doc-api doc-javahl
 doc-api: mkdir-init
 	( cd $(top_srcdir) && \
 	  sed "s,\(OUTPUT_DIRECTORY *= *\),\1$(abs_builddir)/," \
-	  doc/doxygen.conf | doxygen - )
+	  doc/doxygen.conf | $(DOXYGEN) - )
 
 # Generate API documentation for the JavaHL package.
 doc-javahl:

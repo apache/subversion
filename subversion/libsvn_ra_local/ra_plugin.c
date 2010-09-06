@@ -341,14 +341,16 @@ deltify_etc(const svn_commit_info_t *commit_info,
             void *baton, apr_pool_t *pool)
 {
   struct deltify_etc_baton *db = baton;
-  svn_error_t *err1, *err2;
+  svn_error_t *err1 = SVN_NO_ERROR;
+  svn_error_t *err2;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
   /* Invoke the original callback first, in case someone's waiting to
      know the revision number so they can go off and annotate an
      issue or something. */
-  err1 = (*db->callback)(commit_info, db->callback_baton, pool);
+  if (*db->callback)
+    err1 = (*db->callback)(commit_info, db->callback_baton, pool);
 
   /* Maybe unlock the paths. */
   if (db->lock_tokens)

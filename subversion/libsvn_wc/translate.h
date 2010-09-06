@@ -36,8 +36,9 @@ extern "C" {
 
 /* Newline and keyword translation properties */
 
-/* Query the SVN_PROP_EOL_STYLE property on file LOCAL_ABSPATH in DB.  If
-   STYLE is non-null, set *STYLE to LOCAL_ABSPATH's eol style.  Set *EOL to
+/* If EOL is not-NULL query the SVN_PROP_EOL_STYLE property on file
+   LOCAL_ABSPATH in DB.  If STYLE is non-null, set *STYLE to LOCAL_ABSPATH's
+   eol style.  Set *EOL to
 
       - NULL for svn_subst_eol_style_none, or
 
@@ -50,15 +51,32 @@ extern "C" {
    If STYLE is null on entry, ignore it.  If *EOL is non-null on exit,
    it is a static string not allocated in POOL.
 
+   If KEYWORDS is not NULL Expand keywords for the file at LOCAL_ABSPATH
+   in DB, by parsing a whitespace-delimited list of keywords.  If any keywords
+   are found in the list, allocate *KEYWORDS from RESULT_POOL and populate it
+   with mappings from (const char *) keywords to their (svn_string_t *)
+   values (also allocated in RESULT_POOL).
+
+   If a keyword is in the list, but no corresponding value is
+   available, do not create a hash entry for it.  If no keywords are
+   found in the list, or if there is no list, set *KEYWORDS to NULL.
+
+   If SPECIAL is not NULL determine if the svn:special flag is set on LOCAL_ABSPATH
+   in DB.  If so, set SPECIAL to TRUE, if not, set it to FALSE
+
    Use SCRATCH_POOL for temporary allocation, RESULT_POOL for allocating
    *STYLE and *EOL.
 */
-svn_error_t *svn_wc__get_eol_style(svn_subst_eol_style_t *style,
-                                   const char **eol,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
+svn_error_t *
+svn_wc__get_translate_info(svn_subst_eol_style_t *style,
+                           const char **eol,
+                           apr_hash_t **keywords,
+                           svn_boolean_t *special,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 
 /* Reverse parser.  Given a real EOL string ("\n", "\r", or "\r\n"),
    return an encoded *VALUE ("LF", "CR", "CRLF") that one might see in
@@ -67,37 +85,26 @@ void svn_wc__eol_value_from_string(const char **value,
                                    const char *eol);
 
 /* Expand keywords for the file at LOCAL_ABSPATH in DB, by parsing a
-   whitespace-delimited list of keywords.  If any keywords are found
-   in the list, allocate *KEYWORDS from RESULT_POOL and populate it with
-   mappings from (const char *) keywords to their (svn_string_t *)
+   whitespace-delimited list of keywords KEYWORD_LIST.  If any keywords
+   are found in the list, allocate *KEYWORDS from RESULT_POOL and populate
+   it with mappings from (const char *) keywords to their (svn_string_t *)
    values (also allocated in RESULT_POOL).
 
    If a keyword is in the list, but no corresponding value is
    available, do not create a hash entry for it.  If no keywords are
    found in the list, or if there is no list, set *KEYWORDS to NULL.
 
-   If FORCE_LIST is non-null, use it as the list; else use the
-   SVN_PROP_KEYWORDS property for PATH.  In either case, use LOCAL_ABSPATH
-   to expand keyword values.
+   Use LOCAL_ABSPATH to expand keyword values.
 
    Use SCRATCH_POOL for any temporary allocations.
 */
-svn_error_t *svn_wc__get_keywords(apr_hash_t **keywords,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  const char *force_list,
-
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-
-/* Determine if the svn:special flag is set on LOCAL_ABSPATH in DB.  If so,
-   set SPECIAL to TRUE, if not, set it to FALSE.  Perform any temporary
-   allocations in SCRATCH_POOL. */
-svn_error_t *svn_wc__get_special(svn_boolean_t *special,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool);
+svn_error_t *
+svn_wc__expand_keywords(apr_hash_t **keywords,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const char *keyword_list,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /* If the SVN_PROP_EXECUTABLE property is present at all, then set
    LOCAL_ABSPATH in DB executable.  If DID_SET is non-null, then set

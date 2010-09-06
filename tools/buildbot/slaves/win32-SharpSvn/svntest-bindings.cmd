@@ -23,6 +23,12 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
+svnversion . /1.6.x | find "S" > nul:
+IF ERRORLEVEL 1 (
+  ECHO --- Building 1.6.x: Skipping bindings ---
+  EXIT /B 0
+)
+
 IF EXIST "%TESTDIR%\swig" rmdir /s /q "%TESTDIR%\swig"
 mkdir "%TESTDIR%\swig\py-release\libsvn"
 mkdir "%TESTDIR%\swig\py-release\svn"
@@ -35,5 +41,13 @@ xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\
 PATH %PATH%;%TESTDIR%\bin
 SET PYTHONPATH=%TESTDIR%\swig\py-release
 
+SET result=0
+
 python subversion\bindings\swig\python\tests\run_all.py
-IF ERRORLEVEL 1 EXIT /B 1
+IF ERRORLEVEL 1 SET result=1
+
+echo win-tests.py -r -f fsfs --javahl "%TESTDIR%\tests"
+win-tests.py -r -f fsfs --javahl "%TESTDIR%\tests"
+IF ERRORLEVEL 1 SET result=1
+
+exit /b %RESULT%

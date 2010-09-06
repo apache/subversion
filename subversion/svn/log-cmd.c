@@ -637,7 +637,7 @@ svn_cl__log(apr_getopt_t *os,
         }
     }
 
-  /* Strip peg revision if targets contains an URI. */
+  /* Strip peg revision. */
   SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, target, pool));
   APR_ARRAY_IDX(targets, 0, const char *) = true_path;
 
@@ -662,10 +662,6 @@ svn_cl__log(apr_getopt_t *os,
   lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.pool = pool;
-
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
 
   if (opt_state->xml)
     {

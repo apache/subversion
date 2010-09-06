@@ -241,7 +241,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
   dir_abspath = svn_dirent_join(anchor_abspath, dir_path, scratch_pool);
   SVN_ERR(svn_wc__db_base_get_children(&base_children, db, dir_abspath,
                                        scratch_pool, iterpool));
-  SVN_ERR(svn_io_get_dir_filenames(&dirents, dir_abspath, scratch_pool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
+                              scratch_pool, scratch_pool));
 
   /*** Do the real reporting and recursing. ***/
 
@@ -1100,21 +1101,20 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
   /* If the caller wants a copy of the working file translated to
    * repository-normal form, make the copy by tee-ing the stream and set
-   * *TEMPFILE to the path to it. */
+   * *TEMPFILE to the path to it.  This is only needed for the 1.6 API,
+   * 1.7 doesn't set TEMPFILE.  Even when using the 1.6 API this file
+   * is not used by the functions that would have used it when using
+   * the 1.6 code.  It's possible that 3rd party users (if there are any)
+   * might expect this file to be a text-base. */
   if (tempfile)
     {
       svn_stream_t *tempstream;
 
-      SVN_ERR(svn_wc__text_base_deterministic_tmp_path(tempfile,
-                                                       db, local_abspath,
-                                                       result_pool));
-
-      /* Make an untranslated copy of the working file in the
-         administrative tmp area because a) we need to detranslate eol
-         and keywords anyway, and b) after the commit, we're going to
-         copy the tmp file to become the new text base anyway. */
-      SVN_ERR(svn_stream_open_writable(&tempstream, *tempfile,
-                                       scratch_pool, scratch_pool));
+      /* It can't be the same location as in 1.6 because the admin directory
+         no longer exists. */
+      SVN_ERR(svn_stream_open_unique(&tempstream, tempfile,
+                                     NULL, svn_io_file_del_none,
+                                     result_pool, scratch_pool));
 
       /* Wrap the translated stream with a new stream that writes the
          translated contents into the new text base file as we read from it.
@@ -1316,8 +1316,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas3(const char **tempfile,
-                             const svn_checksum_t **new_text_base_md5_checksum,
+svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
                              const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
@@ -1327,7 +1326,7 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  return svn_wc__internal_transmit_text_deltas(tempfile,
+  return svn_wc__internal_transmit_text_deltas(NULL,
                                                new_text_base_md5_checksum,
                                                new_text_base_sha1_checksum,
                                                wc_ctx->db, local_abspath,

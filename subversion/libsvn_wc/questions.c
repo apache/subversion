@@ -114,13 +114,11 @@ compare_and_verify(svn_boolean_t *modified_p,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
 
-  SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, db,
-                                versioned_file_abspath, scratch_pool,
-                                scratch_pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_file_abspath, NULL,
-                               scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_special(&special, db, versioned_file_abspath,
-                              scratch_pool));
+  SVN_ERR(svn_wc__get_translate_info(&eol_style, &eol_str,
+                                     &keywords,
+                                     &special,
+                                     db, versioned_file_abspath,
+                                     scratch_pool, scratch_pool));
 
   need_translation = svn_subst_translation_required(eol_style, eol_str,
                                                     keywords, special, TRUE);
