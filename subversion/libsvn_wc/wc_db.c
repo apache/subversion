@@ -9976,9 +9976,9 @@ struct set_new_dir_to_incomplete_baton
 };
 
 static svn_error_t *
-set_new_dir_to_incomplete_baton_txn(void *baton,
-                                    svn_sqlite__db_t *sdb,
-                                    apr_pool_t *scratch_pool)
+set_new_dir_to_incomplete_txn(void *baton,
+                              svn_sqlite__db_t *sdb,
+                              apr_pool_t *scratch_pool)
 {
   struct set_new_dir_to_incomplete_baton *dtb = baton;
   svn_sqlite__stmt_t *stmt;
@@ -10088,7 +10088,7 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
   SVN_ERR(flush_entries(db, baton.pdh, local_abspath, scratch_pool));
 
   SVN_ERR(svn_sqlite__with_transaction(baton.pdh->wcroot->sdb,
-                                       set_new_dir_to_incomplete_baton_txn,
+                                       set_new_dir_to_incomplete_txn,
                                        &baton, scratch_pool));
 
   return SVN_NO_ERROR;
