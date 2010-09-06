@@ -274,6 +274,11 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
             SVN_ERR(svn_sqlite__bind_blob(stmt, count, blob, blob_size));
             break;
 
+          case 'r':
+            SVN_ERR(svn_sqlite__bind_revnum(stmt, count,
+                                            va_arg(ap, svn_revnum_t)));
+            break;
+
           case 't':
             map = va_arg(ap, const svn_token_map_t *);
             SVN_ERR(svn_sqlite__bind_token(stmt, count, map, va_arg(ap, int)));
@@ -349,6 +354,20 @@ svn_sqlite__bind_token(svn_sqlite__stmt_t *stmt,
 
   SQLITE_ERR(sqlite3_bind_text(stmt->s3stmt, slot, word, -1, SQLITE_STATIC),
              stmt->db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__bind_revnum(svn_sqlite__stmt_t *stmt,
+                        int slot,
+                        svn_revnum_t value)
+{
+  if (SVN_IS_VALID_REVNUM(value))
+    SQLITE_ERR(sqlite3_bind_int64(stmt->s3stmt, slot,
+                                  (sqlite_int64)value), stmt->db);
+  else
+    SQLITE_ERR(sqlite3_bind_null(stmt->s3stmt, slot), stmt->db);
+
   return SVN_NO_ERROR;
 }
 
