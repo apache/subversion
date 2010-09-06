@@ -126,7 +126,7 @@ typedef struct svn_wc__db_t svn_wc__db_t;
 
 
 /* Enumerated constants for how to open a WC datastore.  */
-typedef enum {
+typedef enum svn_wc__db_openmode_t {
   svn_wc__db_openmode_default,    /* Open in the default mode (r/w now). */
   svn_wc__db_openmode_readonly,   /* Changes will definitely NOT be made. */
   svn_wc__db_openmode_readwrite   /* Changes will definitely be made. */
@@ -148,7 +148,7 @@ typedef enum {
    ###   cannot simply be added. it would surprise too much code.
    ###   (we could probably create svn_node_kind2_t though)
 */
-typedef enum {
+typedef enum svn_wc__db_kind_t {
     /* The node is a directory. */
     svn_wc__db_kind_dir,
 
@@ -162,22 +162,11 @@ typedef enum {
        deletion, or incomplete status. */
     svn_wc__db_kind_unknown,
 
-#ifndef SVN_WC__SINGLE_DB
-    /* This directory node is a placeholder; the actual information is
-       held within the subdirectory.
-
-       Note: users of this API shouldn't see this kind. It will be
-       handled internally to wc_db.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_kind_subdir
-#endif
-
 } svn_wc__db_kind_t;
 
 
 /* Enumerated values describing the state of a node. */
-typedef enum {
+typedef enum svn_wc__db_status_t {
     /* The node is present and has no known modifications applied to it. */
     svn_wc__db_status_normal,
 
@@ -203,32 +192,6 @@ typedef enum {
     /* This node has been deleted. No text or property modifications
        will be present. */
     svn_wc__db_status_deleted,
-
-    /* The information for this directory node is obstructed by something
-       in the local filesystem. Full details are not available.
-
-       This is only returned by an unshadowed BASE node. If a WORKING node
-       is present, then obstructed_delete or obstructed_add is returned as
-       appropriate.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_obstructed,
-
-    /* The information for this directory node is obstructed by something
-       in the local filesystem. Full details are not available.
-
-       The directory has been marked for deletion.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_obstructed_delete,
-
-    /* The information for this directory node is obstructed by something
-       in the local filesystem. Full details are not available.
-
-       The directory has been marked for addition.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_obstructed_add,
 
     /* This node was named by the server, but no information was provided. */
     svn_wc__db_status_absent,
@@ -261,7 +224,7 @@ typedef enum {
 
 /* Lock information.  We write/read it all as one, so let's use a struct
    for convenience.  */
-typedef struct {
+typedef struct svn_wc__db_lock_t {
   /* The lock token */
   const char *token;
 
