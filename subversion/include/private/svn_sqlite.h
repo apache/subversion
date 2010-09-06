@@ -148,15 +148,16 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 
 /* Bind values to SQL parameters in STMT, according to FMT.  FMT may contain:
 
-   Spec  Argument type       Item type
-   ----  -----------------   ---------
-   i     apr_int64_t         Number
-   s     const char *        String
-   b     const void *        Blob data
-         apr_size_t          Blob length
-   r     svn_revnum_t        Revision number
-   t     const svn_token_t * Token mapping table
-         int value           Token value
+   Spec  Argument type             Item type
+   ----  -----------------         ---------
+   n     <none, absent>            Column assignment skip
+   i     apr_int64_t               Number
+   s     const char *              String
+   b     const void *              Blob data
+         apr_size_t                Blob length
+   r     svn_revnum_t              Revision number
+   t     const svn_token_t *       Token mapping table
+         int value                 Token value
 
   Each character in FMT maps to one SQL parameter, and one or two function
   parameters, in the order they appear.
@@ -200,7 +201,7 @@ svn_sqlite__bind_revnum(svn_sqlite__stmt_t *stmt, int slot,
                         svn_revnum_t value);
 
 /* Bind a set of properties to the given slot. If PROPS is NULL, then no
-   binding will occur. PROPS will be stored as a serialized skel. */
+/   binding will occur. PROPS will be stored as a serialized skel. */
 svn_error_t *
 svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
                             int slot,

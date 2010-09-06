@@ -284,6 +284,10 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
             SVN_ERR(svn_sqlite__bind_token(stmt, count, map, va_arg(ap, int)));
             break;
 
+          case 'n':
+            /* Skip this column: no binding */
+            break;
+
           default:
             SVN_ERR_MALFUNCTION();
         }
