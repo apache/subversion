@@ -79,7 +79,7 @@ values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
 
 -- STMT_INSERT_NODE
 insert or replace into nodes (
-  wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_relpath,
+  wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
   revision, presence, depth, kind, changed_revision, changed_date,
   changed_author, checksum, properties, translated_size, last_mod_time,
   dav_cache, symlink_target )
