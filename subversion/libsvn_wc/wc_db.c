@@ -623,7 +623,7 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   const insert_base_baton_t *pibb = baton;
   svn_sqlite__stmt_t *stmt;
-#ifdef SVN_WC__NODE_DATA
+#ifdef SVN_WC__NODES
   svn_sqlite__stmt_t *stmt_node;
 #endif
   /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
@@ -635,6 +635,7 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* ### we can't handle this right now  */
   SVN_ERR_ASSERT(pibb->conflict == NULL);
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisstti",
                             pibb->wc_id, pibb->local_relpath,
@@ -677,43 +678,31 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                         scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
+#endif
 
-#ifdef SVN_WC__NODE_DATA
-  SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE_DATA));
-  SVN_ERR(svn_sqlite__bindf(stmt_node, "isistt",
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt_node, "isisnnn" /* No repos rev, id, path */
+                            "tstrssnnnnns",
                             pibb->wc_id, pibb->local_relpath,
                             (apr_int64_t)0, /* op_depth is 0 for base */
                             parent_relpath,
                             presence_map, pibb->status,
-                            kind_map, pibb->kind));
+                            (pibb->kind == svn_wc__db_kind_dir) ?
+                                svn_depth_to_word(pibb->depth) : NULL,
+                            kind_map, pibb->kind,
+                            pibb->changed_rev,
+                            pibb->changed_date,
+                            pibb->changed_author,
+                            (pibb->kind == svn_wc__db_kind_symlink) ?
+                                pibb->target : NULL));
 
-  if (SVN_IS_VALID_REVNUM(pibb->changed_rev))
-    SVN_ERR(svn_sqlite__bind_int64(stmt_node, 7, pibb->changed_rev));
-  if (pibb->changed_date)
-    SVN_ERR(svn_sqlite__bind_int64(stmt_node, 8, pibb->changed_date));
-  if (pibb->changed_author)
-    SVN_ERR(svn_sqlite__bind_text(stmt_node, 9, pibb->changed_author));
 
-  if (pibb->kind == svn_wc__db_kind_dir)
-    {
-      SVN_ERR(svn_sqlite__bind_text(stmt_node, 10,
-                                    svn_depth_to_word(pibb->depth)));
-    }
-  else if (pibb->kind == svn_wc__db_kind_file)
-    {
-      SVN_ERR(svn_sqlite__bind_checksum(stmt_node, 11, pibb->checksum,
-                                        scratch_pool));
-    }
-  else if (pibb->kind == svn_wc__db_kind_symlink)
-    {
-      /* Note: incomplete nodes may have a NULL target.  */
-      if (pibb->target)
-        SVN_ERR(svn_sqlite__bind_text(stmt_node, 12, pibb->target));
-    }
+  if (pibb->kind == svn_wc__db_kind_file)
+    SVN_ERR(svn_sqlite__bind_checksum(stmt_node, 14, pibb->checksum,
+                                      scratch_pool));
 
-  /* Don't bind original_repos_id, original_repos_path and original_revision */
-
-  SVN_ERR(svn_sqlite__bind_properties(stmt_node, 16, pibb->props,
+  SVN_ERR(svn_sqlite__bind_properties(stmt_node, 15, pibb->props,
                                       scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
@@ -9604,12 +9593,12 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
 
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
-#ifdef SVN_WC__NODE_DATA
+#ifdef SVN_WC__NODES
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                        STMT_INSERT_NODE_DATA));
+                                        STMT_INSERT_NODE));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "isistt",
+      SVN_ERR(svn_sqlite__bindf(stmt, "isisnnntnt",
                                 pdh->wcroot->wc_id,
                                 local_relpath,
                                 (apr_int64_t)0, /* op_depth == BASE */
