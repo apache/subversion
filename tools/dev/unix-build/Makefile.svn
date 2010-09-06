@@ -38,6 +38,7 @@ APR_UTIL_VER	= 1.3.9
 HTTPD_VER	= 2.2.15
 NEON_VER	= 0.29.3
 SERF_VER	= 0.7.x
+CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3.6.23.1
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
@@ -46,6 +47,7 @@ GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
 #SERF_DIST	= serf-$(SERF_VER).tar.gz
 SQLITE_DIST	= sqlite-$(SQLITE_VER).tar.gz
+CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
@@ -53,7 +55,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SQLITE_DIST) \
 		$(DISTDIR)/$(HTTPD_DIST) \
 		$(DISTDIR)/$(APR_ICONV_DIST) \
-		$(DISTDIR)/$(GNU_ICONV_DIST)
+		$(DISTDIR)/$(GNU_ICONV_DIST) \
+		$(DISTDIR)/$(CYRUS_SASL_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -68,6 +71,7 @@ NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
 #SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
 SERF_URL	= http://serf.googlecode.com/svn/branches/$(SERF_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
+CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
@@ -78,6 +82,7 @@ HTTPD_SRCDIR	= $(SRCDIR)/httpd-$(HTTPD_VER)
 NEON_SRCDIR	= $(SRCDIR)/neon-$(NEON_VER)
 SERF_SRCDIR	= $(SRCDIR)/serf-$(SERF_VER)
 SQLITE_SRCDIR	= $(SRCDIR)/sqlite-$(SQLITE_VER)
+CYRUS_SASL_SRCDIR	= $(SRCDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -89,6 +94,7 @@ HTTPD_OBJDIR	= $(OBJDIR)/httpd-$(HTTPD_VER)
 NEON_OBJDIR	= $(OBJDIR)/neon-$(NEON_VER)
 SERF_OBJDIR	= $(OBJDIR)/serf-$(SERF_VER)
 SQLITE_OBJDIR	= $(OBJDIR)/sqlite-$(SQLITE_VER)
+CYRUS_SASL_OBJDIR	= $(OBJDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -103,16 +109,17 @@ svn_builddir	?=$(SVN_WC)
 .PHONY: all reset clean nuke
 
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
-	httpd-install neon-install serf-install sqlite-install svn-install \
-	svn-bindings-install
+	httpd-install neon-install serf-install sqlite-install \
+	cyrus-sasl-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
-	httpd-reset neon-reset serf-reset sqlite-reset svn-reset
+	httpd-reset neon-reset serf-reset sqlite-reset cyrus-sasl-reset \
+	svn-reset
 
 # Use to save disc space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
-	neon-clean serf-clean svn-clean
+	neon-clean serf-clean cyrus-sasl-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -656,6 +663,56 @@ $(SQLITE_OBJDIR)/.installed: $(SQLITE_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# cyrus-sasl
+#######################################################################
+
+cyrus-sasl-retrieve:	$(CYRUS_SASL_OBJDIR)/.retrieved
+cyrus-sasl-configure:	$(CYRUS_SASL_OBJDIR)/.configured
+cyrus-sasl-compile:	$(CYRUS_SASL_OBJDIR)/.compiled
+cyrus-sasl-install:	$(CYRUS_SASL_OBJDIR)/.installed
+cyrus-sasl-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(CYRUS_SASL_OBJDIR)/$(f);)
+
+cyrus-sasl-clean:
+	-(cd $(CYRUS_SASL_OBJDIR) && make clean)
+
+# fetch distfile for cyrus-sasl
+$(DISTDIR)/$(CYRUS_SASL_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(CYRUS_SASL_URL)
+
+# retrieve cyrus-sasl
+$(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST)
+	[ -d $(CYRUS_SASL_OBJDIR) ] || mkdir -p $(CYRUS_SASL_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(CYRUS_SASL_DIST)
+	touch $@
+
+# configure cyrus-sasl
+$(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved
+	cd $(CYRUS_SASL_OBJDIR) \
+		&& env CFLAGS="-g" $(CYRUS_SASL_SRCDIR)/configure \
+		--with-dbpath=$(PREFIX)/cyrus-sasl/etc/sasldb2 \
+		--with-plugindir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
+		--with-configdir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
+		--with-bdb-libdir=$(PREFIX)/bdb/lib \
+		--with-bdb-incdir=$(PREFIX)/bdb/include \
+		--with-dblib=berkeley \
+		--with-sqlite=$(PREFIX)/sqlite \
+		--prefix=$(PREFIX)/cyrus-sasl
+	touch $@
+
+# compile cyrus-sasl
+$(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configured
+	(cd $(CYRUS_SASL_OBJDIR) && make)
+	touch $@
+
+# install cyrus-sasl
+$(CYRUS_SASL_OBJDIR)/.installed: $(CYRUS_SASL_OBJDIR)/.compiled
+	(cd $(CYRUS_SASL_OBJDIR) && make install)
+	touch $@
+
+
+#######################################################################
 # svn
 #######################################################################
 
@@ -746,7 +803,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 			--with-serf="$(PREFIX)/serf" \
 			--with-sqlite="$(PREFIX)/sqlite" \
 			--with-berkeley-db="$(BDB_FLAG)" \
-			--with-sasl="no" \
+			--with-sasl="$(PREFIX)/cyrus-sasl" \
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
 			--disable-mod-activation \
 			$(JAVAHL_FLAG)
