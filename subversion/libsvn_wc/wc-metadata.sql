@@ -802,7 +802,6 @@ CREATE TABLE NODES (
      this will be "" if the parent is the wcroot.  Since a wcroot will
      never have a WORKING node the parent_relpath will never be null,
      except when op_depth == 0 and the node is a wcroot. */
-  /* ### would be nice to make this column NOT NULL.  */
   parent_relpath  TEXT,
 
 
