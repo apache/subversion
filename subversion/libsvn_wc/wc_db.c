@@ -4930,7 +4930,10 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
   if (working_status == svn_wc__db_status_deleted
-      || working_status == svn_wc__db_status_obstructed_delete)
+#ifndef SVN_WC__SINGLE_DB
+      || working_status == svn_wc__db_status_obstructed_delete
+#endif
+      )
     {
       /* The node is already deleted.  */
       /* ### return an error? callers should know better.  */
@@ -4944,7 +4947,10 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
 
   if (working_status == svn_wc__db_status_normal
       || working_status == svn_wc__db_status_not_present
-      || working_status == svn_wc__db_status_obstructed)
+#ifndef SVN_WC__SINGLE_DB
+      || working_status == svn_wc__db_status_obstructed
+#endif
+      )
     {
       /* No structural changes (ie. no WORKING node). Mark the BASE node
          as deleted.  */
@@ -4954,6 +4960,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       new_working_none = FALSE;
       new_working_status = svn_wc__db_status_base_deleted;
     }
+#ifndef SVN_WC__SINGLE_DB
   else if (working_status == svn_wc__db_status_obstructed_add)
     {
       /* There is a parent stub for some kind of addition.
@@ -4977,6 +4984,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
                                svn_dirent_local_style(local_abspath,
                                                       scratch_pool));
     }
+#endif
   /* ### remaining states: added, absent, excluded, incomplete
      ### the last three have debatable schedule-delete semantics,
      ### and this code may need to change further, but I'm not
@@ -4986,7 +4994,9 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
     {
       /* No structural changes  */
       if (base_status == svn_wc__db_status_normal
+#ifndef SVN_WC__SINGLE_DB
           || base_status == svn_wc__db_status_obstructed
+#endif
           || base_status == svn_wc__db_status_incomplete
           || base_status == svn_wc__db_status_excluded)
         {
@@ -5796,7 +5806,10 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
         }
 
       if (status == svn_wc__db_status_added
-          || status == svn_wc__db_status_obstructed_add)
+#ifndef SVN_WC__SINGLE_DB
+          || status == svn_wc__db_status_obstructed_add
+#endif
+          )
         {
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
                                            &rb.repos_relpath,
