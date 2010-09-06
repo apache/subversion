@@ -847,9 +847,8 @@ insert_incomplete_working_children(svn_sqlite__db_t *sdb,
                                 wc_id,
                                 svn_relpath_join(local_relpath, name,
                                                  scratch_pool),
-#ifndef SINGLE_DB
-                                (apr_int64_t) 2, /* non-THIS_DIR working */
-#endif
+                                (apr_int64_t) 2, /* ### op_depth
+                                                    non-THIS_DIR working */
                                 local_relpath));
       SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
 #endif
