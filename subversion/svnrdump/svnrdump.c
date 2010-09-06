@@ -58,8 +58,7 @@ static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
       N_("usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
          "Dump revisions LOWER to UPPER of repository at remote URL "
          "to stdout in a 'dumpfile' portable format.\n"
-         "If omitted, LOWER defaults to zero and UPPER to the latest "
-         "latest revision.\n"),
+         "If only LOWER is given, dump that one revision.\n"),
       { 0 } },
     { "load", load_cmd, { 0 },
       N_("usage: svnrdump load URL\n\n"
@@ -75,7 +74,7 @@ static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
 
 static const apr_getopt_option_t svnrdump__options[] =
   {
-    {"revision",     'r', 1, N_("REV1[:REV2] range of revisions to dump")},
+    {"revision",     'r', 1, N_("specify revision number ARG (or X:Y range)")},
     {"quiet",         'q', 0, N_("no progress (only errors) to stderr")},
     {"config-dir",    opt_config_dir, 1, N_("read user configuration files from"
                                             " directory ARG") },
@@ -471,7 +470,10 @@ main(int argc, const char **argv)
                                                                 NULL, 10);
               }
             else
-              opt_baton->start_revision = (svn_revnum_t)strtoul(opt_arg, NULL, 10);
+              {
+                opt_baton->start_revision = (svn_revnum_t)strtoul(opt_arg, NULL, 10);
+                opt_baton->end_revision = opt_baton->start_revision;
+              }
           }
           break;
         case 'q':
