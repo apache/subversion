@@ -154,6 +154,7 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
    s     const char *        String
    b     const void *        Blob data
          apr_size_t          Blob length
+   r     svn_revnum_t        Revision number
    t     const svn_token_t * Token mapping table
          int value           Token value
 
@@ -191,6 +192,12 @@ svn_sqlite__bind_token(svn_sqlite__stmt_t *stmt,
                        int slot,
                        const svn_token_map_t *map,
                        int value);
+
+/* Bind the value to SLOT, unless SVN_IS_VALID_REVNUM(value) is false,
+   in which case it binds NULL.  */
+svn_error_t *
+svn_sqlite__bind_revnum(svn_sqlite__stmt_t *stmt, int slot,
+                        svn_revnum_t value);
 
 /* Bind a set of properties to the given slot. If PROPS is NULL, then no
    binding will occur. PROPS will be stored as a serialized skel. */
