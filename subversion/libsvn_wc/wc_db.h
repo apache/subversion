@@ -1662,15 +1662,11 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
 
    ### Assuming the future ability to copy across repositories, should we
    ### refrain from resetting the copyfrom information in this operation?
-
-   ### SINGLE_DB is a temp argument, and should be TRUE if using compressed
-   ### metadata.  When *all* metadata gets compressed, it should disappear.
 */
 svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            const char *repos_root_url,
-                           svn_boolean_t single_db,
                            apr_pool_t *scratch_pool);
 
 
