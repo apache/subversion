@@ -8601,6 +8601,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
       SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                               pdh->wcroot->sdb, scratch_pool));
 
+#ifndef SVN_WC__NODES_ONLY
       /* ### Insert a switched not present base node. Luckily this hack
              is not as ugly as the original file externals hack. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -8617,6 +8618,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                 kind_map, svn_wc__db_kind_file));
 
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
+#endif
 
 #ifdef SVN_WC__NODES
 
@@ -8923,7 +8925,7 @@ set_new_dir_to_incomplete_txn(void *baton,
   SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 
-
+#ifndef SVN_WC__NODES_ONLY
   /* Insert the incomplete base node */
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_INSERT_BASE_NODE_INCOMPLETE_DIR));
@@ -8940,6 +8942,8 @@ set_new_dir_to_incomplete_txn(void *baton,
     SVN_ERR(svn_sqlite__bind_text(stmt, 7, svn_depth_to_word(dtb->depth)));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
 
 #ifdef SVN_WC__NODE_DATA
 
