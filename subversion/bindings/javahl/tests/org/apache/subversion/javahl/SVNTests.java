@@ -806,7 +806,7 @@ class SVNTests extends TestCase
                 // path
                 String key;
                 if (commitItem.getUrl() != null)
-                    key = commitItem.getUrl().toString();
+                    key = commitItem.getUrl();
                 else
                     key = commitItem.getPath();
 
