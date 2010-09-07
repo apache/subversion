@@ -871,21 +871,8 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
       midConstructor = env->GetMethodID(clazz, "<init>",
                                         "(Ljava/lang/String;"
                                         "L"JAVA_PACKAGE"/NodeKind;"
-                                        "ILjava/net/URI;"
-                                        "Ljava/net/URI;J)V");
-      if (JNIUtil::isExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
-
-  jclass clazz2 = env->FindClass("java/net/URI");
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  static jmethodID mid2 = 0;
-  if (mid2 == 0)
-    {
-      mid2 = env->GetMethodID(clazz2, "<init>",
-                              "(Ljava/lang/String;)V");
+                                        "ILjava/lang/String;"
+                                        "Ljava/lang/String;J)V");
       if (JNIUtil::isExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -913,23 +900,13 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
     jstateFlags |=
       org_apache_subversion_javahl_CommitItemStateFlags_IsCopy;
 
-  jobject jurl = NULL;
-  if (item->url != NULL)
-    {
-      jurl = env->NewObject(clazz2, mid2,
-                            JNIUtil::makeJString(item->url));
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
+  jstring jurl = JNIUtil::makeJString(item->url);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
-  jobject jcopyUrl = NULL;
-  if (item->copyfrom_url != NULL)
-    {
-      jcopyUrl = env->NewObject(clazz2, mid2,
-                                JNIUtil::makeJString(item->copyfrom_url));
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
+  jstring jcopyUrl = JNIUtil::makeJString(item->copyfrom_url);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   jlong jcopyRevision = item->revision;
 
