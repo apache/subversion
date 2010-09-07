@@ -23,8 +23,6 @@
 
 package org.apache.subversion.javahl;
 
-import java.net.URI;
-
 /**
  * The description of a merge conflict, encountered during
  * merge/update/switch operations.
@@ -33,14 +31,14 @@ import java.net.URI;
  */
 public class ConflictVersion
 {
-    private URI reposURL;
+    private String reposURL;
     private long pegRevision;
     private String pathInRepos;
 
     private NodeKind nodeKind;
 
     /** This constructor should only be called from JNI code. */
-    public ConflictVersion(URI reposURL, long pegRevision, String pathInRepos,
+    public ConflictVersion(String reposURL, long pegRevision, String pathInRepos,
                     NodeKind nodeKind)
     {
         this.reposURL = reposURL;
@@ -49,7 +47,7 @@ public class ConflictVersion
         this.nodeKind = nodeKind;
     }
 
-    public URI getReposURL()
+    public String getReposURL()
     {
         return reposURL;
     }
