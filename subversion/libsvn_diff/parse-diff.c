@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_dirent_uri.h"
 #include "svn_diff.h"
@@ -119,20 +120,15 @@ svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk)
 static svn_boolean_t
 parse_offset(svn_linenum_t *offset, const char *number)
 {
-  apr_int64_t parsed_offset;
+  svn_error_t *err;
 
-  errno = 0; /* apr_atoi64() in APR-0.9 does not always set errno */
-  parsed_offset = apr_atoi64(number);
-  if (errno == ERANGE || parsed_offset < 0)
-    return FALSE;
-
-  /* In case we cannot fit 64 bits into an svn_linenum_t,
-   * check for overflow. */
-  if (sizeof(svn_linenum_t) < sizeof(parsed_offset) &&
-      parsed_offset > SVN_LINENUM_MAX_VALUE)
-    return FALSE;
-
-  *offset = parsed_offset;
+  err = svn_cstring_strtoui64(offset, number, 0, SVN_LINENUM_MAX_VALUE, 10);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+  
   return TRUE;
 }
 

@@ -3472,7 +3472,7 @@ svn_io_read_version_file(int *version,
   }
 
   /* Convert to integer. */
-  *version = atoi(buf);
+  SVN_ERR(svn_cstring_atoi(version, buf));
 
   return SVN_NO_ERROR;
 }

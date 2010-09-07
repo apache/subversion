@@ -25,12 +25,15 @@
 
 
 
+#include <apr.h>
+
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_lib.h>     /* for apr_isspace() */
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 #include "svn_ctype.h"
 
+#include "svn_private_config.h"
 
 
 /* Our own realloc, since APR doesn't have one.  Note: this is a
@@ -604,4 +607,89 @@ svn_cstring_casecmp(const char *str1, const char *str2)
       if (cmp || !a || !b)
         return cmp;
     }
+}
+
+svn_error_t *
+svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
+                      apr_uint64_t minval, apr_uint64_t maxval,
+                      int base)
+{
+  apr_int64_t parsed;
+
+  /* We assume errno is thread-safe. */
+  errno = 0; /* APR-0.9 doesn't always set errno */
+
+  /* ### We're throwing away half the number range here.
+   * ### Maybe implement our own number parser? */
+  parsed = apr_strtoi64(str, NULL, base);
+  if (errno != 0)
+    return svn_error_return(
+             svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                               _("Could not convert '%s' into a number"),
+                               str));
+  if (parsed < 0 || parsed < minval || parsed > maxval)
+    return svn_error_return(
+             svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                               _("Number '%s' is out of range"), str));
+  *n = parsed;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cstring_atoui64(apr_uint64_t *n, const char *str)
+{
+  return svn_error_return(svn_cstring_strtoui64(n, str, 0,
+                                                APR_UINT64_MAX, 10));
+}
+
+svn_error_t *
+svn_cstring_atoui(unsigned int *n, const char *str)
+{
+  apr_uint64_t parsed;
+
+  SVN_ERR(svn_cstring_strtoui64(&parsed, str, 0, APR_UINT32_MAX, 10));
+  *n = (unsigned int)parsed;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cstring_strtoi64(apr_int64_t *n, const char *str,
+                     apr_int64_t minval, apr_int64_t maxval,
+                     int base)
+{
+  apr_int64_t parsed;
+
+  /* We assume errno is thread-safe. */
+  errno = 0; /* APR-0.9 doesn't always set errno */
+
+  parsed = apr_strtoi64(str, NULL, base);
+  if (errno != 0)
+    return svn_error_return(
+             svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                               _("Could not convert '%s' into a number"),
+                               str));
+  if (parsed < minval || parsed > maxval)
+    return svn_error_return(
+             svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                               _("Number '%s' is out of range"), str));
+  *n = parsed;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cstring_atoi64(apr_int64_t *n, const char *str)
+{
+  return svn_error_return(svn_cstring_strtoi64(n, str, APR_INT64_MIN,
+                                               APR_INT64_MAX, 10));
+}
+
+svn_error_t *
+svn_cstring_atoi(int *n, const char *str)
+{
+  apr_int64_t parsed;
+
+  SVN_ERR(svn_cstring_strtoi64(&parsed, str, APR_INT32_MIN,
+                               APR_INT32_MAX, 10));
+  *n = (int)parsed;
+  return SVN_NO_ERROR;
 }

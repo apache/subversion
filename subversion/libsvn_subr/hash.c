@@ -344,11 +344,16 @@ svn_hash_read(apr_hash_t *hash,
         }
       else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
+          size_t keylen;
+          int parsed_len;
+          void *keybuf;
+          
           /* Get the length of the key */
-          size_t keylen = (size_t) atoi(buf + 2);
+          SVN_ERR(svn_cstring_atoi(&parsed_len, buf + 2));
+          keylen = parsed_len;
 
           /* Now read that much into a buffer, + 1 byte for null terminator */
-          void *keybuf = apr_palloc(pool, keylen + 1);
+          keybuf = apr_palloc(pool, keylen + 1);
           SVN_ERR(svn_io_file_read_full(srcfile,
                                         keybuf, keylen, &num_read, pool));
           ((char *) keybuf)[keylen] = '\0';
@@ -365,12 +370,15 @@ svn_hash_read(apr_hash_t *hash,
           if ((buf[0] == 'V') && (buf[1] == ' '))
             {
               svn_string_t *value = apr_palloc(pool, sizeof(*value));
+              apr_size_t vallen;
+              void *valbuf;
 
               /* Get the length of the value */
-              apr_size_t vallen = atoi(buf + 2);
+              SVN_ERR(svn_cstring_atoi(&parsed_len, buf + 2));
+              vallen = parsed_len;
 
               /* Again, 1 extra byte for the null termination. */
-              void *valbuf = apr_palloc(pool, vallen + 1);
+              valbuf = apr_palloc(pool, vallen + 1);
               SVN_ERR(svn_io_file_read_full(srcfile,
                                             valbuf, vallen,
                                             &num_read, pool));
