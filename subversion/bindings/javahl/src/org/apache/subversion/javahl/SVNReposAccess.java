@@ -60,9 +60,7 @@ public class SVNReposAccess implements ISVNReposAccess
 */
     }
 
-    /** Don't call this function!  Public fucntion for backward compat reasons
-      */
-    public long getCppAddr()
+    private long getCppAddr()
     {
         return cppAddr;
     }
