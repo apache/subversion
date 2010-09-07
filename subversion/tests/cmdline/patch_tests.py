@@ -2976,6 +2976,43 @@ def patch_prop_with_fuzz(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+def patch_git_add_file(sbox):
+  "patch that contains empty files"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = make_patch_path(sbox)
+
+  new_path = os.path.join(wc_dir, 'new')
+
+  unidiff_patch = [
+    "Index: new\n",
+    "===================================================================\n",
+    "diff --git a/new b/new\n",
+    "new file mode 10644\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'new' : Item(contents="")})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'new' : Item(status='A ', wc_rev=0)})
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
 ########################################################################
 #Run the tests
 
@@ -3005,6 +3042,7 @@ test_list = [ None,
               patch_add_path_with_props,
               patch_prop_offset,
               patch_prop_with_fuzz,
+              patch_git_add_file,
             ]
 
 if __name__ == '__main__':
