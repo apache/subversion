@@ -35,6 +35,7 @@ class SVNReposAccess : public SVNBase
 {
  public:
   svn_revnum_t getDatedRev(apr_time_t time);
+  jobject getLocks(const char *path, svn_depth_t depth);
 
   SVNReposAccess(const char *repos_url);
   virtual ~SVNReposAccess();
