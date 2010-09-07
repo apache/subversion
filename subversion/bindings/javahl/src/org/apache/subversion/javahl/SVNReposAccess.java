@@ -100,4 +100,7 @@ public class SVNReposAccess implements ISVNReposAccess
 
     public native Map<String, Lock> getLocks(String path, Depth depth)
         throws SubversionException;
+
+    public native NodeKind checkPath(String path, Revision revision)
+        throws SubversionException;
 }

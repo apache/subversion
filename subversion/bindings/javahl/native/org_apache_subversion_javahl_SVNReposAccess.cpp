@@ -28,6 +28,7 @@
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"
 #include "EnumMapper.h"
+#include "Revision.h"
 
 #include "svn_version.h"
 #include "svn_private_config.h"
@@ -110,4 +111,27 @@ Java_org_apache_subversion_javahl_SVNReposAccess_getLocks
     return NULL;
 
   return ra->getLocks(path, EnumMapper::toDepth(jdepth));
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNReposAccess_checkPath
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision)
+{
+  JNIEntry(SVNReposAccess, checkPath);
+  SVNReposAccess *ra = SVNReposAccess::getCppObject(jthis);
+  if (ra == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return NULL;
+    }
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  Revision revision(jrevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return ra->checkPath(path, revision);
 }

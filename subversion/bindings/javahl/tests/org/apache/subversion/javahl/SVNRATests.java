@@ -92,4 +92,17 @@ public class SVNRATests extends SVNTests
         assertNotNull(lock);
         assertEquals(lock.getOwner(), "jrandom");
     }
+
+    public void testCheckPath()
+        throws SubversionException, IOException
+    {
+        NodeKind kind = ra.checkPath("iota", Revision.getInstance(1));
+        assertEquals(NodeKind.file, kind);
+
+        kind = ra.checkPath("iota", Revision.getInstance(0));
+        assertEquals(NodeKind.none, kind);
+
+        kind = ra.checkPath("A", Revision.getInstance(1));
+        assertEquals(NodeKind.dir, kind);
+    }
 }

@@ -52,4 +52,7 @@ public interface ISVNReposAccess
 
     public Map<String, Lock> getLocks(String path, Depth depth)
         throws SubversionException;
+
+    public NodeKind checkPath(String path, Revision revision)
+        throws SubversionException;
 }

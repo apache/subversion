@@ -31,11 +31,14 @@
 #include "svn_ra.h"
 #include "SVNBase.h"
 
+class Revision;
+
 class SVNReposAccess : public SVNBase
 {
  public:
   svn_revnum_t getDatedRev(apr_time_t time);
   jobject getLocks(const char *path, svn_depth_t depth);
+  jobject checkPath(const char *path, Revision &revision);
 
   SVNReposAccess(const char *repos_url);
   virtual ~SVNReposAccess();

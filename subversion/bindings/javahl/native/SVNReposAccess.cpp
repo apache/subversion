@@ -28,6 +28,8 @@
 #include "JNIUtil.h"
 #include "JNICriticalSection.h"
 #include "CreateJ.h"
+#include "EnumMapper.h"
+#include "Revision.h"
 
 #include "svn_ra.h"
 #include "svn_private_config.h"
@@ -89,4 +91,18 @@ SVNReposAccess::getLocks(const char *path, svn_depth_t depth)
               NULL);
 
   return CreateJ::LockMap(locks, requestPool.pool());
+}
+
+jobject
+SVNReposAccess::checkPath(const char *path, Revision &revision)
+{
+  SVN::Pool requestPool;
+  svn_node_kind_t kind;
+
+  SVN_JNI_ERR(svn_ra_check_path(m_ra_session, path,
+                                revision.revision()->value.number,
+                                &kind, requestPool.pool()),
+              NULL);
+
+  return EnumMapper::mapNodeKind(kind);
 }
