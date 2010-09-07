@@ -192,6 +192,8 @@ def move_and_shard_pristine_files(old_wc_path, new_wc_path):
 
   for basename in os.listdir(old_pristine_dir):
     shard = basename[:2]
+    if shard == basename: # already converted
+      continue
     old = os.path.join(old_pristine_dir, basename)
     new = os.path.join(new_pristine_dir, shard, basename)
     os.renames(old, new)
