@@ -733,7 +733,9 @@ remove_base_node(svn_wc__db_t *db,
 
   if (base_status == svn_wc__db_status_normal
       && wrk_status != svn_wc__db_status_added
+#ifndef SVN_WC__SINGLE_DB
       && wrk_status != svn_wc__db_status_obstructed_add
+#endif
       && wrk_status != svn_wc__db_status_excluded)
     {
 #ifndef SVN_WC__SINGLE_DB
@@ -770,7 +772,9 @@ remove_base_node(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath, scratch_pool));
     }
   else if (wrk_status == svn_wc__db_status_added
+#ifndef SVN_WC__SINGLE_DB
            || wrk_status == svn_wc__db_status_obstructed_add
+#endif
            || (have_work && wrk_status == svn_wc__db_status_excluded))
     /* ### deletes of working additions should fall in this case, but
        ### we can't express these without the 4th tree */
@@ -1293,7 +1297,10 @@ log_do_committed(svn_wc__db_t *db,
 
           /* Committing a deletion should remove the local nodes.  */
           if (child_status == svn_wc__db_status_deleted
-              || child_status == svn_wc__db_status_obstructed_delete)
+#ifndef SVN_WC__SINGLE_DB
+              || child_status == svn_wc__db_status_obstructed_delete
+#endif
+              )
             {
               SVN_ERR(svn_wc__internal_remove_from_revision_control(
                         db, child_abspath,

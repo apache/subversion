@@ -388,6 +388,71 @@ svn_cstring_join(const apr_array_header_t *strings,
 int
 svn_cstring_casecmp(const char *str1, const char *str2);
 
+/**
+ * Parse the C string @a str into a 64 bit number, and return it in @a *n.
+ * Assume that the number is represented in base @a base.
+ * Raise an error if conversion fails (e.g. due to overflow), or if the
+ * converted number is smaller than @a minval or larger than @a maxval. 
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_cstring_strtoi64(apr_int64_t *n, const char *str,
+                     apr_int64_t minval, apr_int64_t maxval,
+                     int base);
+
+/**
+ * Parse the C string @a str into a 64 bit number, and return it in @a *n.
+ * Assume that the number is represented in base 10.
+ * Raise an error if conversion fails (e.g. due to overflow).
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_cstring_atoi64(apr_int64_t *n, const char *str);
+
+/**
+ * Parse the C string @a str into a 32 bit number, and return it in @a *n.
+ * Assume that the number is represented in base 10.
+ * Raise an error if conversion fails (e.g. due to overflow).
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_cstring_atoi(int *n, const char *str);
+
+/**
+ * Parse the C string @a str into an unsigned 64 bit number, and return
+ * it in @a *n. Assume that the number is represented in base @a base.
+ * Raise an error if conversion fails (e.g. due to overflow), or if the
+ * converted number is smaller than @a minval or larger than @a maxval. 
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
+                      apr_uint64_t minval, apr_uint64_t maxval,
+                      int base);
+
+/**
+ * Parse the C string @a str into an unsigned 64 bit number, and return
+ * it in @a *n. Assume that the number is represented in base 10.
+ * Raise an error if conversion fails (e.g. due to overflow).
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_cstring_atoui64(apr_uint64_t *n, const char *str);
+
+/**
+ * Parse the C string @a str into an unsigned 32 bit number, and return
+ * it in @a *n. Assume that the number is represented in base 10.
+ * Raise an error if conversion fails (e.g. due to overflow).
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_cstring_atoui(unsigned int *n, const char *str);
 
 /** @} */
 

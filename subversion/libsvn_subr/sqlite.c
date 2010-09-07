@@ -71,6 +71,7 @@ struct svn_sqlite__db_t
   int nbr_statements;
   svn_sqlite__stmt_t **prepared_stmts;
   apr_pool_t *state_pool;
+  unsigned savepoint_nr;
 };
 
 struct svn_sqlite__stmt_t
@@ -273,9 +274,18 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
             SVN_ERR(svn_sqlite__bind_blob(stmt, count, blob, blob_size));
             break;
 
+          case 'r':
+            SVN_ERR(svn_sqlite__bind_revnum(stmt, count,
+                                            va_arg(ap, svn_revnum_t)));
+            break;
+
           case 't':
             map = va_arg(ap, const svn_token_map_t *);
             SVN_ERR(svn_sqlite__bind_token(stmt, count, map, va_arg(ap, int)));
+            break;
+
+          case 'n':
+            /* Skip this column: no binding */
             break;
 
           default:
@@ -348,6 +358,20 @@ svn_sqlite__bind_token(svn_sqlite__stmt_t *stmt,
 
   SQLITE_ERR(sqlite3_bind_text(stmt->s3stmt, slot, word, -1, SQLITE_STATIC),
              stmt->db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__bind_revnum(svn_sqlite__stmt_t *stmt,
+                        int slot,
+                        svn_revnum_t value)
+{
+  if (SVN_IS_VALID_REVNUM(value))
+    SQLITE_ERR(sqlite3_bind_int64(stmt->s3stmt, slot,
+                                  (sqlite_int64)value), stmt->db);
+  else
+    SQLITE_ERR(sqlite3_bind_null(stmt->s3stmt, slot), stmt->db);
+
   return SVN_NO_ERROR;
 }
 
@@ -1015,6 +1039,60 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
     }
 
   return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));
+}
+
+svn_error_t *
+svn_sqlite__with_lock(svn_sqlite__db_t *db,
+                      svn_sqlite__transaction_callback_t cb_func,
+                      void *cb_baton,
+                      apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+#if SQLITE_VERSION_AT_LEAST(3,6,8)
+  svn_error_t *err2;
+  int savepoint = db->savepoint_nr++;
+  const char *release_stmt;
+
+  SVN_ERR(exec_sql(db,
+                   apr_psprintf(scratch_pool, "SAVEPOINT s%u;", savepoint)));
+#endif
+
+  err = cb_func(cb_baton, db, scratch_pool);
+
+#if SQLITE_VERSION_AT_LEAST(3,6,8)
+  release_stmt = apr_psprintf(scratch_pool, "RELEASE s%u;", savepoint);
+  err2 = exec_sql(db, release_stmt);
+
+  if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
+    {
+      /* Ok, we have a major problem. Some statement is still open, which
+         makes it impossible to release this savepoint.
+
+         ### See huge comment in svn_sqlite__with_transaction for
+             further details */
+
+      int i;
+
+      err2 = svn_error_compose_create(err2,
+                   svn_error_create(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
+                                    NULL, NULL));
+
+      for (i = 0; i < db->nbr_statements; i++)
+        if (db->prepared_stmts[i] && db->prepared_stmts[i]->needs_reset)
+          err2 = svn_error_compose_create(
+                     err2,
+                     svn_sqlite__reset(db->prepared_stmts[i]));
+
+          err2 = svn_error_compose_create(
+                      exec_sql(db, release_stmt),
+                      err2);
+    }
+
+  err = svn_error_compose_create(err, err2);
+#endif
+
+  return svn_error_return(err);
 }
 
 svn_error_t *

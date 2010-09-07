@@ -642,7 +642,9 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                      svn_dirent_local_style(dst_abspath, scratch_pool));
 
           case svn_wc__db_status_deleted:
+#ifndef SVN_WC__SINGLE_DB
           case svn_wc__db_status_obstructed_delete:
+#endif
           case svn_wc__db_status_not_present:
             break; /* OK to add */
 

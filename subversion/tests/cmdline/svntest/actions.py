@@ -2680,7 +2680,9 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
 
 
 def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
-                                          do_commit_local_changes):
+                                          do_commit_local_changes,
+                                          do_commit_conflicts=True,
+                                          ignore_ancestry=False):
   """
   Runs a given list of tests for conflicts occuring at a merge operation.
 
@@ -2714,12 +2716,14 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       Then, in effect, the local changes are committed as well.
 
    8) In each test case subdir, the "incoming" subdir is merged into the
-      "local" subdir.
-      This causes conflicts between the "local" state in the working
-      copy and the "incoming" state from the incoming subdir.
+      "local" subdir.  If ignore_ancestry is True, then the merge is done
+      with the --ignore-ancestry option, so mergeinfo is neither considered
+      nor recorded.  This causes conflicts between the "local" state in the
+      working copy and the "incoming" state from the incoming subdir.
 
-   9) A commit is performed in each separate container, to verify
-      that each tree-conflict indeed blocks a commit.
+   9) If do_commit_conflicts is True, then a commit is performed in each
+      separate container, to verify that each tree-conflict indeed blocks
+      a commit.
 
   The sbox parameter is just the sbox passed to a test function. No need
   to call sbox.build(), since it is called (once) within this function.
@@ -2851,10 +2855,15 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
         x_skip.copy()
         x_skip.wc_dir = local
 
+      varargs = (local,)
+      if ignore_ancestry:
+        varargs = varargs + ('--ignore-ancestry',)
+
       run_and_verify_merge(local, None, None, incoming, None,
                            x_out, None, None, x_disk, None, x_skip,
-                           error_re_string = test_case.error_re_string,
-                           dry_run = False)
+                           test_case.error_re_string,
+                           None, None, None, None,
+                           False, False, *varargs)
       run_and_verify_unquiet_status(local, x_status)
     except:
       print("ERROR IN: Tests scheme for merge: "
@@ -2864,21 +2873,22 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
 
   # 9) Verify that commit fails.
 
-  for test_case in greater_scheme:
-    try:
-      local = j(wc_dir, test_case.name, 'local')
+  if do_commit_conflicts:
+    for test_case in greater_scheme:
+      try:
+        local = j(wc_dir, test_case.name, 'local')
 
-      x_status = test_case.expected_status
-      if x_status != None:
-        x_status.copy()
-        x_status.wc_dir = local
+        x_status = test_case.expected_status
+        if x_status != None:
+          x_status.copy()
+          x_status.wc_dir = local
 
-      run_and_verify_commit(local, None, x_status,
-                            test_case.commit_block_string,
-                            local)
-    except:
-      print("ERROR IN: Tests scheme for merge: "
-          + "while checking commit-blocking in '%s'" % test_case.name)
-      raise
+        run_and_verify_commit(local, None, x_status,
+                              test_case.commit_block_string,
+                              local)
+      except:
+        print("ERROR IN: Tests scheme for merge: "
+            + "while checking commit-blocking in '%s'" % test_case.name)
+        raise
 
 

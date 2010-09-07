@@ -70,14 +70,14 @@ public class RunTests
                     String className = methodName.substring(0, i);
                     try
                     {
-                        Class clazz = Class.forName(className);
-                        final Class[] argTypes = new Class[] { String.class };
-                        Constructor ctor =
+                        Class<?> clazz = Class.forName(className);
+                        final Class<?>[] argTypes = new Class[] { String.class };
+                        Constructor<?> ctor =
                             clazz.getDeclaredConstructor(argTypes);
                         methodName = methodName.substring(i + 1);
                         String[] args = { methodName };
                         testCases[testCaseIndex++] =
-                            (TestCase) ctor.newInstance(args);
+                            (TestCase) ctor.newInstance((Object[]) args);
                     }
                     catch (Exception e)
                     {
@@ -91,7 +91,7 @@ public class RunTests
             if (testCases == null || testCases.length == 0)
             {
                 // Add default test suites.
-                suite.addTestSuite(SVNAdminTests.class);
+                suite.addTestSuite(SVNReposTests.class);
                 suite.addTestSuite(SVNRATests.class);
                 suite.addTestSuite(BasicTests.class);
             }

@@ -1272,16 +1272,28 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
 
   # local tree missing (via shell delete), incoming leaf edit
 
+  # Note: In 1.7 merge tracking aware merges raise an error if the
+  # merge target has subtrees missing due to a shell delete.  To
+  # preserve the original intent of this test we'll run the merge
+  # with the --ignore-ancestry option, which neither considers nor
+  # records mergeinfo.  With this option the merge should "succeed"
+  # while skipping the missing paths.  Of course with no mergeinfo
+  # recorded and everything skipped, there is nothing to commit, so
+  # unlike most of the tree conflict tests we don't bother with the
+  # final commit step.
+
   sbox.build()
   expected_output = wc.State('', {
   })
 
   expected_disk = disk_after_tree_del
 
+  # Don't expect any mergeinfo property changes because we run
+  # the merge with the --ignore-ancestry option.
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev=3),
+    ''                  : Item(status='  ', wc_rev=3),
     'F'                 : Item(status='  ', wc_rev=3),
-    'F/alpha'           : Item(status='!M', wc_rev=3),
+    'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
     'D/D1'              : Item(status='! ', wc_rev='?'),
     'DF'                : Item(status='  ', wc_rev=3),
@@ -1327,18 +1339,7 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
                expected_disk,
                expected_status,
                expected_skip,
-
-               ### This should not be happening!
-               ### The commit succeeds (it only commits mergeinfo).
-               ### But then the work queue freaks out while trying to install
-               ### F/alpha into the WC, because F/alpha is missing from disk.
-               ### We end up with a working copy that cannot be cleaned up.
-               ### To make this test pass for now we'll expect this error.
-               ### When the problem is fixed this test will start to fail
-               ### and should be adjusted.
-               commit_block_string=".*Error bumping revisions post-commit",
-
-             ) ], False)
+             ) ], False, do_commit_conflicts=False, ignore_ancestry=True)
 
 #----------------------------------------------------------------------
 def tree_conflicts_merge_del_onto_missing(sbox):
@@ -1346,16 +1347,28 @@ def tree_conflicts_merge_del_onto_missing(sbox):
 
   # local tree missing (via shell delete), incoming leaf edit
 
+  # Note: In 1.7 merge tracking aware merges raise an error if the
+  # merge target has subtrees missing due to a shell delete.  To
+  # preserve the original intent of this test we'll run the merge
+  # with the --ignore-ancestry option, which neither considers nor
+  # records mergeinfo.  With this option the merge should "succeed"
+  # while skipping the missing paths.  Of course with no mergeinfo
+  # recorded and everything skipped, there is nothing to commit, so
+  # unlike most of the tree conflict tests we don't bother with the
+  # final commit step.
+
   sbox.build()
   expected_output = wc.State('', {
   })
 
   expected_disk = disk_after_tree_del
 
+  # Don't expect any mergeinfo property changes because we run
+  # the merge with the --ignore-ancestry option.
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev=3),
+    ''                  : Item(status='  ', wc_rev=3),
     'F'                 : Item(status='  ', wc_rev=3),
-    'F/alpha'           : Item(status='!M', wc_rev=3),
+    'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
     'D/D1'              : Item(status='! ', wc_rev='?'),
     'DF'                : Item(status='  ', wc_rev=3),
@@ -1401,18 +1414,7 @@ def tree_conflicts_merge_del_onto_missing(sbox):
                expected_disk,
                expected_status,
                expected_skip,
-
-               ### This should not be happening!
-               ### The commit succeeds (it only commits mergeinfo).
-               ### But then the work queue freaks out while trying to install
-               ### F/alpha into the WC, because F/alpha is missing from disk.
-               ### We end up with a working copy that cannot be cleaned up.
-               ### To make this test pass for now we'll expect this error.
-               ### When the problem is fixed this test will start to fail
-               ### and should be adjusted.
-               commit_block_string=".*Error bumping revisions post-commit",
-
-             ) ], False)
+             ) ], False, do_commit_conflicts=False, ignore_ancestry=True)
 
 #----------------------------------------------------------------------
 def merge_replace_setup(sbox):

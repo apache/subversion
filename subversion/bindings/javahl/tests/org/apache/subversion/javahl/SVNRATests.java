@@ -52,7 +52,7 @@ public class SVNRATests extends SVNTests
         super.setUp();
 
         thisTest = new OneTest(false);
-        ra = new SVNReposAccess(new URI(thisTest.getUrl()));
+        ra = new SVNReposAccess(thisTest.getUrl());
     }
 
     /**

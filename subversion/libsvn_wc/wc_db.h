@@ -126,7 +126,7 @@ typedef struct svn_wc__db_t svn_wc__db_t;
 
 
 /* Enumerated constants for how to open a WC datastore.  */
-typedef enum {
+typedef enum svn_wc__db_openmode_t {
   svn_wc__db_openmode_default,    /* Open in the default mode (r/w now). */
   svn_wc__db_openmode_readonly,   /* Changes will definitely NOT be made. */
   svn_wc__db_openmode_readwrite   /* Changes will definitely be made. */
@@ -148,7 +148,7 @@ typedef enum {
    ###   cannot simply be added. it would surprise too much code.
    ###   (we could probably create svn_node_kind2_t though)
 */
-typedef enum {
+typedef enum svn_wc__db_kind_t {
     /* The node is a directory. */
     svn_wc__db_kind_dir,
 
@@ -162,22 +162,11 @@ typedef enum {
        deletion, or incomplete status. */
     svn_wc__db_kind_unknown,
 
-#ifndef SVN_WC__SINGLE_DB
-    /* This directory node is a placeholder; the actual information is
-       held within the subdirectory.
-
-       Note: users of this API shouldn't see this kind. It will be
-       handled internally to wc_db.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_kind_subdir
-#endif
-
 } svn_wc__db_kind_t;
 
 
 /* Enumerated values describing the state of a node. */
-typedef enum {
+typedef enum svn_wc__db_status_t {
     /* The node is present and has no known modifications applied to it. */
     svn_wc__db_status_normal,
 
@@ -203,32 +192,6 @@ typedef enum {
     /* This node has been deleted. No text or property modifications
        will be present. */
     svn_wc__db_status_deleted,
-
-    /* The information for this directory node is obstructed by something
-       in the local filesystem. Full details are not available.
-
-       This is only returned by an unshadowed BASE node. If a WORKING node
-       is present, then obstructed_delete or obstructed_add is returned as
-       appropriate.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_obstructed,
-
-    /* The information for this directory node is obstructed by something
-       in the local filesystem. Full details are not available.
-
-       The directory has been marked for deletion.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_obstructed_delete,
-
-    /* The information for this directory node is obstructed by something
-       in the local filesystem. Full details are not available.
-
-       The directory has been marked for addition.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_obstructed_add,
 
     /* This node was named by the server, but no information was provided. */
     svn_wc__db_status_absent,
@@ -261,7 +224,7 @@ typedef enum {
 
 /* Lock information.  We write/read it all as one, so let's use a struct
    for convenience.  */
-typedef struct {
+typedef struct svn_wc__db_lock_t {
   /* The lock token */
   const char *token;
 
@@ -427,6 +390,25 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
                       const char *wri_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
+
+typedef svn_error_t * (*svn_wc__db_sqlite_lock_cb)(svn_wc__db_t *db,
+                                                   void *baton,
+                                                   apr_pool_t *scratch_pool);
+
+/* Obtain a sqlite lock to efficiently use the working copy database for
+   WRI_ABSPATH and call LOCK_CB with CB_BATON while this lock exist.
+
+   On returning from this function all operations will be committed, but
+   operations might have been committed before returning from this function.
+
+   ### See svn_sqlite__with_lock() for more details.
+ */
+svn_error_t *
+svn_wc__db_with_sqlite_lock(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            svn_wc__db_sqlite_lock_cb lock_cb,
+                            void *cb_baton,
+                            apr_pool_t *scratch_pool);
 
 /* @} */
 
@@ -1680,15 +1662,11 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
 
    ### Assuming the future ability to copy across repositories, should we
    ### refrain from resetting the copyfrom information in this operation?
-
-   ### SINGLE_DB is a temp argument, and should be TRUE if using compressed
-   ### metadata.  When *all* metadata gets compressed, it should disappear.
 */
 svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            const char *repos_root_url,
-                           svn_boolean_t single_db,
                            apr_pool_t *scratch_pool);
 
 
@@ -2445,6 +2423,8 @@ svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
    LOCAL_ABSPATH's rev (REV) is valid, set is revision and if SET_REPOS_RELPATH
    is TRUE set its repository relative path to REPOS_RELPATH (and make sure its
    REPOS_ROOT_URL and REPOS_ROOT_UUID are still valid).
+
+   ### TODO(SINGLE_DB): Remove the 'update_stub' argument.
  */
 svn_error_t *
 svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
@@ -2484,17 +2464,6 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc__node_get_copyfrom_info */
-svn_error_t *
-svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
-                                   const char **copyfrom_repos_relpath,
-                                   const char **copyfrom_url,
-                                   svn_revnum_t *copyfrom_rev,
-                                   svn_boolean_t *is_copy_target,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
 /* @} */
 
 

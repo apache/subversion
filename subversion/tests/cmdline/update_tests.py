@@ -5683,6 +5683,44 @@ def add_moved_file_has_props2(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+# A regression test for a 1.7-dev crash upon updating a WC to a different
+# revision when it contained an excluded dir.
+def update_with_excluded_subdir(sbox):
+  """update with an excluded subdir"""
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  G = os.path.join(os.path.join(wc_dir, 'A', 'D', 'G'))
+
+  # Make the directory 'G' excluded.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G' : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, False,
+                                        '--set-depth=exclude', G)
+
+  # Commit a new revision so there is something to update to.
+  svntest.main.run_svn(None, 'mkdir', '-m', '', sbox.repo_url + '/New')
+
+  # Test updating the WC.
+  expected_output = svntest.wc.State(wc_dir, {
+    'New' : Item(status='A ') })
+  expected_disk.add({
+    'New' : Item() })
+  expected_status.add({
+    'New' : Item(status='  ') })
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status)
+
+
 #######################################################################
 # Run the tests
 
@@ -5753,6 +5791,7 @@ test_list = [ None,
               mergeinfo_updates_merge_with_local_mods,
               add_moved_file_has_props,
               XFail(add_moved_file_has_props2),
+              update_with_excluded_subdir,
              ]
 
 if __name__ == '__main__':

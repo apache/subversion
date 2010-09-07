@@ -1758,6 +1758,7 @@ svn_wc__get_pristine_props(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
+#ifndef SVN_WC__SINGLE_DB
   /* The node is obstructed:
 
      - subdir is missing, obstructed by a file, or missing admin area
@@ -1777,6 +1778,7 @@ svn_wc__get_pristine_props(apr_hash_t **props,
                                 "properties are not available."),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
+#endif
 
   /* status: normal, moved_here, copied, deleted  */
 

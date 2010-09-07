@@ -663,16 +663,23 @@ adm_available(svn_boolean_t *available,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   if (obstructed)
+#ifndef SVN_WC__SINGLE_DB
     *obstructed = (status == svn_wc__db_status_obstructed ||
                    status == svn_wc__db_status_obstructed_add ||
                    status == svn_wc__db_status_obstructed_delete);
+#else
+    *obstructed = FALSE;
+#endif
 
-  *available = !(status == svn_wc__db_status_obstructed ||
-                 status == svn_wc__db_status_obstructed_add ||
-                 status == svn_wc__db_status_obstructed_delete ||
-                 status == svn_wc__db_status_absent ||
-                 status == svn_wc__db_status_excluded ||
-                 status == svn_wc__db_status_not_present);
+  *available = !(status == svn_wc__db_status_absent
+                 || status == svn_wc__db_status_excluded
+                 || status == svn_wc__db_status_not_present
+#ifndef SVN_WC__SINGLE_DB
+                 || status == svn_wc__db_status_obstructed
+                 || status == svn_wc__db_status_obstructed_add
+                 || status == svn_wc__db_status_obstructed_delete
+#endif
+                 );
 
   return SVN_NO_ERROR;
 }
