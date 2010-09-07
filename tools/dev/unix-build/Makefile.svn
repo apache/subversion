@@ -554,7 +554,8 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 		PATH=$(NEON_OBJDIR):$$PATH \
 		--prefix=$(PREFIX)/neon \
 		--with-ssl \
-		--enable-shared
+		--enable-shared \
+		--without-libproxy
 	touch $@
 
 # compile neon
