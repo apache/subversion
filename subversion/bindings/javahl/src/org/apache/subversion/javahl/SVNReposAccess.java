@@ -97,7 +97,9 @@ public class SVNReposAccess implements ISVNReposAccess
         return NativeResources.getVersion();
     }
 
-    public native long getDatedRevision(Date date);
+    public native long getDatedRevision(Date date)
+        throws SubversionException;
 
-    public native Map<String, Lock> getLocks(String path, Depth depth);
+    public native Map<String, Lock> getLocks(String path, Depth depth)
+        throws SubversionException;
 }

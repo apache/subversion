@@ -47,7 +47,9 @@ public interface ISVNReposAccess
      * @param date      The date
      * @return          The latest revision at date
      */
-    public long getDatedRevision(Date date);
+    public long getDatedRevision(Date date)
+        throws SubversionException;
 
-    public Map<String, Lock> getLocks(String path, Depth depth);
+    public Map<String, Lock> getLocks(String path, Depth depth)
+        throws SubversionException;
 }
