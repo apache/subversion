@@ -25,6 +25,7 @@ package org.apache.subversion.javahl;
 
 import java.net.URI;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * This class allows direct access to remote repositories through a
@@ -97,4 +98,6 @@ public class SVNReposAccess implements ISVNReposAccess
     }
 
     public native long getDatedRevision(Date date);
+
+    public native Map<String, Lock> getLocks(String path, Depth depth);
 }

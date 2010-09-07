@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl;
 
 import java.util.Date;
+import java.util.Map;
 
 /**
  * This interface is an interface to interact with a remote Subversion
@@ -47,4 +48,6 @@ public interface ISVNReposAccess
      * @return          The latest revision at date
      */
     public long getDatedRevision(Date date);
+
+    public Map<String, Lock> getLocks(String path, Depth depth);
 }

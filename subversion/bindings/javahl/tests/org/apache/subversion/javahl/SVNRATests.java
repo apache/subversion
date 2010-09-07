@@ -26,6 +26,9 @@ import org.apache.subversion.javahl.callback.*;
 
 import java.net.URI;
 import java.util.Date;
+import java.util.Set;
+import java.util.Map;
+import java.util.HashSet;
 import java.io.IOException;
 
 /**
@@ -52,7 +55,7 @@ public class SVNRATests extends SVNTests
     {
         super.setUp();
 
-        thisTest = new OneTest(false);
+        thisTest = new OneTest();
         ra = new SVNReposAccess(thisTest.getUrl());
     }
 
@@ -71,5 +74,22 @@ public class SVNRATests extends SVNTests
     {
         long revision = ra.getDatedRevision(new Date());
         assertEquals(revision, 1);
+    }
+
+    public void testGetLocks()
+        throws SubversionException, IOException
+    {
+        Set<String> iotaPathSet = new HashSet<String>(1);
+        String iotaPath = thisTest.getWCPath() + "/iota";
+        iotaPathSet.add(iotaPath);
+
+        client.lock(iotaPathSet, "foo", false);
+
+        Map<String, Lock> locks = ra.getLocks("iota", Depth.infinity);
+
+        assertEquals(locks.size(), 1);
+        Lock lock = locks.get("/iota");
+        assertNotNull(lock);
+        assertEquals(lock.getOwner(), "jrandom");
     }
 }

@@ -27,6 +27,7 @@
 #include "SVNReposAccess.h"
 #include "JNIUtil.h"
 #include "JNICriticalSection.h"
+#include "CreateJ.h"
 
 #include "svn_ra.h"
 #include "svn_private_config.h"
@@ -75,4 +76,17 @@ SVNReposAccess::getDatedRev(apr_time_t tm)
               SVN_INVALID_REVNUM);
 
   return rev;
+}
+
+jobject
+SVNReposAccess::getLocks(const char *path, svn_depth_t depth)
+{
+  SVN::Pool requestPool;
+  apr_hash_t *locks;
+
+  SVN_JNI_ERR(svn_ra_get_locks2(m_ra_session, &locks, path, depth,
+                                requestPool.pool()),
+              NULL);
+
+  return CreateJ::LockMap(locks, requestPool.pool());
 }
