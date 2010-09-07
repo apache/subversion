@@ -1025,14 +1025,19 @@ svn_error_t *svn_io_file_create(const char *file,
 {
   apr_file_t *f;
   apr_size_t written;
+  svn_error_t *err;
 
   SVN_ERR(svn_io_file_open(&f, file,
                            (APR_WRITE | APR_CREATE | APR_EXCL),
                            APR_OS_DEFAULT,
                            pool));
-  SVN_ERR(svn_io_file_write_full(f, contents, strlen(contents),
-                                 &written, pool));
-  return svn_io_file_close(f, pool);
+  err= svn_io_file_write_full(f, contents, strlen(contents),
+                              &written, pool);
+
+
+  return svn_error_return(
+                        svn_error_compose_create(err,
+                                                 svn_io_file_close(f, pool)));
 }
 
 svn_error_t *svn_io_dir_file_copy(const char *src_path,
@@ -2868,12 +2873,19 @@ svn_io_write_unique(const char **tmp_path,
                     apr_pool_t *pool)
 {
   apr_file_t *new_file;
+  svn_error_t *err;
 
   SVN_ERR(svn_io_open_unique_file3(&new_file, tmp_path, dirpath,
                                    delete_when, pool, pool));
-  SVN_ERR(svn_io_file_write_full(new_file, buf, nbytes, NULL, pool));
-  SVN_ERR(svn_io_file_flush_to_disk(new_file, pool));
-  return svn_io_file_close(new_file, pool);
+
+  err = svn_io_file_write_full(new_file, buf, nbytes, NULL, pool);
+
+  if (!err)
+    err = svn_io_file_flush_to_disk(new_file, pool);
+
+  return svn_error_return(
+                  svn_error_compose_create(err,
+                                           svn_io_file_close(new_file, pool)));
 }
 
 
