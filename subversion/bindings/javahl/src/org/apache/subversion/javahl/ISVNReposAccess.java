@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import java.util.Date;
+
 /**
  * This interface is an interface to interact with a remote Subversion
  * repository via the repository access method.
@@ -39,4 +41,10 @@ public interface ISVNReposAccess
      * @since 1.0
      */
     public Version getVersion();
+
+    /**
+     * @param date      The date
+     * @return          The latest revision at date
+     */
+    public long getDatedRevision(Date date);
 }

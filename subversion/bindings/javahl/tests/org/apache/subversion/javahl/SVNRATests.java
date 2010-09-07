@@ -25,6 +25,7 @@ package org.apache.subversion.javahl;
 import org.apache.subversion.javahl.callback.*;
 
 import java.net.URI;
+import java.util.Date;
 import java.io.IOException;
 
 /**
@@ -63,5 +64,12 @@ public class SVNRATests extends SVNTests
         throws SubversionException, IOException
     {
         assertTrue("repository exists", thisTest.getRepository().exists());
+    }
+
+    public void testDatedRev()
+        throws SubversionException, IOException
+    {
+        long revision = ra.getDatedRevision(new Date());
+        assertEquals(revision, 1);
     }
 }
