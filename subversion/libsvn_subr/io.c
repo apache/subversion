@@ -3449,15 +3449,17 @@ svn_io_read_version_file(int *version,
   apr_file_t *format_file;
   char buf[80];
   apr_size_t len;
+  svn_error_t *err;
 
   /* Read a chunk of data from PATH */
   SVN_ERR(svn_io_file_open(&format_file, path, APR_READ,
                            APR_OS_DEFAULT, pool));
   len = sizeof(buf);
-  SVN_ERR(svn_io_file_read(format_file, buf, &len, pool));
+  err = svn_io_file_read(format_file, buf, &len, pool);
 
   /* Close the file. */
-  SVN_ERR(svn_io_file_close(format_file, pool));
+  SVN_ERR(svn_error_compose_create(err,
+                                   svn_io_file_close(format_file, pool)));
 
   /* If there was no data in PATH, return an error. */
   if (len == 0)
@@ -3498,48 +3500,65 @@ contents_identical_p(svn_boolean_t *identical_p,
                      const char *file2,
                      apr_pool_t *pool)
 {
-  svn_error_t *err1;
-  svn_error_t *err2;
+  svn_error_t *err;
   apr_size_t bytes_read1, bytes_read2;
   char *buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
+  svn_boolean_t done1 = FALSE;
+  svn_boolean_t done2 = FALSE;
 
   SVN_ERR(svn_io_file_open(&file1_h, file1, APR_READ, APR_OS_DEFAULT,
                            pool));
-  SVN_ERR(svn_io_file_open(&file2_h, file2, APR_READ, APR_OS_DEFAULT,
-                           pool));
+
+  err = svn_io_file_open(&file2_h, file2, APR_READ, APR_OS_DEFAULT,
+                         pool);
+
+  if (err)
+    return svn_error_return(
+               svn_error_compose_create(err,
+                                        svn_io_file_close(file1_h, pool)));
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
-  do
+  while (! (done1 || done2))
     {
-      err1 = svn_io_file_read_full(file1_h, buf1,
-                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1, pool);
-      if (err1 && !APR_STATUS_IS_EOF(err1->apr_err))
-        return err1;
-
-      err2 = svn_io_file_read_full(file2_h, buf2,
-                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2, pool);
-      if (err2 && !APR_STATUS_IS_EOF(err2->apr_err))
+      err = svn_io_file_read_full(file1_h, buf1,
+                                  SVN__STREAM_CHUNK_SIZE, &bytes_read1, pool);
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
         {
-          svn_error_clear(err1);
-          return err2;
+          svn_error_clear(err);
+          err = NULL;
+          done1 = TRUE;
         }
+      else if (err)
+        break;
+
+      err = svn_io_file_read_full(file2_h, buf2,
+                                  SVN__STREAM_CHUNK_SIZE, &bytes_read2, pool);
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
+        {
+          svn_error_clear(err);
+          err = NULL;
+          done2 = TRUE;
+        }
+      else if (err)
+        break;
 
       if ((bytes_read1 != bytes_read2)
+          || (done1 != done2)
           || (memcmp(buf1, buf2, bytes_read1)))
         {
           *identical_p = FALSE;
           break;
         }
-    } while (! err1 && ! err2);
+    }
 
-  svn_error_clear(err1);
-  svn_error_clear(err2);
-
-  SVN_ERR(svn_io_file_close(file1_h, pool));
-  return svn_io_file_close(file2_h, pool);
+  return svn_error_return(
+           svn_error_compose_create(
+                err,
+                svn_error_compose_create(svn_io_file_close(file1_h, pool),
+                                         svn_io_file_close(file2_h, pool))));
 }
 
 
