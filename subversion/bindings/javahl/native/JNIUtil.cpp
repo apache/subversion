@@ -807,6 +807,31 @@ jobject JNIUtil::createDate(apr_time_t time)
   return ret;
 }
 
+apr_time_t
+JNIUtil::getDate(jobject jdate)
+{
+  JNIEnv *env = getEnv();
+  jclass clazz = env->FindClass("java/util/Date");
+  if (isJavaExceptionThrown())
+    return 0;
+
+  static jmethodID mid = 0;
+  if (mid == 0)
+    {
+      mid = env->GetMethodID(clazz, "getTime", "()J");
+      if (isJavaExceptionThrown())
+        return 0;
+    }
+
+  jlong jmillis = env->CallLongMethod(jdate, mid);
+  if (isJavaExceptionThrown())
+    return 0;
+
+  env->DeleteLocalRef(clazz);
+
+  return jmillis * 1000;
+}
+
 /**
  * Return the request pool. The request pool will be destroyed after each
  * request (call).

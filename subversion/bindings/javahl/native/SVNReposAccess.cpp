@@ -26,15 +26,28 @@
 
 #include "SVNReposAccess.h"
 #include "JNIUtil.h"
+#include "JNICriticalSection.h"
+
 #include "svn_ra.h"
 #include "svn_private_config.h"
 
-SVNReposAccess::SVNReposAccess()
+SVNReposAccess::SVNReposAccess(const char *repos_url)
 {
+  JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
+  m_sess_pool = svn_pool_create(JNIUtil::getPool());
+
+  svn_ra_callbacks2_t *cbtable =
+            (svn_ra_callbacks2_t *) apr_pcalloc(m_sess_pool, sizeof(*cbtable));
+
+  SVN_JNI_ERR(svn_ra_open4(&m_ra_session, NULL, repos_url,
+                           NULL, cbtable, NULL, NULL,
+                           m_sess_pool), );
 }
 
 SVNReposAccess::~SVNReposAccess()
 {
+  // This will close the ra session
+  svn_pool_destroy(m_sess_pool);
 }
 
 SVNReposAccess *SVNReposAccess::getCppObject(jobject jthis)
@@ -49,4 +62,17 @@ void SVNReposAccess::dispose()
 {
   static jfieldID fid = 0;
   SVNBase::dispose(&fid, JAVA_PACKAGE"/SVNReposAccess");
+}
+
+svn_revnum_t
+SVNReposAccess::getDatedRev(apr_time_t tm)
+{
+  SVN::Pool requestPool;
+  svn_revnum_t rev;
+
+  SVN_JNI_ERR(svn_ra_get_dated_revision(m_ra_session, &rev, tm,
+                                        requestPool.pool()),
+              SVN_INVALID_REVNUM);
+
+  return rev;
 }

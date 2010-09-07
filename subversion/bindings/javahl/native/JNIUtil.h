@@ -67,6 +67,7 @@ class JNIUtil
   static void setRequestPool(SVN::Pool *pool);
   static SVN::Pool *getRequestPool();
   static jobject createDate(apr_time_t time);
+  static apr_time_t getDate(jobject jdate);
   static void logMessage(const char *message);
   static int getLogLevel();
   static char *getFormatBuffer();

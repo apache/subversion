@@ -34,12 +34,15 @@
 class SVNReposAccess : public SVNBase
 {
  public:
-  SVNReposAccess();
+  svn_revnum_t getDatedRev(apr_time_t time);
+
+  SVNReposAccess(const char *repos_url);
   virtual ~SVNReposAccess();
   void dispose();
   static SVNReposAccess *getCppObject(jobject jthis);
-
  private:
+  apr_pool_t *m_sess_pool;
+  svn_ra_session_t *m_ra_session;
 };
 
 #endif // SVNREPOSACCESS_H

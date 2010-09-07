@@ -26,6 +26,7 @@
 #include "../include/org_apache_subversion_javahl_SVNReposAccess.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
+#include "JNIStringHolder.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -35,10 +36,15 @@
 
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNReposAccess_ctNative
-(JNIEnv *env, jobject jthis)
+(JNIEnv *env, jobject jthis, jstring jurl)
 {
   JNIEntry(SVNReposAccess, ctNative);
-  SVNReposAccess *obj = new SVNReposAccess;
+
+  JNIStringHolder url(jurl);
+  if (JNIUtil::isExceptionThrown())
+    return -1;
+
+  SVNReposAccess *obj = new SVNReposAccess(url);
   return obj->getCppAddr();
 }
 
@@ -64,4 +70,23 @@ Java_org_apache_subversion_javahl_SVNReposAccess_finalize
   SVNReposAccess *ra = SVNReposAccess::getCppObject(jthis);
   if (ra != NULL)
     ra->finalize();
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_apache_subversion_javahl_SVNReposAccess_getDatedRevision
+(JNIEnv *env, jobject jthis, jobject jdate)
+{
+  JNIEntry(SVNReposAccess, getDatedRevision);
+  SVNReposAccess *ra = SVNReposAccess::getCppObject(jthis);
+  if (ra == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return -1;
+    }
+
+  apr_time_t date = JNIUtil::getDate(jdate);
+  if (JNIUtil::isExceptionThrown())
+    return -1;
+
+  return ra->getDatedRev(date);
 }

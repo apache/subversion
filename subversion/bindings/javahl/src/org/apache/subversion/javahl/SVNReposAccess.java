@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl;
 
 import java.net.URI;
+import java.util.Date;
 
 /**
  * This class allows direct access to remote repositories through a
@@ -44,7 +45,7 @@ public class SVNReposAccess implements ISVNReposAccess
      */
     public SVNReposAccess(URI reposURI)
     {
-        cppAddr = ctNative();
+        cppAddr = ctNative(reposURI.toString());
 /*
         // Ensure that Subversion's config file area and templates exist.
         try
@@ -69,7 +70,7 @@ public class SVNReposAccess implements ISVNReposAccess
      * Build the native peer
      * @return the adress of the peer
      */
-    private native long ctNative();
+    private native long ctNative(String uri);
 
      /**
      * release the native peer (should not depend on finalize)
@@ -94,4 +95,6 @@ public class SVNReposAccess implements ISVNReposAccess
     {
         return NativeResources.getVersion();
     }
+
+    public native long getDatedRevision(Date date);
 }
