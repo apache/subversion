@@ -461,16 +461,22 @@ node_get_relpath_ignore_errors(svn_wc__db_t *db,
   if (relpath)
     return relpath;
 
-  if (status == svn_wc__db_status_added ||
-      status == svn_wc__db_status_obstructed_add)
+  if (status == svn_wc__db_status_added
+#ifndef SVN_WC__SINGLE_DB
+      || status == svn_wc__db_status_obstructed_add
+#endif
+      )
     {
       svn_error_clear(svn_wc__db_scan_addition(NULL, NULL, &relpath, NULL,
                                                NULL, NULL, NULL, NULL, NULL,
                                                db, local_abspath,
                                                result_pool, scratch_pool));
     }
-  else if (status != svn_wc__db_status_deleted &&
-           status != svn_wc__db_status_obstructed_delete)
+  else if (status != svn_wc__db_status_deleted
+#ifndef SVN_WC__SINGLE_DB
+           && status != svn_wc__db_status_obstructed_delete
+#endif
+           )
     {
       svn_error_clear(svn_wc__db_scan_base_repos(&relpath, NULL, NULL,
                                                  db, local_abspath,
@@ -1578,10 +1584,16 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                                        result_pool, scratch_pool));
 
       /* This better really be an added status. */
+#ifndef SVN_WC__SINGLE_DB
       SVN_ERR_ASSERT(added_status == svn_wc__db_status_added
                      || added_status == svn_wc__db_status_obstructed_add
                      || added_status == svn_wc__db_status_copied
                      || added_status == svn_wc__db_status_moved_here);
+#else
+      SVN_ERR_ASSERT(added_status == svn_wc__db_status_added
+                     || added_status == svn_wc__db_status_copied
+                     || added_status == svn_wc__db_status_moved_here);
+#endif
     }
   else if (reason == svn_wc_conflict_reason_unversioned)
     {
@@ -1760,7 +1772,9 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   switch (status)
     {
       case svn_wc__db_status_added:
+#ifndef SVN_WC__SINGLE_DB
       case svn_wc__db_status_obstructed_add:
+#endif
       case svn_wc__db_status_moved_here:
       case svn_wc__db_status_copied:
         /* Is it a replace? */
@@ -1801,7 +1815,9 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
 
       case svn_wc__db_status_deleted:
+#ifndef SVN_WC__SINGLE_DB
       case svn_wc__db_status_obstructed_delete:
+#endif
         /* The node is locally deleted. */
         reason = svn_wc_conflict_reason_deleted;
         break;
@@ -1813,10 +1829,12 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
          * So the node exists and is essentially 'normal'. We still need to
          * check prop and text mods, and those checks will retrieve the
          * missing information (hopefully). */
+#ifndef SVN_WC__SINGLE_DB
       case svn_wc__db_status_obstructed:
         /* Tree-conflicts during update are only concerned with local
          * modifications. We can safely update BASE, disregarding the
          * obstruction. So let's treat this as normal. */
+#endif
       case svn_wc__db_status_normal:
         if (action == svn_wc_conflict_action_edit)
           /* An edit onto a local edit or onto *no* local changes is no
@@ -1840,7 +1858,9 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                * but the update editor will not visit the subdirectories
                * of a directory that it wants to delete.  Therefore, we
                * need to start a separate crawl here. */
+#ifndef SVN_WC__SINGLE_DB
               if (status != svn_wc__db_status_obstructed)
+#endif
                 SVN_ERR(tree_has_local_mods(&modified, &all_mods_are_deletes,
                                             eb->db, local_abspath,
                                             eb->cancel_func, eb->cancel_baton,
@@ -2543,6 +2563,7 @@ add_directory(const char *path,
            * conflict, so merge it with the incoming add. */
           db->add_existed = TRUE;
 
+#ifndef SVN_WC__SINGLE_DB
           /* Pre-single-db, a dir that was OS-deleted from the working copy
            * along with its .svn folder is seen 'obstructed' in this code
            * path. The particular situation however better matches the word
@@ -2559,6 +2580,7 @@ add_directory(const char *path,
               do_notification(eb, db->local_abspath, svn_node_dir,
                               svn_wc_notify_add, pool);
             }
+#endif
         }
     }
   else if (kind != svn_node_none)
@@ -5361,6 +5383,8 @@ close_file(void *file_baton,
  * If ALLOW_REMOVAL is TRUE the tweaks might cause the node for
  * LOCAL_ABSPATH to be removed from the WC; if ALLOW_REMOVAL is FALSE this
  * will not happen.
+ *
+ * ### TODO(SINGLE_DB): Remove the 'parent_stub' argument.
  */
 static svn_error_t *
 tweak_node(svn_wc__db_t *db,
@@ -5380,6 +5404,10 @@ tweak_node(svn_wc__db_t *db,
   const char *repos_relpath, *repos_root_url, *repos_uuid;
   svn_boolean_t set_repos_relpath = FALSE;
   svn_error_t *err;
+
+#ifdef SVN_WC__SINGLE_DB
+  SVN_ERR_ASSERT(! parent_stub);
+#endif
 
   err = svn_wc__db_base_get_info(&status, &db_kind, &revision,
                                  &repos_relpath, &repos_root_url,
@@ -5534,14 +5562,14 @@ tweak_entries(svn_wc__db_t *db,
             || status == svn_wc__db_status_absent
             || status == svn_wc__db_status_excluded)
         {
-          
-
+#ifndef SVN_WC__SINGLE_DB
           if (kind == svn_wc__db_kind_dir)
             SVN_ERR(tweak_node(db, child_abspath, svn_wc__db_kind_dir, TRUE,
                                child_repos_relpath, new_repos_root_url,
                                new_repos_uuid, new_rev,
                                TRUE /* allow_removal */, iterpool));
           else
+#endif
             SVN_ERR(tweak_node(db, child_abspath, kind, FALSE,
                                child_repos_relpath, new_repos_root_url,
                                new_repos_uuid, new_rev,
@@ -5678,6 +5706,8 @@ do_update_cleanup(svn_wc__db_t *db,
       case svn_wc__db_status_absent:
       case svn_wc__db_status_not_present:
         return SVN_NO_ERROR;
+
+#ifndef SVN_WC__SINGLE_DB
       case svn_wc__db_status_obstructed:
       case svn_wc__db_status_obstructed_add:
       case svn_wc__db_status_obstructed_delete:
@@ -5688,6 +5718,7 @@ do_update_cleanup(svn_wc__db_t *db,
                            new_repos_uuid, new_revision,
                            FALSE /* allow_removal */, pool));
         return SVN_NO_ERROR;
+#endif
 
       /* Explicitly ignore other statii */
       default:

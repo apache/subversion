@@ -591,8 +591,7 @@ file_diff(struct dir_baton *db,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, local_abspath, pool, pool));
 
-  replaced = ((status == svn_wc__db_status_added
-               || status == svn_wc__db_status_obstructed_add)
+  replaced = ((status == svn_wc__db_status_added)
               && have_base
               && base_status != svn_wc__db_status_not_present);
 

@@ -652,8 +652,10 @@ report_revisions_and_depths(svn_wc__db_t *db,
              ### skip it right here. I guess with an obstruction, we
              ### can't really do anything with info the server might
              ### send, so maybe this is just fine.  */
+#ifdef SVN_WC__DB_SINGLE_DB
           if (this_status == svn_wc__db_status_obstructed)
             continue;
+#endif
 
           is_incomplete = (this_status == svn_wc__db_status_incomplete);
           start_empty = is_incomplete;

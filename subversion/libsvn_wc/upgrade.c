@@ -281,60 +281,36 @@ maybe_add_subdir(apr_array_header_t *subdirs,
 }
 
 
-/* Return in CHILDREN, the list of all versioned subdirectories which also
-   exist on disk as directories.  */
+/* Return in CHILDREN, the list of all 1.6 versioned subdirectories
+   which also exist on disk as directories.  */
 static svn_error_t *
 get_versioned_subdirs(apr_array_header_t **children,
-                      svn_wc__db_t *db,
                       const char *dir_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  int wc_format;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
 
   *children = apr_array_make(result_pool, 10, sizeof(const char *));
 
-  SVN_ERR(svn_wc__db_temp_get_format(&wc_format, db, dir_abspath, iterpool));
-  if (wc_format >= SVN_WC__WC_NG_VERSION)
+  SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
+                                   scratch_pool, iterpool));
+  for (hi = apr_hash_first(scratch_pool, entries);
+       hi;
+       hi = apr_hash_next(hi))
     {
-      const apr_array_header_t *all_children;
-      int i;
+      const char *name = svn__apr_hash_index_key(hi);
 
-      SVN_ERR(svn_wc__db_read_children(&all_children, db, dir_abspath,
-                                       scratch_pool, scratch_pool));
-      for (i = 0; i < all_children->nelts; ++i)
-        {
-          const char *name = APR_ARRAY_IDX(all_children, i, const char *);
+      /* skip "this dir"  */
+      if (*name == '\0')
+        continue;
 
-          svn_pool_clear(iterpool);
+      svn_pool_clear(iterpool);
 
-          SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
-                                   result_pool, iterpool));
-        }
-    }
-  else
-    {
-      apr_hash_t *entries;
-      apr_hash_index_t *hi;
-
-      SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
-                                       scratch_pool, iterpool));
-      for (hi = apr_hash_first(scratch_pool, entries);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *name = svn__apr_hash_index_key(hi);
-
-          /* skip "this dir"  */
-          if (*name == '\0')
-            continue;
-
-          svn_pool_clear(iterpool);
-
-          SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
-                                   result_pool, iterpool));
-        }
+      SVN_ERR(maybe_add_subdir(*children, dir_abspath, name,
+                               result_pool, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1220,10 +1196,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
   apr_hash_t *entries;
   svn_wc_entry_t *this_dir;
 
-#ifndef SVN_WC__SINGLE_DB
-  SVN_ERR_ASSERT(!data->sdb);
-#endif
-
   /* Don't try to mess with the WC if there are old log files left. */
 
   /* Is the (first) log file present?  */
@@ -1278,7 +1250,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
 
   if (!data->sdb)
     {
-#ifdef SVN_WC__SINGLE_DB
       const char *root_adm_abspath;
 
       /* In root wc construst path to temporary root wc/.svn/wcng/.svn
@@ -1289,9 +1260,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
       root_adm_abspath = svn_wc__adm_child(data->root_abspath, "",
                                            scratch_pool);
       SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
-#else
-      data->root_abspath = apr_pstrdup(result_pool, dir_abspath);
-#endif
 
       /* Create an empty sqlite database for this directory. */
       SVN_ERR(svn_wc__db_upgrade_begin(&data->sdb,
@@ -1355,16 +1323,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* All done. DB should finalize the upgrade process now.  */
   SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, data->sdb, scratch_pool));
 
-  /* All subdir access batons (and locks!) will be closed. Of course, they
-     should have been closed/unlocked just after their own upgrade process
-     has run.  */
-  /* ### well, actually.... we don't recursively delete subdir locks here,
-     ### we rely upon their own upgrade processes to do it. */
-#ifndef SVN_WC__SINGLE_DB
-  SVN_ERR(svn_wc__db_wclock_release(db, dir_abspath, scratch_pool));
-  data->sdb = NULL;
-#endif
-
   /* Zap all the obsolete files. This removes the old-style lock file.
      In single-db we should postpone this until we have processed all
      entries files into the single-db, otherwise an interrupted
@@ -1373,13 +1331,11 @@ upgrade_to_wcng(svn_wc__db_t *db,
      use 1.6 to cleanup. */
   wipe_obsolete_files(dir_abspath, scratch_pool);
 
-#ifdef SVN_WC__SINGLE_DB
   /* Remove the admin dir in subdirectories of the root. */
   if (!svn_dirent_is_ancestor(dir_abspath, data->root_abspath))
     svn_error_clear(svn_io_remove_dir2(svn_wc__adm_child(dir_abspath, NULL,
                                                          scratch_pool),
                                        FALSE, NULL, NULL, scratch_pool));
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -1547,14 +1503,24 @@ upgrade_working_copy(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_temp_get_format(&old_format, db, dir_abspath,
                                      iterpool));
 
-  SVN_ERR(get_versioned_subdirs(&subdirs, db, dir_abspath,
+  if (old_format >= SVN_WC__WC_NG_VERSION)
+    {
+      if (notify_func)
+        notify_func(notify_baton,
+                    svn_wc_create_notify(dir_abspath, svn_wc_notify_skip,
+                                         iterpool),
+                iterpool);
+      return SVN_NO_ERROR;
+    }
+
+  /* At present upgrade_to_wcng removes the entries file so get the
+     children before calling it. */
+  SVN_ERR(get_versioned_subdirs(&subdirs, dir_abspath,
                                 scratch_pool, iterpool));
 
-  /* Upgrade this directory first. */
-  if (old_format < SVN_WC__WC_NG_VERSION)
-    SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format,
-                            repos_info_func, repos_info_baton,
-                            repos_cache, data, scratch_pool, iterpool));
+  SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format,
+                          repos_info_func, repos_info_baton,
+                          repos_cache, data, scratch_pool, iterpool));
 
   if (notify_func)
     notify_func(notify_baton,
@@ -1562,7 +1528,6 @@ upgrade_working_copy(svn_wc__db_t *db,
                                      iterpool),
                 iterpool);
 
-  /* Now recurse. */
   for (i = 0; i < subdirs->nelts; ++i)
     {
       const char *child_abspath = APR_ARRAY_IDX(subdirs, i, const char *);
@@ -1583,6 +1548,44 @@ upgrade_working_copy(svn_wc__db_t *db,
 }
 
 
+/* Return TRUE if LOCAL_ABSPATH is a pre-1.7 working copy root, FALSE
+   otherwise. */
+static svn_boolean_t
+is_old_wcroot(const char *local_abspath,
+              apr_pool_t *scratch_pool)
+{
+  apr_hash_t *entries;
+  const char *parent_abspath, *name;
+  svn_wc_entry_t *entry;
+  svn_error_t *err = svn_wc__read_entries_old(&entries, local_abspath,
+                                              scratch_pool, scratch_pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+
+  svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
+
+  err = svn_wc__read_entries_old(&entries, parent_abspath,
+                                 scratch_pool, scratch_pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return TRUE;
+    }
+
+  entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+  if (!entry
+      || entry->absent
+      || (entry->deleted && entry->schedule != svn_wc_schedule_add))
+    {
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
 svn_error_t *
 svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
@@ -1596,9 +1599,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db;
   struct upgrade_data_t data = { NULL };
-#if 0
-  svn_boolean_t is_wcroot;
-#endif
 
   /* We need a DB that does not attempt an auto-upgrade, nor require
      running a stale work queue. We'll handle everything manually.  */
@@ -1606,15 +1606,11 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                           NULL /* ### config */, FALSE, FALSE,
                           scratch_pool, scratch_pool));
 
-  /* ### this expects a wc-ng working copy. sigh. fix up soonish...  */
-#if 0
-  SVN_ERR(svn_wc__strictly_is_wc_root(&is_wcroot, wc_ctx, local_abspath,
-                                      scratch_pool));
-  if (!is_wcroot)
-    return svn_error_create(
+  if (!is_old_wcroot(local_abspath, scratch_pool))
+    return svn_error_createf(
       SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-      _("'svn upgrade' can only be run from the root of the working copy."));
-#endif
+      _("Cannot upgrade '%s' as it is not a pre-1.7 working copy root"),
+      svn_dirent_local_style(local_abspath, scratch_pool));
 
   /* Upgrade this directory and/or its subdirectories.  */
   SVN_ERR(upgrade_working_copy(db, local_abspath,
@@ -1624,7 +1620,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                                notify_func, notify_baton,
                                scratch_pool));
 
-#ifdef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__db_wclock_release(db, data.root_abspath, scratch_pool));
   SVN_ERR(svn_wc__db_drop_root(db, data.root_abspath, scratch_pool));
   SVN_ERR(svn_sqlite__close(data.sdb));
@@ -1648,7 +1643,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_io_remove_dir2(data.root_abspath, FALSE, NULL, NULL,
                                scratch_pool));
   }
-#endif
 
   SVN_ERR(svn_wc__db_close(db));
 

@@ -151,7 +151,10 @@ process_committed_leaf(svn_wc__db_t *db,
   SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
 
   if (status == svn_wc__db_status_deleted
-      || status == svn_wc__db_status_obstructed_delete)
+#ifndef SVN_WC__SINGLE_DB
+      || status == svn_wc__db_status_obstructed_delete
+#endif
+      )
     {
       return svn_error_return(svn_wc__wq_add_deletion_postcommit(
                                 db, local_abspath, new_revnum, no_unlock,
@@ -309,7 +312,10 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                  of running the log for the replaced directory that was
                  created at the start of this function). */
               if (status == svn_wc__db_status_deleted
-                  || status == svn_wc__db_status_obstructed_delete)
+#ifndef SVN_WC__SINGLE_DB
+                  || status == svn_wc__db_status_obstructed_delete
+#endif
+                  )
                 {
                   svn_boolean_t replaced;
 
@@ -963,7 +969,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
             node_exists = FALSE;
             break;
           case svn_wc__db_status_deleted:
+#ifndef SVN_WC__SINGLE_DB
           case svn_wc__db_status_obstructed_delete:
+#endif
             /* A working copy root should never have a WORKING_NODE */
             SVN_ERR_ASSERT(!is_wc_root);
             node_exists = FALSE;
@@ -1020,8 +1028,11 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
         || parent_status == svn_wc__db_status_not_present
         || parent_status == svn_wc__db_status_excluded
         || parent_status == svn_wc__db_status_absent
+#ifndef SVN_WC__SINGLE_DB
         || parent_status == svn_wc__db_status_obstructed
-        || parent_status == svn_wc__db_status_obstructed_add)
+        || parent_status == svn_wc__db_status_obstructed_add
+#endif
+        )
       {
         return
           svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, err,
@@ -1031,7 +1042,10 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                    scratch_pool));
       }
     else if (parent_status == svn_wc__db_status_deleted
-             || parent_status == svn_wc__db_status_obstructed_delete)
+#ifndef SVN_WC__SINGLE_DB
+             || parent_status == svn_wc__db_status_obstructed_delete
+#endif
+             )
       {
         return
           svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,

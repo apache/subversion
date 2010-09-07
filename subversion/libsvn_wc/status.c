@@ -2535,12 +2535,15 @@ internal_status(svn_wc_status3_t **status,
                              scratch_pool, scratch_pool);
 
   if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      || node_status == svn_wc__db_status_not_present
+      || node_status == svn_wc__db_status_absent
+      || node_status == svn_wc__db_status_excluded
+#ifndef SVN_WC__SINGLE_DB
       || node_status == svn_wc__db_status_obstructed
       || node_status == svn_wc__db_status_obstructed_add
       || node_status == svn_wc__db_status_obstructed_delete
-      || node_status == svn_wc__db_status_not_present
-      || node_status == svn_wc__db_status_absent
-      || node_status == svn_wc__db_status_excluded)
+#endif
+      )
     {
       svn_error_clear(err);
       node_kind = svn_wc__db_kind_unknown;

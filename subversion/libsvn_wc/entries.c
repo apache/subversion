@@ -272,7 +272,10 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                    db, parent_abspath,
                                    scratch_pool, scratch_pool));
       if (parent_status == svn_wc__db_status_added
-          || parent_status == svn_wc__db_status_obstructed_add)
+#ifndef SVN_WC__SINGLE_DB
+          || parent_status == svn_wc__db_status_obstructed_add
+#endif
+          )
         SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
                                          &parent_repos_relpath,
                                          &entry->repos,
@@ -405,7 +408,10 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                        db, parent_abspath,
                                        scratch_pool, scratch_pool));
           if (parent_status == svn_wc__db_status_added
-              || parent_status == svn_wc__db_status_obstructed_add)
+#ifndef SVN_WC__SINGLE_DB
+              || parent_status == svn_wc__db_status_obstructed_add
+#endif
+              )
             SVN_ERR(svn_wc__db_scan_addition(&parent_status,
                                              NULL,
                                              NULL, NULL, NULL,
@@ -649,7 +655,10 @@ read_one_entry(const svn_wc_entry_t **new_entry,
         }
     }
   else if (status == svn_wc__db_status_deleted
-           || status == svn_wc__db_status_obstructed_delete)
+#ifndef SVN_WC__SINGLE_DB
+           || status == svn_wc__db_status_obstructed_delete
+#endif
+           )
     {
 #ifdef SVN_WC__SINGLE_DB
       svn_node_kind_t path_kind;
@@ -690,7 +699,10 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 #endif
     }
   else if (status == svn_wc__db_status_added
-           || status == svn_wc__db_status_obstructed_add)
+#ifndef SVN_WC__SINGLE_DB
+           || status == svn_wc__db_status_obstructed_add
+#endif
+           )
     {
       svn_wc__db_status_t work_status;
       const char *op_root_abspath;
@@ -772,6 +784,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                   && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
                 entry->revision = 0;
 
+#ifndef SVN_WC__SINGLE_DB
               if (status == svn_wc__db_status_obstructed_add)
                 entry->revision = SVN_INVALID_REVNUM;
 
@@ -781,6 +794,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                   && status == svn_wc__db_status_obstructed_add)
                 entry->schedule = svn_wc_schedule_normal;
               else
+#endif
                 entry->schedule = svn_wc_schedule_add;
             }
         }
@@ -789,6 +803,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
          then we cannot begin a scan for data. The original node may
          have important data. Set up stuff to kill that idea off,
          and finish up this entry.  */
+#ifndef SVN_WC__SINGLE_DB
       if (status == svn_wc__db_status_obstructed_add)
         {
           entry->cmt_rev = SVN_INVALID_REVNUM;
@@ -796,6 +811,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           scanned_original_relpath = NULL;
         }
       else
+#endif
         {
           SVN_ERR(svn_wc__db_scan_addition(&work_status,
                                            &op_root_abspath,
@@ -993,12 +1009,14 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       entry->schedule = svn_wc_schedule_normal;
       entry->deleted = TRUE;
     }
+#ifndef SVN_WC__SINGLE_DB
   else if (status == svn_wc__db_status_obstructed)
     {
       /* ### set some values that should (hopefully) let this directory
          ### be usable.  */
       entry->revision = SVN_INVALID_REVNUM;
     }
+#endif
   else if (status == svn_wc__db_status_absent)
     {
       entry->absent = TRUE;
@@ -1049,6 +1067,14 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
      ### the last three should probably have an "implied" REPOS_RELPATH
   */
+#ifdef SVN_WC__SINGLE_DB
+  SVN_ERR_ASSERT(repos_relpath != NULL
+                 || entry->schedule == svn_wc_schedule_delete
+                 || status == svn_wc__db_status_not_present
+                 || status == svn_wc__db_status_absent
+                 || status == svn_wc__db_status_excluded
+                 );
+#else
   SVN_ERR_ASSERT(repos_relpath != NULL
                  || entry->schedule == svn_wc_schedule_delete
                  || status == svn_wc__db_status_obstructed
@@ -1058,6 +1084,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                  || status == svn_wc__db_status_absent
                  || status == svn_wc__db_status_excluded
                  );
+#endif
   if (repos_relpath)
     entry->url = svn_path_url_add_component2(entry->repos,
                                              repos_relpath,

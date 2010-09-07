@@ -311,7 +311,17 @@ dav_svn__log_report(const dav_resource *resource,
       else if (strcmp(child->name, "end-revision") == 0)
         end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "limit") == 0)
-        limit = atoi(dav_xml_get_cdata(child, resource->pool, 1));
+        {
+          serr = svn_cstring_atoi(&limit,
+                                  dav_xml_get_cdata(child, resource->pool, 1));
+          if (serr)
+            {
+              derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
+                                          "Malformed CDATA in element "
+                                          "\"limit\"", resource->pool);
+              goto cleanup;
+            }
+        }
       else if (strcmp(child->name, "discover-changed-paths") == 0)
         discover_changed_paths = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "strict-node-history") == 0)

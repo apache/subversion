@@ -3409,7 +3409,9 @@ def diff_git_format_wc_wc(sbox):
     "+Changed 'iota'.\n",
   ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+  expected = svntest.verify.UnorderedOutput(expected_output)
+
+  svntest.actions.run_and_verify_svn(None, expected, [], 'diff', 
                                      '--git', wc_dir)
 
 def diff_git_format_url_wc(sbox):
@@ -3445,7 +3447,9 @@ def diff_git_format_url_wc(sbox):
     "+Changed 'iota'.\n",
   ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+  expected = svntest.verify.UnorderedOutput(expected_output)
+
+  svntest.actions.run_and_verify_svn(None, expected, [], 'diff', 
                                      '--git',
                                      '--old', repo_url + '@1', '--new',
                                      wc_dir)
@@ -3485,7 +3489,9 @@ def diff_git_format_url_url(sbox):
     "+Changed 'iota'.\n",
   ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
+  expected = svntest.verify.UnorderedOutput(expected_output)
+
+  svntest.actions.run_and_verify_svn(None, expected, [], 'diff', 
                                      '--git', 
                                      '--old', repo_url + '@1', '--new',
                                      repo_url + '@2')

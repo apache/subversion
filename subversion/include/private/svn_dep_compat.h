@@ -62,6 +62,15 @@ extern "C" {
 #define apr_array_clear(arr)         (arr)->nelts = 0
 #endif
 
+#if !APR_VERSION_AT_LEAST(1,3,0)
+#define APR_UINT32_MAX 0xFFFFFFFFU
+#define APR_INT32_MAX  0x7FFFFFFF
+#define APR_INT32_MIN (-APR_INT32_MAX-1)
+#define APR_UINT64_MAX APR_UINT64_C(0xFFFFFFFFFFFFFFFF)
+#define APR_INT64_MAX   APR_INT64_C(0x7FFFFFFFFFFFFFFF)
+#define APR_INT64_MIN (-APR_INT64_MAX-1)
+#endif
+
 /**
  * Check at compile time if the Serf version is at least a certain
  * level.

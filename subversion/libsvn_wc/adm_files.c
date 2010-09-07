@@ -357,13 +357,14 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                "because it has an unexpected status"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
+#ifndef SVN_WC__SINGLE_DB
   else
     /* We know that it is a file, so we can't hit the _obstructed stati.
        Also, we should never see _base_deleted here. */
     SVN_ERR_ASSERT(status != svn_wc__db_status_obstructed
                    && status != svn_wc__db_status_obstructed_add
-                   && status != svn_wc__db_status_obstructed_delete
-                   && status != svn_wc__db_status_base_deleted);
+                   && status != svn_wc__db_status_obstructed_delete);
+#endif
 
   if (sha1_checksum)
     SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
@@ -638,8 +639,11 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
    * arbitrary revision and the URL may differ if the add is
    * being driven from a merge which will have a different URL. */
   if (status != svn_wc__db_status_deleted
+      && status != svn_wc__db_status_not_present
+#ifndef SVN_WC__SINGLE_DB
       && status != svn_wc__db_status_obstructed_delete
-      && status != svn_wc__db_status_not_present)
+#endif
+      )
     {
       /* ### Should we match copyfrom_revision? */
       if (db_revision != revision)
