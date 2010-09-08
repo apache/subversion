@@ -44,6 +44,7 @@
 #include "svn_sorts.h"
 #include "svn_version.h"
 #include "svn_props.h"
+#include "svn_ctype.h"
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_dirent_uri.h"
@@ -1519,7 +1520,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
 
         /* Look for 'var = value' --- and make sure the var is in lcase. */
 
-        for (cp = parm; (*cp && !apr_isspace(*cp) && *cp != '='); ++cp)
+        for (cp = parm; (*cp && !svn_ctype_isspace(*cp) && *cp != '='); ++cp)
           {
             *cp = apr_tolower(*cp);
           }
@@ -1530,7 +1531,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
           }
 
         *cp++ = '\0';           /* Delimit var */
-        while (*cp && (apr_isspace(*cp) || *cp == '='))
+        while (*cp && (svn_ctype_isspace(*cp) || *cp == '='))
           {
             ++cp;
           }
@@ -1544,7 +1545,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
           }
         else
           {
-            for (end = cp; (*end && !apr_isspace(*end)); end++);
+            for (end = cp; (*end && !svn_ctype_isspace(*end)); end++);
           }
         if (*end)
           {

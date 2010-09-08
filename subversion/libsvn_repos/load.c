@@ -34,6 +34,7 @@
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
 #include "svn_subst.h"
+#include "svn_ctype.h"
 
 #include <apr_lib.h>
 
@@ -735,7 +736,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
             return stream_ran_dry();
         }
 
-      if ((linebuf->len == 0) || (apr_isspace(linebuf->data[0])))
+      if ((linebuf->len == 0) || (svn_ctype_isspace(linebuf->data[0])))
         continue; /* empty line ... loop */
 
       /*** Found the beginning of a new record. ***/

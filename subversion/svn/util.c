@@ -829,8 +829,8 @@ svn_cl__get_log_message(const char **log_msg,
           for (len = message->len - 1; len >= 0; len--)
             {
               /* FIXME: should really use an UTF-8 whitespace test
-                 rather than apr_isspace, which is locale dependant */
-              if (! apr_isspace(message->data[len]))
+                 rather than svn_ctype_isspace, which is ASCII only */
+              if (! svn_ctype_isspace(message->data[len]))
                 break;
             }
           if (len < 0)

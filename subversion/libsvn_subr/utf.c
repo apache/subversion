@@ -530,9 +530,9 @@ check_non_ascii(const char *data, apr_size_t len, apr_pool_t *pool)
 
   for (; len > 0; --len, data++)
     {
-      if ((! apr_isascii(*data))
-          || ((! apr_isspace(*data))
-              && apr_iscntrl(*data)))
+      if ((! svn_ctype_isascii(*data))
+          || ((! svn_ctype_isspace(*data))
+              && svn_ctype_iscntrl(*data)))
         {
           /* Show the printable part of the data, followed by the
              decimal code of the questionable character.  Because if a
