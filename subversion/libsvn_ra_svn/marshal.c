@@ -38,6 +38,7 @@
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
 #include "svn_private_config.h"
+#include "svn_ctype.h"
 
 #include "ra_svn.h"
 
@@ -593,7 +594,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Determine the item type and read it in.  Make sure that c is the
    * first character at the end of the item so we can test to make
    * sure it's whitespace. */
-  if (apr_isdigit(c))
+  if (svn_ctype_isdigit(c))
     {
       /* It's a number or a string.  Read the number part, either way. */
       val = c - '0';
@@ -601,7 +602,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         {
           prev_val = val;
           SVN_ERR(readbuf_getchar(conn, pool, &c));
-          if (!apr_isdigit(c))
+          if (!svn_ctype_isdigit(c))
             break;
           val = val * 10 + (c - '0');
           if ((val / 10) != prev_val) /* val wrapped past maximum value */
@@ -621,14 +622,14 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           item->u.number = val;
         }
     }
-  else if (apr_isalpha(c))
+  else if (svn_ctype_isalpha(c))
     {
       /* It's a word. */
       str = svn_stringbuf_ncreate(&c, 1, pool);
       while (1)
         {
           SVN_ERR(readbuf_getchar(conn, pool, &c));
-          if (!apr_isalnum(c) && c != '-')
+          if (!svn_ctype_isalnum(c) && c != '-')
             break;
           svn_stringbuf_appendbytes(str, &c, 1);
         }

@@ -88,7 +88,7 @@ string_first_non_whitespace(const char *str, apr_size_t len)
 
   for (i = 0; i < len; i++)
     {
-      if (! apr_isspace(str[i]))
+      if (! svn_ctype_isspace(str[i]))
         return i;
     }
 
@@ -464,7 +464,7 @@ svn_stringbuf_strip_whitespace(svn_stringbuf_t *str)
   str->blocksize -= offset;
 
   /* Now that we've trimmed the front, trim the end, wasting more RAM. */
-  while ((str->len > 0) && apr_isspace(str->data[str->len - 1]))
+  while ((str->len > 0) && svn_ctype_isspace(str->data[str->len - 1]))
     str->len--;
   str->data[str->len] = '\0';
 }
@@ -506,12 +506,12 @@ svn_cstring_split_append(apr_array_header_t *array,
     {
       if (chop_whitespace)
         {
-          while (apr_isspace(*p))
+          while (svn_ctype_isspace(*p))
             p++;
 
           {
             char *e = p + (strlen(p) - 1);
-            while ((e >= p) && (apr_isspace(*e)))
+            while ((e >= p) && (svn_ctype_isspace(*e)))
               e--;
             *(++e) = '\0';
           }

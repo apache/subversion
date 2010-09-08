@@ -47,6 +47,7 @@
 #include "svn_time.h"
 #include "svn_mergeinfo.h"
 #include "svn_config.h"
+#include "svn_ctype.h"
 
 #include "fs.h"
 #include "err.h"
@@ -916,7 +917,7 @@ check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
   const char *p;
 
   for (p = buf + offset; *p; p++)
-    if (!apr_isdigit(*p))
+    if (!svn_ctype_isdigit(*p))
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
         _("Format file '%s' contains unexpected non-digit '%c' within '%s'"),
         svn_dirent_local_style(path, pool), *p, buf);

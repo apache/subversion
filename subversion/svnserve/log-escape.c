@@ -40,10 +40,10 @@
 
 
 #include <apr.h>
-#include <apr_lib.h>
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include "server.h"
+#include "svn_ctype.h"
 
 /* copied from httpd-2.2.4/server/util.c */
 /* c2x takes an unsigned, and expects the caller has guaranteed that
@@ -93,7 +93,9 @@ apr_size_t escape_errorlog_item(char *dest, const char *source,
            which does this same check with a fast lookup table.  Well,
            mostly the same; we don't escape quotes, as that does.
         */
-        if (*s && (!apr_isprint(*s) || *s == '\\' || apr_iscntrl(*s))) {
+        if (*s && (   !svn_ctype_isprint(*s)
+                   || *s == '\\'
+                   || svn_ctype_iscntrl(*s))) {
             *d++ = '\\';
             if (d >= ep) {
                 --d;

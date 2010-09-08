@@ -29,7 +29,6 @@
 
 #include <apr_pools.h>
 #include <apr_general.h>
-#include <apr_lib.h>
 
 #include "svn_cmdline.h"
 #include "svn_opt.h"
@@ -38,6 +37,7 @@
 #include "svn_test.h"
 #include "svn_io.h"
 #include "svn_path.h"
+#include "svn_ctype.h"
 #include "svn_private_config.h"
 
 
@@ -262,7 +262,7 @@ do_test_num(const char *progname,
         printf("WARNING: Test docstring exceeds 50 characters\n");
       if (msg[len - 1] == '.')
         printf("WARNING: Test docstring ends in a period (.)\n");
-      if (apr_isupper(msg[0]))
+      if (svn_ctype_isupper(msg[0]))
         printf("WARNING: Test docstring is capitalized\n");
     }
   if (desc->msg == NULL)
@@ -425,7 +425,7 @@ main(int argc, const char *argv[])
         {
           for (i = 1; i < argc; i++)
             {
-              if (apr_isdigit(argv[i][0]))
+              if (svn_ctype_isdigit(argv[i][0]))
                 {
                   ran_a_test = TRUE;
                   test_num = atoi(argv[i]);

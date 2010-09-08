@@ -27,11 +27,11 @@
 
 /*** Includes. ***/
 
-#include <apr_lib.h>
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
 #include "svn_error.h"
+#include "svn_ctype.h"
 #include "svn_private_config.h"
 
 
@@ -63,9 +63,9 @@ svn_mime_type_validate(const char *mime_type, apr_pool_t *pool)
   for (i = 0; i < len; i++)
     {
       if (&mime_type[i] != slash_pos
-        && (! apr_isascii(mime_type[i])
-            || apr_iscntrl(mime_type[i])
-            || apr_isspace(mime_type[i])
+         && (! svn_ctype_isascii(mime_type[i])
+            || svn_ctype_iscntrl(mime_type[i])
+            || svn_ctype_isspace(mime_type[i])
             || (strchr(tspecials, mime_type[i]) != NULL)))
         return svn_error_createf
           (SVN_ERR_BAD_MIME_TYPE, NULL,
