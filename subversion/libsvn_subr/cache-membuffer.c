@@ -511,7 +511,7 @@ find_entry(svn_membuffer_t *cache,
    */
   for (i = 0; i < GROUP_SIZE; ++i)
     if (group[i].offset != NO_OFFSET && 
-        !memcmp(to_find, group[i].key, sizeof(to_find)))
+        !memcmp(to_find, group[i].key, KEY_SIZE))
       {
         /* found it
          */
@@ -556,7 +556,7 @@ find_entry(svn_membuffer_t *cache,
         }
 
       /* initialize entry for the new key */
-      memcpy(entry->key, to_find, sizeof(to_find));
+      memcpy(entry->key, to_find, KEY_SIZE);
     }
 
   return entry;
