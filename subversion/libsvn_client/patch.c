@@ -1838,15 +1838,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
               {
                 /* We could not copy the entire target property to the
                  * temporary file, and would truncate the target if we
-                 * copied the temporary file on top of it. Skip this target. 
-                 *
-                 * ### dannas: Do we really want to skip an entire target
-                 * ### if one of the properties does not apply cleanly,
-                 * ### e.g. both text changes and all prop changes will not be
-                 * ### installed.
-                 * ### stsp: This is a "should never happen" situation.
-                 * ### It means we've run out of disk space or something
-                 * ### like that, so skipping is appropriate. */
+                 * copied the temporary file on top of it. Skip this target.  */
                 target->skipped = TRUE;
               }
           }
