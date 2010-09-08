@@ -59,6 +59,7 @@
 #define OP_TMP_SET_TEXT_CONFLICT_MARKERS "tmp-set-text-conflict-markers"
 #define OP_TMP_SET_PROPERTY_CONFLICT_MARKER "tmp-set-property-conflict-marker"
 #define OP_PRISTINE_GET_TRANSLATED "pristine-get-translated"
+#define OP_POSTUPGRADE "postupgrade"
 
 /* For work queue debugging. Generates output about its operation.  */
 /* #define DEBUG_WORK_QUEUE */
@@ -1610,6 +1611,34 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 }
 
 /* ------------------------------------------------------------------------ */
+/* OP_POSTUPGRADE  */
+
+static svn_error_t *
+run_postupgrade(svn_wc__db_t *db,
+                const svn_skel_t *work_item,
+                const char *wri_abspath,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__wipe_postupgrade(wri_abspath, FALSE,
+                                   cancel_func, cancel_baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wq_build_postupgrade(svn_skel_t **work_item,
+                             apr_pool_t *result_pool)
+{
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  svn_skel__prepend_str(OP_POSTUPGRADE, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
 
 /* OP_FILE_INSTALL */
 
@@ -2393,6 +2422,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_TMP_SET_TEXT_CONFLICT_MARKERS, run_set_text_conflict_markers },
   { OP_TMP_SET_PROPERTY_CONFLICT_MARKER, run_set_property_conflict_marker },
   { OP_PRISTINE_GET_TRANSLATED, run_pristine_get_translated },
+  { OP_POSTUPGRADE, run_postupgrade },
 
 #ifndef SVN_WC__SINGLE_DB
   { OP_KILLME, run_killme },

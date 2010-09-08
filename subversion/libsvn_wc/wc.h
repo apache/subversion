@@ -649,6 +649,13 @@ svn_wc__upgrade_sdb(int *result_format,
                     apr_pool_t *scratch_pool);
 
 
+svn_error_t *
+svn_wc__wipe_postupgrade(const char *dir_abspath,
+                         svn_boolean_t whole_admin,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool);
+
 /* Check whether a node is a working copy root or switched.
  *
  * If LOCAL_ABSPATH is the root of a working copy, set *WC_ROOT to TRUE,

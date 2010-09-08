@@ -35,6 +35,7 @@
 #include "wc_db.h"
 #include "tree_conflicts.h"
 #include "wc-queries.h"  /* for STMT_*  */
+#include "workqueue.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -495,6 +496,42 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                     TRUE, scratch_pool));
 }
 
+svn_error_t *
+svn_wc__wipe_postupgrade(const char *dir_abspath,
+                         svn_boolean_t whole_admin,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_array_header_t *subdirs;
+  int i;
+
+  if (cancel_func)
+    SVN_ERR((*cancel_func)(cancel_baton));
+
+  SVN_ERR(get_versioned_subdirs(&subdirs, dir_abspath, scratch_pool, iterpool));
+  for (i = 0; i < subdirs->nelts; ++i)
+    {
+      const char *child_abspath = APR_ARRAY_IDX(subdirs, i, const char *);
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_wc__wipe_postupgrade(child_abspath, TRUE,
+                                       cancel_func, cancel_baton, iterpool));
+    }
+
+  /* ### Should we really be ignoring errors here? */
+  if (whole_admin)
+    svn_error_clear(svn_io_remove_dir2(svn_wc__adm_child(dir_abspath, "",
+                                                         iterpool),
+                                       TRUE, NULL, NULL, iterpool));
+  else
+    wipe_obsolete_files(dir_abspath, scratch_pool);
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
 
 /* Ensure that ENTRY has its REPOS and UUID fields set. These will be
    used to establish the REPOSITORY row in the new database, and then
@@ -1252,11 +1289,11 @@ upgrade_to_wcng(svn_wc__db_t *db,
     {
       const char *root_adm_abspath;
 
-      /* In root wc construst path to temporary root wc/.svn/wcng/.svn
+      /* In root wc construst path to temporary root wc/.svn/tmp/wcng/.svn */
 
-         ### This should really be in tmp so that 1.6 can cleanup if
-             interrupted, i.e. wc/.svn/tmp/wcng/.svn */
-      data->root_abspath = svn_wc__adm_child(dir_abspath, "wcng", result_pool);
+      data->root_abspath = svn_dirent_join(svn_wc__adm_child(dir_abspath, "tmp",
+                                                             scratch_pool),
+                                           "wcng", result_pool);
       root_adm_abspath = svn_wc__adm_child(data->root_abspath, "",
                                            scratch_pool);
       SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
@@ -1322,20 +1359,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
 
   /* All done. DB should finalize the upgrade process now.  */
   SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, data->sdb, scratch_pool));
-
-  /* Zap all the obsolete files. This removes the old-style lock file.
-     In single-db we should postpone this until we have processed all
-     entries files into the single-db, otherwise an interrupted
-     upgrade is nasty.  Perhaps add a wq item?  If we do postpone then
-     perhaps we should still remove the lock otherwise the user has to
-     use 1.6 to cleanup. */
-  wipe_obsolete_files(dir_abspath, scratch_pool);
-
-  /* Remove the admin dir in subdirectories of the root. */
-  if (!svn_dirent_is_ancestor(dir_abspath, data->root_abspath))
-    svn_error_clear(svn_io_remove_dir2(svn_wc__adm_child(dir_abspath, NULL,
-                                                         scratch_pool),
-                                       FALSE, NULL, NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1599,12 +1622,8 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db;
   struct upgrade_data_t data = { NULL };
-
-  /* We need a DB that does not attempt an auto-upgrade, nor require
-     running a stale work queue. We'll handle everything manually.  */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, FALSE, FALSE,
-                          scratch_pool, scratch_pool));
+  svn_skel_t *work_item, *work_items = NULL;
+  const char *pristine_from, *pristine_to, *db_from, *db_to;
 
   if (!is_old_wcroot(local_abspath, scratch_pool))
     return svn_error_createf(
@@ -1612,7 +1631,20 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
       _("Cannot upgrade '%s' as it is not a pre-1.7 working copy root"),
       svn_dirent_local_style(local_abspath, scratch_pool));
 
-  /* Upgrade this directory and/or its subdirectories.  */
+  /* Given a pre-wcng root some/wc we create a temporary wcng in
+     some/wc/.svn/tmp/wcng/wc.db and copy the metadata from one to the
+     other, then the temporary wc.db file gets moved into the original
+     root.  Until the wc.db file is moved the original working copy
+     remains a pre-wcng and 'cleanup' with an old client will remove
+     the partial upgrade.  Moving the wc.db file creates a wcng, and
+     'cleanup' with a new client will complete any outstanding
+     upgrade. */
+
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          NULL /* ### config */, FALSE, FALSE,
+                          scratch_pool, scratch_pool));
+
+  /* Upgrade the pre-wcng into a wcng in a temporary location. */
   SVN_ERR(upgrade_working_copy(db, local_abspath,
                                repos_info_func, repos_info_baton,
                                apr_hash_make(scratch_pool), &data,
@@ -1620,31 +1652,41 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                                notify_func, notify_baton,
                                scratch_pool));
 
-  SVN_ERR(svn_wc__db_wclock_release(db, data.root_abspath, scratch_pool));
-  SVN_ERR(svn_wc__db_drop_root(db, data.root_abspath, scratch_pool));
-  SVN_ERR(svn_sqlite__close(data.sdb));
-  {
-    const char *pristine_from = svn_wc__adm_child(data.root_abspath,
-                                                  PRISTINE_STORAGE_RELPATH,
-                                                  scratch_pool);
-    const char *pristine_to = svn_wc__adm_child(local_abspath,
-                                                PRISTINE_STORAGE_RELPATH,
-                                                scratch_pool);
-    SVN_ERR(svn_io_file_rename(pristine_from, pristine_to, scratch_pool));
-  }
-  {
-    const char *db_from = svn_wc__adm_child(data.root_abspath, SDB_FILE,
-                                            scratch_pool);
-    const char *db_to = svn_wc__adm_child(local_abspath, SDB_FILE,
-                                          scratch_pool);
-    SVN_ERR(svn_io_file_rename(db_from, db_to, scratch_pool));
-  }
-  {
-    SVN_ERR(svn_io_remove_dir2(data.root_abspath, FALSE, NULL, NULL,
-                               scratch_pool));
-  }
+  /* A workqueue item to move the pristine dir into place */
+  pristine_from = svn_wc__adm_child(data.root_abspath, PRISTINE_STORAGE_RELPATH,
+                                    scratch_pool);
+  pristine_to = svn_wc__adm_child(local_abspath, PRISTINE_STORAGE_RELPATH,
+                                  scratch_pool);
+  SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
+                                     pristine_from, pristine_to,
+                                     scratch_pool, scratch_pool));
+  work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
 
+  /* A workqueue item to remove pre-wcng metadata */
+  SVN_ERR(svn_wc__wq_build_postupgrade(&work_item, scratch_pool));
+  work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+  SVN_ERR(svn_wc__db_wq_add(db, data.root_abspath, work_items, scratch_pool));
+
+  SVN_ERR(svn_wc__db_wclock_release(db, data.root_abspath, scratch_pool));
+  SVN_ERR(svn_sqlite__close(data.sdb));
   SVN_ERR(svn_wc__db_close(db));
+
+  /* Renaming the db file is what makes the pre-wcng into a wcng */
+  db_from = svn_wc__adm_child(data.root_abspath, SDB_FILE, scratch_pool);
+  db_to = svn_wc__adm_child(local_abspath, SDB_FILE, scratch_pool);
+  SVN_ERR(svn_io_file_rename(db_from, db_to, scratch_pool));
+
+  /* Now we have a working wcng, tidy up the droppings */
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+                          NULL /* ### config */, FALSE, FALSE,
+                          scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
+                         scratch_pool));
+  SVN_ERR(svn_wc__db_close(db));
+
+  /* Should we have the workqueue remove this empty dir? */
+  SVN_ERR(svn_io_remove_dir2(data.root_abspath, FALSE, NULL, NULL,
+                             scratch_pool));
 
   return SVN_NO_ERROR;
 }
