@@ -1721,16 +1721,13 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       svn_prop_patch_t *prop_patch;
       const char *prop_name;
       prop_patch_target_t *prop_target;
-      target_content_info_t *prop_content_info;
         
       prop_name = svn__apr_hash_index_key(hash_index);
       prop_patch = svn__apr_hash_index_val(hash_index);
 
-      /* We'll store matched hunks in prop_content_info.
-       * ### Just use prop_target->content_info? */
+      /* We'll store matched hunks in prop_content_info. */
       prop_target = apr_hash_get(target->prop_targets, prop_name, 
                                  APR_HASH_KEY_STRING);
-      prop_content_info = prop_target->content_info;
 
       for (i = 0; i < prop_patch->hunks->nelts; i++)
         {
@@ -1749,7 +1746,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
            * If no match is found initially, try with fuzz. */
           do
             {
-              SVN_ERR(get_hunk_info(&hi, target, prop_content_info, hunk, fuzz,
+              SVN_ERR(get_hunk_info(&hi, target, prop_target->content_info, 
+                                    hunk, fuzz,
                                     ignore_whitespace,
                                     TRUE /* is_prop_hunk */,
                                     cancel_func, cancel_baton,
@@ -1758,7 +1756,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
             }
           while (hi->rejected && fuzz <= MAX_FUZZ && ! hi->already_applied);
 
-          APR_ARRAY_PUSH(prop_content_info->hunks, hunk_info_t *) = hi;
+          APR_ARRAY_PUSH(prop_target->content_info->hunks, hunk_info_t *) = hi;
         }
     }
 
@@ -1768,40 +1766,36 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
        hash_index = apr_hash_next(hash_index))
     {
       prop_patch_target_t *prop_target;
-      target_content_info_t *prop_content_info;
-      const char *prop_patched_path;
 
       prop_target = svn__apr_hash_index_val(hash_index);
-      /* ### Just use prop_target->content_info? */
-      prop_content_info = prop_target->content_info;
-      /* ### Just use prop_target->patched_path? */
-      prop_patched_path = prop_target->patched_path;
 
-      for (i = 0; i < prop_content_info->hunks->nelts; i++)
+      for (i = 0; i < prop_target->content_info->hunks->nelts; i++)
         {
           hunk_info_t *hi;
 
           svn_pool_clear(iterpool);
 
-          hi = APR_ARRAY_IDX(prop_content_info->hunks, i, hunk_info_t *);
+          hi = APR_ARRAY_IDX(prop_target->content_info->hunks, i, 
+                             hunk_info_t *);
           if (hi->already_applied)
             continue;
           else if (hi->rejected)
-            SVN_ERR(reject_hunk(target, prop_content_info, hi,
+            SVN_ERR(reject_hunk(target, prop_target->content_info, hi,
                                 prop_target->name,
                                 iterpool));
           else
-            SVN_ERR(apply_hunk(target, prop_content_info, hi, 
+            SVN_ERR(apply_hunk(target, prop_target->content_info, hi, 
                                prop_target->name,
                                iterpool));
         }
 
-        if (prop_content_info->stream)
+        if (prop_target->content_info->stream)
           {
             /* Copy any remaining lines to target. */
-            SVN_ERR(copy_lines_to_target(prop_content_info, 0,
-                                         prop_patched_path, scratch_pool));
-            if (! prop_content_info->eof)
+            SVN_ERR(copy_lines_to_target(prop_target->content_info, 0,
+                                         prop_target->patched_path, 
+                                         scratch_pool));
+            if (! prop_target->content_info->eof)
               {
                 /* We could not copy the entire target property to the
                  * temporary file, and would truncate the target if we
