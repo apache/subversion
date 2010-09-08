@@ -1,0 +1,6 @@
+This branch exists to test out the implementation of the repository access
+APIs with JavaHL.
+
+I currently only plan on implementing simple RA APIs in this interface.  I
+have no intention, or desire, to do a full editor implementation, though
+others are willing to do so.
