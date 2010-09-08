@@ -69,6 +69,7 @@ extern "C" {
 #define APR_UINT64_MAX APR_UINT64_C(0xFFFFFFFFFFFFFFFF)
 #define APR_INT64_MAX   APR_INT64_C(0x7FFFFFFFFFFFFFFF)
 #define APR_INT64_MIN (-APR_INT64_MAX-1)
+#define APR_SIZE_MAX (~(apr_size_t)0)
 #endif
 
 /**
