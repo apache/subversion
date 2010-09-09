@@ -196,6 +196,8 @@ propset_on_url(const char *propname,
                svn_boolean_t skip_checks,
                svn_revnum_t base_revision_for_url,
                const apr_hash_t *revprop_table,
+               svn_commit_callback2_t commit_callback,
+               void *commit_baton,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
@@ -215,7 +217,7 @@ propset_on_url(const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, target,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, target,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
@@ -270,8 +272,8 @@ propset_on_url(const char *propname,
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    ctx->commit_callback2,
-                                    ctx->commit_baton,
+                                    commit_callback,
+                                    commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
@@ -346,6 +348,8 @@ svn_client_propset4(const char *propname,
                     svn_revnum_t base_revision_for_url,
                     const apr_array_header_t *changelists,
                     const apr_hash_t *revprop_table,
+                    svn_commit_callback2_t commit_callback,
+                    void *commit_baton,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
@@ -397,7 +401,8 @@ svn_client_propset4(const char *propname,
                                    "'%s' is not supported"), propname, target);
 
       return propset_on_url(propname, propval, target, skip_checks,
-                            base_revision_for_url, revprop_table, ctx, pool);
+                            base_revision_for_url, revprop_table,
+                            commit_callback, commit_baton, ctx, pool);
     }
   else
     {
@@ -520,7 +525,7 @@ svn_client_revprop_set2(const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
                                                NULL, FALSE, TRUE, ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
@@ -1001,7 +1006,7 @@ svn_client_revprop_get(const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
                                                NULL, FALSE, TRUE, ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
@@ -1345,7 +1350,7 @@ svn_client_revprop_list(apr_hash_t **props,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
                                                NULL, FALSE, TRUE, ctx, pool));
 
   /* Resolve the revision into something real, and return that to the

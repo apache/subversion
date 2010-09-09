@@ -471,6 +471,7 @@ class Httpd:
       fp.write(self._sys_module('authn_file_module', 'mod_authn_file.so'))
     else:
       fp.write(self._sys_module('auth_module', 'mod_auth.so'))
+    fp.write(self._sys_module('alias_module', 'mod_alias.so'))
     fp.write(self._sys_module('mime_module', 'mod_mime.so'))
     fp.write(self._sys_module('log_config_module', 'mod_log_config.so'))
 
@@ -482,10 +483,16 @@ class Httpd:
     fp.write(self._svn_repo('repositories'))
     fp.write(self._svn_repo('local_tmp'))
 
+    # And two redirects for the redirect tests
+    fp.write('RedirectMatch permanent ^/svn-test-work/repositories/' 
+             'REDIRECT-PERM-(.*)$ /svn-test-work/repositories/$1\n')
+    fp.write('RedirectMatch           ^/svn-test-work/repositories/'
+             'REDIRECT-TEMP-(.*)$ /svn-test-work/repositories/$1\n')
+
     fp.write('TypesConfig     ' + self._quote(self.httpd_mime_types) + '\n')
     fp.write('LogLevel        Debug\n')
     fp.write('HostNameLookups Off\n')
-
+    
     fp.close()
 
   def __del__(self):

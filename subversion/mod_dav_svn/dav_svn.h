@@ -37,6 +37,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "private/svn_dav_protocol.h"
+#include "private/svn_skel.h"
 #include "mod_authz_svn.h"
 
 #ifdef __cplusplus
@@ -419,7 +420,7 @@ dav_svn__store_activity(const dav_svn_repos *repos,
                         const char *txn_name);
 
 
-/* HTTP protocol v2:  client does POST against 'me' resource. */
+/* POST request handler.  (Used by HTTP protocol v2 clients only.)  */
 int dav_svn__method_post(request_rec *r);
 
 
@@ -639,6 +640,23 @@ dav_error *
 dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
                                 ap_filter_t *output);
+
+
+/*** posts/ ***/
+
+/* The list of Subversion's custom POSTs. */
+/* ### should move these report names to a public header to share with
+   ### the client (and third parties). */
+static const char * dav_svn__posts_list[] = {
+  "create-txn",
+  NULL
+};
+
+/* The various POST handlers, defined in posts/, and used by repos.c.  */
+dav_error *
+dav_svn__post_create_txn(const dav_resource *resource,
+                         svn_skel_t *request_skel,
+                         ap_filter_t *output);
 
 /*** authz.c ***/
 
@@ -889,6 +907,13 @@ dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
  * dav_error_response_tag() function which is, sadly, not public.
  */
 int dav_svn__error_response_tag(request_rec *r, dav_error *err);
+
+
+/* Set *SKEL to a parsed skel read from the body of request R, and
+ * allocated in POOL.
+ */
+int dav_svn__parse_request_skel(svn_skel_t **skel, request_rec *r,
+                                apr_pool_t *pool);
 
 /*** mirror.c ***/
 

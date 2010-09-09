@@ -1810,8 +1810,6 @@ def mergeinfo_switch_elision(sbox):
     'F'       : Item(),
     })
   expected_skip = svntest.wc.State(B_COPY_1_path, { })
-  saved_cwd = os.getcwd()
-
   svntest.actions.run_and_verify_merge(B_COPY_1_path, '2', '4',
                                        sbox.repo_url + '/A/B', None,
                                        expected_output,
@@ -1858,8 +1856,6 @@ def mergeinfo_switch_elision(sbox):
     'beta'  : Item("New content"),
     })
   expected_skip = svntest.wc.State(E_COPY_2_path, { })
-  saved_cwd = os.getcwd()
-
   svntest.actions.run_and_verify_merge(E_COPY_2_path, '2', '4',
                                        sbox.repo_url + '/A/B/E', None,
                                        expected_output,

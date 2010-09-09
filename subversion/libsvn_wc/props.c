@@ -52,10 +52,8 @@
 #include "private/svn_skel.h"
 
 #include "wc.h"
-#include "adm_files.h"
 #include "props.h"
 #include "translate.h"
-#include "lock.h"  /* for svn_wc__write_check()  */
 #include "workqueue.h"
 #include "conflicts.h"
 
@@ -69,34 +67,6 @@ static const svn_string_t *
 message_from_skel(const svn_skel_t *skel,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
-
-static svn_error_t *
-load_pristine_props(apr_hash_t **props,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_read_pristine_props(props, db, local_abspath,
-                                         result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-load_actual_props(apr_hash_t **props,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_read_props(props, db, local_abspath,
-                                result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Given a *SINGLE* property conflict in PROP_SKEL, generate a message
    for it, and write it to STREAM, along with a trailing EOL sequence.
@@ -165,77 +135,6 @@ svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
   return SVN_NO_ERROR;
 }
 
-
-/* See props.h  */
-#ifdef SVN__SUPPORT_BASE_MERGE
-
-/* Add a working queue item to install PROPS and, if INSTALL_PRISTINE_PROPS is
-   TRUE, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the node to reflect
-   the changes.  PRISTINE_PROPS must be supplied even if INSTALL_PRISTINE_PROPS
-   is FALSE.
-
-   Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-queue_install_props(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_wc__db_kind_t kind,
-                    apr_hash_t *pristine_props,
-                    apr_hash_t *props,
-                    svn_boolean_t install_pristine_props,
-                    apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *prop_diffs;
-  const char *prop_abspath;
-  svn_skel_t *work_item;
-
-  SVN_ERR_ASSERT(pristine_props != NULL);
-
-  /* Check if the props are modified. */
-  SVN_ERR(svn_prop_diffs(&prop_diffs, props, pristine_props, scratch_pool));
-
-  /* Save the actual properties file if it differs from base. */
-  if (prop_diffs->nelts == 0)
-    props = NULL; /* Remove actual properties*/
-
-  if (install_pristine_props)
-    {
-      /* Write out a new set of pristine properties.  */
-      SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
-                                svn_wc__props_base, scratch_pool));
-      SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
-                                               prop_abspath,
-                                               pristine_props,
-                                               scratch_pool));
-      SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-    }
-
-  /* For the old school: write the properties into the "working" (aka ACTUAL)
-     location. Note that PROPS may be NULL, indicating a removal of the
-     props file.  */
-  SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
-                            svn_wc__props_working, scratch_pool));
-  SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
-                                           prop_abspath,
-                                           props,
-                                           scratch_pool));
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-
-  /* ### this is disappearing. for now, it is a delayed call to put
-     ### properties into wc_db.  */
-  if (!install_pristine_props)
-    pristine_props = NULL; /* Don't change the pristine properties */
-  SVN_ERR(svn_wc__wq_add_install_properties(db,
-                                            local_abspath,
-                                            pristine_props,
-                                            props,
-                                            scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-#endif /* SVN__SUPPORT_BASE_MERGE  */
-
-
 /* */
 static svn_error_t *
 immediate_install_props(svn_wc__db_t *db,
@@ -247,8 +146,8 @@ immediate_install_props(svn_wc__db_t *db,
   apr_hash_t *base_props;
 
   /* ### no pristines should be okay.  */
-  SVN_ERR_W(load_pristine_props(&base_props, db, local_abspath,
-                                scratch_pool, scratch_pool),
+  SVN_ERR_W(svn_wc__db_read_pristine_props(&base_props, db, local_abspath,
+                                           scratch_pool, scratch_pool),
             _("Failed to load pristine properties"));
 
   /* Check if the props are modified. If no changes, then wipe out
@@ -270,15 +169,6 @@ immediate_install_props(svn_wc__db_t *db,
                                   NULL, /* work_items */
                                   scratch_pool));
 
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__working_props_committed(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool)
-{
   return SVN_NO_ERROR;
 }
 
@@ -457,9 +347,35 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
 
 /* See props.h  */
 #ifdef SVN__SUPPORT_BASE_MERGE
-      SVN_ERR(queue_install_props(db, local_abspath, kind,
-                                  new_base_props, new_actual_props,
-                                  base_merge, pool));
+      {
+        svn_wc__db_status_t status;
+        svn_boolean_t have_base;
+        apr_array_header_t *prop_diffs;
+
+        SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     &have_base, NULL, NULL, NULL,
+                                     db, local_abspath, pool, pool));
+
+        if (status == svn_wc__db_status_added)
+          SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
+                                                    new_base_props, pool));
+        else
+          SVN_ERR(svn_wc__db_temp_base_set_props(db, local_abspath,
+                                                 new_base_props, pool));
+
+        /* Check if the props are modified. */
+        SVN_ERR(svn_prop_diffs(&prop_diffs, actual_props, new_base_props, pool));
+
+        /* Save the actual properties file if it differs from base. */
+        if (prop_diffs->nelts == 0)
+          SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, NULL, NULL,
+                                          pool));
+        else
+          SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
+                                          NULL, NULL, pool));
+      }
 #else
       if (base_merge)
         return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -1777,8 +1693,8 @@ svn_wc__get_actual_props(apr_hash_t **props,
   /* ### perform some state checking. for example, locally-deleted nodes
      ### should not have any ACTUAL props.  */
 
-  return svn_error_return(load_actual_props(props, db, local_abspath,
-                                            result_pool, scratch_pool));
+  return svn_error_return(svn_wc__db_read_props(props, db, local_abspath,
+                                                result_pool, scratch_pool));
 }
 
 
@@ -1842,6 +1758,7 @@ svn_wc__get_pristine_props(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
+#ifndef SVN_WC__SINGLE_DB
   /* The node is obstructed:
 
      - subdir is missing, obstructed by a file, or missing admin area
@@ -1861,11 +1778,13 @@ svn_wc__get_pristine_props(apr_hash_t **props,
                                 "properties are not available."),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
+#endif
 
   /* status: normal, moved_here, copied, deleted  */
 
   /* After the above checks, these pristines should always be present.  */
-  return svn_error_return(load_pristine_props(props, db, local_abspath,
+  return svn_error_return(
+               svn_wc__db_read_pristine_props(props, db, local_abspath,
                                               result_pool, scratch_pool));
 }
 
@@ -2205,8 +2124,8 @@ svn_wc__internal_propset(svn_wc__db_t *db,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(load_actual_props(&prophash, db, local_abspath,
-                              scratch_pool, scratch_pool),
+  SVN_ERR_W(svn_wc__db_read_props(&prophash, db, local_abspath,
+                                  scratch_pool, scratch_pool),
             _("Failed to load current properties"));
 
   /* If we're changing this file's list of expanded keywords, then
@@ -2494,8 +2413,8 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
 
   /* ### if pristines are not defined, then should this raise an error,
      ### or use an empty set?  */
-  SVN_ERR(load_pristine_props(&baseprops, db, local_abspath,
-                              result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_props(&baseprops, db, local_abspath,
+                                         result_pool, scratch_pool));
 
   if (original_props != NULL)
     *original_props = baseprops;
@@ -2509,8 +2428,8 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
       if (baseprops == NULL)
         baseprops = apr_hash_make(scratch_pool);
 
-      SVN_ERR(load_actual_props(&actual_props, db, local_abspath,
-                                result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
+                                    result_pool, scratch_pool));
       /* ### be wary. certain nodes don't have ACTUAL props either. we
          ### may want to raise an error. or maybe that is a deletion of
          ### any potential pristine props?  */

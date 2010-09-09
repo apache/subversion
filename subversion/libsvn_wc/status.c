@@ -444,18 +444,10 @@ assemble_status(svn_wc_status3_t **status,
         {
           apr_hash_t *props;
         
-          SVN_ERR(svn_wc__get_pristine_props(&props, db, local_abspath,
-                                             scratch_pool, scratch_pool));
-        
-          if (props != NULL && apr_hash_count(props) > 0)
-            has_props = TRUE;
-          else
-            {
-              SVN_ERR(svn_wc__get_actual_props(&props, db, local_abspath,
-                                               scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
+                                                 scratch_pool, scratch_pool));
 
-              has_props = (props != NULL && apr_hash_count(props) > 0);
-            }
+          has_props = (props != NULL && apr_hash_count(props) > 0);
         }
       if (has_props)
         prop_status = svn_wc_status_normal;
@@ -476,10 +468,11 @@ assemble_status(svn_wc_status3_t **status,
 #endif /* HAVE_SYMLINK */
 
       /* If the entry is a file, check for textual modifications */
-      if ((db_kind == svn_wc__db_kind_file
-           || db_kind == svn_wc__db_kind_symlink)
+      if (node_status != svn_wc_status_missing
+          && (db_kind == svn_wc__db_kind_file
+              || db_kind == svn_wc__db_kind_symlink)
 #ifdef HAVE_SYMLINK
-          && (wc_special == (dirent && dirent->special))
+             && (wc_special == (dirent && dirent->special))
 #endif /* HAVE_SYMLINK */
           )
         {
@@ -524,19 +517,7 @@ assemble_status(svn_wc_status3_t **status,
         text_status = svn_wc_status_modified;
     }
 
-  /* While tree conflicts aren't stored on the node themselves, check
-     explicitly for tree conflicts to allow our users to ignore this detail */
-  if (!conflicted)
-    {
-      const svn_wc_conflict_description2_t *tree_conflict;
-
-      SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict,
-                                               db, local_abspath,
-                                               scratch_pool, scratch_pool));
-
-      conflicted = (tree_conflict != NULL);
-    }
-  else
+  if (conflicted)
     {
       svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
 
@@ -992,9 +973,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
      ###       (Requires  changes to the test suite)
    */
   if (db_kind == svn_wc__db_kind_dir
-#ifdef SVN_WC__SINGLE_DB
-      && (!dirent || dirent->kind != svn_node_file)
-#else
+#ifndef SVN_WC__SINGLE_DB
       && dirent && dirent->kind == svn_node_dir
 #endif
      )
@@ -1003,12 +982,15 @@ handle_dir_entry(const struct walk_status_baton *wb,
          we've discovered because we got a THIS_DIR entry. And only descend
          if DEPTH permits it, of course.  */
 
-      if (status != svn_wc__db_status_obstructed
+      if ((depth == svn_depth_unknown
+              || depth == svn_depth_immediates
+              || depth == svn_depth_infinity)
+#ifndef SVN_WC__SINGLE_DB
+          && status != svn_wc__db_status_obstructed
           && status != svn_wc__db_status_obstructed_add
           && status != svn_wc__db_status_obstructed_delete
-          && (depth == svn_depth_unknown
-              || depth == svn_depth_immediates
-              || depth == svn_depth_infinity))
+#endif
+          )
         {
           SVN_ERR(get_dir_status(wb, local_abspath, NULL, FALSE,
                                  dir_repos_root_url, dir_repos_relpath,
@@ -1627,8 +1609,10 @@ make_dir_baton(void **dir_baton,
      our purposes includes being an external or ignored item). */
   if (status_in_parent
       && (status_in_parent->node_status != svn_wc_status_unversioned)
+#ifndef SVN_WC__SINGLE_DB
       && (status_in_parent->node_status != svn_wc_status_missing)
       && (status_in_parent->node_status != svn_wc_status_obstructed)
+#endif
       && (status_in_parent->node_status != svn_wc_status_external)
       && (status_in_parent->node_status != svn_wc_status_ignored)
       && (status_in_parent->kind == svn_node_dir)
@@ -1811,9 +1795,11 @@ handle_statii(struct edit_baton *eb,
 
       /* Now, handle the status.  We don't recurse for svn_depth_immediates
          because we already have the subdirectories' statii. */
-      if (status->node_status != svn_wc_status_obstructed
+      if (status->versioned && status->kind == svn_node_dir
+#ifndef SVN_WC__SINGLE_DB
+          && status->node_status != svn_wc_status_obstructed
           && status->node_status != svn_wc_status_missing
-          && status->versioned && status->kind == svn_node_dir
+#endif
           && (depth == svn_depth_unknown
               || depth == svn_depth_infinity))
         {
@@ -2549,12 +2535,15 @@ internal_status(svn_wc_status3_t **status,
                              scratch_pool, scratch_pool);
 
   if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      || node_status == svn_wc__db_status_not_present
+      || node_status == svn_wc__db_status_absent
+      || node_status == svn_wc__db_status_excluded
+#ifndef SVN_WC__SINGLE_DB
       || node_status == svn_wc__db_status_obstructed
       || node_status == svn_wc__db_status_obstructed_add
       || node_status == svn_wc__db_status_obstructed_delete
-      || node_status == svn_wc__db_status_not_present
-      || node_status == svn_wc__db_status_absent
-      || node_status == svn_wc__db_status_excluded)
+#endif
+      )
     {
       svn_error_clear(err);
       node_kind = svn_wc__db_kind_unknown;

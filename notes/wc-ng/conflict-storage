@@ -48,6 +48,16 @@ equivalent in wc-ng conflict storage (such as paths to temporary files),
 but this information can be deduced from the information stored
 (e.g. conflict-old and friends; foo.r42 is now 'foo' + '.r' + left_rev)
 
+### BH: We have to store the exact name of the conflict marker files. If we
+### just 'guess' how conflict markers are named by using their revision
+### numbers, we can't handle situations where there are existing files with
+### these names. The WC-1.0 code uses a unique name function to generate a
+### unique marker file name which happens to match this pattern if there are
+### no conflicts, but sometimes explicitly preserves the existing file
+### extension to help diff tools. (See 'preserved-conflict-file-exts' in our
+### config). I think we can move the names of the markers into the skel and/or
+### keep them in their own columns. (These names are needed on filling a
+### svn_wc_entry_t)
 
 Operation skel
 --------------
@@ -256,18 +266,22 @@ is the failure to find a match for a hunk's context in the patch target.
 There can be one or more reject conflicts on a node. Each "reject" conflict
 has the following form:
 
-  ("reject" HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LEN
-    HUNK_MODIFIED_OFFSET HUNK_MODIFIED_LENGTH
-    REJECT_DIFF_SHA1)
+  REJECTED_HUNK_LIST := (HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LENGTH
+                         HUNK_MODIFIED_OFFSET HUNK_MODIFIED_LENGTH)*
+
+  ("reject" REJECT_FILE TARGET_PATCH_SHA1 REJECTED_HUNK_LIST)
+
+REJECT_FILE is ...
+
+TARGET_PATCH_SHA1 is <selection of patch file applying to target>
+the sha1 of the unidiff content of the rejected
+hunk as written to the .svnpatch.rej file. The actual unidiff content
+(which can be large!) can be retrieved from the pristine store.
 
 HUNK_{ORIGINAL,MODIFIED}_OFFSET and HUNK_{ORIGINAL,MODIFIED}_LENGTH
 are the hunk header values as parsed from the patch file (i.e. the "ID"
 of the hunk within the patch file). These also occur in the reject
 diff text but are stored here for easy retrieval.
-
-REJECT_DIFF_SHA1 is the sha1 of the unidiff content of the rejected
-hunk as written to the .svnpatch.rej file. The actual unidiff content
-(which can be large!) can be retrieved from the pristine store.
 
 ### BH: Using a sha1 here, makes it impossible to cleanup the pristine store
 ###     The pristine store needs all references to be stored in a DB column.
@@ -277,3 +291,6 @@ hunk as written to the .svnpatch.rej file. The actual unidiff content
 ###   the user deletes the tempfile would be nice. And I don't see an issue
 ###   with also storing the SHA1 sum in the ACTUAL table. We do this for
 ###   text conflicts as well. Why would it need an extra table?
+
+  ("prop-reject" REJECT_FILE
+   (PROPERTY_NAME TARGET_PATCH_SHA1 REJECTED_HUNK_LIST)* )

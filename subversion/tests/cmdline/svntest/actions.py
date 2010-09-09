@@ -38,6 +38,12 @@ def no_sleep_for_timestamps():
 def do_sleep_for_timestamps():
   os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'no'
 
+def no_relocate_validation():
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION'] = 'yes'
+
+def do_relocate_validation():
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION'] = 'no'
+
 def setup_pristine_greek_repository():
   """Create the pristine repository and 'svn import' the greek tree"""
 
@@ -938,7 +944,12 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
   If DRY_RUN is set then a --dry-run merge will be carried out first and
   the output compared with that of the full merge.
 
-  Return if successful, raise on failure."""
+  Return if successful, raise on failure.
+
+  *ARGS are any extra optional args to the merge subcommand.
+  NOTE: If *ARGS is specified at all, an explicit target path must be passed
+  in *ARGS as well. This allows the caller to merge into single items inside
+  the working copy, but still verify the entire working copy dir. """
 
   merge_command = [ "merge" ]
   if url2:
@@ -947,7 +958,8 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
     if not (rev1 is None and rev2 is None):
       merge_command.append("-r" + str(rev1) + ":" + str(rev2))
     merge_command.append(url1)
-  merge_command.append(dir)
+  if len(args) == 0:
+    merge_command.append(dir)
   merge_command = tuple(merge_command)
 
   if dry_run:
@@ -2102,6 +2114,13 @@ deep_trees_after_leaf_del = wc.State('', {
   'DDD/D1/D2'       : Item(),
   })
 
+# deep trees state after a call to deep_trees_leaf_del with no commit
+def deep_trees_after_leaf_del_no_ci(wc_dir):
+  if svntest.main.wc_is_singledb(wc_dir):
+    return deep_trees_after_leaf_del
+  else:
+    return deep_trees_empty_dirs
+
 
 def deep_trees_tree_del(base):
   """Helper function for deep trees test cases.  Delete top-level dirs."""
@@ -2159,6 +2178,13 @@ deep_trees_empty_dirs = wc.State('', {
   'DDD/D1/D2'       : Item(),
   'DDD/D1/D2/D3'    : Item(),
   })
+
+# deep trees state after a call to deep_trees_tree_del with no commit
+def deep_trees_after_tree_del_no_ci(wc_dir):
+  if svntest.main.wc_is_singledb(wc_dir):
+    return deep_trees_after_tree_del
+  else:
+    return deep_trees_empty_dirs
 
 def deep_trees_tree_del_repos(base):
   """Helper function for deep trees test cases.  Delete top-level dirs,
@@ -2694,7 +2720,9 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
 
 
 def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
-                                          do_commit_local_changes):
+                                          do_commit_local_changes,
+                                          do_commit_conflicts=True,
+                                          ignore_ancestry=False):
   """
   Runs a given list of tests for conflicts occuring at a merge operation.
 
@@ -2728,12 +2756,14 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       Then, in effect, the local changes are committed as well.
 
    8) In each test case subdir, the "incoming" subdir is merged into the
-      "local" subdir.
-      This causes conflicts between the "local" state in the working
-      copy and the "incoming" state from the incoming subdir.
+      "local" subdir.  If ignore_ancestry is True, then the merge is done
+      with the --ignore-ancestry option, so mergeinfo is neither considered
+      nor recorded.  This causes conflicts between the "local" state in the
+      working copy and the "incoming" state from the incoming subdir.
 
-   9) A commit is performed in each separate container, to verify
-      that each tree-conflict indeed blocks a commit.
+   9) If do_commit_conflicts is True, then a commit is performed in each
+      separate container, to verify that each tree-conflict indeed blocks
+      a commit.
 
   The sbox parameter is just the sbox passed to a test function. No need
   to call sbox.build(), since it is called (once) within this function.
@@ -2747,7 +2777,8 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
 
   j = os.path.join
 
-  sbox.build()
+  if not sbox.is_built():
+    sbox.build()
   wc_dir = sbox.wc_dir
 
   # 1) Create directories.
@@ -2864,10 +2895,15 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
         x_skip.copy()
         x_skip.wc_dir = local
 
+      varargs = (local,)
+      if ignore_ancestry:
+        varargs = varargs + ('--ignore-ancestry',)
+
       run_and_verify_merge(local, None, None, incoming, None,
                            x_out, None, None, x_disk, None, x_skip,
-                           error_re_string = test_case.error_re_string,
-                           dry_run = False)
+                           test_case.error_re_string,
+                           None, None, None, None,
+                           False, False, *varargs)
       run_and_verify_unquiet_status(local, x_status)
     except:
       print("ERROR IN: Tests scheme for merge: "
@@ -2877,21 +2913,22 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
 
   # 9) Verify that commit fails.
 
-  for test_case in greater_scheme:
-    try:
-      local = j(wc_dir, test_case.name, 'local')
+  if do_commit_conflicts:
+    for test_case in greater_scheme:
+      try:
+        local = j(wc_dir, test_case.name, 'local')
 
-      x_status = test_case.expected_status
-      if x_status != None:
-        x_status.copy()
-        x_status.wc_dir = local
+        x_status = test_case.expected_status
+        if x_status != None:
+          x_status.copy()
+          x_status.wc_dir = local
 
-      run_and_verify_commit(local, None, x_status,
-                            test_case.commit_block_string,
-                            local)
-    except:
-      print("ERROR IN: Tests scheme for merge: "
-          + "while checking commit-blocking in '%s'" % test_case.name)
-      raise
+        run_and_verify_commit(local, None, x_status,
+                              test_case.commit_block_string,
+                              local)
+      except:
+        print("ERROR IN: Tests scheme for merge: "
+            + "while checking commit-blocking in '%s'" % test_case.name)
+        raise
 
 

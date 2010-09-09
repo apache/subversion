@@ -460,7 +460,9 @@ public class SVNAdmin
         {
             Set<org.apache.subversion.javahl.Lock> aLocks =
                                                     aSVNAdmin.lslocks(
-                                                        new File(path));
+                                                        new File(path),
+                                                        Depth.toADepth(
+                                                              Depth.infinity));
             Lock[] locks = new Lock[aLocks.size()];
 
             int i = 0;

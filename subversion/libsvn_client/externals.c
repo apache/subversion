@@ -224,8 +224,8 @@ switch_dir_external(const char *path,
 
                   /* Get the repos root of the new URL. */
                   SVN_ERR(svn_client__open_ra_session_internal
-                          (&ra_session, url, NULL, NULL, FALSE, TRUE,
-                           ctx, subpool));
+                          (&ra_session, NULL, url, NULL, NULL,
+                           FALSE, TRUE, ctx, subpool));
                   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
                                                  subpool));
 
@@ -1380,7 +1380,7 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
           SVN_ERR(svn_client_status5(NULL, ctx, fullpath,
                                      &(external->revision),
                                      depth, get_all, update,
-                                     no_ignore, FALSE, NULL,
+                                     no_ignore, FALSE, FALSE, NULL,
                                      status_func, status_baton,
                                      iterpool));
         }

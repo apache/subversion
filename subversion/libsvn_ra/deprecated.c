@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_compat.h"
 #include "svn_props.h"
+#include "svn_pools.h"
 
 #include "ra_loader.h"
 
@@ -147,6 +148,18 @@ static svn_ra_reporter2_t reporter_3in2_wrapper = {
   finish_report,
   abort_report
 };
+
+svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
+                          const char *repos_URL,
+                          const char *uuid,
+                          const svn_ra_callbacks2_t *callbacks,
+                          void *callback_baton,
+                          apr_hash_t *config,
+                          apr_pool_t *pool)
+{
+  return svn_ra_open4(session_p, NULL, repos_URL, uuid,
+                      callbacks, callback_baton, config, pool);
+}
 
 svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
                           const char *repos_URL,

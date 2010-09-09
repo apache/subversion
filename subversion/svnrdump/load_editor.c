@@ -44,7 +44,8 @@ commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
                 apr_pool_t *pool)
 {
-  SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld\n",
+  /* ### Don't print directly; generate a notification. */
+  SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld.\n",
                              commit_info->revision));
   return SVN_NO_ERROR;
 }
@@ -131,16 +132,20 @@ new_node_record(void **node_baton,
 
   /* If the creation of commit_editor is pending, create it now and
      open_root on it; also create a top-level directory baton. */
-  if (!commit_editor) {
 
-      if (rb->revprop_table)
-        {
-          /* Clear revprops that we aren't allowed to set with the commit */
-          apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_AUTHOR,
-                       APR_HASH_KEY_STRING, NULL);
-          apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_DATE,
-                       APR_HASH_KEY_STRING, NULL);
-        }
+  if (!commit_editor)
+    {
+      /* The revprop_table should have been filled in with important
+         information like svn:log in set_revision_property. We can now
+         use it all this information to create our commit_editor. But
+         first, clear revprops that we aren't allowed to set with the
+         commit_editor. We'll set them separately using the RA API
+         after closing the editor (see close_revision). */
+
+      apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_AUTHOR,
+                   APR_HASH_KEY_STRING, NULL);
+      apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_DATE,
+                   APR_HASH_KEY_STRING, NULL);
 
       SVN_ERR(svn_ra_get_commit_editor3(rb->pb->session, &commit_editor,
                                         &commit_edit_baton, rb->revprop_table,
@@ -162,7 +167,7 @@ new_node_record(void **node_baton,
       child_db->relpath = svn_relpath_canonicalize("/", rb->pool);
       child_db->parent = NULL;
       rb->db = child_db;
-  }
+    }
 
   for (hi = apr_hash_first(rb->pool, headers); hi; hi = apr_hash_next(hi))
     {
@@ -448,7 +453,8 @@ close_revision(void *baton)
 
   /* Fake revision 0 */
   if (rb->rev == 0)
-    SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0\n"));
+    /* ### Don't print directly; generate a notification. */
+    SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0.\n"));
   else if (commit_editor)
     {
       /* Close all pending open directories, and then close the edit
@@ -532,6 +538,10 @@ drive_dumpstream_loader(svn_stream_t *stream,
 {
   struct parse_baton *pb;
   pb = parse_baton;
+
+  /* ### TODO: Figure out if we're allowed to set revprops before
+     ### we're too late and mess up the repository. svnsync uses some
+     ### sort of locking mechanism. */
 
   SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
   SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,

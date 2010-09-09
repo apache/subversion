@@ -1000,7 +1000,7 @@ typedef svn_error_t *
                                   const char *name, apr_ssize_t name_len,
                                   const svn_string_t *val,
                                   apr_pool_t *pool);
-void
+svn_error_t *
 svn_ra_serf__walk_all_paths(apr_hash_t *props,
                             svn_revnum_t rev,
                             svn_ra_serf__path_rev_walker_t walker,
@@ -1385,11 +1385,20 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          apr_pool_t *pool);
 
 /* Exchange capabilities with the server, by sending an OPTIONS
-   request announcing the client's capabilities, and by filling
-   SERF_SESS->capabilities with the server's capabilities as read
-   from the response headers.  Use POOL only for temporary allocation. */
+ * request announcing the client's capabilities, and by filling
+ * SERF_SESS->capabilities with the server's capabilities as read from
+ * the response headers.  Use POOL only for temporary allocation.
+ *
+ * If the CORRECTED_URL is non-NULL, allow the OPTIONS response to
+ * report a server-dictated redirect or relocation (HTTP 301 or 302
+ * error codes), setting *CORRECTED_URL to the value of the corrected
+ * repository URL.  Otherwise, such responses from the server will
+ * generate an error.  (In either case, no capabilities are exchanged
+ * if there is, in fact, such a response from the server.)
+ */
 svn_error_t *
 svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
+                                   const char **corrected_url,
                                    apr_pool_t *pool);
 
 /* Implements the has_capability RA layer function. */

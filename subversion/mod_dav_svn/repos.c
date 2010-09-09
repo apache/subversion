@@ -44,6 +44,7 @@
 #include "svn_sorts.h"
 #include "svn_version.h"
 #include "svn_props.h"
+#include "svn_ctype.h"
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_dirent_uri.h"
@@ -1519,7 +1520,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
 
         /* Look for 'var = value' --- and make sure the var is in lcase. */
 
-        for (cp = parm; (*cp && !apr_isspace(*cp) && *cp != '='); ++cp)
+        for (cp = parm; (*cp && !svn_ctype_isspace(*cp) && *cp != '='); ++cp)
           {
             *cp = apr_tolower(*cp);
           }
@@ -1530,7 +1531,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
           }
 
         *cp++ = '\0';           /* Delimit var */
-        while (*cp && (apr_isspace(*cp) || *cp == '='))
+        while (*cp && (svn_ctype_isspace(*cp) || *cp == '='))
           {
             ++cp;
           }
@@ -1544,7 +1545,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
           }
         else
           {
-            for (end = cp; (*end && !apr_isspace(*end)); end++);
+            for (end = cp; (*end && !svn_ctype_isspace(*end)); end++);
           }
         if (*end)
           {
@@ -4263,58 +4264,73 @@ dav_svn__create_version_resource(dav_resource **version_res,
 }
 
 
-/* POST handler for HTTP protocol v2.
- 
-   Currently we allow POSTs only against the "me resource", which may
-   in the future act as a dispatcher of sorts for handling potentially
-   many different kinds of operations as specified by the body of the
-   POST request itself.
+
+static dav_error *
+handle_post_request(request_rec *r,
+                    dav_resource *resource,
+                    ap_filter_t *output)
+{
+  svn_skel_t *request_skel;
+  int status;
+  apr_pool_t *pool = resource->pool;
 
-   ### TODO: Define what the format of those POST bodies might be.  If
-   ### XML, we have access to Apache's streamy XML parsing code, but
-   ### ... it's XML.  Meh.  If skels, we get skels!  But we need to
-   ### write our own streamy skel parsing routine around a brigade
-   ### read loop.  Ewww...
-   ###
-   ### Today we only support transaction creation requests, but we
-   ### could conceivable support the likes of a multi-path lock
-   ### and/or unlock request, or some other thing for which stock
-   ### WebDAV doesn't work or doesn't work well enough.
-   ###
-   ### Fortunately, today we don't use the POST body at all, and we'll
-   ### be able to get away with not defining the body format in the
-   ### future thanks to the following:
+  /* Make sure our skel-based request parses okay, has an initial atom
+     that identifies what kind of action is expected, and that that
+     action is something we understand.  */
+  status = dav_svn__parse_request_skel(&request_skel, r, pool);
 
-   As a special consideration, an empty POST body is interpreted as a
-   simple request to create a new commit transaction based on the HEAD
-   revision.  The new transaction name will be returned via a custom
-   response header SVN_DAV_TXN_NAME_HEADER.
-*/
+  if (status != OK)
+    return dav_new_error(pool, status, 0,
+                         "Error parsing skel POST request body.");
+
+  if (svn_skel__list_length(request_skel) < 1)
+    return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
+                         "Unable to identify skel POST request flavor.");
+
+  if (svn_skel__matches_atom(request_skel->children, "create-txn"))
+    {
+      return dav_svn__post_create_txn(resource, request_skel, output);
+    }
+  else
+    {
+      return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
+                           "Unsupported skel POST request flavor.");
+    }
+  /* NOTREACHED */
+}
+
 int dav_svn__method_post(request_rec *r)
 {
   dav_resource *resource;
   dav_error *derr;
-  const char *txn_name;
+  const char *content_type;
 
+  /* We only allow POSTs against the "me resource" right now. */
   derr = get_resource(r, dav_svn__get_root_dir(r),
                       "ignored", 0, &resource);
   if (derr != NULL)
     return derr->status;
-
   if (resource->info->restype != DAV_SVN_RESTYPE_ME)
     return HTTP_BAD_REQUEST;
 
-  /* Create a Subversion repository transaction based on HEAD. */
-  derr = dav_svn__create_txn(resource->info->repos, &txn_name, resource->pool);
+  /* Pass skel-type POST request handling off to a dispatcher; any
+     other type of request is considered bogus. */
+  content_type = apr_table_get(r->headers_in, "content-type");
+  if (content_type && (strcmp(content_type, SVN_SKEL_MIME_TYPE) == 0))
+    {
+      derr = handle_post_request(r, resource, r->output_filters);
+    }
+  else
+    {
+      derr = dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                           "Unsupported POST request type.");
+    }
+
+  /* If something went wrong above, we'll generate a response back to
+     the client with (hopefully) some helpful information. */
   if (derr)
     return dav_svn__error_response_tag(r, derr);
-
-  /* Build a "201 Created" response with header that tells the client
-     our new transaction's name. */
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_TXN_NAME_HEADER,
-                txn_name);
-  r->status = HTTP_CREATED;
-
+    
   return OK;
 }
 

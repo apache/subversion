@@ -283,7 +283,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
   {"limit",         'l', 1, N_("maximum number of log entries")},
-  {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets")},
+  {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets\n"
+                       "                             "
+                       "[aliases: --nul, --keep-lock]")},
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
@@ -368,7 +370,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("override diff-cmd specified in config file\n"
                        "                             "
                        "[alias: --idiff]")},
-  {"git-diff", opt_use_git_diff_format, 0,
+  {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format\n")},
                   
   /* Long-opt Aliases
@@ -399,6 +401,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"iw",            opt_ignore_whitespace, 0, NULL},
   {"diff",          opt_show_diff, 0, NULL},
   {"idiff",         opt_internal_diff, 0, NULL},
+  {"nul",           opt_no_unlock, 0, NULL},
+  {"keep-lock",     opt_no_unlock, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -543,7 +547,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    committed, are immediately removed from the working copy\n"
      "    unless the --keep-local option is given.\n"
      "    PATHs that are, or contain, unversioned or modified items will\n"
-     "    not be removed unless the --force option is given.\n"
+     "    not be removed unless the --force or --keep-local option is given.\n"
      "\n"
      "  2. Each item specified by a URL is deleted from the repository\n"
      "    via an immediate commit.\n"),
@@ -1783,6 +1787,7 @@ main(int argc, const char *argv[])
         break;
       case opt_use_git_diff_format:
         opt_state.use_git_diff_format = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -2228,10 +2233,6 @@ main(int argc, const char *argv[])
       if (err)
         return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
-
-  /* Set up our commit callback.  We leave the callback NULL. */
-  if (!opt_state.quiet)
-    ctx->commit_callback2 = svn_cl__print_commit_info;
 
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;

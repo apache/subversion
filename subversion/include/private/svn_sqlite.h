@@ -148,14 +148,16 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 
 /* Bind values to SQL parameters in STMT, according to FMT.  FMT may contain:
 
-   Spec  Argument type       Item type
-   ----  -----------------   ---------
-   i     apr_int64_t         Number
-   s     const char *        String
-   b     const void *        Blob data
-         apr_size_t          Blob length
-   t     const svn_token_t * Token mapping table
-         int value           Token value
+   Spec  Argument type             Item type
+   ----  -----------------         ---------
+   n     <none, absent>            Column assignment skip
+   i     apr_int64_t               Number
+   s     const char *              String
+   b     const void *              Blob data
+         apr_size_t                Blob length
+   r     svn_revnum_t              Revision number
+   t     const svn_token_t *       Token mapping table
+         int value                 Token value
 
   Each character in FMT maps to one SQL parameter, and one or two function
   parameters, in the order they appear.
@@ -192,8 +194,14 @@ svn_sqlite__bind_token(svn_sqlite__stmt_t *stmt,
                        const svn_token_map_t *map,
                        int value);
 
+/* Bind the value to SLOT, unless SVN_IS_VALID_REVNUM(value) is false,
+   in which case it binds NULL.  */
+svn_error_t *
+svn_sqlite__bind_revnum(svn_sqlite__stmt_t *stmt, int slot,
+                        svn_revnum_t value);
+
 /* Bind a set of properties to the given slot. If PROPS is NULL, then no
-   binding will occur. PROPS will be stored as a serialized skel. */
+/   binding will occur. PROPS will be stored as a serialized skel. */
 svn_error_t *
 svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
                             int slot,
@@ -308,6 +316,34 @@ svn_error_t *
 svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              svn_sqlite__transaction_callback_t cb_func,
                              void *cb_baton, apr_pool_t *scratch_pool);
+
+
+/* Helper function to handle several SQLite operations inside a shared lock.
+   This callback is similar to svn_sqlite__with_transaction(), but can be
+   nested (even with a transaction) and changes in the callback are always
+   committed when this function returns.
+
+   Behavior on an application crash while this function is running is
+   UNDEFINED: Either everything is committed (for < 3.6.8) or is not (for
+   >= 3.6.8 where this function uses a SAVEPOINT), so this should only be used
+   for operations that are safe under these conditions or just for reading.
+
+   Use a transaction when you need explicit behavior.
+
+   For SQLite 3.6.8 and later using this function as a wrapper around a group
+   of operations can give a *huge* performance boost as the shared-read lock
+   will be shared over multiple statements, instead of being reobtained
+   everytime, which requires disk and/or network io.
+
+   ### It might be possible to implement the same lock behavior for < 3.6.8
+       by keeping a read SQLite statement open, but this wouldn't replicate
+       the rollback behavior on crashing. Maybe we should just require 3.6.8?
+ */
+svn_error_t *
+svn_sqlite__with_lock(svn_sqlite__db_t *db,
+                      svn_sqlite__transaction_callback_t cb_func,
+                      void *cb_baton,
+                      apr_pool_t *scratch_pool);
 
 
 /* Hotcopy an SQLite database from SRC_PATH to DST_PATH. */

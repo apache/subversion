@@ -43,6 +43,12 @@ extern "C" {
  */
 #define SVN_SVNDIFF_MIME_TYPE "application/vnd.svn-svndiff"
 
+/** This is the MIME type that Subversion users for its "skel" format.
+ *
+ * This is an application type, for the "svn" vendor. The specific subtype
+ * is "skel".
+ */
+#define SVN_SKEL_MIME_TYPE "application/vnd.svn-skel"
 
 /** This header is *TEMPORARILY* used to transmit the delta base to the
  * server. It contains a version resource URL for what is on the client.

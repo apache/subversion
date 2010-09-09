@@ -1169,7 +1169,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       *ctx->status_code = sl.code;
     }
 
-  if (sl.code == 301 || sl.code == 302)
+  if (sl.code == 301 || sl.code == 302 || sl.code == 307)
     {
       ctx->location = svn_ra_serf__response_get_location(response, pool);
     }
@@ -1860,6 +1860,7 @@ svn_ra_serf__error_on_status(int status_code,
     {
       case 301:
       case 302:
+      case 307:
         return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
                                  (status_code == 301)
                                  ? _("Repository moved permanently to '%s';"

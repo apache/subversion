@@ -403,6 +403,8 @@ options_response_handler(serf_request_t *request,
   serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
 
   /* Start out assuming all capabilities are unsupported. */
+  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+               APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_DEPTH,
                APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
@@ -483,12 +485,9 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
 
 /** Capabilities exchange. */
 
-/* Exchange capabilities with the server, by sending an OPTIONS
-   request announcing the client's capabilities, and by filling
-   SERF_SESS->capabilities with the server's capabilities as read
-   from the response headers.  Use POOL only for temporary allocation. */
 svn_error_t *
 svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
+                                   const char **corrected_url,
                                    apr_pool_t *pool)
 {
   svn_ra_serf__options_context_t *opt_ctx;
@@ -501,6 +500,17 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   err = svn_ra_serf__context_run_wait(
             svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
 
+  /* If our caller cares about server redirections, and our response
+     carries such a thing, report as much.  We'll disregard ERR --
+     it's most likely just a complaint about the response body not
+     successfully parsing as XML or somesuch. */
+  if (corrected_url && (opt_ctx->status_code == 301))
+    {
+      svn_error_clear(err);
+      *corrected_url = opt_ctx->parser_ctx->location;
+      return SVN_NO_ERROR;
+    }
+                        
   return svn_error_compose_create(
              svn_ra_serf__error_on_status(opt_ctx->status_code,
                                           serf_sess->repos_url.path,
@@ -531,7 +541,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
-    SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, pool));
+    SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, NULL, pool));
 
   /* Try again, now that we've fetched the capabilities. */
   cap_result = apr_hash_get(serf_sess->capabilities,

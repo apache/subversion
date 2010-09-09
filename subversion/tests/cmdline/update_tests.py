@@ -5636,6 +5636,114 @@ def add_moved_file_has_props(sbox):
   # This shouldn't show property modifications, but at r982550 it did.
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+# Test for receiving modified properties on added files that were originally
+# moved from somewhere else. (Triggers locate_copyfrom behavior). This is
+# an extended variant that has another property change on the new path
+def add_moved_file_has_props2(sbox):
+  """update adding moved node receives 2* props"""
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  G = os.path.join(os.path.join(wc_dir, 'A', 'D', 'G'))
+  pi  = os.path.join(G, 'pi')
+  G_new = os.path.join(wc_dir, 'G_new')
+
+  # Give pi some property
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'native', pi)
+  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'added eol-style')
+
+  svntest.actions.run_and_verify_svn(None, 'At revision 2.', [], 'up', wc_dir)
+
+  # Now move pi to a different place
+  svntest.main.run_svn(None, 'mkdir', G_new)
+  svntest.main.run_svn(None, 'mv', pi, G_new)
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'CR', os.path.join(G_new, 'pi'))
+
+  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'Moved pi to G_new')
+
+  svntest.actions.run_and_verify_svn(None, 'At revision 3.', [], 'up', wc_dir)
+
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/D/G/pi')
+  expected_status.add({
+    'G_new'    : Item (status='  ', wc_rev=3),
+    'G_new/pi' : Item (status='  ', wc_rev=3),
+  })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.main.run_svn(None, 'up', '-r', '0', G_new)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # This shouldn't show local modifications, but currently it
+  # shows a property conflict on G_new/pi.
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+# A regression test for a 1.7-dev crash upon updating a WC to a different
+# revision when it contained an excluded dir.
+def update_with_excluded_subdir(sbox):
+  """update with an excluded subdir"""
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  G = os.path.join(os.path.join(wc_dir, 'A', 'D', 'G'))
+
+  # Make the directory 'G' excluded.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G' : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, False,
+                                        '--set-depth=exclude', G)
+
+  # Commit a new revision so there is something to update to.
+  svntest.main.run_svn(None, 'mkdir', '-m', '', sbox.repo_url + '/New')
+
+  # Test updating the WC.
+  expected_output = svntest.wc.State(wc_dir, {
+    'New' : Item(status='A ') })
+  expected_disk.add({
+    'New' : Item() })
+  expected_status.add({
+    'New' : Item(status='  ') })
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status)
+
+#----------------------------------------------------------------------
+# Test for issue #3471 'svn up touches file w/ lock & svn:keywords property'
+#
+# Marked as XFail until the issue is fixed.
+def update_with_file_lock_and_keywords_property_set(sbox):
+  """update with file lock & keywords property set"""
+  sbox.build()
+  
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, '$Id$')
+  svntest.main.run_svn(None, 'ps', 'svn:keywords', 'Id', mu_path)
+  svntest.main.run_svn(None, 'lock', mu_path)
+  mu_ts_before_update = os.path.getmtime(mu_path)
+  
+  # Issue #3471 manifests itself here; The timestamp of 'mu' gets updated 
+  # to the time of the last "svn up".
+  sbox.simple_update()
+  mu_ts_after_update = os.path.getmtime(mu_path)
+  if (mu_ts_before_update != mu_ts_after_update):
+    print("The timestamp of 'mu' before and after update does not match.")
+    raise svntest.Failure
+  
 
 #######################################################################
 # Run the tests
@@ -5705,7 +5813,10 @@ test_list = [ None,
               XFail(update_deleted_locked_files),
               XFail(update_empty_hides_entries),
               mergeinfo_updates_merge_with_local_mods,
-              XFail(add_moved_file_has_props),
+              add_moved_file_has_props,
+              XFail(add_moved_file_has_props2),
+              update_with_excluded_subdir,
+              XFail(update_with_file_lock_and_keywords_property_set)
              ]
 
 if __name__ == '__main__':

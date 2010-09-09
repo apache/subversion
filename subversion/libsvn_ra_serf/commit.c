@@ -1124,6 +1124,18 @@ svndiff_stream_write(void *file_baton,
 
 /* POST against 'me' resource handlers. */
 
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_txn_post_body(serf_bucket_t **body_bkt,
+                     void *baton,
+                     serf_bucket_alloc_t *alloc,
+                     apr_pool_t *pool)
+{
+  *body_bkt = SERF_BUCKET_SIMPLE_STRING("( create-txn )", alloc);
+  return SVN_NO_ERROR;
+}
+
+
 /* Handler baton for POST request. */
 typedef struct
 {
@@ -1203,6 +1215,9 @@ open_root(void *edit_baton,
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));
       handler->method = "POST";
+      handler->body_type = SVN_SKEL_MIME_TYPE;
+      handler->body_delegate = create_txn_post_body;
+      handler->body_delegate_baton = NULL;
       handler->path = ctx->session->me_resource;
       handler->conn = ctx->session->conns[0];
       handler->session = ctx->session;

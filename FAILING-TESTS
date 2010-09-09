@@ -1,0 +1,29 @@
+As of r995562 (which is the sync up to r995395 from trunk), the tests are as follows:
+
+* ra_local, ra_svn, ra_neon:
+    All tests pass.
+
+* ra_serf:
+    The following tests fail.  They failed before r995395 too.
+[[[
+FAIL:  depth_tests.py 37: tree conflicts resolved depth-empty
+FAIL:  depth_tests.py 38: tree conflicts resolved depth-files
+FAIL:  depth_tests.py 39: tree conflicts resolved depth-immediates
+FAIL:  depth_tests.py 40: tree conflicts resolved depth-infinity
+FAIL:  diff_tests.py 24: diff a prop change on a dir named explicitly
+FAIL:  diff_tests.py 29: diff to BASE with local property mods
+FAIL:  merge_tests.py 3: some simple property merges
+FAIL:  merge_tests.py 55: subtrees can lose non-inheritable ranges
+FAIL:  merge_tests.py 58: child having different rev ranges to merge
+FAIL:  merge_tests.py 63: reverse merge of prop add on child
+FAIL:  merge_tests.py 77: merges that remove all mergeinfo work
+FAIL:  merge_tests.py 98: mergeinfo deleted by a merge should disappear
+FAIL:  resolved_tests.py 1: resolved on working copy root
+FAIL:  stat_tests.py 24: run 'status -u' variations w/ incoming propchanges
+FAIL:  stat_tests.py 25: run 'status -uv' w/ incoming propchanges
+FAIL:  svnadmin_tests.py 13: recover a repository (FSFS only)
+FAIL:  svnadmin_tests.py 17: fsfs recovery checks missing revs / revprops files
+FAIL:  update_tests.py 35: update conflicted files
+FAIL:  update_tests.py 36: mergeinfo does not elide after update
+FAIL:  update_tests.py 45: restarted update should delete dir prop
+]]]

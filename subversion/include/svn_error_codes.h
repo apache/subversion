@@ -512,6 +512,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 37,
              "Previous operation was interrupted; run 'svn cleanup'")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_INVALID_OPERATION_DEPTH,
+             SVN_ERR_WC_CATEGORY_START + 38,
+             "This operation can not be performed with just this depth.")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -836,6 +841,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_REPOS_ROOT_URL_MISMATCH,
              SVN_ERR_RA_CATEGORY_START + 10,
              "Repository root URL does not match expected root URL")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_RA_SESSION_URL_MISMATCH,
+             SVN_ERR_RA_CATEGORY_START + 11,
+             "Session URL does not match expected session URL")
 
   /* ra_dav errors */
 
@@ -1164,6 +1174,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT,
              SVN_ERR_CLIENT_CATEGORY_START + 18,
              "Invalid path component strip count specified")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_CYCLE_DETECTED,
+             SVN_ERR_CLIENT_CATEGORY_START + 19,
+             "Detected a cycle while processing the operation")
 
   /* misc errors */
 

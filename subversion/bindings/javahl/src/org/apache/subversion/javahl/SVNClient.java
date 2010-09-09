@@ -65,9 +65,7 @@ public class SVNClient implements ISVNClient
         }
     }
 
-    /** Don't call this function!  Public fucntion for backward compat reasons
-      */
-    public long getCppAddr()
+    private long getCppAddr()
     {
         return cppAddr;
     }
@@ -93,6 +91,8 @@ public class SVNClient implements ISVNClient
      * of this member
      */
     protected long cppAddr;
+
+    private ClientContext clientContext = new ClientContext();
 
     /**
      * @since 1.0
@@ -174,29 +174,34 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.2
      */
-    public native void notification2(ClientNotifyCallback notify);
+    public void notification2(ClientNotifyCallback notify)
+    {
+        clientContext.notify = notify;
+    }
 
     /**
      * @since 1.5
      */
-    public native void setConflictResolver(ConflictResolverCallback listener);
+    public void setConflictResolver(ConflictResolverCallback listener)
+    {
+        clientContext.resolver = listener;
+    }
 
     /**
      * @since 1.5
      */
-    public native void setProgressCallback(ProgressCallback listener);
-
-    /**
-     * @since 1.0
-     */
-    public native void commitMessageHandler(CommitMessage messageHandler);
+    public void setProgressCallback(ProgressCallback listener)
+    {
+        clientContext.listener = listener;
+    }
 
     /**
      * @since 1.5
      */
-    public native void remove(Set<String> paths, String message, boolean force,
+    public native void remove(Set<String> paths, boolean force,
                               boolean keepLocal,
-                              Map<String, String> revpropTable)
+                              Map<String, String> revpropTable,
+                              CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -225,36 +230,39 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native long commit(Set<String> paths, String message, Depth depth,
-                              boolean noUnlock, boolean keepChangelist,
+    public native void commit(Set<String> paths, Depth depth, boolean noUnlock,
+                              boolean keepChangelist,
                               Collection<String> changelists,
-                              Map<String, String> revpropTable)
+                              Map<String, String> revpropTable,
+                              CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
      * @since 1.7
      */
     public native void copy(List<CopySource> sources, String destPath,
-                            String message, boolean copyAsChild,
-                            boolean makeParents, boolean ignoreExternals,
-                            Map<String, String> revpropTable)
+                            boolean copyAsChild, boolean makeParents,
+                            boolean ignoreExternals,
+                            Map<String, String> revpropTable,
+                            CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
      * @since 1.5
      */
     public native void move(Set<String> srcPaths, String destPath,
-                            String message, boolean force, boolean moveAsChild,
+                            boolean force, boolean moveAsChild,
                             boolean makeParents,
-                            Map<String, String> revpropTable)
+                            Map<String, String> revpropTable,
+                            CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void mkdir(Set<String> paths, String message,
-                             boolean makeParents,
-                             Map<String, String> revpropTable)
+    public native void mkdir(Set<String> paths, boolean makeParents,
+                             Map<String, String> revpropTable,
+                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -291,10 +299,11 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void doImport(String path, String url, String message,
-                                Depth depth, boolean noIgnore,
+    public native void doImport(String path, String url, Depth depth,
+                                boolean noIgnore,
                                 boolean ignoreUnknownNodeTypes,
-                                Map<String, String> revpropTable)
+                                Map<String, String> revpropTable,
+                                CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -406,17 +415,20 @@ public class SVNClient implements ISVNClient
     public native void propertySet(String path, String name, String value,
                                    Depth depth, Collection<String> changelists,
                                    boolean force,
-                                   Map<String, String> revpropTable)
+                                   Map<String, String> revpropTable,
+                                   CommitCallback callback)
             throws ClientException;
 
     /**
      * @since 1.5
      */
     public void propertyRemove(String path, String name, Depth depth,
-                               Collection<String> changelists)
+                               Collection<String> changelists,
+                               CommitCallback callback)
             throws ClientException
     {
-        propertySet(path, name, null, depth, changelists, false, null);
+        propertySet(path, name, null, depth, changelists, false, null,
+                    callback);
     }
 
     /**
@@ -424,10 +436,11 @@ public class SVNClient implements ISVNClient
      */
     public void propertyCreate(String path, String name, String value,
                                Depth depth, Collection<String> changelists,
-                               boolean force)
+                               boolean force, CommitCallback callback)
             throws ClientException
     {
-        propertySet(path, name, value, depth, changelists, force, null);
+        propertySet(path, name, value, depth, changelists, force, null,
+                    callback);
     }
 
     /**
@@ -627,4 +640,38 @@ public class SVNClient implements ISVNClient
                              PatchCallback callback)
             throws ClientException;
 
+    /**
+     * A private class to hold the contextual information required to
+     * persist in this object, such as notification handlers.
+     */
+    private class ClientContext
+        implements ClientNotifyCallback, ProgressCallback,
+            ConflictResolverCallback
+    {
+        public ClientNotifyCallback notify = null;
+        public ProgressCallback listener = null;
+        public ConflictResolverCallback resolver = null;
+
+        public void onNotify(ClientNotifyInformation notifyInfo)
+        {
+            if (notify != null)
+                notify.onNotify(notifyInfo);
+        }
+
+        public void onProgress(ProgressEvent event)
+        {
+            if (listener != null)
+                listener.onProgress(event);
+        }
+
+        public ConflictResult resolve(ConflictDescriptor conflict)
+            throws SubversionException
+        {
+            if (resolver != null)
+                return resolver.resolve(conflict);
+            else
+                return new ConflictResult(ConflictResult.Choice.postpone,
+                                          null);
+        }
+    }
 }

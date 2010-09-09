@@ -466,10 +466,18 @@ dav_svn__replay_report(const dav_resource *resource,
             }
           else if (strcmp(child->name, "send-deltas") == 0)
             {
+              apr_int64_t parsed_val;
+
               cdata = dav_xml_get_cdata(child, resource->pool, 1);
               if (! cdata)
                 return malformed_element_error("send-deltas", resource->pool);
-              send_deltas = atoi(cdata);
+              err = svn_cstring_strtoi64(&parsed_val, cdata, 0, 1, 10);
+              if (err)
+                {
+                  svn_error_clear(err);
+                  return malformed_element_error("send-deltas", resource->pool);
+                }
+              send_deltas = parsed_val ? TRUE : FALSE;
             }
         }
     }

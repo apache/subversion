@@ -227,6 +227,9 @@ struct edit_baton {
   /* Should this diff not compare copied files with their source? */
   svn_boolean_t show_copies_as_adds;
 
+  /* Are we producing a git-style diff? */
+  svn_boolean_t use_git_diff_format;
+
   /* Possibly diff repos against text-bases instead of working files. */
   svn_boolean_t use_text_base;
 
@@ -350,6 +353,7 @@ make_edit_baton(struct edit_baton **edit_baton,
                 svn_depth_t depth,
                 svn_boolean_t ignore_ancestry,
                 svn_boolean_t show_copies_as_adds,
+                svn_boolean_t use_git_diff_format,
                 svn_boolean_t use_text_base,
                 svn_boolean_t reverse_order,
                 const apr_array_header_t *changelists,
@@ -373,6 +377,7 @@ make_edit_baton(struct edit_baton **edit_baton,
   eb->depth = depth;
   eb->ignore_ancestry = ignore_ancestry;
   eb->show_copies_as_adds = show_copies_as_adds;
+  eb->use_git_diff_format = use_git_diff_format;
   eb->use_text_base = use_text_base;
   eb->reverse_order = reverse_order;
   eb->changelist_hash = changelist_hash;
@@ -586,8 +591,7 @@ file_diff(struct dir_baton *db,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, local_abspath, pool, pool));
 
-  replaced = ((status == svn_wc__db_status_added
-               || status == svn_wc__db_status_obstructed_add)
+  replaced = ((status == svn_wc__db_status_added)
               && have_base
               && base_status != svn_wc__db_status_not_present);
 
@@ -660,11 +664,15 @@ file_diff(struct dir_baton *db,
   * If the item is schedule-add *with history*, then we usually want
   * to see the usual working vs. text-base comparison, which will show changes
   * made since the file was copied.  But in case we're showing copies as adds,
-  * we need to compare the copied file to the empty file. */
+  * we need to compare the copied file to the empty file. If we're doing a git
+  * diff, and the file was copied, we need to report the file as added and
+  * diff it against the text base, so that a "copied" git diff header, and
+  * possibly a diff against the copy source, will be generated for it. */
   if ((! replaced && status == svn_wc__db_status_added) ||
      (replaced && ! eb->ignore_ancestry) ||
      ((status == svn_wc__db_status_copied ||
-       status == svn_wc__db_status_moved_here) && eb->show_copies_as_adds))
+       status == svn_wc__db_status_moved_here) &&
+         (eb->show_copies_as_adds || eb->use_git_diff_format)))
     {
       const char *translated = NULL;
       const char *working_mimetype;
@@ -689,7 +697,10 @@ file_diff(struct dir_baton *db,
               pool, pool));
 
       SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL, NULL, path,
-                                        empty_file,
+                                        (! eb->show_copies_as_adds &&
+                                         eb->use_git_diff_format &&
+                                         status != svn_wc__db_status_added) ?
+                                          textbase : empty_file,
                                         translated,
                                         0, revision,
                                         NULL,
@@ -701,16 +712,15 @@ file_diff(struct dir_baton *db,
     }
   else
     {
-      svn_boolean_t modified;
       const char *translated = NULL;
       apr_hash_t *baseprops;
       const char *base_mimetype;
       const char *working_mimetype;
       apr_hash_t *workingprops;
       apr_array_header_t *propchanges;
+      svn_boolean_t modified;
 
       /* Here we deal with showing pure modifications. */
-
       SVN_ERR(svn_wc__internal_text_modified_p(&modified, eb->db,
                                                local_abspath, FALSE, TRUE,
                                                pool));
@@ -1817,6 +1827,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
                         svn_boolean_t show_copies_as_adds,
+                        svn_boolean_t use_git_diff_format,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         const apr_array_header_t *changelists,
@@ -1836,6 +1847,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                           anchor_path, target,
                           callbacks, callback_baton,
                           depth, ignore_ancestry, show_copies_as_adds,
+                          use_git_diff_format,
                           use_text_base, reverse_order, changelists,
                           cancel_func, cancel_baton,
                           result_pool));
@@ -1891,6 +1903,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              svn_boolean_t show_copies_as_adds,
+             svn_boolean_t use_git_diff_format,
              const apr_array_header_t *changelists,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
@@ -1921,6 +1934,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
                           target,
                           callbacks, callback_baton,
                           depth, ignore_ancestry, show_copies_as_adds,
+                          use_git_diff_format,
                           FALSE, FALSE, changelists,
                           cancel_func, cancel_baton,
                           pool));

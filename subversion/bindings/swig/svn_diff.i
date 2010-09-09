@@ -48,9 +48,9 @@
 
 /* The WRAPPED_STREAM typemap can't cope with struct members, and there
    isn't really a reason to change these. */
-%immutable svn_hunk_t::diff_text;
-%immutable svn_hunk_t::original_text;
-%immutable svn_hunk_t::modified_text;
+%immutable svn_diff_hunk_t::diff_text;
+%immutable svn_diff_hunk_t::original_text;
+%immutable svn_diff_hunk_t::modified_text;
 
 /* Ditto. */
 %immutable svn_patch_t::patch_file;
