@@ -1308,6 +1308,8 @@ upgrade_to_wcng(svn_wc__db_t *db,
                                            "wcng", result_pool);
       root_adm_abspath = svn_wc__adm_child(data->root_abspath, "",
                                            scratch_pool);
+      SVN_ERR(svn_io_remove_dir2(root_adm_abspath, TRUE, NULL, NULL,
+                                 scratch_pool));
       SVN_ERR(svn_wc__ensure_directory(root_adm_abspath, scratch_pool));
 
       /* Create an empty sqlite database for this directory. */
