@@ -1946,18 +1946,20 @@ get_packed_offset(apr_off_t *rev_offset,
     {
       svn_stringbuf_t *sb;
       svn_boolean_t eof;
+      apr_int64_t val;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_stream_readline(manifest_stream, &sb, "\n", &eof, iterpool));
       if (eof)
         break;
 
-      errno = 0; /* apr_atoi64() in APR-0.9 does not always set errno */
-      APR_ARRAY_PUSH(manifest, apr_off_t) =
-                apr_atoi64(svn_string_create_from_buf(sb, iterpool)->data);
-      if (errno == ERANGE)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                "Manifest offset too large");
+      err = svn_cstring_atoi64(&val, sb->data);
+      if (err)
+        return svn_error_return(
+                 svn_error_create(SVN_ERR_FS_CORRUPT, err,
+                                  _("Manifest offset too large")));
+      APR_ARRAY_PUSH(manifest, apr_off_t) = (apr_off_t)val;
     }
   svn_pool_destroy(iterpool);
 
