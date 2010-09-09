@@ -403,8 +403,11 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
   apr_size_t old_len = str->len;
   if (str->blocksize > old_len + 1)
     {
-      str->data[old_len] = byte;
-      str->data[old_len+1] = '\0';
+      char *dest = str->data;
+
+      dest[old_len] = byte;
+      dest[old_len+1] = '\0';
+
       str->len = old_len+1;
     }
   else
@@ -412,7 +415,8 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
       /* we need to re-allocate the string buffer
        * -> let the more generic implementation take care of that part
        */
-      svn_stringbuf_appendbytes(str, &byte, 1);
+      char b = byte;
+      svn_stringbuf_appendbytes(str, &b, 1);
     }
 }
 
