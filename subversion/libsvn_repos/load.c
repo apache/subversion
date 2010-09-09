@@ -649,7 +649,7 @@ parse_format_version(const char *versionstring, int *version)
     return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                             _("Malformed dumpfile header"));
 
-  value = atoi(p+1);
+  SVN_ERR(svn_cstring_atoi(&value, p + 1));
 
   if (value > SVN_REPOS_DUMPFILE_FORMAT_VERSION)
     return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
@@ -791,7 +791,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
                                      APR_HASH_KEY_STRING)))
         {
           /* ### someday, switch modes of operation here. */
-          version = atoi(value);
+          SVN_ERR(svn_cstring_atoi(&version, value));
         }
       /* Or is this bogosity?! */
       else
