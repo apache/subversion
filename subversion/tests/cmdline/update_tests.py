@@ -5720,6 +5720,30 @@ def update_with_excluded_subdir(sbox):
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
 
+#----------------------------------------------------------------------
+# Test for issue #3471 'svn up touches file w/ lock & svn:keywords property'
+#
+# Marked as XFail until the issue is fixed.
+def update_with_file_lock_and_keywords_property_set(sbox):
+  """update with file lock & keywords property set"""
+  sbox.build()
+  
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, '$Id$')
+  svntest.main.run_svn(None, 'ps', 'svn:keywords', 'Id', mu_path)
+  svntest.main.run_svn(None, 'lock', mu_path)
+  mu_ts_before_update = os.path.getmtime(mu_path)
+  
+  # Issue #3471 manifests itself here; The timestamp of 'mu' gets updated 
+  # to the time of the last "svn up".
+  sbox.simple_update()
+  mu_ts_after_update = os.path.getmtime(mu_path)
+  if (mu_ts_before_update != mu_ts_after_update):
+    print("The timestamp of 'mu' before and after update does not match.")
+    raise svntest.Failure
+  
 
 #######################################################################
 # Run the tests
@@ -5792,6 +5816,7 @@ test_list = [ None,
               add_moved_file_has_props,
               XFail(add_moved_file_has_props2),
               update_with_excluded_subdir,
+              XFail(update_with_file_lock_and_keywords_property_set)
              ]
 
 if __name__ == '__main__':
