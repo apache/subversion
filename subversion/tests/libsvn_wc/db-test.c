@@ -321,9 +321,6 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
   svn_sqlite__db_t *sdb;
   const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
-#ifdef SVN_WC__NODE_DATA
-    statements[STMT_CREATE_NODE_DATA],
-#endif
 #ifdef SVN_WC__NODES
     statements[STMT_CREATE_NODES],
 #endif
