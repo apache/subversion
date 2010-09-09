@@ -2501,6 +2501,7 @@ read_rep_line(struct rep_args **rep_args_p,
   apr_size_t limit;
   struct rep_args *rep_args;
   char *str, *last_str;
+  apr_int64_t val;
 
   limit = sizeof(buffer);
   SVN_ERR(svn_io_read_length_line(file, buffer, &limit, pool));
@@ -2539,12 +2540,14 @@ read_rep_line(struct rep_args **rep_args_p,
   str = apr_strtok(NULL, " ", &last_str);
   if (! str)
     goto error;
-  rep_args->base_offset = (apr_off_t) apr_atoi64(str);
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep_args->base_offset = (apr_off_t)val;
 
   str = apr_strtok(NULL, " ", &last_str);
   if (! str)
     goto error;
-  rep_args->base_length = (apr_size_t) apr_atoi64(str);
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep_args->base_length = (apr_size_t)val;
 
   *rep_args_p = rep_args;
   return SVN_NO_ERROR;
