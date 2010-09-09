@@ -5727,7 +5727,10 @@ def update_with_excluded_subdir(sbox):
 def update_with_file_lock_and_keywords_property_set(sbox):
   """update with file lock & keywords property set"""
   sbox.build()
-  
+
+  # We need a timestamp change to detect that the mtime did change.
+  actions.do_sleep_for_timestamps()
+
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
