@@ -275,6 +275,9 @@ svn_fs_fs__id_parse(const char *data,
 
   if (str[0] == 'r')
     {
+      apr_int64_t val;
+      svn_error_t *err;
+
       /* This is a revision type ID */
       pvt->txn_id = NULL;
 
@@ -286,7 +289,13 @@ svn_fs_fs__id_parse(const char *data,
       str = apr_strtok(NULL, "/", &last_str);
       if (str == NULL)
         return NULL;
-      pvt->offset = apr_atoi64(str);
+      err = svn_cstring_atoi64(&val, str);
+      if (err)
+        {
+          svn_error_clear(err);
+          return NULL;
+        }
+      pvt->offset = (apr_off_t)val;
     }
   else if (str[0] == 't')
     {
