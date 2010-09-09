@@ -187,10 +187,12 @@ run_revert(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   const char *parent_abspath;
   svn_boolean_t conflicted;
+  apr_int64_t val;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  replaced = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+  replaced = (val != 0);
   /* magic_changed is extracted further below.  */
   /* use_commit_times is extracted further below.  */
 
@@ -214,7 +216,8 @@ run_revert(svn_wc__db_t *db,
       svn_boolean_t magic_changed;
       svn_boolean_t reinstall_working;
 
-      magic_changed = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
+      SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
+      magic_changed = (val != 0);
 
       /* If there was a magic property change, then we'll reinstall the
          working-file to pick up any/all appropriate changes. If there was
@@ -276,8 +279,9 @@ run_revert(svn_wc__db_t *db,
           svn_boolean_t use_commit_times;
           svn_skel_t *wi_file_install;
 
-          use_commit_times = svn_skel__parse_int(arg1->next->next->next,
-                                                 scratch_pool) != 0;
+          SVN_ERR(svn_skel__parse_int(&val, arg1->next->next->next,
+                                     scratch_pool));
+          use_commit_times = (val != 0);
 
           SVN_ERR(svn_wc__wq_build_file_install(&wi_file_install,
                                                 db, local_abspath,
@@ -552,10 +556,12 @@ run_killme(svn_wc__db_t *db,
   const char *repos_root_url;
   const char *repos_uuid;
   svn_error_t *err;
+  apr_int64_t val;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   dir_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  adm_only = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+  adm_only = (val != 0);
 
   err = svn_wc__db_base_get_info(&status, NULL, &original_revision,
                                  NULL, NULL, NULL,
@@ -807,9 +813,11 @@ run_base_remove(svn_wc__db_t *db,
   svn_revnum_t revision;
   const char *repos_relpath, *repos_root_url, *repos_uuid;
   svn_wc__db_kind_t kind;
+  apr_int64_t val;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  keep_not_present = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+  keep_not_present = (val != 0);
 
   if (keep_not_present)
     {
@@ -901,13 +909,16 @@ run_deletion_postcommit(svn_wc__db_t *db,
   svn_revnum_t new_revision;
   svn_boolean_t no_unlock;
   svn_wc__db_kind_t kind;
+  apr_int64_t val;
 
   /* ### warning: this code has not been vetted for running multiple times  */
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  new_revision = (svn_revnum_t)svn_skel__parse_int(arg1->next, scratch_pool);
-  no_unlock = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+  new_revision = (svn_revnum_t)val;
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
+  no_unlock = (val != 0);
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
 
@@ -1496,10 +1507,13 @@ run_postcommit(svn_wc__db_t *db,
   svn_boolean_t keep_changelist, no_unlock;
   const char *tmp_text_base_abspath;
   svn_error_t *err;
+  apr_int64_t val;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  new_revision = (svn_revnum_t)svn_skel__parse_int(arg1->next, scratch_pool);
-  changed_date = svn_skel__parse_int(arg1->next->next, scratch_pool);
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+  new_revision = (svn_revnum_t)val;
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
+  changed_date = (apr_time_t)val;
   if (arg1->next->next->next->len == 0)
     changed_author = NULL;
   else
@@ -1521,7 +1535,8 @@ run_postcommit(svn_wc__db_t *db,
   else
     SVN_ERR(svn_skel__parse_proplist(&new_dav_cache, arg5->next,
                                      scratch_pool));
-  keep_changelist = svn_skel__parse_int(arg5->next->next, scratch_pool) != 0;
+  SVN_ERR(svn_skel__parse_int(&val, arg5->next->next, scratch_pool));
+  keep_changelist = (val != 0);
 
   /* Before r927056, this WQ item didn't have this next field.  Catch any
    * attempt to run this code on a WC having a stale WQ item in it. */
@@ -1534,14 +1549,20 @@ run_postcommit(svn_wc__db_t *db,
                                            arg5->next->next->next->len);
 
   if (arg5->next->next->next->next)
-    no_unlock = svn_skel__parse_int(arg5->next->next->next->next,
-                                     scratch_pool) != 0;
+    {
+      SVN_ERR(svn_skel__parse_int(&val, arg5->next->next->next->next,
+                                  scratch_pool));
+      no_unlock = (val != 0);
+    }
   else
     no_unlock = TRUE;
 
   if (arg5->next->next->next->next->next)
-    changed_rev = svn_skel__parse_int(arg5->next->next->next->next->next,
-                                      scratch_pool);
+    {
+      SVN_ERR(svn_skel__parse_int(&val, arg5->next->next->next->next->next,
+                                  scratch_pool));
+      changed_rev = (svn_revnum_t)val;
+    }
   else
     changed_rev = new_revision; /* Behavior before fixing issue #3676 */
 
@@ -1666,10 +1687,13 @@ run_file_install(svn_wc__db_t *db,
   const char *temp_dir_abspath;
   svn_stream_t *dst_stream;
   const char *dst_abspath;
+  apr_int64_t val;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  use_commit_times = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
-  record_fileinfo = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+  use_commit_times = (val != 0);
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
+  record_fileinfo = (val != 0);
 
   if (arg4 == NULL)
     {
@@ -2145,7 +2169,12 @@ run_record_fileinfo(svn_wc__db_t *db,
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
 
   if (arg1->next)
-    set_time = svn_skel__parse_int(arg1->next, scratch_pool);
+    {
+      apr_int64_t val;
+
+      SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+      set_time = (apr_time_t)val;
+    }
 
   if (set_time != 0)
     {
