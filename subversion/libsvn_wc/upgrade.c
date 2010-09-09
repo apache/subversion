@@ -505,12 +505,24 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *subdirs;
+  svn_error_t *err;
   int i;
 
   if (cancel_func)
     SVN_ERR((*cancel_func)(cancel_baton));
 
-  SVN_ERR(get_versioned_subdirs(&subdirs, dir_abspath, scratch_pool, iterpool));
+  err = get_versioned_subdirs(&subdirs, dir_abspath, scratch_pool, iterpool);
+  if (err)
+    {
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* An unversioned dir is obstructing a versioned dir */
+          svn_error_clear(err);
+          err = NULL;
+        }
+      svn_pool_destroy(iterpool);
+      return err;
+    }
   for (i = 0; i < subdirs->nelts; ++i)
     {
       const char *child_abspath = APR_ARRAY_IDX(subdirs, i, const char *);
@@ -1517,9 +1529,9 @@ upgrade_working_copy(svn_wc__db_t *db,
   int old_format;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *subdirs;
+  svn_error_t *err;
   int i;
 
-  /* Check cancellation; note that this catches recursive calls too. */
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
@@ -1533,13 +1545,28 @@ upgrade_working_copy(svn_wc__db_t *db,
                     svn_wc_create_notify(dir_abspath, svn_wc_notify_skip,
                                          iterpool),
                 iterpool);
+      svn_pool_destroy(iterpool);
       return SVN_NO_ERROR;
     }
 
-  /* At present upgrade_to_wcng removes the entries file so get the
-     children before calling it. */
-  SVN_ERR(get_versioned_subdirs(&subdirs, dir_abspath,
-                                scratch_pool, iterpool));
+  err = get_versioned_subdirs(&subdirs, dir_abspath, scratch_pool, iterpool);
+  if (err)
+    {
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* An unversioned dir is obstructing a versioned dir */
+          svn_error_clear(err);
+          err = NULL;
+          if (notify_func)
+            notify_func(notify_baton,
+                        svn_wc_create_notify(dir_abspath, svn_wc_notify_skip,
+                                             iterpool),
+                        iterpool);
+        }
+      svn_pool_destroy(iterpool);
+      return err;
+    }
+
 
   SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format,
                           repos_info_func, repos_info_baton,
