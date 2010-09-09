@@ -2683,7 +2683,12 @@ get_root_changes_offset(apr_off_t *root_offset,
   i++;
 
   if (root_offset)
-    *root_offset = rev_offset + apr_atoi64(&buf[i]);
+    {
+      apr_int64_t val;
+
+      SVN_ERR(svn_cstring_atoi64(&val, &buf[i]));
+      *root_offset = rev_offset + (apr_off_t)val;
+    }
 
   /* find the next space */
   for ( ; i < (num_bytes - 2) ; i++)
