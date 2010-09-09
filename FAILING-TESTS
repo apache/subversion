@@ -1,4 +1,4 @@
-As of r995562 (which is the sync up to r995395 from trunk), the tests are as follows:
+As of r995566 (which is the sync up to r995395 from trunk), the tests are as follows:
 
 * ra_local, ra_svn, ra_neon:
     All tests pass.
