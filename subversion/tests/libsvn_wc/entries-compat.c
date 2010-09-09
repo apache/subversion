@@ -362,16 +362,16 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
   const char *dirpath;
   const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
-#ifdef SVN_WC__NODE_DATA
-    statements[STMT_CREATE_NODE_DATA],
+#ifdef SVN_WC__NODES
+    statements[STMT_CREATE_NODES],
 #endif
     TESTING_DATA,
     NULL
   };
   const char * const M_statements[] = {
     statements[STMT_CREATE_SCHEMA],
-#ifdef SVN_WC__NODE_DATA
-    statements[STMT_CREATE_NODE_DATA],
+#ifdef SVN_WC__NODES
+    statements[STMT_CREATE_NODES],
 #endif
     M_TESTING_DATA,
     NULL
