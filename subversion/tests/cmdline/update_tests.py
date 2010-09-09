@@ -26,6 +26,7 @@
 
 # General modules
 import sys, re, os, subprocess
+import time
 
 # Our testing module
 import svntest
@@ -5728,9 +5729,6 @@ def update_with_file_lock_and_keywords_property_set(sbox):
   """update with file lock & keywords property set"""
   sbox.build()
 
-  # We need a timestamp change to detect that the mtime did change.
-  actions.do_sleep_for_timestamps()
-
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -5738,7 +5736,10 @@ def update_with_file_lock_and_keywords_property_set(sbox):
   svntest.main.run_svn(None, 'ps', 'svn:keywords', 'Id', mu_path)
   svntest.main.run_svn(None, 'lock', mu_path)
   mu_ts_before_update = os.path.getmtime(mu_path)
-  
+
+  # Make sure we are at a different timestamp to really notice a mtime change
+  time.sleep(1)
+
   # Issue #3471 manifests itself here; The timestamp of 'mu' gets updated 
   # to the time of the last "svn up".
   sbox.simple_update()
