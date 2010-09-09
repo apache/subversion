@@ -4,7 +4,7 @@ As of r995566 (which is the sync up to r995395 from trunk), the tests are as fol
     All tests pass.
 
 * ra_serf:
-    The following tests fail.  They failed before r995395 too.
+    The following tests fail.  They failed before r995566 too.
 [[[
 FAIL:  depth_tests.py 37: tree conflicts resolved depth-empty
 FAIL:  depth_tests.py 38: tree conflicts resolved depth-files
