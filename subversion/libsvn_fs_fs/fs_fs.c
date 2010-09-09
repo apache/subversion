@@ -44,6 +44,7 @@
 #include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
+#include "svn_string.h"
 #include "svn_time.h"
 #include "svn_mergeinfo.h"
 #include "svn_config.h"
@@ -975,7 +976,7 @@ read_format(int *pformat, int *max_files_per_dir,
 
   /* Check that the first line contains only digits. */
   SVN_ERR(check_format_file_buffer_numeric(buf, 0, path, pool));
-  *pformat = atoi(buf);
+  SVN_ERR(svn_cstring_atoi(pformat, buf));
 
   /* Set the default values for anything that can be set via an option. */
   *max_files_per_dir = 0;
@@ -1006,7 +1007,7 @@ read_format(int *pformat, int *max_files_per_dir,
             {
               /* Check that the argument is numeric. */
               SVN_ERR(check_format_file_buffer_numeric(buf, 15, path, pool));
-              *max_files_per_dir = atoi(buf+15);
+              SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf + 15));
               continue;
             }
         }
