@@ -721,7 +721,7 @@ dirent_walker(void *baton,
         }
       else if (strcmp(name, "getcontentlength") == 0)
         {
-          entry->size = apr_atoi64(val->data);
+          SVN_ERR(svn_cstring_atoi64(&entry->size, val->data));
         }
       else if (strcmp(name, "resourcetype") == 0)
         {

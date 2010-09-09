@@ -647,22 +647,27 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 #endif
 
 #ifdef SVN_WC__NODES
+  /* the 'r' binding below doesn't work yet...
+     no idea why; needs more investigation... */
   SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE));
+  { svn_revnum_t rev = pibb->changed_rev;
   SVN_ERR(svn_sqlite__bindf(stmt_node, "isisnnn" /* No repos rev, id, path */
-                            "tstrssnnnnns",
-                            pibb->wc_id, pibb->local_relpath,
+                            "tstr"               /* 8 - 11 */
+                            "isnnnnns",          /* 12 - 19 */
+                            pibb->wc_id,         /* 1 */
+                            pibb->local_relpath, /* 2 */
                             (apr_int64_t)0, /* op_depth is 0 for base */
-                            parent_relpath,
-                            presence_map, pibb->status,
-                            (pibb->kind == svn_wc__db_kind_dir) ?
-                                svn_depth_to_word(pibb->depth) : NULL,
-                            kind_map, pibb->kind,
-                            pibb->changed_rev,
-                            pibb->changed_date,
-                            pibb->changed_author,
+                            parent_relpath,      /* 4 */
+                            presence_map, pibb->status, /* 8 */
+                            (pibb->kind == svn_wc__db_kind_dir) ? /* 9 */
+                               svn_depth_to_word(pibb->depth) : NULL,
+                            kind_map, pibb->kind, /* 10 */
+                            rev,                  /* 11 */
+                            pibb->changed_date,   /* 12 */
+                            pibb->changed_author, /* 13 */
                             (pibb->kind == svn_wc__db_kind_symlink) ?
-                                pibb->target : NULL));
-
+                                pibb->target : NULL)); /* 19 */
+  }
 
   if (pibb->kind == svn_wc__db_kind_file)
     SVN_ERR(svn_sqlite__bind_checksum(stmt_node, 14, pibb->checksum,
@@ -678,17 +683,20 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     {
       int i;
 
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_INSERT_BASE_NODE_INCOMPLETE));
-#ifdef SVN_WC__NODE_DATA
+#endif
+#ifdef SVN_WC__NODES
       SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb,
-                                        STMT_INSERT_NODE_DATA_INCOMPLETE));
+                                        STMT_INSERT_NODE));
 #endif
 
       for (i = pibb->children->nelts; i--; )
         {
           const char *name = APR_ARRAY_IDX(pibb->children, i, const char *);
 
+#ifndef SVN_WC__NODES_ONLY
           SVN_ERR(svn_sqlite__bindf(stmt, "issi",
                                     pibb->wc_id,
                                     svn_relpath_join(pibb->local_relpath,
@@ -697,15 +705,17 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                     pibb->local_relpath,
                                     (apr_int64_t)pibb->revision));
           SVN_ERR(svn_sqlite__insert(NULL, stmt));
-
-#ifdef SVN_WC__NODE_DATA
-          SVN_ERR(svn_sqlite__bindf(stmt_node, "isis",
+#endif
+#ifdef SVN_WC__NODES
+          SVN_ERR(svn_sqlite__bindf(stmt_node, "isisnnnsns",
                                     pibb->wc_id,
                                     svn_relpath_join(pibb->local_relpath,
                                                      name,
                                                      scratch_pool),
                                     (apr_int64_t)0 /* BASE */,
-                                    pibb->local_relpath));
+                                    pibb->local_relpath, /* parent_relpath */
+                                    "incomplete",
+                                    "unknown"));
           SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
 #endif
         }
@@ -783,17 +793,21 @@ insert_incomplete_working_children(svn_sqlite__db_t *sdb,
                                    const apr_array_header_t *children,
                                    apr_pool_t *scratch_pool)
 {
+#ifndef SVN_WC__NODES_ONLY
   svn_sqlite__stmt_t *stmt;
-#ifdef SVN_WC__NODE_DATA
+#endif
+#ifdef SVN_WC__NODES
   svn_sqlite__stmt_t *stmt_node;
 #endif
   int i;
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_INSERT_WORKING_NODE_INCOMPLETE));
-#ifdef SVN_WC__NODE_DATA
+#endif
+#ifdef SVN_WC__NODES
   SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb,
-                                    STMT_INSERT_NODE_DATA_INCOMPLETE));
+                                    STMT_INSERT_NODE));
 #endif
 
 
@@ -801,21 +815,25 @@ insert_incomplete_working_children(svn_sqlite__db_t *sdb,
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
 
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                                 wc_id,
                                 svn_relpath_join(local_relpath, name,
                                                  scratch_pool),
                                 local_relpath));
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
-
-#ifdef SVN_WC__NODE_DATA
-      SVN_ERR(svn_sqlite__bindf(stmt_node, "isis",
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(svn_sqlite__bindf(stmt_node, "isisnnnsns",
                                 wc_id,
                                 svn_relpath_join(local_relpath, name,
                                                  scratch_pool),
                                 (apr_int64_t) 2, /* ### op_depth
                                                     non-THIS_DIR working */
-                                local_relpath));
+                                local_relpath,
+                                "incomplete", /* 8, presence */
+                                "unknown"));  /* 10, kind */
+
       SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
 #endif
     }
@@ -8591,6 +8609,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
       SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                               pdh->wcroot->sdb, scratch_pool));
 
+#ifndef SVN_WC__NODES_ONLY
       /* ### Insert a switched not present base node. Luckily this hack
              is not as ugly as the original file externals hack. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -8607,6 +8626,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                 kind_map, svn_wc__db_kind_file));
 
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
+#endif
 
 #ifdef SVN_WC__NODES
 
@@ -8913,7 +8933,7 @@ set_new_dir_to_incomplete_txn(void *baton,
   SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 
-
+#ifndef SVN_WC__NODES_ONLY
   /* Insert the incomplete base node */
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_INSERT_BASE_NODE_INCOMPLETE_DIR));
@@ -8930,20 +8950,27 @@ set_new_dir_to_incomplete_txn(void *baton,
     SVN_ERR(svn_sqlite__bind_text(stmt, 7, svn_depth_to_word(dtb->depth)));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
-#ifdef SVN_WC__NODE_DATA
+
+#ifdef SVN_WC__NODES
 
   /* Insert the incomplete base node */
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
-                                    STMT_INSERT_BASE_NODE_DATA_INCOMPLETE_DIR));
+                                    STMT_INSERT_NODE));
 
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", dtb->pdh->wcroot->wc_id,
-                            dtb->local_relpath,
-                            parent_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isis" /* 1 - 4 */
+                            "nnn" "sns", /* 5 - 7(n), 8, 9(n), 10 */
+                            dtb->pdh->wcroot->wc_id, /* 1 */
+                            dtb->local_relpath,      /* 2 */
+                            (apr_int64_t)0, /* op_depth == 0; BASE */
+                            parent_relpath,          /* 4 */
+                            "incomplete",            /* 8, presence */
+                            "dir"));                 /* 10, kind */
 
   /* If depth is not unknown: record depth */
   if (dtb->depth >= svn_depth_empty && dtb->depth <= svn_depth_infinity)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, svn_depth_to_word(dtb->depth)));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 9, svn_depth_to_word(dtb->depth)));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 

@@ -106,11 +106,6 @@ insert or ignore into base_node (
   kind, revnum, depth)
 values (?1, ?2, ?3, ?4, ?5, 'incomplete', 'dir', ?6, ?7);
 
--- STMT_INSERT_BASE_NODE_DATA_INCOMPLETE_DIR
-insert or ignore into node_data (
-  wc_id, local_relpath, op_depth, parent_relpath, presence, kind, depth)
-values (?1, ?2, 0, ?3, 'incomplete', 'dir', ?4);
-
 -- STMT_INSERT_WORKING_NODE_INCOMPLETE
 INSERT OR IGNORE INTO WORKING_NODE (
   wc_id, local_relpath, parent_relpath, presence, kind)

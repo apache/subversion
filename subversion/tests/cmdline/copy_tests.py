@@ -4701,6 +4701,7 @@ def changed_data_should_match_checkout(sbox):
 
   os.chdir(was_cwd)
   os.chdir(wc_dir)
+  verify_out = svntest.verify.UnorderedOutput(verify_out)
   svntest.actions.run_and_verify_svn(None, verify_out, [], 'status', '-v')
   os.chdir(was_cwd)
 
