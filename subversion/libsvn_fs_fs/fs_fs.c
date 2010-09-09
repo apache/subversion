@@ -2700,10 +2700,16 @@ get_root_changes_offset(apr_off_t *root_offset,
 
   i++;
 
-  /* note that apr_atoi64() will stop reading as soon as it encounters
-     the final newline. */
+  /* note that svn_cstring_atoi64() (actually, apr_atoi64()) will stop
+   * reading as soon as it encounters the final newline.
+   * ### Is it OK to rely on this APR implementation detail? */
   if (changes_offset)
-    *changes_offset = rev_offset + apr_atoi64(&buf[i]);
+    {
+      apr_int64_t val;
+
+      SVN_ERR(svn_cstring_atoi64(&val, &buf[i]));
+      *changes_offset = rev_offset + (apr_off_t)val;
+    }
 
   return SVN_NO_ERROR;
 }
