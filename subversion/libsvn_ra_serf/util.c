@@ -736,7 +736,10 @@ start_error(svn_ra_serf__xml_parser_t *parser,
       err_code = svn_xml_get_attr_value("errcode", attrs);
       if (err_code)
         {
-          ctx->error->apr_err = apr_atoi64(err_code);
+          apr_int64_t val;
+          
+          SVN_ERR(svn_cstring_atoi64(&val, err_code));
+          ctx->error->apr_err = (apr_status_t)val;
         }
       else
         {
