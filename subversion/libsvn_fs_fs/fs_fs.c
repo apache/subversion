@@ -2217,7 +2217,10 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
   /* Read the 'count' field. */
   value = apr_hash_get(headers, HEADER_COUNT, APR_HASH_KEY_STRING);
-  noderev->predecessor_count = (value == NULL) ? 0 : atoi(value);
+  if (value)
+    SVN_ERR(svn_cstring_atoi(&noderev->predecessor_count, value));
+  else
+    noderev->predecessor_count = 0;
 
   /* Get the properties location. */
   value = apr_hash_get(headers, HEADER_PROPS, APR_HASH_KEY_STRING);
@@ -2308,7 +2311,10 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
   /* Get the mergeinfo count. */
   value = apr_hash_get(headers, HEADER_MINFO_CNT, APR_HASH_KEY_STRING);
-  noderev->mergeinfo_count = (value == NULL) ? 0 : apr_atoi64(value);
+  if (value)
+    SVN_ERR(svn_cstring_atoi64(&noderev->mergeinfo_count, value));
+  else
+    noderev->mergeinfo_count = 0;
 
   /* Get whether *this* node has mergeinfo. */
   value = apr_hash_get(headers, HEADER_MINFO_HERE, APR_HASH_KEY_STRING);
