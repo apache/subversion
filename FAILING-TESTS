@@ -27,3 +27,7 @@ FAIL:  update_tests.py 35: update conflicted files
 FAIL:  update_tests.py 36: mergeinfo does not elide after update
 FAIL:  update_tests.py 45: restarted update should delete dir prop
 ]]]
+
+However, all ra_serf tests pass here: http://ci.apache.org/builders/svn-slik-w2k3-x64-ra/builds/760/steps/Test%20fsfs%2Bserf
+
+### local problem?  platform-specific problem?
