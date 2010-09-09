@@ -44,11 +44,13 @@
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_repos.h"
+#include "svn_string.h"
 #include "svn_fs.h"
 #include "svn_version.h"
 #include "svn_io.h"
 
 #include "svn_private_config.h"
+#include "private/svn_dep_compat.h"
 #include "winservice.h"
 
 #ifdef HAVE_UNISTD_H
@@ -473,7 +475,17 @@ int main(int argc, const char *argv[])
           break;
 
         case SVNSERVE_OPT_LISTEN_PORT:
-          port = atoi(arg);
+          {
+            apr_uint64_t val;
+
+            err = svn_cstring_strtoui64(&val, arg, 0, APR_UINT16_MAX, 10);
+            if (err)
+              return svn_cmdline_handle_exit_error(
+                       svn_error_createf(SVN_ERR_INCORRECT_PARAMS, err,
+                                         _("Invalid port '%s'"), arg),
+                       pool, "svnserve: ");
+            port = (apr_uint16_t)val;
+          }
           break;
 
         case SVNSERVE_OPT_LISTEN_HOST:
