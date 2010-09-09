@@ -2528,26 +2528,31 @@ read_rep_line(struct rep_args **rep_args_p,
 
   /* We have hopefully a DELTA vs. a non-empty base revision. */
   str = apr_strtok(buffer, " ", &last_str);
-  if (! str || (strcmp(str, REP_DELTA) != 0)) goto err;
+  if (! str || (strcmp(str, REP_DELTA) != 0))
+    goto error;
 
   str = apr_strtok(NULL, " ", &last_str);
-  if (! str) goto err;
+  if (! str)
+    goto error;
   rep_args->base_revision = SVN_STR_TO_REV(str);
 
   str = apr_strtok(NULL, " ", &last_str);
-  if (! str) goto err;
+  if (! str)
+    goto error;
   rep_args->base_offset = (apr_off_t) apr_atoi64(str);
 
   str = apr_strtok(NULL, " ", &last_str);
-  if (! str) goto err;
+  if (! str)
+    goto error;
   rep_args->base_length = (apr_size_t) apr_atoi64(str);
 
   *rep_args_p = rep_args;
   return SVN_NO_ERROR;
 
- err:
-  return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                          _("Malformed representation header"));
+ error:
+  return svn_error_return(
+           svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Malformed representation header")));
 }
 
 /* Given a revision file REV_FILE, opened to REV in FS, find the Node-ID
