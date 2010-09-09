@@ -450,9 +450,11 @@ parse_property_block(svn_stream_t *stream,
       else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
           char *keybuf;
+          apr_int64_t len;
 
+          SVN_ERR(svn_cstring_atoi64(&len, buf + 2));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
-                                  stream, atoi(buf + 2), proppool));
+                                  stream, (apr_size_t)len, proppool));
 
           /* Read a val length line */
           SVN_ERR(svn_stream_readline(stream, &strbuf, "\n", &eof, proppool));
@@ -466,8 +468,10 @@ parse_property_block(svn_stream_t *stream,
             {
               svn_string_t propstring;
               char *valbuf;
+              apr_int64_t val;
 
-              propstring.len = atoi(buf + 2);
+              SVN_ERR(svn_cstring_atoi64(&val, buf + 2));
+              propstring.len = (apr_size_t)val;
               SVN_ERR(read_key_or_val(&valbuf, actual_length,
                                       stream, propstring.len, proppool));
               propstring.data = valbuf;
