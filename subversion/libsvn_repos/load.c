@@ -524,9 +524,11 @@ parse_property_block(svn_stream_t *stream,
       else if ((buf[0] == 'D') && (buf[1] == ' '))
         {
           char *keybuf;
+          apr_int64_t len;
 
+          SVN_ERR(svn_cstring_atoi64(&len, buf + 2));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
-                                  stream, atoi(buf + 2), proppool));
+                                  stream, (apr_size_t)len, proppool));
 
           /* We don't expect these in revision properties, and if we see
              one when we don't have a delete_node_property callback,
