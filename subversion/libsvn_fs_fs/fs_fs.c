@@ -2553,9 +2553,8 @@ read_rep_line(struct rep_args **rep_args_p,
   return SVN_NO_ERROR;
 
  error:
-  return svn_error_return(
-           svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed representation header")));
+  return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                          _("Malformed representation header"));
 }
 
 /* Given a revision file REV_FILE, opened to REV in FS, find the Node-ID
