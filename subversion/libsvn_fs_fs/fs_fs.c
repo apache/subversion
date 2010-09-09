@@ -2060,6 +2060,7 @@ read_rep_offsets(representation_t **rep_p,
 {
   representation_t *rep;
   char *str, *last_str;
+  apr_int64_t val;
 
   rep = apr_pcalloc(pool, sizeof(*rep));
   *rep_p = rep;
@@ -2083,21 +2084,24 @@ read_rep_offsets(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  rep->offset = apr_atoi64(str);
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep->offset = (apr_off_t)val;
 
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  rep->size = apr_atoi64(str);
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep->size = (svn_filesize_t)val;
 
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  rep->expanded_size = apr_atoi64(str);
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep->expanded_size = (svn_filesize_t)val;
 
   /* Read in the MD5 hash. */
   str = apr_strtok(NULL, " ", &last_str);
