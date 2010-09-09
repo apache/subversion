@@ -481,7 +481,7 @@ int main(int argc, const char *argv[])
             err = svn_cstring_strtoui64(&val, arg, 0, APR_UINT16_MAX, 10);
             if (err)
               return svn_cmdline_handle_exit_error(
-                       svn_error_createf(SVN_ERR_INCORRECT_PARAMS, err,
+                       svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
                                          _("Invalid port '%s'"), arg),
                        pool, "svnserve: ");
             port = (apr_uint16_t)val;
