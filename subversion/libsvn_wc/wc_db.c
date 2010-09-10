@@ -8887,6 +8887,7 @@ set_new_dir_to_incomplete_txn(void *baton,
   SVN_ERR(create_repos_id(&repos_id, dtb->repos_root_url, dtb->repos_uuid,
                           sdb, scratch_pool));
 
+#ifndef SVN_WC__NODES_ONLY
   /* Delete the working node */
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_DELETE_WORKING_NODE));
@@ -8900,8 +8901,9 @@ set_new_dir_to_incomplete_txn(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", dtb->pdh->wcroot->wc_id,
                                         dtb->local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
-#ifdef SVN_WC__NODE_DATA
+#ifdef SVN_WC__NODES
   /* Delete the base and working node data */
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_DELETE_NODES));
@@ -8931,7 +8933,6 @@ set_new_dir_to_incomplete_txn(void *baton,
 
 
 #ifdef SVN_WC__NODES
-
   /* Insert the incomplete base node */
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_INSERT_NODE));
@@ -8952,8 +8953,6 @@ set_new_dir_to_incomplete_txn(void *baton,
   SVN_ERR(svn_sqlite__step_done(stmt));
 
 #endif
-
-
 
   return SVN_NO_ERROR;
 }
