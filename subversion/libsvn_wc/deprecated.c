@@ -1128,7 +1128,7 @@ svn_wc_get_ancestry(char **url,
 
   SVN_ERR(svn_wc__get_entry(&entry, svn_wc__adm_get_db(adm_access),
                             local_abspath, FALSE,
-                            svn_node_unknown, FALSE,
+                            svn_node_unknown,
                             pool, pool));
 
   if (url)
@@ -3911,7 +3911,6 @@ svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
   SVN_ERR(svn_wc__get_entry_versioned(entry, svn_wc__adm_get_db(adm_access),
                                       local_abspath, svn_node_unknown,
                                       show_hidden,
-                                      FALSE, /* NEED_PARENT_STUB */
                                       pool, pool));
 
   return SVN_NO_ERROR;
