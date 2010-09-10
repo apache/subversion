@@ -1254,7 +1254,7 @@ read_entries(apr_hash_t **entries,
    which the entry information is located, and *ENTRY_NAME to the entry name
    to access that entry.
 
-   KIND and NEED_PARENT_STUB are as in svn_wc__get_entry().
+   KIND is as in svn_wc__get_entry().
 
    Return the results in RESULT_POOL and use SCRATCH_POOL for temporary
    allocations. */
@@ -1264,15 +1264,11 @@ get_entry_access_info(const char **adm_abspath,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       svn_node_kind_t kind,
-                      svn_boolean_t need_parent_stub,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t read_from_subdir = FALSE;
-
-  /* Can't ask for the parent stub if the node is a file.  */
-  SVN_ERR_ASSERT(!need_parent_stub || kind != svn_node_file);
 
   /* If the caller didn't know the node kind, then stat the path. Maybe
      it is really there, and we can speed up the steps below.  */
@@ -1317,10 +1313,10 @@ get_entry_access_info(const char **adm_abspath,
         {
           /* We found a directory for this UNKNOWN node. Determine whether
              we need to read inside it.  */
-          read_from_subdir = !need_parent_stub;
+          read_from_subdir = TRUE;
         }
     }
-  else if (kind == svn_node_dir && !need_parent_stub)
+  else if (kind == svn_node_dir)
     {
       read_from_subdir = TRUE;
     }
@@ -1350,19 +1346,14 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                   const char *local_abspath,
                   svn_boolean_t allow_unversioned,
                   svn_node_kind_t kind,
-                  svn_boolean_t need_parent_stub,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   const char *dir_abspath;
   const char *entry_name;
 
-  /* Can't ask for the parent stub if the node is a file.  */
-  SVN_ERR_ASSERT(!need_parent_stub || kind != svn_node_file);
-
   SVN_ERR(get_entry_access_info(&dir_abspath, &entry_name, db, local_abspath,
-                                kind, need_parent_stub, scratch_pool,
-                                scratch_pool));
+                                kind, scratch_pool, scratch_pool));
 
     {
       const svn_wc_entry_t *parent_entry;
@@ -1411,8 +1402,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
              Redo the fetch, but "insist" we are trying to find a file.
              This will read from the parent directory of the "file".  */
           err = svn_wc__get_entry(entry, db, local_abspath, allow_unversioned,
-                                  svn_node_file, FALSE,
-                                  result_pool, scratch_pool);
+                                  svn_node_file, result_pool, scratch_pool);
           if (err == SVN_NO_ERROR)
             return SVN_NO_ERROR;
           if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
@@ -1449,25 +1439,6 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                              _("'%s' is not of the right kind"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
-
-  if (kind == svn_node_unknown)
-    {
-      /* They wanted a (directory) stub, but this isn't a directory.  */
-      if (need_parent_stub && (*entry)->kind != svn_node_dir)
-        return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                 _("'%s' is not of the right kind"),
-                                 svn_dirent_local_style(local_abspath,
-                                                        scratch_pool));
-
-      /* The actual (directory) information was wanted, but we got a stub.  */
-      if (!need_parent_stub
-          && (*entry)->kind == svn_node_dir
-          && *(*entry)->name != '\0')
-        return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                 _("'%s' is not of the right kind"),
-                                 svn_dirent_local_style(local_abspath,
-                                                        scratch_pool));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -2683,7 +2654,7 @@ svn_wc_walk_entries3(const char *path,
         }
 
       SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE,
-                                svn_node_file, FALSE, pool, pool));
+                                svn_node_file, pool, pool));
 
       err = walk_callbacks->found_entry(path, entry, walk_baton, pool);
       if (err)
