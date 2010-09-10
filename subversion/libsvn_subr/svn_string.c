@@ -622,14 +622,15 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
   errno = 0; /* APR-0.9 doesn't always set errno */
 
   /* ### We're throwing away half the number range here.
-   * ### Maybe implement our own number parser? */
+   * ### APR needs a apr_strtoui64() function. */
   val = apr_strtoi64(str, &endptr, base);
-  if (errno != 0 || endptr == str)
+  if (endptr == str || str[0] == '\0' || *endptr != '\0')
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Could not convert '%s' into a number"),
                                str));
-  if (val < 0 || (apr_uint64_t)val < minval || (apr_uint64_t)val > maxval)
+  if ((errno == ERANGE && (val == APR_INT64_MIN || val == APR_INT64_MAX)) ||
+      val < 0 || (apr_uint64_t)val < minval || (apr_uint64_t)val > maxval)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Number '%s' is out of range"), str));
@@ -666,12 +667,13 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
   errno = 0; /* APR-0.9 doesn't always set errno */
 
   val = apr_strtoi64(str, &endptr, base);
-  if (errno != 0 || endptr == str)
+  if (endptr == str || str[0] == '\0' || *endptr != '\0')
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Could not convert '%s' into a number"),
                                str));
-  if (val < minval || val > maxval)
+  if ((errno == ERANGE && (val == APR_INT64_MIN || val == APR_INT64_MAX)) ||
+      val < minval || val > maxval)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Number '%s' is out of range"), str));

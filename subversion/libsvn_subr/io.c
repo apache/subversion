@@ -3477,7 +3477,10 @@ svn_io_read_version_file(int *version,
         char c = buf[i];
 
         if (i > 0 && (c == '\r' || c == '\n'))
-          break;
+          {
+            buf[i] = '\0';
+            break;
+          }
         if (! svn_ctype_isdigit(c))
           return svn_error_createf
             (SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
