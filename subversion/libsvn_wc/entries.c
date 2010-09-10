@@ -271,11 +271,7 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    db, parent_abspath,
                                    scratch_pool, scratch_pool));
-      if (parent_status == svn_wc__db_status_added
-#ifndef SVN_WC__SINGLE_DB
-          || parent_status == svn_wc__db_status_obstructed_add
-#endif
-          )
+      if (parent_status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
                                          &parent_repos_relpath,
                                          &entry->repos,
@@ -407,11 +403,7 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, parent_abspath,
                                        scratch_pool, scratch_pool));
-          if (parent_status == svn_wc__db_status_added
-#ifndef SVN_WC__SINGLE_DB
-              || parent_status == svn_wc__db_status_obstructed_add
-#endif
-              )
+          if (parent_status == svn_wc__db_status_added)
             SVN_ERR(svn_wc__db_scan_addition(&parent_status,
                                              NULL,
                                              NULL, NULL, NULL,
@@ -654,38 +646,12 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           entry->incomplete = (status == svn_wc__db_status_incomplete);
         }
     }
-  else if (status == svn_wc__db_status_deleted
-#ifndef SVN_WC__SINGLE_DB
-           || status == svn_wc__db_status_obstructed_delete
-#endif
-           )
+  else if (status == svn_wc__db_status_deleted)
     {
-#ifdef SVN_WC__SINGLE_DB
       svn_node_kind_t path_kind;
-#endif
       /* ### we don't have to worry about moves, so this is a delete. */
       entry->schedule = svn_wc_schedule_delete;
 
-      /* ### keep_local ... ugh. hacky.  */
-      /* We only read keep_local in the directory itself, because we
-         can't rely on the actual record being available in the parent
-         stub when the directory is recorded as deleted in the directory
-         itself. (This last value is the status that brought us in this
-         if block).
-
-         This is safe because we will only write this flag in the
-         directory itself (see mark_deleted() in adm_ops.c), and also
-         because we will never use keep_local in the final version of
-         WC-NG. With a central db and central pristine store we can
-         remove working copy directories directly. So any left over
-         directories after the delete operation are always kept locally.
-      */
-#ifndef SVN_WC__SINGLE_DB
-      if (*entry->name == '\0')
-        SVN_ERR(svn_wc__db_temp_determine_keep_local(&entry->keep_local,
-                                                     db, entry_abspath,
-                                                     scratch_pool));
-#else
       /* If there is still a directory on-disk we keep it, if not it is
          already deleted. Simple, isn't it? 
          
@@ -696,13 +662,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
        */
       SVN_ERR(svn_io_check_path(entry_abspath, &path_kind, scratch_pool));
       entry->keep_local = (path_kind == svn_node_dir);
-#endif
     }
-  else if (status == svn_wc__db_status_added
-#ifndef SVN_WC__SINGLE_DB
-           || status == svn_wc__db_status_obstructed_add
-#endif
-           )
+  else if (status == svn_wc__db_status_added)
     {
       svn_wc__db_status_t work_status;
       const char *op_root_abspath;
@@ -784,18 +745,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                   && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
                 entry->revision = 0;
 
-#ifndef SVN_WC__SINGLE_DB
-              if (status == svn_wc__db_status_obstructed_add)
-                entry->revision = SVN_INVALID_REVNUM;
-
-              /* ### when we're reading a directory that is not present,
-                 ### then it must be "normal" rather than "add".  */
-              if (*entry->name == '\0'
-                  && status == svn_wc__db_status_obstructed_add)
-                entry->schedule = svn_wc_schedule_normal;
-              else
-#endif
-                entry->schedule = svn_wc_schedule_add;
+              entry->schedule = svn_wc_schedule_add;
             }
         }
 
@@ -803,15 +753,6 @@ read_one_entry(const svn_wc_entry_t **new_entry,
          then we cannot begin a scan for data. The original node may
          have important data. Set up stuff to kill that idea off,
          and finish up this entry.  */
-#ifndef SVN_WC__SINGLE_DB
-      if (status == svn_wc__db_status_obstructed_add)
-        {
-          entry->cmt_rev = SVN_INVALID_REVNUM;
-          work_status = svn_wc__db_status_normal;
-          scanned_original_relpath = NULL;
-        }
-      else
-#endif
         {
           SVN_ERR(svn_wc__db_scan_addition(&work_status,
                                            &op_root_abspath,
@@ -1009,14 +950,6 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       entry->schedule = svn_wc_schedule_normal;
       entry->deleted = TRUE;
     }
-#ifndef SVN_WC__SINGLE_DB
-  else if (status == svn_wc__db_status_obstructed)
-    {
-      /* ### set some values that should (hopefully) let this directory
-         ### be usable.  */
-      entry->revision = SVN_INVALID_REVNUM;
-    }
-#endif
   else if (status == svn_wc__db_status_absent)
     {
       entry->absent = TRUE;
@@ -1067,24 +1000,11 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
      ### the last three should probably have an "implied" REPOS_RELPATH
   */
-#ifdef SVN_WC__SINGLE_DB
   SVN_ERR_ASSERT(repos_relpath != NULL
                  || entry->schedule == svn_wc_schedule_delete
                  || status == svn_wc__db_status_not_present
                  || status == svn_wc__db_status_absent
-                 || status == svn_wc__db_status_excluded
-                 );
-#else
-  SVN_ERR_ASSERT(repos_relpath != NULL
-                 || entry->schedule == svn_wc_schedule_delete
-                 || status == svn_wc__db_status_obstructed
-                 || status == svn_wc__db_status_obstructed_add
-                 || status == svn_wc__db_status_obstructed_delete
-                 || status == svn_wc__db_status_not_present
-                 || status == svn_wc__db_status_absent
-                 || status == svn_wc__db_status_excluded
-                 );
-#endif
+                 || status == svn_wc__db_status_excluded);
   if (repos_relpath)
     entry->url = svn_path_url_add_component2(entry->repos,
                                              repos_relpath,
@@ -1681,14 +1601,6 @@ insert_base_node(svn_sqlite__db_t *sdb,
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->revision));
 
-#ifndef SVN_WC__SINGLE_DB
-  /* ### in per-subdir operation, if we're about to write a directory and
-     ### it is *not* "this dir", then we're writing a row in the parent
-     ### directory about the child. note that in the kind.  */
-  if (base_node->kind == svn_node_dir && *base_node->local_relpath != '\0')
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "subdir"));
-  else
-#endif
   /* ### kind might be "symlink" or "unknown" */
   if (base_node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, "unknown"));
@@ -1744,14 +1656,6 @@ insert_base_node(svn_sqlite__db_t *sdb,
   else if (base_node->presence == svn_wc__db_status_excluded)
     SVN_ERR(svn_sqlite__bind_text(stmt, 4, "excluded"));
 
-#ifndef SVN_WC__SINGLE_DB
-  /* ### in per-subdir operation, if we're about to write a directory and
-     ### it is *not* "this dir", then we're writing a row in the parent
-     ### directory about the child. note that in the kind.  */
-  if (base_node->kind == svn_node_dir && *base_node->local_relpath != '\0')
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "subdir"));
-  else
-#endif
   /* ### kind might be "symlink" or "unknown" */
   if (base_node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, "unknown"));
@@ -1814,15 +1718,6 @@ insert_working_node(svn_sqlite__db_t *sdb,
   else if (working_node->presence == svn_wc__db_status_excluded)
     SVN_ERR(svn_sqlite__bind_text(stmt, 4, "excluded"));
 
-#ifndef SVN_WC__SINGLE_DB
-  /* ### in per-subdir operation, if we're about to write a directory and
-     ### it is *not* "this dir", then we're writing a row in the parent
-     ### directory about the child. note that in the kind.  */
-  if (working_node->kind == svn_node_dir
-      && *working_node->local_relpath != '\0')
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "subdir"));
-  else
-#endif
   if (working_node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, "unknown"));
   else
@@ -1897,15 +1792,6 @@ insert_working_node(svn_sqlite__db_t *sdb,
   else if (working_node->presence == svn_wc__db_status_excluded)
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, "excluded"));
 
-#ifndef SVN_WC__SINGLE_DB
-  /* ### in per-subdir operation, if we're about to write a directory and
-     ### it is *not* "this dir", then we're writing a row in the parent
-     ### directory about the child. note that in the kind.  */
-  if (working_node->kind == svn_node_dir
-      && *working_node->local_relpath != '\0')
-    SVN_ERR(svn_sqlite__bind_text(stmt, 6, "subdir"));
-  else
-#endif
   if (working_node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 6, "unknown"));
   else
@@ -2208,7 +2094,6 @@ write_entry(svn_wc__db_t *db,
         {
           base_node->kind = entry->kind;
 
-#ifdef SVN_WC__SINGLE_DB
           /* All subdirs are initially incomplete, they stop being
              incomplete when the entries file in the subdir is
              upgraded and remain incomplete if that doesn't happen. */
@@ -2218,7 +2103,6 @@ write_entry(svn_wc__db_t *db,
               base_node->presence = svn_wc__db_status_incomplete;
             }
           else
-#endif
             {
 
               if (entry->incomplete)
@@ -2344,7 +2228,6 @@ write_entry(svn_wc__db_t *db,
                                        svn_checksum_md5,
                                        entry->checksum, scratch_pool));
 
-#ifdef SVN_WC__SINGLE_DB
       /* All subdirs start of incomplete, and stop being incomplete
          when the entries file in the subdir is upgraded. */
       if (entry->kind == svn_node_dir
@@ -2353,9 +2236,7 @@ write_entry(svn_wc__db_t *db,
           working_node->presence = svn_wc__db_status_incomplete;
           working_node->kind = svn_node_dir;
         }
-      else
-#endif
-      if (entry->schedule == svn_wc_schedule_delete)
+      else if (entry->schedule == svn_wc_schedule_delete)
         {
           if (entry->incomplete)
             {
