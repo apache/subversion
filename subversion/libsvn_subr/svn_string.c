@@ -615,7 +615,7 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
                       apr_uint64_t minval, apr_uint64_t maxval,
                       int base)
 {
-  apr_int64_t parsed;
+  apr_int64_t val;
   char *endptr;
 
   /* We assume errno is thread-safe. */
@@ -623,17 +623,17 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
 
   /* ### We're throwing away half the number range here.
    * ### Maybe implement our own number parser? */
-  parsed = apr_strtoi64(str, &endptr, base);
+  val = apr_strtoi64(str, &endptr, base);
   if (errno != 0 || endptr == str)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Could not convert '%s' into a number"),
                                str));
-  if (parsed < 0 || parsed < minval || parsed > maxval)
+  if (val < 0 || val < minval || val > maxval)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Number '%s' is out of range"), str));
-  *n = parsed;
+  *n = val;
   return SVN_NO_ERROR;
 }
 
@@ -647,10 +647,10 @@ svn_cstring_atoui64(apr_uint64_t *n, const char *str)
 svn_error_t *
 svn_cstring_atoui(unsigned int *n, const char *str)
 {
-  apr_uint64_t parsed;
+  apr_uint64_t val;
 
-  SVN_ERR(svn_cstring_strtoui64(&parsed, str, 0, APR_UINT32_MAX, 10));
-  *n = (unsigned int)parsed;
+  SVN_ERR(svn_cstring_strtoui64(&val, str, 0, APR_UINT32_MAX, 10));
+  *n = (unsigned int)val;
   return SVN_NO_ERROR;
 }
 
@@ -659,23 +659,23 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
                      apr_int64_t minval, apr_int64_t maxval,
                      int base)
 {
-  apr_int64_t parsed;
+  apr_int64_t val;
   char *endptr;
 
   /* We assume errno is thread-safe. */
   errno = 0; /* APR-0.9 doesn't always set errno */
 
-  parsed = apr_strtoi64(str, &endptr, base);
+  val = apr_strtoi64(str, &endptr, base);
   if (errno != 0 || endptr == str)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Could not convert '%s' into a number"),
                                str));
-  if (parsed < minval || parsed > maxval)
+  if (val < minval || val > maxval)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Number '%s' is out of range"), str));
-  *n = parsed;
+  *n = val;
   return SVN_NO_ERROR;
 }
 
@@ -689,10 +689,9 @@ svn_cstring_atoi64(apr_int64_t *n, const char *str)
 svn_error_t *
 svn_cstring_atoi(int *n, const char *str)
 {
-  apr_int64_t parsed;
+  apr_int64_t val;
 
-  SVN_ERR(svn_cstring_strtoi64(&parsed, str, APR_INT32_MIN,
-                               APR_INT32_MAX, 10));
-  *n = (int)parsed;
+  SVN_ERR(svn_cstring_strtoi64(&val, str, APR_INT32_MIN, APR_INT32_MAX, 10));
+  *n = (int)val;
   return SVN_NO_ERROR;
 }
