@@ -929,25 +929,6 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   svn_boolean_t loop_recurse = FALSE;
   svn_boolean_t remove_lock;
 
-#ifndef SVN_WC__SINGLE_DB
-  /* Is it a missing, deleted directory?
-
-     ### Temporary: once we centralise this sort of node is just a
-     normal delete and will get handled by the post-commit queue. */
-  if (item->kind == svn_node_dir
-      && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-    {
-      svn_boolean_t obstructed;
-
-      SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed,
-                                                wc_ctx, item->path,
-                                                scratch_pool));
-      if (obstructed)
-        return svn_wc__temp_mark_missing_not_present(item->path,
-                                                     wc_ctx, scratch_pool);
-    }
-#endif
-
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
       && (item->kind == svn_node_dir)
       && (item->copyfrom_url))

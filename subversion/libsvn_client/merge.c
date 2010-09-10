@@ -437,29 +437,7 @@ obstructed_or_missing(svn_wc_notify_state_t *obstr_state,
                                              local_abspath,
                                              pool));
       if (is_deleted)
-        {
-#ifndef SVN_WC__SINGLE_DB
-          /* ### While we are not at single-db: detect missing .svn dirs.
-             ### Once we switch to single db expected kind should be always
-             ### none, just like for files */
-          if (kind_expected == svn_node_dir)
-            {
-              if (kind_on_disk == svn_node_none)
-                {
-                  svn_boolean_t is_obstructed;
-                  
-                  SVN_ERR(svn_wc__node_is_status_obstructed(&is_obstructed,
-                                                            merge_b->ctx->wc_ctx,
-                                                            local_abspath,
-                                                            pool));
-                  if (!is_obstructed)
-                    kind_expected = svn_node_none; 
-                }
-            }
-          else
-#endif
-            kind_expected = svn_node_none;
-        }
+        kind_expected = svn_node_none;
     }
 
   if (kind_expected == kind_on_disk)
@@ -5467,9 +5445,6 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   svn_boolean_t is_present;
   svn_boolean_t deleted;
   svn_boolean_t absent;
-#ifndef SVN_WC__SINGLE_DB
-  svn_boolean_t obstructed;
-#endif
   svn_boolean_t immediate_child_dir;
 
   /* TODO(#2843) How to deal with a excluded item on merge? */
@@ -5481,20 +5456,12 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   if (!is_present)
     return SVN_NO_ERROR;
 
-#ifndef SVN_WC__SINGLE_DB
-  SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed, wb->ctx->wc_ctx,
-                                            local_abspath, scratch_pool));
-#endif
   SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wb->ctx->wc_ctx,
                                          local_abspath, scratch_pool));
   SVN_ERR(svn_wc__node_is_status_absent(&absent, wb->ctx->wc_ctx,
                                         local_abspath, scratch_pool));
 
-#ifndef SVN_WC__SINGLE_DB
-   if (obstructed || deleted || absent)
-#else
    if (deleted || absent)
-#endif
     {
       propval = NULL;
       switched = FALSE;
@@ -5525,11 +5492,7 @@ get_mergeinfo_walk_cb(const char *local_abspath,
                          && (strcmp(abs_parent_path,
                                     wb->merge_target_abspath) == 0));
   /* Make sure what the WC thinks is present on disk really is. */
-#ifndef SVN_WC__SINGLE_DB
-   if (!absent && !deleted && !obstructed)
-#else
    if (!absent && !deleted)
-#endif
     SVN_ERR(record_missing_subtree_roots(local_abspath, kind,
                                          wb->subtree_dirents,
                                          wb->missing_subtrees,
