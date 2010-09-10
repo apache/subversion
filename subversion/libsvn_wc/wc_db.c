@@ -651,13 +651,16 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
      no idea why; needs more investigation... */
   SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE));
   { svn_revnum_t rev = pibb->changed_rev;
-  SVN_ERR(svn_sqlite__bindf(stmt_node, "isisnnn" /* No repos rev, id, path */
+  SVN_ERR(svn_sqlite__bindf(stmt_node, "isisisr"
                             "tstr"               /* 8 - 11 */
                             "isnnnnns",          /* 12 - 19 */
                             pibb->wc_id,         /* 1 */
                             pibb->local_relpath, /* 2 */
                             (apr_int64_t)0, /* op_depth is 0 for base */
                             parent_relpath,      /* 4 */
+                            pibb->repos_id,
+                            pibb->repos_relpath,
+                            pibb->revision,
                             presence_map, pibb->status, /* 8 */
                             (pibb->kind == svn_wc__db_kind_dir) ? /* 9 */
                                svn_depth_to_word(pibb->depth) : NULL,
@@ -8938,11 +8941,14 @@ set_new_dir_to_incomplete_txn(void *baton,
                                     STMT_INSERT_NODE));
 
   SVN_ERR(svn_sqlite__bindf(stmt, "isis" /* 1 - 4 */
-                            "nnn" "sns", /* 5 - 7(n), 8, 9(n), 10 */
+                            "isr" "sns", /* 5 - 7, 8, 9(n), 10 */
                             dtb->pdh->wcroot->wc_id, /* 1 */
                             dtb->local_relpath,      /* 2 */
                             (apr_int64_t)0, /* op_depth == 0; BASE */
                             parent_relpath,          /* 4 */
+                            repos_id,
+                            dtb->repos_relpath,
+                            dtb->revision,
                             "incomplete",            /* 8, presence */
                             "dir"));                 /* 10, kind */
 
