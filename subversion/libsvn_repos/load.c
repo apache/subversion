@@ -38,6 +38,7 @@
 
 #include <apr_lib.h>
 
+#include "private/svn_dep_compat.h"
 #include "private/svn_mergeinfo_private.h"
 
 /*----------------------------------------------------------------------*/
@@ -450,9 +451,9 @@ parse_property_block(svn_stream_t *stream,
       else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
           char *keybuf;
-          apr_int64_t len;
+          apr_uint64_t len;
 
-          SVN_ERR(svn_cstring_atoi64(&len, buf + 2));
+          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX, 10));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
                                   stream, (apr_size_t)len, proppool));
 
@@ -528,9 +529,9 @@ parse_property_block(svn_stream_t *stream,
       else if ((buf[0] == 'D') && (buf[1] == ' '))
         {
           char *keybuf;
-          apr_int64_t len;
+          apr_uint64_t len;
 
-          SVN_ERR(svn_cstring_atoi64(&len, buf + 2));
+          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX, 10));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
                                   stream, (apr_size_t)len, proppool));
 
