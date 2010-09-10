@@ -161,6 +161,7 @@ where wc_id = ?1 and local_relpath = ?2
   and op_depth in
    (select op_depth from nodes
     where wc_id = ?1 and local_relpath = ?2
+    order by op_depth desc
     limit 1);
 
 -- STMT_UPDATE_ACTUAL_PROPS
