@@ -624,7 +624,7 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
   /* ### We're throwing away half the number range here.
    * ### APR needs a apr_strtoui64() function. */
   val = apr_strtoi64(str, &endptr, base);
-  if (endptr == str || str[0] == '\0' || *endptr != '\0')
+  if (errno == EINVAL || endptr == str || str[0] == '\0' || *endptr != '\0')
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Could not convert '%s' into a number"),
@@ -668,7 +668,7 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
   errno = 0; /* APR-0.9 doesn't always set errno */
 
   val = apr_strtoi64(str, &endptr, base);
-  if (endptr == str || str[0] == '\0' || *endptr != '\0')
+  if (errno == EINVAL || endptr == str || str[0] == '\0' || *endptr != '\0')
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Could not convert '%s' into a number"),
