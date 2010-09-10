@@ -175,7 +175,6 @@ void
 svn_ra_serf__set_ver_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name,
-                          const svn_string_t *const *old_value_p,
                           const svn_string_t *val, apr_pool_t *pool)
 {
   apr_hash_t *ver_props, *path_props, *ns_props;
@@ -209,30 +208,17 @@ svn_ra_serf__set_ver_prop(apr_hash_t *props,
       apr_hash_set(path_props, ns, APR_HASH_KEY_STRING, ns_props);
     }
 
-  if (old_value_p)
-    {
-      /* This must be PROPPATCH_CTX->ATOMIC_PROPS. */
-      svn_dav__two_props_t *both_values;
-      both_values = apr_palloc(pool, sizeof(*both_values));
-      both_values->old_value_p = old_value_p;
-      both_values->new_value = val;
-      apr_hash_set(ns_props, name, APR_HASH_KEY_STRING, both_values);
-    }
-  else
-    {
-      apr_hash_set(ns_props, name, APR_HASH_KEY_STRING, val);
-    }
+  apr_hash_set(ns_props, name, APR_HASH_KEY_STRING, val);
 }
 
 void
 svn_ra_serf__set_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns, const char *name,
-                      const svn_string_t *const *old_value_p,
                       const svn_string_t *val, apr_pool_t *pool)
 {
   svn_ra_serf__set_ver_prop(props, path, SVN_INVALID_REVNUM, ns, name,
-                            old_value_p, val, pool);
+                            val, pool);
 }
 
 static prop_info_t *
@@ -384,7 +370,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
       /* set the return props and update our cache too. */
       svn_ra_serf__set_ver_prop(ctx->ret_props,
                                 ctx->current_path, ctx->rev,
-                                ns, pname, NULL, val_str,
+                                ns, pname, val_str,
                                 ctx->pool);
       if (ctx->cache_props)
         {
@@ -395,7 +381,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
 
           svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
                                     ctx->current_path, ctx->rev,
-                                    ns, pname, NULL, val_str,
+                                    ns, pname, val_str,
                                     ctx->sess->pool);
         }
 
@@ -556,8 +542,7 @@ check_cache(apr_hash_t *ret_props,
       if (val)
         {
           svn_ra_serf__set_ver_prop(ret_props, path, rev,
-                                    prop->namespace, prop->name, NULL,
-                                    val, pool);
+                                    prop->namespace, prop->name, val, pool);
         }
       else
         {
@@ -757,7 +742,6 @@ svn_error_t *
 svn_ra_serf__walk_all_props(apr_hash_t *props,
                             const char *name,
                             svn_revnum_t rev,
-                            svn_boolean_t values_are_proppairs,
                             svn_ra_serf__walker_visitor_t walker,
                             void *baton,
                             apr_pool_t *pool)
@@ -796,18 +780,8 @@ svn_ra_serf__walk_all_props(apr_hash_t *props,
 
           apr_hash_this(name_hi, &prop_name, &prop_len, &prop_val);
           /* use a subpool? */
-          if (values_are_proppairs)
-            {
-              svn_dav__two_props_t *both_values = prop_val;
-              SVN_ERR(walker(baton, ns_name, ns_len, prop_name, prop_len,
-                             both_values->old_value_p, both_values->new_value,
-                             pool));
-            }
-          else
-            {
-              SVN_ERR(walker(baton, ns_name, ns_len, prop_name, prop_len,
-                             NULL, prop_val, pool));
-            }
+          SVN_ERR(walker(baton, ns_name, ns_len, prop_name, prop_len,
+                         prop_val, pool));
         }
     }
 
@@ -954,7 +928,6 @@ svn_error_t *
 svn_ra_serf__set_flat_props(void *baton,
                             const char *ns, apr_ssize_t ns_len,
                             const char *name, apr_ssize_t name_len,
-                            const svn_string_t *const *ignored,
                             const svn_string_t *val,
                             apr_pool_t *pool)
 {
@@ -966,7 +939,6 @@ svn_error_t *
 svn_ra_serf__set_bare_props(void *baton,
                             const char *ns, apr_ssize_t ns_len,
                             const char *name, apr_ssize_t name_len,
-                            const svn_string_t *const *ignored,
                             const svn_string_t *val,
                             apr_pool_t *pool)
 {

@@ -545,7 +545,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                                       propfind_path, rev, "0", all_props,
                                       pool));
 
-  SVN_ERR(svn_ra_serf__walk_all_props(props, propfind_path, rev, FALSE,
+  SVN_ERR(svn_ra_serf__walk_all_props(props, propfind_path, rev,
                                       svn_ra_serf__set_bare_props, *ret_props,
                                       pool));
 
@@ -692,7 +692,6 @@ static svn_error_t *
 dirent_walker(void *baton,
               const char *ns, apr_ssize_t ns_len,
               const char *name, apr_ssize_t name_len,
-              const svn_string_t *const *ignored,
               const svn_string_t *val,
               apr_pool_t *pool)
 {
@@ -778,7 +777,7 @@ path_dirent_walker(void *baton,
       apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
     }
 
-  return dirent_walker(entry, ns, ns_len, name, name_len, NULL, val, pool);
+  return dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
 }
 
 static svn_error_t *
@@ -812,8 +811,8 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
 
   entry = apr_pcalloc(pool, sizeof(*entry));
 
-  SVN_ERR(svn_ra_serf__walk_all_props(props, path, fetched_rev, FALSE,
-                                      dirent_walker, entry, pool));
+  SVN_ERR(svn_ra_serf__walk_all_props(props, path, fetched_rev, dirent_walker,
+                                      entry, pool));
 
   *dirent = entry;
 
@@ -926,7 +925,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       /* Check if the path is really a directory. */
       SVN_ERR(resource_is_directory (props, path, revision));
 
-      SVN_ERR(svn_ra_serf__walk_all_props(props, path, revision, FALSE,
+      SVN_ERR(svn_ra_serf__walk_all_props(props, path, revision,
                                           svn_ra_serf__set_flat_props,
                                           *ret_props, pool));
     }

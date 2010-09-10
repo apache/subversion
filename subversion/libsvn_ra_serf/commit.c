@@ -108,7 +108,6 @@ typedef struct {
   /* Changed and removed properties. */
   apr_hash_t *changed_props;
   apr_hash_t *removed_props;
-  apr_hash_t *atomic_props;
 
   /* In HTTP v2, this is the file/directory version we think we're changing. */
   svn_revnum_t base_revision;
@@ -640,17 +639,16 @@ checkout_file(file_context_t *file)
 /* Helper function for proppatch_walker() below. */
 static svn_error_t *
 get_encoding_and_cdata(const char **encoding_p,
-                       const svn_string_t **encoded_value_p,
+                       serf_bucket_t **cdata_bkt_p,
                        serf_bucket_alloc_t *alloc,
                        const svn_string_t *value,
                        apr_pool_t *pool)
 {
-  if (value == NULL)
-    {
-      *encoding_p = NULL;
-      *encoded_value_p = NULL;
-      return SVN_NO_ERROR;
-    }
+  const char *encoding;
+  const char *cdata;
+  apr_size_t len; /* of cdata */
+
+  SVN_ERR_ASSERT(value);
 
   /* If a property is XML-safe, XML-encode it.  Else, base64-encode
      it. */
@@ -658,15 +656,23 @@ get_encoding_and_cdata(const char **encoding_p,
     {
       svn_stringbuf_t *xml_esc = NULL;
       svn_xml_escape_cdata_string(&xml_esc, value, pool);
-      *encoding_p = NULL;
-      *encoded_value_p = svn_string_create_from_buf(xml_esc, pool);
+      encoding = NULL;
+      cdata = xml_esc->data;
+      len = xml_esc->len;
     }
   else
     {
-      *encoding_p = "base64";
-      *encoded_value_p = svn_base64_encode_string2(value, TRUE, pool);
+      const svn_string_t *base64ed = svn_base64_encode_string2(value, TRUE,
+                                                               pool);
+      encoding = "base64";
+      cdata = base64ed->data;
+      len = base64ed->len;
     }
 
+  /* ENCODING, CDATA, and LEN are now set. */
+
+  *encoding_p = encoding;
+  *cdata_bkt_p = SERF_BUCKET_SIMPLE_STRING_LEN(cdata, len, alloc);
   return SVN_NO_ERROR;
 }
 
@@ -674,14 +680,12 @@ static svn_error_t *
 proppatch_walker(void *baton,
                  const char *ns, apr_ssize_t ns_len,
                  const char *name, apr_ssize_t name_len,
-                 const svn_string_t *const *old_val_p,
                  const svn_string_t *val,
                  apr_pool_t *pool)
 {
   serf_bucket_t *body_bkt = baton;
   serf_bucket_t *cdata_bkt;
   serf_bucket_alloc_t *alloc;
-  const svn_string_t *encoded_value;
   const char *encoding;
   char *prop_name;
 
@@ -695,66 +699,12 @@ proppatch_walker(void *baton,
 
   alloc = body_bkt->allocator;
 
-  SVN_ERR(get_encoding_and_cdata(&encoding, &encoded_value, alloc, val, pool));
-  if (encoded_value)
-    {
-      cdata_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(encoded_value->data,
-                                                encoded_value->len,
-                                                alloc);
-    }
-  else
-    {
-      cdata_bkt = NULL;
-    }
+  SVN_ERR(get_encoding_and_cdata(&encoding, &cdata_bkt, alloc, val, pool));
 
-  if (cdata_bkt)
-    svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
-                                      "V:encoding", encoding,
-                                      NULL);
-  else
-    svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
-                                      "V:" SVN_DAV__OLD_VALUE__ABSENT, "1",
-                                      NULL);
-
-  if (old_val_p)
-    {
-      const char *encoding2;
-      const svn_string_t *encoded_value2;
-      serf_bucket_t *cdata_bkt2;
-
-      SVN_ERR(get_encoding_and_cdata(&encoding2, &encoded_value2,
-                                     alloc, *old_val_p, pool));
-
-      if (encoded_value2)
-        {
-          cdata_bkt2 = SERF_BUCKET_SIMPLE_STRING_LEN(encoded_value2->data,
-                                                     encoded_value2->len,
-                                                     alloc);
-        }
-      else
-        {
-          cdata_bkt2 = NULL;
-        }
-
-      if (cdata_bkt2)
-        svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
-                                          SVN_DAV__OLD_VALUE,
-                                          "V:encoding", encoding2,
-                                          NULL);
-      else
-        svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
-                                          SVN_DAV__OLD_VALUE,
-                                          "V:" SVN_DAV__OLD_VALUE__ABSENT, "1",
-                                          NULL);
-
-      if (cdata_bkt2)
-        serf_bucket_aggregate_append(body_bkt, cdata_bkt2);
-
-      svn_ra_serf__add_close_tag_buckets(body_bkt, alloc,
-                                         SVN_DAV__OLD_VALUE);
-    }
-  if (cdata_bkt)
-    serf_bucket_aggregate_append(body_bkt, cdata_bkt);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
+                                    "V:encoding", encoding,
+                                    NULL);
+  serf_bucket_aggregate_append(body_bkt, cdata_bkt);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, prop_name);
 
   return SVN_NO_ERROR;
@@ -814,26 +764,13 @@ create_proppatch_body(serf_bucket_t **bkt,
                                     "xmlns:S", SVN_DAV_PROP_NS_SVN,
                                     NULL);
 
-  if (ctx->atomic_props && apr_hash_count(ctx->atomic_props) > 0)
-    {
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
-
-      svn_ra_serf__walk_all_props(ctx->atomic_props, ctx->path,
-                                  SVN_INVALID_REVNUM, TRUE,
-                                  proppatch_walker, body_bkt, pool);
-
-      svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
-      svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:set");
-    }
-
   if (apr_hash_count(ctx->changed_props) > 0)
     {
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", NULL);
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
       SVN_ERR(svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
-                                          SVN_INVALID_REVNUM, FALSE,
+                                          SVN_INVALID_REVNUM,
                                           proppatch_walker, body_bkt, pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
@@ -846,7 +783,7 @@ create_proppatch_body(serf_bucket_t **bkt,
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
       SVN_ERR(svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
-                                          SVN_INVALID_REVNUM, FALSE,
+                                          SVN_INVALID_REVNUM,
                                           proppatch_walker, body_bkt, pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
@@ -1384,7 +1321,7 @@ open_root(void *edit_baton,
         }
 
       svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
-                            ns, name, NULL, value, proppatch_ctx->pool);
+                            ns, name, value, proppatch_ctx->pool);
     }
 
   SVN_ERR(proppatch_resource(proppatch_ctx, dir->commit, ctx->pool));
@@ -1677,13 +1614,13 @@ change_dir_prop(void *dir_baton,
     {
       value = svn_string_dup(value, dir->pool);
       svn_ra_serf__set_prop(dir->changed_props, proppatch_target,
-                            ns, name, NULL, value, dir->pool);
+                            ns, name, value, dir->pool);
     }
   else
     {
       value = svn_string_create("", dir->pool);
       svn_ra_serf__set_prop(dir->removed_props, proppatch_target,
-                            ns, name, NULL, value, dir->pool);
+                            ns, name, value, dir->pool);
     }
 
   return SVN_NO_ERROR;
@@ -1929,14 +1866,14 @@ change_file_prop(void *file_baton,
     {
       value = svn_string_dup(value, file->pool);
       svn_ra_serf__set_prop(file->changed_props, file->url,
-                            ns, name, NULL, value, file->pool);
+                            ns, name, value, file->pool);
     }
   else
     {
       value = svn_string_create("", file->pool);
 
       svn_ra_serf__set_prop(file->removed_props, file->url,
-                            ns, name, NULL, value, file->pool);
+                            ns, name, value, file->pool);
     }
 
   return SVN_NO_ERROR;
@@ -2292,6 +2229,9 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
 
       /* How did you get past the same check in svn_ra_change_rev_prop2()? */
       SVN_ERR_ASSERT(capable);
+
+      /* ### server-side support hasn't been implemented yet */
+      SVN__NOT_IMPLEMENTED();
     }
 
   commit = apr_pcalloc(pool, sizeof(*commit));
@@ -2340,25 +2280,19 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   proppatch_ctx->path = proppatch_target;
   proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
   proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
-  proppatch_ctx->atomic_props = apr_hash_make(proppatch_ctx->pool);
   proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
 
-  if (old_value_p)
-    {
-      svn_ra_serf__set_prop(proppatch_ctx->atomic_props, proppatch_ctx->path,
-                            ns, name, old_value_p, value, proppatch_ctx->pool);
-    }
-  else if (value)
+  if (value)
     {
       svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
-                            ns, name, old_value_p, value, proppatch_ctx->pool);
+                            ns, name, value, proppatch_ctx->pool);
     }
   else
     {
       value = svn_string_create("", proppatch_ctx->pool);
 
       svn_ra_serf__set_prop(proppatch_ctx->removed_props, proppatch_ctx->path,
-                            ns, name, old_value_p, value, proppatch_ctx->pool);
+                            ns, name, value, proppatch_ctx->pool);
     }
 
   err = proppatch_resource(proppatch_ctx, commit, proppatch_ctx->pool);

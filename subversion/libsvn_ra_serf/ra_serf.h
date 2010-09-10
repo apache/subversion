@@ -960,9 +960,6 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
                             apr_pool_t *pool);
 
 /* Set PROPS for PATH at REV revision with a NS:NAME VAL.
- * 
- * If OLD_VALUE_P is not NULL, it must equal the current value of the
- * revprop.
  *
  * The POOL governs allocation.
  */
@@ -970,7 +967,6 @@ void
 svn_ra_serf__set_ver_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name,
-                          const svn_string_t *const *old_value_p,
                           const svn_string_t *val, apr_pool_t *pool);
 #define svn_ra_serf__set_rev_prop svn_ra_serf__set_ver_prop
 
@@ -980,7 +976,6 @@ typedef svn_error_t *
 (*svn_ra_serf__walker_visitor_t)(void *baton,
                                  const char *ns, apr_ssize_t ns_len,
                                  const char *name, apr_ssize_t name_len,
-                                 const svn_string_t *const *old_val_p,
                                  const svn_string_t *val,
                                  apr_pool_t *pool);
 
@@ -988,7 +983,6 @@ svn_error_t *
 svn_ra_serf__walk_all_props(apr_hash_t *props,
                             const char *name,
                             svn_revnum_t rev,
-                            svn_boolean_t values_are_proppairs,
                             svn_ra_serf__walker_visitor_t walker,
                             void *baton,
                             apr_pool_t *pool);
@@ -1024,7 +1018,6 @@ svn_error_t *
 svn_ra_serf__set_flat_props(void *baton,
                             const char *ns, apr_ssize_t ns_len,
                             const char *name, apr_ssize_t name_len,
-                            const svn_string_t *const *ignored,
                             const svn_string_t *val,
                             apr_pool_t *pool);
 
@@ -1032,7 +1025,6 @@ svn_error_t *
 svn_ra_serf__set_bare_props(void *baton,
                             const char *ns, apr_ssize_t ns_len,
                             const char *name, apr_ssize_t name_len,
-                            const svn_string_t *const *ignored,
                             const svn_string_t *val,
                             apr_pool_t *pool);
 
@@ -1057,7 +1049,6 @@ svn_ra_serf__get_prop(apr_hash_t *props,
 void
 svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const char *ns, const char *name,
-                      const svn_string_t *const *old_value_p,
                       const svn_string_t *val, apr_pool_t *pool);
 
 /** MERGE-related functions **/

@@ -184,7 +184,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       ctx->dst_rev_pool = svn_pool_create(ctx->src_rev_pool);
       ctx->props = apr_hash_make(ctx->dst_rev_pool);
       SVN_ERR(svn_ra_serf__walk_all_props(ctx->revs_props, ctx->report_target,
-                                          ctx->revision, FALSE,
+                                          ctx->revision,
                                           svn_ra_serf__set_bare_props,
                                           ctx->props, ctx->dst_rev_pool));
       if (ctx->revstart_func)
