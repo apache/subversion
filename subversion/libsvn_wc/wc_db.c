@@ -374,6 +374,93 @@ fetch_repos_info(const char **repos_root_url,
   return svn_error_return(svn_sqlite__reset(stmt));
 }
 
+#ifdef SVN_WC__NODES
+
+/* Can't verify if we only have the NODES table */
+#ifndef SVN_WC__NODES_ONLY
+
+/* */
+static svn_error_t *
+assert_text_columns_equal(svn_sqlite__stmt_t *stmt1,
+                          svn_sqlite__stmt_t *stmt2,
+                          int column,
+                          apr_pool_t *scratch_pool)
+{
+  const char *val1 = svn_sqlite__column_text(stmt1, column, scratch_pool);
+  const char *val2 = svn_sqlite__column_text(stmt2, column, scratch_pool);
+
+  if (val1 != NULL && val2 != NULL) {
+    if (strcmp(val1, val2) != 0)
+      return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+          "Value in statement 1 (%s) differs from value in statement 2 (%s)",
+                             val1, val2);
+  } else if (val1 == NULL && val2 == NULL) {
+    /* Do nothing: equal */
+  } else
+      return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+          "Value in statement 1 (%s) differs from value in statement 2 (%s)",
+                             val1, val2);
+
+  return SVN_NO_ERROR;
+}
+
+#endif
+
+static svn_error_t *
+assert_base_rows_match(svn_boolean_t have_row1,
+                       svn_boolean_t have_row2,
+                       svn_sqlite__stmt *stmt1,
+                       svn_sqlite__stmt *stmt2,
+                       const char *relpath)
+{
+
+  if (have_row1 != have_row2)
+    SVN_ERR(svn_error_createf(
+              SVN_ERR_WC_CORRUPT, NULL,
+              "Different results from BASE (%d) and NODES queries (%d), "
+              "for local_relpath %s",
+              have_row, have_data_row, relpath));
+
+  if (have_row) {
+    SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 1)
+                   == svn_sqlite__column_int64(stmt2, 1));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 2, scratch_pool));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 3, scratch_pool));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 4, scratch_pool));
+
+    SVN_ERR_ASSERT(svn_sqlite__column_revnum(stmt1, 5)
+                   == svn_sqlite__column_revnum(stmt2, 5));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 6, scratch_pool));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 7, scratch_pool));
+
+    SVN_ERR_ASSERT(svn_sqlite__column_revnum(stmt1, 8)
+                   == svn_sqlite__column_revnum(stmt2, 8));
+
+
+    SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 9)
+                   == svn_sqlite__column_int64(stmt2, 9));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 10, scratch_pool));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 11, scratch_pool));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 12, scratch_pool));
+
+    SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 13)
+                   == svn_sqlite__column_int64(stmt2, 13));
+
+    /* 14: verify props? */
+  }
+
+  return SVN_NO_ERROR;
+}
+
+#endif
 
 /* Scan from LOCAL_RELPATH upwards through parent nodes until we find a parent
    that has values in the 'repos_id' and 'repos_relpath' columns.  Return
@@ -394,20 +481,51 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
   const char *current_relpath = local_relpath;
   svn_sqlite__stmt_t *stmt;
 
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *data_stmt;
+#endif
+
   SVN_ERR_ASSERT(wcroot->sdb != NULL && wcroot->wc_id != UNKNOWN_WC_ID);
   SVN_ERR_ASSERT(repos_id != NULL || repos_relpath != NULL);
 
+#ifndef SVN_WC__NODES_ONLY
   /* ### is it faster to fetch fewer columns? */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_BASE_NODE));
+#endif
+
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&data_stmt, wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE_1));
+#endif
 
   while (TRUE)
     {
       svn_boolean_t have_row;
+#ifdef SVN_WC__NODES
+      svn_boolean_t have_data_row;
+#endif
 
+#ifndef SVN_WC__NODES_ONLY
       /* Get the current node's repository information.  */
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+
+#ifdef SVN_WC__NODES
+
+      /* Get the current node's repository information.  */
+      SVN_ERR(svn_sqlite__bindf(data_stmt, "is",
+                                wcroot->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__step(&have_data_row, data_stmt));
+
+#ifndef SVN_WC__NODES_ONLY
+      /* When switching to NODES_ONLY, stop verifying our results. */
+      SVN_ERR(assert_base_rows_match(have_row, have_data_row,
+                                     stmt, data_stmt,
+                                     current_relpath));
+#endif
+#endif
 
       if (!have_row)
         {
@@ -430,6 +548,9 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
                 svn_dirent_local_style(local_abspath, scratch_pool));
             }
 
+#ifdef SVN_WC__NODES
+          SVN_ERR(svn_sqlite__reset(data_stmt));
+#endif
           return svn_error_compose_create(err, svn_sqlite__reset(stmt));
         }
 
@@ -449,10 +570,17 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
                                                                       NULL),
                                               relpath_suffix,
                                               result_pool);
+#ifdef SVN_WC__NODES
+          SVN_ERR(svn_sqlite__reset(data_stmt));
+#endif
           return svn_sqlite__reset(stmt);
         }
+#ifdef SVN_WC__NODES
+      SVN_ERR(svn_sqlite__reset(data_stmt));
+#endif
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__reset(stmt));
-
+#endif
       if (*current_relpath == '\0')
         {
           /* We scanned all the way up, and did not find the information.
