@@ -2669,7 +2669,8 @@ get_root_changes_offset(apr_off_t *root_offset,
   /* Look for the next previous newline. */
   for (i = num_bytes - 2; i >= 0; i--)
     {
-      if (buf[i] == '\n') break;
+      if (buf[i] == '\n')
+        break;
     }
 
   if (i < 0)
@@ -2691,7 +2692,8 @@ get_root_changes_offset(apr_off_t *root_offset,
 
   /* find the next space */
   for ( ; i < (num_bytes - 2) ; i++)
-    if (buf[i] == ' ') break;
+    if (buf[i] == ' ')
+      break;
 
   if (i == (num_bytes - 2))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
