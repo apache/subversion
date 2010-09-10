@@ -382,6 +382,9 @@ static const char * const TESTING_DATA = (
    " "
 #endif
 #ifdef SVN_WC__NODES
+   /* Load data into NODES table;
+      ### op_depths have not been calculated by me yet;
+      the value 1 is just 'good enough' to make the nodes WORKING nodes. */
   "insert into nodes values ("
   "  1, 'I', 1, '', 2, 'some/dir', 2, 'normal', 'immediates',"
   "  0, null, 'dir', 2, " TIME_2s ", ' " AUTHOR_2 " ', null, '()',"
