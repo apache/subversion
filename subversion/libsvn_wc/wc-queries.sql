@@ -299,6 +299,10 @@ VALUES (?1, ?2, ?3, ?4);
 delete from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_DELETE_BASE_NODE_1
+delete from nodes
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 /* ### Basically, this query can't exist:
    we can't be deleting BASE nodes while they still have
    associated WORKING nodes;
@@ -311,13 +315,13 @@ where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 delete from working_node
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_DELETE_NODE_DATA_WORKING
-delete from node_data
+-- STMT_DELETE_WORKING_NODES
+delete from nodes
 where wc_id = ?1 and local_relpath = ?2 and op_depth > 0;
 
--- STMT_DELETE_NODE_DATA_LAYERS
-delete from node_data
-where wc_id = ?1 and local_relpath = ?2 and op_depth >= ?3;
+-- STMT_DELETE_NODES
+delete from nodes
+where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_DELETE_ACTUAL_NODE
 delete from actual_node
@@ -521,24 +525,16 @@ SELECT wc_id, local_relpath, parent_relpath, ?3 AS presence, kind, checksum,
     symlink_target, last_mod_time FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
--- STMT_INSERT_WORKING_NODE_DATA_FROM_BASE_NODE_1
-/* ### NODE_DATA  This statement and the statement below (_2) need to
-   be executed in a single transaction */
-INSERT INTO NODE_DATA (
+-- STMT_INSERT_WORKING_NODE_FROM_BASE
+INSERT INTO NODES (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
-    changed_revision, changed_date, changed_author, depth, symlink_target )
-SELECT wc_id, local_relpath, ?4 as op_depth, parent_relpath, ?3 AS presence,
-       kind, checksum, changed_revision, changed_date,
-       changed_author, depth, symlink_target
-FROM NODE_DATA
-WHERE wc_id = ?1 AND local_relpath = ?2 and op_depth = 0;
-
--- STMT_INSERT_WORKING_NODE_DATA_FROM_BASE_NODE_2
-INSERT INTO WORKING_NODE (
-    wc_id, local_relpath, parent_relpath, translated_size, last_mod_time )
-SELECT wc_id, local_relpath, parent_relpath, translated_size, last_mod_time
-FROM BASE_NODE
-WHERE wc_id = ?1 AND local_relpath = ?2;
+    changed_revision, changed_date, changed_author, depth, symlink_target,
+    translated_size, last_mod_time, properties)
+SELECT wc_id, local_relpath, ?3 as op_depth, parent_relpath, ?4 as presence,
+       kind, checksum, changed_revision, changed_date, changed_author, depth,
+       symlink_target, translated_size, last_mod_time, properties
+FROM NODES
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE_NODE
 INSERT INTO WORKING_NODE (
