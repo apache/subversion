@@ -2615,6 +2615,7 @@ get_root_changes_offset(apr_off_t *root_offset,
   apr_off_t rev_offset;
   char buf[64];
   int i, num_bytes;
+  const char *str;
   apr_size_t len;
   apr_seek_where_t seek_relative;
 
@@ -2681,14 +2682,7 @@ get_root_changes_offset(apr_off_t *root_offset,
     }
 
   i++;
-
-  if (root_offset)
-    {
-      apr_int64_t val;
-
-      SVN_ERR(svn_cstring_atoi64(&val, &buf[i]));
-      *root_offset = rev_offset + (apr_off_t)val;
-    }
+  str = &buf[i];
 
   /* find the next space */
   for ( ; i < (num_bytes - 2) ; i++)
@@ -2699,16 +2693,29 @@ get_root_changes_offset(apr_off_t *root_offset,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Final line in revision file missing space"));
 
-  i++;
+  if (root_offset)
+    {
+      apr_int64_t val;
 
-  /* note that svn_cstring_atoi64() (actually, apr_atoi64()) will stop
-   * reading as soon as it encounters the final newline.
-   * ### Is it OK to rely on this APR implementation detail? */
+      buf[i] = '\0';
+      SVN_ERR(svn_cstring_atoi64(&val, str));
+      *root_offset = rev_offset + (apr_off_t)val;
+    }
+
+  i++;
+  str = &buf[i];
+
+  /* find the next newline */
+  for ( ; i < num_bytes; i++)
+    if (buf[i] == '\n')
+      break;
+
   if (changes_offset)
     {
       apr_int64_t val;
 
-      SVN_ERR(svn_cstring_atoi64(&val, &buf[i]));
+      buf[i] = '\0';
+      SVN_ERR(svn_cstring_atoi64(&val, str));
       *changes_offset = rev_offset + (apr_off_t)val;
     }
 
