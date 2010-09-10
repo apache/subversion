@@ -102,11 +102,6 @@ INSERT OR IGNORE INTO WORKING_NODE (
   wc_id, local_relpath, parent_relpath, presence, kind)
 VALUES (?1, ?2, ?3, 'incomplete', 'unknown');
 
--- STMT_INSERT_NODE_DATA_INCOMPLETE
-INSERT OR IGNORE INTO NODE_DATA (
-  wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
-VALUES (?1, ?2, ?3, ?4, 'incomplete', 'unknown');
-
 -- STMT_COUNT_BASE_NODE_CHILDREN
 SELECT COUNT(*) FROM BASE_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
@@ -296,14 +291,6 @@ where wc_id = ?1 and local_relpath = ?2;
 delete from nodes
 where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
-/* ### Basically, this query can't exist:
-   we can't be deleting BASE nodes while they still have
-   associated WORKING nodes;
-   at minimum, the op_depth restriction should be removed */
--- STMT_DELETE_NODE_DATA_BASE
-delete from node_data
-where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
-
 -- STMT_DELETE_WORKING_NODE
 delete from working_node
 where wc_id = ?1 and local_relpath = ?2;
@@ -353,12 +340,12 @@ UPDATE WORKING_NODE SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_WORKING_EXCLUDED
-UPDATE NODE_DATA SET presence = 'excluded', depth = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2 AND
-      op_depth IN (SELECT op_depth FROM NODE_DATA
-                   WHERE wc_id = ?1 AND local_relpath = ?2
-                   ORDER BY op_depth DECSC
-                   LIMIT 1);
+update nodes SET presence = 'excluded', depth = NULL
+where wc_id = ?1 and local_relpath = ?2 and
+      op_depth IN (select op_depth from NODES
+                   where wc_id = ?1 and local_relpath = ?2
+                   order by op_depth DECSC
+                   limit 1);
 
 -- STMT_UPDATE_BASE_PRESENCE
 update base_node set presence= ?3
@@ -492,11 +479,6 @@ WHERE wc_id = ?1 AND local_dir_relpath LIKE ?2 ESCAPE '#';
 /* translated_size and last_mod_time are not mentioned here because they will
    be tweaked after the working-file is installed.
    ### what to do about file_external?  */
-/* ### NODE_DATA the fields 'presence', 'kind', 'properties', 'changed_rev',
-   'changed_date', 'changed_author', 'depth', 'symlink_target' - but not:
-   'repos_id', 'repos_relpath', 'dav_cache' - will move to the NODE_DATA
-   table, meaning we can't use this query anymore; we need 2, wrapped in a
-   transaction. */
 INSERT OR REPLACE INTO BASE_NODE (
   wc_id, local_relpath, parent_relpath, presence, kind, revnum, changed_rev,
   changed_author, properties, repos_id, repos_relpath, checksum, changed_date,
