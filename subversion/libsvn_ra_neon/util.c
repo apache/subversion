@@ -775,7 +775,18 @@ start_err_element(void *baton, int parent,
                                  atts);
 
         if (errcode_str && *err)
-          (*err)->apr_err = atoi(errcode_str);
+          {
+            apr_int64_t val;
+            svn_error_t *err2;
+
+            err2 = svn_cstring_atoi64(&val, errcode_str);
+            if (err2)
+              {
+                svn_error_clear(err2);
+                break;
+              }
+            (*err)->apr_err = (apr_status_t)val;
+          }
 
         break;
       }
