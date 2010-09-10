@@ -33,6 +33,13 @@ select repos_id, repos_relpath, presence, kind, revnum, checksum,
 from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_BASE_NODE_1
+select repos_id, repos_path, presence, kind, revision, checksum,
+  translated_size, changed_revision, changed_date, changed_author, depth,
+  symlink_target, last_mod_time, properties
+from nodes
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_BASE_NODE_WITH_LOCK
 select base_node.repos_id, base_node.repos_relpath, presence, kind,
   revnum, checksum, translated_size, changed_rev, changed_date,
