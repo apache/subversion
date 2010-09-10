@@ -370,7 +370,7 @@ where wc_id = ?1 and local_relpath =?2;
 -- STMT_UPDATE_NODE_WORKING_PRESENCE
 update nodes set presence = ?3
 where wc_id = ?1 and local_relpath = ?2
-  and op_depth in (select op_depth from node_data
+  and op_depth in (select op_depth from nodes
                    where wc_id = ?1 and local_relpath = ?2
                    order by op_depth desc
                    limit 1);
