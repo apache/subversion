@@ -647,8 +647,6 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 #endif
 
 #ifdef SVN_WC__NODES
-  /* the 'r' binding below doesn't work yet...
-     no idea why; needs more investigation... */
   SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE));
   { svn_revnum_t rev = pibb->changed_rev;
   SVN_ERR(svn_sqlite__bindf(stmt_node, "isisisr"
