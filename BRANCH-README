@@ -25,12 +25,13 @@ Planned work
   - [DONE] unit test: prop_tests.py 34: atomic_over_ra()
   - TODO: ensure consistent error code (replacing SVN_ERR_BAD_PROPERTY_VALUE)
   - TODO: use "409 Conflict" DAV response (within the 207 Multi-Status response)
+  - TODO: ra_dav: marshal error chains over the wire
 
 * [DONE] client support: svn_client_revprop_set2()
 
-* TODO: svnsync:
-  - use the new RA API to resolve the race condition in locking.
-  - upgrade svn_ra_change_rev_prop() callers
+* svnsync:
+  - TODO: use the new RA API to resolve the race condition in locking.
+  - TODO: upgrade svn_ra_change_rev_prop() callers
 
 
 Failing tests
