@@ -629,7 +629,7 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Could not convert '%s' into a number"),
                                str));
-  if (val < 0 || val < minval || val > maxval)
+  if (val < 0 || (apr_uint64_t)val < minval || (apr_uint64_t)val > maxval)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Number '%s' is out of range"), str));
