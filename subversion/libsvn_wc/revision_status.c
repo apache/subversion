@@ -83,12 +83,7 @@ analyze_status(const char *local_abspath,
       return SVN_NO_ERROR;
     }
   else if (status == svn_wc__db_status_added
-           || status == svn_wc__db_status_deleted
-#ifndef SVN_WC__SINGLE_DB
-           || status == svn_wc__db_status_obstructed_add
-           || status == svn_wc__db_status_obstructed_delete
-#endif
-           )
+           || status == svn_wc__db_status_deleted)
     {
       wb->result->modified = TRUE; 
     }

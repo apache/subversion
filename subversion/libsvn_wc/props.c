@@ -1758,28 +1758,6 @@ svn_wc__get_pristine_props(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
-#ifndef SVN_WC__SINGLE_DB
-  /* The node is obstructed:
-
-     - subdir is missing, obstructed by a file, or missing admin area
-     - a file is obstructed by a versioned subdir   (### not reported)
-
-     Thus, properties are not available for this node. Returning NULL
-     would indicate "not defined" for its state. For obstructions, we
-     cannot *determine* whether properties should be here or not.
-
-     ### it would be nice to report an obstruction, rather than simply
-     ### PROPERTY_NOT_FOUND. but this is transitional until single-db.  */
-  if (status == svn_wc__db_status_obstructed_delete
-      || status == svn_wc__db_status_obstructed
-      || status == svn_wc__db_status_obstructed_add)
-    return svn_error_createf(SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-                             U_("Directory '%s' is missing on disk, so the "
-                                "properties are not available."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-#endif
-
   /* status: normal, moved_here, copied, deleted  */
 
   /* After the above checks, these pristines should always be present.  */
