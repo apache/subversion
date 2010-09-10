@@ -36,7 +36,7 @@ Planned work
 Failing tests
 =============
 
-See details in ./FAILING-TESTS.
+See details in ./FAILING-TESTS.  Cause unknown, but fixed as of r995827.
 
 
 Dependency: have ra_dav provide err->apr_err over the wire
