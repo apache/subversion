@@ -633,7 +633,8 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
       val < 0 || (apr_uint64_t)val < minval || (apr_uint64_t)val > maxval)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                               _("Number '%s' is out of range"), str));
+                               _("Number '%s' is out of range '[%lu, %lu]'"),
+                               str, minval, maxval));
   *n = val;
   return SVN_NO_ERROR;
 }
@@ -676,7 +677,8 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
       val < minval || val > maxval)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                               _("Number '%s' is out of range"), str));
+                               _("Number '%s' is out of range '[%ld, %ld]'"),
+                               str, minval, maxval));
   *n = val;
   return SVN_NO_ERROR;
 }
