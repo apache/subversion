@@ -5746,9 +5746,9 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             prop_blob.data, prop_blob.len,
                             cb->new_dav_cache));
 
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, cb->new_checksum,
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 13, cb->new_checksum,
                                     scratch_pool));
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 15, cb->new_dav_cache,
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 14, cb->new_dav_cache,
                                       scratch_pool));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
