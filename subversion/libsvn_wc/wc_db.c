@@ -409,9 +409,10 @@ assert_text_columns_equal(svn_sqlite__stmt_t *stmt1,
 static svn_error_t *
 assert_base_rows_match(svn_boolean_t have_row1,
                        svn_boolean_t have_row2,
-                       svn_sqlite__stmt *stmt1,
-                       svn_sqlite__stmt *stmt2,
-                       const char *relpath)
+                       svn_sqlite__stmt_t *stmt1,
+                       svn_sqlite__stmt_t *stmt2,
+                       const char *relpath,
+                       apr_pool_t *scratch_pool)
 {
 
   if (have_row1 != have_row2)
@@ -523,7 +524,8 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
       /* When switching to NODES_ONLY, stop verifying our results. */
       SVN_ERR(assert_base_rows_match(have_row, have_data_row,
                                      stmt, data_stmt,
-                                     current_relpath));
+                                     current_relpath,
+                                     scratch_pool));
 #endif
 #endif
 
