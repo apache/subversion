@@ -9020,6 +9020,7 @@ set_rev_relpath_txn(void *baton,
 
   if (SVN_IS_VALID_REVNUM(rrb->rev))
     {
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_UPDATE_BASE_REVISION));
 
@@ -9028,6 +9029,17 @@ set_rev_relpath_txn(void *baton,
                                              (apr_int64_t)rrb->rev));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_BASE_REVISION_1));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", rrb->pdh->wcroot->wc_id,
+                                             rrb->local_relpath,
+                                             (apr_int64_t)rrb->rev));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
     }
 
   if (rrb->set_repos_relpath)
@@ -9036,6 +9048,7 @@ set_rev_relpath_txn(void *baton,
       SVN_ERR(create_repos_id(&repos_id, rrb->repos_root_url, rrb->repos_uuid,
                               rrb->pdh->wcroot->sdb, scratch_pool));
 
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_UPDATE_BASE_REPOS));
 
@@ -9045,6 +9058,18 @@ set_rev_relpath_txn(void *baton,
                                               rrb->repos_relpath));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_BASE_REPOS_1));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isis", rrb->pdh->wcroot->wc_id,
+                                              rrb->local_relpath,
+                                              repos_id,
+                                              rrb->repos_relpath));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
     }
 
   return SVN_NO_ERROR;
