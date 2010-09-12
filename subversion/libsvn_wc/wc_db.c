@@ -8807,12 +8807,14 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                         STMT_INSERT_NODE));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "isisnnntnt",
+      SVN_ERR(svn_sqlite__bindf(stmt, "isisisntnt",
                                 pdh->wcroot->wc_id,
                                 local_relpath,
                                 (apr_int64_t)0, /* op_depth == BASE */
                                 svn_relpath_dirname(local_relpath,
                                                     scratch_pool),
+                                repos_id,
+                                repos_relpath,
                                 presence_map, svn_wc__db_status_not_present,
                                 kind_map, svn_wc__db_kind_file));
 
