@@ -8205,6 +8205,7 @@ start_directory_update_txn(void *baton,
                                 du->local_relpath,
                                 presence_map, svn_wc__db_status_incomplete,
                                 (apr_int64_t)du->new_rev));
+      SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 #ifdef SVN_WC__NODES
       /* Just update revision and status */
@@ -8217,6 +8218,7 @@ start_directory_update_txn(void *baton,
                                 du->local_relpath,
                                 presence_map, svn_wc__db_status_incomplete,
                                 (apr_int64_t)du->new_rev));
+      SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
     }
   else
@@ -8233,6 +8235,7 @@ start_directory_update_txn(void *baton,
                                 presence_map, svn_wc__db_status_incomplete,
                                 (apr_int64_t)du->new_rev,
                                 du->new_repos_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 #ifdef SVN_WC__NODES
       /* ### TODO: Maybe check if we can make repos_relpath NULL. */
@@ -8246,10 +8249,10 @@ start_directory_update_txn(void *baton,
                                 presence_map, svn_wc__db_status_incomplete,
                                 (apr_int64_t)du->new_rev,
                                 du->new_repos_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
     }
-
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
