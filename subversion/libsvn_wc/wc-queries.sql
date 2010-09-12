@@ -689,9 +689,17 @@ SELECT 0 FROM WORKING_NODE WHERE wc_id = ?1 and local_relpath = ?2 and kind = 's
 UPDATE BASE_NODE SET revnum=?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_REVISION_1
+update nodes set revision = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_BASE_REPOS
 UPDATE BASE_NODE SET repos_id = ?3, repos_relpath = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_REPOS_1
+update nodes set repos_id = ?3, repos_path = ?4
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 /* ------------------------------------------------------------------------- */
 
