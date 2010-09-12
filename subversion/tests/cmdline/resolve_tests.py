@@ -95,7 +95,7 @@ def automatic_conflict_resolution(sbox):
   # Test 'svn resolve -R --accept theirs-full'
   do_text_conflicting_merge()
   svntest.actions.run_and_verify_resolve([psi_COPY_path],
-                                         '-R', '--accept', 'theirs-full',
+                                         '-R', '--accept', 'tf',
                                          A_COPY_path)
   wc_disk.tweak('A_COPY/D/H/psi', contents="New content")
   svntest.actions.verify_disk(wc_dir, wc_disk)

@@ -59,23 +59,33 @@ svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
 svn_cl__accept_t
 svn_cl__accept_from_word(const char *word)
 {
-  if (strcmp(word, SVN_CL__ACCEPT_POSTPONE) == 0)
+  /* Shorthand options are consistent with  svn_cl__conflict_handler(). */
+  if (strcmp(word, SVN_CL__ACCEPT_POSTPONE) == 0
+      || strcmp(word, "p") == 0)
     return svn_cl__accept_postpone;
   if (strcmp(word, SVN_CL__ACCEPT_BASE) == 0)
+    /* ### shorthand? */
     return svn_cl__accept_base;
   if (strcmp(word, SVN_CL__ACCEPT_WORKING) == 0)
+    /* ### shorthand? */
     return svn_cl__accept_working;
-  if (strcmp(word, SVN_CL__ACCEPT_MINE_CONFLICT) == 0)
+  if (strcmp(word, SVN_CL__ACCEPT_MINE_CONFLICT) == 0
+      || strcmp(word, "mc") == 0)
     return svn_cl__accept_mine_conflict;
-  if (strcmp(word, SVN_CL__ACCEPT_THEIRS_CONFLICT) == 0)
+  if (strcmp(word, SVN_CL__ACCEPT_THEIRS_CONFLICT) == 0
+      || strcmp(word, "tc") == 0)
     return svn_cl__accept_theirs_conflict;
-  if (strcmp(word, SVN_CL__ACCEPT_MINE_FULL) == 0)
+  if (strcmp(word, SVN_CL__ACCEPT_MINE_FULL) == 0
+      || strcmp(word, "mf") == 0)
     return svn_cl__accept_mine_full;
-  if (strcmp(word, SVN_CL__ACCEPT_THEIRS_FULL) == 0)
+  if (strcmp(word, SVN_CL__ACCEPT_THEIRS_FULL) == 0
+      || strcmp(word, "tf") == 0)
     return svn_cl__accept_theirs_full;
-  if (strcmp(word, SVN_CL__ACCEPT_EDIT) == 0)
+  if (strcmp(word, SVN_CL__ACCEPT_EDIT) == 0
+      || strcmp(word, "e") == 0)
     return svn_cl__accept_edit;
-  if (strcmp(word, SVN_CL__ACCEPT_LAUNCH) == 0)
+  if (strcmp(word, SVN_CL__ACCEPT_LAUNCH) == 0
+      || strcmp(word, "l") == 0)
     return svn_cl__accept_launch;
   /* word is an invalid action. */
   return svn_cl__accept_invalid;
@@ -493,6 +503,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           if (strcmp(answer, "s") == 0)
             {
+              /* These are used in svn_cl__accept_from_word(). */
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
               _("\n"
                 "  (e)  edit             - change merged file in an editor\n"
