@@ -423,37 +423,37 @@ assert_base_rows_match(svn_boolean_t have_row1,
               have_row1, have_row2, relpath));
 
   if (have_row1) {
-    SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 1)
-                   == svn_sqlite__column_int64(stmt2, 1));
+    SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 0)
+                   == svn_sqlite__column_int64(stmt2, 0));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 1, scratch_pool));
 
     SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 2, scratch_pool));
 
     SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 3, scratch_pool));
 
-    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 4, scratch_pool));
+    SVN_ERR_ASSERT(svn_sqlite__column_revnum(stmt1, 4)
+                   == svn_sqlite__column_revnum(stmt2, 4));
 
-    SVN_ERR_ASSERT(svn_sqlite__column_revnum(stmt1, 5)
-                   == svn_sqlite__column_revnum(stmt2, 5));
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 5, scratch_pool));
 
     SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 6, scratch_pool));
 
-    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 7, scratch_pool));
-
-    SVN_ERR_ASSERT(svn_sqlite__column_revnum(stmt1, 8)
-                   == svn_sqlite__column_revnum(stmt2, 8));
+    SVN_ERR_ASSERT(svn_sqlite__column_revnum(stmt1, 7)
+                   == svn_sqlite__column_revnum(stmt2, 7));
 
 
-    SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 9)
-                   == svn_sqlite__column_int64(stmt2, 9));
+    SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 8)
+                   == svn_sqlite__column_int64(stmt2, 8));
+
+    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 9, scratch_pool));
 
     SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 10, scratch_pool));
 
     SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 11, scratch_pool));
 
-    SVN_ERR(assert_text_columns_equal(stmt1, stmt2, 12, scratch_pool));
-
-    SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 13)
-                   == svn_sqlite__column_int64(stmt2, 13));
+    SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 12)
+                   == svn_sqlite__column_int64(stmt2, 12));
 
     /* 14: verify props? */
   }
