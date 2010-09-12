@@ -2399,6 +2399,7 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_UPDATE_BASE_DAV_CACHE, scratch_pool));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
@@ -2410,6 +2411,21 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
                              _("The node '%s' was not found."),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_UPDATE_BASE_NODE_DAV_CACHE,
+                                 scratch_pool));
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
+
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  if (affected_rows != 1)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -2464,11 +2480,23 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
                            escape_sqlite_like(local_relpath, scratch_pool),
                            "/%", NULL);
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_CLEAR_BASE_RECURSIVE_DAV_CACHE));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", pdh->wcroot->wc_id, local_relpath,
                             like_arg));
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", pdh->wcroot->wc_id, local_relpath,
+                            like_arg));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

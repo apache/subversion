@@ -188,6 +188,10 @@ values (?1);
 update base_node set dav_cache = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_NODE_DAV_CACHE
+update nodes set dav_cache = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_BASE_DAV_CACHE
 select dav_cache from base_node
 where wc_id = ?1 and local_relpath = ?2;
@@ -210,6 +214,12 @@ where repos_id = ?1 and repos_relpath = ?2;
 -- STMT_CLEAR_BASE_RECURSIVE_DAV_CACHE
 update base_node set dav_cache = null
 where dav_cache is not null and wc_id = ?1 and
+  (local_relpath = ?2 or
+   local_relpath like ?3 escape '#');
+
+-- STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE
+update nodes set dav_cache = null
+where dav_cache is not null and wc_id = ?1 and op_depth = 0 and
   (local_relpath = ?2 or
    local_relpath like ?3 escape '#');
 
