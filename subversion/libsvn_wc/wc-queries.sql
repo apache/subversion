@@ -241,9 +241,21 @@ where repos_id = ?1 and
 UPDATE BASE_NODE SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_NODE_FILEINFO
+update nodes set translated_size = ?3, last_mod_time = ?4
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_WORKING_FILEINFO
 UPDATE WORKING_NODE SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_NODE_FILEINFO
+update nodes set translated_size = ?3, last_mod_time = ?4
+where wc_id = ?1 and local_relpath = ?2
+  and op_depth = (select op_depth from nodes
+                  where wc_id = ?1 and local_relpath = ?2
+                  order by op_depth desc
+                  limit 1);
 
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 update actual_node set tree_conflict_data = ?3
