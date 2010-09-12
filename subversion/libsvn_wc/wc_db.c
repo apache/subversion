@@ -6052,7 +6052,7 @@ record_fileinfo(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                "information."),
                              svn_dirent_local_style(rb->local_abspath,
                                                     scratch_pool));
-
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     working_exists
                                       ? STMT_UPDATE_WORKING_FILEINFO
@@ -6063,6 +6063,23 @@ record_fileinfo(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   SVN_ERR_ASSERT(affected_rows == 1);
+#endif
+
+#ifdef SVN_WC__NODES
+  /* ### Instead of doing it this way, we just ought to update the highest
+     op_depth level. That way, there's no need to find out which
+     tree to update first */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    working_exists
+                                      ? STMT_UPDATE_WORKING_NODE_FILEINFO
+                                      : STMT_UPDATE_BASE_NODE_FILEINFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isii",
+                            rb->wc_id, rb->local_relpath,
+                            rb->translated_size, rb->last_mod_time));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  SVN_ERR_ASSERT(affected_rows == 1);
+#endif
 
   return SVN_NO_ERROR;
 }
