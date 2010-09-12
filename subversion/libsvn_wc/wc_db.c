@@ -419,9 +419,9 @@ assert_base_rows_match(svn_boolean_t have_row1,
               SVN_ERR_WC_CORRUPT, NULL,
               "Different results from BASE (%d) and NODES queries (%d), "
               "for local_relpath %s",
-              have_row, have_data_row, relpath));
+              have_row1, have_row2, relpath));
 
-  if (have_row) {
+  if (have_row1) {
     SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 1)
                    == svn_sqlite__column_int64(stmt2, 1));
 
