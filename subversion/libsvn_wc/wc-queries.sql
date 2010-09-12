@@ -389,7 +389,7 @@ update base_node set presence = ?3, kind = ?4
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_BASE_PRESENCE_KIND
-update node_data set presence = ?3, kind = ?4
+update nodes set presence = ?3, kind = ?4
 where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 -- STMT_UPDATE_WORKING_PRESENCE
