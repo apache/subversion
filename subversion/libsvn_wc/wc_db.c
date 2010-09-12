@@ -8194,6 +8194,7 @@ start_directory_update_txn(void *baton,
 
   if (strcmp(du->new_repos_relpath, repos_relpath) == 0)
     {
+#ifndef SVN_WC__NODES_ONLY
       /* Just update revision and status */
       SVN_ERR(svn_sqlite__get_statement(
                         &stmt, db,
@@ -8204,9 +8205,23 @@ start_directory_update_txn(void *baton,
                                 du->local_relpath,
                                 presence_map, svn_wc__db_status_incomplete,
                                 (apr_int64_t)du->new_rev));
+#endif
+#ifdef SVN_WC__NODES
+      /* Just update revision and status */
+      SVN_ERR(svn_sqlite__get_statement(
+                        &stmt, db,
+                        STMT_UPDATE_BASE_NODE_PRESENCE_AND_REVNUM));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isti",
+                                du->wc_id,
+                                du->local_relpath,
+                                presence_map, svn_wc__db_status_incomplete,
+                                (apr_int64_t)du->new_rev));
+#endif
     }
   else
     {
+#ifndef SVN_WC__NODES_ONLY
       /* ### TODO: Maybe check if we can make repos_relpath NULL. */
       SVN_ERR(svn_sqlite__get_statement(
                         &stmt, db,
@@ -8218,6 +8233,20 @@ start_directory_update_txn(void *baton,
                                 presence_map, svn_wc__db_status_incomplete,
                                 (apr_int64_t)du->new_rev,
                                 du->new_repos_relpath));
+#endif
+#ifdef SVN_WC__NODES
+      /* ### TODO: Maybe check if we can make repos_relpath NULL. */
+      SVN_ERR(svn_sqlite__get_statement(
+                   &stmt, db,
+                   STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "istis",
+                                du->wc_id,
+                                du->local_relpath,
+                                presence_map, svn_wc__db_status_incomplete,
+                                (apr_int64_t)du->new_rev,
+                                du->new_repos_relpath));
+#endif
     }
 
   return svn_error_return(svn_sqlite__step_done(stmt));
