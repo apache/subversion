@@ -5731,7 +5731,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
                                     STMT_APPLY_CHANGES_TO_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "issisrtstrinsbns",
+  SVN_ERR(svn_sqlite__bindf(stmt, "issisrtstrisnbns",
                             cb->pdh->wcroot->wc_id, cb->local_relpath,
                             parent_relpath,
                             cb->repos_id,
@@ -5748,7 +5748,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 13, cb->new_checksum,
                                     scratch_pool));
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 14, cb->new_dav_cache,
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 15, cb->new_dav_cache,
                                       scratch_pool));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
