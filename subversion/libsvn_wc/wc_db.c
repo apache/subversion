@@ -6699,11 +6699,23 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_int64_t wc_id;
   apr_hash_index_t *hi;
+#ifndef SVN_WC__NODES_ONLY
   svn_sqlite__stmt_t *stmt;
+#endif
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_node;
+#endif
 
   SVN_ERR(svn_wc__db_util_fetch_wc_id(&wc_id, sdb, iterpool));
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DAV_CACHE));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb,
+                                    STMT_UPDATE_BASE_NODE_DAV_CACHE));
+#endif
+
 
   /* Iterate over all the wcprops, writing each one to the wc_db. */
   for (hi = apr_hash_first(scratch_pool, cache_values);
@@ -6718,9 +6730,17 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
 
       local_relpath = svn_relpath_join(dir_relpath, name, iterpool);
 
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
       SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, iterpool));
       SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(svn_sqlite__bindf(stmt_node, "is", wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bind_properties(stmt_node, 3, props, iterpool));
+      SVN_ERR(svn_sqlite__step_done(stmt_node));
+#endif
+
     }
 
   svn_pool_destroy(iterpool);
