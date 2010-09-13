@@ -1541,6 +1541,7 @@ insert_base_node(svn_sqlite__db_t *sdb,
 {
   svn_sqlite__stmt_t *stmt;
 
+#ifndef SVN_WC__NODES_ONLY
   /* ### NODE_DATA when switching to NODE_DATA, replace the
      query below with STMT_INSERT_BASE_NODE_DATA_FOR_ENTRY_1
      and adjust the parameters bound. Can't do that yet. */
@@ -1605,52 +1606,60 @@ insert_base_node(svn_sqlite__db_t *sdb,
   /* Execute and reset the insert clause. */
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
-#ifdef SVN_WC__NODE_DATA
+#endif
+#ifdef SVN_WC__NODES
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_INSERT_BASE_NODE_DATA_FOR_ENTRY_2));
+                                    STMT_INSERT_BASE_NODE_FOR_ENTRY_1));
 
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, base_node->wc_id));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 2, base_node->local_relpath));
-
-  if (base_node->parent_relpath)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 3, base_node->parent_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issisr",
+                            base_node->wc_id,
+                            base_node->local_relpath,
+                            base_node->parent_relpath,
+                            base_node->repos_id,
+                            base_node->repos_relpath,
+                            base_node->revision));
 
   if (base_node->presence == svn_wc__db_status_not_present)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "not-present"));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 7, "not-present"));
   else if (base_node->presence == svn_wc__db_status_normal)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "normal"));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 7, "normal"));
   else if (base_node->presence == svn_wc__db_status_absent)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "absent"));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 7, "absent"));
   else if (base_node->presence == svn_wc__db_status_incomplete)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "incomplete"));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 7, "incomplete"));
   else if (base_node->presence == svn_wc__db_status_excluded)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, "excluded"));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 7, "excluded"));
 
   /* ### kind might be "symlink" or "unknown" */
   if (base_node->kind == svn_node_none)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "unknown"));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "unknown"));
   else
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5,
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8,
                                   svn_node_kind_to_word(base_node->kind)));
 
   if (base_node->checksum)
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 6, base_node->checksum,
+    SVN_ERR(svn_sqlite__bind_checksum(stmt, 9, base_node->checksum,
                                       scratch_pool));
 
   /* ### strictly speaking, changed_rev should be valid for present nodes. */
   if (SVN_IS_VALID_REVNUM(base_node->changed_rev))
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 7, base_node->changed_rev));
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 10, base_node->changed_rev));
   if (base_node->changed_date)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 8, base_node->changed_date));
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 11, base_node->changed_date));
   if (base_node->changed_author)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 9, base_node->changed_author));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 12, base_node->changed_author));
 
-  SVN_ERR(svn_sqlite__bind_text(stmt, 10, svn_depth_to_word(base_node->depth)));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 13, svn_depth_to_word(base_node->depth)));
 
   if (base_node->properties)
-    SVN_ERR(svn_sqlite__bind_properties(stmt, 11, base_node->properties,
+    SVN_ERR(svn_sqlite__bind_properties(stmt, 14, base_node->properties,
                                         scratch_pool));
+
+  if (base_node->translated_size != SVN_INVALID_FILESIZE)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 15, base_node->translated_size));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 16, base_node->last_mod_time));
 
   /* Execute and reset the insert clause. */
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
