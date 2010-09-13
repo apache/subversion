@@ -357,45 +357,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
       this_path = svn_dirent_join(dir_path, child, iterpool);
       this_abspath = svn_dirent_join(dir_abspath, child, iterpool);
 
-      err = svn_wc__db_base_get_info(&this_status, &this_kind, &this_rev,
-                                     &this_repos_relpath, &this_repos_root_url,
-                                     NULL, NULL, NULL, NULL, NULL, &this_depth,
-                                     NULL, NULL, NULL, &this_lock,
-                                     db, this_abspath, iterpool, iterpool);
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_return(err);
-
-          /* THIS_ABSPATH was listed as a BASE child of DIR_ABSPATH. Yet,
-             we just got an error trying to read it. What gives? :-P
-
-             This happens when THIS_ABSPATH is a subdirectory that is
-             marked in the parent stub as "not-present". The subdir is
-             then removed. Later, an addition is scheduled, putting the
-             subdirectory back, but ONLY containing WORKING nodes.
-
-             Thus, the BASE fetch comes out of the subdir, and fails.
-
-             For this case, we go ahead and treat this as a simple
-             not-present, and ignore whatever is in the subdirectory.  */
-          svn_error_clear(err);
-
-          this_status = svn_wc__db_status_not_present;
-
-          /* Note: the other THIS_* local variables pass to base_get_info
-             are NOT set at this point. But we don't need them...  */
-        }
-
-      /* Note: some older code would attempt to check the parent stub
-         of subdirectories for the not-present state. That check was
-         redundant since a not-present directory has no BASE nodes
-         within it which may report another status.
-
-         There might be NO BASE node (per the condition above), but the
-         typical case is that base_get_info() reads the parent stub
-         because there is no subdir (with administrative data). Thus, we
-         already have all the information we need. No further testing.  */
+      SVN_ERR(svn_wc__db_base_get_info(&this_status, &this_kind, &this_rev,
+                                       &this_repos_relpath,
+                                       &this_repos_root_url,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       &this_depth,
+                                       NULL, NULL, NULL, &this_lock,
+                                       db, this_abspath, iterpool, iterpool));
 
       /* First check for exclusion */
       if (this_status == svn_wc__db_status_excluded)
