@@ -134,14 +134,6 @@ extern "C" {
 
 #define SVN_WC__VERSION 19
 
-/* ### SVN_WC__SINGLE_DB and SINGLE_DB were both used in development
-   ### and will both disappear before the final 1.7 release. */
-#if SVN_WC__VERSION >= 19
-#define SVN_WC__SINGLE_DB
-#define SINGLE_DB
-#endif
-
-
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
 

@@ -9136,7 +9136,6 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
                                              const char *repos_relpath,
                                              const char *repos_root_url,
                                              const char *repos_uuid,
-                                             svn_boolean_t update_stub,
                                              apr_pool_t *scratch_pool)
 {
   struct set_rev_relpath_baton baton;
@@ -9158,8 +9157,6 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
   VERIFY_USABLE_PDH(baton.pdh);
 
   SVN_ERR(flush_entries(db, baton.pdh, local_abspath, scratch_pool));
-
-  SVN_ERR_ASSERT(!update_stub);
 
   SVN_ERR(svn_sqlite__with_transaction(baton.pdh->wcroot->sdb,
                                        set_rev_relpath_txn,

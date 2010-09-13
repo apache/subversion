@@ -2206,24 +2206,6 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
 
-#ifndef SVN_WC__SINGLE_DB
-/* For a deleted node, determine its keep_local flag. (This flag will
-   go away once we have a consolidated administrative area) */
-svn_error_t *
-svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
-                                     svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     apr_pool_t *scratch_pool);
-
-/* For a deleted directory, set its keep_local flag. (This flag will
-   go away once we have a consolidated administrative area) */
-svn_error_t *
-svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               svn_boolean_t keep_local,
-                               apr_pool_t *scratch_pool);
-#endif
-
 /* Removes all references of LOCAL_ABSPATH from its working copy
    using DB. */
 svn_error_t *
@@ -2367,14 +2349,6 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
                                   apr_pool_t *scratch_pool);
 
 
-#ifndef SVN_WC__SINGLE_DB
-/* Remove a stray "subdir" record in the BASE_NODE table.  */
-svn_error_t *
-svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     apr_pool_t *scratch_pool);
-#endif
-
 /* Set file external information on LOCAL_ABSPATH to REPOS_RELPATH
    at PEG_REV with revision REV*/
 svn_error_t *
@@ -2403,28 +2377,10 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                                      const char *prej_basename,
                                                      apr_pool_t *scratch_pool);
 
-#ifndef SVN_WC__SINGLE_DB
-/* Ensure that the parent stub of LOCAL_ABSPATH contains a BASE_NODE record with
-   a normal status and optionally remove the WORKING_NODE record for the node;
-   this assumes that the parent directory is in the incomplete state, or the
-   node already exists (either as working or as base node). 
-
-   ### This function is a HACK with assumptions that aren't completely checked.
-   ### Don't add new callers unless you exactly know what 
-   ### you are doing! This call is never needed once we get to a central db. */
-svn_error_t *
-svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
-                                          const char *local_abspath,
-                                          svn_boolean_t delete_working,
-                                          apr_pool_t *scratch_pool);
-#endif
-
 /* Sets a base nodes revision and/or repository relative path. If
    LOCAL_ABSPATH's rev (REV) is valid, set is revision and if SET_REPOS_RELPATH
    is TRUE set its repository relative path to REPOS_RELPATH (and make sure its
    REPOS_ROOT_URL and REPOS_ROOT_UUID are still valid).
-
-   ### TODO(SINGLE_DB): Remove the 'update_stub' argument.
  */
 svn_error_t *
 svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
@@ -2434,7 +2390,6 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
                                              const char *repos_relpath,
                                              const char *repos_root_url,
                                              const char *repos_uuid,
-                                             svn_boolean_t update_stub,
                                              apr_pool_t *scratch_pool);
 
 /* Tweak a locally added existing directory LOCAL_ABSPATH to have a base
