@@ -50,6 +50,16 @@ left outer join lock on base_node.repos_id = lock.repos_id
   and base_node.repos_relpath = lock.repos_relpath
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_BASE_NODE_WITH_LOCK_1
+select nodes.repos_id, nodes.repos_path, presence, kind, revision,
+  checksum, translated_size, changed_revision, changed_date, changed_author,
+  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
+  lock_comment, lock_date
+from nodes
+left outer join lock on nodes.repos_id = lock.repos_id
+  and nodes.repos_path = lock.repos_relpath
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_WORKING_NODE
 select presence, kind, checksum, translated_size,
   changed_rev, changed_date, changed_author, depth, symlink_target,
