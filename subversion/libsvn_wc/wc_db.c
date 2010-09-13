@@ -6825,6 +6825,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
     {
       apr_hash_t *props = revert_props ? revert_props : base_props;
 
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_PROPS));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
       SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
@@ -6832,6 +6833,17 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 
       /* ### should we provide a nicer error message?  */
       SVN_ERR_ASSERT(affected_rows == 1);
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_NODE_BASE_PROPS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+      /* ### should we provide a nicer error message?  */
+      SVN_ERR_ASSERT(affected_rows == 1);
+#endif
     }
 
   if (have_work)
@@ -6848,6 +6860,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
           && (work_presence == svn_wc__db_status_normal
               || work_presence == svn_wc__db_status_incomplete))
         {
+#ifndef SVN_WC__NODES_ONLY
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                             STMT_UPDATE_WORKING_PROPS));
           SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
@@ -6857,6 +6870,18 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 
           /* ### should we provide a nicer error message?  */
           SVN_ERR_ASSERT(affected_rows == 1);
+#endif
+#ifdef SVN_WC__NODES
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                            STMT_UPDATE_WORKING_PROPS));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__bind_properties(stmt, 3, base_props,
+                                              scratch_pool));
+          SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+          /* ### should we provide a nicer error message?  */
+          SVN_ERR_ASSERT(affected_rows == 1);
+#endif
         }
       /* else other states should have no properties.  */
       /* ### should we insert empty props for <= SVN_WC__NO_REVERT_FILES?  */
