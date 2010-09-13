@@ -714,18 +714,15 @@ insert or replace into base_node (
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
   ?15, ?16);
 
--- STMT_INSERT_BASE_NODE_DATA_FOR_ENTRY_1
-insert or replace into base_node (
-  wc_id, local_relpath, parent_relpath, repos_id, repos_relpath, revnum,
-  translated_size, last_mod_time )
-values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);
-
--- STMT_INSERT_BASE_NODE_DATA_FOR_ENTRY_2
+-- STMT_INSERT_BASE_NODE_FOR_ENTRY_1
 /* The BASE tree has a fixed op_depth '0' */
-insert or replace into node_data (
-  wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
-  changed_revision, changed_date, changed_author, depth, properties )
-values (?1, ?2, 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
+insert or replace into nodes (
+  wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+  revision, presence, kind, checksum,
+  changed_revision, changed_date, changed_author, depth, properties,
+  translated_size, last_mod_time )
+values (?1, ?2, 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13,
+       ?14, ?15, ?16 );
 
 -- STMT_INSERT_WORKING_NODE
 insert or replace into working_node (
