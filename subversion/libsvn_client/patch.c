@@ -811,7 +811,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
   svn_boolean_t hunk_eof;
   svn_boolean_t lines_matched;
   apr_pool_t *iterpool;
-  svn_linenum_t original_length;
+  svn_linenum_t hunk_length;
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
 
@@ -823,13 +823,18 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
   saved_line = content_info->current_line;
   lines_read = 0;
   lines_matched = FALSE;
-  original_length = svn_diff_hunk_get_original_length(hunk);
   leading_context = svn_diff_hunk_get_leading_context(hunk);
   trailing_context = svn_diff_hunk_get_trailing_context(hunk);
   if (match_modified)
-    SVN_ERR(svn_diff_hunk_reset_modified_text(hunk));
+    {
+      SVN_ERR(svn_diff_hunk_reset_modified_text(hunk));
+      hunk_length = svn_diff_hunk_get_modified_length(hunk);
+    }
   else
-    SVN_ERR(svn_diff_hunk_reset_original_text(hunk));
+    {
+      SVN_ERR(svn_diff_hunk_reset_original_text(hunk));
+      hunk_length = svn_diff_hunk_get_original_length(hunk);
+    }
   iterpool = svn_pool_create(pool);
   do
     {
@@ -858,7 +863,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
         {
           if (lines_read <= fuzz && leading_context > fuzz)
             lines_matched = TRUE;
-          else if (lines_read > original_length - fuzz &&
+          else if (lines_read > hunk_length - fuzz &&
                    trailing_context > fuzz)
             lines_matched = TRUE;
           else
