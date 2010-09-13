@@ -271,7 +271,7 @@ static const char * const TESTING_DATA = (
   "  1, 'K/K-b', 0, 'K', null, null, 1, 'normal', null,"
   "  null, null, 'file', 1, " TIME_1s ", '" AUTHOR_1 "', '$sha1$" SHA1_1 "',"
   " '()', 15, null, null, null, null);"
-   ""
+  ""
 #endif
 #ifndef SVN_WC__NODES_ONLY
    "insert into working_node values ("
