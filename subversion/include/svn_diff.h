@@ -986,6 +986,10 @@ typedef struct svn_patch_t {
   /**
    * Represents the operation performed on the file. */
   svn_diff_operation_kind_t operation;
+
+  /**
+   * Indicates whether the patch is being interpreted in reverse. */
+  svn_boolean_t reverse;
 } svn_patch_t;
 
 /**
