@@ -639,27 +639,6 @@ get_statement_for_path(svn_sqlite__stmt_t **stmt,
 }
 
 
-/* */
-static svn_error_t *
-navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
-                   svn_wc__db_t *db,
-                   svn_wc__db_pdh_t *child_pdh,
-                   svn_sqlite__mode_t smode,
-                   svn_boolean_t verify_parent_stub,
-                   apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_pdh_navigate_to_parent(parent_pdh,
-                                            db,
-                                            child_pdh,
-                                            smode,
-                                            scratch_pool));
-
-  SVN_ERR_ASSERT(!verify_parent_stub);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* For a given REPOS_ROOT_URL/REPOS_UUID pair, return the existing REPOS_ID
    value. If one does not exist, then create a new one. */
 static svn_error_t *
@@ -3373,7 +3352,6 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                                       scratch_pool));
     }
 
-  /* Get the children for a directory if this is not the parent stub */
   if (kind == svn_wc__db_kind_dir)
     SVN_ERR(gather_children(&children, FALSE, db, src_abspath,
                             scratch_pool, scratch_pool));
@@ -6455,8 +6433,9 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       if (strcmp(current_abspath, pdh->local_abspath) == 0)
         {
           /* The current node is a directory, so move to the parent dir.  */
-          SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readonly,
-                                     FALSE, scratch_pool));
+          SVN_ERR(svn_wc__db_pdh_navigate_to_parent(&pdh, db, pdh,
+                                                    svn_sqlite__mode_readonly,
+                                                    scratch_pool));
         }
       current_abspath = pdh->local_abspath;
       current_relpath = svn_wc__db_pdh_compute_relpath(pdh, NULL);
@@ -6687,8 +6666,9 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       if (strcmp(current_abspath, pdh->local_abspath) == 0)
         {
           /* The current node is a directory, so move to the parent dir.  */
-          SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readonly,
-                                     FALSE, scratch_pool));
+          SVN_ERR(svn_wc__db_pdh_navigate_to_parent(&pdh, db, pdh,
+                                                    svn_sqlite__mode_readonly,
+                                                    scratch_pool));
         }
       current_abspath = pdh->local_abspath;
       current_relpath = svn_wc__db_pdh_compute_relpath(pdh, NULL);
