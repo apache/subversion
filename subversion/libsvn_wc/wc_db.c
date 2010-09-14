@@ -6289,6 +6289,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
   const char *child_abspath = NULL;
   const char *build_relpath = "";
   svn_wc__db_pdh_t *pdh;
+  svn_wc__db_wcroot_t *wcroot;
   svn_boolean_t found_info = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -6319,6 +6320,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+  wcroot = pdh->wcroot;
+
   while (TRUE)
     {
       svn_sqlite__stmt_t *stmt;
@@ -6326,10 +6329,9 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       svn_wc__db_status_t presence;
 
       /* ### is it faster to fetch fewer columns? */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_WORKING_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                pdh->wcroot->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
       if (!have_row)
@@ -6396,7 +6398,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                                               result_pool);
           if (original_root_url || original_uuid)
             SVN_ERR(fetch_repos_info(original_root_url, original_uuid,
-                                     pdh->wcroot->sdb,
+                                     wcroot->sdb,
                                      svn_sqlite__column_int64(stmt, 9),
                                      result_pool));
           if (original_revision)
@@ -6430,15 +6432,13 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       /* Move to the parent node. Remember the abspath to this node, since
          it could be the root of an add/delete.  */
       child_abspath = current_abspath;
-      if (strcmp(current_abspath, pdh->local_abspath) == 0)
-        {
-          /* The current node is a directory, so move to the parent dir.  */
-          SVN_ERR(svn_wc__db_pdh_navigate_to_parent(&pdh, db, pdh,
-                                                    svn_sqlite__mode_readonly,
-                                                    scratch_pool));
-        }
-      current_abspath = pdh->local_abspath;
-      current_relpath = svn_wc__db_pdh_compute_relpath(pdh, NULL);
+
+      /* The wcroot can't have a restructuring operation; make sure we don't
+         loop on invalid data */
+      SVN_ERR_ASSERT(current_relpath[0] != '\0');
+
+      current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
+      current_abspath = svn_dirent_dirname(current_abspath, scratch_pool);
     }
 
   /* If we're here, then we have an added/copied/moved (start) node, and
@@ -6481,6 +6481,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   svn_boolean_t child_has_base = FALSE;
   svn_boolean_t found_moved_to = FALSE;
   svn_wc__db_pdh_t *pdh;
+  svn_wc__db_wcroot_t *wcroot;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -6503,6 +6504,8 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+  wcroot = pdh->wcroot;
+
   while (TRUE)
     {
       svn_sqlite__stmt_t *stmt;
@@ -6510,10 +6513,9 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       svn_boolean_t have_base;
       svn_wc__db_status_t work_presence;
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_DELETION_INFO));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                pdh->wcroot->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
       if (!have_row)
@@ -6641,7 +6643,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
           if (moved_to_abspath != NULL)
             *moved_to_abspath = svn_dirent_join(
-                                    pdh->wcroot->abspath,
+                                    wcroot->abspath,
                                     svn_sqlite__column_text(stmt, 2, NULL),
                                     result_pool);
         }
@@ -6663,15 +6665,13 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       child_abspath = current_abspath;
       child_presence = work_presence;
       child_has_base = have_base;
-      if (strcmp(current_abspath, pdh->local_abspath) == 0)
-        {
-          /* The current node is a directory, so move to the parent dir.  */
-          SVN_ERR(svn_wc__db_pdh_navigate_to_parent(&pdh, db, pdh,
-                                                    svn_sqlite__mode_readonly,
-                                                    scratch_pool));
-        }
-      current_abspath = pdh->local_abspath;
-      current_relpath = svn_wc__db_pdh_compute_relpath(pdh, NULL);
+
+      /* The wcroot can't be deleted, but make sure we don't loop on invalid
+         data */
+      SVN_ERR_ASSERT(current_relpath[0] != '\0');
+
+      current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
+      current_abspath = svn_dirent_dirname(current_abspath, scratch_pool);
     }
 
   return SVN_NO_ERROR;
