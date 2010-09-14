@@ -1554,7 +1554,7 @@ def update_modify_file_external(sbox):
 
   # Update to modify the file external, this asserts in update_editor.c
   expected_output = svntest.wc.State(wc_dir, {
-      'A/external'      : Item(status='E '),
+      'A/external'      : Item(status='U '),
     })
   expected_disk.tweak('A/mu', 'A/external',
                       contents=expected_disk.desc['A/mu'].contents
@@ -1600,7 +1600,7 @@ test_list = [ None,
               relegate_external,
               wc_repos_file_externals,
               merge_target_with_externals,
-              XFail(update_modify_file_external),
+              update_modify_file_external,
              ]
 
 if __name__ == '__main__':
