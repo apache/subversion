@@ -3957,6 +3957,7 @@ do_walk(walker_ctx_t *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
+  apr_pool_t *iterpool;
 
   /* Clear the temporary pool. */
   svn_pool_clear(ctx->info.pool);
@@ -4032,12 +4033,15 @@ do_walk(walker_ctx_t *ctx, int depth)
                                 params->pool);
 
   /* iterate over the children in this collection */
+  iterpool = svn_pool_create(params->pool);
   for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
       void *val;
       svn_fs_dirent_t *dirent;
+
+      svn_pool_clear(iterpool);
 
       /* fetch one of the children */
       apr_hash_this(hi, &key, &klen, &val);
@@ -4046,7 +4050,16 @@ do_walk(walker_ctx_t *ctx, int depth)
       /* authorize access to this resource, if applicable */
       if (params->walk_type & DAV_WALKTYPE_AUTH)
         {
-          /* ### how/what to do? */
+          const char *repos_relpath =
+            apr_pstrcat(iterpool, 
+                        apr_pstrmemdup(iterpool,
+                                       ctx->repos_path->data,
+                                       ctx->repos_path->len),
+                        key, NULL);
+          if (! dav_svn__allow_read(ctx->info.r, ctx->info.repos,
+                                    repos_relpath, ctx->info.root.rev,
+                                    iterpool))
+            continue;
         }
 
       /* append this child to our buffers */
@@ -4087,6 +4100,9 @@ do_walk(walker_ctx_t *ctx, int depth)
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
     }
+  
+  svn_pool_destroy(iterpool);
+
   return NULL;
 }
 
