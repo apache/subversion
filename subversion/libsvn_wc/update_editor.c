@@ -1964,6 +1964,7 @@ do_entry_deletion(struct edit_baton *eb,
                   svn_boolean_t in_deleted_and_tree_conflicted_subtree,
                   apr_pool_t *pool)
 {
+  svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_boolean_t conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
@@ -1971,9 +1972,9 @@ do_entry_deletion(struct edit_baton *eb,
   svn_boolean_t hidden;
   svn_skel_t *work_item;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                &conflicted, NULL,
                                eb->db, local_abspath, pool, pool));
 
@@ -1994,8 +1995,9 @@ do_entry_deletion(struct edit_baton *eb,
 
     /* Receive the remote removal of excluded/absent/not present node.
        Do not notify. */
-  SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, local_abspath, pool));
-  if (hidden)
+  if (status == svn_wc__db_status_not_present
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_absent)
     {
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath, pool));
 
