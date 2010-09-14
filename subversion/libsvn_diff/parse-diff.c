@@ -1242,6 +1242,13 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
     } while (! eof);
 
   (*patch)->reverse = reverse;
+  if (reverse)
+    {
+      const char *temp;
+      temp = (*patch)->old_filename;
+      (*patch)->old_filename = (*patch)->new_filename;
+      (*patch)->new_filename = temp;
+    }
 
   if ((*patch)->old_filename == NULL || (*patch)->new_filename == NULL)
     {
