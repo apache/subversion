@@ -44,19 +44,13 @@ extern "C" {
 
 
 #define SVN_WC__PROP_REJ_EXT  ".prej"
-#define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
-#define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
-#define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
-                                               file */
-
-
 
 /* We can handle this format or anything lower, and we (should) error
  * on anything higher.
  *
  * There is no format version 0; we started with 1.
  *
- * The change from 1 to 2 was the introduction of SVN_WC__WORK_EXT.
+ * The change from 1 to 2 was the introduction of the ".svn-work" extension.
  * For example, ".svn/props/foo" became ".svn/props/foo.svn-work".
  *
  * The change from 2 to 3 was the introduction of the entry attribute
