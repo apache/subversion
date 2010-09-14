@@ -4408,10 +4408,17 @@ merge_file(svn_skel_t **work_items,
                  ### base, but the rest of libsvn_wc appears to compensate
                  ### for this fact (even tho it is schedule_normal!!).
                  ### in any case, let's do the working copy file install
-                 ### from the revert base for file externals.  */
+                 ### from the revert base for file externals.
+
+                 ### Sheesh^2: If the file external is based on a copy from
+                 ### a different 'related' location we receive copyfrom info
+                 ### on the add. And in that specific case (externals_tests
+                 ### 25, "update that modifies a file external") we have a
+                 ### status normal instead of added. */
               if (file_external)
                 {
-                  SVN_ERR_ASSERT(status == svn_wc__db_status_added);
+                  SVN_ERR_ASSERT(status == svn_wc__db_status_added
+                                 || status == svn_wc__db_status_normal);
 
                   /* The revert-base will be installed later in this function.
                      To tell the caller to install the new working text from
