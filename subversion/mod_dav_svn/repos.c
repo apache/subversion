@@ -3120,6 +3120,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
       apr_hash_t *entries;
       apr_pool_t *entry_pool;
       apr_array_header_t *sorted;
+      svn_revnum_t dir_rev = SVN_INVALID_REVNUM;
       int i;
 
       /* XML schema for the directory index if xslt_uri is set:
@@ -3197,6 +3198,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         }
       else
         {
+          dir_rev = svn_fs_revision_root_revision(resource->info->root.root);
           serr = svn_fs_dir_entries(&entries, resource->info->root.root,
                                     resource->info->repos_path, resource->pool);
           if (serr != NULL)
@@ -3305,8 +3307,30 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           const char *name = item->key;
           const char *href = name;
           svn_boolean_t is_dir = (entry->kind == svn_node_dir);
+          const char *repos_relpath = NULL;
 
           svn_pool_clear(entry_pool);
+
+          /* DIR_REV is set to a valid revision if we're looking at
+             the entries of a versioned directory.  Otherwise, we're
+             looking at a parent-path listing. */
+          if (SVN_IS_VALID_REVNUM(dir_rev))
+            {
+              repos_relpath = svn_path_join(resource->info->repos_path,
+                                            name, entry_pool);
+              if (! dav_svn__allow_read(resource->info->r,
+                                        resource->info->repos,
+                                        repos_relpath,
+                                        dir_rev,
+                                        entry_pool))
+                continue;
+            }
+          else
+            {
+              /* ### TODO:  We could test for readability of the root
+                     directory of each repository and hide those that
+                     the user can't see. */
+            }
 
           /* append a trailing slash onto the name for directories. we NEED
              this for the href portion so that the relative reference will
