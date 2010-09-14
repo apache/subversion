@@ -363,8 +363,16 @@ test_parse_unidiff(apr_pool_t *pool)
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse, 
                                         ignore_whitespace, pool, pool));
       SVN_TEST_ASSERT(patch);
-      SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
-      SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));
+      if (reverse)
+        {
+          SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/D/gamma.orig"));
+          SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/D/gamma"));
+        }
+      else
+        {
+          SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
+          SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));
+        }
       SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
       hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
