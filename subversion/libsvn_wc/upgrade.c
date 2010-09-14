@@ -42,6 +42,11 @@
 #include "private/svn_sqlite.h"
 #include "private/svn_token.h"
 
+/* WC-1.0 administrative area extensions */
+#define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
+#define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
+#define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
+                                               file */
 
 /* Old locations for storing "wcprops" (aka "dav cache").  */
 #define WCPROPS_SUBDIR_FOR_FILES "wcprops"
