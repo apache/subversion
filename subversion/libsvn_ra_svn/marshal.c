@@ -631,7 +631,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           SVN_ERR(readbuf_getchar(conn, pool, &c));
           if (!svn_ctype_isalnum(c) && c != '-')
             break;
-          svn_stringbuf_appendbytes(str, &c, 1);
+          svn_stringbuf_appendbyte(str, c);
         }
       item->kind = SVN_RA_SVN_WORD;
       item->u.word = str->data;

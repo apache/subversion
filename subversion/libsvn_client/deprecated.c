@@ -317,7 +317,7 @@ wrapped_receiver(void *baton,
   struct wrapped_receiver_baton_s *b = baton;
   svn_stringbuf_t *expanded_line = svn_stringbuf_create(line, pool);
 
-  svn_stringbuf_appendbytes(expanded_line, "\r", 1);
+  svn_stringbuf_appendbyte(expanded_line, '\r');
 
   return b->orig_receiver(b->orig_baton, line_no, revision, author,
                           date, expanded_line->data, pool);

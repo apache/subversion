@@ -42,6 +42,7 @@
 /*----------------------------------------------------------------------*/
 
 
+
 /* Compute the delta between OLDROOT/OLDPATH and NEWROOT/NEWPATH and
    store it into a new temporary file *TEMPFILE.  OLDROOT may be NULL,
    in which case the delta will be computed against an empty file, as

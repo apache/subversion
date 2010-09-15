@@ -860,7 +860,7 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
             {
               if (type != svn_diff__file_output_unified_skip)
                 {
-                  svn_stringbuf_appendbytes(baton->hunk, curp, 1);
+                  svn_stringbuf_appendbyte(baton->hunk, *curp);
                 }
               /* We don't append the LF to extra_context, since it would
                * just be stripped anyway. */

@@ -2268,7 +2268,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
       if (propval->data[propval->len - 1] != '\n')
         {
           new_value = svn_stringbuf_create_from_string(propval, pool);
-          svn_stringbuf_appendbytes(new_value, "\n", 1);
+          svn_stringbuf_appendbyte(new_value, '\n');
         }
 
       /* Make sure this is a valid externals property.  Do not

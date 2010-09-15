@@ -205,7 +205,7 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
   p++;
   while (*p && *p != ' ')
     {
-      svn_stringbuf_appendbytes(range, p, 1);
+      svn_stringbuf_appendbyte(range, *p);
       p++;
     }
   if (*p != ' ')
@@ -226,7 +226,7 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
   p++;
   while (*p && *p != ' ')
     {
-      svn_stringbuf_appendbytes(range, p, 1);
+      svn_stringbuf_appendbyte(range, *p);
       p++;
     }
   if (*p != ' ')
@@ -362,7 +362,7 @@ hunk_readline(svn_stream_t *stream,
           else
             match = eol_str;
 
-          svn_stringbuf_appendbytes(str, &c, 1);
+          svn_stringbuf_appendbyte(str, c);
         }
 
       svn_stringbuf_chop(str, match - eol_str);

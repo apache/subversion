@@ -184,9 +184,9 @@ put_implicit_length_byte(svn_stringbuf_t *str, char byte, char term)
       && ! skel_is_space(term)
       && ! skel_is_paren(term))
     abort();
-  svn_stringbuf_appendbytes(str, &byte, 1);
+  svn_stringbuf_appendbyte(str, byte);
   if (term != '\0')
-    svn_stringbuf_appendbytes(str, &term, 1);
+    svn_stringbuf_appendbyte(str, term);
 }
 
 
@@ -239,7 +239,7 @@ put_implicit_length_all_chars(svn_stringbuf_t *str, char term)
 
   svn_stringbuf_appendbytes(str, name, len);
   if (term != '\0')
-    svn_stringbuf_appendbytes(str, &term, 1);
+    svn_stringbuf_appendbyte(str, term);
 }
 
 
@@ -461,7 +461,7 @@ put_list_start(svn_stringbuf_t *str, char space, int len)
 
   svn_stringbuf_appendcstr(str, "(");
   for (i = 0; i < len; i++)
-    svn_stringbuf_appendbytes(str, &space, 1);
+    svn_stringbuf_appendbyte(str, space);
 }
 
 
@@ -476,7 +476,7 @@ put_list_end(svn_stringbuf_t *str, char space, int len)
     abort();
 
   for (i = 0; i < len; i++)
-    svn_stringbuf_appendbytes(str, &space, 1);
+    svn_stringbuf_appendbyte(str, space);
   svn_stringbuf_appendcstr(str, ")");
 }
 
