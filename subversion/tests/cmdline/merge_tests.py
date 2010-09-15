@@ -14922,32 +14922,6 @@ def merge_automatic_conflict_resolution(sbox):
                                        A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
-  # Issue #3514 fails here with an error similar to:
-  #
-  # ..\..\..\subversion\svn\util.c:900: (apr_err=125007)
-  #..\..\..\subversion\libsvn_client\merge.c:9408: (apr_err=125007)
-  #..\..\..\subversion\libsvn_client\merge.c:8054: (apr_err=125007)
-  #..\..\..\subversion\libsvn_client\merge.c:7733: (apr_err=125007)
-  #..\..\..\subversion\libsvn_client\merge.c:4870: (apr_err=125007)
-  #..\..\..\subversion\libsvn_repos\reporter.c:1266: (apr_err=125007)
-  #..\..\..\subversion\libsvn_repos\reporter.c:1197: (apr_err=125007)
-  #..\..\..\subversion\libsvn_repos\reporter.c:1135: (apr_err=125007)
-  #..\..\..\subversion\libsvn_repos\reporter.c:854: (apr_err=125007)
-  #..\..\..\subversion\libsvn_repos\reporter.c:1135: (apr_err=125007)
-  #..\..\..\subversion\libsvn_repos\reporter.c:854: (apr_err=125007)
-  #..\..\..\subversion\libsvn_repos\reporter.c:1135: (apr_err=125007)
-  #..\..\..\subversion\libsvn_client\repos_diff.c:861: (apr_err=125007)
-  #..\..\..\subversion\libsvn_client\merge.c:1511: (apr_err=125007)
-  #..\..\..\subversion\libsvn_wc\merge.c:1309: (apr_err=125007)
-  #..\..\..\subversion\libsvn_wc\merge.c:1252: (apr_err=125007)
-  #..\..\..\subversion\libsvn_wc\merge.c:914: (apr_err=125007)
-  #..\..\..\subversion\libsvn_wc\merge.c:794: (apr_err=125007)
-  #..\..\..\subversion\libsvn_wc\merge.c:460: (apr_err=125007)
-  #..\..\..\subversion\libsvn_wc\log.c:921: (apr_err=125007)
-  #..\..\..\subversion\libsvn_wc\log.c:878: (apr_err=125007)
-  #svn: Path 'C:\DOCUME~1\pburba\LOCALS~1\Temp\tempfile.149.tmp' is not a
-  # child of 'C:\SVN\src-trunk\Debug\subversion\tests\cmdline\svn-test-work\
-  # working_copies\merge_tests-137\A_COPY\D\H'
   svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -14963,16 +14937,11 @@ def merge_automatic_conflict_resolution(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
   # Test --accept base
-  #
-  # Make a working change to A_COPY/D/H/psi.
-  svntest.main.file_write(psi_COPY_path, "WORKING.\n")
   expected_output = wc.State(A_COPY_path, {'D/H/psi' : Item(status='U ')})
   expected_elision_output = wc.State(A_COPY_path, {
     })
-  expected_disk.tweak('D/H/psi', contents="BASE")
+  expected_disk.tweak('D/H/psi', contents="This is the file 'psi'.\n")
   expected_status.tweak('D/H/psi', status='M ')
-  # Issue #3514 fails here with an error similar to the one above for
-  # --accept theirs-full.
   svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -16101,7 +16070,7 @@ test_list = [ None,
               copy_then_replace_via_merge,
               SkipUnless(record_only_merge,
                          server_has_mergeinfo),
-              XFail(merge_automatic_conflict_resolution),
+              merge_automatic_conflict_resolution,
               skipped_files_get_correct_mergeinfo,
               committed_case_only_move_and_revert,
               merge_into_wc_for_deleted_branch,

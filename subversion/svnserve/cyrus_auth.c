@@ -297,13 +297,13 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
                  SVN_CONFIG_SECTION_SASL,
                  SVN_CONFIG_OPTION_MIN_SSF,
                  "0");
-  secprops.min_ssf = atoi(val);
+  SVN_ERR(svn_cstring_atoui(&secprops.min_ssf, val));
 
   svn_config_get(b->cfg, &val,
                  SVN_CONFIG_SECTION_SASL,
                  SVN_CONFIG_OPTION_MAX_SSF,
                  "256");
-  secprops.max_ssf = atoi(val);
+  SVN_ERR(svn_cstring_atoui(&secprops.max_ssf, val));
 
   /* Set security properties. */
   result = sasl_setprop(sasl_ctx, SASL_SEC_PROPS, &secprops);

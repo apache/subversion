@@ -1033,12 +1033,21 @@ const svn_string_t *
 svn_ra_serf__get_ver_prop_string(apr_hash_t *props,
                                  const char *path, svn_revnum_t rev,
                                  const char *ns, const char *name);
+
+/* Wraps svn_ra_serf__get_ver_prop_string(). */
 const char *
 svn_ra_serf__get_ver_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name);
 
-/* Same as get_prop, but for the unknown revision */
+/* Same as get_ver_prop_string, but for the unknown revision */
+const svn_string_t *
+svn_ra_serf__get_prop_string(apr_hash_t *props,
+                             const char *path,
+                             const char *ns,
+                             const char *name);
+
+/* Same as get_ver_prop, but for the unknown revision */
 const char *
 svn_ra_serf__get_prop(apr_hash_t *props,
                       const char *path,

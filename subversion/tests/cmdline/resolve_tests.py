@@ -95,10 +95,89 @@ def automatic_conflict_resolution(sbox):
   # Test 'svn resolve -R --accept theirs-full'
   do_text_conflicting_merge()
   svntest.actions.run_and_verify_resolve([psi_COPY_path],
-                                         '-R', '--accept', 'theirs-full',
+                                         '-R', '--accept', 'tf',
                                          A_COPY_path)
   wc_disk.tweak('A_COPY/D/H/psi', contents="New content")
   svntest.actions.verify_disk(wc_dir, wc_disk)
+
+#----------------------------------------------------------------------
+# Test for issue #3707 'property conflicts not handled correctly by
+# svn resolve'.
+def prop_conflict_resolution(sbox):
+  "resolving prop conflicts"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  iota_path = os.path.join(wc_dir, "iota")
+  mu_path   = os.path.join(wc_dir, "A", "mu")
+  
+  # r2 - Set property 'propname:propval' on iota and A/mu.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'propname', 'propval',
+                                     iota_path, mu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'create some new properties',
+                                     wc_dir)
+
+  # r3 - Delete property 'propname' from iota and change the property value
+  # of 'propname' on A/mu to 'incoming'.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'pd', 'propname', iota_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'propname', 'incoming', mu_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'delete a property',
+                                     wc_dir)
+
+  def do_prop_conflicting_up_and_resolve(resolve_accept,
+                                         resolved_deleted_prop_val_output,
+                                         resolved_edited_prop_val_output):
+
+    """Revert the WC, update it to r2, set the property 'propname:local_edit'
+    on iota and A/mu.  Update the WC, postponing conflicts, then run svn
+    resolve -R --accept=RESOLVE_ACCEPT and check that the property on iota
+    (using svn pg), is RESOLVED_PROP_VAL_OUTPUT and property on A/mu is
+    RESOLVED_EDITED_PROP_VAL_OUTPUT.  Both output arguments follow the rules
+    for the expected_stdout arg to run_and_verify_svn2()"""
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'revert', '--recursive', wc_dir)
+    svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r2', wc_dir)
+    svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                       'propname', 'local_edit',
+                                       iota_path, mu_path)
+    svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                       '--accept=postpone', wc_dir)
+    svntest.actions.run_and_verify_resolve([iota_path, mu_path], '-R',
+                                           '--accept', resolve_accept, wc_dir)
+    svntest.actions.run_and_verify_svn(
+      'svn revolve -R --accept=' + resolve_accept + ' of prop conflict '
+      'not resolved as expected;',
+      resolved_deleted_prop_val_output, [], 'pg', 'propname', iota_path)
+    svntest.actions.run_and_verify_svn(
+      'svn revolve -R --accept=' + resolve_accept + ' of prop conflict '
+      'not resolved as expected;',
+      resolved_edited_prop_val_output, [], 'pg', 'propname', mu_path)
+
+  # Test how svn resolve deals with prop conflicts resulting from:
+  #
+  #   1) 'iota' - An incoming prop delete on a local prop modification.
+  #   2) 'A/mu' - An incoming prop edit on a local prop modification.
+  #
+  # This currently fails because svn resolve --accept=[theirs-conflict |
+  # theirs-full] does not delete the locally modified property.
+  do_prop_conflicting_up_and_resolve('mine-full',
+                                     ['local_edit\n'], ['local_edit\n'])
+  do_prop_conflicting_up_and_resolve('mine-conflict',
+                                     ['local_edit\n'], ['local_edit\n'])
+  do_prop_conflicting_up_and_resolve('working',
+                                     ['local_edit\n'], ['local_edit\n'])
+  do_prop_conflicting_up_and_resolve('theirs-conflict',
+                                     [], ['incoming\n'])
+  do_prop_conflicting_up_and_resolve('theirs-full',
+                                     [], ['incoming\n'])
 
 ########################################################################
 # Run the tests
@@ -106,6 +185,7 @@ def automatic_conflict_resolution(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               automatic_conflict_resolution,
+              XFail(prop_conflict_resolution),
              ]
 
 if __name__ == '__main__':

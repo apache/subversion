@@ -84,11 +84,9 @@ typedef struct svn_wc__db_wcroot_t {
      format has not (yet) been determined, this will be UNKNOWN_FORMAT.  */
   int format;
 
-#ifdef SVN_WC__SINGLE_DB
   /* Array of svn_wc__db_wclock_t fields (not pointers!).
      Typically just one or two locks maximum. */
   apr_array_header_t *owned_locks;
-#endif
 
 } svn_wc__db_wcroot_t;
 
@@ -98,15 +96,6 @@ typedef struct svn_wc__db_wcroot_t {
  * a given working copy directory.
  */
 typedef struct svn_wc__db_pdh_t {
-#ifndef SVN_WC__SINGLE_DB
-  /* This (versioned) working copy directory is obstructing what *should*
-     be a file in the parent directory (according to its metadata).
-
-     Note: this PDH should probably be ignored (or not created).
-
-     ### obstruction is only possible with per-dir wc.db databases.  */
-  svn_boolean_t obstructed_file;
-#endif
 
   /* The absolute path to this working copy directory. */
   const char *local_abspath;
@@ -116,11 +105,6 @@ typedef struct svn_wc__db_pdh_t {
 
   /* The parent directory's per-dir information. */
   struct svn_wc__db_pdh_t *parent;
-
-#ifndef SVN_WC__SINGLE_DB
-  /* Whether this process owns a write-lock on this directory. */
-  svn_boolean_t locked;
-#endif
 
   /* Hold onto the old-style access baton that corresponds to this PDH.  */
   svn_wc_adm_access_t *adm_access;

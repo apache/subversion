@@ -44,9 +44,11 @@
 #include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
+#include "svn_string.h"
 #include "svn_time.h"
 #include "svn_mergeinfo.h"
 #include "svn_config.h"
+#include "svn_ctype.h"
 
 #include "fs.h"
 #include "err.h"
@@ -916,7 +918,7 @@ check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
   const char *p;
 
   for (p = buf + offset; *p; p++)
-    if (!apr_isdigit(*p))
+    if (!svn_ctype_isdigit(*p))
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
         _("Format file '%s' contains unexpected non-digit '%c' within '%s'"),
         svn_dirent_local_style(path, pool), *p, buf);
@@ -974,7 +976,7 @@ read_format(int *pformat, int *max_files_per_dir,
 
   /* Check that the first line contains only digits. */
   SVN_ERR(check_format_file_buffer_numeric(buf, 0, path, pool));
-  *pformat = atoi(buf);
+  SVN_ERR(svn_cstring_atoi(pformat, buf));
 
   /* Set the default values for anything that can be set via an option. */
   *max_files_per_dir = 0;
@@ -1005,7 +1007,7 @@ read_format(int *pformat, int *max_files_per_dir,
             {
               /* Check that the argument is numeric. */
               SVN_ERR(check_format_file_buffer_numeric(buf, 15, path, pool));
-              *max_files_per_dir = atoi(buf+15);
+              SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf + 15));
               continue;
             }
         }
@@ -1944,18 +1946,20 @@ get_packed_offset(apr_off_t *rev_offset,
     {
       svn_stringbuf_t *sb;
       svn_boolean_t eof;
+      apr_int64_t val;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_stream_readline(manifest_stream, &sb, "\n", &eof, iterpool));
       if (eof)
         break;
 
-      errno = 0; /* apr_atoi64() in APR-0.9 does not always set errno */
-      APR_ARRAY_PUSH(manifest, apr_off_t) =
-                apr_atoi64(svn_string_create_from_buf(sb, iterpool)->data);
-      if (errno == ERANGE)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                "Manifest offset too large");
+      err = svn_cstring_atoi64(&val, sb->data);
+      if (err)
+        return svn_error_return(
+                 svn_error_create(SVN_ERR_FS_CORRUPT, err,
+                                  _("Manifest offset too large")));
+      APR_ARRAY_PUSH(manifest, apr_off_t) = (apr_off_t)val;
     }
   svn_pool_destroy(iterpool);
 
@@ -2056,6 +2060,7 @@ read_rep_offsets(representation_t **rep_p,
 {
   representation_t *rep;
   char *str, *last_str;
+  apr_int64_t val;
 
   rep = apr_pcalloc(pool, sizeof(*rep));
   *rep_p = rep;
@@ -2079,21 +2084,24 @@ read_rep_offsets(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  rep->offset = apr_atoi64(str);
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep->offset = (apr_off_t)val;
 
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  rep->size = apr_atoi64(str);
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep->size = (svn_filesize_t)val;
 
   str = apr_strtok(NULL, " ", &last_str);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  rep->expanded_size = apr_atoi64(str);
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep->expanded_size = (svn_filesize_t)val;
 
   /* Read in the MD5 hash. */
   str = apr_strtok(NULL, " ", &last_str);
@@ -2209,7 +2217,10 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
   /* Read the 'count' field. */
   value = apr_hash_get(headers, HEADER_COUNT, APR_HASH_KEY_STRING);
-  noderev->predecessor_count = (value == NULL) ? 0 : atoi(value);
+  if (value)
+    SVN_ERR(svn_cstring_atoi(&noderev->predecessor_count, value));
+  else
+    noderev->predecessor_count = 0;
 
   /* Get the properties location. */
   value = apr_hash_get(headers, HEADER_PROPS, APR_HASH_KEY_STRING);
@@ -2300,7 +2311,10 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
   /* Get the mergeinfo count. */
   value = apr_hash_get(headers, HEADER_MINFO_CNT, APR_HASH_KEY_STRING);
-  noderev->mergeinfo_count = (value == NULL) ? 0 : apr_atoi64(value);
+  if (value)
+    SVN_ERR(svn_cstring_atoi64(&noderev->mergeinfo_count, value));
+  else
+    noderev->mergeinfo_count = 0;
 
   /* Get whether *this* node has mergeinfo. */
   value = apr_hash_get(headers, HEADER_MINFO_HERE, APR_HASH_KEY_STRING);
@@ -2487,6 +2501,7 @@ read_rep_line(struct rep_args **rep_args_p,
   apr_size_t limit;
   struct rep_args *rep_args;
   char *str, *last_str;
+  apr_int64_t val;
 
   limit = sizeof(buffer);
   SVN_ERR(svn_io_read_length_line(file, buffer, &limit, pool));
@@ -2514,24 +2529,30 @@ read_rep_line(struct rep_args **rep_args_p,
 
   /* We have hopefully a DELTA vs. a non-empty base revision. */
   str = apr_strtok(buffer, " ", &last_str);
-  if (! str || (strcmp(str, REP_DELTA) != 0)) goto err;
+  if (! str || (strcmp(str, REP_DELTA) != 0))
+    goto error;
 
   str = apr_strtok(NULL, " ", &last_str);
-  if (! str) goto err;
+  if (! str)
+    goto error;
   rep_args->base_revision = SVN_STR_TO_REV(str);
 
   str = apr_strtok(NULL, " ", &last_str);
-  if (! str) goto err;
-  rep_args->base_offset = (apr_off_t) apr_atoi64(str);
+  if (! str)
+    goto error;
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep_args->base_offset = (apr_off_t)val;
 
   str = apr_strtok(NULL, " ", &last_str);
-  if (! str) goto err;
-  rep_args->base_length = (apr_size_t) apr_atoi64(str);
+  if (! str)
+    goto error;
+  SVN_ERR(svn_cstring_atoi64(&val, str));
+  rep_args->base_length = (apr_size_t)val;
 
   *rep_args_p = rep_args;
   return SVN_NO_ERROR;
 
- err:
+ error:
   return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                           _("Malformed representation header"));
 }
@@ -2594,6 +2615,7 @@ get_root_changes_offset(apr_off_t *root_offset,
   apr_off_t rev_offset;
   char buf[64];
   int i, num_bytes;
+  const char *str;
   apr_size_t len;
   apr_seek_where_t seek_relative;
 
@@ -2648,7 +2670,8 @@ get_root_changes_offset(apr_off_t *root_offset,
   /* Look for the next previous newline. */
   for (i = num_bytes - 2; i >= 0; i--)
     {
-      if (buf[i] == '\n') break;
+      if (buf[i] == '\n')
+        break;
     }
 
   if (i < 0)
@@ -2659,24 +2682,42 @@ get_root_changes_offset(apr_off_t *root_offset,
     }
 
   i++;
-
-  if (root_offset)
-    *root_offset = rev_offset + apr_atoi64(&buf[i]);
+  str = &buf[i];
 
   /* find the next space */
   for ( ; i < (num_bytes - 2) ; i++)
-    if (buf[i] == ' ') break;
+    if (buf[i] == ' ')
+      break;
 
   if (i == (num_bytes - 2))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Final line in revision file missing space"));
 
-  i++;
+  if (root_offset)
+    {
+      apr_int64_t val;
 
-  /* note that apr_atoi64() will stop reading as soon as it encounters
-     the final newline. */
+      buf[i] = '\0';
+      SVN_ERR(svn_cstring_atoi64(&val, str));
+      *root_offset = rev_offset + (apr_off_t)val;
+    }
+
+  i++;
+  str = &buf[i];
+
+  /* find the next newline */
+  for ( ; i < num_bytes; i++)
+    if (buf[i] == '\n')
+      break;
+
   if (changes_offset)
-    *changes_offset = rev_offset + apr_atoi64(&buf[i]);
+    {
+      apr_int64_t val;
+
+      buf[i] = '\0';
+      SVN_ERR(svn_cstring_atoi64(&val, str));
+      *changes_offset = rev_offset + (apr_off_t)val;
+    }
 
   return SVN_NO_ERROR;
 }

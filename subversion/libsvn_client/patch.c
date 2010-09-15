@@ -811,7 +811,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
   svn_boolean_t hunk_eof;
   svn_boolean_t lines_matched;
   apr_pool_t *iterpool;
-  svn_linenum_t original_length;
+  svn_linenum_t hunk_length;
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
 
@@ -823,13 +823,18 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
   saved_line = content_info->current_line;
   lines_read = 0;
   lines_matched = FALSE;
-  original_length = svn_diff_hunk_get_original_length(hunk);
   leading_context = svn_diff_hunk_get_leading_context(hunk);
   trailing_context = svn_diff_hunk_get_trailing_context(hunk);
   if (match_modified)
-    SVN_ERR(svn_diff_hunk_reset_modified_text(hunk));
+    {
+      SVN_ERR(svn_diff_hunk_reset_modified_text(hunk));
+      hunk_length = svn_diff_hunk_get_modified_length(hunk);
+    }
   else
-    SVN_ERR(svn_diff_hunk_reset_original_text(hunk));
+    {
+      SVN_ERR(svn_diff_hunk_reset_original_text(hunk));
+      hunk_length = svn_diff_hunk_get_original_length(hunk);
+    }
   iterpool = svn_pool_create(pool);
   do
     {
@@ -858,7 +863,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
         {
           if (lines_read <= fuzz && leading_context > fuzz)
             lines_matched = TRUE;
-          else if (lines_read > original_length - fuzz &&
+          else if (lines_read > hunk_length - fuzz &&
                    trailing_context > fuzz)
             lines_matched = TRUE;
           else
@@ -1599,6 +1604,45 @@ send_patch_notification(const patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
+/* Close the streams of the TARGET so that their content is flushed
+ * to disk. This will also close underlying streams and files. Use POOL for
+ * temporary allocations. */
+static svn_error_t *
+close_target_streams(const patch_target_t *target,
+                     apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  target_content_info_t *prop_content_info;
+
+   /* First the streams belonging to properties .. */
+      for (hi = apr_hash_first(pool, target->prop_targets);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          prop_patch_target_t *prop_target;
+          prop_target = svn__apr_hash_index_val(hi);
+          prop_content_info = prop_target->content_info;
+
+          /* ### If the prop did not exist pre-patching we'll not have a
+           * ### stream to read from. Find a better way to store info on
+           * ### the existence of the target prop. */
+          if (prop_content_info->stream)
+            SVN_ERR(svn_stream_close(prop_content_info->stream));
+
+          SVN_ERR(svn_stream_close(prop_content_info->patched));
+        }
+
+
+   /* .. And then streams associted with the file. The reject stream is
+    * shared between all target_content_info structures. */
+  if (target->kind_on_disk == svn_node_file)
+    SVN_ERR(svn_stream_close(target->content_info->stream));
+  SVN_ERR(svn_stream_close(target->content_info->patched));
+  SVN_ERR(svn_stream_close(target->content_info->reject));
+
+  return SVN_NO_ERROR;
+}
+
 /* Apply a PATCH to a working copy at ABS_WC_PATH and put the result
  * into temporary files, to be installed in the working copy later.
  * Return information about the patch target in *PATCH_TARGET, allocated
@@ -1721,16 +1765,13 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       svn_prop_patch_t *prop_patch;
       const char *prop_name;
       prop_patch_target_t *prop_target;
-      target_content_info_t *prop_content_info;
         
       prop_name = svn__apr_hash_index_key(hash_index);
       prop_patch = svn__apr_hash_index_val(hash_index);
 
-      /* We'll store matched hunks in prop_content_info.
-       * ### Just use prop_target->content_info? */
+      /* We'll store matched hunks in prop_content_info. */
       prop_target = apr_hash_get(target->prop_targets, prop_name, 
                                  APR_HASH_KEY_STRING);
-      prop_content_info = prop_target->content_info;
 
       for (i = 0; i < prop_patch->hunks->nelts; i++)
         {
@@ -1749,7 +1790,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
            * If no match is found initially, try with fuzz. */
           do
             {
-              SVN_ERR(get_hunk_info(&hi, target, prop_content_info, hunk, fuzz,
+              SVN_ERR(get_hunk_info(&hi, target, prop_target->content_info, 
+                                    hunk, fuzz,
                                     ignore_whitespace,
                                     TRUE /* is_prop_hunk */,
                                     cancel_func, cancel_baton,
@@ -1758,7 +1800,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
             }
           while (hi->rejected && fuzz <= MAX_FUZZ && ! hi->already_applied);
 
-          APR_ARRAY_PUSH(prop_content_info->hunks, hunk_info_t *) = hi;
+          APR_ARRAY_PUSH(prop_target->content_info->hunks, hunk_info_t *) = hi;
         }
     }
 
@@ -1768,52 +1810,40 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
        hash_index = apr_hash_next(hash_index))
     {
       prop_patch_target_t *prop_target;
-      target_content_info_t *prop_content_info;
-      const char *prop_patched_path;
 
       prop_target = svn__apr_hash_index_val(hash_index);
-      /* ### Just use prop_target->content_info? */
-      prop_content_info = prop_target->content_info;
-      /* ### Just use prop_target->patched_path? */
-      prop_patched_path = prop_target->patched_path;
 
-      for (i = 0; i < prop_content_info->hunks->nelts; i++)
+      for (i = 0; i < prop_target->content_info->hunks->nelts; i++)
         {
           hunk_info_t *hi;
 
           svn_pool_clear(iterpool);
 
-          hi = APR_ARRAY_IDX(prop_content_info->hunks, i, hunk_info_t *);
+          hi = APR_ARRAY_IDX(prop_target->content_info->hunks, i, 
+                             hunk_info_t *);
           if (hi->already_applied)
             continue;
           else if (hi->rejected)
-            SVN_ERR(reject_hunk(target, prop_content_info, hi,
+            SVN_ERR(reject_hunk(target, prop_target->content_info, hi,
                                 prop_target->name,
                                 iterpool));
           else
-            SVN_ERR(apply_hunk(target, prop_content_info, hi, 
+            SVN_ERR(apply_hunk(target, prop_target->content_info, hi, 
                                prop_target->name,
                                iterpool));
         }
 
-        if (prop_content_info->stream)
+        if (prop_target->content_info->stream)
           {
             /* Copy any remaining lines to target. */
-            SVN_ERR(copy_lines_to_target(prop_content_info, 0,
-                                         prop_patched_path, scratch_pool));
-            if (! prop_content_info->eof)
+            SVN_ERR(copy_lines_to_target(prop_target->content_info, 0,
+                                         prop_target->patched_path, 
+                                         scratch_pool));
+            if (! prop_target->content_info->eof)
               {
                 /* We could not copy the entire target property to the
                  * temporary file, and would truncate the target if we
-                 * copied the temporary file on top of it. Skip this target. 
-                 *
-                 * ### dannas: Do we really want to skip an entire target
-                 * ### if one of the properties does not apply cleanly,
-                 * ### e.g. both text changes and all prop changes will not be
-                 * ### installed.
-                 * ### stsp: This is a "should never happen" situation.
-                 * ### It means we've run out of disk space or something
-                 * ### like that, so skipping is appropriate. */
+                 * copied the temporary file on top of it. Skip this target.  */
                 target->skipped = TRUE;
               }
           }
@@ -1821,40 +1851,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
   svn_pool_destroy(iterpool);
 
-  /* ### Move this a separate function? apply_one_patch() has gotten quite
-   * ### big. We should consider splitting it up into several pieces. */
-    {
-      apr_hash_index_t *hi;
-      target_content_info_t *prop_content_info;
-
-      /* Close the streams of the target so that their content is flushed
-       * to disk. This will also close underlying streams and files. 
-       * First the streams belonging to properties .. */
-          for (hi = apr_hash_first(result_pool, target->prop_targets);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              prop_patch_target_t *prop_target;
-              prop_target = svn__apr_hash_index_val(hi);
-              prop_content_info = prop_target->content_info;
-
-              /* ### If the prop did not exist pre-patching we'll not have a
-               * ### stream to read from. Find a better way to store info on
-               * ### the existence of the target prop. */
-              if (prop_content_info->stream)
-                SVN_ERR(svn_stream_close(prop_content_info->stream));
-
-              SVN_ERR(svn_stream_close(prop_content_info->patched));
-            }
-
-
-       /* .. And then streams associted with the file. The reject stream is
-        * shared between all target_content_info structures. */
-      if (target->kind_on_disk == svn_node_file)
-        SVN_ERR(svn_stream_close(target->content_info->stream));
-      SVN_ERR(svn_stream_close(target->content_info->patched));
-      SVN_ERR(svn_stream_close(target->content_info->reject));
-    }
+  SVN_ERR(close_target_streams(target, scratch_pool));
 
   if (! target->skipped)
     {

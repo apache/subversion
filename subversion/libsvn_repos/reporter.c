@@ -32,6 +32,7 @@
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_dep_compat.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4
 
@@ -154,11 +155,6 @@ read_number(apr_uint64_t *num, apr_file_t *temp, apr_pool_t *pool)
     }
   return SVN_NO_ERROR;
 }
-
-#ifndef APR_SIZE_MAX
-/* APR 0.9 doesn't define APR_SIZE_MAX */
-#define APR_SIZE_MAX    (~((apr_size_t)0))
-#endif
 
 static svn_error_t *
 read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
