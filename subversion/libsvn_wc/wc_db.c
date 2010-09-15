@@ -788,6 +788,9 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   SVN_ERR(svn_sqlite__bind_properties(stmt_node, 15, pibb->props,
                                       scratch_pool));
+  if (pibb->dav_cache)
+    SVN_ERR(svn_sqlite__bind_properties(stmt_node, 18, pibb->dav_cache,
+                                        scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt_node));
 #endif
