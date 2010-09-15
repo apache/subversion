@@ -274,11 +274,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r984928, r984931
-   Fix an URL canonicalization assertion seen in the wild (kde.org).
-   Notes:
-    r984928 is the main fix.
-    r984931 is an obvious fix (edits a comment).
-   Votes:
-     +1: danielsh, jerenkrantz, hwright
