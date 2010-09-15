@@ -101,25 +101,23 @@ Overview of BASE_NODE columns:
 
       'presence'      Meaning       Node-Rev?     Content?  Last-Change?
       ----------      -----------   -----------   --------  ------------
-      normal      =>  Present       Existing      Yes       Yes
-      incomplete  =>  Incomplete    Existing[*]   No[*]     No
-      absent      =>  Unauthz       Existing      No        No
-      excluded    =>  Unwanted      Existing      No        No
-      not-present =>  Nonexistent   Nonexistent   No        No
+      normal      =>  Present       Yes           Yes       Yes
+      incomplete  =>  Incomplete    Yes           Partial   No ### ?
+      absent      =>  Unauthz       Yes           No        No
+      excluded    =>  Unwanted      Yes           No        No
+      not-present =>  Nonexistent   No            No        No
 
-    - [*] If presence==incomplete, this node refers to an existing node-rev
-      but its Content is not stored.  This is intended to be a temporary
-      state, during an update.  Node-Rev is sometimes specified as just a
-      revnum.  Sometimes the Content is specified as kind==dir with a depth,
-      but in this case there is no guarantee about rows representing the
-      children.
+    - If presence==incomplete, this node refers to an existing node-rev but
+      its Content is not fully and correctly stored.  In particular, if it
+      is a directory, some rows that should represent its children may not
+      exist or may be in the wrong state.  This is intended to be a
+      temporary state, e.g. during an update.
 
   Node-Rev columns: (repos_id, repos_relpath, revnum)
 
-    - Always points to the corresponding repository node-rev.
+    - The Node-Rev group points to the corresponding repository node-rev.
 
-    - Points to an existing node-rev, unless presence==not-present in which
-      case it points to a nonexistent node-rev.
+    - If not used (as specified by the 'presence' table above), all null.
 
     - ### A comment on 'repos_id' and 'repos_relpath' says they may be null;
       is this true and wanted?
@@ -141,7 +139,7 @@ Overview of BASE_NODE columns:
 
     - If kind==dir, the children are represented by the existence of other
       BASE_NODE rows.  For each immediate child of 'repos_relpath'@'revnum'
-      that is included by 'depth', a BASE_NODE row exists with its
+      in the repo, subject to 'depth', a BASE_NODE row exists with its
       'local_relpath' being this node's 'local_relpath' plus the child's
       basename.  (Rows may also exist for additional children which are
       outside the scope of 'depth' or do not exist as children of this
@@ -156,8 +154,6 @@ Overview of BASE_NODE columns:
 
   Last-Change columns: (changed_rev, changed_date, changed_author)
 
-    - Last-Change info is present iff presence==normal, otherwise null.
-
     - Specifies the revision in which the content was last changed before
       Node-Rev, following copies and not counting the copy operation itself
       as a change.
@@ -167,6 +163,8 @@ Overview of BASE_NODE columns:
       the last change of this node's content.
 
     - Includes a copy of the corresponding date and author rev-props.
+
+    - If not used (as specified by the 'presence' table above), all null.
 
   Working file status: (translated_size, last_mod_time)
 
@@ -187,11 +185,18 @@ Overview of BASE_NODE columns:
 
   (dav_cache)
 
+    - Content is opaque to libsvn_wc.  ### ?
+
+    - Lifetime is managed by the WC: values cleared to null at certain times.
+      ### To be documented.
+
   (incomplete_children)
 
     - Obsolete, unused.
 
   (file_external)
+
+    - ### To be obsoleted?
 */
 
 CREATE TABLE BASE_NODE (
