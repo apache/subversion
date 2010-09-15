@@ -122,6 +122,7 @@ typedef enum {
   opt_show_diff,
   opt_internal_diff,
   opt_use_git_diff_format,
+  opt_old_patch_target_names,
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -357,6 +358,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"reverse-diff", opt_reverse_diff, 0,
                     N_("apply the unidiff in reverse\n"
                        "                             "
+                       "This option also reverses patch target names; the\n"
+                       "                             "
+                       "--old-patch-target-names option will prevent this.\n"
+                       "                             "
                        "[alias: --rd]")},
   {"ignore-whitespace", opt_ignore_whitespace, 0,
                        N_("ignore whitespace during pattern matching\n"
@@ -373,6 +378,19 @@ const apr_getopt_option_t svn_cl__options[] =
   {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format\n")},
                   
+  {"old-patch-target-names", opt_old_patch_target_names, 0,
+                       N_("use target names from the old side of a patch.\n"
+                       "                             "
+                       "If a diff header contains\n"
+                       "                             "
+                       "  --- foo.c\n"
+                       "                             "
+                       "  +++ foo.c.new\n"
+                       "                             "
+                       "this option will cause the name \"foo.c\" to be used\n"
+                       "                             "
+                       "[alias: --optn]")},
+
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -403,6 +421,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"idiff",         opt_internal_diff, 0, NULL},
   {"nul",           opt_no_unlock, 0, NULL},
   {"keep-lock",     opt_no_unlock, 0, NULL},
+  {"optn",          opt_old_patch_target_names, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -852,7 +871,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  do not agree with.\n"
      ),
     {'q', opt_dry_run, opt_strip_count, opt_reverse_diff,
-     opt_ignore_whitespace} },
+     opt_ignore_whitespace, opt_old_patch_target_names} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1787,6 +1806,9 @@ main(int argc, const char *argv[])
         break;
       case opt_use_git_diff_format:
         opt_state.use_git_diff_format = TRUE;
+        break;
+      case opt_old_patch_target_names:
+        opt_state.old_patch_target_names = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
