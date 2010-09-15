@@ -99,6 +99,7 @@ Overview of BASE_NODE columns:
     - The Node-Rev, Content and Last-Change column groups take one of the
       states shown in the table below, according to the 'presence':
 
+                                    Has           Has       Has
       'presence'      Meaning       Node-Rev?     Content?  Last-Change?
       ----------      -----------   -----------   --------  ------------
       normal      =>  Present       Yes           Yes       Yes
@@ -113,17 +114,28 @@ Overview of BASE_NODE columns:
       exist or may be in the wrong state.  This is intended to be a
       temporary state, e.g. during an update.
 
+    - If presence==absent or ==excluded, this row refers to a node that
+      exists in the repo, but the node is not stored in the WC.
+
+    - If presence==not-present, this row indicates that its parent in the WC
+      is a directory that, in its pristine state, would have a child of this
+      name.  However, this child was updated or switched to a node-revision
+      that does not exist.  Information about which node-revision it was
+      updated or switched to is lost; only the fact that it is currently not
+      present is remembered.
+
+    - The order of precedence of the negative presence values is:
+        'excluded' if administratively excluded from the WC, else
+        'absent' if server doesn't authorize reading the path, else
+        'not-present' if it does not exist in repo.
+
   Node-Rev columns: (repos_id, repos_relpath, revnum)
 
     - The Node-Rev group points to the corresponding repository node-rev.
 
-    - If not used (as specified by the 'presence' table above), all null.
-
-    - ### A comment on 'repos_id' and 'repos_relpath' says they may be null;
-      is this true and wanted?
-
-    - ### A comment on 'revnum' says, "this could be NULL for non-present
-      nodes -- no info"; is this true and wanted?
+    - If not used (as specified by the 'presence' table above), the values
+      are undefined.
+      ### Perhaps we should set them to null to make it clearer.
 
   Content columns: (kind, properties, depth, target, checksum)
                     ----  ----------  -----  ------  --------
@@ -165,6 +177,7 @@ Overview of BASE_NODE columns:
     - Includes a copy of the corresponding date and author rev-props.
 
     - If not used (as specified by the 'presence' table above), all null.
+      ### Not checked; in practice these columns may have undefined values.
 
   Working file status: (translated_size, last_mod_time)
 
