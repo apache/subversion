@@ -860,12 +860,27 @@ svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
          easily change that, so "" means a nonexistent message. */
       if (!*message)
         message = NULL;
-      err = svn_error_create((apr_status_t)apr_err, err, message);
-      err->file = apr_pstrdup(err->pool, file);
-      err->line = (long)line;
+      
+      /* Skip over links in the error chain that were intended only to
+         exist on the server (to wrap real errors intended for the
+         client) but accidentally got included in the server's actual
+         response. */
+      if ((apr_status_t)apr_err != SVN_ERR_RA_SVN_CMD_ERR)
+        {
+          err = svn_error_create((apr_status_t)apr_err, err, message);
+          err->file = apr_pstrdup(err->pool, file);
+          err->line = (long)line;
+        }
     }
 
   svn_pool_destroy(subpool);
+
+  /* If we get here, then we failed to find a real error in the error
+     chain that the server proported to be sending us.  That's bad. */
+  if (! err)
+    err = svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                           _("Malformed error list"));
+    
   return err;
 }
 
