@@ -53,18 +53,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/**
-   ### @todo  Multiple Targets
-    - Up for debate:  an update on multiple targets is *not* atomic.
-    Right now, svn_client_update only takes one path.  What's
-    debatable is whether this should ever change.  On the one hand,
-    it's kind of losing to have the client application loop over
-    targets and call svn_client_update() on each one;  each call to
-    update initializes a whole new repository session (network
-    overhead, etc.)  On the other hand, it's a very simple
-    implementation, and allows for the possibility that different
-    targets may come from different repositories.  */
-
 
 /**
  * Get libsvn_client version information.
@@ -1200,6 +1188,17 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * it passing @a ctx->cancel_baton at various places during the update.
  *
  * Use @a pool for any temporary allocation.
+ *
+ *  @todo  Multiple Targets
+ *  - Up for debate:  an update on multiple targets is *not* atomic.
+ *  Right now, svn_client_update only takes one path.  What's
+ *  debatable is whether this should ever change.  On the one hand,
+ *  it's kind of losing to have the client application loop over
+ *  targets and call svn_client_update() on each one;  each call to
+ *  update initializes a whole new repository session (network
+ *  overhead, etc.)  On the other hand, it's a very simple
+ *  implementation, and allows for the possibility that different
+ *  targets may come from different repositories.
  *
  * @since New in 1.5.
  */
