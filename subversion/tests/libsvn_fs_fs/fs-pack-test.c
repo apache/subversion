@@ -80,12 +80,6 @@ write_format(const char *path,
                                   contents, strlen(contents),
                                   svn_io_file_del_none, pool));
 
-#ifdef WIN32
-      /* make the destination writable, but only on Windows, because
-         Windows does not let us replace read-only files. */
-      SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
-#endif /* WIN32 */
-
       /* rename the temp file as the real destination */
       SVN_ERR(svn_io_file_rename(path_tmp, path, pool));
     }

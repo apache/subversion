@@ -1900,7 +1900,7 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
 
 /** @defgroup svn_repos_fs_locks Repository lock wrappers
  * @{
- * @since New in 1.2. */
+ */
 
 /** Like svn_fs_lock(), but invoke the @a repos's pre- and
  * post-lock hooks before and after the locking action.  Use @a pool
@@ -1915,6 +1915,8 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * The pre-lock hook may cause a different token to be used for the
  * lock, instead of @a token; see the pre-lock-hook documentation for
  * more.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *
 svn_repos_fs_lock(svn_lock_t **lock,
@@ -1938,6 +1940,8 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * hook, return the original error wrapped with
  * SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the unlock succeeded anyway.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *
 svn_repos_fs_unlock(svn_repos_t *repos,
@@ -1954,7 +1958,31 @@ svn_repos_fs_unlock(svn_repos_t *repos,
  * authz_read_func and @a authz_read_baton to "screen" all returned
  * locks.  That is: do not return any locks on any paths that are
  * unreadable in HEAD, just silently omit them.
+ *
+ * @a depth limits the returned locks to those associated with paths
+ * within the specified depth of @a path, and must be one of the
+ * following values:  #svn_depth_empty, #svn_depth_files,
+ * #svn_depth_immediates, or #svn_depth_infinity.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_repos_fs_get_locks2(apr_hash_t **locks,
+                        svn_repos_t *repos,
+                        const char *path,
+                        svn_depth_t depth,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool);
+
+/** 
+ * Similar to svn_repos_fs_get_locks2(), but with @a depth always
+ * passed as svn_depth_infinity.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_get_locks(apr_hash_t **locks,
                        svn_repos_t *repos,
@@ -2268,11 +2296,15 @@ svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_NODE_ACTION               "Node-action"
 #define SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH        "Node-copyfrom-path"
 #define SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV         "Node-copyfrom-rev"
+/** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_MD5      "Text-copy-source-md5"
+/** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_SHA1     "Text-copy-source-sha1"
 #define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM \
                                         SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_MD5
+/** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5          "Text-content-md5"
+/** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_CONTENT_SHA1         "Text-content-sha1"
 #define SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM     \
                                         SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
@@ -2284,11 +2316,11 @@ svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_PROP_DELTA                "Prop-delta"
 /** @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
-/** @since New in 1.5. */
+/** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5       "Text-delta-base-md5"
 /** @since New in 1.6. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_SHA1      "Text-delta-base-sha1"
-/** @since New in 1.6. */
+/** @since New in 1.5. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  \
                                         SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5
 

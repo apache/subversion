@@ -34,10 +34,6 @@
 
 #include "svn_private_config.h"
 
-WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
-
-
-
 /* ### Same values as wc_db.c */
 #define SDB_FILE  "wc.db"
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
@@ -87,51 +83,6 @@ get_old_version(int *version,
 
   *version = 0;
   return SVN_NO_ERROR;
-}
-
-
-/* The filesystem has a directory at LOCAL_RELPATH. Examine the metadata
-   to determine if a *file* was supposed to be there.
-
-   ### this function is only required for per-dir .svn support. once all
-   ### metadata is collected in a single wcroot, then we won't need to
-   ### look in subdirs for other metadata.  */
-static svn_error_t *
-determine_obstructed_file(svn_boolean_t *obstructed_file,
-                          const svn_wc__db_wcroot_t *wcroot,
-                          const char *local_relpath,
-                          apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR_ASSERT(wcroot->sdb != NULL && wcroot->wc_id != UNKNOWN_WC_ID);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_WORKING_IS_FILE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                            wcroot->wc_id,
-                            local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    {
-      *obstructed_file = svn_sqlite__column_boolean(stmt, 0);
-    }
-  else
-    {
-      SVN_ERR(svn_sqlite__reset(stmt));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_BASE_IS_FILE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                wcroot->wc_id,
-                                local_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (have_row)
-        *obstructed_file = svn_sqlite__column_boolean(stmt, 0);
-    }
-
-  return svn_sqlite__reset(stmt);
 }
 
 
@@ -299,15 +250,29 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
         format);
     }
 
+  /* Verify that no work items exists. If they do, then our integrity is
+     suspect and, thus, we cannot use this database.  */
+  if (format >= SVN_WC__HAS_WORK_QUEUE
+      && (enforce_empty_wq || (format < SVN_WC__VERSION && auto_upgrade)))
+    {
+      svn_error_t *err = verify_no_work(sdb);
+      if (err)
+        {
+          /* Special message for attempts to upgrade a 1.7-dev wc with
+             outstanding workqueue items. */
+          if (err->apr_err == SVN_ERR_WC_CLEANUP_REQUIRED
+              && format < SVN_WC__VERSION && auto_upgrade)
+            err = svn_error_quick_wrap(err, _("Cleanup with an older 1.7 "
+                                              "client before upgrading with "
+                                              "this client"));
+          return svn_error_return(err);
+        }
+    }
+
   /* Auto-upgrade the SDB if possible.  */
   if (format < SVN_WC__VERSION && auto_upgrade)
     SVN_ERR(svn_wc__upgrade_sdb(&format, wcroot_abspath, sdb, format,
                                 scratch_pool));
-
-  /* Verify that no work items exists. If they do, then our integrity is
-     suspect and, thus, we cannot use this database.  */
-  if (format >= SVN_WC__HAS_WORK_QUEUE && enforce_empty_wq)
-    SVN_ERR(verify_no_work(sdb));
 
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
 
@@ -315,6 +280,10 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   (*wcroot)->sdb = sdb;
   (*wcroot)->wc_id = wc_id;
   (*wcroot)->format = format;
+  /* 8 concurrent locks is probably more than a typical wc_ng based svn client
+     uses. */
+  (*wcroot)->owned_locks = apr_array_make(result_pool, 8,
+                                          sizeof(svn_wc__db_wclock_t));
 
   /* SDB will be NULL for pre-NG working copies. We only need to run a
      cleanup when the SDB is present.  */
@@ -375,7 +344,6 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
   const char *build_relpath;
   svn_wc__db_pdh_t *found_pdh = NULL;
   svn_wc__db_pdh_t *child_pdh;
-  svn_boolean_t obstruction_possible = FALSE;
   svn_sqlite__db_t *sdb;
   svn_boolean_t moved_upwards = FALSE;
   svn_boolean_t always_check = FALSE;
@@ -423,7 +391,7 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
          For both of these cases, strip the basename off of the path and
          move up one level. Keep record of what we strip, though, since
          we'll need it later to construct local_relpath.  */
-      svn_dirent_split(local_abspath, &local_abspath, &build_relpath,
+      svn_dirent_split(&local_abspath, &build_relpath, local_abspath,
                        scratch_pool);
 
       /* ### if *pdh != NULL (from further above), then there is (quite
@@ -456,14 +424,6 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
       /* Start the local_relpath empty. If *this* directory contains the
          wc.db, then relpath will be the empty string.  */
       build_relpath = "";
-
-      /* It is possible that LOCAL_ABSPATH was *intended* to be a file,
-         but we just found a directory in its place. After we build
-         the PDH, then we'll examine the parent to see how it describes
-         this particular path.
-
-         ### this is only possible with per-dir wc.db databases.  */
-      obstruction_possible = TRUE;
     }
 
   /* LOCAL_ABSPATH refers to a directory at this point. The PDH corresponding
@@ -531,16 +491,6 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
       moved_upwards = TRUE;
 
-      /* An obstruction is no longer possible.
-
-         Example: we were given "/some/file" and "file" turned out to be
-         a directory. We did not find an SDB at "/some/file/.svn/wc.db",
-         so we are now going to look at "/some/.svn/wc.db". That SDB will
-         contain the correct information for "file".
-
-         ### obstruction is only possible with per-dir wc.db databases.  */
-      obstruction_possible = FALSE;
-
       /* Is the parent directory recorded in our hash?  */
       found_pdh = apr_hash_get(db->dir_data,
                                local_abspath, APR_HASH_KEY_STRING);
@@ -597,10 +547,6 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
                             NULL, UNKNOWN_WC_ID, wc_format,
                             db->auto_upgrade, db->enforce_empty_wq,
                             db->state_pool, scratch_pool));
-
-      /* Don't test for a directory obstructing a versioned file. The wc-1
-         code can manage that itself.  */
-      obstruction_possible = FALSE;
     }
 
   {
@@ -613,94 +559,6 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
     /* And the result local_relpath may include a filename.  */
     *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
   }
-
-  /* Check to see if this (versioned) directory is obstructing what should
-     be a file in the parent directory.
-
-     ### obstruction is only possible with per-dir wc.db databases.  */
-  if (obstruction_possible)
-    {
-      const char *parent_dir;
-      svn_wc__db_pdh_t *parent_pdh;
-
-      /* We should NOT have moved up a directory.  */
-      assert(!moved_upwards);
-
-      /* Get/make a PDH for the parent.  */
-      parent_dir = svn_dirent_dirname(local_abspath, scratch_pool);
-      parent_pdh = apr_hash_get(db->dir_data, parent_dir, APR_HASH_KEY_STRING);
-      if (parent_pdh == NULL || parent_pdh->wcroot == NULL)
-        {
-          svn_error_t *err = svn_wc__db_util_open_db(&sdb, parent_dir,
-                                                     SDB_FILE, smode,
-                                                     db->state_pool,
-                                                     scratch_pool);
-          if (err)
-            {
-              if (err->apr_err != SVN_ERR_SQLITE_ERROR
-                  && !APR_STATUS_IS_ENOENT(err->apr_err))
-                return svn_error_return(err);
-              svn_error_clear(err);
-
-              /* No parent, so we're at a wcroot apparently. An obstruction
-                 is (therefore) not possible.  */
-              parent_pdh = NULL;
-            }
-          else
-            {
-              /* ### construct this according to per-dir semantics.  */
-              if (parent_pdh == NULL)
-                {
-                  parent_pdh = apr_pcalloc(db->state_pool,
-                                           sizeof(*parent_pdh));
-                  parent_pdh->local_abspath = apr_pstrdup(db->state_pool,
-                                                          parent_dir);
-                }
-              else
-                {
-                  /* The PDH should have been built correctly (so far).  */
-                  SVN_ERR_ASSERT(strcmp(parent_pdh->local_abspath,
-                                        parent_dir) == 0);
-                }
-
-              SVN_ERR(svn_wc__db_pdh_create_wcroot(&parent_pdh->wcroot,
-                                    parent_pdh->local_abspath,
-                                    sdb,
-                                    1 /* ### hack.  */,
-                                    FORMAT_FROM_SDB,
-                                    db->auto_upgrade, db->enforce_empty_wq,
-                                    db->state_pool, scratch_pool));
-
-              apr_hash_set(db->dir_data,
-                           parent_pdh->local_abspath, APR_HASH_KEY_STRING,
-                           parent_pdh);
-
-              (*pdh)->parent = parent_pdh;
-            }
-        }
-
-      if (parent_pdh)
-        {
-          const char *lookfor_relpath = svn_dirent_basename(local_abspath,
-                                                            scratch_pool);
-
-          /* Was there supposed to be a file sitting here?  */
-          SVN_ERR(determine_obstructed_file(&(*pdh)->obstructed_file,
-                                            parent_pdh->wcroot,
-                                            lookfor_relpath,
-                                            scratch_pool));
-
-          /* If we determined that a file was supposed to be at the
-             LOCAL_ABSPATH requested, then return the PDH and LOCAL_RELPATH
-             which describes that file.  */
-          if ((*pdh)->obstructed_file)
-            {
-              *pdh = parent_pdh;
-              *local_relpath = apr_pstrdup(result_pool, lookfor_relpath);
-              return SVN_NO_ERROR;
-            }
-        }
-    }
 
   /* The PDH is complete. Stash it into DB.  */
   apr_hash_set(db->dir_data,
@@ -759,6 +617,72 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
     }
   while (child_pdh != found_pdh
          && strcmp(child_pdh->local_abspath, local_abspath) != 0);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
+                                  svn_wc__db_t *db,
+                                  svn_wc__db_pdh_t *child_pdh,
+                                  svn_sqlite__mode_t smode,
+                                  apr_pool_t *scratch_pool)
+{
+  const char *parent_abspath;
+  const char *local_relpath;
+
+  if ((*parent_pdh = child_pdh->parent) != NULL
+      && (*parent_pdh)->wcroot != NULL)
+    return SVN_NO_ERROR;
+
+  /* Make sure we don't see the root as its own parent */
+  SVN_ERR_ASSERT(!svn_dirent_is_root(child_pdh->local_abspath,
+                                     strlen(child_pdh->local_abspath)));
+
+  parent_abspath = svn_dirent_dirname(child_pdh->local_abspath, scratch_pool);
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(parent_pdh, &local_relpath, db,
+                              parent_abspath, smode,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(*parent_pdh);
+
+  child_pdh->parent = *parent_pdh;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_drop_root(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *root_pdh = apr_hash_get(db->dir_data, local_abspath,
+                                            APR_HASH_KEY_STRING);
+  apr_hash_index_t *hi;
+  apr_status_t result;
+
+  if (!root_pdh)
+    return SVN_NO_ERROR;
+
+  if (!root_pdh->wcroot || strcmp(root_pdh->wcroot->abspath, local_abspath))
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                             _("'%s' is not a working copy root"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, db->dir_data);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_wc__db_pdh_t *pdh = svn__apr_hash_index_val(hi);
+
+      if (pdh->wcroot == root_pdh->wcroot)
+        apr_hash_set(db->dir_data,
+                     pdh->local_abspath, svn__apr_hash_index_klen(hi), NULL);
+    }
+
+  result = apr_pool_cleanup_run(db->state_pool, root_pdh->wcroot, close_wcroot);
+  if (result != APR_SUCCESS)
+    return svn_error_wrap_apr(result, NULL);
 
   return SVN_NO_ERROR;
 }

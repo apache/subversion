@@ -775,6 +775,11 @@ def commit_a_copy_of_root(sbox):
   #Testcase for issue 3438.
   run_test(sbox, "repo_with_copy_of_root_dir.dump")
 
+# issue #3641
+def descend_into_replace(sbox):
+  "descending into replaced dir looks in src"
+  run_test(sbox, "descend_into_replace.dump", subdir='/trunk/H',
+           exp_dump_file_name = "descend_into_replace.expected.dump")
 
 ########################################################################
 # Run the tests
@@ -788,8 +793,8 @@ test_list = [ None,
               modified_in_place,
               tag_empty_trunk,
               tag_trunk_with_dir,
-              tag_trunk_with_file2,
               tag_trunk_with_file,
+              tag_trunk_with_file2,
               tag_with_modified_file,
               dir_prop_change,
               file_dir_file,
@@ -815,6 +820,7 @@ test_list = [ None,
               copy_bad_line_endings,
               delete_svn_props,
               commit_a_copy_of_root,
+              descend_into_replace,
              ]
 
 if __name__ == '__main__':

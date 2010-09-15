@@ -45,8 +45,6 @@
 #include "adm_files.h"
 #include "props.h"
 #include "translate.h"
-#include "entries.h"
-#include "lock.h"
 #include "workqueue.h"
 #include "conflicts.h"
 
@@ -62,12 +60,16 @@
    last-commit-time.  Either way, set entry-timestamp to match that of
    the working file when all is finished.
 
+   If REMOVE_TEXT_CONFLICT is TRUE, remove an existing text conflict
+   from LOCAL_ABSPATH.
+
    Not that a valid access baton with a write lock to the directory of
    LOCAL_ABSPATH must be available in DB.*/
 static svn_error_t *
 restore_file(svn_wc__db_t *db,
              const char *local_abspath,
              svn_boolean_t use_commit_times,
+             svn_boolean_t remove_text_conflicts,
              apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item;
@@ -89,8 +91,67 @@ restore_file(svn_wc__db_t *db,
                          scratch_pool));
 
   /* Remove any text conflict */
-  return svn_error_return(svn_wc__resolve_text_conflict(db, local_abspath,
+  if (remove_text_conflicts)
+    SVN_ERR(svn_wc__resolve_text_conflict(db, local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_restore(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t use_commit_times,
+               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_node_kind_t disk_kind;
+
+  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+
+  if (disk_kind != svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
+                             _("The existing node '%s' can not be restored."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  switch (status)
+    {
+      case svn_wc__db_status_added:
+        SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
+                                         wc_ctx->db, local_abspath,
+                                         scratch_pool, scratch_pool));
+        if (status != svn_wc__db_status_added)
+          break; /* Has pristine version */
+      case svn_wc__db_status_deleted:
+      case svn_wc__db_status_not_present:
+      case svn_wc__db_status_absent:
+      case svn_wc__db_status_excluded:
+        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                 _("The node '%s' can not be restored."),
+                                 svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
+      default:
+        break;
+    }
+
+  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
+    SVN_ERR(restore_file(wc_ctx->db, local_abspath, use_commit_times, FALSE,
+                         scratch_pool));
+  else
+    SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
@@ -98,14 +159,10 @@ restore_file(svn_wc__db_t *db,
    If USE_COMMIT_TIMES is set, then set working file's timestamp to
    last-commit-time.
 
-   Set RESTORED to TRUE if the node is successfull restored. RESTORED will
-   be FALSE if restoring this node is not supported.
-
    This function does all temporary allocations in SCRATCH_POOL
  */
 static svn_error_t *
-restore_node(svn_boolean_t *restored,
-             svn_wc__db_t *db,
+restore_node(svn_wc__db_t *db,
              const char *local_abspath,
              svn_wc__db_kind_t kind,
              svn_boolean_t use_commit_times,
@@ -113,27 +170,26 @@ restore_node(svn_boolean_t *restored,
              void *notify_baton,
              apr_pool_t *scratch_pool)
 {
-  *restored = FALSE;
-
-  /* Currently we can only restore files, but we will be able to restore
-     directories after we move to a single database and pristine store. */
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
-      /* ... recreate file from text-base, and ... */
-      SVN_ERR(restore_file(db, local_abspath, use_commit_times,
+      /* Recreate file from text-base */
+      SVN_ERR(restore_file(db, local_abspath, use_commit_times, TRUE,
                            scratch_pool));
+    }
+  else if (kind == svn_wc__db_kind_dir)
+    {
+      /* Recreating a directory is just a mkdir */
+      SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
+    }
 
-      *restored = TRUE;
-      /* ... report the restoration to the caller.  */
-      if (notify_func != NULL)
-        {
-          svn_wc_notify_t *notify = svn_wc_create_notify(
-                                            local_abspath,
-                                            svn_wc_notify_restore,
-                                            scratch_pool);
-          notify->kind = svn_node_file;
-          (*notify_func)(notify_baton, notify, scratch_pool);
-        }
+  /* ... report the restoration to the caller.  */
+  if (notify_func != NULL)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
+                                                     svn_wc_notify_restore,
+                                                     scratch_pool);
+      notify->kind = svn_node_file;
+      (*notify_func)(notify_baton, notify, scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -235,6 +291,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
   int i;
   const char *dir_repos_root, *dir_repos_relpath;
   svn_depth_t dir_depth;
+  svn_error_t *err;
 
 
   /* Get both the SVN Entries and the actual on-disk entries.   Also
@@ -243,7 +300,18 @@ report_revisions_and_depths(svn_wc__db_t *db,
   dir_abspath = svn_dirent_join(anchor_abspath, dir_path, scratch_pool);
   SVN_ERR(svn_wc__db_base_get_children(&base_children, db, dir_abspath,
                                        scratch_pool, iterpool));
-  SVN_ERR(svn_io_get_dir_filenames(&dirents, dir_abspath, scratch_pool));
+
+  err = svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
+                            scratch_pool, scratch_pool);
+
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      dirents = apr_hash_make(scratch_pool);
+    }
+  else
+    SVN_ERR(err);
 
   /*** Do the real reporting and recursing. ***/
 
@@ -280,7 +348,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
       svn_depth_t this_depth;
       svn_wc__db_lock_t *this_lock;
       svn_boolean_t this_switched;
-      svn_error_t *err;
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
@@ -290,45 +357,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
       this_path = svn_dirent_join(dir_path, child, iterpool);
       this_abspath = svn_dirent_join(dir_abspath, child, iterpool);
 
-      err = svn_wc__db_base_get_info(&this_status, &this_kind, &this_rev,
-                                     &this_repos_relpath, &this_repos_root_url,
-                                     NULL, NULL, NULL, NULL, NULL, &this_depth,
-                                     NULL, NULL, NULL, &this_lock,
-                                     db, this_abspath, iterpool, iterpool);
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_return(err);
-
-          /* THIS_ABSPATH was listed as a BASE child of DIR_ABSPATH. Yet,
-             we just got an error trying to read it. What gives? :-P
-
-             This happens when THIS_ABSPATH is a subdirectory that is
-             marked in the parent stub as "not-present". The subdir is
-             then removed. Later, an addition is scheduled, putting the
-             subdirectory back, but ONLY containing WORKING nodes.
-
-             Thus, the BASE fetch comes out of the subdir, and fails.
-
-             For this case, we go ahead and treat this as a simple
-             not-present, and ignore whatever is in the subdirectory.  */
-          svn_error_clear(err);
-
-          this_status = svn_wc__db_status_not_present;
-
-          /* Note: the other THIS_* local variables pass to base_get_info
-             are NOT set at this point. But we don't need them...  */
-        }
-
-      /* Note: some older code would attempt to check the parent stub
-         of subdirectories for the not-present state. That check was
-         redundant since a not-present directory has no BASE nodes
-         within it which may report another status.
-
-         There might be NO BASE node (per the condition above), but the
-         typical case is that base_get_info() reads the parent stub
-         because there is no subdir (with administrative data). Thus, we
-         already have all the information we need. No further testing.  */
+      SVN_ERR(svn_wc__db_base_get_info(&this_status, &this_kind, &this_rev,
+                                       &this_repos_relpath,
+                                       &this_repos_root_url,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       &this_depth,
+                                       NULL, NULL, NULL, &this_lock,
+                                       db, this_abspath, iterpool, iterpool));
 
       /* First check for exclusion */
       if (this_status == svn_wc__db_status_excluded)
@@ -383,7 +418,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
       /* Is the entry NOT on the disk? We may be able to restore it.  */
       if (apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
         {
-          svn_boolean_t missing = FALSE;
           svn_wc__db_status_t wrk_status;
           svn_wc__db_kind_t wrk_kind;
 
@@ -394,10 +428,18 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                        NULL, NULL,
                                        db, this_abspath, iterpool, iterpool));
 
-          if (restore_files && wrk_status != svn_wc__db_status_added
+          if (wrk_status == svn_wc__db_status_added)
+            SVN_ERR(svn_wc__db_scan_addition(&wrk_status, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             db, this_abspath,
+                                             iterpool, iterpool));
+
+          if (restore_files
+              && wrk_status != svn_wc__db_status_added
               && wrk_status != svn_wc__db_status_deleted
-              && wrk_status != svn_wc__db_status_obstructed_add
-              && wrk_status != svn_wc__db_status_obstructed_delete)
+              && wrk_status != svn_wc__db_status_excluded
+              && wrk_status != svn_wc__db_status_not_present
+              && wrk_status != svn_wc__db_status_absent)
             {
               svn_node_kind_t dirent_kind;
 
@@ -409,29 +451,10 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
               if (dirent_kind == svn_node_none)
                 {
-                  svn_boolean_t restored;
-
-                  SVN_ERR(restore_node(&restored, db, this_abspath, wrk_kind,
+                  SVN_ERR(restore_node(db, this_abspath, wrk_kind,
                                        use_commit_times, notify_func,
                                        notify_baton, iterpool));
-                  if (!restored)
-                    missing = TRUE;
                 }
-            }
-          else
-            missing = TRUE;
-
-          /* If a node is still missing from disk here, we have no way to
-             recreate it locally, so report as missing and move along.
-             Again, don't bother if we're reporting everything, because the
-             dir is already missing on the server. */
-          if (missing && wrk_kind == svn_wc__db_kind_dir
-               && (depth > svn_depth_files || depth == svn_depth_unknown))
-            {
-              if (! report_everything)
-                SVN_ERR(reporter->delete_path(report_baton, this_path,
-                                              iterpool));
-              continue;
             }
         }
 
@@ -527,21 +550,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
         {
           svn_boolean_t is_incomplete;
           svn_boolean_t start_empty;
-
-          /* If the subdir and its administrative area are not present,
-             then do NOT bother to report this node, much less recurse
-             into the thing.
-
-             Note: if the there is nothing on the disk, then we may have
-             reported it missing further above.
-
-             ### hmm. but what if we have a *file* obstructing the dir?
-             ### the code above will not report it, and we'll simply
-             ### skip it right here. I guess with an obstruction, we
-             ### can't really do anything with info the server might
-             ### send, so maybe this is just fine.  */
-          if (this_status == svn_wc__db_status_obstructed)
-            continue;
 
           is_incomplete = (this_status == svn_wc__db_status_incomplete);
           start_empty = is_incomplete;
@@ -719,13 +727,13 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *fserr, *err;
   svn_revnum_t target_rev = SVN_INVALID_REVNUM;
-  svn_boolean_t missing = FALSE;
   svn_boolean_t start_empty;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t target_kind = svn_wc__db_kind_unknown;
   const char *repos_relpath=NULL, *repos_root=NULL;
   svn_depth_t target_depth = svn_depth_unknown;
   svn_wc__db_lock_t *target_lock = NULL;
+  svn_node_kind_t disk_kind;
   svn_boolean_t explicit_rev;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -853,54 +861,57 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   if (target_depth == svn_depth_unknown)
     target_depth = svn_depth_infinity;
 
+  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+
+  /* Determine if there is a missing node that should be restored */
+  if (disk_kind == svn_node_none)
+    {
+      svn_wc__db_status_t wrk_status;
+      err = svn_wc__db_read_info(&wrk_status, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
+                                 db, local_abspath,
+                                 scratch_pool, scratch_pool);
+
+
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          wrk_status = svn_wc__db_status_not_present;
+        }
+      else
+        SVN_ERR(err);
+
+      if (wrk_status == svn_wc__db_status_added)
+        SVN_ERR(svn_wc__db_scan_addition(&wrk_status, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+      if (restore_files
+          && wrk_status != svn_wc__db_status_added
+          && wrk_status != svn_wc__db_status_deleted
+          && wrk_status != svn_wc__db_status_excluded
+          && wrk_status != svn_wc__db_status_not_present
+          && wrk_status != svn_wc__db_status_absent)
+        {
+          SVN_ERR(restore_node(wc_ctx->db, local_abspath,
+                               target_kind, use_commit_times,
+                               notify_func, notify_baton,
+                               scratch_pool));
+        }
+    }
+
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
   SVN_ERR(reporter->set_path(report_baton, "", target_rev, target_depth,
                              start_empty, NULL, scratch_pool));
 
-  /* ### status can NEVER be deleted. should examine why this was
-     ### ever here. we may have remapped into wc-ng incorrectly.  */
-  if (status != svn_wc__db_status_deleted)
-    {
-      apr_finfo_t info;
-      err = svn_io_stat(&info, local_abspath, APR_FINFO_MIN, scratch_pool);
-      if (err)
-        {
-          if (APR_STATUS_IS_ENOENT(err->apr_err))
-            missing = TRUE;
-          svn_error_clear(err);
-          err = NULL;
-        }
-    }
-
-  if (missing && restore_files)
-    {
-      svn_boolean_t restored;
-
-      err = restore_node(&restored, wc_ctx->db, local_abspath,
-                         target_kind, use_commit_times,
-                         notify_func, notify_baton,
-                         scratch_pool);
-
-      if (err)
-          goto abort_report;
-
-      if (restored)
-        missing = FALSE;
-    }
-
   if (target_kind == svn_wc__db_kind_dir)
     {
-      if (missing)
-        {
-          /* Report missing directories as deleted to retrieve them
-             from the repository. */
-          err = reporter->delete_path(report_baton, "", scratch_pool);
-          if (err)
-            goto abort_report;
-        }
-      else if (depth != svn_depth_empty)
+      if (depth != svn_depth_empty)
         {
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
@@ -930,7 +941,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       svn_wc__db_status_t parent_status;
       const char *parent_repos_relpath;
 
-      svn_dirent_split(local_abspath, &parent_abspath, &base,
+      svn_dirent_split(&parent_abspath, &base, local_abspath,
                        scratch_pool);
 
       /* We can assume a file is in the same repository as its parent
@@ -1102,21 +1113,20 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
   /* If the caller wants a copy of the working file translated to
    * repository-normal form, make the copy by tee-ing the stream and set
-   * *TEMPFILE to the path to it. */
+   * *TEMPFILE to the path to it.  This is only needed for the 1.6 API,
+   * 1.7 doesn't set TEMPFILE.  Even when using the 1.6 API this file
+   * is not used by the functions that would have used it when using
+   * the 1.6 code.  It's possible that 3rd party users (if there are any)
+   * might expect this file to be a text-base. */
   if (tempfile)
     {
       svn_stream_t *tempstream;
 
-      SVN_ERR(svn_wc__text_base_deterministic_tmp_path(tempfile,
-                                                       db, local_abspath,
-                                                       result_pool));
-
-      /* Make an untranslated copy of the working file in the
-         administrative tmp area because a) we need to detranslate eol
-         and keywords anyway, and b) after the commit, we're going to
-         copy the tmp file to become the new text base anyway. */
-      SVN_ERR(svn_stream_open_writable(&tempstream, *tempfile,
-                                       scratch_pool, scratch_pool));
+      /* It can't be the same location as in 1.6 because the admin directory
+         no longer exists. */
+      SVN_ERR(svn_stream_open_unique(&tempstream, tempfile,
+                                     NULL, svn_io_file_del_none,
+                                     result_pool, scratch_pool));
 
       /* Wrap the translated stream with a new stream that writes the
          translated contents into the new text base file as we read from it.
@@ -1302,12 +1312,10 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                                    result_pool);
   if (new_text_base_sha1_checksum)
     {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
       SVN_ERR(svn_wc__db_pristine_install(db, new_pristine_tmp_abspath,
                                           local_sha1_checksum,
                                           local_md5_checksum,
                                           scratch_pool));
-#endif
       *new_text_base_sha1_checksum = svn_checksum_dup(local_sha1_checksum,
                                                       result_pool);
     }
@@ -1320,8 +1328,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas3(const char **tempfile,
-                             const svn_checksum_t **new_text_base_md5_checksum,
+svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
                              const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
@@ -1331,7 +1338,7 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  return svn_wc__internal_transmit_text_deltas(tempfile,
+  return svn_wc__internal_transmit_text_deltas(NULL,
                                                new_text_base_md5_checksum,
                                                new_text_base_sha1_checksum,
                                                wc_ctx->db, local_abspath,

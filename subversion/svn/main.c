@@ -121,6 +121,8 @@ typedef enum {
   opt_ignore_whitespace,
   opt_show_diff,
   opt_internal_diff,
+  opt_use_git_diff_format,
+  opt_old_patch_target_names,
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -282,7 +284,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
   {"limit",         'l', 1, N_("maximum number of log entries")},
-  {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets")},
+  {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets\n"
+                       "                             "
+                       "[aliases: --nul, --keep-lock]")},
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
@@ -354,6 +358,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"reverse-diff", opt_reverse_diff, 0,
                     N_("apply the unidiff in reverse\n"
                        "                             "
+                       "This option also reverses patch target names; the\n"
+                       "                             "
+                       "--old-patch-target-names option will prevent this.\n"
+                       "                             "
                        "[alias: --rd]")},
   {"ignore-whitespace", opt_ignore_whitespace, 0,
                        N_("ignore whitespace during pattern matching\n"
@@ -367,6 +375,22 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("override diff-cmd specified in config file\n"
                        "                             "
                        "[alias: --idiff]")},
+  {"git", opt_use_git_diff_format, 0,
+                       N_("use git's extended diff format\n")},
+                  
+  {"old-patch-target-names", opt_old_patch_target_names, 0,
+                       N_("use target names from the old side of a patch.\n"
+                       "                             "
+                       "If a diff header contains\n"
+                       "                             "
+                       "  --- foo.c\n"
+                       "                             "
+                       "  +++ foo.c.new\n"
+                       "                             "
+                       "this option will cause the name \"foo.c\" to be used\n"
+                       "                             "
+                       "[alias: --optn]")},
+
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -395,6 +419,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"iw",            opt_ignore_whitespace, 0, NULL},
   {"diff",          opt_show_diff, 0, NULL},
   {"idiff",         opt_internal_diff, 0, NULL},
+  {"nul",           opt_no_unlock, 0, NULL},
+  {"keep-lock",     opt_no_unlock, 0, NULL},
+  {"optn",          opt_old_patch_target_names, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -459,8 +486,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "changelist", svn_cl__changelist, {"cl"}, N_
     ("Associate (or dissociate) changelist CLNAME with the named files.\n"
-     "usage: 1. changelist CLNAME TARGET...\n"
-     "       2. changelist --remove TARGET...\n"),
+     "usage: 1. changelist CLNAME PATH...\n"
+     "       2. changelist --remove PATH...\n"),
     { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
@@ -493,7 +520,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Recursively clean up the working copy, removing locks, resuming\n"
      "unfinished operations, etc.\n"
-     "usage: cleanup [PATH...]\n"),
+     "usage: cleanup [WCPATH...]\n"),
     {opt_merge_cmd} },
 
   { "commit", svn_cl__commit, {"ci"},
@@ -539,7 +566,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    committed, are immediately removed from the working copy\n"
      "    unless the --keep-local option is given.\n"
      "    PATHs that are, or contain, unversioned or modified items will\n"
-     "    not be removed unless the --force option is given.\n"
+     "    not be removed unless the --force or --keep-local option is given.\n"
      "\n"
      "  2. Each item specified by a URL is deleted from the repository\n"
      "    via an immediate commit.\n"),
@@ -571,7 +598,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
      opt_internal_diff, 'x', opt_no_diff_deleted, opt_show_copies_as_adds,
-     opt_notice_ancestry, opt_summarize, opt_changelist, opt_force, opt_xml} },
+     opt_notice_ancestry, opt_summarize, opt_changelist, opt_force, opt_xml,
+     opt_use_git_diff_format} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -657,15 +685,18 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      {opt_force_log, N_("force validity of lock comment source")}} },
 
   { "log", svn_cl__log, {0}, N_
-    ("Show the log messages for a set of revision(s) and/or file(s).\n"
-     "usage: 1. log [PATH]\n"
+    ("Show the log messages for a set of revision(s) and/or path(s).\n"
+     "usage: 1. log [PATH][@REV]\n"
      "       2. log URL[@REV] [PATH...]\n"
      "\n"
-     "  1. Print the log messages for a local PATH (default: '.').\n"
-     "     The default revision range is BASE:1.\n"
+     "  1. Print the log messages for the URL corresponding to PATH\n"
+     "     (default: '.'). If specified, REV is the revision in which the\n"
+     "     URL is first looked up, and the default revision range is REV:1.\n"
+     "     If REV is not specified, the default revision range is BASE:1,\n"
+     "     since the URL might not exist in the HEAD revision.\n"
      "\n"
      "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
-     "     If specified, REV determines in which revision the URL is first\n"
+     "     If specified, REV is the revision in which the URL is first\n"
      "     looked up, and the default revision range is REV:1; otherwise,\n"
      "     the URL is looked up in HEAD, and the default revision range is\n"
      "     HEAD:1.\n"
@@ -686,8 +717,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Examples:\n"
      "    svn log\n"
      "    svn log foo.c\n"
+     "    svn log bar.c@42\n"
      "    svn log http://www.example.com/repo/project/foo.c\n"
-     "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
+     "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+     "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
      opt_show_diff, opt_diff_cmd, opt_internal_diff, 'x'},
@@ -838,7 +871,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  do not agree with.\n"
      ),
     {'q', opt_dry_run, opt_strip_count, opt_reverse_diff,
-     opt_ignore_whitespace} },
+     opt_ignore_whitespace, opt_old_patch_target_names} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -924,20 +957,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      A mimetype beginning with 'text/' (or an absent mimetype) is\n"
      "      treated as text.  Anything else is treated as binary.\n"
      "    svn:externals  - A newline separated list of module specifiers,\n"
-     "      each of which consists of a relative directory path, optional\n"
-     "      revision flags and an URL.  The ordering of the three elements\n"
-     "      implements different behavior.  Subversion 1.4 and earlier only\n"
-     "      support the following formats and the URLs cannot have peg\n"
-     "      revisions:\n"
-     "        foo             http://example.com/repos/zig\n"
-     "        foo/bar -r 1234 http://example.com/repos/zag\n"
-     "      Subversion 1.5 and greater support the above formats and the\n"
-     "      following formats where the URLs may have peg revisions:\n"
-     "                http://example.com/repos/zig@42 foo\n"
-     "        -r 1234 http://example.com/repos/zig foo/bar\n"
-     "      Relative URLs are supported in Subversion 1.5 and greater for\n"
-     "      all above formats and are indicated by starting the URL with one\n"
-     "      of the following strings\n"
+     "      each of which consists of a URL and a relative directory path,\n"
+     "      similar to the syntax of the 'svn checkout' command:\n"
+     "        http://example.com/repos/zag foo/bar\n"
+     "      An optional peg revision may be appended to the URL to pin the\n"
+     "      external to a known revision:\n"
+     "        http://example.com/repos/zig@42 foo\n"
+     "      Relative URLs are indicated by starting the URL with one\n"
+     "      of the following strings:\n"
      "        ../  to the parent directory of the extracted external\n"
      "        ^/   to the repository root\n"
      "        //   to the scheme\n"
@@ -946,6 +973,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      'relative_url relative_path' with peg revision support.\n"
      "      Lines in externals definitions starting with the '#' character\n"
      "      are considered comments and are ignored.\n"
+     "      Subversion 1.4 and earlier only support the following formats\n"
+     "      where peg revisions can only be specified using a -r modifier\n"
+     "      and where URLs cannot be relative:\n"
+     "        foo             http://example.com/repos/zig\n"
+     "        foo/bar -r 1234 http://example.com/repos/zag\n"
+     "      Use of these formats is discouraged. They should only be used if\n"
+     "      interoperability with 1.4 clients is desired.\n"
      "    svn:needs-lock - If present, indicates that the file should be locked\n"
      "      before it is modified.  Makes the working copy file read-only\n"
      "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
@@ -1046,10 +1080,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      ' ' the working copy is up to date\n"
      "\n"
      "  Remaining fields are variable width and delimited by spaces:\n"
-     "    The working revision (with -u or -v)\n"
+     "    The working revision (with -u or -v; '-' if the item is copied)\n"
      "    The last committed revision and last committed author (with -v)\n"
      "    The working copy path is always the final field, so it can\n"
      "      include spaces.\n"
+     "\n"
+     "  The presence of a question mark ('?') where a working revision, last\n"
+     "  committed revision, or last committed author was expected indicates\n"
+     "  that the information is unknown or irrelevant given the state of the\n"
+     "  item (for example, when the item is the result of a copy operation).\n"
+     "  The question mark serves as a visual placeholder to facilitate parsing.\n"
      "\n"
      "  Example output:\n"
      "    svn status wc\n"
@@ -1059,13 +1099,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn status -u wc\n"
      "     M           965    wc/bar.c\n"
      "           *     965    wc/foo.c\n"
-     "    A  +         965    wc/qax.c\n"
+     "    A  +           -    wc/qax.c\n"
      "    Status against revision:   981\n"
      "\n"
      "    svn status --show-updates --verbose wc\n"
      "     M           965       938 kfogel       wc/bar.c\n"
      "           *     965       922 sussman      wc/foo.c\n"
-     "    A  +         965       687 joe          wc/qax.c\n"
+     "    A  +           -       687 joe          wc/qax.c\n"
      "                 965       687 joe          wc/zig.c\n"
      "    Status against revision:   981\n"
      "\n"
@@ -1173,7 +1213,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"
-     "usage: upgrade TARGET...\n"),
+     "usage: upgrade WCPATH...\n"),
     {0} },
 
   { NULL, NULL, {0}, NULL, {0} }
@@ -1764,6 +1804,12 @@ main(int argc, const char *argv[])
       case opt_internal_diff:
         opt_state.internal_diff = TRUE;
         break;
+      case opt_use_git_diff_format:
+        opt_state.use_git_diff_format = TRUE;
+        break;
+      case opt_old_patch_target_names:
+        opt_state.old_patch_target_names = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -2199,6 +2245,16 @@ main(int argc, const char *argv[])
   /* Set the log message callback function.  Note that individual
      subcommands will populate the ctx->log_msg_baton3. */
   ctx->log_msg_func3 = svn_cl__get_log_message;
+
+  /* Set up the notifier. */
+  if (((subcommand->cmd_func != svn_cl__status) && !opt_state.quiet)
+        || ((subcommand->cmd_func == svn_cl__status) && !opt_state.xml))
+    {
+      err = svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, pool);
+      if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
 
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;

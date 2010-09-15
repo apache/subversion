@@ -133,14 +133,13 @@ class SvnInfoTest < Test::Unit::TestCase
       assert_equal([].sort, info.deleted_dirs)
       assert_equal(["#{dir_svn_path}/", "#{tmp_dir_svn_path}/"].sort,
                    info.added_dirs)
-
-      File.open(file1_path, "w") {|f| f.puts "changed"}
-      File.open(file2_path, "w") {|f| f.puts "changed"}
-      File.open(file3_path, "w") {|f| f.puts "changed"}
     end
 
     log = "changed 3 files\ndeleted 2 files\nadded 3 files"
     make_context(log) do |ctx|
+      File.open(file1_path, "w") {|f| f.puts "changed"}
+      File.open(file2_path, "w") {|f| f.puts "changed"}
+      File.open(file3_path, "w") {|f| f.puts "changed"}
       ctx.rm_f([file4_path, file5_path])
       FileUtils.touch(file6_path)
       FileUtils.touch(file7_path)

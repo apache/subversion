@@ -284,9 +284,9 @@ svn_cl__diff(apr_getopt_t *os,
         }
 
       if (url_present && working_copy_present)
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Target lists to diff may not contain "
-                                   "both working copy paths and URLs"));
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                  _("Cannot mix repository and working copy "
+                                    "targets"));
 
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified
           && working_copy_present)
@@ -349,6 +349,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->no_diff_deleted,
                      opt_state->show_copies_as_adds,
                      opt_state->force,
+                     opt_state->use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,
@@ -393,6 +394,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->no_diff_deleted,
                      opt_state->show_copies_as_adds,
                      opt_state->force,
+                     opt_state->use_git_diff_format,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,

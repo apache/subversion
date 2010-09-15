@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef _MSC_VER
+#if defined(WIN32) || defined(__OS2__)
 #include <direct.h>
 #define getcwd _getcwd
 #define getdcwd _getdcwd
@@ -40,6 +40,11 @@
 #include "../svn_test.h"
 
 #define SVN_EMPTY_PATH ""
+
+/* This check must match the check on top of dirent_uri.c */
+#if defined(WIN32) || defined(__CYGWIN__) || defined(__OS2__)
+#define SVN_USE_DOS_PATHS
+#endif
 
 #define COUNT_OF(x) (sizeof(x) / sizeof(x[0]))
 
@@ -57,7 +62,7 @@ test_dirent_is_root(apr_pool_t *pool)
     { "/foo/bar",      FALSE },
     { "/foo",          FALSE },
     { "",              FALSE },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/foo",        FALSE },
     { "X:/",           TRUE },
     { "X:foo",         FALSE }, /* Based on non absolute root */
@@ -66,11 +71,11 @@ test_dirent_is_root(apr_pool_t *pool)
     { "//srv/shr/fld", FALSE },
     { "//srv/s r",     TRUE },
     { "//srv/s r/fld", FALSE },
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "/",             TRUE },
     { "/X:foo",        FALSE },
     { "/X:",           FALSE },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -145,7 +150,7 @@ test_dirent_is_absolute(apr_pool_t *pool)
     { "foo/bar",       FALSE },
     { "foo",           FALSE },
     { "",              FALSE },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "/foo/bar",      FALSE },
     { "/foo",          FALSE },
     { "/",             FALSE },
@@ -157,13 +162,13 @@ test_dirent_is_absolute(apr_pool_t *pool)
     { "//srv/shr/fld", TRUE },
     { "//srv/s r",     TRUE },
     { "//srv/s r/fld", TRUE },
-#else/* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "/foo/bar",      TRUE },
     { "/foo",          TRUE },
     { "/",             TRUE },
     { "X:/foo",        FALSE },
     { "X:/",           FALSE },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
     { "X:foo",         FALSE }, /* Not special on Posix, relative on Windows */
     { "X:foo/bar",     FALSE },
     { "X:",            FALSE },
@@ -269,7 +274,7 @@ test_dirent_join(apr_pool_t *pool)
     { SVN_EMPTY_PATH, "/abc", "/abc" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "/", "/", "/" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/", SVN_EMPTY_PATH, "X:/" },
     { "X:/", "abc", "X:/abc" },
     { "X:/", "/def", "X:/def" },
@@ -292,11 +297,11 @@ test_dirent_join(apr_pool_t *pool)
     { "aa", "A:", "A:" },
     { "aa", "A:file", "A:file"},
     { "A:", "/", "A:/" },
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "X:abc", "X:/def", "X:abc/X:/def" },
     { "X:","abc", "X:/abc" },
     { "X:/abc", "X:/def", "X:/abc/X:/def" },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
 
   for (i = 0; i < COUNT_OF(joins); i++ )
@@ -360,7 +365,7 @@ test_dirent_join(apr_pool_t *pool)
   TEST_MANY((pool, SVN_EMPTY_PATH, "/", SVN_EMPTY_PATH, NULL), "/");
   TEST_MANY((pool, SVN_EMPTY_PATH, SVN_EMPTY_PATH, "/", NULL), "/");
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   TEST_MANY((pool, "X:/", "def", "ghi", NULL), "X:/def/ghi");
   TEST_MANY((pool, "abc", "X:/", "ghi", NULL), "X:/ghi");
   TEST_MANY((pool, "abc", "def", "X:/", NULL), "X:/");
@@ -389,12 +394,12 @@ test_dirent_join(apr_pool_t *pool)
   TEST_MANY((pool, "abcd", "/dir", "A:", "file", NULL), "A:file");
   TEST_MANY((pool, "abcd", "A:", "/dir", "file", NULL), "A:/dir/file");
 
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
   TEST_MANY((pool, "X:", "def", "ghi", NULL), "X:/def/ghi");
   TEST_MANY((pool, "X:", SVN_EMPTY_PATH, "ghi", NULL), "X:/ghi");
   TEST_MANY((pool, "X:", "def", SVN_EMPTY_PATH, NULL), "X:/def");
   TEST_MANY((pool, SVN_EMPTY_PATH, "X:", "ghi", NULL), "X:/ghi");
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
 
   /* ### probably need quite a few more tests... */
 
@@ -412,6 +417,8 @@ test_relpath_join(apr_pool_t *pool)
     { "a", "def", "a/def" },
     { "a", "d", "a/d" },
     { SVN_EMPTY_PATH, "abc", "abc" },
+    { "abc", SVN_EMPTY_PATH, "abc" },
+    { "", "", "" },
   };
 
   for (i = 0; i < COUNT_OF(joins); i++)
@@ -515,7 +522,7 @@ test_dirent_basename(apr_pool_t *pool)
     { "/", "" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "X:/abc", "abc" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:", "" },
     { "X:/", "" },
     { "X:abc", "abc" },
@@ -523,10 +530,10 @@ test_dirent_basename(apr_pool_t *pool)
     { "//srv/shr/fld", "fld" },
     { "//srv/shr/fld/subfld", "subfld" },
     { "//srv/s r/fld", "fld" },
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "X:", "X:" },
     { "X:abc", "X:abc" },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -633,7 +640,7 @@ test_dirent_dirname(apr_pool_t *pool)
     { "/", "/" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "X:abc/def", "X:abc" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/", "X:/" },
     { "X:/abc", "X:/" },
     { "X:abc", "X:" },
@@ -642,11 +649,11 @@ test_dirent_dirname(apr_pool_t *pool)
     { "//srv/shr/fld",  "//srv/shr" },
     { "//srv/shr/fld/subfld", "//srv/shr/fld" },
     { "//srv/s r/fld",  "//srv/s r" },
-#else  /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     /* on non-Windows platforms, ':' is allowed in pathnames */
     { "X:", "" },
     { "X:abc", "" },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -776,7 +783,7 @@ test_dirent_canonicalize(apr_pool_t *pool)
     { "X:",                   "X:" },
     { "X:foo",                "X:foo" },
     { "C:/folder/subfolder/file", "C:/folder/subfolder/file" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/",                  "X:/" },
     { "X:/./",                "X:/" },
     { "x:/",                  "X:/" },
@@ -793,7 +800,7 @@ test_dirent_canonicalize(apr_pool_t *pool)
     { "//SERVER/SHare/",      "//server/SHare" },
     { "//srv/s r",            "//srv/s r" },
     { "//srv/s r/qq",         "//srv/s r/qq" },
-#endif /* WIN32 or Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
   };
   int i;
 
@@ -963,15 +970,15 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "s://d/c#",              "s://d/c%23" }, /* Escape schema separator */
     { "s://d/c($) .+?",        "s://d/c($)%20.+%3F" }, /* Test special chars */
     { "file:///C%3a/temp",     "file:///C:/temp" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "file:///c:/temp/repos", "file:///c:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
   int i;
 
@@ -1036,7 +1043,7 @@ test_dirent_is_canonical(apr_pool_t *pool)
     { "X:foo",                 TRUE },
     { "X:foo/",                FALSE },
     { "file with spaces",      TRUE },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/",                   TRUE },
     { "X:/foo",                TRUE },
     { "X:",                    TRUE },
@@ -1055,13 +1062,13 @@ test_dirent_is_canonical(apr_pool_t *pool)
     { "//server/SHare",        TRUE },
     { "//SERVER/SHare",        FALSE },
     { "//srv/SH RE",           TRUE },
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "X:/",                   FALSE },
     /* Some people use colons in their filenames. */
     { ":", TRUE },
     { ".:", TRUE },
     { "foo/.:", TRUE },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
   int i;
 
@@ -1262,15 +1269,15 @@ test_uri_is_canonical(apr_pool_t *pool)
     { "file:///folder/c#",      FALSE }, /* # needs escaping */
     { "file:///fld/with space", FALSE }, /* # needs escaping */
     { "file:///fld/c%23",       TRUE }, /* Properly escaped C# */
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },
     { "file:///C:/temp/REPOS", TRUE },
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "file:///c:/temp/repos", TRUE },
     { "file:///c:/temp/REPOS", TRUE },
     { "file:///C:/temp/REPOS", TRUE },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
   int i;
 
@@ -1324,23 +1331,23 @@ test_dirent_split(apr_pool_t *pool)
     { "/",               "/",             "" },
     { "X:/foo/bar",      "X:/foo",        "bar" },
     { "X:foo/bar",       "X:foo",         "bar" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/",             "X:/",           "" },
     { "X:/foo",          "X:/",           "foo" },
     { "X:foo",           "X:",            "foo" },
     { "//srv/shr",       "//srv/shr",     "" },
     { "//srv/shr/fld",   "//srv/shr",     "fld" },
     { "//srv/s r",       "//srv/s r",     "" },
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "X:foo",           SVN_EMPTY_PATH,  "X:foo" },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
 
   for (i = 0; i < COUNT_OF(paths); i++)
     {
       const char *dir, *base_name;
 
-      svn_dirent_split(paths[i][0], &dir, &base_name, pool);
+      svn_dirent_split(&dir, &base_name, paths[i][0], pool);
       if (strcmp(dir, paths[i][1]))
         {
           return svn_error_createf
@@ -1375,7 +1382,7 @@ test_relpath_split(apr_pool_t *pool)
     {
       const char *dir, *base_name;
 
-      svn_relpath_split(paths[i][0], &dir, &base_name, pool);
+      svn_relpath_split( &dir, &base_name, paths[i][0], pool);
       if (strcmp(dir, paths[i][1]))
         {
           return svn_error_createf
@@ -1414,7 +1421,7 @@ test_uri_split(apr_pool_t *pool)
     {
       const char *dir, *base_name;
 
-      svn_uri_split(paths[i][0], &dir, &base_name, pool);
+      svn_uri_split(&dir, &base_name, paths[i][0], pool);
       if (strcmp(dir, paths[i][1]))
         {
           return svn_error_createf
@@ -1461,7 +1468,7 @@ test_dirent_is_ancestor(apr_pool_t *pool)
     { SVN_EMPTY_PATH,    SVN_EMPTY_PATH,  TRUE},
     { "/",               "/",             TRUE},
     { "X:foo",           "X:bar",         FALSE},
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "//srv/shr",       "//srv",         FALSE},
     { "//srv/shr",       "//srv/shr/fld", TRUE },
     { "//srv/s r",       "//srv/s r/fld", TRUE },
@@ -1473,10 +1480,10 @@ test_dirent_is_ancestor(apr_pool_t *pool)
     { "X:/",             "X:/foo",        TRUE},
     { "X:",              "X:foo",         TRUE},
     { SVN_EMPTY_PATH,    "C:/",           FALSE},
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "X:",              "X:foo",         FALSE},
     { SVN_EMPTY_PATH,    "C:/",           TRUE},
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -1612,7 +1619,7 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
     { "foo/bar",         "foo",             "foo"},
     { "/foo/bar",        "foo",             "foo"},
     { "/",               "bar/bla",         "bar/bla"},
-#ifdef WIN32
+#ifdef SVN_USE_DOS_PATHS
     { "A:/foo",          "A:/foo/bar",      "bar"},
     { "A:/foo",          "A:/foot",         "A:/foot"},
     { "A:/",             "A:/foo",          "foo"},
@@ -1750,7 +1757,7 @@ test_dirent_get_longest_ancestor(apr_pool_t *pool)
     { "/",              "/",               "/"},
     { "X:foo",          "Y:foo",           SVN_EMPTY_PATH},
     { "X:/folder1",     "Y:/folder2",      SVN_EMPTY_PATH},
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "X:/",            "X:/",             "X:/"},
     { "X:/foo/bar/A/D/H/psi", "X:/foo/bar/A/B", "X:/foo/bar/A" },
     { "X:/foo/bar/boo", "X:/foo/bar/baz/boz", "X:/foo/bar"},
@@ -1764,12 +1771,12 @@ test_dirent_get_longest_ancestor(apr_pool_t *pool)
     { "X:",             "X:foo",           "X:"},
     { "X:",             "X:/",             SVN_EMPTY_PATH},
     { "X:foo",          "X:bar",           "X:"},
-#else /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "X:/foo",         "X:",              "X:"},
     { "X:/folder1",     "X:/folder2",      "X:"},
     { "X:",             "X:foo",           SVN_EMPTY_PATH},
     { "X:foo",          "X:bar",           SVN_EMPTY_PATH},
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -1945,7 +1952,7 @@ test_dirent_is_child(apr_pool_t *pool)
     ".foo",
     "/",
     "foo2",
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     "//srv",
     "//srv2",
     "//srv/shr",
@@ -1960,7 +1967,7 @@ test_dirent_is_child(apr_pool_t *pool)
     "H:",
     "H:foo",
     "H:foo/baz",
-#endif /* Win32 and Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
     };
 
   /* Maximum number of path[] items for all platforms */
@@ -1991,7 +1998,7 @@ test_dirent_is_child(apr_pool_t *pool)
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     /* //srv paths */
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, "shr", "shr/fld", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -2024,7 +2031,7 @@ test_dirent_is_child(apr_pool_t *pool)
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "baz" },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-#endif /* Win32 and Cygwin */
+#endif /* SVN_USE_DOS_PATHS */
   };
 
   for (i = 0; i < COUNT_OF(paths); i++)
@@ -2233,10 +2240,10 @@ test_dirent_get_absolute(apr_pool_t *pool)
   int i;
   const char *curdir;
   char buf[8192];
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   const char *curdironc;
   char curdrive[3] = "C:";
-#endif /* WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
 
   struct {
     const char *path;
@@ -2245,7 +2252,7 @@ test_dirent_get_absolute(apr_pool_t *pool)
     /* '%' will be replaced by the current working dir. */
     { "abc", "%/abc" },
     { SVN_EMPTY_PATH, "%" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     /* '@' will be replaced by the current working dir on C:\. */
     /* '$' will be replaced by the current drive */
     { "C:/", "C:/" },
@@ -2262,12 +2269,12 @@ test_dirent_get_absolute(apr_pool_t *pool)
     { "//srv/shr",      "//srv/shr" },
     { "//srv/shr/fld",  "//srv/shr" },
     { "//srv/shr/fld/subfld", "//srv/shr/fld" }, */
-#else  /* WIN32 or Cygwin */
+#else /* !SVN_USE_DOS_PATHS */
     { "/abc", "/abc" },
     { "/x/abc", "/x/abc" },
     { "X:", "%/X:" },
     { "X:abc", "%/X:abc" },
-#endif /* non-WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
   };
 
   if (! getcwd(buf, sizeof(buf)))
@@ -2275,13 +2282,13 @@ test_dirent_get_absolute(apr_pool_t *pool)
 
   curdir = svn_dirent_internal_style(buf, pool);
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
   if (! getdcwd(3, buf, sizeof(buf))) /* 3 stands for drive C: */
     return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
 
   curdironc = svn_dirent_internal_style(buf, pool);
   curdrive[0] = curdir[0];
-#endif /* WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
 
   for (i = 0 ; i < COUNT_OF(tests) ; i++ )
     {
@@ -2292,7 +2299,7 @@ test_dirent_get_absolute(apr_pool_t *pool)
       expect_abs = expect;
       if (*expect == '%')
         expect_abs = apr_pstrcat(pool, curdir, expect + 1, NULL);
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
       if (*expect == '@')
         expect_abs = apr_pstrcat(pool, curdironc, expect + 1, NULL);
 
@@ -2301,7 +2308,7 @@ test_dirent_get_absolute(apr_pool_t *pool)
 
       /* Remove double '/' when CWD was the root dir (E.g. C:/) */
       expect_abs = svn_dirent_canonicalize(expect_abs, pool);
-#endif /* WIN32 */
+#endif /* SVN_USE_DOS_PATHS */
 
       SVN_ERR(svn_dirent_get_absolute(&result, path, pool));
       if (strcmp(result, expect_abs))
@@ -2389,7 +2396,7 @@ test_dirent_condense_targets(apr_pool_t *pool)
     { { "/dir", "/dir/file", NULL },         NULL,     { "", "file" } },
     { { "/dir1", "/dir2", NULL },            NULL,     { "dir1", "dir2" } },
     { { "dir1", "dir2", NULL },              NULL,     { "dir1", "dir2" } },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { {"C:/", "C:/zeta", NULL},              "C:/",    {"", "zeta"} },
     { {"C:/dir", "C:/dir/zeta", NULL},       "C:/dir", {"", "zeta"} },
     { {"C:/dir/omega", "C:/dir/zeta", NULL}, "C:/dir", {"omega", "zeta" } },
@@ -2518,7 +2525,7 @@ test_dirent_local_style(apr_pool_t *pool)
   } tests[] = {
     { "",                     "." },
     { ".",                    "." },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "A:/",                 "A:\\" },
     { "A:/file",             "A:\\file" },
     { "a:/",                 "A:\\" },
@@ -2561,7 +2568,7 @@ test_relpath_local_style(apr_pool_t *pool)
     { "",                     "." },
     { ".",                    "." },
     { "c:hi",                 "c:hi" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "dir/file",             "dir\\file" },
     { "a:/file",              "a:\\file" },
 #else
@@ -2598,7 +2605,7 @@ test_dirent_internal_style(apr_pool_t *pool)
     { "file",                "file" },
     { "dir/file",            "dir/file" },
     { "dir/file/./.",        "dir/file" },
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef SVN_USE_DOS_PATHS
     { "A:\\",                "A:/" },
     { "A:\\file",            "A:/file" },
     { "A:file",              "A:file" },
@@ -2665,6 +2672,188 @@ test_relpath_internal_style(apr_pool_t *pool)
                                  "svn_relpath_internal_style(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
                                  tests[i].path, internal, tests[i].result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_dirent_from_file_url(apr_pool_t *pool)
+{
+  struct {
+    const char *url;
+    const char *result;
+  } tests[] = {
+    { "file://",                   "/" },
+    { "file:///dir",               "/dir" },
+    { "file:///dir/path",          "/dir/path" },
+    { "file://localhost",          "/" },
+    { "file://localhost/dir",      "/dir" },
+    { "file://localhost/dir/path", "/dir/path" },
+#ifdef SVN_USE_DOS_PATHS
+    { "file://server/share",       "//server/share" },
+    { "file://server/share/dir",   "//server/share/dir" },
+    { "file:///A:",                "A:/" },
+    { "file:///A:/dir",            "A:/dir" },
+    { "file:///A:dir",             "A:dir" },
+    { "file:///A%7C",              "A:/" },
+    { "file:///A%7C/dir",          "A:/dir" },
+    { "file:///A%7Cdir",           "A:dir" },
+#endif
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *result;
+      
+      SVN_ERR(svn_uri_get_dirent_from_file_url(&result, tests[i].url, pool));
+
+      if (strcmp(result, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_get_dirent_from_file_url(\"%s\") "
+                                 "returned \"%s\" expected \"%s\"",
+                                 tests[i].url, result, tests[i].result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_dirent_from_file_url_errors(apr_pool_t *pool)
+{
+  const char *bad_file_urls[] = {
+    /* error if scheme is not "file" */
+    "http://localhost/dir",
+    "file+ssh://localhost/dir",
+#ifndef SVN_USE_DOS_PATHS
+    "file://localhostwrongname/dir",  /* error if host name not "localhost" */
+#endif
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(bad_file_urls); i++)
+    {
+      const char *result;
+      svn_error_t *err;
+
+      err = svn_uri_get_dirent_from_file_url(&result, bad_file_urls[i],
+                                             pool);
+
+      if (err == NULL)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_get_dirent_from_file_url(\"%s\") "
+                                 "didn't return an error.",
+                                 bad_file_urls[i]);
+      svn_error_clear(err);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_file_url_from_dirent(apr_pool_t *pool)
+{
+  struct {
+    const char *dirent;
+    const char *result;
+  } tests[] = {
+#ifdef SVN_USE_DOS_PATHS
+    { "C:/file",                   "file:///C:/file" },
+    { "C:/",                       "file:///C:/" },
+    { "C:/File#$",                 "file:///C:/File%23$" },
+    /* We can't check these as svn_dirent_get_absolute() won't work
+       on shares that don't exist */
+    /*{ "//server/share",            "file://server/share" },
+    { "//server/share/file",       "file://server/share/file" },*/
+#else
+    { "/a/b",                      "file:///a/b" },
+    { "/a",                        "file:///a" },
+    { "/",                         "file:///" },
+    { "/File#$",                   "file:///File%23$" },
+#endif
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *result;
+      
+      SVN_ERR(svn_uri_get_file_url_from_dirent(&result, tests[i].dirent,
+                                               pool));
+
+      if (strcmp(result, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_get_file_url_from_dirent(\"%s\") "
+                                 "returned \"%s\" expected \"%s\"",
+                                 tests[i].dirent, result, tests[i].result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_dirent_is_under_root(apr_pool_t *pool)
+{
+  struct {
+    const char *base_path;
+    const char *path;
+    svn_boolean_t under_root;
+    const char *result;
+  } tests[] = {
+    { "/",        "/base",          FALSE},
+    { "/aa",      "/aa/bb",         FALSE},
+    { "/base",    "/base2",         FALSE},
+    { "/b",       "bb",             TRUE, "/b/bb"},
+    { "/b",       "../bb",          FALSE},
+    { "/b",       "r/./bb",         TRUE, "/b/r/bb"},
+    { "/b",       "r/../bb",        TRUE, "/b/bb"},
+    { "/b",       "r/../../bb",     FALSE},
+    { "/b",       "./bb",           TRUE, "/b/bb"},
+    { "/b",       ".",              TRUE, "/b"},
+    { "/b",       "",               TRUE, "/b"},
+    { "b",        "b",              TRUE, "b/b"},
+#ifdef SVN_USE_DOS_PATHS
+    { "C:/file",  "a\\d",           TRUE, "C:/file/a/d"},
+    { "C:/file",  "aa\\..\\d",      TRUE, "C:/file/d"},
+    { "C:/file",  "aa\\..\\..\\d",  FALSE},
+#else
+    { "C:/file",  "a\\d",           TRUE, "C:/file/a\\d"},
+    { "C:/file",  "aa\\..\\d",      TRUE, "C:/file/aa\\..\\d"},
+    { "C:/file",  "aa\\..\\..\\d",  TRUE, "C:/file/aa\\..\\..\\d"},
+#endif /* SVN_USE_DOS_PATHS */
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      svn_boolean_t under_root;
+      const char *result;
+      
+      SVN_ERR(svn_dirent_is_under_root(&under_root,
+                                       &result,
+                                       tests[i].base_path,
+                                       tests[i].path,
+                                       pool));
+
+      if (under_root != tests[i].under_root)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_is_under_root(..\"%s\", \"%s\"..)"
+                                 " returned %s expected %s.",
+                                 tests[i].base_path,
+                                 tests[i].path,
+                                 under_root ? "TRUE" : "FALSE",
+                                 tests[i].under_root ? "TRUE" : "FALSE");
+
+      if (under_root
+          && strcmp(result, tests[i].result) != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_is_under_root(..\"%s\", \"%s\"..)"
+                                 " found \"%s\" expected \"%s\".",
+                                 tests[i].base_path,
+                                 tests[i].path,
+                                 result,
+                                 tests[i].result);
     }
 
   return SVN_NO_ERROR;
@@ -2762,5 +2951,13 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_dirent_internal_style"),
     SVN_TEST_PASS2(test_relpath_internal_style,
                    "test svn_relpath_internal_style"),
+    SVN_TEST_PASS2(test_dirent_from_file_url,
+                   "test svn_uri_get_dirent_from_file_url"),
+    SVN_TEST_PASS2(test_dirent_from_file_url_errors,
+                   "test svn_uri_get_dirent_from_file_url errors"),
+    SVN_TEST_PASS2(test_file_url_from_dirent,
+                   "test svn_uri_get_file_url_from_dirent"),
+    SVN_TEST_PASS2(test_dirent_is_under_root,
+                   "test svn_dirent_is_under_root"),
     SVN_TEST_NULL
   };

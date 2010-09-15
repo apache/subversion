@@ -71,6 +71,7 @@ struct svn_sqlite__db_t
   int nbr_statements;
   svn_sqlite__stmt_t **prepared_stmts;
   apr_pool_t *state_pool;
+  unsigned savepoint_nr;
 };
 
 struct svn_sqlite__stmt_t
@@ -81,10 +82,12 @@ struct svn_sqlite__stmt_t
 };
 
 
-/* Convert SQLite error codes to SVN */
-#define SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY    \
-                              ? SVN_ERR_SQLITE_READONLY \
-                              : SVN_ERR_SQLITE_ERROR )
+/* Convert SQLite error codes to SVN. Evaluates X multiple times */
+#define SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY       \
+                              ? SVN_ERR_SQLITE_READONLY    \
+                              : ((x) == SQLITE_BUSY        \
+                                 ? SVN_ERR_SQLITE_BUSY     \
+                                 : SVN_ERR_SQLITE_ERROR) )
 
 
 /* SQLITE->SVN quick error wrap, much like SVN_ERR. */
@@ -174,10 +177,11 @@ step_with_expectation(svn_sqlite__stmt_t* stmt,
   if ((got_row && !expecting_row)
       ||
       (!got_row && expecting_row))
-    return svn_error_create(SVN_ERR_SQLITE_ERROR, NULL,
+    return svn_error_create(SVN_ERR_SQLITE_ERROR,
+                            svn_sqlite__reset(stmt),
                             expecting_row
-                            ? _("Expected database row missing")
-                            : _("Extra database row found"));
+                              ? _("Expected database row missing")
+                              : _("Extra database row found"));
 
   return SVN_NO_ERROR;
 }
@@ -270,9 +274,18 @@ vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
             SVN_ERR(svn_sqlite__bind_blob(stmt, count, blob, blob_size));
             break;
 
+          case 'r':
+            SVN_ERR(svn_sqlite__bind_revnum(stmt, count,
+                                            va_arg(ap, svn_revnum_t)));
+            break;
+
           case 't':
             map = va_arg(ap, const svn_token_map_t *);
             SVN_ERR(svn_sqlite__bind_token(stmt, count, map, va_arg(ap, int)));
+            break;
+
+          case 'n':
+            /* Skip this column: no binding */
             break;
 
           default:
@@ -345,6 +358,20 @@ svn_sqlite__bind_token(svn_sqlite__stmt_t *stmt,
 
   SQLITE_ERR(sqlite3_bind_text(stmt->s3stmt, slot, word, -1, SQLITE_STATIC),
              stmt->db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_sqlite__bind_revnum(svn_sqlite__stmt_t *stmt,
+                        int slot,
+                        svn_revnum_t value)
+{
+  if (SVN_IS_VALID_REVNUM(value))
+    SQLITE_ERR(sqlite3_bind_int64(stmt->s3stmt, slot,
+                                  (sqlite_int64)value), stmt->db);
+  else
+    SQLITE_ERR(sqlite3_bind_null(stmt->s3stmt, slot), stmt->db);
+
   return SVN_NO_ERROR;
 }
 
@@ -965,11 +992,107 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
   /* Commit or rollback the sqlite transaction. */
   if (err)
     {
-      svn_error_clear(exec_sql(db, "ROLLBACK TRANSACTION;"));
-      return svn_error_return(err);
+      svn_error_t *err2 = exec_sql(db, "ROLLBACK TRANSACTION;");
+
+      if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
+        {
+          int i;
+          /* ### Houston, we have a problem!
+
+             We are trying to rollback but we can't because some
+             statements are still busy. This leaves the database
+             unusable for future transactions as the current transaction
+             is still open.
+
+             As we are returning the actual error as the most relevant
+             error in the chain, our caller might assume that it can
+             retry/compensate on this error (e.g. SVN_WC_LOCKED), while
+             in fact the SQLite database is unusable until the statements
+             started within this transaction are reset and the transaction
+             aborted.
+
+             We try to compensate by resetting al prepared but unreset
+             statements; but we leave the busy error in the chain anyway to
+             help diagnosing the original error and help in finding where
+             a reset statement is missing. */
+
+          /* ### Should we reorder the errors in this specific case
+             ### to avoid returning the normal error as top level error? */
+
+          err2 = svn_error_compose_create(err2,
+                   svn_error_create(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
+                                    NULL, NULL));
+
+          for (i = 0; i < db->nbr_statements; i++)
+            if (db->prepared_stmts[i] && db->prepared_stmts[i]->needs_reset)
+              err2 = svn_error_compose_create(
+                         err2,
+                         svn_sqlite__reset(db->prepared_stmts[i]));
+
+          err2 = svn_error_compose_create(
+                      exec_sql(db, "ROLLBACK TRANSACTION;"),
+                      err2);
+        }
+
+      return svn_error_compose_create(err,
+                                      err2);
     }
 
   return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));
+}
+
+svn_error_t *
+svn_sqlite__with_lock(svn_sqlite__db_t *db,
+                      svn_sqlite__transaction_callback_t cb_func,
+                      void *cb_baton,
+                      apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+#if SQLITE_VERSION_AT_LEAST(3,6,8)
+  svn_error_t *err2;
+  int savepoint = db->savepoint_nr++;
+  const char *release_stmt;
+
+  SVN_ERR(exec_sql(db,
+                   apr_psprintf(scratch_pool, "SAVEPOINT s%u;", savepoint)));
+#endif
+
+  err = cb_func(cb_baton, db, scratch_pool);
+
+#if SQLITE_VERSION_AT_LEAST(3,6,8)
+  release_stmt = apr_psprintf(scratch_pool, "RELEASE s%u;", savepoint);
+  err2 = exec_sql(db, release_stmt);
+
+  if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
+    {
+      /* Ok, we have a major problem. Some statement is still open, which
+         makes it impossible to release this savepoint.
+
+         ### See huge comment in svn_sqlite__with_transaction for
+             further details */
+
+      int i;
+
+      err2 = svn_error_compose_create(err2,
+                   svn_error_create(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
+                                    NULL, NULL));
+
+      for (i = 0; i < db->nbr_statements; i++)
+        if (db->prepared_stmts[i] && db->prepared_stmts[i]->needs_reset)
+          err2 = svn_error_compose_create(
+                     err2,
+                     svn_sqlite__reset(db->prepared_stmts[i]));
+
+          err2 = svn_error_compose_create(
+                      exec_sql(db, release_stmt),
+                      err2);
+    }
+
+  err = svn_error_compose_create(err, err2);
+#endif
+
+  return svn_error_return(err);
 }
 
 svn_error_t *

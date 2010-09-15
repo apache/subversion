@@ -16,15 +16,15 @@ Revision-number: 1
 Prop-content-length: 77
 Content-length: 77
 
+K 8
+svn:date
+V 27
+2006-10-27T18:55:49.840787Z
 K 7
 svn:log
 V 4
 foo
 
-K 8
-svn:date
-V 27
-2006-10-27T18:55:49.840787Z
 PROPS-END
 
 Node-path: trunk

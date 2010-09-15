@@ -24,11 +24,11 @@
 package org.apache.subversion.javahl;
 
 import java.util.EventObject;
+import org.apache.subversion.javahl.callback.DiffSummaryCallback;
 
 /**
- * The event passed to the {@link
- * DiffSummaryReceiver#onSummary(DiffSummary)} API in response to path
- * differences reported by {@link SVNClientInterface#diffSummarize}.
+ * The event passed to the {@link DiffSummaryCallback#onSummary} API
+ * in response to path differences reported by {@link ISVNClient#diffSummarize}.
  *
  * @since 1.5
  */

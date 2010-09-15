@@ -54,6 +54,7 @@ typedef struct svn_ra__vtable_t {
   /* All fields in SESSION, except priv, have been initialized by the
      time this is called.  SESSION->priv may be set by this function. */
   svn_error_t *(*open_session)(svn_ra_session_t *session,
+                               const char **corrected_url,
                                const char *repos_URL,
                                const svn_ra_callbacks2_t *callbacks,
                                void *callback_baton,
@@ -230,6 +231,7 @@ typedef struct svn_ra__vtable_t {
   svn_error_t *(*get_locks)(svn_ra_session_t *session,
                             apr_hash_t **locks,
                             const char *path,
+                            svn_depth_t depth,
                             apr_pool_t *pool);
   svn_error_t *(*replay)(svn_ra_session_t *session,
                          svn_revnum_t revision,

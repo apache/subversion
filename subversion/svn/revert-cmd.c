@@ -56,10 +56,6 @@ svn_cl__revert(apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
-
   /* Revert is especially conservative, by default it is as
      nonrecursive as possible. */
   if (opt_state->depth == svn_depth_unknown)
@@ -71,7 +67,7 @@ svn_cl__revert(apr_getopt_t *os,
                            opt_state->changelists, ctx, scratch_pool);
 
   if (err
-      && (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+      && (err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH)
       && (! SVN_DEPTH_IS_RECURSIVE(opt_state->depth)))
     {
       err = svn_error_quick_wrap

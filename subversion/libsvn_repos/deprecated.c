@@ -390,6 +390,22 @@ svn_repos_fs_pack(svn_repos_t *repos,
                             cancel_func, cancel_baton, pool);
 }
 
+
+svn_error_t *
+svn_repos_fs_get_locks(apr_hash_t **locks,
+                       svn_repos_t *repos,
+                       const char *path,
+                       svn_repos_authz_func_t authz_read_func,
+                       void *authz_read_baton,
+                       apr_pool_t *pool)
+{
+  return svn_error_return(svn_repos_fs_get_locks2(locks, repos, path,
+                                                  svn_depth_infinity,
+                                                  authz_read_func,
+                                                  authz_read_baton, pool));
+}
+
+
 /*** From logs.c ***/
 svn_error_t *
 svn_repos_get_logs3(svn_repos_t *repos,

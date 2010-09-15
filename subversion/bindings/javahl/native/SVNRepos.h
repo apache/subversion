@@ -20,8 +20,8 @@
  * ====================================================================
  * @endcopyright
  *
- * @file SVNAdmin.h
- * @brief Interface of the class SVNAdmin
+ * @file SVNRepos.h
+ * @brief Interface of the class SVNRepos
  */
 
 #ifndef SVNADMIN_H
@@ -38,11 +38,11 @@
 #include "StringArray.h"
 #include "File.h"
 
-class SVNAdmin : public SVNBase
+class SVNRepos : public SVNBase
 {
  public:
   void rmlocks(File &path, StringArray &locks);
-  jobject lslocks(File &path);
+  jobject lslocks(File &path, svn_depth_t depth);
   void verify(File &path, Revision &revisionStart, Revision &revisionEnd,
               ReposNotifyCallback *notifyCallback);
   void setRevProp(File &path, Revision &revision,
@@ -67,10 +67,10 @@ class SVNAdmin : public SVNBase
               const char *fstype);
   void upgrade(File &path, ReposNotifyCallback *callback);
   void pack(File &path, ReposNotifyCallback *callback);
-  SVNAdmin();
-  virtual ~SVNAdmin();
-  void dispose(jobject jthis);
-  static SVNAdmin *getCppObject(jobject jthis);
+  SVNRepos();
+  virtual ~SVNRepos();
+  void dispose();
+  static SVNRepos *getCppObject(jobject jthis);
 
  private:
   static svn_error_t *getRevnum(svn_revnum_t *revnum,

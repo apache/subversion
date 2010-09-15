@@ -36,6 +36,7 @@ from svntest.main import SVN_PROP_MERGEINFO
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -2460,16 +2461,18 @@ def move_dir_back_and_forth(sbox):
 
   # Move the moved dir: D_moved back to its starting
   # location at A/D.
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, None, svntest.verify.AnyOutput,
-    'mv', D_move_path, D_path)
 
-  for line in err:
-    if re.match('.*Cannot copy to .*as it is scheduled for deletion',
-                line, ):
-      return
-  raise svntest.Failure("mv failed but not in the expected way")
+  if svntest.main.wc_is_singledb(wc_dir):
+    # In single-db target is gone on-disk after it was moved away, so this
+    # move works ok
+    expected_err = []
+  else:
+    # In !SINGLE_DB the target of the copy exists on-dir, so svn tries
+    # to move the file below the deleted directory
+    expected_err = '.*Cannot copy to .*as it is scheduled for deletion'
 
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'mv', D_move_path, D_path)
 
 def copy_move_added_paths(sbox):
   "copy and move added paths without commits"
@@ -4249,8 +4252,6 @@ def copy_below_copy(sbox):
 def move_below_move(sbox):
   "move a dir below a moved dir"
   sbox.build()
-  "copy a dir below a copied dir"
-  sbox.build()
 
   A = os.path.join(sbox.wc_dir, 'A')
   new_A = os.path.join(sbox.wc_dir, 'new_A')
@@ -4260,16 +4261,17 @@ def move_below_move(sbox):
   new_A_new_mu = os.path.join(new_A, 'new_mu')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', A, new_A)
+                                     'mv', A, new_A)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mv', new_A_D, new_A_new_D)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mv', new_A_mu, new_A_new_mu)
 
-  # ### It could be that we miss a Deleting here.
   expected_output = svntest.wc.State(sbox.wc_dir, {
       'A'                 : Item(verb='Deleting'),
+      'new_A/D'           : Item(verb='Deleting'),
+      'new_A/mu'          : Item(verb='Deleting'),
       'new_A'             : Item(verb='Adding'),
       'new_A/new_D'       : Item(verb='Adding'),
       'new_A/new_mu'      : Item(verb='Adding'),
@@ -4298,8 +4300,6 @@ def move_below_move(sbox):
       'new_A/C'           : Item(status='  ', wc_rev='2'),
     })
 
-  # ### This remove block is untested, because the commit fails with an
-  # ### assertion on trunk (BH: 2009-11-01
   expected_status.remove('A', 'A/D', 'A/D/gamma', 'A/D/G', 'A/D/G/pi',
                          'A/D/G/rho', 'A/D/G/tau', 'A/D/H', 'A/D/H/chi',
                          'A/D/H/omega', 'A/D/H/psi', 'A/B', 'A/B/E',
@@ -4494,6 +4494,347 @@ def copy_broken_symlink(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def move_dir_containing_move(sbox):
+  """move a directory containing moved node"""
+
+  sbox.build()
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B/E/alpha'),
+                                     sbox.ospath('A/B/E/alpha_moved'))
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B/F'),
+                                     sbox.ospath('A/B/F_moved'))
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B'),
+                                     sbox.ospath('A/B_tmp'))
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak('A/B',
+                        'A/B/E',
+                        'A/B/E/alpha',
+                        'A/B/E/beta',
+                        'A/B/F',
+                        'A/B/lambda',
+                        status='D ')
+  expected_status.add({
+      'A/B_tmp'               : Item(status='A ', copied='+', wc_rev='-'),
+      # alpha has a revision that isn't reported by status.
+      'A/B_tmp/E'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_tmp/E/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
+      'A/B_tmp/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_tmp/F'             : Item(status='D ', wc_rev='?'),
+      'A/B_tmp/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_tmp/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('A/B_tmp'),
+                                     sbox.ospath('A/B_moved'))
+  expected_status.remove('A/B_tmp',
+                         'A/B_tmp/E',
+                         'A/B_tmp/E/alpha',
+                         'A/B_tmp/E/alpha_moved',
+                         'A/B_tmp/E/beta',
+                         'A/B_tmp/F',
+                         'A/B_tmp/F_moved',
+                         'A/B_tmp/lambda')
+  expected_status.add({
+      'A/B_moved'               : Item(status='A ', copied='+', wc_rev='-'),
+      # alpha has a revision that isn't reported by status.
+      'A/B_moved/E'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_moved/E/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
+      'A/B_moved/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B_moved/F'             : Item(status='D ', wc_rev='?'),
+      'A/B_moved/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B_moved/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B'                    : Item(verb='Deleting'),
+    'A/B_moved'              : Item(verb='Adding'),
+    'A/B_moved/E/alpha'      : Item(verb='Deleting'),
+    'A/B_moved/E/alpha_moved': Item(verb='Adding'),
+    'A/B_moved/F'            : Item(verb='Deleting'),
+    'A/B_moved/F_moved'      : Item(verb='Adding'),
+    })
+
+  expected_status.tweak('A/B_moved',
+                        'A/B_moved/E',
+                        'A/B_moved/E/alpha_moved',
+                        'A/B_moved/E/beta',
+                        'A/B_moved/F_moved',
+                        'A/B_moved/lambda',
+                        status='  ', copied=None, wc_rev='2')
+  expected_status.remove('A/B',
+                         'A/B/E',
+                         'A/B/E/alpha',
+                         'A/B/E/beta',
+                         'A/B/F',
+                         'A/B/lambda',
+                         'A/B_moved/E/alpha',
+                         'A/B_moved/F')
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, sbox.wc_dir)
+
+def copy_dir_with_space(sbox):
+  """copy a directory with whitespace to one without"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'A', 'B', 'E'),
+                                     os.path.join(wc_dir, 'E with spaces'))
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'A', 'B', 'E', 'alpha'),
+                                     os.path.join(wc_dir, 'E with spaces', 'al pha'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_output = svntest.wc.State(wc_dir, {
+    'E with spaces'        : Item(verb='Adding'),
+    'E with spaces/al pha' : Item(verb='Adding'),
+    })
+  expected_status.add({
+    'E with spaces'        : Item(status='  ', wc_rev='2'),
+    'E with spaces/alpha'  : Item(status='  ', wc_rev='2'),
+    'E with spaces/beta'   : Item(status='  ', wc_rev='2'),
+    'E with spaces/al pha' : Item(status='  ', wc_rev='2'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'E with spaces'),
+                                     os.path.join(wc_dir, 'E also spaces')
+                                     )
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'E with spaces/al pha'),
+                                     os.path.join(wc_dir, 'E also spaces/al b')
+                                     )
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'E also spaces'     : Item(verb='Adding'),
+      'E also spaces/al b': Item(verb='Adding'),
+    })
+  expected_status.add({
+      'E also spaces'     : Item(status='  ', wc_rev='3'),
+      'E also spaces/beta': Item(status='  ', wc_rev='3'),
+      'E also spaces/al b': Item(status='  ', wc_rev='3'),
+      'E also spaces/alpha': Item(status='  ', wc_rev='3'),
+      'E also spaces/al pha': Item(status='  ', wc_rev='3'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     os.path.join(wc_dir, 'E with spaces'),
+                                     os.path.join(wc_dir, 'E new spaces')
+                                     )
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     os.path.join(wc_dir, 'E new spaces/al pha'),
+                                     os.path.join(wc_dir, 'E also spaces/al c')
+                                     )
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'E with spaces'     : Item(verb='Deleting'),
+      'E also spaces/al c': Item(verb='Adding'),
+      'E new spaces'      : Item(verb='Adding'),
+      'E new spaces/al pha': Item(verb='Deleting'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'E also spaces'     : Item(status='  ', wc_rev='3'),
+      'E also spaces/beta': Item(status='  ', wc_rev='3'),
+      'E also spaces/al b': Item(status='  ', wc_rev='3'),
+      'E also spaces/al c': Item(status='  ', wc_rev='4'),
+      'E also spaces/alpha': Item(status='  ', wc_rev='3'),
+      'E also spaces/al pha': Item(status='  ', wc_rev='3'),
+      'E new spaces'      : Item(status='  ', wc_rev='4'),
+      'E new spaces/alpha': Item(status='  ', wc_rev='4'),
+      'E new spaces/beta' : Item(status='  ', wc_rev='4'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+# Regression test for issue #3676
+def changed_data_should_match_checkout(sbox):
+  """changed data after commit should match checkout"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_B_E = os.path.join(wc_dir, 'A', 'B', 'E')
+  E_new = os.path.join(wc_dir, 'E_new')
+
+  verify_dir = sbox.add_wc_path('verify')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_B_E, E_new)
+
+  sbox.simple_commit(wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'co', sbox.repo_url, verify_dir)
+
+  was_cwd = os.getcwd()
+  os.chdir(verify_dir)
+
+  rv, verify_out, err = main.run_svn(None, 'status', '-v')
+
+  os.chdir(was_cwd)
+  os.chdir(wc_dir)
+  verify_out = svntest.verify.UnorderedOutput(verify_out)
+  svntest.actions.run_and_verify_svn(None, verify_out, [], 'status', '-v')
+  os.chdir(was_cwd)
+
+# Regression test for issue #3676 for copies including directories
+def changed_dir_data_should_match_checkout(sbox):
+  """changed dir after commit should match checkout"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_B = os.path.join(wc_dir, 'A', 'B')
+  B_new = os.path.join(wc_dir, 'B_new')
+
+  verify_dir = sbox.add_wc_path('verify')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_B, B_new)
+
+  sbox.simple_commit(wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'co', sbox.repo_url, verify_dir)
+
+  was_cwd = os.getcwd()
+  os.chdir(verify_dir)
+
+  rv, verify_out, err = main.run_svn(None, 'status', '-v')
+
+  os.chdir(was_cwd)
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, verify_out, [], 'status', '-v')
+  os.chdir(was_cwd)
+
+def move_added_nodes(sbox):
+  """move added nodes"""
+
+  sbox.build()
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                     sbox.ospath('X'),
+                                     sbox.ospath('X/Y'))
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+      'X'   : Item(status='A ', wc_rev='0'),
+      'X/Y' : Item(status='A ', wc_rev='0'),
+      })
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('X/Y'),
+                                     sbox.ospath('X/Z'))
+  expected_status.remove('X/Y')
+  expected_status.add({'X/Z' : Item(status='A ', wc_rev='0')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('X/Z'),
+                                     sbox.ospath('Z'))
+  expected_status.remove('X/Z')
+  expected_status.add({'Z' : Item(status='A ', wc_rev='0')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     sbox.ospath('Z'),
+                                     sbox.ospath('X/Z'))
+  expected_status.remove('Z')
+  expected_status.add({'X/Z' : Item(status='A ', wc_rev='0')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+def locate_wrong_origin(sbox):
+  "update editor locates invalid file source"
+
+  sbox.build()
+
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  gamma = os.path.join(sbox.wc_dir, 'A/D/gamma')
+
+  D1 = os.path.join(sbox.wc_dir, 'D1')
+  D2 = os.path.join(sbox.wc_dir, 'D2')
+
+  main.run_svn(None, 'mkdir', D1, D2)
+  main.run_svn(None, 'cp', iota, os.path.join(D1, 'iota'))
+  main.run_svn(None, 'cp', gamma, os.path.join(D2, 'iota'))
+
+  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Add 2*iotas in r2')
+  main.run_svn(None, 'rm', D1)
+
+  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Why?')
+
+  main.run_svn(None, 'cp', D2, D1)
+  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Replace one iota')
+
+  # <= 1.6 needs a new checkout here to reproduce, but not since r961831.
+  # so we just perform an update
+  main.run_svn(None, 'up', sbox.wc_dir)
+
+  main.run_svn(None, 'cp', sbox.repo_url + '/D1/iota@2',
+               sbox.repo_url + '/iobeta', '-m', 'Copy iota')
+
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 4)
+  expected_status.add({
+    'D1'                : Item(status='  ', wc_rev='4'),
+    'D1/iota'           : Item(status='  ', wc_rev='4'),
+    'D2'                : Item(status='  ', wc_rev='4'),
+    'D2/iota'           : Item(status='  ', wc_rev='4'),
+  })
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  # The next update receives an add_file('/D1/iota', 2), which it then tries
+  # to locate in the local working copy. It finds a '/D1/iota' in the expected
+  # place, with a last-changed revision of 2 and a local revision of HEAD-1
+  #
+  # locate_copyfrom identifies this file as correct because 
+  #     * last-mod <= 2 and
+  #     * 2 <= REV
+  #
+  # Luckily close_file() receives an expected_checksum which makes us fail, or
+  # we would have a completely broken working copy
+
+  # So this gives a Checksum mismatch error.
+  main.run_svn(None, 'up', sbox.wc_dir)
+
+# This test currently fails, but should work ok once we move to single DB
+def copy_over_deleted_dir(sbox):
+  "copy a directory over a deleted directory"
+  sbox.build(read_only = True)
+
+  main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'A/B'))
+  main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A/D'),
+               os.path.join(sbox.wc_dir, 'A/B'))
+
+
 ########################################################################
 # Run the tests
 
@@ -4523,9 +4864,7 @@ test_list = [ None,
               repos_to_wc_1634,
               double_uri_escaping_1814,
               wc_to_wc_copy_between_different_repos,
-              ### should be XFail, but it core dumps with an assertion.
-              ### marking as Skip() to avoid core dump turds...
-              Skip(wc_to_wc_copy_deleted),
+              XFail(wc_to_wc_copy_deleted),
               url_to_non_existent_url_path,
               non_existent_url_to_url,
               old_dir_url_to_url,
@@ -4570,7 +4909,7 @@ test_list = [ None,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
-              XFail(allow_unversioned_parent_for_copy_src),
+              allow_unversioned_parent_for_copy_src,
               replaced_local_source_for_incoming_copy,
               unneeded_parents,
               double_parents_with_url,
@@ -4580,11 +4919,20 @@ test_list = [ None,
               path_copy_in_repo_2475,
               commit_copy_depth_empty,
               copy_below_copy,
-              XFail(move_below_move),
+              move_below_move,
               reverse_merge_move,
               XFail(nonrecursive_commit_of_copy),
               copy_added_dir_with_copy,
               SkipUnless(copy_broken_symlink, svntest.main.is_posix_os),
+              move_dir_containing_move,
+              copy_dir_with_space,
+              changed_data_should_match_checkout,
+              XFail(changed_dir_data_should_match_checkout),
+              move_added_nodes,
+              # Serf needs a different testcase for this issue
+              XFail(Skip(locate_wrong_origin,
+                         svntest.main.is_ra_type_dav_serf)),
+              copy_over_deleted_dir,
              ]
 
 if __name__ == '__main__':

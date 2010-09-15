@@ -131,6 +131,16 @@ svn__apr_hash_index_klen(const apr_hash_index_t *hi);
 void *
 svn__apr_hash_index_val(const apr_hash_index_t *hi);
 
+/** On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
+ * invalid-pathname error but not this one, so we include it. */
+/* ### This fix should go into APR. */
+#ifndef WIN32
+#define SVN__APR_STATUS_IS_ENOTDIR(s)  APR_STATUS_IS_ENOTDIR(s)
+#else
+#define SVN__APR_STATUS_IS_ENOTDIR(s)  (APR_STATUS_IS_ENOTDIR(s) \
+                      || ((s) == APR_OS_START_SYSERR + ERROR_INVALID_NAME))
+#endif
+
 /** @} */
 
 /** The various types of nodes in the Subversion filesystem. */
@@ -600,6 +610,10 @@ typedef struct svn_commit_info_t
 
   /** error message from post-commit hook, or NULL. */
   const char *post_commit_err;
+
+  /** repository root, may be @c NULL if unknown.
+      @since New in 1.7. */
+  const char *repos_root;
 
 } svn_commit_info_t;
 

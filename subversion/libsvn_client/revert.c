@@ -151,7 +151,7 @@ svn_client_revert2(const apr_array_header_t *paths,
       baton.changelists = changelists;
       baton.ctx = ctx;
       err = svn_wc__call_with_write_lock(revert, &baton, ctx->wc_ctx,
-                                         local_abspath, pool, pool);
+                                         local_abspath, TRUE, pool, pool);
       if (err)
         goto errorful;
     }

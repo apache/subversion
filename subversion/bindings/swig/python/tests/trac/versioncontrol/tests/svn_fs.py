@@ -361,8 +361,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
-                              suiteClass=SubversionRepositoryTestSetup)
+    loader = unittest.TestLoader()
+    loader.suiteClass = SubversionRepositoryTestSetup
+    return loader.loadTestsFromTestCase(SubversionRepositoryTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

@@ -65,9 +65,58 @@ typedef enum svn_io_file_del_t
   svn_io_file_del_on_pool_cleanup
 } svn_io_file_del_t;
 
+/** A set of directory entry data elements as returned by svn_io_get_dirents
+ *
+ * Note that the first two fields are exactly identical to svn_io_dirent_t
+ * to allow returning a svn_io_dirent2_t as a svn_io_dirent_t.
+ *
+ * Use svn_io_dirent2_create() to create new svn_dirent2_t instances or
+ * svn_io_dirent2_dup() to duplicate an existing instance.
+ *
+ * @since New in 1.7.
+ */
+typedef struct svn_io_dirent2_t {
+  /* New fields must be added at the end to preserve binary compatibility */
 
-
+  /** The kind of this entry. */
+  svn_node_kind_t kind;
+
+  /** If @c kind is #svn_node_file, whether this entry is a special file;
+   * else FALSE.
+   *
+   * @see svn_io_check_special_path().
+   */
+  svn_boolean_t special;
+
+  /** The filesize of this entry or undefined for a directory */
+  svn_filesize_t filesize;
+
+  /** The time the file was last modified */
+  apr_time_t mtime;
+
+  /* Don't forget to update svn_io_dirent2_dup() when adding new fields */
+} svn_io_dirent2_t;
+
+
+/** Creates a new @a svn_io_dirent2_t structure
+ *
+ * @since New in 1.7.
+ */
+svn_io_dirent2_t *
+svn_io_dirent2_create(apr_pool_t *result_pool);
+
+/** Duplicates a @c svn_io_dirent2_t structure into @a result_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_io_dirent2_t *
+svn_io_dirent2_dup(const svn_io_dirent2_t *item,
+                   apr_pool_t *result_pool);
+
 /** Represents the kind and special status of a directory entry.
+ *
+ * Note that the first two fields are exactly identical to svn_io_dirent2_t
+ * to allow returning a svn_io_dirent2_t as a svn_io_dirent_t.
  *
  * @since New in 1.3.
  */
@@ -301,6 +350,8 @@ svn_io_copy_file(const char *src,
 
 /** Copy permission flags from @a src onto the file at @a dst. Both
  * filenames are utf8-encoded filenames.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_io_copy_perms(const char *src,
@@ -698,13 +749,6 @@ typedef svn_error_t *(*svn_write_fn_t)(void *baton,
 /** Close handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_close_fn_t)(void *baton);
 
-/** Reset handler function for a generic stream. @see svn_stream_t and
- * svn_stream_reset().
- *
- * @since New in 1.7.
- */
-typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
-
 /** An opaque type which represents a mark on a stream.
  *
  * @see svn_stream_mark().
@@ -728,41 +772,6 @@ typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton,
  */
 typedef svn_error_t *(*svn_io_seek_fn_t)(void *baton,
                                          svn_stream_mark_t *mark);
-
-/** Line-filtering callback function for a generic stream.
- * @a baton is the stream's baton.
- * @see svn_stream_t, svn_stream_set_baton() and svn_stream_readline().
- *
- * @since New in 1.7.
- */
-typedef svn_error_t *(*svn_io_line_filter_cb_t)(svn_boolean_t *filtered,
-                                                const char *line,
-                                                void *baton,
-                                                apr_pool_t *scratch_pool);
-
-/** A callback function, invoked by svn_stream_readline(), which can perform
- * arbitary transformations on the line before it is passed back to the caller
- * of svn_stream_readline().
- *
- * Returns a transformed stringbuf in @a buf, allocated in @a result_pool.
- * This callback gets invoked on lines which were not filtered by the
- * line-filtering callback function.
- *
- * Implementations should always at least return an empty stringbuf.
- * It is a fatal error if an implementation returns @a *buf as NULL.
- *
- * @a baton is the stream's baton.
- *
- * @see svn_stream_t, svn_stream_set_baton(), svn_io_line_filter_cb_t and
- * svn_stream_readline().
- *
- * @since New in 1.7.
- */
-typedef svn_error_t *(*svn_io_line_transformer_cb_t)(svn_stringbuf_t **buf,
-                                                     const char *line,
-                                                     void *baton,
-                                                     apr_pool_t *result_pool,
-                                                     apr_pool_t *scratch_pool);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -789,14 +798,6 @@ void
 svn_stream_set_close(svn_stream_t *stream,
                      svn_close_fn_t close_fn);
 
-/** Set @a stream's reset function to @a reset_fn
- *
- * @since New in 1.7.
- */
-void
-svn_stream_set_reset(svn_stream_t *stream,
-                     svn_io_reset_fn_t reset_fn);
-
 /** Set @a stream's mark function to @a mark_fn
  *
  * @since New in 1.7.
@@ -812,24 +813,6 @@ svn_stream_set_mark(svn_stream_t *stream,
 void
 svn_stream_set_seek(svn_stream_t *stream,
                     svn_io_seek_fn_t seek_fn);
-
-/** Set @a stream's line-filtering callback function to @a line_filter_cb
- *
- * @since New in 1.7.
- */
-void
-svn_stream_set_line_filter_callback(svn_stream_t *stream,
-                                    svn_io_line_filter_cb_t line_filter_cb);
-
-/** Set @a streams's line-transforming callback function to
- * @a line_transformer_cb.
- *
- * @since New in 1.7.
- */
-void
-svn_stream_set_line_transformer_callback(
-  svn_stream_t *stream,
-  svn_io_line_transformer_cb_t line_transformer_cb);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1096,7 +1079,8 @@ svn_stream_mark(svn_stream_t *stream,
 
 /** Seek to a @a mark in a generic @a stream.
  * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
- * if the stream doesn't implement seeking.
+ * if the stream doesn't implement seeking. Passing NULL as @a mark,
+ * seeks to the start of the stream.
  *
  * @see svn_stream_mark()
  * @since New in 1.7.
@@ -1152,19 +1136,6 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
  *
  * If @a stream runs out of bytes before encountering a line-terminator,
  * then set @a *eof to @c TRUE, otherwise set @a *eof to FALSE.
- *
- * If a line-filter callback function was set on the stream using
- * svn_stream_set_line_filter_callback(), lines will only be returned
- * if they pass the filtering decision of the callback function.
- * If end-of-file is encountered while reading the line and the line
- * is filtered, @a *stringbuf will be empty.
- *
- * If a line-transformer callback function was set on the stream using
- * svn_stream_set_line_transformer_callback(), lines will be returned
- * transformed, in a way determined by the callback.
- *
- * Note that the line-transformer callback gets called after the line-filter
- * callback, not before.
  */
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,
@@ -1386,7 +1357,9 @@ svn_io_remove_dir(const char *path,
  * apr_dir_read() are NOT returned in the hash.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_get_dir_filenames(apr_hash_t **dirents,
                          const char *path,
@@ -1394,16 +1367,33 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
  * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
- * #svn_io_dirent_t structures, allocated in @a pool.
+ * #svn_io_dirent2_t structures, allocated in @a pool.
+ *
+ * If @a only_check_type is set to @c TRUE, only the kind and special
+ * fields of the svn_io_dirent2_t are filled.
  *
  * @note The `.' and `..' directories normally returned by
  * apr_dir_read() are NOT returned in the hash.
  *
  * @note The kind field in the @a dirents is set according to the mapping
- *       as documented for svn_io_check_path()
+ *       as documented for svn_io_check_path().
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_io_get_dirents3(apr_hash_t **dirents,
+                    const char *path,
+                    svn_boolean_t only_check_type,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_io_get_dirents3, but returns a mapping to svn_io_dirent_t
+ * structures instead of svn_io_dirent2_t and with only a single pool.
  *
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_get_dirents2(apr_hash_t **dirents,
                     const char *path,
@@ -1420,6 +1410,21 @@ svn_io_get_dirents(apr_hash_t **dirents,
                    const char *path,
                    apr_pool_t *pool);
 
+/** Create a svn_io_dirent2_t instance for path. Specialized variant of
+ * svn_io_stat() that directly translates node_kind and special.
+ *
+ * If @a ignore_enoent is set to @c TRUE, set *dirent_p->kind to
+ * svn_node_none instead of returning an error.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
+                   const char *path,
+                   svn_boolean_t ignore_enoent,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
 
 /** Callback function type for svn_io_dir_walk() */
 typedef svn_error_t * (*svn_io_walk_func_t)(void *baton,
@@ -1427,19 +1432,38 @@ typedef svn_error_t * (*svn_io_walk_func_t)(void *baton,
                                             const apr_finfo_t *finfo,
                                             apr_pool_t *pool);
 
-/** This function will recursively walk over the files and directories
- * rooted at @a dirname, a utf8-encoded path. For each file or directory,
- * @a walk_func is invoked, passing in the @a walk_baton, the utf8-encoded
- * full path to the entry, an @c apr_finfo_t structure, and a temporary
- * pool for allocations.  For any directory, @a walk_func will be invoked
- * on the directory itself before being invoked on any subdirectories or
- * files within the directory.
+/** Recursively walk the directory rooted at @a dirname, a
+ * utf8-encoded path, invoking @a walk_func (with @a walk_baton) for
+ * each item in the tree.  For a given directory, invoke @a walk_func
+ * on the directory itself before invoking it on any children thereof.
  *
- * The set of information passed to @a walk_func is specified by @a wanted,
- * and the items specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
+ * Deliver to @a walk_func the information specified by @a wanted,
+ * plus the items specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
  *
- * All allocations will be performed in @a pool.
+ * Use @a pool for all allocations.
+ *
+ * @note This function does not currently pass all file types to @a
+ * walk_func -- only APR_DIR, APR_REG, and APR_LNK.  We reserve the
+ * right to pass additional file types through this interface in the
+ * future, though, so implementations of this callback should
+ * explicitly test FINFO->filetype.  See the APR library's
+ * apr_filetype_e enum for the various filetypes and their meanings.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_io_dir_walk2(const char *dirname,
+                 apr_int32_t wanted,
+                 svn_io_walk_func_t walk_func,
+                 void *walk_baton,
+                 apr_pool_t *pool);
+
+/** Similar to svn_io_dir_walk(), but only calls @a walk_func for
+ * files of type APR_DIR (directory) and APR_REG (regular file).
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_dir_walk(const char *dirname,
                 apr_int32_t wanted,
@@ -1893,6 +1917,16 @@ svn_io_dir_read(apr_finfo_t *finfo,
                 apr_dir_t *thedir,
                 apr_pool_t *pool);
 
+/** Wrapper for apr_file_name_get().  @a *filename is utf8-encoded.
+ *
+ * @note The file name may be NULL.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_io_file_name_get(const char **filename,
+                     apr_file_t *file,
+                     apr_pool_t *pool);
+
 
 
 /** Version/format files.
@@ -1920,14 +1954,6 @@ svn_error_t *
 svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool);
-
-/** Wrapper for apr_file_name_get().
- *
- * @since New in 1.7. */
-svn_error_t *
-svn_io_file_name_get(const char **filename,
-                     apr_file_t *file,
-                     apr_pool_t *pool);
 
 /** @} */
 

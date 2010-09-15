@@ -122,6 +122,33 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that describes a moves of
+   a file or directory from SRC_ABSPATH to DST_ABSPATH, ready for
+   storing in the working copy managing DST_ABSPATH.
+
+   Perform temporary allocations in SCRATCH_POOL and *WORK_ITEM in
+   RESULT_POOL.
+*/
+svn_error_t *
+svn_wc__wq_build_file_move(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
+                           const char *src_abspath,
+                           const char *dst_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/* Set *WORK_ITEM to a new work item that describes a copy from
+   SRC_ABSPATH to DST_ABSPATH, while translating the stream using
+   the information from LOCAL_ABSPATH. */
+svn_error_t *
+svn_wc__wq_build_file_copy_translated(svn_skel_t **work_item,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      const char *src_abspath,
+                                      const char *dst_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
 
 /* Set *WORK_ITEM to a new work item that will synchronize the
    target node's readonly and executable flags with the values defined
@@ -146,26 +173,18 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
-
-/* Set *WORK_ITEM to a new work item that will install PROPS at PROPS_ABSPATH.
-   If PROPS is NULL, then the target props file will will be removed.
-
-   ### this will go away when we fully move to in-db properties.  */
-svn_error_t *
-svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
-                                 const char *props_abspath,
-                                 apr_hash_t *props,
-                                 apr_pool_t *result_pool);
-
-
 /* Set *WORK_ITEM to a new work item that will record file information of
    LOCAL_ABSPATH into the TRANSLATED_SIZE and LAST_MOD_TIME of the node via
    the svn_wc__db_global_record_fileinfo() function.
+
+   If SET_TIME is not 0, set LOCAL_ABSPATH's last modified time to this
+   time and after that record the actual file time.
 
    ### it is unclear whether this should survive.  */
 svn_error_t *
 svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
                                  const char *local_abspath,
+                                 apr_time_t set_time,
                                  apr_pool_t *result_pool);
 
 
@@ -177,41 +196,22 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                       svn_boolean_t use_commit_times,
                       apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that will remove all the data of
+   the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping
+   any WORKING_NODE data.
 
-/* Record a work item to prepare the "revert props" and "revert text base"
-   for LOCAL_ABSPATH.  */
+   This function doesn't check for local modifications of the text files
+   as these would have triggered a tree conflict before.
+
+   ### This is only used from update_editor.c's do_entry_deletion().
+ */
 svn_error_t *
-svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool);
-
-
-/* Handle the old "KILLME" concept -- perform the actual deletion of a
-   subdir (or just its admin area) during post-commit processing of a
-   deleted subdir.  */
-svn_error_t *
-svn_wc__wq_add_killme(svn_wc__db_t *db,
-                      const char *adm_abspath,
-                      svn_boolean_t adm_only,
-                      apr_pool_t *scratch_pool);
-
-
-/* ### temporary compat for mapping the old loggy into workqueue space.
-
-   Set *WORK_ITEM to a new work item ...
-
-   LOG_CONTENT may be NULL or reference an empty log.  Set *WORK_ITEM to
-   NULL in this case.
-
-   NOTE: ADM_ABSPATH and LOG_CONTENT must live at least as long as
-   RESULT_POOL (typically, they'll be allocated within RESULT_POOL).
-*/
-svn_error_t *
-svn_wc__wq_build_loggy(svn_skel_t **work_item,
-                       svn_wc__db_t *db,
-                       const char *adm_abspath,
-                       const svn_stringbuf_t *log_content,
-                       apr_pool_t *result_pool);
+svn_wc__wq_build_base_remove(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t keep_not_present,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 
 /* ### Temporary helper to store text conflict marker locations as a wq
@@ -254,6 +254,20 @@ svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
                                                   apr_pool_t *result_pool,
                                                   apr_pool_t *scratch_pool);
 
+/* Set *WORK_ITEM to a new work item that will create the file NEW_ABSPATH
+ * with the pristine text identified by PRISTINE_SHA1, translated into
+ * working-copy form according to the versioned properties of
+ * VERSIONED_ABSPATH that are current when the work item is executed.  The
+ * work item will overwrite NEW_ABSPATH if that already exists. */
+svn_error_t *
+svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
+                                         svn_wc__db_t *db,
+                                         const char *versioned_abspath,
+                                         const char *new_abspath,
+                                         const svn_checksum_t *pristine_sha1,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
 svn_error_t *
 svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
                                    const char *local_abspath,
@@ -267,41 +281,18 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           const char *local_abspath,
                           const char *tmp_text_base_abspath,
                           svn_revnum_t new_revision,
-                          apr_time_t new_date,
-                          const char *new_author,
+                          svn_revnum_t changed_rev,
+                          apr_time_t changed_date,
+                          const char *changed_author,
                           const svn_checksum_t *new_checksum,
                           apr_hash_t *new_dav_cache,
                           svn_boolean_t keep_changelist,
+                          svn_boolean_t no_unlock,
                           apr_pool_t *scratch_pool);
 
-
-/* See props.h  */
-#ifdef SVN__SUPPORT_BASE_MERGE
 svn_error_t *
-svn_wc__wq_add_install_properties(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_hash_t *pristine_props,
-                                  apr_hash_t *actual_props,
-                                  apr_pool_t *scratch_pool);
-#endif
-
-/* Add a work item to delete a node.
-
-   ### LOCAL_ABSPATH is the node to be deleted and the queue exists in
-   PARENT_ABSPATH (because when LOCAL_ABSPATH is a directory it might
-   not exist on disk).  This use of PARENT_ABSPATH is inherited from
-   the log file conversion but perhaps we don't need to use a work
-   queue when deleting a directory that does not exist on disk.
- */
-svn_error_t *
-svn_wc__wq_add_delete(svn_wc__db_t *db,
-                      const char *parent_abspath,
-                      const char *local_abspath,
-                      svn_wc__db_kind_t kind,
-                      svn_boolean_t was_added,
-                      svn_boolean_t was_copied,
-                      svn_boolean_t was_replaced,
-                      apr_pool_t *scratch_pool);
+svn_wc__wq_build_postupgrade(svn_skel_t **work_item,
+                             apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -27,6 +27,7 @@
 
 #include "svn_client.h"
 #include "svn_compat.h"
+#include "svn_dirent_uri.h"
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_error.h"
@@ -305,6 +306,7 @@ log_entry_receiver(void *baton,
                              TRUE, /* no diff deleted */
                              FALSE, /* show copies as adds */
                              FALSE, /* ignore content type */
+                             FALSE, /* use git diff format */
                              svn_cmdline_output_encoding(pool),
                              outfile,
                              errfile,
@@ -337,6 +339,7 @@ log_entry_receiver(void *baton,
                                          TRUE, /* no diff deleted */
                                          FALSE, /* show copies as adds */
                                          FALSE, /* ignore content type */
+                                         FALSE, /* use git diff format */
                                          svn_cmdline_output_encoding(iterpool),
                                          outfile,
                                          errfile,
@@ -349,6 +352,7 @@ log_entry_receiver(void *baton,
                       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
                         {
                           svn_error_clear(err);
+                          parent = svn_uri_dirname(parent, pool);
                           continue;
                         }
                       if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL ||
@@ -360,8 +364,6 @@ log_entry_receiver(void *baton,
                         }
                       return svn_error_return(err);
                     }
-
-                  parent = svn_uri_dirname(parent, pool);
                 }
               svn_pool_destroy(iterpool);
             }
@@ -635,7 +637,7 @@ svn_cl__log(apr_getopt_t *os,
         }
     }
 
-  /* Strip peg revision if targets contains an URI. */
+  /* Strip peg revision. */
   SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, target, pool));
   APR_ARRAY_IDX(targets, 0, const char *) = true_path;
 
@@ -645,10 +647,13 @@ svn_cl__log(apr_getopt_t *os,
         {
           target = APR_ARRAY_IDX(targets, i, const char *);
 
-          if (svn_path_is_url(target))
-            return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                    _("Only relative paths can be specified "
-                                      "after a URL"));
+          if (svn_path_is_url(target) || target[0] == '/')
+            return svn_error_return(svn_error_createf(
+                                      SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Only relative paths can be specified"
+                                        " after a URL for 'svn log', "
+                                        "but '%s' is not a relative path"),
+                                      target));
         }
     }
 
@@ -660,10 +665,6 @@ svn_cl__log(apr_getopt_t *os,
   lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.pool = pool;
-
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
 
   if (opt_state->xml)
     {

@@ -44,6 +44,7 @@
 #include "svn_sorts.h"
 #include "svn_version.h"
 #include "svn_props.h"
+#include "svn_ctype.h"
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_dirent_uri.h"
@@ -1519,7 +1520,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
 
         /* Look for 'var = value' --- and make sure the var is in lcase. */
 
-        for (cp = parm; (*cp && !apr_isspace(*cp) && *cp != '='); ++cp)
+        for (cp = parm; (*cp && !svn_ctype_isspace(*cp) && *cp != '='); ++cp)
           {
             *cp = apr_tolower(*cp);
           }
@@ -1530,7 +1531,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
           }
 
         *cp++ = '\0';           /* Delimit var */
-        while (*cp && (apr_isspace(*cp) || *cp == '='))
+        while (*cp && (svn_ctype_isspace(*cp) || *cp == '='))
           {
             ++cp;
           }
@@ -1544,7 +1545,7 @@ static const char *get_entry(apr_pool_t *p, accept_rec *result,
           }
         else
           {
-            for (end = cp; (*end && !apr_isspace(*end)); end++);
+            for (end = cp; (*end && !svn_ctype_isspace(*end)); end++);
           }
         if (*end)
           {
@@ -2293,19 +2294,17 @@ static const char *
 get_parent_path(const char *path, apr_pool_t *pool)
 {
   apr_size_t len;
-  const char *parentpath, *base_name;
   char *tmp = apr_pstrdup(pool, path);
 
   len = strlen(tmp);
 
   if (len > 0)
     {
-      /* Remove any trailing slash; else svn_uri_split() asserts. */
+      /* Remove any trailing slash; else svn_uri_dirname() asserts. */
       if (tmp[len-1] == '/')
         tmp[len-1] = '\0';
-      svn_uri_split(tmp, &parentpath, &base_name, pool);
 
-      return parentpath;
+      return svn_uri_dirname(tmp, pool);
     }
 
   return path;
@@ -3121,6 +3120,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
       apr_hash_t *entries;
       apr_pool_t *entry_pool;
       apr_array_header_t *sorted;
+      svn_revnum_t dir_rev = SVN_INVALID_REVNUM;
       int i;
 
       /* XML schema for the directory index if xslt_uri is set:
@@ -3165,7 +3165,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           const char *fs_parent_path =
             dav_svn__get_fs_parent_path(resource->info->r);
 
-          serr = svn_io_get_dirents2(&dirents, fs_parent_path, resource->pool);
+          serr = svn_io_get_dirents3(&dirents, fs_parent_path, TRUE,
+                                     resource->pool, resource->pool);
           if (serr != NULL)
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                         "couldn't fetch dirents of SVNParentPath",
@@ -3197,6 +3198,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         }
       else
         {
+          dir_rev = svn_fs_revision_root_revision(resource->info->root.root);
           serr = svn_fs_dir_entries(&entries, resource->info->root.root,
                                     resource->info->repos_path, resource->pool);
           if (serr != NULL)
@@ -3305,8 +3307,30 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           const char *name = item->key;
           const char *href = name;
           svn_boolean_t is_dir = (entry->kind == svn_node_dir);
+          const char *repos_relpath = NULL;
 
           svn_pool_clear(entry_pool);
+
+          /* DIR_REV is set to a valid revision if we're looking at
+             the entries of a versioned directory.  Otherwise, we're
+             looking at a parent-path listing. */
+          if (SVN_IS_VALID_REVNUM(dir_rev))
+            {
+              repos_relpath = svn_path_join(resource->info->repos_path,
+                                            name, entry_pool);
+              if (! dav_svn__allow_read(resource->info->r,
+                                        resource->info->repos,
+                                        repos_relpath,
+                                        dir_rev,
+                                        entry_pool))
+                continue;
+            }
+          else
+            {
+              /* ### TODO:  We could test for readability of the root
+                     directory of each repository and hide those that
+                     the user can't see. */
+            }
 
           /* append a trailing slash onto the name for directories. we NEED
              this for the href portion so that the relative reference will
@@ -3391,7 +3415,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
               */
               ap_fputs(output, bb,
                        " </ul>\n <hr noshade><em>Powered by "
-                       "<a href=\"http://subversion.apache.org/\">Subversion"
+                       "<a href=\"http://subversion.apache.org/\">"
+                       "Apache Subversion"
                        "</a> version " SVN_VERSION "."
                        "</em>\n</body></html>");
             }
@@ -3932,6 +3957,7 @@ do_walk(walker_ctx_t *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
+  apr_pool_t *iterpool;
 
   /* Clear the temporary pool. */
   svn_pool_clear(ctx->info.pool);
@@ -4007,12 +4033,15 @@ do_walk(walker_ctx_t *ctx, int depth)
                                 params->pool);
 
   /* iterate over the children in this collection */
+  iterpool = svn_pool_create(params->pool);
   for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
       void *val;
       svn_fs_dirent_t *dirent;
+
+      svn_pool_clear(iterpool);
 
       /* fetch one of the children */
       apr_hash_this(hi, &key, &klen, &val);
@@ -4021,7 +4050,16 @@ do_walk(walker_ctx_t *ctx, int depth)
       /* authorize access to this resource, if applicable */
       if (params->walk_type & DAV_WALKTYPE_AUTH)
         {
-          /* ### how/what to do? */
+          const char *repos_relpath =
+            apr_pstrcat(iterpool, 
+                        apr_pstrmemdup(iterpool,
+                                       ctx->repos_path->data,
+                                       ctx->repos_path->len),
+                        key, NULL);
+          if (! dav_svn__allow_read(ctx->info.r, ctx->info.repos,
+                                    repos_relpath, ctx->info.root.rev,
+                                    iterpool))
+            continue;
         }
 
       /* append this child to our buffers */
@@ -4062,6 +4100,9 @@ do_walk(walker_ctx_t *ctx, int depth)
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
     }
+  
+  svn_pool_destroy(iterpool);
+
   return NULL;
 }
 
@@ -4263,58 +4304,73 @@ dav_svn__create_version_resource(dav_resource **version_res,
 }
 
 
-/* POST handler for HTTP protocol v2.
- 
-   Currently we allow POSTs only against the "me resource", which may
-   in the future act as a dispatcher of sorts for handling potentially
-   many different kinds of operations as specified by the body of the
-   POST request itself.
+
+static dav_error *
+handle_post_request(request_rec *r,
+                    dav_resource *resource,
+                    ap_filter_t *output)
+{
+  svn_skel_t *request_skel;
+  int status;
+  apr_pool_t *pool = resource->pool;
 
-   ### TODO: Define what the format of those POST bodies might be.  If
-   ### XML, we have access to Apache's streamy XML parsing code, but
-   ### ... it's XML.  Meh.  If skels, we get skels!  But we need to
-   ### write our own streamy skel parsing routine around a brigade
-   ### read loop.  Ewww...
-   ###
-   ### Today we only support transaction creation requests, but we
-   ### could conceivable support the likes of a multi-path lock
-   ### and/or unlock request, or some other thing for which stock
-   ### WebDAV doesn't work or doesn't work well enough.
-   ###
-   ### Fortunately, today we don't use the POST body at all, and we'll
-   ### be able to get away with not defining the body format in the
-   ### future thanks to the following:
+  /* Make sure our skel-based request parses okay, has an initial atom
+     that identifies what kind of action is expected, and that that
+     action is something we understand.  */
+  status = dav_svn__parse_request_skel(&request_skel, r, pool);
 
-   As a special consideration, an empty POST body is interpreted as a
-   simple request to create a new commit transaction based on the HEAD
-   revision.  The new transaction name will be returned via a custom
-   response header SVN_DAV_TXN_NAME_HEADER.
-*/
+  if (status != OK)
+    return dav_new_error(pool, status, 0,
+                         "Error parsing skel POST request body.");
+
+  if (svn_skel__list_length(request_skel) < 1)
+    return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
+                         "Unable to identify skel POST request flavor.");
+
+  if (svn_skel__matches_atom(request_skel->children, "create-txn"))
+    {
+      return dav_svn__post_create_txn(resource, request_skel, output);
+    }
+  else
+    {
+      return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
+                           "Unsupported skel POST request flavor.");
+    }
+  /* NOTREACHED */
+}
+
 int dav_svn__method_post(request_rec *r)
 {
   dav_resource *resource;
   dav_error *derr;
-  const char *txn_name;
+  const char *content_type;
 
+  /* We only allow POSTs against the "me resource" right now. */
   derr = get_resource(r, dav_svn__get_root_dir(r),
                       "ignored", 0, &resource);
   if (derr != NULL)
     return derr->status;
-
   if (resource->info->restype != DAV_SVN_RESTYPE_ME)
     return HTTP_BAD_REQUEST;
 
-  /* Create a Subversion repository transaction based on HEAD. */
-  derr = dav_svn__create_txn(resource->info->repos, &txn_name, resource->pool);
+  /* Pass skel-type POST request handling off to a dispatcher; any
+     other type of request is considered bogus. */
+  content_type = apr_table_get(r->headers_in, "content-type");
+  if (content_type && (strcmp(content_type, SVN_SKEL_MIME_TYPE) == 0))
+    {
+      derr = handle_post_request(r, resource, r->output_filters);
+    }
+  else
+    {
+      derr = dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                           "Unsupported POST request type.");
+    }
+
+  /* If something went wrong above, we'll generate a response back to
+     the client with (hopefully) some helpful information. */
   if (derr)
     return dav_svn__error_response_tag(r, derr);
-
-  /* Build a "201 Created" response with header that tells the client
-     our new transaction's name. */
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_TXN_NAME_HEADER,
-                txn_name);
-  r->status = HTTP_CREATED;
-
+    
   return OK;
 }
 

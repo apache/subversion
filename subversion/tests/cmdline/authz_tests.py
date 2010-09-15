@@ -37,6 +37,7 @@ from svntest.main import server_authz_has_aliases
 # (abbreviation)
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
@@ -973,6 +974,92 @@ def multiple_matches(sbox):
                        '-m', 'second copy',
                        root_url, root_url + '/second')
 
+def wc_wc_copy(sbox):
+  "wc-to-wc copy with absent nodes"
+
+  sbox.build(create_wc = False)
+  local_dir = sbox.wc_dir
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  write_authz_file(sbox, {'/'       : '* = r',
+                          '/A/B/E'  : '* =', })
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = local_dir
+  expected_output.tweak(status='A ', contents=None)
+  expected_output.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_wc = svntest.main.greek_state.copy()
+  expected_wc.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+
+  svntest.actions.run_and_verify_checkout(sbox.repo_url, local_dir,
+                                          expected_output,
+                                          expected_wc)
+
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: Cannot copy.*excluded by server',
+                                     'cp', sbox.ospath('A'), sbox.ospath('A2'))
+
+  # The copy failed and A2/B/E is incomplete.  That means A2 and A2/B
+  # are complete, but for the other parts of A2 the status is undefined.
+  expected_output = svntest.verify.ExpectedOutput(
+    ['A  +             -        1 jrandom      ' + sbox.ospath('A2') + '\n',
+     '   +             -        1 jrandom      ' + sbox.ospath('A2/B') + '\n',
+     '!               ?        ?   ?           ' + sbox.ospath('A2/B/E') + '\n',
+     ])
+  expected_output.match_all = False
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '--verbose', sbox.ospath('A2'))
+
+def wc_wc_copy_revert(sbox):
+  "wc-to-wc-copy with absent nodes and then revert"
+
+  wc_wc_copy(sbox)
+
+  # Fails with a "No write-lock" error, as does "rm --force", on a
+  # path under A2.  Multiple repeats fail on different paths until the
+  # command completes.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '--recursive', sbox.ospath('A2'))
+  
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+def authz_recursive_ls(sbox):
+  "recursive ls with private subtrees"
+
+  sbox.build(create_wc = False)
+  local_dir = sbox.wc_dir
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  write_authz_file(sbox, {'/'       : '* = r',
+                          '/A/B/E'  : '* =',
+                          '/A/mu'   : '* =',
+                          })
+  expected_entries = [
+    'A/',
+    'A/B/',
+    'A/B/F/',
+    'A/B/lambda',
+    'A/C/',
+    'A/D/',
+    'A/D/G/',
+    'A/D/G/pi',
+    'A/D/G/rho',
+    'A/D/G/tau',
+    'A/D/H/',
+    'A/D/H/chi',
+    'A/D/H/omega',
+    'A/D/H/psi',
+    'A/D/gamma',
+    'iota',
+    ]
+  svntest.actions.run_and_verify_svn('recursive ls from /',
+                                     map(lambda x: x + '\n', expected_entries),
+                                     [], 'ls', '-R',
+                                     sbox.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -1001,6 +1088,12 @@ test_list = [ None,
               Skip(authz_access_required_at_repo_root2,
                    svntest.main.is_ra_type_file),
               Skip(multiple_matches, svntest.main.is_ra_type_file),
+              Skip(wc_wc_copy, svntest.main.is_ra_type_file),
+              Skip(wc_wc_copy_revert,
+                   svntest.main.is_ra_type_file),
+              XFail(Skip(authz_recursive_ls,
+                         svntest.main.is_ra_type_file),
+                    svntest.main.is_ra_type_svn),
              ]
 
 if __name__ == '__main__':

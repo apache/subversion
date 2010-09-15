@@ -153,7 +153,7 @@ SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
 SQLITE_MINIMUM_VER="3.4.0"
-SQLITE_RECOMMENDED_VER="3.6.17"
+SQLITE_RECOMMENDED_VER="3.7.2"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -330,6 +330,21 @@ if test "$trang" = "yes"; then
 else
     TRANG="$trang"
     AC_SUBST(TRANG)
+fi
+
+dnl Check for doxygen
+doxygen=yes
+AC_ARG_WITH(doxygen,
+AC_HELP_STRING([--with-doxygen=PATH],
+               [Specify the command to run doxygen]),
+[
+    doxygen="$withval"
+])
+if test "$doxygen" = "yes"; then
+    AC_PATH_PROG(DOXYGEN, doxygen, none)
+else
+    DOXYGEN="$doxygen"
+    AC_SUBST(DOXYGEN)
 fi
 
 
@@ -804,7 +819,10 @@ dnl Use -Wl,--no-undefined during linking of some libraries
 AC_ARG_ENABLE(disallowing-of-undefined-references,
   [AS_HELP_STRING([--enable-disallowing-of-undefined-references],
                   [Use -Wl,--no-undefined flag during linking of some libraries to disallow undefined references])])
-if test "$enable_disallowing_of_undefined_references" = "yes"; then
+if test "$enable_disallowing_of_undefined_references" != "yes" && test "`uname`" != "Linux"; then
+  enable_disallowing_of_undefined_references="no"
+fi
+if test "$enable_disallowing_of_undefined_references" != "no"; then
   AC_MSG_CHECKING([for -Wl,--no-undefined])
   old_LDFLAGS="$LDFLAGS"
   LDFLAGS="$LDFLAGS -Wl,--no-undefined"
@@ -818,7 +836,9 @@ if test "$enable_disallowing_of_undefined_references" = "yes"; then
     done
   else
     AC_MSG_RESULT([no])
-    AC_MSG_ERROR([--enable-disallowing-of-undefined-references explicitly requested, but -Wl,--no-undefined not supported])
+    if test "$enable_disallowing_of_undefined_references" = "yes"; then
+      AC_MSG_ERROR([--enable-disallowing-of-undefined-references explicitly requested, but -Wl,--no-undefined not supported])
+    fi
   fi
 fi
 AC_SUBST([libsvn_auth_gnome_keyring_LDFLAGS])
@@ -882,6 +902,9 @@ AS_HELP_STRING([--enable-maintainer-mode],
         CFLAGS="-Wold-style-definition $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
+        CFLAGS="-Wno-system-headers $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
         AC_LANG_POP([C])
         CFLAGS="$CFLAGS_KEEP"
       fi
@@ -937,16 +960,16 @@ AS_HELP_STRING([--with-editor=PATH],
 
 SVN_LIB_Z
 
-MOD_ACTIVATION="-a"
+MOD_ACTIVATION=""
 AC_ARG_ENABLE(mod-activation,
-AS_HELP_STRING([--disable-mod-activation],
-               [Do not enable mod_dav_svn in httpd.conf]),
+AS_HELP_STRING([--enable-mod-activation],
+               [Enable mod_dav_svn in httpd.conf]),
 [
-    if test "$enableval" = "no" ; then
-      MOD_ACTIVATION=""
-      AC_MSG_NOTICE([Disabling apache module activation])
-    else
+    if test "$enableval" = "yes" ; then
+      MOD_ACTIVATION="-a"
       AC_MSG_NOTICE([Enabling apache module activation])
+    else
+      AC_MSG_NOTICE([Disabling apache module activation])
     fi
 ])
 AC_SUBST(MOD_ACTIVATION)

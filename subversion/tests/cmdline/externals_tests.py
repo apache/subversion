@@ -1471,6 +1471,104 @@ def wc_repos_file_externals(sbox):
                                         None, None, None, None, None,
                                         True)
 
+#----------------------------------------------------------------------
+def merge_target_with_externals(sbox):
+  "merge target with externals"
+
+  # Test for a problem the plagued Subversion in the pre-1.7-single-DB world:
+  # Externals in a merge target would get meaningless explicit mergeinfo set
+  # on them.  See http://svn.haxx.se/dev/archive-2010-08/0088.shtml
+  externals_test_setup(sbox)
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Some paths we'll care about
+  A_path              = os.path.join(wc_dir, "A")
+  A_branch_path       = os.path.join(wc_dir, "A-branch")
+  A_gamma_branch_path = os.path.join(wc_dir, "A-branch", "D", "gamma")
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  # Branch A@1 to A-branch and make a simple text change on the latter in r8.
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_path + '@1',
+                                     A_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'make a copy', wc_dir)
+  svntest.main.file_write(A_gamma_branch_path, "The new gamma!\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'branch edit', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Merge r8 from A-branch back to A.  There should be explicit mergeinfo
+  # only at the root of A; the externals should not get any.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c8',
+                                     repo_url + '/A-branch', A_path)
+  svntest.actions.run_and_verify_svn(
+    "Unexpected subtree mergeinfo created",
+    ["Properties on '" + A_path + "':\n",
+     "  svn:mergeinfo\n",
+     "    /A-branch:8\n"],
+    [], 'pg', svntest.main.SVN_PROP_MERGEINFO, '-vR', wc_dir)
+
+def update_modify_file_external(sbox):
+  "update that modifies a file external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Setup A/external as file external to A/mu
+  externals_prop = "^/A/mu external\n"
+  change_external(sbox.ospath('A'), externals_prop)
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/external'      : Item(status='E '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A'          : Item(props={'svn:externals':externals_prop}),
+    'A/external' : Item("This is the file 'mu'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/external' : Item(status='  ', wc_rev='2', switched='X'),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+  # Modify A/mu
+  svntest.main.file_append(sbox.ospath('A/mu'), 'appended mu text')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status.tweak('A/mu', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Update to modify the file external, this asserts in update_editor.c
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/external'      : Item(status='U '),
+    })
+  expected_disk.tweak('A/mu', 'A/external',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/external' : Item(status='  ', wc_rev='3', switched='X'),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
 
 ########################################################################
 # Run the tests
@@ -1501,6 +1599,8 @@ test_list = [ None,
               export_sparse_wc_with_externals,
               relegate_external,
               wc_repos_file_externals,
+              merge_target_with_externals,
+              update_modify_file_external,
              ]
 
 if __name__ == '__main__':

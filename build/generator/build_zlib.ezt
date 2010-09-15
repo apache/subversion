@@ -43,13 +43,13 @@ if not exist gvmat32c.c    copy contrib\masmx86\gvmat32c.c .
 if not exist gvmat32.asm   copy contrib\masmx86\gvmat32.asm .
 if not exist inffas32.asm  copy contrib\masmx86\inffas32.asm .[end]
 
-if "%1" == "release" goto release
-if "%1" == "debug" goto debug
+if /i "%1" == "release" goto release
+if /i "%1" == "debug" goto debug
 goto pIerr
 
 :checkrebuild
-if "%2" == "rebuild" goto rebuild
-if "%2" == "clean" goto clean
+if /i "%2" == "rebuild" goto rebuild
+if /i "%2" == "clean" goto clean
 if not "%2" == "" goto pIIerr
 set target= %STATICLIB%
 goto build

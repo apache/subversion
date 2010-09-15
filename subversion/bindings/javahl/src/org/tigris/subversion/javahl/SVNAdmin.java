@@ -35,14 +35,14 @@ import java.io.IOException;
  */
 public class SVNAdmin
 {
-    private org.apache.subversion.javahl.SVNAdmin aSVNAdmin;
+    private org.apache.subversion.javahl.SVNRepos aSVNAdmin;
 
     /**
      * Standard empty contructor, builds just the native peer.
      */
     public SVNAdmin()
     {
-        aSVNAdmin = new org.apache.subversion.javahl.SVNAdmin();
+        aSVNAdmin = new org.apache.subversion.javahl.SVNRepos();
         cppAddr = aSVNAdmin.getCppAddr();
     }
 
@@ -244,7 +244,7 @@ public class SVNAdmin
      * interface to receive the messages
      */
     public static interface MessageReceiver
-        extends org.apache.subversion.javahl.SVNAdmin.MessageReceiver
+        extends org.apache.subversion.javahl.ISVNRepos.MessageReceiver
     {
     }
 
@@ -460,7 +460,9 @@ public class SVNAdmin
         {
             Set<org.apache.subversion.javahl.Lock> aLocks =
                                                     aSVNAdmin.lslocks(
-                                                        new File(path));
+                                                        new File(path),
+                                                        Depth.toADepth(
+                                                              Depth.infinity));
             Lock[] locks = new Lock[aLocks.size()];
 
             int i = 0;

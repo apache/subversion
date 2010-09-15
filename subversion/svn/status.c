@@ -50,7 +50,6 @@ generate_status_code(enum svn_wc_status_kind status)
     case svn_wc_status_deleted:     return 'D';
     case svn_wc_status_replaced:    return 'R';
     case svn_wc_status_modified:    return 'M';
-    case svn_wc_status_merged:      return 'G';
     case svn_wc_status_conflicted:  return 'C';
     case svn_wc_status_obstructed:  return '~';
     case svn_wc_status_ignored:     return 'I';
@@ -65,18 +64,20 @@ generate_status_code(enum svn_wc_status_kind status)
 static enum svn_wc_status_kind
 combined_status(const svn_client_status_t *status)
 {
-  enum svn_wc_status_kind combined_status = status->node_status;
+  enum svn_wc_status_kind new_status = status->node_status;
 
   switch (status->node_status)
     {
       case svn_wc_status_modified:
       case svn_wc_status_conflicted:
         /* This value might be the property status */
-        combined_status = status->text_status;
+        new_status = status->text_status;
+        break;
+      default:
         break;
     }
 
-  return combined_status;
+  return new_status;
 }
 
 /* Return the single character representation of the switched column
@@ -106,7 +107,6 @@ generate_status_desc(enum svn_wc_status_kind status)
     case svn_wc_status_deleted:     return "deleted";
     case svn_wc_status_replaced:    return "replaced";
     case svn_wc_status_modified:    return "modified";
-    case svn_wc_status_merged:      return "merged";
     case svn_wc_status_conflicted:  return "conflicted";
     case svn_wc_status_obstructed:  return "obstructed";
     case svn_wc_status_ignored:     return "ignored";
@@ -189,18 +189,16 @@ print_status(const char *path,
          ### we'll just maintain the old behavior. */
       if (! status->versioned)
         working_rev = "";
+      else if (status->copied)
+        working_rev = "-";
       else if (! SVN_IS_VALID_REVNUM(status->revision))
         {
-          if (status->copied)
-            working_rev = "-";
-          else if (node_status == svn_wc_status_added
-              || node_status == svn_wc_status_replaced)
+          if (node_status == svn_wc_status_added ||
+              node_status == svn_wc_status_replaced)
             working_rev = "0";
           else
             working_rev = " ? ";
         }
-      else if (status->copied)
-        working_rev = "-";
       else
         working_rev = apr_psprintf(pool, "%ld", status->revision);
 

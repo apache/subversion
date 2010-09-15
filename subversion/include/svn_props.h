@@ -110,6 +110,8 @@ svn_prop_hash_dup(apr_hash_t *hash,
  * Return the value of property @a prop_name as it is in @a properties,
  * with values <tt>const svn_string_t</tt>. If @a prop_name is not
  * in @a properties or @ properties is NULL, return NULL.
+ *
+ * @since New in 1.7.
  */
 const char *
 svn_prop_get_value(apr_hash_t *properties,
@@ -262,7 +264,7 @@ svn_prop_name_is_valid(const char *prop_name);
  * @{
  */
 
-/* Properties whose values are interpreted as booleans (such as
+/** Properties whose values are interpreted as booleans (such as
  * svn:executable, svn:needs_lock, and svn:special) always fold their
  * value to this.
  *
@@ -317,13 +319,14 @@ svn_prop_name_is_valid(const char *prop_name);
  *
  * The format is a series of lines, such as:
  *
- *@verbatim
+ * <pre reason="Should use 'verbatim' instead, but Doxygen v1.6.1 & v1.7.1
+ *              then doesn't recognize the #define; presumably a bug.">
      localdir1           http://url.for.external.source/etc/
      localdir1/foo       http://url.for.external.source/foo
      localdir1/bar       http://blah.blah.blah/repositories/theirproj
      localdir1/bar/baz   http://blorg.blorg.blorg/basement/code
      localdir2           http://another.url/blah/blah/blah
-     localdir3           http://and.so.on/and/so/forth @endverbatim
+     localdir3           http://and.so.on/and/so/forth </pre>
  *
  * The subdir names on the left side are relative to the directory on
  * which this property is set.
@@ -396,9 +399,10 @@ svn_prop_name_is_valid(const char *prop_name);
  * For example, WebDAV RA implementations might store a versioned-resource
  * url as a WC prop like this:
  *
- * @verbatim
+ * <pre reason="Should use 'verbatim' instead, but Doxygen v1.6.1 & v1.7.1
+ *              then doesn't recognize the #define; presumably a bug.">
       name = svn:wc:dav_url
-      val  = http://www.example.com/repos/452348/e.289 @endverbatim
+      val  = http://www.example.com/repos/452348/e.289 </pre>
  *
  * The client will try to protect WC props by warning users against
  * changing them.  The client will also send them back to the RA layer

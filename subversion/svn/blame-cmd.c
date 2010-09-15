@@ -167,7 +167,7 @@ print_line_info(svn_stream_t *out,
     }
   else
     {
-      return svn_stream_printf(out, pool, "%s %10s ", rev_str,
+      return svn_stream_printf(out, pool, "%s %10.10s ", rev_str,
                                author ? author : "         -");
     }
 

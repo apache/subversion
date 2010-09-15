@@ -37,6 +37,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "private/svn_dav_protocol.h"
+#include "private/svn_skel.h"
 #include "mod_authz_svn.h"
 
 #ifdef __cplusplus
@@ -419,7 +420,7 @@ dav_svn__store_activity(const dav_svn_repos *repos,
                         const char *txn_name);
 
 
-/* HTTP protocol v2:  client does POST against 'me' resource. */
+/* POST request handler.  (Used by HTTP protocol v2 clients only.)  */
 int dav_svn__method_post(request_rec *r);
 
 
@@ -640,6 +641,23 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
                                 ap_filter_t *output);
 
+
+/*** posts/ ***/
+
+/* The list of Subversion's custom POSTs. */
+/* ### should move these report names to a public header to share with
+   ### the client (and third parties). */
+static const char * dav_svn__posts_list[] = {
+  "create-txn",
+  NULL
+};
+
+/* The various POST handlers, defined in posts/, and used by repos.c.  */
+dav_error *
+dav_svn__post_create_txn(const dav_resource *resource,
+                         svn_skel_t *request_skel,
+                         ap_filter_t *output);
+
 /*** authz.c ***/
 
 /* A baton needed by dav_svn__authz_read_func(). */
@@ -654,17 +672,32 @@ typedef struct
 } dav_svn__authz_read_baton;
 
 
-/* Convert incoming RESOURCE and revision REV into a version-resource URI and
-   perform a GET subrequest on it.  This will invoke any authz modules loaded
-   into apache. Return TRUE if the subrequest succeeds, FALSE otherwise.
-
-   If REV is SVN_INVALID_REVNUM, then we look at HEAD.
-   Use POOL for any temporary allocation.
+/* Return TRUE iff the current user (as determined by Apache's
+   authentication system) has permission to read PATH in REPOS at REV
+   (where an invalid REV means "HEAD").  This will invoke any authz
+   modules loaded into Apache unless this Subversion location has been
+   configured to bypass those in favor of a direct lookup in the
+   Subversion authz subsystem.  Use POOL for any temporary allocation.
 */
 svn_boolean_t
-dav_svn__allow_read(const dav_resource *resource,
-                   svn_revnum_t rev,
-                   apr_pool_t *pool);
+dav_svn__allow_read(request_rec *r,
+                    const dav_svn_repos *repos,
+                    const char *path,
+                    svn_revnum_t rev,
+                    apr_pool_t *pool);
+
+/* Return TRUE iff the current user (as determined by Apache's
+   authentication system) has permission to read RESOURCE in REV
+   (where an invalid REV means "HEAD").  This will invoke any authz
+   modules loaded into Apache unless this Subversion location has been
+   configured to bypass those in favor of a direct lookup in the
+   Subversion authz subsystem.  Use POOL for any temporary allocation.
+*/
+svn_boolean_t
+dav_svn__allow_read_resource(const dav_resource *resource,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool);
+
 
 /* If authz is enabled in the specified BATON, return a read authorization
    function. Otherwise, return NULL. */
@@ -889,6 +922,13 @@ dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
  * dav_error_response_tag() function which is, sadly, not public.
  */
 int dav_svn__error_response_tag(request_rec *r, dav_error *err);
+
+
+/* Set *SKEL to a parsed skel read from the body of request R, and
+ * allocated in POOL.
+ */
+int dav_svn__parse_request_skel(svn_skel_t **skel, request_rec *r,
+                                apr_pool_t *pool);
 
 /*** mirror.c ***/
 

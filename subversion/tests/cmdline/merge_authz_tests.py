@@ -82,13 +82,6 @@ def mergeinfo_and_skipped_paths(sbox):
   #   2) Destination of merge is inaccessible due to authz restrictions.
   #   3) Source *and* destination of merge is inaccessible due to authz
   #      restrictions.
-  #   4) File path is versioned but is missing from disk due to OS deletion.
-  #      This isn't technically part of issue #2893 but we handle this case
-  #      and it didn't warrant its own test).
-  #
-  # Eventually we should also test(?):
-  #
-  #   5) Dir path is versioned but is missing from disk due to an OS deletion.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -122,27 +115,20 @@ def mergeinfo_and_skipped_paths(sbox):
   omega_path = os.path.join(wc_restricted, "A_COPY", "D", "H", "omega")
   zeta_path = os.path.join(wc_dir, "A", "D", "H", "zeta")
 
-  # Restrict access to some more of the merge destination the
-  # old fashioned way, delete it via the OS.
-  ### TODO: Delete a versioned directory?
-  os.remove(omega_path)
-
   # Merge r4:8 into the restricted WC's A_COPY.
   #
   # We expect A_COPY/B/E to be skipped because we can't access the source
   # and A_COPY/D/H/omega because it is missing.  Since we have A_COPY/B/E
   # we should override it's inherited mergeinfo, giving it just what it
-  # inherited from A_COPY before the merge.  omega is missing, but since
-  # it is a file we can record the fact that it is missing in its parent
-  # directory A_COPY/D/H.
+  # inherited from A_COPY before the merge.
   expected_output = wc.State(A_COPY_path, {
     'D/G/rho'   : Item(status='U '),
     'D/H/psi'   : Item(status='U '),
+    'D/H/omega' : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_COPY_path, {
     ''          : Item(status=' U'),
     'B/E'       : Item(status=' U'),
-    'D/H/omega' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_COPY_path, {
     })
@@ -150,7 +136,7 @@ def mergeinfo_and_skipped_paths(sbox):
     ''          : Item(status=' M', wc_rev=8),
     'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/psi'   : Item(status='M ', wc_rev=8),
-    'D/H/omega' : Item(status='!M', wc_rev=8),
+    'D/H/omega' : Item(status='M ', wc_rev=8),
     'D/H'       : Item(status='  ', wc_rev=8),
     'D/G/pi'    : Item(status='  ', wc_rev=8),
     'D/G/rho'   : Item(status='M ', wc_rev=8),
@@ -171,9 +157,7 @@ def mergeinfo_and_skipped_paths(sbox):
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-8'}),
     'D/H/psi'   : Item("New content"),
     'D/H/chi'   : Item("This is the file 'chi'.\n"),
-     # 'D/H/omega' : run_and_verify_merge() doesn't support checking
-     #               the props on a missing path, so we do that
-     #               manually (see below).
+    'D/H/omega' : Item("New content"),
     'D/H'       : Item(),
     'D/G/pi'    : Item("This is the file 'pi'.\n"),
     'D/G/rho'   : Item("New content"),
@@ -192,9 +176,7 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_skip = wc.State(A_COPY_path, {
     'B/E'       : Item(),
-    'D/H/omega' : Item(),
     })
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_path, '4', '8',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -205,10 +187,6 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-
-  # Manually check the props on A_COPY/D/H/omega.
-  svntest.actions.run_and_verify_svn(None, ['\n'], [],
-                                    'pg', SVN_PROP_MERGEINFO, omega_path)
 
   # Merge r4:8 into the restricted WC's A_COPY_2.
   #
@@ -273,7 +251,6 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/G'       : Item(),
     'D/H/psi'   : Item(),
     })
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -338,7 +315,6 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(),
     })
   expected_skip = wc.State(A_COPY_3_path, {'B/E' : Item()})
-  saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_3_path, '5', '7',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -378,7 +354,6 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_skip = wc.State(A_COPY_2_H_path, {
     'psi'   : Item(),
     })
-  saved_cwd = os.getcwd()
   # Note we don't bother checking expected mergeinfo output because the
   # multiple merges being performed here, -c5 and -c8, will result in
   # first ' U' and then ' G' mergeinfo notifications.  Our expected
@@ -393,7 +368,8 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0, '-c5', '-c8')
+                                       None, 1, 0, '-c5', '-c8',
+                                       A_COPY_2_H_path)
 
   # Test issue #2829 'Improve handling for skipped paths encountered
   # during a merge'
@@ -441,8 +417,6 @@ def mergeinfo_and_skipped_paths(sbox):
                    props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:8-9'}),
     })
   expected_skip = wc.State(A_COPY_2_H_path, {})
-  saved_cwd = os.getcwd()
-  #raise svntest.Failure("PTB")
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
                                        sbox.repo_url + '/A/D/H', None,
                                        expected_output,
@@ -641,7 +615,7 @@ def reintegrate_fails_if_no_root_access(sbox):
     'mu'           : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -698,7 +672,7 @@ def reintegrate_fails_if_no_root_access(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
   
 ########################################################################
 # Run the tests

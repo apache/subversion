@@ -102,6 +102,7 @@ $2" "$3" > "$3.new"
 current_directory="$(pwd)"
 for libtool_script in $executables $tests; do
   eval "libtool_script_path=\$${libtool_script}_path"
+  libtool_script_libraries=""
   if [ -f "$libtool_script_path" ]; then
     if { grep LD_LIBRARY_PATH "$libtool_script_path" && ! grep LD_PRELOAD "$libtool_script_path"; } > /dev/null; then
       echo "Transforming $libtool_script_path"

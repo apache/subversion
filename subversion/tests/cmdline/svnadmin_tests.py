@@ -1162,28 +1162,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
 
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
-  #
-  # Currently this fails because our current logic mapping mergeinfo revs
-  # in the load stream to their new values based on the offset of the
-  # target repository is quite flawed.  Right now this is the resulting
-  # mergeinfo:
-  #
-  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B1\B
-  #      svn:mergeinfo
-  #        /Projects/Project-X/branches/B2/B/E:11-12
-  #        /Projects/Project-X/trunk/B/E:5-6,8-9
-  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B1':
-  #      svn:mergeinfo
-  #        /Projects/Project-X/branches/B2:11-18
-  #                                           ^^
-  #                                 The *only* correct rev here!
-  #        /Projects/Project-X/trunk:6,9
-  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B2':
-  #      svn:mergeinfo
-  #        /Projects/Project-X/trunk:9
-  #
-  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16 for
-  # more info.
+  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
@@ -1276,7 +1255,7 @@ test_list = [ None,
               create_in_repo_subdir,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
-              XFail(dont_drop_valid_mergeinfo_during_incremental_loads),
+              dont_drop_valid_mergeinfo_during_incremental_loads,
               SkipUnless(hotcopy_symlink, svntest.main.is_posix_os),
              ]
 

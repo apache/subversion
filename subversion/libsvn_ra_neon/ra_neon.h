@@ -57,6 +57,7 @@ extern "C" {
 #define SVN_RA_NEON__XML_CDATA   (1<<1)
 #define SVN_RA_NEON__XML_COLLECT ((1<<2) | SVN_RA_NEON__XML_CDATA)
 
+/* ### Related to anonymous enum below? */
 typedef int svn_ra_neon__xml_elmid;
 
 /** XML element */
@@ -98,7 +99,8 @@ typedef struct svn_ra_neon__session_t {
   void *callback_baton;
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
-  const char *auth_username;            /* last authenticated username used */
+  svn_boolean_t auth_used;              /* Save authorization state after
+                                           successful usage */
 
   svn_auth_iterstate_t *p11pin_iterstate; /* state of PKCS#11 pin retries */
 
@@ -200,8 +202,9 @@ typedef struct {
  *
  * Register a pool cleanup for any allocated Neon resources.
  */
-svn_ra_neon__request_t *
-svn_ra_neon__request_create(svn_ra_neon__session_t *sess,
+svn_error_t *
+svn_ra_neon__request_create(svn_ra_neon__request_t **request,
+                            svn_ra_neon__session_t *sess,
                             const char *method, const char *url,
                             apr_pool_t *pool);
 
@@ -381,6 +384,13 @@ svn_error_t *svn_ra_neon__get_file_revs(svn_ra_session_t *session,
                                         svn_file_rev_handler_t handler,
                                         void *handler_baton,
                                         apr_pool_t *pool);
+
+
+/* Local duplicate of svn_ra_get_path_relative_to_root(). */
+svn_error_t *svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
+                                                    const char **rel_path,
+                                                    const char *url,
+                                                    apr_pool_t *pool);
 
 
 /*
@@ -665,7 +675,8 @@ typedef svn_error_t * (*svn_ra_neon__endelm_cb_t)(void *baton,
  * Register a pool cleanup on the pool of REQ to clean up any allocated
  * Neon resources.
  *
- * ACCPT indicates whether the parser wants read the response body
+ * Return the new parser.  Also attach it to REQ if ACCPT is non-null.
+ * ACCPT indicates whether the parser wants to read the response body
  * or not.  Pass NULL for ACCPT when you don't want the returned parser
  * to be attached to REQ.
  */
@@ -730,6 +741,7 @@ svn_ra_neon__check_parse_error(const char *method,
                                ne_xml_parser *xml_parser,
                                const char *url);
 
+/* ### Related to svn_ra_neon__xml_elmid? */
 /* ### add SVN_RA_NEON_ to these to prefix conflicts with (sys) headers? */
 enum {
   /* Redefine Neon elements */
@@ -935,12 +947,10 @@ svn_ra_neon__maybe_store_auth_info_after_result(svn_error_t *err,
    NULL, as this will cause Neon to generate a "Content-Length: 0"
    header (which is important to some proxies).
 
-   OKAY_1 and OKAY_2 are the "acceptable" result codes. Anything other
-   than one of these will generate an error. OKAY_1 should always be
-   specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
-   not allowed.
-
- */
+   OKAY_1 and OKAY_2 are the "acceptable" result codes.  Anything
+   other than one of these will generate an error.  OKAY_1 should
+   always be specified (e.g. as 200); use 0 for OKAY_2 if additional
+   result codes aren't allowed.  */
 svn_error_t *
 svn_ra_neon__request_dispatch(int *code_p,
                               svn_ra_neon__request_t *request,
@@ -963,8 +973,9 @@ svn_ra_neon__simple_request(int *code,
                             const char *url,
                             apr_hash_t *extra_headers,
                             const char *body,
-                            int okay_1, int okay_2, apr_pool_t *pool);
-
+                            int okay_1,
+                            int okay_2,
+                            apr_pool_t *pool);
 
 /* Convenience statement macro for setting headers in a hash */
 #define svn_ra_neon__set_header(hash, hdr, val) \
@@ -1022,6 +1033,7 @@ svn_error_t *
 svn_ra_neon__get_locks(svn_ra_session_t *session,
                        apr_hash_t **locks,
                        const char *path,
+                       svn_depth_t depth,
                        apr_pool_t *pool);
 
 /*
@@ -1098,14 +1110,22 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
    RAS->capabilities with the server's capabilities as read from the
    response headers.  Use POOL only for temporary allocation.
 
+   If the RELOCATION_LOCATION is non-NULL, allow the OPTIONS response
+   to report a server-dictated redirect or relocation (HTTP 301 or 302
+   error codes), setting *RELOCATION_LOCATION to the value of the
+   corrected repository URL.  Otherwise, such responses from the
+   server will generate an error.  (In either case, no capabilities are
+   exchanged if there is, in fact, such a response from the server.)
+
    If the server is kind enough to tell us the current youngest
    revision of the target repository, set *YOUNGEST_REV to that value;
    set it to SVN_INVALID_REVNUM otherwise.
 
-  NOTE:  This function also expects the server to announce the
+   NOTE:  This function also expects the server to announce the
    activity collection.  */
 svn_error_t *
 svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
+                                   const char **relocation_location,
                                    svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool);
 

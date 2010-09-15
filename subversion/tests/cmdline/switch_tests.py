@@ -29,6 +29,7 @@ import shutil, re, os
 
 # Our testing module
 import svntest
+from svntest import verify, actions, main
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -37,6 +38,8 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
+from externals_tests import change_external
+
 
 ### Bummer.  It would be really nice to have easy access to the URL
 ### member of our entries files so that switches could be testing by
@@ -564,7 +567,10 @@ def relocate_deleted_missing_copied(sbox):
     'A/D2/H/omega' : Item(status='  ', wc_rev='-', copied='+'),
     'A/D2/H/psi'   : Item(status='  ', wc_rev='-', copied='+'),
     })
-  expected_status.tweak('A/B/F', status='! ', wc_rev='?')
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_status.tweak('A/B/F', status='! ', wc_rev='1')
+  else:
+    expected_status.tweak('A/B/F', status='! ', wc_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Relocate
@@ -578,20 +584,28 @@ def relocate_deleted_missing_copied(sbox):
 
   # Deleted and missing entries should be preserved, so update should
   # show only A/B/F being reinstated
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/B/F' : Item(status='A '),
-    })
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_output = svntest.wc.State(wc_dir, {
+        'A/B/F' : Item(verb='Restored'),
+        })
+  else:
+    expected_output = svntest.wc.State(wc_dir, {
+        'A/B/F' : Item(status='A '),
+        })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/mu')
   expected_disk.add({
     'A/D2'       : Item(),
     'A/D2/gamma'   : Item("This is the file 'gamma'.\n"),
-    'A/D2/G'       : Item(),
     'A/D2/H'       : Item(),
     'A/D2/H/chi'   : Item("This is the file 'chi'.\n"),
     'A/D2/H/omega' : Item("This is the file 'omega'.\n"),
     'A/D2/H/psi'   : Item("This is the file 'psi'.\n"),
     })
+  if not svntest.main.wc_is_singledb(wc_dir):
+    expected_disk.add({
+        'A/D2/G'       : Item(),
+        })
   expected_status.add({
     'A/B/F'       : Item(status='  ', wc_rev='2'),
     })
@@ -802,35 +816,92 @@ def bad_intermediate_urls(sbox):
   "bad intermediate urls in use"
   sbox.build()
   wc_dir = sbox.wc_dir
+  url = sbox.repo_url
+
+  A = os.path.join(wc_dir, 'A')
+  A_Z = os.path.join(wc_dir, 'A', 'Z')
+  url_A_C = url + '/A/C'
+  url_A_C_A = url + '/A/C/A'
+  url_A_C_A_Z = url + '/A/C/A/Z'
 
   # We'll be switching our working copy to (a modified) A/C in the Greek tree.
 
   # First, make an extra subdirectory in C to match one in the root, plus
   # another one inside of that.
-  C_url = sbox.repo_url + '/A/C'
-  C_A_url = sbox.repo_url + '/A/C/A'
-  C_A_Z_url = sbox.repo_url + '/A/C/A/Z'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg',
-                                     C_A_url, C_A_Z_url)
+                                     url_A_C_A, url_A_C_A_Z)
 
   # Now, we'll drop a conflicting path under the root.
-  A_path = os.path.join(wc_dir, 'A')
-  A_Z_path = os.path.join(A_path, 'Z')
-  svntest.main.file_append(A_Z_path, 'Look, Mom, no ... switch success.')
+  svntest.main.file_append(A_Z, 'Look, Mom, a ... tree conflict.')
 
-  # This switch should fail for reasons of obstruction.
-  exit_code, out, err = svntest.main.run_svn(1, 'switch',
-                                             C_url, wc_dir)
-  if not err:
-    raise svntest.Failure
+  #svntest.factory.make(sbox, """
+  #  svn switch url/A/C wc_dir
+  #  # svn info A
+  #  # check that we can recover from the tree conflict
+  #  rm A/Z
+  #  svn up
+  #  """)
+  #exit(0)
 
-  # However, the URL for A should now reflect A/C/A, not something else.
+  # svn switch url/A/C wc_dir
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'              : Item(status='D '),
+    'A/Z'               : Item(status='  ', treeconflict='C'),
+    'A/C'               : Item(status='D '),
+    'A/B'               : Item(status='D '),
+    'A/D'               : Item(status='D '),
+    'iota'              : Item(status='D '),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota', 'A/B', 'A/B/E', 'A/B/E/beta', 'A/B/E/alpha',
+    'A/B/F', 'A/B/lambda', 'A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/pi',
+    'A/D/G/tau', 'A/D/H', 'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi',
+    'A/D/gamma', 'A/mu', 'A/C')
+  expected_disk.add({
+    'A/Z'               : Item(contents="Look, Mom, a ... tree conflict."),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('iota', 'A/B', 'A/B/E', 'A/B/E/beta', 'A/B/E/alpha',
+    'A/B/F', 'A/B/lambda', 'A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/pi',
+    'A/D/G/tau', 'A/D/H', 'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi',
+    'A/D/gamma', 'A/mu', 'A/C')
+  expected_status.add({
+    'A/Z'               : Item(status='? ', treeconflict='C'),
+  })
+
+  actions.run_and_verify_switch(wc_dir, wc_dir, url_A_C, expected_output,
+    expected_disk, expected_status, None, None, None, None, None, False)
+
+  
+  # However, the URL for wc/A should now reflect ^/A/C/A, not something else.
   expected_infos = [
       { 'URL' : '.*/A/C/A$' },
     ]
-  svntest.actions.run_and_verify_info(expected_infos, A_path)
+  svntest.actions.run_and_verify_info(expected_infos, A)
+
+
+  # check that we can recover from the tree conflict
+  # rm A/Z
+  os.remove(A_Z)
+
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/Z'               : Item(status='A '),
+  })
+
+  expected_disk.tweak('A/Z', contents=None)
+
+  expected_status.tweak(status='  ', wc_rev='2')
+  expected_status.tweak('A/Z', treeconflict=None)
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
+
 
 
 #----------------------------------------------------------------------
@@ -839,42 +910,84 @@ def bad_intermediate_urls(sbox):
 
 def obstructed_switch(sbox):
   "obstructed switch"
+  #svntest.factory.make(sbox, """svn cp -m msgcopy url/A/B/E url/A/B/Esave
+  #                              svn rm A/B/E/alpha
+  #                              svn commit
+  #                              echo "hello" >> A/B/E/alpha
+  #                              svn switch url/A/B/Esave A/B/E
+  #                              svn status
+  #                              svn info A/B/E/alpha""")
   sbox.build()
   wc_dir = sbox.wc_dir
+  url = sbox.repo_url
 
-  E_url      = sbox.repo_url + '/A/B/E'
-  E_url2     = sbox.repo_url + '/A/B/Esave'
-  svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
-                                     'cp', '-m', 'msgcopy', E_url, E_url2)
+  A_B_E = os.path.join(wc_dir, 'A', 'B', 'E')
+  A_B_E_alpha = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  url_A_B_E = url + '/A/B/E'
+  url_A_B_Esave = url + '/A/B/Esave'
 
-  E_path     = os.path.join(wc_dir, 'A', 'B', 'E')
-  alpha_path = os.path.join(E_path, 'alpha')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.remove('A/B/E/alpha')
+  # svn cp -m msgcopy url/A/B/E url/A/B/Esave
+  expected_stdout = verify.UnorderedOutput([
+    '\n',
+    'Committed revision 2.\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'cp', '-m',
+    'msgcopy', url_A_B_E, url_A_B_Esave)
+
+  # svn rm A/B/E/alpha
+  expected_stdout = ['D         ' + A_B_E_alpha + '\n']
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'rm',
+    A_B_E_alpha)
+
+  # svn commit
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E/alpha' : Item(verb='Deleting'),
-    })
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+    'A/B/E/alpha'       : Item(verb='Deleting'),
+  })
 
-  svntest.main.file_append(alpha_path, "hello")
-  exit_code, out, err = svntest.main.run_svn(1, 'sw', E_url2, E_path)
+  expected_status = actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/E/alpha')
 
-  for line in err:
-    if line.find("file of the same name already exists") != -1:
-      break
-  else:
-    raise svntest.Failure
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
+    None, wc_dir)
 
-  os.remove(alpha_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'sw', E_url2, E_path)
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', wc_rev=3)
-  expected_status.tweak('A/B/E', switched='S')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  # echo "hello" >> A/B/E/alpha
+  main.file_append(A_B_E_alpha, 'hello')
+
+  # svn switch url/A/B/Esave A/B/E
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha'       : Item(status='  ', treeconflict='C'),
+  })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/alpha', contents='hello')
+
+  expected_status.add({
+    'A/B/E/alpha'       : Item(status='? ', treeconflict='C'),
+  })
+  expected_status.tweak('A/B/E', wc_rev='3', switched='S')
+  expected_status.tweak('A/B/E/beta', wc_rev='3')
+
+  actions.run_and_verify_switch(wc_dir, A_B_E, url_A_B_Esave,
+    expected_output, expected_disk, expected_status, None, None, None, None,
+    None, False)
+
+  # svn status
+  expected_status.add({
+    'A/B/Esave'         : Item(status='  '),
+    'A/B/Esave/beta'    : Item(status='  '),
+    'A/B/Esave/alpha'   : Item(status='  '),
+  })
+
+  actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  # svn info A/B/E/alpha
+  expected_stdout = verify.RegexOutput(
+                      ".*local unversioned, incoming add upon switch",
+                      match_all=False)
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'info',
+    A_B_E_alpha)
 
 
 #----------------------------------------------------------------------
@@ -1230,194 +1343,248 @@ def forced_switch(sbox):
                                         '--force')
 
 #----------------------------------------------------------------------
-
+# This test currently XFails for serf as the different order of
+# operations is not handled here.
 def forced_switch_failures(sbox):
   "forced switch detects tree conflicts"
+  #  svntest.factory.make(sbox,
+  #    """
+  #    # Add a directory to obstruct a file.
+  #    mkdir A/B/F/pi
+  #  
+  #    # Add a file to obstruct a directory.
+  #    echo "The file 'H'" > A/C/H
+  #  
+  #    # Test three cases where forced switch should cause a tree conflict
+  #  
+  #    # 1) A forced switch that tries to add a file when an unversioned
+  #    #    directory of the same name already exists.  (Currently fails)
+  #    svn switch --force url/A/D A/C
+  #  
+  #    # 2) A forced switch that tries to add a dir when a file of the same
+  #    #    name already exists. (Tree conflict)
+  #    svn switch --force url/A/D/G A/B/F
+  #    svn info A/B/F/pi
+  #  
+  #    # 3) A forced update that tries to add a directory when a versioned
+  #    #    directory of the same name already exists.
+  #  
+  #    # Make dir A/D/H/I in repos.
+  #    svn mkdir -m "Log message" url/A/D/H/I
+  #  
+  #    # Make A/D/G/I and co A/D/H/I into it.
+  #    mkdir A/D/G/I
+  #    svn co url/A/D/H/I A/D/G/I
+  #  
+  #    # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
+  #    # from the repos, causing an error.
+  #    svn switch --force url/A/D/H A/D/G
+  #  
+  #    # Delete all three obstructions and finish the update.
+  #    rm -rf A/D/G/I
+  #    rm A/B/F/pi
+  #    rm A/C/H
+  #  
+  #    # A/B/F is switched to A/D/G
+  #    # A/C is switched to A/D
+  #    # A/D/G is switched to A/D/H
+  #    svn up
+  #    """)
+  #  exit(0)
   sbox.build()
+  wc_dir = sbox.wc_dir
+  url = sbox.repo_url
+
+  A_B_F = os.path.join(wc_dir, 'A', 'B', 'F')
+  A_B_F_pi = os.path.join(wc_dir, 'A', 'B', 'F', 'pi')
+  A_C = os.path.join(wc_dir, 'A', 'C')
+  A_C_H = os.path.join(wc_dir, 'A', 'C', 'H')
+  A_D_G = os.path.join(wc_dir, 'A', 'D', 'G')
+  A_D_G_I = os.path.join(wc_dir, 'A', 'D', 'G', 'I')
+  url_A_D = url + '/A/D'
+  url_A_D_G = url + '/A/D/G'
+  url_A_D_H = url + '/A/D/H'
+  url_A_D_H_I = url + '/A/D/H/I'
 
   # Add a directory to obstruct a file.
-  pi_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'pi')
-  os.mkdir(pi_path)
+  # mkdir A/B/F/pi
+  os.makedirs(A_B_F_pi)
 
   # Add a file to obstruct a directory.
-  H_path = os.path.join(sbox.wc_dir, 'A', 'C', 'H')
-  svntest.main.file_write(H_path, "The file 'H'\n")
+  # echo "The file 'H'" > A/C/H
+  main.file_write(A_C_H, "The file 'H'\n")
 
   # Test three cases where forced switch should cause a tree conflict
-
   # 1) A forced switch that tries to add a file when an unversioned
   #    directory of the same name already exists.  (Currently fails)
+  # svn switch --force url/A/D A/C
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/G'             : Item(status='A '),
+    'A/C/G/pi'          : Item(status='A '),
+    'A/C/G/rho'         : Item(status='A '),
+    'A/C/G/tau'         : Item(status='A '),
+    'A/C/gamma'         : Item(status='A '),
+    'A/C/H'             : Item(status='  ', treeconflict='C'),
+  })
+
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'A/C'               : Item(),
-    'A/C/gamma'         : Item("This is the file 'gamma'.\n"),
-    'A/C/H'             : Item("The file 'H'\n"),
+    'A/C/gamma'         : Item(contents="This is the file 'gamma'.\n"),
     'A/C/G'             : Item(),
-    'A/C/G/rho'         : Item("This is the file 'rho'.\n"),
-    'A/C/G/pi'          : Item("This is the file 'pi'.\n"),
-    'A/C/G/tau'         : Item("This is the file 'tau'.\n"),
-    })
-  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+    'A/C/G/pi'          : Item(contents="This is the file 'pi'.\n"),
+    'A/C/G/rho'         : Item(contents="This is the file 'rho'.\n"),
+    'A/C/G/tau'         : Item(contents="This is the file 'tau'.\n"),
+    'A/C/H'             : Item(contents="The file 'H'\n"),
+    'A/B/F/pi'          : Item(),
+  })
+
+  expected_status = actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/C'               : Item(status='! ', wc_rev='1', switched='S'),
     'A/C/G'             : Item(status='  ', wc_rev='1'),
-    'A/C/G/pi'          : Item(status='  ', wc_rev='1'),
     'A/C/G/rho'         : Item(status='  ', wc_rev='1'),
     'A/C/G/tau'         : Item(status='  ', wc_rev='1'),
+    'A/C/G/pi'          : Item(status='  ', wc_rev='1'),
+    'A/C/H'             : Item(status='? ', treeconflict='C'),
     'A/C/gamma'         : Item(status='  ', wc_rev='1'),
-    })
-  svntest.actions.run_and_verify_switch(sbox.wc_dir,
-                                        os.path.join(sbox.wc_dir, 'A', 'C'),
-                                        sbox.repo_url + "/A/D",
-                                        None, None, None,
-                                        ".*Failed to add directory .*" + \
-                                        ": a non-directory object of the" + \
-                                        " same name already exists\n",
-                                        None, None, None, None, 0, '--force')
+  })
+  expected_status.tweak('A/C', switched='S')
+
+  actions.run_and_verify_switch(wc_dir, A_C, url_A_D, expected_output,
+    expected_disk, expected_status, None, None, None, None, None, False,
+    '--force')
+
 
   # 2) A forced switch that tries to add a dir when a file of the same
-  #    name already exists.  (Currently fails)
+  #    name already exists. (Tree conflict)
+  # svn switch --force url/A/D/G A/B/F
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F/rho'         : Item(status='A '),
+    'A/B/F/pi'          : Item(status='  ', treeconflict='C'),
+    'A/B/F/tau'         : Item(status='A '),
+  })
+
   expected_disk.add({
-    'A/B/F/pi'          : Item(),
-    })
+    'A/B/F/rho'         : Item(contents="This is the file 'rho'.\n"),
+    'A/B/F/tau'         : Item(contents="This is the file 'tau'.\n"),
+  })
+
   expected_status.add({
-    'A/B/F'             : Item(status='! ', wc_rev='1', switched='S'),
-    })
-  svntest.actions.run_and_verify_switch(sbox.wc_dir,
-                                        os.path.join(sbox.wc_dir,
-                                                     'A', 'B', 'F'),
-                                        sbox.repo_url + "/A/D/G",
-                                        None, None, None,
-                                        ".*Failed to add file .*" + \
-                                        ": a non-file object of the " + \
-                                        "same name already exists\n",
-                                        None, None, None, None, 0, '--force')
+    'A/B/F/tau'         : Item(status='  ', wc_rev='1'),
+    'A/B/F/pi'          : Item(status='? ', treeconflict='C'),
+    'A/B/F/rho'         : Item(status='  ', wc_rev='1'),
+  })
+  expected_status.tweak('A/B/F', switched='S')
+
+  actions.run_and_verify_switch(wc_dir, A_B_F, url_A_D_G, expected_output,
+    expected_disk, expected_status, None, None, None, None, None, False,
+    '--force')
+
+  # svn info A/B/F/pi
+  expected_stdout = verify.ExpectedOutput(
+    'Tree conflict: local unversioned, incoming add upon switch\n',
+    match_all=False)
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'info',
+    A_B_F_pi)
+
 
   # 3) A forced update that tries to add a directory when a versioned
   #    directory of the same name already exists.
-
   # Make dir A/D/H/I in repos.
-  I_url = sbox.repo_url + "/A/D/H/I"
-  exit_code, so, se = svntest.actions.run_and_verify_svn(
-    "Unexpected error during mkdir",
-    ['\n', 'Committed revision 2.\n'], [],
-    "mkdir", I_url, "-m", "Log Message")
+  # svn mkdir -m "Log message" url/A/D/H/I
+  expected_stdout = verify.UnorderedOutput([
+    '\n',
+    'Committed revision 2.\n',
+  ])
+
+  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir',
+    '-m', 'Log message', url_A_D_H_I)
 
   # Make A/D/G/I and co A/D/H/I into it.
-  I_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'I')
-  os.mkdir(I_path)
-  exit_code, so, se = svntest.actions.run_and_verify_svn(
-    "Unexpected error during co",
-    ['Checked out revision 2.\n'], [],
-    "co", I_url, I_path)
+  # mkdir A/D/G/I
+  os.makedirs(A_D_G_I)
+
+  # svn co url/A/D/H/I A/D/G/I
+  expected_output = svntest.wc.State(wc_dir, {})
+
+  expected_disk.add({
+    'A/D/G/I'           : Item(),
+  })
+
+  exit_code, so, se = svntest.actions.run_and_verify_svn( 
+    "Unexpected error during co", 
+    ['Checked out revision 2.\n'], [], 
+    "co", url_A_D_H_I, A_D_G_I)
 
   # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
   # from the repos, causing an error.
-  G_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G')
-  svntest.actions.run_and_verify_switch(sbox.wc_dir,
-                                        G_path,
-                                        sbox.repo_url + "/A/D/H",
-                                        None, None, None,
-                                        "Failed to add directory '.*I'."
-                                        "*already exists",
-                                        None, None, None, None, False,
-                                        '--force')
+  # svn switch --force url/A/D/H A/D/G
+  expected_error = ('Failed to add directory.*' + re.escape(A_D_G_I) +
+                    '.*a separate working copy.*already exists')
+
+  actions.run_and_verify_switch(wc_dir, A_D_G, url_A_D_H, None, None, None,
+    expected_error, None, None, None, None, False, '--force')
 
   # Delete all three obstructions and finish the update.
-  svntest.main.safe_rmtree(I_path)
-  svntest.main.safe_rmtree(pi_path)
-  os.remove(H_path)
+  # rm -rf A/D/G/I
+  main.safe_rmtree(A_D_G_I)
 
-  # For our expected disk start with the standard greek tree.
-  expected_disk = svntest.main.greek_state.copy()
+  # rm A/B/F/pi
+  main.safe_rmtree(A_B_F_pi)
 
-  ### There has to be a simpler way to do this...but it will do for now.
+  # rm A/C/H
+  os.remove(A_C_H)
+
   # A/B/F is switched to A/D/G
-  new_A_B_F = svntest.wc.State('', {
-    "A/B/F"       : Item(),
-    "A/B/F/rho"   : Item("This is the file 'rho'.\n"),
-    "A/B/F/pi"    : Item("This is the file 'pi'.\n"),
-    "A/B/F/tau"   : Item("This is the file 'tau'.\n"),
-    })
   # A/C is switched to A/D
-  new_A_C = svntest.wc.State('', {
-    "A/C"         : Item(),
-    "A/C/gamma"   : Item("This is the file 'gamma'.\n"),
-    "A/C/G"       : Item(),
-    "A/C/G/pi"    : Item("This is the file 'pi'.\n"),
-    "A/C/G/rho"   : Item("This is the file 'rho'.\n"),
-    "A/C/G/tau"   : Item("This is the file 'tau'.\n"),
-    "A/C/H"       : Item(),
-    "A/C/H/chi"   : Item("This is the file 'chi'.\n"),
-    "A/C/H/I"     : Item(),
-    "A/C/H/omega" : Item("This is the file 'omega'.\n"),
-    "A/C/H/psi"   : Item("This is the file 'psi'.\n"),
-    })
   # A/D/G is switched to A/D/H
-  new_A_D_G = svntest.wc.State('', {
-    "A/D/G"       : Item(),
-    "A/D/G/chi"   : Item("This is the file 'chi'.\n"),
-    "A/D/G/omega" : Item("This is the file 'omega'.\n"),
-    "A/D/G/I"     : Item(),
-    "A/D/G/psi"   : Item("This is the file 'psi'.\n"),
-    "A/D/H"       : Item(),
-    "A/D/H/chi"   : Item("This is the file 'chi'.\n"),
-    "A/D/H/omega" : Item("This is the file 'omega'.\n"),
-    "A/D/H/I"     : Item(),
-    "A/D/H/psi"   : Item("This is the file 'psi'.\n"),
-    "iota"        : Item("This is the file 'iota'.\n"),
-    })
-  # Remove the three switched subtrees and replace with their new contents.
-  expected_disk.remove('A/B/F', 'A/C',
-                       'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
-  expected_disk.add_state('', new_A_B_F)
-  expected_disk.add_state('', new_A_C)
-  expected_disk.add_state('', new_A_D_G)
+  # svn up
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/H'             : Item(status='A '),
+    'A/C/H/omega'       : Item(status='A '),
+    'A/C/H/chi'         : Item(status='A '),
+    'A/C/H/I'           : Item(status='A '),
+    'A/C/H/psi'         : Item(status='A '),
+    'A/D/G/omega'       : Item(status='A '),
+    'A/D/G/I'           : Item(status='A '),
+    'A/D/G/psi'         : Item(status='A '),
+    'A/D/H/I'           : Item(status='A '),
+    'A/B/F/pi'          : Item(status='A '),
+  })
 
-  expected_status = svntest.wc.State(sbox.wc_dir, {
-    ""            : Item(),
-    "A"           : Item(),
-    "A/B"         : Item(),
-    "A/B/lambda"  : Item(),
-    "A/B/E"       : Item(),
-    "A/B/E/alpha" : Item(),
-    "A/B/E/beta"  : Item(),
-    "A/B/F"       : Item(switched='S'),
-    "A/B/F/rho"   : Item(),
-    "A/B/F/pi"    : Item(),
-    "A/B/F/tau"   : Item(),
-    "A/mu"        : Item(),
-    "A/C"         : Item(switched='S'),
-    "A/C/gamma"   : Item(),
-    "A/C/G"       : Item(),
-    "A/C/G/pi"    : Item(),
-    "A/C/G/rho"   : Item(),
-    "A/C/G/tau"   : Item(),
-    "A/C/H"       : Item(),
-    "A/C/H/chi"   : Item(),
-    "A/C/H/I"     : Item(),
-    "A/C/H/omega" : Item(),
-    "A/C/H/psi"   : Item(),
-    "A/D"         : Item(),
-    "A/D/gamma"   : Item(),
-    "A/D/G"       : Item(switched='S'),
-    "A/D/G/chi"   : Item(),
-    "A/D/G/omega" : Item(),
-    "A/D/G/I"     : Item(),
-    "A/D/G/psi"   : Item(),
-    "A/D/H"       : Item(),
-    "A/D/H/chi"   : Item(),
-    "A/D/H/omega" : Item(),
-    "A/D/H/I"     : Item(),
-    "A/D/H/psi"   : Item(),
-    "iota"        : Item(),
-    })
-  expected_status.tweak(status='  ', wc_rev=2)
-  svntest.actions.run_and_verify_update(sbox.wc_dir,
-                                        None,
-                                        expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None, False)
+  expected_disk.remove('A/D/G/tau', 'A/D/G/rho', 'A/D/G/pi')
+  expected_disk.add({
+    'A/D/H/I'           : Item(),
+    'A/D/G/omega'       : Item(contents="This is the file 'omega'.\n"),
+    'A/D/G/psi'         : Item(contents="This is the file 'psi'.\n"),
+    'A/D/G/chi'         : Item(contents="This is the file 'chi'.\n"),
+    'A/C/H/I'           : Item(),
+    'A/C/H/omega'       : Item(contents="This is the file 'omega'.\n"),
+    'A/C/H/psi'         : Item(contents="This is the file 'psi'.\n"),
+    'A/C/H/chi'         : Item(contents="This is the file 'chi'.\n"),
+  })
+  expected_disk.tweak('A/C/H', contents=None)
+  expected_disk.tweak('A/B/F/pi', contents="This is the file 'pi'.\n")
+
+  expected_status.remove('A/D/G/tau', 'A/D/G/rho', 'A/D/G/pi')
+  expected_status.add({
+    'A/D/G/omega'       : Item(status='  ', wc_rev='2'),
+    'A/D/G/I'           : Item(status='  ', wc_rev='2'),
+    'A/D/G/psi'         : Item(status='  ', wc_rev='2'),
+    'A/D/G/chi'         : Item(status='  ', wc_rev='2'),
+    'A/D/H/I'           : Item(status='  ', wc_rev='2'),
+    'A/C/H/psi'         : Item(status='  ', wc_rev='2'),
+    'A/C/H/omega'       : Item(status='  ', wc_rev='2'),
+    'A/C/H/chi'         : Item(status='  ', wc_rev='2'),
+    'A/C/H/I'           : Item(status='  ', wc_rev='2'),
+  })
+  expected_status.tweak(wc_rev='2', status='  ')
+  expected_status.tweak('A/B/F/pi', 'A/C/H', treeconflict=None)
+  expected_status.tweak('A/D/G', switched='S')
+
+  actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+    expected_status, None, None, None, None, None, False, wc_dir)
+
 
 def switch_with_obstructing_local_adds(sbox):
   "switch tolerates WC adds"
@@ -1455,11 +1622,8 @@ def switch_with_obstructing_local_adds(sbox):
 
   # Setup expected results of switch.
   expected_output = svntest.wc.State(sbox.wc_dir, {
-    "A/B/F/gamma"   : Item(status='E '),
-    "A/B/F/G"       : Item(status='E '),
-    "A/B/F/G/pi"    : Item(status='C '),
-    "A/B/F/G/rho"   : Item(status='A '),
-    "A/B/F/G/tau"   : Item(status='E '),
+    "A/B/F/gamma"   : Item(status='  ', treeconflict='C'),
+    "A/B/F/G"       : Item(status='  ', treeconflict='C'),
     "A/B/F/H"       : Item(status='A '),
     "A/B/F/H/chi"   : Item(status='A '),
     "A/B/F/H/omega" : Item(status='A '),
@@ -1470,13 +1634,7 @@ def switch_with_obstructing_local_adds(sbox):
   expected_disk.add({
     "A/B/F/gamma"     : Item("This is the file 'gamma'.\n"),
     "A/B/F/G"         : Item(),
-    "A/B/F/G/pi"      : Item("\n".join(["<<<<<<< .mine",
-                                        "This is the OBSTRUCTING file 'pi'.",
-                                        "=======",
-                                        "This is the file 'pi'.",
-                                        ">>>>>>> .r1",
-                                        ""])),
-    "A/B/F/G/rho"     : Item("This is the file 'rho'.\n"),
+    "A/B/F/G/pi"      : Item("This is the OBSTRUCTING file 'pi'.\n"),
     "A/B/F/G/tau"     : Item("This is the file 'tau'.\n"),
     "A/B/F/G/upsilon" : Item("This is the unversioned file 'upsilon'.\n"),
     "A/B/F/H"         : Item(),
@@ -1488,18 +1646,17 @@ def switch_with_obstructing_local_adds(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.tweak('A/B/F', switched='S')
   expected_status.add({
-    "A/B/F/gamma"     : Item(status='  ', wc_rev=1),
-    "A/B/F/G"         : Item(status='  ', wc_rev=1),
-    "A/B/F/G/pi"      : Item(status='C ', wc_rev=1),
-    "A/B/F/G/rho"     : Item(status='  ', wc_rev=1),
-    "A/B/F/G/tau"     : Item(status='  ', wc_rev=1),
-    "A/B/F/G/upsilon" : Item(status='A ', wc_rev=0),
-    "A/B/F/H"         : Item(status='  ', wc_rev=1),
-    "A/B/F/H/chi"     : Item(status='  ', wc_rev=1),
-    "A/B/F/H/omega"   : Item(status='  ', wc_rev=1),
-    "A/B/F/H/psi"     : Item(status='  ', wc_rev=1),
-    "A/B/F/I"         : Item(status='A ', wc_rev=0),
-    })
+    'A/B/F/gamma'     : Item(status='R ', treeconflict='C', wc_rev='1'),
+    'A/B/F/G'         : Item(status='A ', treeconflict='C', wc_rev='0'),
+    'A/B/F/G/pi'      : Item(status='A ', wc_rev='0'),
+    'A/B/F/G/tau'     : Item(status='A ', wc_rev='0'),
+    'A/B/F/G/upsilon' : Item(status='A ', wc_rev='0'),
+    'A/B/F/H'         : Item(status='  ', wc_rev='1'),
+    'A/B/F/H/chi'     : Item(status='  ', wc_rev='1'),
+    'A/B/F/H/omega'   : Item(status='  ', wc_rev='1'),
+    'A/B/F/H/psi'     : Item(status='  ', wc_rev='1'),
+    'A/B/F/I'         : Item(status='A ', wc_rev='0'),
+  })
 
   # "Extra" files that we expect to result from the conflicts.
   extra_files = ['pi\.r0', 'pi\.r1', 'pi\.mine']
@@ -1653,8 +1810,6 @@ def mergeinfo_switch_elision(sbox):
     'F'       : Item(),
     })
   expected_skip = svntest.wc.State(B_COPY_1_path, { })
-  saved_cwd = os.getcwd()
-
   svntest.actions.run_and_verify_merge(B_COPY_1_path, '2', '4',
                                        sbox.repo_url + '/A/B', None,
                                        expected_output,
@@ -1701,8 +1856,6 @@ def mergeinfo_switch_elision(sbox):
     'beta'  : Item("New content"),
     })
   expected_skip = svntest.wc.State(E_COPY_2_path, { })
-  saved_cwd = os.getcwd()
-
   svntest.actions.run_and_verify_merge(E_COPY_2_path, '2', '4',
                                        sbox.repo_url + '/A/B/E', None,
                                        expected_output,
@@ -2319,6 +2472,8 @@ j = os.path.join
 def tree_conflicts_on_switch_1_1(sbox):
   "tree conflicts 1.1: tree del, leaf edit on switch"
 
+  sbox.build()
+
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
 
@@ -2336,6 +2491,10 @@ def tree_conflicts_on_switch_1_1(sbox):
   })
 
   expected_disk = disk_empty_dirs.copy()
+  if  svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_disk.remove('D/D1', 'DF/D1', 'DD/D1', 'DD/D1/D2',
+                         'DDF/D1', 'DDF/D1/D2',
+                         'DDD/D1', 'DDD/D1/D2', 'DDD/D1/D2/D3')
 
   # The files delta, epsilon, and zeta are incoming additions, but since
   # they are all within locally deleted trees they should also be schedule
@@ -2403,6 +2562,8 @@ def tree_conflicts_on_switch_1_1(sbox):
 def tree_conflicts_on_switch_1_2(sbox):
   "tree conflicts 1.2: tree del, leaf del on switch"
 
+  sbox.build()
+
   # 1.2) local tree delete, incoming leaf delete
 
   expected_output = deep_trees_conflict_output.copy()
@@ -2442,6 +2603,10 @@ def tree_conflicts_on_switch_1_2(sbox):
   expected_disk.remove('D/D1',
                        'DD/D1/D2',
                        'DDD/D1/D2/D3')
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_disk.remove('DF/D1', 'DD/D1',
+                         'DDF/D1', 'DDF/D1/D2',
+                         'DDD/D1', 'DDD/D1/D2')
 
   expected_info = {
     'F/alpha' : {
@@ -2925,6 +3090,33 @@ def copy_with_switched_subdir(sbox):
   # should either be the tree of E, or nothing at all.
   svntest.actions.run_and_verify_status(wc_dir, state)
 
+### regression test for issue #3597
+def relocate_with_relative_externals(sbox):
+  "relocate a directory containing relative externals"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a relative external.
+  change_external(os.path.join(wc_dir, 'A', 'B'), "^/A/D/G G-ext", commit=True)
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+  
+  # Move our repository to another location.
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 2, 0)
+  svntest.main.safe_rmtree(repo_dir, 1)
+
+  # Now relocate our working copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+
+  # Check the URL of the external -- was it updated to point to the
+  # .other repository URL?
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/G$' }],
+                                      os.path.join(wc_dir, 'A', 'B', 'G-ext'))
+
 
 ########################################################################
 # Run the tests
@@ -2951,7 +3143,8 @@ test_list = [ None,
               switch_change_repos_root,
               relocate_and_propset,
               forced_switch,
-              forced_switch_failures,
+              XFail(forced_switch_failures,
+                    svntest.main.is_ra_type_dav_serf),
               switch_scheduled_add,
               SkipUnless(mergeinfo_switch_elision, server_has_mergeinfo),
               switch_with_obstructing_local_adds,
@@ -2969,7 +3162,8 @@ test_list = [ None,
               single_file_relocate,
               relocate_with_switched_children,
               XFail(copy_with_switched_subdir),
-             ]
+              XFail(relocate_with_relative_externals),
+              ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)

@@ -48,7 +48,6 @@ svn_cl__import(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *path;
   const char *url;
-  svn_commit_info_t *commit_info = NULL;
 
   /* Import takes two arguments, for example
    *
@@ -101,14 +100,15 @@ svn_cl__import(apr_getopt_t *os,
       url = APR_ARRAY_IDX(targets, 1, const char *);
     }
 
+  if (svn_path_is_url(path))
+    return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                              NULL,
+                                              _("'%s' is not a local path"),
+                                              path));
   if (! svn_path_is_url(url))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("Invalid URL '%s'"), url);
-
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
@@ -118,18 +118,16 @@ svn_cl__import(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__cleanup_log_msg
           (ctx->log_msg_baton3,
-           svn_client_import3(&commit_info,
-                              path,
+           svn_client_import4(path,
                               url,
                               opt_state->depth,
                               opt_state->no_ignore,
                               opt_state->force,
                               opt_state->revprop_table,
+                              svn_cl__print_commit_info,
+                              NULL,
                               ctx,
                               pool), pool));
-
-  if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 
   return SVN_NO_ERROR;
 }

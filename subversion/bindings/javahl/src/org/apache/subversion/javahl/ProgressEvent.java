@@ -23,10 +23,11 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.callback.ProgressCallback;
+
 /**
- * The event passed to the {@link
- * ProgressListener#onProgress(ProgressEvent)} API to inform {@link
- * SVNClientInterface} of command progress (in terms of bytes).
+ * The event passed to the {@link ProgressCallback#onProgress} API to inform
+ * {@link ISVNClient} of command progress (in terms of bytes).
  *
  * @since 1.5
  */

@@ -2,31 +2,6 @@
 #
 # WARNING: This may or may not work on your system. This Makefile is
 # an example, rather than a ready-made universal solution.
-#
-# This Makefile builds and installs Subversion, and many of its
-# dependencies, on UNIX-like systems, in the current working directory.
-# Indirect dependencies are not covered, e.g. you need OpenSSL installed
-# to get SSL support in neon and serf.
-#
-# The Makefile can also run Subversion's regression test suite via all
-# repository backends and RA methods. It generates the necessary configuration
-# files and starts svnserve and httpd daemons automatically on non-privileged
-# ports.
-#
-# Some version of Subversion is required to be in $PATH and will be used
-# to check out working copies.
-#
-# The default is to compile trunk.
-# Pass the branch you want to build in BRANCH, e.g.
-#	$ make BRANCH="1.5.x"
-# You can also pass a tag to build:
-#       $ make TAG="1.6.6"
-# And you can specify a working copy to use, in case you need more
-# than one working copy of the same branch:
-#	$ make BRANCH="1.6.x" WC="1.6.x-test2"
-#
-# After the build, point your PATH to the Subversion build you want to use.
-# Note that this Makefile requires GNU make.
 
 ENABLE_PYTHON_BINDINGS ?= yes
 ENABLE_RUBY_BINDINGS ?= yes
@@ -35,6 +10,7 @@ ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 
 PWD		= $(shell pwd)
+UNAME		= $(shell uname)
 
 TAG		?= none
 ifeq ($(TAG),none)
@@ -61,7 +37,8 @@ GNU_ICONV_VER	= 1.13.1
 APR_UTIL_VER	= 1.3.9
 HTTPD_VER	= 2.2.15
 NEON_VER	= 0.29.3
-SERF_VER	= 0.6.x
+SERF_VER	= 0.7.x
+CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3.6.23.1
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
@@ -70,6 +47,7 @@ GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
 #SERF_DIST	= serf-$(SERF_VER).tar.gz
 SQLITE_DIST	= sqlite-$(SQLITE_VER).tar.gz
+CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
 
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
@@ -77,21 +55,23 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SQLITE_DIST) \
 		$(DISTDIR)/$(HTTPD_DIST) \
 		$(DISTDIR)/$(APR_ICONV_DIST) \
-		$(DISTDIR)/$(GNU_ICONV_DIST)
+		$(DISTDIR)/$(GNU_ICONV_DIST) \
+		$(DISTDIR)/$(CYRUS_SASL_DIST)
 
 FETCH_CMD	= wget -c
 
 SUBVERSION_REPOS_URL = https://svn.apache.org/repos/asf/subversion
 BDB_URL		= http://ftp2.de.freebsd.org/pub/FreeBSD/distfiles/bdb/$(BDB_DIST)
 APR_URL		= http://svn.apache.org/repos/asf/apr/apr
-APR_ICONV_URL	= ftp://ftp.fu-berlin.de/unix/www/apache/apr/$(APR_ICONV_DIST)
-GNU_ICONV_URL	= ftp://ftp.fu-berlin.de/unix/gnu/libiconv/$(GNU_ICONV_DIST)
+APR_ICONV_URL	= http://www.apache.org/dist/apr/$(APR_ICONV_DIST)
+GNU_ICONV_URL	= http://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= http://svn.apache.org/repos/asf/apr/apr-util
 HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
 #SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
 SERF_URL	= http://serf.googlecode.com/svn/branches/$(SERF_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
+CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
@@ -102,6 +82,7 @@ HTTPD_SRCDIR	= $(SRCDIR)/httpd-$(HTTPD_VER)
 NEON_SRCDIR	= $(SRCDIR)/neon-$(NEON_VER)
 SERF_SRCDIR	= $(SRCDIR)/serf-$(SERF_VER)
 SQLITE_SRCDIR	= $(SRCDIR)/sqlite-$(SQLITE_VER)
+CYRUS_SASL_SRCDIR	= $(SRCDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -113,6 +94,7 @@ HTTPD_OBJDIR	= $(OBJDIR)/httpd-$(HTTPD_VER)
 NEON_OBJDIR	= $(OBJDIR)/neon-$(NEON_VER)
 SERF_OBJDIR	= $(OBJDIR)/serf-$(SERF_VER)
 SQLITE_OBJDIR	= $(OBJDIR)/sqlite-$(SQLITE_VER)
+CYRUS_SASL_OBJDIR	= $(OBJDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -127,16 +109,17 @@ svn_builddir	?=$(SVN_WC)
 .PHONY: all reset clean nuke
 
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
-	httpd-install neon-install serf-install sqlite-install svn-install \
-	svn-bindings-install
+	httpd-install neon-install serf-install sqlite-install \
+	cyrus-sasl-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
-	httpd-reset neon-reset serf-reset sqlite-reset svn-reset
+	httpd-reset neon-reset serf-reset sqlite-reset cyrus-sasl-reset \
+	svn-reset
 
 # Use to save disc space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
-	neon-clean serf-clean svn-clean
+	neon-clean serf-clean cyrus-sasl-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -154,7 +137,7 @@ nuke:
 			yes)    echo "You said $$ANSWER. I will continue."; \
 				echo rm -rf $(SRCDIR) $(OBJDIR) $(PREFIX); \
 				rm -rf $(SRCDIR) $(OBJDIR) $(PREFIX); \
-				echo "Remember to reset the build!"; \
+				$(MAKE) reset; \
 				;; \
 			"")     echo "You said no."; \
 				;; \
@@ -332,6 +315,7 @@ $(DISTDIR)/$(GNU_ICONV_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(GNU_ICONV_URL)
 
 $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
+	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
 	echo "--- lib/encodings.def.orig	Wed Oct 24 23:41:41 2007" > $@
 	echo "+++ lib/encodings.def	Wed Oct 24 23:43:47 2007" >> $@
 	echo "@@ -37,6 +37,7 @@" >> $@
@@ -344,6 +328,7 @@ $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff:
 	echo "               \"ISO_646.IRV:1991\",       /* IANA */" >> $@
 
 $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
+	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
 	echo "--- lib/aliases.gperf.orig	Wed Oct 24 23:41:32 2007" > $@
 	echo "+++ lib/aliases.gperf	Wed Oct 24 23:47:38 2007" >> $@
 	echo "@@ -10,6 +10,7 @@ struct alias { int name; unsigned int encoding_index; " >> $@
@@ -360,7 +345,6 @@ $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff:
 $(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST) \
 		$(GNU_ICONV_OBJDIR)/lib_encodings.def.diff \
 		$(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
-	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GNU_ICONV_DIST)
 	cd $(SRCDIR)/libiconv-$(GNU_ICONV_VER) && \
 		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff && \
@@ -552,14 +536,26 @@ $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(NEON_DIST)
 	touch $@
 
+# OpenBSD does not have krb5-config in PATH, but the neon port has
+# a suitable replacement.
+ifeq ($(UNAME),OpenBSD)
+KRB5_CONFIG_PATH=/usr/ports/net/neon/files
+endif
+
 # configure neon
 $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 	cd $(NEON_SRCDIR) && ./autogen.sh
+	if [ -n "$(KRB5_CONFIG_PATH)" -a -d "$(KRB5_CONFIG_PATH)" ]; then \
+		cp $(KRB5_CONFIG_PATH)/krb5-config $(NEON_OBJDIR); \
+		chmod +x $(NEON_OBJDIR)/krb5-config; \
+	fi
 	cd $(NEON_OBJDIR) \
 		&& env CFLAGS="-g" $(NEON_SRCDIR)/configure \
+		PATH=$(NEON_OBJDIR):$$PATH \
 		--prefix=$(PREFIX)/neon \
 		--with-ssl \
-		--enable-shared
+		--enable-shared \
+		--without-libproxy
 	touch $@
 
 # compile neon
@@ -668,6 +664,62 @@ $(SQLITE_OBJDIR)/.installed: $(SQLITE_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# cyrus-sasl
+#######################################################################
+
+cyrus-sasl-retrieve:	$(CYRUS_SASL_OBJDIR)/.retrieved
+cyrus-sasl-configure:	$(CYRUS_SASL_OBJDIR)/.configured
+cyrus-sasl-compile:	$(CYRUS_SASL_OBJDIR)/.compiled
+cyrus-sasl-install:	$(CYRUS_SASL_OBJDIR)/.installed
+cyrus-sasl-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(CYRUS_SASL_OBJDIR)/$(f);)
+
+cyrus-sasl-clean:
+	-(cd $(CYRUS_SASL_OBJDIR) && make clean)
+
+# fetch distfile for cyrus-sasl
+$(DISTDIR)/$(CYRUS_SASL_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(CYRUS_SASL_URL)
+
+# retrieve cyrus-sasl
+$(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST)
+	[ -d $(CYRUS_SASL_OBJDIR) ] || mkdir -p $(CYRUS_SASL_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(CYRUS_SASL_DIST)
+	# fixes build on Debian:
+	sed 's/#elif WITH_DES/#elif defined(WITH_DES)/' \
+		< $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c \
+		> $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c.patched
+	mv $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c.patched \
+		$(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c
+	touch $@
+
+# configure cyrus-sasl
+$(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved
+	cd $(CYRUS_SASL_OBJDIR) \
+		&& env CFLAGS="-g" $(CYRUS_SASL_SRCDIR)/configure \
+		--with-dbpath=$(PREFIX)/cyrus-sasl/etc/sasldb2 \
+		--with-plugindir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
+		--with-configdir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
+		--with-bdb-libdir=$(PREFIX)/bdb/lib \
+		--with-bdb-incdir=$(PREFIX)/bdb/include \
+		--with-dblib=berkeley \
+		--with-sqlite=$(PREFIX)/sqlite \
+		--prefix=$(PREFIX)/cyrus-sasl
+	touch $@
+
+# compile cyrus-sasl
+$(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configured
+	(cd $(CYRUS_SASL_OBJDIR) && make)
+	touch $@
+
+# install cyrus-sasl
+$(CYRUS_SASL_OBJDIR)/.installed: $(CYRUS_SASL_OBJDIR)/.compiled
+	(cd $(CYRUS_SASL_OBJDIR) && make install)
+	touch $@
+
+
+#######################################################################
 # svn
 #######################################################################
 
@@ -758,7 +810,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 			--with-serf="$(PREFIX)/serf" \
 			--with-sqlite="$(PREFIX)/sqlite" \
 			--with-berkeley-db="$(BDB_FLAG)" \
-			--with-sasl="no" \
+			--with-sasl="$(PREFIX)/cyrus-sasl" \
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
 			--disable-mod-activation \
 			$(JAVAHL_FLAG)

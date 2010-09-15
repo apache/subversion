@@ -89,6 +89,17 @@ struct edit_baton {
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 
+  /* TRUE if the operation needs to walk deleted dirs on the "old" side.
+     FALSE otherwise. */
+  svn_boolean_t walk_deleted_repos_dirs;
+
+  /* A callback used to see if the client wishes to cancel the running
+     operation. */
+  svn_cancel_func_t cancel_func;
+
+  /* A baton to pass to the cancellation callback. */
+  void *cancel_baton;
+
   apr_pool_t *pool;
 };
 
@@ -230,11 +241,10 @@ make_dir_baton(const char *path,
 static struct file_baton *
 make_file_baton(const char *path,
                 svn_boolean_t added,
-                void *edit_baton,
+                struct edit_baton *edit_baton,
                 apr_pool_t *pool)
 {
   struct file_baton *file_baton = apr_pcalloc(pool, sizeof(*file_baton));
-  struct edit_baton *eb = edit_baton;
 
   file_baton->edit_baton = edit_baton;
   file_baton->added = added;
@@ -242,7 +252,7 @@ make_file_baton(const char *path,
   file_baton->skip = FALSE;
   file_baton->pool = pool;
   file_baton->path = apr_pstrdup(pool, path);
-  file_baton->wcpath = svn_dirent_join(eb->target, path, pool);
+  file_baton->wcpath = svn_dirent_join(edit_baton->target, path, pool);
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   return file_baton;
@@ -291,9 +301,11 @@ get_file_mime_types(const char **mimetype1,
 }
 
 
-/* Get the repository version of a file. This makes an RA request to
- * retrieve the file contents. A pool cleanup handler is installed to
- * delete this file.
+/* Get revision REVISION of the file described by B from the repository.
+ * Set B->path_start_revision to the path of a new temporary file containing
+ * the file's text.  Set B->pristine_props to a new hash containing the
+ * file's properties.  Install a pool cleanup handler on B->pool to delete
+ * the file.
  */
 static svn_error_t *
 get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
@@ -443,6 +455,89 @@ open_root(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+/* Recursively walk tree rooted at DIR (at REVISION) in the repository,
+ * reporting all files as deleted.  Part of a workaround for issue 2333.
+ *
+ * DIR is a repository path relative to the URL in RA_SESSION.  REVISION
+ * must be a valid revision number, not SVN_INVALID_REVNUM.  EB is the
+ * overall crawler editor baton.  If CANCEL_FUNC is not NULL, then it
+ * should refer to a cancellation function (along with CANCEL_BATON).
+ */
+/* ### TODO: Handle depth. */
+static svn_error_t *
+diff_deleted_dir(const char *dir,
+                 svn_revnum_t revision,
+                 svn_ra_session_t *ra_session,
+                 struct edit_baton *eb,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool)
+{
+  apr_hash_t *dirents;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_index_t *hi;
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  SVN_ERR(svn_ra_get_dir2(ra_session,
+                          &dirents,
+                          NULL, NULL,
+                          dir,
+                          revision,
+                          SVN_DIRENT_KIND,
+                          pool));
+  
+  for (hi = apr_hash_first(pool, dirents); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path;
+      const char *name = svn__apr_hash_index_key(hi);
+      svn_dirent_t *dirent = svn__apr_hash_index_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      path = svn_relpath_join(dir, name, iterpool);
+
+      if (dirent->kind == svn_node_file)
+        {
+          struct file_baton *b;
+          const char *mimetype1, *mimetype2;
+
+          /* Compare a file being deleted against an empty file */
+          b = make_file_baton(path, FALSE, eb, iterpool);
+          SVN_ERR(get_file_from_ra(b, revision));
+
+          SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
+      
+          get_file_mime_types(&mimetype1, &mimetype2, b);
+
+          SVN_ERR(eb->diff_callbacks->file_deleted(
+                                NULL, NULL, NULL, b->wcpath,
+                                b->path_start_revision,
+                                b->path_end_revision,
+                                mimetype1, mimetype2,
+                                b->pristine_props,
+                                b->edit_baton->diff_cmd_baton,
+                                pool));
+        }
+ 
+      if (dirent->kind == svn_node_dir)
+        SVN_ERR(diff_deleted_dir(path,
+                                 revision,
+                                 ra_session,
+                                 eb,
+                                 cancel_func,
+                                 cancel_baton,
+                                 iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 /* An editor function.  */
 static svn_error_t *
 delete_entry(const char *path,
@@ -500,6 +595,20 @@ delete_entry(const char *path,
                     (local_dir_abspath, &state, &tree_conflicted,
                      svn_dirent_join(eb->target, path, pool),
                      eb->diff_cmd_baton, pool));
+ 
+            if (eb->walk_deleted_repos_dirs)
+              {
+                /* A workaround for issue 2333.  The "old" dir will be
+                skipped by the repository report.  Crawl it recursively,
+                diffing each file against the empty file. */
+                SVN_ERR(diff_deleted_dir(path,
+                                         eb->revision,
+                                         eb->ra_session,
+                                         eb,
+                                         eb->cancel_func,
+                                         eb->cancel_baton,
+                                         pool));
+              }
             break;
           }
         default:
@@ -1057,6 +1166,27 @@ change_file_prop(void *file_baton,
   if (b->skip)
     return SVN_NO_ERROR;
 
+  /* Issue #3657 'phantom svn:eol-style changes cause spurious merge text
+     conflicts'.  When communicating with the repository via ra_serf and
+     ra_neon, the change_dir_prop and change_file_prop svn_delta_editor_t
+     callbacks are called (obviously) when a directory or file property has
+     changed between the start and end of the edit.  Less obvious however,
+     is that these callbacks may be made describing *all* of the properties
+     on FILE_BATON->PATH when using the DAV providers, not just the change(s).
+     (Specifically ra_neon does this for diff/merge and ra_serf does it
+     for diff/merge/update/switch).
+
+     Normally this is fairly harmless, but if it appears that the
+     svn:eol-style property has changed on a file, then we can get spurious
+     text conflicts (i.e. Issue #3657).  To prevent this, we populate
+     FILE_BATON->PRISTINE_PROPS only with actual property changes. */
+  if (value)
+    {
+      const char *current_prop = svn_prop_get_value(b->pristine_props, name);
+      if (current_prop && strcmp(current_prop, value->data) == 0)
+        return SVN_NO_ERROR;
+    }
+
   propchange = apr_array_push(b->propchanges);
   propchange->name = apr_pstrdup(b->pool, name);
   propchange->value = value ? svn_string_dup(value, b->pool) : NULL;
@@ -1192,6 +1322,9 @@ svn_client__get_diff_editor(const char *target,
   eb->pool = subpool;
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;
+  eb->walk_deleted_repos_dirs = TRUE;
+  eb->cancel_func = cancel_func;
+  eb->cancel_baton = cancel_baton;
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;

@@ -401,12 +401,6 @@ svn_error_t *svn_fs_fs__move_into_place(const char *old_filename,
                                         const char *perms_reference,
                                         apr_pool_t *pool);
 
-/* Match the perms on FILENAME to the PERMS_REFERENCE file if we're
-   not on a win32 system.  On win32, this is a no-op. */
-svn_error_t *svn_fs_fs__dup_perms(const char *filename,
-                                  const char *perms_reference,
-                                  apr_pool_t *pool);
-
 /* Sets *PATH to the path of REV in FS, whether in a pack file or not.
    Allocate in POOL. */
 svn_error_t *

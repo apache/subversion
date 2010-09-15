@@ -309,7 +309,7 @@ import_dir(const svn_delta_editor_t *editor,
   if (!no_ignore)
     SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
 
-  SVN_ERR(svn_io_get_dirents2(&dirents, path, pool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, path, TRUE, pool, pool));
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
@@ -444,7 +444,7 @@ import_dir(const svn_delta_editor_t *editor,
  * EDIT_BATON.  PATH can be a file or directory.
  *
  * DEPTH is the depth at which to import PATH; it behaves as for
- * svn_client_import3().
+ * svn_client_import4().
  *
  * NEW_ENTRIES is an ordered array of path components that must be
  * created in the repository (where the ordering direction is
@@ -592,30 +592,52 @@ import(const char *path,
 }
 
 
+struct capture_baton_t {
+  svn_commit_callback2_t original_callback;
+  void *original_baton;
+
+  svn_commit_info_t **info;
+  apr_pool_t *pool;
+};
+
+
+static svn_error_t *
+capture_commit_info(const svn_commit_info_t *commit_info,
+                    void *baton,
+                    apr_pool_t *pool)
+{
+  struct capture_baton_t *cb = baton;
+
+  *(cb->info) = svn_commit_info_dup(commit_info, cb->pool);
+
+  if (cb->original_callback)
+    SVN_ERR((cb->original_callback)(commit_info, cb->original_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 get_ra_editor(svn_ra_session_t **ra_session,
               const svn_delta_editor_t **editor,
               void **edit_baton,
               svn_client_ctx_t *ctx,
               const char *base_url,
-              const char *base_dir,
+              const char *base_dir_abspath,
               const char *log_msg,
               const apr_array_header_t *commit_items,
               const apr_hash_t *revprop_table,
-              svn_commit_info_t **commit_info_p,
               svn_boolean_t is_commit,
               apr_hash_t *lock_tokens,
               svn_boolean_t keep_locks,
+              svn_commit_callback2_t commit_callback,
+              void *commit_baton,
               apr_pool_t *pool)
 {
-  void *commit_baton;
   apr_hash_t *commit_revprops;
-  const char *base_dir_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
 
   /* Open an RA session to URL. */
-  SVN_ERR(svn_client__open_ra_session_internal(ra_session, base_url,
+  SVN_ERR(svn_client__open_ra_session_internal(ra_session, NULL, base_url,
                                                base_dir_abspath, commit_items,
                                                is_commit, !is_commit,
                                                ctx, pool));
@@ -638,10 +660,8 @@ get_ra_editor(svn_ra_session_t **ra_session,
                                            log_msg, ctx, pool));
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   return svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
-                                   commit_revprops,
-                                   svn_client__commit_callback,
+                                   commit_revprops, commit_callback,
                                    commit_baton, lock_tokens, keep_locks,
                                    pool);
 }
@@ -650,13 +670,14 @@ get_ra_editor(svn_ra_session_t **ra_session,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import3(svn_commit_info_t **commit_info_p,
-                   const char *path,
+svn_client_import4(const char *path,
                    const char *url,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -667,12 +688,21 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session;
   apr_hash_t *excludes = apr_hash_make(pool);
   svn_node_kind_t kind;
-  const char *base_dir = path;
+  const char *local_abspath;
+  const char *base_dir_abspath;
   apr_array_header_t *new_entries = apr_array_make(pool, 4,
                                                    sizeof(const char *));
   const char *temp;
   const char *dir;
   apr_pool_t *subpool;
+
+  if (svn_path_is_url(path))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                              _("'%s' is not a local path"),
+                                              path));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  base_dir_abspath = local_abspath;
 
   /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -702,9 +732,9 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
         }
     }
 
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
   if (kind == svn_node_file)
-    base_dir = svn_dirent_dirname(path, pool);
+    base_dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
   /* Figure out all the path components we need to create just to have
      a place to stick our imported tree. */
@@ -728,16 +758,16 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
           else
             svn_error_clear(err);
 
-          svn_uri_split(url, &temp, &dir, pool);
+          svn_uri_split(&temp, &dir, url, pool);
           APR_ARRAY_PUSH(new_entries, const char *) =
             svn_path_uri_decode(dir, pool);
           url = temp;
         }
     }
   while ((err = get_ra_editor(&ra_session,
-                              &editor, &edit_baton, ctx, url, base_dir,
-                              log_msg, NULL, revprop_table,
-                              commit_info_p, FALSE, NULL, TRUE, subpool)));
+                              &editor, &edit_baton, ctx, url, base_dir_abspath,
+                              log_msg, NULL, revprop_table, FALSE, NULL, TRUE,
+                              commit_callback, commit_baton, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
   if (new_entries->nelts)
@@ -792,59 +822,22 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
       return err;
     }
 
-  /* Transfer *COMMIT_INFO from the subpool to the callers pool */
-  if (*commit_info_p)
-    *commit_info_p = svn_commit_info_dup(*commit_info_p, pool);
-
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
 
 
-/* Remove (if it exists) each file whose path is given by a value in the
- * hash TEMPFILES, which is a mapping from (const char *) path to (const
- * char *) tempfile abspath.  Ignore the keys of TEMPFILES. */
-static svn_error_t *
-remove_tmpfiles(apr_hash_t *tempfiles,
-                apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool;
-
-  /* Split if there's nothing to be done. */
-  if (! tempfiles)
-    return SVN_NO_ERROR;
-
-  iterpool = svn_pool_create(pool);
-
-  /* Clean up any tempfiles. */
-  for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = svn__apr_hash_index_val(hi);
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
-    }
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-
 static svn_error_t *
 reconcile_errors(svn_error_t *commit_err,
                  svn_error_t *unlock_err,
                  svn_error_t *bump_err,
-                 svn_error_t *cleanup_err,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
 
   /* Early release (for good behavior). */
-  if (! (commit_err || unlock_err || bump_err || cleanup_err))
+  if (! (commit_err || unlock_err || bump_err))
     return SVN_NO_ERROR;
 
   /* If there was a commit error, start off our error chain with
@@ -882,17 +875,6 @@ reconcile_errors(svn_error_t *commit_err,
 
       /* Append this error to the chain. */
       svn_error_compose(err, bump_err);
-    }
-
-  /* If there was a cleanup error... */
-  if (cleanup_err)
-    {
-      /* Wrap the error with some headers. */
-      cleanup_err = svn_error_quick_wrap
-        (cleanup_err, _("Error in post-commit clean-up (details follow):"));
-
-      /* Append this error to the chain. */
-      svn_error_compose(err, cleanup_err);
     }
 
   return err;
@@ -946,23 +928,6 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
 {
   svn_boolean_t loop_recurse = FALSE;
   svn_boolean_t remove_lock;
-
-  /* Is it a missing, deleted directory?
-
-     ### Temporary: once we centralise this sort of node is just a
-     normal delete and will get handled by the post-commit queue. */
-  if (item->kind == svn_node_dir
-      && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-    {
-      svn_boolean_t obstructed;
-
-      SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed,
-                                                wc_ctx, item->path,
-                                                scratch_pool));
-      if (obstructed)
-        return svn_wc__temp_mark_missing_not_present(item->path,
-                                                     wc_ctx, scratch_pool);
-    }
 
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
       && (item->kind == svn_node_dir)
@@ -1049,18 +1014,20 @@ check_nonrecursive_dir_delete(const char *target_path,
 }
 
 svn_error_t *
-svn_client_commit4(svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *targets,
+svn_client_commit5(const apr_array_header_t *targets,
                    svn_depth_t depth,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
                    const apr_array_header_t *changelists,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *editor;
   void *edit_baton;
+  struct capture_baton_t cb;
   svn_ra_session_t *ra_session;
   const char *log_msg;
   const char *base_abspath;
@@ -1069,13 +1036,13 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   apr_array_header_t *rel_targets;
   apr_hash_t *committables;
   apr_hash_t *lock_tokens;
-  apr_hash_t *tempfiles = NULL;
   apr_hash_t *md5_checksums;
   apr_hash_t *sha1_checksums;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
-  svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
+  svn_error_t *bump_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
+  svn_commit_info_t *commit_info = NULL;
   const char *current_abspath;
   const char *notify_prefix;
   int i;
@@ -1097,13 +1064,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* No targets means nothing to commit, so just return. */
   if (base_abspath == NULL)
-    {
-      /* As per our promise, if *commit_info_p isn't set, provide a
-         default where rev = SVN_INVALID_REVNUM. */
-      if (! *commit_info_p)
-        *commit_info_p = svn_create_commit_info(pool);
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(rel_targets != NULL);
 
@@ -1129,7 +1090,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                                   pool);
 
   SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_abspath,
-                                     pool, pool));
+                                     FALSE, pool, pool));
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
@@ -1160,6 +1121,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                                   ! keep_locks,
                                                   changelists,
                                                   ctx,
+                                                  pool,
                                                   pool)))
     goto cleanup;
 
@@ -1221,11 +1183,16 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                      pool)))
     goto cleanup;
 
-  if ((cmt_err = get_ra_editor(&ra_session,
-                               &editor, &edit_baton, ctx,
+  cb.original_callback = commit_callback;
+  cb.original_baton = commit_baton;
+  cb.info = &commit_info;
+  cb.pool = pool;
+
+  if ((cmt_err = get_ra_editor(&ra_session, &editor, &edit_baton, ctx,
                                base_url, base_abspath, log_msg,
-                               commit_items, revprop_table, commit_info_p,
-                               TRUE, lock_tokens, keep_locks, pool)))
+                               commit_items, revprop_table, TRUE, lock_tokens,
+                               keep_locks, capture_commit_info,
+                               &cb, pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
@@ -1233,7 +1200,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                  notify_prefix, &tempfiles, &md5_checksums,
+                                  notify_prefix, &md5_checksums,
                                   &sha1_checksums, ctx, pool);
 
   /* Handle a successful commit. */
@@ -1266,12 +1233,12 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
         }
       svn_pool_destroy(iterpool);
 
-      SVN_ERR_ASSERT(*commit_info_p);
+      SVN_ERR_ASSERT(commit_info);
       bump_err
         = svn_wc_process_committed_queue2(queue, ctx->wc_ctx,
-                                         (*commit_info_p)->revision,
-                                         (*commit_info_p)->date,
-                                         (*commit_info_p)->author,
+                                         commit_info->revision,
+                                         commit_info->date,
+                                         commit_info->author,
                                          pool);
     }
 
@@ -1289,17 +1256,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      attempt to modify the working copy, so it doesn't prevent explicit
      clean-up. */
   if (! bump_err)
-    {
-      unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_abspath, pool);
+    unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_abspath, pool);
 
-      if (! unlock_err)
-        cleanup_err = remove_tmpfiles(tempfiles, pool);
-    }
-
-  /* As per our promise, if *commit_info_p isn't set, provide a default where
-     rev = SVN_INVALID_REVNUM. */
-  if (! *commit_info_p)
-    *commit_info_p = svn_create_commit_info(pool);
-
-  return reconcile_errors(cmt_err, unlock_err, bump_err, cleanup_err, pool);
+  return reconcile_errors(cmt_err, unlock_err, bump_err, pool);
 }

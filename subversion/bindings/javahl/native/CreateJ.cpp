@@ -32,6 +32,7 @@
 #include "RevisionRange.h"
 #include "CreateJ.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
+#include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
 #include "svn_path.h"
 #include "private/svn_wc_private.h"
@@ -349,6 +350,62 @@ CreateJ::Lock(const svn_lock_t *lock)
 }
 
 jobject
+CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass clazzCP = env->FindClass(JAVA_PACKAGE"/ChangePath");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN(SVN_NO_ERROR);
+
+  static jmethodID midCP = 0;
+  if (midCP == 0)
+    {
+      midCP = env->GetMethodID(clazzCP,
+                               "<init>",
+                               "(Ljava/lang/String;JLjava/lang/String;"
+                               "L"JAVA_PACKAGE"/ChangePath$Action;"
+                               "L"JAVA_PACKAGE"/NodeKind;"
+                               "L"JAVA_PACKAGE"/Tristate;"
+                               "L"JAVA_PACKAGE"/Tristate;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN(SVN_NO_ERROR);
+    }
+
+  jstring jpath = JNIUtil::makeJString(path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jcopyFromPath = JNIUtil::makeJString(log_item->copyfrom_path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobject jaction = EnumMapper::mapChangePathAction(log_item->action);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobject jnodeKind = EnumMapper::mapNodeKind(log_item->node_kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jlong jcopyFromRev = log_item->copyfrom_rev;
+
+  jobject jcp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
+                      jcopyFromPath, jaction, jnodeKind,
+                      EnumMapper::mapTristate(log_item->text_modified),
+                      EnumMapper::mapTristate(log_item->props_modified));
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  return env->PopLocalFrame(jcp);
+}
+
+jobject
 CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                 const svn_client_status_t *status, apr_pool_t *pool)
 {
@@ -542,43 +599,58 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
             POP_AND_RETURN_NULL;
         }
 
-      const svn_wc_entry_t *entry = NULL;
-
-      if (status->versioned)
+      if (status->versioned && status->conflicted)
         {
-          /* ### This call returns SVN_ERR_ENTRY_NOT_FOUND for all not found
-             ### cases including the (for status) ignored 
-             ### SVN_ERR_NODE_UNEXPECTED_KIND!. Needs a workaround for 100%
-             ### compatibility with <= 1.6 */
-          svn_error_t *err = svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                                         svn_node_unknown, FALSE, FALSE,
-                                                         pool, pool);
+          const char *conflict_new, *conflict_old, *conflict_wrk;
+          const char *copyfrom_url;
+          svn_revnum_t copyfrom_rev;
+          svn_boolean_t is_copy_target;
 
-          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-            svn_error_clear(err);
-          else
-            SVN_JNI_ERR(err, NULL);
-         }
+          /* This call returns SVN_ERR_ENTRY_NOT_FOUND for some hidden
+             cases, which we can just ignore here as hidden nodes
+             are not in text or property conflict. */
+          svn_error_t *err = svn_wc__node_get_info_bits(NULL,
+                                                        &conflict_old,
+                                                        &conflict_new,
+                                                        &conflict_wrk,
+                                                        NULL,
+                                                        wc_ctx, local_abspath,
+                                                        pool, pool);
 
-      if (entry != NULL)
-        {
-          jConflictNew = JNIUtil::makeJString(entry->conflict_new);
+          if (err)
+            {
+               if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+                 svn_error_clear(err);
+               else
+                 SVN_JNI_ERR(err, NULL);
+            }
+
+          jConflictNew = JNIUtil::makeJString(conflict_new);
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NULL;
 
-          jConflictOld = JNIUtil::makeJString(entry->conflict_old);
+          jConflictOld = JNIUtil::makeJString(conflict_old);
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NULL;
 
-          jConflictWorking= JNIUtil::makeJString(entry->conflict_wrk);
+          jConflictWorking= JNIUtil::makeJString(conflict_wrk);
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NULL;
 
-          jURLCopiedFrom = JNIUtil::makeJString(entry->copyfrom_url);
+          SVN_JNI_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
+                                                     &copyfrom_url,
+                                                     &copyfrom_rev,
+                                                     &is_copy_target,
+                                                     wc_ctx, local_abspath,
+                                                     pool, pool), NULL);
+
+          jURLCopiedFrom = JNIUtil::makeJString(is_copy_target ? copyfrom_url
+                                                               : NULL);
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NULL;
 
-          jRevisionCopiedFrom = entry->copyfrom_rev;
+          jRevisionCopiedFrom = is_copy_target ? copyfrom_rev
+                                               : SVN_INVALID_REVNUM;
         }
     }
 
@@ -772,6 +844,117 @@ CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify,
   jobject jInfo = env->NewObject(clazz, midCT, jAction, jRevision, jWarning,
                                  jShard, jnewRevision, joldRevision,
                                  jnodeAction, jpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  return env->PopLocalFrame(jInfo);
+}
+
+jobject
+CreateJ::CommitItem(svn_client_commit_item3_t *item)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitItem");
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  // Get the method id for the CommitItem constructor.
+  static jmethodID midConstructor = 0;
+  if (midConstructor == 0)
+    {
+      midConstructor = env->GetMethodID(clazz, "<init>",
+                                        "(Ljava/lang/String;"
+                                        "L"JAVA_PACKAGE"/NodeKind;"
+                                        "ILjava/lang/String;"
+                                        "Ljava/lang/String;J)V");
+      if (JNIUtil::isExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jstring jpath = JNIUtil::makeJString(item->path);
+
+  jobject jnodeKind = EnumMapper::mapNodeKind(item->kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jint jstateFlags = 0;
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+    jstateFlags |=
+      org_apache_subversion_javahl_CommitItemStateFlags_Add;
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+    jstateFlags |=
+      org_apache_subversion_javahl_CommitItemStateFlags_Delete;
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+    jstateFlags |=
+      org_apache_subversion_javahl_CommitItemStateFlags_TextMods;
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+    jstateFlags |=
+      org_apache_subversion_javahl_CommitItemStateFlags_PropMods;
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+    jstateFlags |=
+      org_apache_subversion_javahl_CommitItemStateFlags_IsCopy;
+
+  jstring jurl = JNIUtil::makeJString(item->url);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jcopyUrl = JNIUtil::makeJString(item->copyfrom_url);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jlong jcopyRevision = item->revision;
+
+  // create the Java object
+  jobject jitem = env->NewObject(clazz, midConstructor, jpath,
+                                 jnodeKind, jstateFlags, jurl,
+                                 jcopyUrl, jcopyRevision);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  return env->PopLocalFrame(jitem);
+}
+
+jobject
+CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  static jmethodID midCT = 0;
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitInfo");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  if (midCT == 0)
+    {
+      midCT = env->GetMethodID(clazz, "<init>",
+                               "(JLjava/lang/String;Ljava/lang/String;)V");
+      if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
+        POP_AND_RETURN_NULL;
+    }
+
+  jstring jAuthor = JNIUtil::makeJString(commit_info->author);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jDate = JNIUtil::makeJString(commit_info->date);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jlong jRevision = commit_info->revision;
+
+  // call the Java method
+  jobject jInfo = env->NewObject(clazz, midCT, jRevision, jDate, jAuthor);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 

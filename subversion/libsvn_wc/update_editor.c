@@ -30,7 +30,6 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 #include <apr_tables.h>
-#include <apr_file_io.h>
 #include <apr_strings.h>
 
 #include "svn_types.h"
@@ -39,27 +38,20 @@
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
-#include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
-#include "svn_config.h"
 #include "svn_iter.h"
 
 #include "wc.h"
-#include "log.h"
 #include "adm_files.h"
-#include "adm_ops.h"
 #include "entries.h"
-#include "lock.h"
-#include "props.h"
 #include "translate.h"
 #include "tree_conflicts.h"
 #include "workqueue.h"
 
 #include "private/svn_wc_private.h"
-
 /* Checks whether a svn_wc__db_status_t indicates whether a node is
    present in a working copy. Used by the editor implementation */
 #define IS_NODE_PRESENT(status)                             \
@@ -197,11 +189,6 @@ struct edit_baton
 
   /* Allow unversioned obstructions when adding a path. */
   svn_boolean_t allow_unver_obstructions;
-
-  /* The close_edit method destroys the edit pool and so runs the
-     cleanup_dir_baton cleanup handlers.  This flag is set to indicate
-     that the edit was completed successfully. */
-  svn_boolean_t close_edit_complete;
 
   /* If this is a 'switch' operation, the new relpath of target_abspath,
      else NULL. */
@@ -474,16 +461,14 @@ node_get_relpath_ignore_errors(svn_wc__db_t *db,
   if (relpath)
     return relpath;
 
-  if (status == svn_wc__db_status_added ||
-      status == svn_wc__db_status_obstructed_add)
+  if (status == svn_wc__db_status_added)
     {
       svn_error_clear(svn_wc__db_scan_addition(NULL, NULL, &relpath, NULL,
                                                NULL, NULL, NULL, NULL, NULL,
                                                db, local_abspath,
                                                result_pool, scratch_pool));
     }
-  else if (status != svn_wc__db_status_deleted &&
-           status != svn_wc__db_status_obstructed_delete)
+  else if (status != svn_wc__db_status_deleted)
     {
       svn_error_clear(svn_wc__db_scan_base_repos(&relpath, NULL, NULL,
                                                  db, local_abspath,
@@ -505,19 +490,8 @@ cleanup_dir_baton(void *dir_baton)
   apr_pool_t *pool = apr_pool_parent_get(db->pool);
 
   err = svn_wc__wq_run(eb->db, db->local_abspath,
-                       eb->cancel_func, eb->cancel_baton,
+                       NULL /* cancel_func */, NULL /* cancel_baton */,
                        pool);
-
-  /* If the editor aborts for some sort of error, the command line
-     client relies on pool cleanup to run outstanding work queues and
-     remove locks.  This avoids leaving the working copy locked in
-     many cases, but plays havoc with operations that do multiple
-     updates (think externals). So we flag updates that complete
-     successfully and avoid removing locks.  In 1.6 locks were
-     associated with a pool distinct from the edit pool and so were
-     removed separately. */
-  if (!err && !eb->close_edit_complete)
-    err = svn_wc__release_write_lock(eb->wc_ctx, db->local_abspath, pool);
 
   if (err)
     {
@@ -726,15 +700,10 @@ complete_directory(struct edit_baton *eb,
   int i;
   apr_pool_t *iterpool;
 
-  /* If this is the root directory and there is a target, we can't
+  /* If this is the root directory and there is a target, we don't have to
      mark this directory complete. */
   if (is_root_dir && *eb->target_basename != '\0')
     {
-      /* ### obsolete comment?
-         Before we can finish, we may need to clear the exclude flag for
-         target. Also give a chance to the target that is explicitly pulled
-         in. */
-      svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
       svn_error_t *err;
 
@@ -749,38 +718,26 @@ complete_directory(struct edit_baton *eb,
 
          If there is no BASE node for the target, then we certainly don't
          have to worry about removing it.  */
-      err = svn_wc__db_base_get_info(&status, &kind, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
-                                     eb->db, eb->target_abspath,
-                                     pool, pool);
+      err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL,
+                                     eb->db, eb->target_abspath, pool, pool);
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
             return svn_error_return(err);
 
           svn_error_clear(err);
-          return SVN_NO_ERROR;
         }
 
-      if (status == svn_wc__db_status_excluded)
+      if (!err && status == svn_wc__db_status_excluded)
         {
-          /* ### obsolete comment?
-             There is a small chance that the target is gone in the
-             repository.  If so, we should get rid of the entry now. */
+          /* There is a small chance that the explicit target of an update/
+             switch is gone in the repository, in that specific case the node
+             hasn't been re-added to the BASE tree by this update. If so, we
+             should get rid of this excluded node now. */
 
-          if (kind == svn_wc__db_kind_dir &&
-              svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
-            {
-              /* ### obsolete comment?
-               * Still passing NULL for THEIR_URL. A case where THEIR_URL
-               * is needed in this call is rare or even non-existant.
-               * ### TODO: Construct a proper THEIR_URL anyway. See also
-               * NULL handling code in do_entry_deletion(). */
-              SVN_ERR(do_entry_deletion(eb, eb->target_abspath,
-                                        NULL, FALSE, pool));
-            }
+          SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
         }
 
       return SVN_NO_ERROR;
@@ -836,46 +793,17 @@ complete_directory(struct edit_baton *eb,
       svn_wc__db_status_t status;
       svn_wc__db_kind_t kind;
       svn_revnum_t revnum;
-      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
       node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-      /* ### there is an edge case that we can run into right now: this
-         ### dir can have a "subdir" node in the BASE_NODE, but the
-         ### actual subdir does NOT have a record.
-         ###
-         ### in particular, copy_tests 21 and schedule_tests 10 can create
-         ### this situation. in short: the subdir is rm'd on the disk, and
-         ### a deletion of that directory is committed. a local-add then
-         ### reintroduces the directory and metadata (within WORKING).
-         ### before or after an update, the parent dir has the "subdir"
-         ### BASE_NODE and it is missing in the child. asking for the BASE
-         ### won't return status_obstructed since there is a true subdir
-         ### there now.
-         ###
-         ### at some point in the control flow, we should have removed
-         ### the "subdir" record. maybe there is a good place to remove
-         ### that record (or wait for single-dir). for now, we can correct
-         ### it when we detect it.  */
-      err = svn_wc__db_base_get_info(&status, &kind, &revnum,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
-                                     eb->db, node_abspath,
-                                     iterpool, iterpool);
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_return(err);
-
-          svn_error_clear(err);
-
-          SVN_ERR(svn_wc__db_temp_remove_subdir_record(eb->db, node_abspath,
-                                                       iterpool));
-          continue;
-        }
+      SVN_ERR(svn_wc__db_base_get_info(&status, &kind, &revnum,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       eb->db, node_abspath,
+                                       iterpool, iterpool));
 
       /* ### obsolete comment?
          Any entry still marked as deleted (and not schedule add) can now
@@ -888,24 +816,32 @@ complete_directory(struct edit_baton *eb,
          number different from the target revision of the update means the
          update never mentioned the item, so the entry should be
          removed. */
-      if (status == svn_wc__db_status_not_present
-          || (status == svn_wc__db_status_absent
-              && revnum != *eb->target_revision))
+      if (status == svn_wc__db_status_not_present)
+        {
+          /* "Usually", not_present nodes indicate that an 'svn delete' was
+           * committed and its parent has not been updated yet. We have just
+           * updated the parent and so the not_present BASE_NODE should go
+           * away.
+           * However, not_present can also mean that 'update' wanted to add a
+           * node and found an unversioned obstruction at that path. We don't
+           * want to remove such not_present state, so check if there is a
+           * tree conflict flagged against an unversioned node and leave the
+           * BASE_NODE alone if so.
+           * Note that add_file() automatically fixes such an
+           * added-not_present node when it finds the obstruction gone. */
+          const svn_wc_conflict_description2_t *tree_conflict;
+          SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict,
+                                                   eb->db,
+                                                   node_abspath,
+                                                   iterpool, iterpool));
+          if (!tree_conflict
+              || tree_conflict->reason != svn_wc_conflict_reason_unversioned)
+            SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
+        }
+      else if (status == svn_wc__db_status_absent
+               && revnum != *eb->target_revision)
         {
           SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
-        }
-      else if (kind == svn_wc__db_kind_dir
-               && svn_wc__adm_missing(eb->db, node_abspath, iterpool)
-               && status != svn_wc__db_status_absent)
-        {
-          SVN_ERR(svn_wc__db_temp_op_remove_entry(eb->db, node_abspath,
-                                                  iterpool));
-
-          do_notification(eb, node_abspath, svn_wc_notify_update_delete,
-                          (kind == svn_wc__db_kind_dir)
-                            ? svn_node_dir
-                            : svn_node_file,
-                          iterpool);
         }
     }
 
@@ -993,27 +929,14 @@ struct file_baton
      within a locally deleted tree. */
   svn_boolean_t deleted;
 
-  /* The path to the incoming text base (that is, to a text-base-file-
-     in-progress in the tmp area).  This gets set if there are file
-     content changes. */
-  const char *new_text_base_tmp_abspath;
-
-  /* The MD5 checksum of the incoming text base (pristine text). */
+  /* If there are file content changes, these are the checksums of the
+     resulting new text base, which is in the pristine store, else NULL. */
   svn_checksum_t *new_text_base_md5_checksum;
-
-  /* The SHA1 checksum of the incoming text base (pristine text). */
   svn_checksum_t *new_text_base_sha1_checksum;
 
-  /* If this file was added with history, this is the path to a copy
-     of the text base of the copyfrom file (in the temporary area). */
-  const char *copied_text_base_abspath;
-
-  /* If this file was added with history, this is the MD5 checksum of the
-     text base (see copied_text_base_abspath). May be NULL if unknown. */
+  /* If this file was added with history, these are the checksums of the
+     copy-from text base, which is in the pristine store, else NULL. */
   svn_checksum_t *copied_text_base_md5_checksum;
-
-  /* If this file was added with history, this is the SHA-1 checksum of the
-     text base (see copied_text_base_abspath). May be NULL if unknown. */
   svn_checksum_t *copied_text_base_sha1_checksum;
 
   /* If this file was added with history, and the copyfrom had local
@@ -1039,11 +962,18 @@ struct file_baton
 
   /* The last-changed-date of the file.  This is actually a property
      that comes through as an 'entry prop', and will be used to set
-     the working file's timestamp if it's added.  */
+     the working file's timestamp if it's added. 
+
+     Will be NULL unless eb->use_commit_times is TRUE. */
   const char *last_changed_date;
 
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
+
+  /* This is set when there is an incoming add of a file/symlink node onto a
+   * locally added node of different identity (add-vs-add tree conflict). */
+  svn_boolean_t adding_base_under_local_add;
+
 };
 
 
@@ -1099,12 +1029,15 @@ make_file_baton(struct file_baton **f_p,
 }
 
 
-/* */
+/* Handle the next delta window of the file described by BATON.  If it is
+ * the end (WINDOW == NULL), then check the checksum, store the text in the
+ * pristine store and write its details into BATON->fb->new_text_base_*. */
 static svn_error_t *
 window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
+  svn_wc__db_t *db = fb->edit_baton->db;
   svn_error_t *err;
 
   /* Apply this window.  We may be done at that point.  */
@@ -1142,16 +1075,20 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     }
   else
     {
-      /* Tell the file baton about the new text base. */
-      fb->new_text_base_tmp_abspath = apr_pstrdup(fb->pool,
-                                              hb->new_text_base_tmp_abspath);
-
-      /* ... and its checksums. */
+      /* Tell the file baton about the new text base's checksums. */
       fb->new_text_base_md5_checksum =
         svn_checksum__from_digest(hb->new_text_base_md5_digest,
                                   svn_checksum_md5, fb->pool);
       fb->new_text_base_sha1_checksum =
         svn_checksum_dup(hb->new_text_base_sha1_checksum, fb->pool);
+
+      /* Store the new pristine text in the pristine store now.  Later, in a
+         single transaction we will update the BASE_NODE to include a
+         reference to this pristine text's checksum. */
+      SVN_ERR(svn_wc__db_pristine_install(db, hb->new_text_base_tmp_abspath,
+                                          fb->new_text_base_sha1_checksum,
+                                          fb->new_text_base_md5_checksum,
+                                          hb->pool));
     }
 
   svn_pool_destroy(hb->pool);
@@ -1172,36 +1109,12 @@ prep_directory(struct dir_baton *db,
                svn_revnum_t ancestor_revision,
                apr_pool_t *pool)
 {
-  const char *repos_root;
   const char *dir_abspath;
-  svn_boolean_t locked_here;
 
   dir_abspath = db->local_abspath;
 
   /* Make sure the directory exists. */
   SVN_ERR(svn_wc__ensure_directory(dir_abspath, pool));
-
-  /* Use the repository root of the anchor, but only if it actually is an
-     ancestor of the URL of this directory. */
-  if (svn_uri_is_ancestor(db->edit_baton->repos_root, ancestor_url))
-    repos_root = db->edit_baton->repos_root;
-  else
-    repos_root = NULL;
-
-  /* Make sure it's the right working copy, either by creating it so,
-     or by checking that it is so already. */
-  SVN_ERR(svn_wc__internal_ensure_adm(db->edit_baton->db, dir_abspath,
-                                      ancestor_url, repos_root,
-                                      db->edit_baton->repos_uuid,
-                                      ancestor_revision,
-                                      db->ambient_depth, pool));
-
-  SVN_ERR(svn_wc_locked2(&locked_here, NULL, db->edit_baton->wc_ctx,
-                         dir_abspath, pool));
-  if (!locked_here)
-    /* Recursive lock release on parent will release this lock. */
-    SVN_ERR(svn_wc__acquire_write_lock(NULL, db->edit_baton->wc_ctx,
-                                       dir_abspath, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1273,9 +1186,12 @@ check_path_under_root(const char *base_path,
                       const char *add_path,
                       apr_pool_t *pool)
 {
-  char *full_path;
+  const char *full_path;
+  svn_boolean_t under_root;
 
-  if (! svn_dirent_is_under_root(&full_path, base_path, add_path, pool))
+  SVN_ERR(svn_dirent_is_under_root(&under_root, &full_path, base_path, add_path, pool));
+
+  if (! under_root)
     {
       return svn_error_createf(
           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -1386,36 +1302,6 @@ open_root(void *edit_baton,
 }
 
 
-/* Helper for delete_entry() and do_entry_deletion().
-
-   If the error chain ERR contains evidence that a local mod was left
-   (an SVN_ERR_WC_LEFT_LOCAL_MOD error), clear ERR.  Otherwise, return ERR.
-*/
-static svn_error_t *
-leftmod_error_chain(svn_error_t *err)
-{
-  svn_error_t *tmp_err;
-
-  if (! err)
-    return SVN_NO_ERROR;
-
-  /* Advance TMP_ERR to the part of the error chain that reveals that
-     a local mod was left, or to the NULL end of the chain. */
-  for (tmp_err = err; tmp_err; tmp_err = tmp_err->child)
-    if (tmp_err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-      {
-        /* We just found a "left a local mod" error, so tolerate it
-           and clear the whole error. In that case we continue with
-           modified files left on the disk. */
-        svn_error_clear(err);
-        return SVN_NO_ERROR;
-      }
-
-  /* Otherwise, we just return our top-most error. */
-  return err;
-}
-
-
 /* ===================================================================== */
 /* Checking for local modifications. */
 
@@ -1481,7 +1367,9 @@ modcheck_found_node(const char *local_abspath,
 
   if (status != svn_wc__db_status_normal)
     modified = TRUE;
-  else
+  /* No need to check if we already have at least one non-delete
+     modification */
+  else if (!baton->found_mod || baton->all_edits_are_deletes)
     SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
                                  kind, scratch_pool));
 
@@ -1533,6 +1421,199 @@ tree_has_local_mods(svn_boolean_t *modified,
 /* Indicates an unset svn_wc_conflict_reason_t. */
 #define SVN_WC_CONFLICT_REASON_NONE (svn_wc_conflict_reason_t)(-1)
 
+/* Create a tree conflict struct.
+ *
+ * The REASON is stored directly in the tree conflict info.
+ *
+ * All temporary allocactions are be made in SCRATCH_POOL, while allocations
+ * needed for the returned conflict struct are made in RESULT_POOL.
+ *
+ * All other parameters are identical to and described by
+ * check_tree_conflict(), with the slight modification that this function
+ * relies on the reason passed in REASON instead of actively looking for one. */
+static svn_error_t *
+create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
+                     struct edit_baton *eb,
+                     const char *local_abspath,
+                     svn_wc_conflict_reason_t reason,
+                     svn_wc_conflict_action_t action,
+                     svn_node_kind_t their_node_kind,
+                     const char *their_relpath,
+                     apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  const char *repos_root_url = NULL;
+  const char *left_repos_relpath;
+  svn_revnum_t left_revision;
+  svn_node_kind_t left_kind;
+  const char *right_repos_relpath;
+  const char *added_repos_relpath = NULL;
+  svn_node_kind_t conflict_node_kind;
+  svn_wc_conflict_version_t *src_left_version;
+  svn_wc_conflict_version_t *src_right_version;
+
+  *pconflict = NULL;
+
+  SVN_ERR_ASSERT(reason != SVN_WC_CONFLICT_REASON_NONE);
+
+  /* Get the source-left information, i.e. the local state of the node
+   * before any changes were made to the working copy, i.e. the state the
+   * node would have if it was reverted. */
+  if (reason == svn_wc_conflict_reason_added)
+    {
+      svn_wc__db_status_t added_status;
+
+      /* ###TODO: It would be nice to tell the user at which URL and
+       * ### revision source-left was empty, which could be quite difficult
+       * ### to code, and is a slight theoretical leap of the svn mind.
+       * ### Update should show
+       * ###   URL: svn_wc__db_scan_addition( &repos_relpath )
+       * ###   REV: The base revision of the parent of before this update
+       * ###        started
+       * ###        ### BUT what if parent was updated/switched away with
+       * ###        ### depth=empty after this node was added?
+       * ### Switch should show
+       * ###   URL: scan_addition URL of before this switch started
+       * ###   REV: same as above */
+
+      /* In case of a local addition, source-left is non-existent / empty. */
+      left_kind = svn_node_none;
+      left_revision = SVN_INVALID_REVNUM;
+      left_repos_relpath = NULL;
+
+      /* Still get the repository root needed by both 'update' and 'switch',
+       * and the would-be repos_relpath needed to construct the source-right
+       * in case of an 'update'. Check sanity while we're at it. */
+      SVN_ERR(svn_wc__db_scan_addition(&added_status, NULL,
+                                       &added_repos_relpath,
+                                       &repos_root_url,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       eb->db, local_abspath,
+                                       result_pool, scratch_pool));
+
+      /* This better really be an added status. */
+      SVN_ERR_ASSERT(added_status == svn_wc__db_status_added
+                     || added_status == svn_wc__db_status_copied
+                     || added_status == svn_wc__db_status_moved_here);
+    }
+  else if (reason == svn_wc_conflict_reason_unversioned)
+    {
+      /* Obstructed by an unversioned node. Source-left is
+       * non-existent/empty. */
+      left_kind = svn_node_none;
+      left_revision = SVN_INVALID_REVNUM;
+      left_repos_relpath = NULL;
+      repos_root_url = eb->repos_root;
+    }
+  else
+    {
+      /* A BASE node should exist. */
+      svn_wc__db_kind_t base_kind;
+
+      /* If anything else shows up, then this assertion is probably naive
+       * and that other case should also be handled. */
+      SVN_ERR_ASSERT(reason == svn_wc_conflict_reason_edited
+                     || reason == svn_wc_conflict_reason_deleted
+                     || reason == svn_wc_conflict_reason_replaced
+                     || reason == svn_wc_conflict_reason_obstructed);
+
+      SVN_ERR(svn_wc__db_base_get_info(NULL, &base_kind,
+                                       &left_revision,
+                                       &left_repos_relpath,
+                                       &repos_root_url,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       eb->db,
+                                       local_abspath,
+                                       result_pool,
+                                       scratch_pool));
+      /* Translate the node kind. */
+      if (base_kind == svn_wc__db_kind_file
+          || base_kind == svn_wc__db_kind_symlink)
+        left_kind = svn_node_file;
+      else if (base_kind == svn_wc__db_kind_dir)
+        left_kind = svn_node_dir;
+      else
+        SVN_ERR_MALFUNCTION();
+    }
+
+  SVN_ERR_ASSERT(strcmp(repos_root_url, eb->repos_root) == 0);
+
+  /* Find the source-right information, i.e. the state in the repository
+   * to which we would like to update. */
+  if (eb->switch_relpath)
+    {
+      /* If this is a 'switch' operation, try to construct the switch
+       * target's REPOS_RELPATH. */
+      if (their_relpath != NULL)
+        right_repos_relpath = their_relpath;
+      else
+        {
+          /* The complete source-right URL is not available, but it
+           * is somewhere below the SWITCH_URL. For now, just go
+           * without it.
+           * ### TODO: Construct a proper THEIR_URL in some of the
+           * delete cases that still pass NULL for THEIR_URL when
+           * calling this function. Do that on the caller's side. */
+          right_repos_relpath = eb->switch_relpath;
+          right_repos_relpath = apr_pstrcat(result_pool, right_repos_relpath,
+                                            "_THIS_IS_INCOMPLETE", NULL);
+        }
+    }
+  else
+    {
+      /* This is an 'update', so REPOS_RELPATH would be the same as for
+       * source-left. However, we don't have a source-left for locally
+       * added files. */
+      right_repos_relpath = (reason == svn_wc_conflict_reason_added ?
+                             added_repos_relpath : left_repos_relpath);
+      if (! right_repos_relpath)
+        right_repos_relpath = their_relpath;
+    }
+
+  SVN_ERR_ASSERT(right_repos_relpath != NULL);
+
+  /* Determine PCONFLICT's overall node kind, which is not allowed to be
+   * svn_node_none. We give it the source-right revision (THEIR_NODE_KIND)
+   * -- unless source-right is deleted and hence == svn_node_none, in which
+   * case we take it from source-left, which has to be the node kind that
+   * was deleted. */
+  conflict_node_kind = (action == svn_wc_conflict_action_delete ?
+                        left_kind : their_node_kind);
+  SVN_ERR_ASSERT(conflict_node_kind == svn_node_file
+                 || conflict_node_kind == svn_node_dir);
+
+
+  /* Construct the tree conflict info structs. */
+
+  if (left_repos_relpath == NULL)
+    /* A locally added or unversioned path in conflict with an incoming add.
+     * Send an 'empty' left revision. */
+    src_left_version = NULL;
+  else
+    src_left_version = svn_wc_conflict_version_create(repos_root_url,
+                                                      left_repos_relpath,
+                                                      left_revision,
+                                                      left_kind,
+                                                      result_pool);
+
+  src_right_version = svn_wc_conflict_version_create(repos_root_url,
+                                                     right_repos_relpath,
+                                                     *eb->target_revision,
+                                                     their_node_kind,
+                                                     result_pool);
+
+  *pconflict = svn_wc_conflict_description_create_tree2(
+                   local_abspath, conflict_node_kind,
+                   eb->switch_relpath ?
+                     svn_wc_operation_switch : svn_wc_operation_update,
+                   src_left_version, src_right_version, result_pool);
+  (*pconflict)->action = action;
+  (*pconflict)->reason = reason;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Check whether the incoming change ACTION on FULL_PATH would conflict with
  * LOCAL_ABSPATH's scheduled change. If so, then raise a tree conflict with
  * LOCAL_ABSPATH as the victim.
@@ -1540,24 +1621,20 @@ tree_has_local_mods(svn_boolean_t *modified,
  * The edit baton EB gives information including whether the operation is
  * an update or a switch.
  *
- * If PCONFLICT is not null, set *PCONFLICT to the conflict description if
- * there is one or else to null.
+ * If a tree conflict reason was found for the incoming action, the resulting
+ * tree conflict info is returned in *PCONFLICT. PCONFLICT must be non-NULL,
+ * while *PCONFLICT is always overwritten.
  *
- * THEIR_NODE_KIND is the node kind reflected by the incoming edit
+ * THEIR_NODE_KIND should be the node kind reflected by the incoming edit
  * function. E.g. dir_opened() should pass svn_node_dir, etc.
  * In some cases of delete, svn_node_none may be used here.
  *
- * THEIR_RELPATH is the involved node's repository relative path on the
- * source-right side, the side that the target should become after the
- * update. Simply put, that's the URL obtained from the node's
- * dir_baton->new_relpath or file_baton->new_relpath (but it's more
- * complex for a delete).
+ * THEIR_RELPATH should be the involved node's repository-relative path on the
+ * source-right side, the side that the target should become after the update.
+ * Simply put, that's the URL obtained from the node's dir_baton->new_relpath
+ * or file_baton->new_relpath (but it's more complex for a delete).
  *
- * ACCEPT_DELETED is true if one of the ancestors got tree conflicted, but
- * the operation continued updating a deleted base tree.
- *
- * Tree conflict use cases are described in issue #2282 and in
- * notes/tree-conflicts/detection.txt.
+ * All allocations are made in POOL.
  */
 static svn_error_t *
 check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
@@ -1595,7 +1672,6 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   switch (status)
     {
       case svn_wc__db_status_added:
-      case svn_wc__db_status_obstructed_add:
       case svn_wc__db_status_moved_here:
       case svn_wc__db_status_copied:
         /* Is it a replace? */
@@ -1636,7 +1712,6 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
 
       case svn_wc__db_status_deleted:
-      case svn_wc__db_status_obstructed_delete:
         /* The node is locally deleted. */
         reason = svn_wc_conflict_reason_deleted;
         break;
@@ -1648,10 +1723,6 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
          * So the node exists and is essentially 'normal'. We still need to
          * check prop and text mods, and those checks will retrieve the
          * missing information (hopefully). */
-      case svn_wc__db_status_obstructed:
-        /* Tree-conflicts during update are only concerned with local
-         * modifications. We can safely update BASE, disregarding the
-         * obstruction. So let's treat this as normal. */
       case svn_wc__db_status_normal:
         if (action == svn_wc_conflict_action_edit)
           /* An edit onto a local edit or onto *no* local changes is no
@@ -1675,11 +1746,10 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                * but the update editor will not visit the subdirectories
                * of a directory that it wants to delete.  Therefore, we
                * need to start a separate crawl here. */
-              if (!svn_wc__adm_missing(eb->db, local_abspath, pool))
-                SVN_ERR(tree_has_local_mods(&modified, &all_mods_are_deletes,
-                                            eb->db, local_abspath,
-                                            eb->cancel_func, eb->cancel_baton,
-                                            pool));
+              SVN_ERR(tree_has_local_mods(&modified, &all_mods_are_deletes,
+                                          eb->db, local_abspath,
+                                          eb->cancel_func, eb->cancel_baton,
+                                          pool));
               break;
 
             default:
@@ -1739,161 +1809,11 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
   /* A conflict was detected. Append log commands to the log accumulator
    * to record it. */
-  {
-    const char *repos_root_url = NULL;
-    const char *left_repos_relpath;
-    svn_revnum_t left_revision;
-    svn_node_kind_t left_kind;
-    const char *right_repos_relpath;
-    const char *added_repos_relpath = NULL;
-    svn_node_kind_t conflict_node_kind;
-    svn_wc_conflict_version_t *src_left_version;
-    svn_wc_conflict_version_t *src_right_version;
-
-    /* Get the source-left information, i.e. the local state of the node
-     * before any changes were made to the working copy, i.e. the state the
-     * node would have if it was reverted. */
-    if (reason == svn_wc_conflict_reason_added)
-      {
-        svn_wc__db_status_t added_status;
-
-        /* ###TODO: It would be nice to tell the user at which URL and
-         * ### revision source-left was empty, which could be quite difficult
-         * ### to code, and is a slight theoretical leap of the svn mind.
-         * ### Update should show
-         * ###   URL: svn_wc__db_scan_addition( &repos_relpath )
-         * ###   REV: The base revision of the parent of before this update
-         * ###        started
-         * ###        ### BUT what if parent was updated/switched away with
-         * ###        ### depth=empty after this node was added?
-         * ### Switch should show
-         * ###   URL: scan_addition URL of before this switch started
-         * ###   REV: same as above */
-
-        /* In case of a local addition, source-left is non-existent / empty. */
-        left_kind = svn_node_none;
-        left_revision = SVN_INVALID_REVNUM;
-        left_repos_relpath = NULL;
-
-        /* Still get the repository root needed by both 'update' and 'switch',
-         * and the would-be repos_relpath needed to construct the source-right
-         * in case of an 'update'. Check sanity while we're at it. */
-        SVN_ERR(svn_wc__db_scan_addition(&added_status, NULL,
-                                         &added_repos_relpath,
-                                         &repos_root_url,
-                                         NULL, NULL, NULL, NULL, NULL,
-                                         eb->db, local_abspath, pool, pool));
-
-        /* This better really be an added status. */
-        SVN_ERR_ASSERT(added_status == svn_wc__db_status_added
-                       || added_status == svn_wc__db_status_obstructed_add
-                       || added_status == svn_wc__db_status_copied
-                       || added_status == svn_wc__db_status_moved_here);
-      }
-    else
-      {
-        /* A BASE node should exist. */
-        svn_wc__db_kind_t base_kind;
-
-        /* If anything else shows up, then this assertion is probably naive
-         * and that other case should also be handled. */
-        SVN_ERR_ASSERT(reason == svn_wc_conflict_reason_edited
-                       || reason == svn_wc_conflict_reason_deleted
-                       || reason == svn_wc_conflict_reason_replaced
-                       || reason == svn_wc_conflict_reason_obstructed);
-
-        SVN_ERR(svn_wc__db_base_get_info(NULL, &base_kind,
-                                         &left_revision,
-                                         &left_repos_relpath,
-                                         &repos_root_url,
-                                         NULL, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL, NULL,
-                                         eb->db,
-                                         local_abspath,
-                                         pool,
-                                         pool));
-        /* Translate the node kind. */
-        if (base_kind == svn_wc__db_kind_file
-            || base_kind == svn_wc__db_kind_symlink)
-          left_kind = svn_node_file;
-        else if (base_kind == svn_wc__db_kind_dir)
-          left_kind = svn_node_dir;
-        else
-          SVN_ERR_MALFUNCTION();
-      }
-
-
-    /* Find the source-right information, i.e. the state in the repository
-     * to which we would like to update. */
-    if (eb->switch_relpath)
-      {
-        /* If this is a 'switch' operation, try to construct the switch
-         * target's REPOS_RELPATH. */
-        if (their_relpath != NULL)
-          right_repos_relpath = their_relpath;
-        else
-          {
-            /* The complete source-right URL is not available, but it
-             * is somewhere below the SWITCH_URL. For now, just go
-             * without it.
-             * ### TODO: Construct a proper THEIR_URL in some of the
-             * delete cases that still pass NULL for THEIR_URL when
-             * calling this function. Do that on the caller's side. */
-            right_repos_relpath = eb->switch_relpath;
-            right_repos_relpath = apr_pstrcat(pool, right_repos_relpath,
-                                              "_THIS_IS_INCOMPLETE", NULL);
-          }
-      }
-    else
-      {
-        /* This is an 'update', so REPOS_RELPATH would be the same as for
-         * source-left. However, we don't have a source-left for locally
-         * added files. */
-        right_repos_relpath = (reason == svn_wc_conflict_reason_added ?
-                               added_repos_relpath : left_repos_relpath);
-      }
-
-    /* Determine PCONFLICT's overall node kind, which is not allowed to be
-     * svn_node_none. We give it the source-right revision (THEIR_NODE_KIND)
-     * -- unless source-right is deleted and hence == svn_node_none, in which
-     * case we take it from source-left, which has to be the node kind that
-     * was deleted. */
-    conflict_node_kind = (action == svn_wc_conflict_action_delete ?
-                          left_kind : their_node_kind);
-    SVN_ERR_ASSERT(conflict_node_kind == svn_node_file
-                   || conflict_node_kind == svn_node_dir);
-
-
-    /* Construct the tree conflict info structs. */
-
-    if (left_repos_relpath == NULL)
-      /* A locally added path in conflict with an incoming add.
-       * Send an 'empty' left revision. */
-      src_left_version = NULL;
-    else
-      src_left_version = svn_wc_conflict_version_create(repos_root_url,
-                                                        left_repos_relpath,
-                                                        left_revision,
-                                                        left_kind,
-                                                        pool);
-
-    src_right_version = svn_wc_conflict_version_create(repos_root_url,
-                                                       right_repos_relpath,
-                                                       *eb->target_revision,
-                                                       their_node_kind,
-                                                       pool);
-
-    *pconflict = svn_wc_conflict_description_create_tree2(
-                     local_abspath, conflict_node_kind,
-                     eb->switch_relpath ?
-                       svn_wc_operation_switch : svn_wc_operation_update,
-                     src_left_version, src_right_version, pool);
-    (*pconflict)->action = action;
-    (*pconflict)->reason = reason;
-  }
-
-  return SVN_NO_ERROR;
+  return svn_error_return(create_tree_conflict(pconflict, eb, local_abspath,
+                                               reason, action, their_node_kind,
+                                               their_relpath, pool, pool));
 }
+
 
 /* If LOCAL_ABSPATH is inside a conflicted tree, set *CONFLICTED to TRUE,
  * Otherwise set *CONFLICTED to FALSE.  Use SCRATCH_POOL for temporary
@@ -1923,58 +1843,55 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
   while (TRUE)
     {
-      svn_wc__db_kind_t kind;
-      svn_boolean_t hidden;
-      svn_boolean_t is_wc_root;
+      svn_wc__db_status_t status;
+      svn_boolean_t is_wc_root, has_conflict;
       svn_error_t *err;
       const svn_wc_conflict_description2_t *conflict;
 
       svn_pool_clear(iterpool);
 
-      err = svn_wc__db_read_kind(&kind, db, ancestor_abspath, TRUE,
-                                 iterpool);
+      err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, &has_conflict, NULL,
+                                 db, ancestor_abspath, iterpool, iterpool);
 
       if (err)
         {
-          if (! SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+              && !SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
             return svn_error_return(err);
 
           svn_error_clear(err);
           break;
         }
 
-      if (kind == svn_wc__db_kind_unknown)
+      if (status == svn_wc__db_status_not_present
+          || status == svn_wc__db_status_absent
+          || status == svn_wc__db_status_excluded)
         break;
 
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, ancestor_abspath, iterpool));
-
-      if (hidden)
-        break;
-
-      SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db, ancestor_abspath,
-                                               iterpool, iterpool));
-
-      if (conflict != NULL)
+      if (has_conflict)
         {
-          *conflicted = TRUE;
-          break;
+          SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db,
+                                                   ancestor_abspath,
+                                                   iterpool, iterpool));
+
+          if (conflict != NULL)
+            {
+              *conflicted = TRUE;
+              break;
+            }
         }
 
       if (svn_dirent_is_root(ancestor_abspath, strlen(ancestor_abspath)))
         break;
 
-      err = svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
-                                  db, ancestor_abspath, iterpool);
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, ancestor_abspath,
+                                   iterpool));
 
-      if (err
-          && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-              || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
-        {
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      else
-        SVN_ERR(err);
+      if (is_wc_root)
+        break;
 
       ancestor_abspath = svn_dirent_dirname(ancestor_abspath, scratch_pool);
     }
@@ -2047,19 +1964,25 @@ do_entry_deletion(struct edit_baton *eb,
                   svn_boolean_t in_deleted_and_tree_conflicted_subtree,
                   apr_pool_t *pool)
 {
+  svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   svn_boolean_t hidden;
   svn_skel_t *work_item;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, local_abspath, FALSE, pool));
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &conflicted, NULL,
+                               eb->db, local_abspath, pool, pool));
 
   /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  local_abspath, pool));
-  if (already_conflicted)
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    local_abspath, pool));
+  if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
@@ -2072,10 +1995,11 @@ do_entry_deletion(struct edit_baton *eb,
 
     /* Receive the remote removal of excluded/absent/not present node.
        Do not notify. */
-  SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, local_abspath, pool));
-  if (hidden)
+  if (status == svn_wc__db_status_not_present
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_absent)
     {
-      SVN_ERR(svn_wc__db_temp_op_remove_entry(eb->db, local_abspath, pool));
+      SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath, pool));
 
       if (strcmp(local_abspath, eb->target_abspath) == 0)
         eb->target_deleted = TRUE;
@@ -2097,12 +2021,19 @@ do_entry_deletion(struct edit_baton *eb,
 
   if (tree_conflict != NULL)
     {
-      /* When we raise a tree conflict on a directory, we want to avoid
+      /* When we raise a tree conflict on a node, we want to avoid
        * making any changes inside it. (Will an update ever try to make
-       * further changes to or inside a directory it's just deleted?) */
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item, eb->db, dir_abspath,
-                                              tree_conflict, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
+       * further changes to or inside a directory it's just deleted?)
+       *
+       * ### BH: Only if a new node is added in it's place.
+       *          See svn_delta.h for further details. */
+
+      /* ### Note that we still add this on the parent of a node, so it is
+         ### safe to add it now, while we remove the node later */
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                              tree_conflict->local_abspath,
+                                              tree_conflict,
+                                              pool));
 
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
@@ -2113,23 +2044,16 @@ do_entry_deletion(struct edit_baton *eb,
         {
           /* The item exists locally and has some sort of local mod.
            * It no longer exists in the repository at its target URL@REV.
-           * (### If its WC parent was not updated similarly, then it needs to
-           * be marked 'deleted' in its WC parent.)
+           *
            * To prepare the "accept mine" resolution for the tree conflict,
            * we must schedule the existing content for re-addition as a copy
            * of what it was, but with its local modifications preserved. */
 
-          /* Run the log in the parent dir, to record the tree conflict.
-           * Do this before schedule_existing_item_for_re_add(), in case
-           * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
-                                 eb->cancel_func, eb->cancel_baton,
-                                 pool));
-
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
+          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, FALSE,
                                                pool));
 
-          return SVN_NO_ERROR;
+          /* Fall through to remove the BASE_NODEs properly, with potentially
+             keeping a not-present marker */
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
         {
@@ -2143,31 +2067,19 @@ do_entry_deletion(struct edit_baton *eb,
       else if (tree_conflict->reason == svn_wc_conflict_reason_replaced)
         {
           /* The item was locally replaced with something else. We should
-           * keep the existing item schedule-replace, but we also need to
-           * update the BASE rev of the item to the revision we are updating
-           * to. Otherwise, the replace cannot be committed because the item
-           * is considered out-of-date, and it cannot be updated either because
-           * we're here to do just that. */
-
-          /* Run the log in the parent dir, to record the tree conflict.
-           * Do this before schedule_existing_item_for_re_add(), in case
-           * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
-                                 eb->cancel_func, eb->cancel_baton,
-                                 pool));
-
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
-                                               pool));
-
-          return SVN_NO_ERROR;
+           * remove the BASE node below the new working node, which turns
+           * the replacement in an addition. */
+           
+           /* Fall through to the normal "delete" code path. */
         }
       else
         SVN_ERR_MALFUNCTION();  /* other reasons are not expected here */
     }
 
-  /* Issue a loggy command to delete the entry from version control and to
-     delete it from disk if unmodified, but leave any modified files on disk
-     unversioned.
+  /* Issue a wq operation to delete the BASE_NODE data and to delete actual
+     nodes based on that from disk, but leave any WORKING_NODEs on disk.
+
+     Local modifications are already turned into copies at this point.
 
      If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
@@ -2175,58 +2087,21 @@ do_entry_deletion(struct edit_baton *eb,
   if (strcmp(local_abspath, eb->target_abspath) != 0)
     {
       /* Delete, and do not leave a not-present node.  */
-      SVN_ERR(svn_wc__loggy_delete_entry(&work_item,
-                                         eb->db, dir_abspath, local_abspath,
-                                         SVN_INVALID_REVNUM,
-                                         svn_wc__db_kind_unknown,
-                                         pool));
+      SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
+                                           eb->db, local_abspath, FALSE,
+                                           pool, pool));
       SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
     }
   else
     {
       /* Delete, leaving a not-present node.  */
-      SVN_ERR(svn_wc__loggy_delete_entry(&work_item,
-                                         eb->db, dir_abspath, local_abspath,
-                                         *eb->target_revision,
-                                         kind,
-                                         pool));
+      SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
+                                           eb->db, local_abspath, TRUE,
+                                           pool, pool));
       SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
       eb->target_deleted = TRUE;
     }
 
-  if (eb->switch_relpath)
-    {
-      /* The SVN_WC__LOG_DELETE_ENTRY log item will cause
-       * svn_wc_remove_from_revision_control() to be run.  But that
-       * function checks whether the deletion target's URL is child of
-       * its parent directory's URL, and if it's not, then the entry
-       * in parent won't be deleted (because presumably the child
-       * represents a disjoint working copy, i.e., it is a wc_root).
-       *
-       * However, during a switch this works against us, because by
-       * the time we get here, the parent's URL has already been
-       * changed.  So we manually remove the child from revision
-       * control after the delete-entry item has been written in the
-       * parent's log, but before it is run, so the only work left for
-       * the log item is to remove the entry in the parent directory.
-       */
-
-      if (kind == svn_wc__db_kind_dir)
-        {
-          SVN_ERR(leftmod_error_chain(
-                    svn_wc__internal_remove_from_revision_control(
-                      eb->db,
-                      local_abspath,
-                      TRUE, /* destroy */
-                      FALSE, /* instant error */
-                      eb->cancel_func,
-                      eb->cancel_baton,
-                      pool)));
-        }
-    }
-
-  /* Note: these two lines are duplicated in the tree-conflicts bail out
-   * above. */
   SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          pool));
@@ -2288,7 +2163,9 @@ add_directory(const char *path,
   svn_node_kind_t kind;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t wc_kind;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
+  svn_boolean_t versioned_locally_and_present;
+  svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_error_t *err;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
@@ -2364,25 +2241,6 @@ add_directory(const char *path,
       db->ambient_depth = svn_depth_infinity;
     }
 
-  /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  db->local_abspath, pool));
-  if (already_conflicted)
-    {
-      /* Record this conflict so that its descendants are skipped silently. */
-      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
-
-      db->skip_this = TRUE;
-      db->skip_descendants = TRUE;
-      db->already_notified = TRUE;
-
-      /* ### TODO: Also print victim_path in the skip msg. */
-      do_notification(eb, db->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, pool);
-
-      return SVN_NO_ERROR;
-    }
-
   /* It may not be named the same as the administrative directory. */
   if (svn_wc_is_adm_dir(db->name, pool))
     return svn_error_createf(
@@ -2395,8 +2253,8 @@ add_directory(const char *path,
 
   err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             &conflicted, NULL,
                              eb->db, db->local_abspath, db->pool, db->pool);
   if (err)
     {
@@ -2406,48 +2264,98 @@ add_directory(const char *path,
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
       status = svn_wc__db_status_normal;
+      conflicted = TRUE;  /* TRUE here causes us to check for a conflict */
+
+      versioned_locally_and_present = FALSE;
     }
+  else
+    versioned_locally_and_present = IS_NODE_PRESENT(status);
 
-  /* The path can exist, but it must be a directory. */
-  if (kind == svn_node_file || kind == svn_node_unknown ||
-      (wc_kind != svn_wc__db_kind_unknown &&
-       wc_kind != svn_wc__db_kind_dir && IS_NODE_PRESENT(status)))
+  /* Is this path a conflict victim? */
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    db->local_abspath, pool));
+  if (conflicted
+      && status == svn_wc__db_status_not_present
+      && kind == svn_node_none)
     {
-      db->already_notified = TRUE;
-      do_notification(eb, db->local_abspath, svn_node_dir,
-                      svn_wc_notify_update_obstruction, pool);
-
-      return svn_error_createf(
-       SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("Failed to add directory '%s': a non-directory object of the "
-         "same name already exists"),
-       svn_dirent_local_style(db->local_abspath, pool));
-    }
-
-  if (kind == svn_node_dir &&
-      (wc_kind == svn_wc__db_kind_unknown || !IS_NODE_PRESENT(status)))
-    {
-      /* Found an unversioned directory */
-      db->obstruction_found = TRUE;
-
-      if (!eb->allow_unver_obstructions)
+      /* A conflict is flagged. Now let's do some user convenience.
+       * When we flagged a tree conflict for a local unversioned node
+       * vs. an incoming add, and we find that this unversioned node is
+       * no longer in the way, automatically pull in the versioned node
+       * and remove the conflict marker.
+       * Right, the node status matches (not_present) and there is no
+       * unversioned obstruction in the file system (anymore?). If it
+       * has a tree conflict with reason 'unversioned', remove that. */
+      const svn_wc_conflict_description2_t *previous_tc;
+      SVN_ERR(svn_wc__get_tree_conflict(&previous_tc,
+                                        eb->wc_ctx,
+                                        db->local_abspath,
+                                        pool, pool));
+      if (previous_tc
+          && previous_tc->reason == svn_wc_conflict_reason_unversioned)
         {
-          db->already_notified = TRUE;
-          do_notification(eb, db->local_abspath, svn_node_dir,
-                          svn_wc_notify_update_obstruction, pool);
-
-          return svn_error_createf(
-             SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-             _("Failed to add directory '%s': an unversioned "
-               "directory of the same name already exists"),
-             svn_dirent_local_style(db->local_abspath, pool));
+          /* Remove tree conflict. */
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                                  db->local_abspath,
+                                                  NULL, pool));
+          /* Don't skip this path after all. */
+          conflicted = FALSE;
         }
     }
-  else if (wc_kind == svn_wc__db_kind_dir)
+
+  /* Now the "usual" behaviour if already conflicted. Skip it. */
+  if (conflicted)
     {
-      /* Directory exists */
-      if (IS_NODE_PRESENT(status) &&
-          status != svn_wc__db_status_deleted)
+      /* Record this conflict so that its descendants are skipped silently. */
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+
+      db->skip_this = TRUE;
+      db->skip_descendants = TRUE;
+      db->already_notified = TRUE;
+
+      /* ### TODO: Also print victim_path in the skip msg. */
+      do_notification(eb, db->local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip, pool);
+      return SVN_NO_ERROR;
+    }
+
+
+  if (versioned_locally_and_present)
+    {
+      /* What to do with a versioned or schedule-add dir:
+
+         A dir already added without history is OK.  Set add_existed
+         so that user notification is delayed until after any prop
+         conflicts have been found.
+
+         An existing versioned dir is an error.  In the future we may
+         relax this restriction and simply update such dirs.
+
+         A dir added with history is a tree conflict. */
+
+      svn_boolean_t local_is_dir;
+      svn_boolean_t local_is_non_dir;
+      const char *local_is_copy = NULL;
+
+      /* Is the local add a copy? */
+      if (status == svn_wc__db_status_added)
+        SVN_ERR(svn_wc__node_get_copyfrom_info(&local_is_copy,
+                                               NULL, NULL, NULL, NULL,
+                                               eb->wc_ctx,
+                                               db->local_abspath,
+                                               pool, pool));
+
+
+      /* Is there something that is a file? */
+      local_is_dir = (wc_kind == svn_wc__db_kind_dir
+                      && status != svn_wc__db_status_deleted);
+
+      /* Is there *something* that is not a dir? */
+      local_is_non_dir = (wc_kind != svn_wc__db_kind_dir
+                          && status != svn_wc__db_status_deleted);
+
+      if (local_is_dir)
         {
           svn_boolean_t wc_root;
           svn_boolean_t switched;
@@ -2489,128 +2397,125 @@ add_directory(const char *path,
             }
         }
 
-      /* What to do with a versioned or schedule-add dir:
-
-         A dir already added without history is OK.  Set add_existed
-         so that user notification is delayed until after any prop
-         conflicts have been found.
-
-         An existing versioned dir is an error.  In the future we may
-         relax this restriction and simply update such dirs.
-
-         A dir added with history is a tree conflict. */
-
-      if (status == svn_wc__db_status_added)
+      /* We can't properly handle add vs. add with mismatching
+       * node kinds before single db. */
+      if (local_is_non_dir)
         {
-          /* Specialize the added case to added, copied, moved */
-          SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, eb->db,
-                                           db->local_abspath, pool, pool));
+          db->already_notified = TRUE;
+          do_notification(eb, db->local_abspath, svn_node_dir,
+                          svn_wc_notify_update_obstruction, pool);
+          return svn_error_createf(
+                   SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                   _("Failed to add directory '%s': a non-directory object "
+                     "of the same name already exists"),
+                   svn_dirent_local_style(db->local_abspath,
+                                          pool));
         }
 
-      switch (status)
+      /* Do tree conflict checking if
+       *  - if there is a local copy.
+       *  - if this is a switch operation
+       *  - the node kinds mismatch (when single db is here)
+       *
+       * During switch, local adds at the same path as incoming adds get
+       * "lost" in that switching back to the original will no longer have the
+       * local add. So switch always alerts the user with a tree conflict.
+       *
+       * Allow pulling absent/exluded/not_present nodes back in.
+       *
+       * ### This code is already gearing up to single db with respect to
+       * add-vs.-add conflicts with mismatching node kinds. But before single
+       * db, we cannot deal with mismatching node kinds properly.
+       *
+       * ### We would also like to be checking copyfrom infos to not flag tree
+       * conflicts on two copies with identical history. But at the time of
+       * writing, add_directory() does not get any copyfrom information. */
+      if (! pb->in_deleted_and_tree_conflicted_subtree
+          && (eb->switch_relpath != NULL
+              || local_is_non_dir
+              || local_is_copy
+             )
+         )
         {
-          case svn_wc__db_status_absent:
-          case svn_wc__db_status_excluded:
-            /* Ignore these hidden states. Allow pulling them (back) in. */
-            break;
-          case svn_wc__db_status_not_present:
-            break;
-          case svn_wc__db_status_obstructed:
-          case svn_wc__db_status_obstructed_add:
-          case svn_wc__db_status_obstructed_delete:
-            /* ### In 1.6 we ignored these cases in this block as
-                   the behavior was just pulling them back in.
+          SVN_ERR(check_tree_conflict(&tree_conflict, eb,
+                                      db->local_abspath,
+                                      svn_wc_conflict_action_add,
+                                      svn_node_dir, db->new_relpath, pool));
+        }
 
-                   Explicitly handle them as not raising a tree conflict
-                   now. Will never occur once we have a central DB. */
-            break;
-          case svn_wc__db_status_added:
-            /* ### BH: I think this case should be conditional with something
-                       like allow_unver_obstructions, as this changes the
-                       base of locally added files.
-               ### BH: Always generate tree conflict? */
-            db->add_existed = TRUE;
-            break;
-          default:
-            {
-              svn_wc_conflict_description2_t *tree_conflict = NULL;
 
-              /* Check for conflicts only when we haven't already recorded
-               * a tree-conflict on a parent node. */
-              if (!db->in_deleted_and_tree_conflicted_subtree)
-                SVN_ERR(check_tree_conflict(&tree_conflict, eb,
-                                            db->local_abspath,
-                                            svn_wc_conflict_action_add,
-                                            svn_node_dir, db->new_relpath, pool));
-
-              if (tree_conflict != NULL)
-                {
-                  svn_skel_t *work_item;
-
-                  /* Queue this conflict in the parent so that its descendants
-                     are skipped silently. */
-                  SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                                          eb->db,
-                                                          pb->local_abspath,
-                                                          tree_conflict,
-                                                          pool));
-                  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
-                                            work_item, pool));
-
-                  SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
-
-                  db->skip_this = TRUE;
-                  db->skip_descendants = TRUE;
-                  db->already_notified = TRUE;
-
-                  do_notification(eb, db->local_abspath, svn_node_unknown,
-                                  svn_wc_notify_tree_conflict, pool);
-
-                  return SVN_NO_ERROR;
-                }
-            }
-            break;
+      if (tree_conflict == NULL)
+        {
+          /* We have a node in WORKING and we've decided not to flag a
+           * conflict, so merge it with the incoming add. */
+          db->add_existed = TRUE;
         }
     }
-
+  else if (kind != svn_node_none)
     {
-      /* Immediately create an entry for the new directory in the parent.
-         Note that the parent must already be either added or opened, and
-         thus it's in an 'incomplete' state just like the new dir.
-         The entry may already exist if the new directory is already
-         scheduled for addition without history, in that case set
-         its schedule to normal. */
-      SVN_ERR(svn_wc__db_temp_set_parent_stub_to_normal(eb->db,
-                                                        db->local_abspath,
-                                                        db->add_existed,
-                                                        pool));
+      /* There's an unversioned node at this path. */
+      db->obstruction_found = TRUE;
 
-      if (db->add_existed)
+      /* Unversioned, obstructing dirs are handled by prop merge/conflict,
+       * if unversioned obstructions are allowed. */
+      if (! (kind == svn_node_dir && eb->allow_unver_obstructions))
         {
-          /* Immediately tweak the schedule for "this dir" so it too
-             is no longer scheduled for addition.  Change rev from 0
-             to the target revision allowing prep_directory() to do
-             its thing without error. 
+          /* ### Instead of skipping, this should bring in the BASE node
+           * and mark some sort of obstruction-conflict. Come, o single-db! */
+          db->skip_this = TRUE;
 
-             ### In the future this should probably become a proper
-             ### tree conflict and just handled by putting a base
-             ### directory below the existing working node.
-             */
-          SVN_ERR(svn_wc__db_temp_op_set_new_dir_to_incomplete(
-                                                  eb->db,
-                                                  db->local_abspath,
+          /* If we are skipping an add, we need to tell the WC that
+           * there's a node supposed to be here which we don't have. */
+          SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, db->local_abspath,
                                                   db->new_relpath,
                                                   eb->repos_root,
                                                   eb->repos_uuid,
-                                                  *eb->target_revision,
-                                                  pool));
+                                                  (eb->target_revision?
+                                                   *eb->target_revision
+                                                   : SVN_INVALID_REVNUM),
+                                                  svn_wc__db_kind_dir,
+                                                  svn_wc__db_status_not_present,
+                                                  NULL, NULL, pool));
+          SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
-          SVN_ERR(svn_wc__db_temp_set_parent_stub_to_normal(eb->db,
-                                                            db->local_abspath,
-                                                            TRUE, pool));
+          /* Mark a conflict */
+          SVN_ERR(create_tree_conflict(&tree_conflict, eb,
+                                       db->local_abspath,
+                                       svn_wc_conflict_reason_unversioned,
+                                       svn_wc_conflict_action_add,
+                                       svn_node_dir,
+                                       db->new_relpath, pool, pool));
+          SVN_ERR_ASSERT(tree_conflict != NULL);
         }
     }
+
+  if (tree_conflict != NULL)
+    {
+      /* Queue this conflict in the parent so that its descendants
+         are skipped silently. */
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
+                                              tree_conflict, pool));
+
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+
+      db->skip_this = TRUE;
+      db->skip_descendants = TRUE;
+      db->already_notified = TRUE;
+
+      do_notification(eb, db->local_abspath, svn_node_unknown,
+                      svn_wc_notify_tree_conflict, pool);
+      return SVN_NO_ERROR;
+    }
+
+
+  SVN_ERR(svn_wc__db_temp_op_set_new_dir_to_incomplete(eb->db,
+                                                       db->local_abspath,
+                                                       db->new_relpath,
+                                                       eb->repos_root,
+                                                       eb->repos_uuid,
+                                                       *eb->target_revision,
+                                                       db->ambient_depth,
+                                                       pool));
 
   SVN_ERR(prep_directory(db,
                          svn_path_url_add_component2(eb->repos_root,
@@ -2663,7 +2568,7 @@ open_directory(const char *path,
   struct dir_baton *db, *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_boolean_t have_work;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_wc__db_status_t status, base_status;
 
@@ -2693,7 +2598,7 @@ open_directory(const char *path,
                                NULL, NULL, NULL, NULL, NULL,
                                &db->ambient_depth, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, &have_work, NULL, NULL,
+                               NULL, &have_work, &conflicted, NULL,
                                eb->db, db->local_abspath, pool, pool));
 
   if (!have_work)
@@ -2708,9 +2613,10 @@ open_directory(const char *path,
   db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
 
   /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  db->local_abspath, pool));
-  if (already_conflicted)
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    db->local_abspath, pool));
+  if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
@@ -2737,13 +2643,9 @@ open_directory(const char *path,
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
     {
-      svn_skel_t *work_item;
-
       /* Place a tree conflict into the parent work queue.  */
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                              eb->db, pb->local_abspath,
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
                                               tree_conflict, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
 
       do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, pool);
@@ -2832,54 +2734,6 @@ prop_hash_from_array(const apr_array_header_t *prop_list,
   return prop_hash;
 }
 
-
-/* Set *WORK_ITEM to a new work item to write an old-style propsfile for the
-   specified BASE properties, BASE_PROPS.
-
-   ### breaks the props encapsulation by using svn_wc__prop_path, but this
-   ### function will only last until we move props into the database.  */
-static svn_error_t *
-build_write_base_props(svn_skel_t **work_item,
-                       const char *local_abspath,
-                       svn_wc__db_kind_t kind,
-                       apr_hash_t *base_props,
-                       apr_pool_t *scratch_pool)
-{
-  const char *props_abspath;
-
-  SVN_ERR(svn_wc__prop_path(&props_abspath, local_abspath, kind,
-                            svn_wc__props_base, scratch_pool));
-  return svn_error_return(svn_wc__wq_build_write_old_props(work_item,
-                                                           props_abspath,
-                                                           base_props,
-                                                           scratch_pool));
-}
-
-
-/* Set *WORK_ITEM to a new work item to write an old-style propsfile for the
-   specified ACTUAL properties. If ACTUAL_PROPS is NULL, then the old-style
-   propsfile will be removed, indicating "no change" from the pristines.
-
-   ### breaks the props encapsulation by using svn_wc__prop_path, but this
-   ### function will only last until we move props into the database.  */
-static svn_error_t *
-build_write_actual_props(svn_skel_t **work_item,
-                         const char *local_abspath,
-                         svn_wc__db_kind_t kind,
-                         apr_hash_t *actual_props,
-                         apr_pool_t *scratch_pool)
-{
-  const char *props_abspath;
-
-  SVN_ERR(svn_wc__prop_path(&props_abspath, local_abspath, kind,
-                            svn_wc__props_working, scratch_pool));
-  return svn_error_return(svn_wc__wq_build_write_old_props(work_item,
-                                                           props_abspath,
-                                                           actual_props,
-                                                           scratch_pool));
-}
-
-
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 close_directory(void *dir_baton,
@@ -2888,7 +2742,7 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-  apr_array_header_t *entry_props, *wc_props, *regular_props;
+  apr_array_header_t *entry_props, *dav_props, *regular_props;
   apr_hash_t *base_props;
   apr_hash_t *actual_props;
   apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
@@ -2911,7 +2765,7 @@ close_directory(void *dir_baton,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
+  SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &dav_props,
                                &regular_props, pool));
 
   /* Fetch the existing properties.  */
@@ -2966,7 +2820,7 @@ close_directory(void *dir_baton,
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
-  if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
+  if (regular_props->nelts || entry_props->nelts || dav_props->nelts)
     {
       if (regular_props->nelts)
         {
@@ -3056,7 +2910,6 @@ close_directory(void *dir_baton,
       apr_time_t changed_date;
       const char *changed_author;
       apr_hash_t *props;
-      svn_skel_t *work_items;
 
       /* ### we know a base node already exists. it was created in
          ### open_directory or add_directory.  let's just preserve the
@@ -3078,22 +2931,17 @@ close_directory(void *dir_baton,
       if (new_changed_author != NULL)
         changed_author = new_changed_author;
 
+      /* If no depth is set yet, set to infinity. */
+      if (depth == svn_depth_unknown)
+        depth = svn_depth_infinity;
+
       /* Do we have new properties to install? Or shall we simply retain
          the prior set of properties? If we're installing new properties,
          then we also want to write them to an old-style props file.  */
       props = new_base_props;
       if (props == NULL)
-        {
-          SVN_ERR(svn_wc__db_base_get_props(&props, eb->db, db->local_abspath,
-                                            pool, pool));
-          work_items = NULL;
-        }
-      else
-        {
-          SVN_ERR(build_write_base_props(&work_items, db->local_abspath,
-                                         svn_wc__db_kind_dir, new_base_props,
-                                         pool));
-        }
+        SVN_ERR(svn_wc__db_base_get_props(&props, eb->db, db->local_abspath,
+                                          pool, pool));
 
       /* ### NOTE: from this point onwards, we make TWO changes to the
          ### database in a non-transactional way. some kind of revamp
@@ -3109,8 +2957,11 @@ close_directory(void *dir_baton,
                 changed_rev, changed_date, changed_author,
                 NULL /* children */,
                 depth,
+                (dav_props && dav_props->nelts > 0)
+                    ? prop_hash_from_array(dav_props, pool)
+                    : NULL,
                 NULL /* conflict */,
-                work_items,
+                NULL /* work_items */,
                 pool));
 
       /* If we updated the BASE properties, then we also have ACTUAL
@@ -3132,24 +2983,11 @@ close_directory(void *dir_baton,
           if (prop_diffs->nelts == 0)
             props = NULL;
 
-          SVN_ERR(build_write_actual_props(&work_items, db->local_abspath,
-                                           svn_wc__db_kind_dir,
-                                           props,
-                                           pool));
           SVN_ERR(svn_wc__db_op_set_props(eb->db, db->local_abspath,
                                           props,
                                           NULL /* conflict */,
-                                          work_items,
+                                          NULL /* work_items */,
                                           pool));
-        }
-
-      /* Handle the wcprops. */
-      if (wc_props && wc_props->nelts > 0)
-        {
-          SVN_ERR(svn_wc__db_base_set_dav_cache(eb->db, db->local_abspath,
-                                                prop_hash_from_array(wc_props,
-                                                                     pool),
-                                                pool));
         }
     }
 
@@ -3275,15 +3113,35 @@ absent_directory(const char *path,
 }
 
 
-/* Beginning at DIR_ABSPATH (from repository with uuid DIR_REPOS_UUID and
-   with repos_relpath DIR_REPOS_RELPATH) within a working copy, search the
-   working copy for a pre-existing versioned file which is exactly equal
-   to COPYFROM_PATH@COPYFROM_REV.
+/* Beginning at DIR_ABSPATH within a working copy, search the working copy
+   copy for a pre-existing versioned file which is exactly equal to
+   COPYFROM_PATH@COPYFROM_REV.
 
-   If the file isn't found, set *RETURN_ABSPATH to NULL.
+   The current implementation does this by taking the repos_relpath of
+   dir_abspath and copyfrom_relpath to calculate where in the working copy
+   repos_relpath would be and then tries to confirm its guess.
 
-   If the file is found, return the absolute path to it in
-   *RETURN_ABSPATH.
+   1) When it finds a copied file there, it looks for its origin to see
+   if the origin matches the copied file good enough to use it as new base
+   contents and properties. If that is the case set NEW_BASE_CONTENTS
+   and NEW_BASE_PROPS to the found restult.
+
+   If the new base information is found check if the node is tree-conflicted,
+   and when that is the case use its in-wc contents and actual properties
+   to set NEW_CONTENTS and NEW_PROPS.
+
+   (If new base info is found, return)
+
+   2) If the node's BASE information matches the expected origin matches the the
+   copy origin good enough use it as NEW_BASE_CONTENTS and NEW_BASE_PROPS.
+
+   If the new base information is found and the db_status of the node is normal,
+   then set NEW_CONTENTS and NEW_PROPS with the found values.
+
+   If data is not found, its values will be set to NULL. 
+
+   Allocate the return values in RESULT_POOL, but perform all temporary allocations
+   in SCRATCH_POOL.
 
    ### With a centralized datastore this becomes much easier. For now we
    ### keep the old algorithm because the result is also used for copying
@@ -3291,32 +3149,40 @@ absent_directory(const char *path,
    ### local file moves.
 */
 static svn_error_t *
-locate_copyfrom(svn_wc__db_t *db,
-                const char *copyfrom_path,
-                svn_revnum_t copyfrom_rev,
+locate_copyfrom(svn_stream_t **new_base_contents,
+                svn_stream_t **new_contents,
+                apr_hash_t **new_base_props,
+                apr_hash_t **new_props,
+                svn_wc__db_t *db,
                 const char *dir_abspath,
-                const char *dir_repos_uuid,
-                const char *dir_repos_relpath,
-                const char **return_abspath,
+                const char *copyfrom_relpath,
+                svn_revnum_t copyfrom_rev,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
   const char *ancestor_abspath, *ancestor_relpath;
-  const char *copyfrom_relpath;
+  const char *dir_repos_relpath, *dir_repos_root_url, *dir_repos_uuid;
+  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  const char *local_abspath;
+
   apr_size_t levels_up;
-  const char *file_abspath;
   svn_error_t *err;
 
-  SVN_ERR_ASSERT(dir_repos_relpath && dir_repos_uuid);
-  SVN_ERR_ASSERT(copyfrom_path[0] == '/');
+  SVN_ERR_ASSERT(copyfrom_relpath[0] != '/');
+
+  SVN_ERR(svn_wc__db_scan_base_repos(&dir_repos_relpath, &dir_repos_root_url,
+                                     &dir_repos_uuid,
+                                     db, dir_abspath,
+                                     scratch_pool, scratch_pool));
 
   /* Be pessimistic.  This function is basically a series of tests
      that gives dozens of ways to fail our search, returning
      SVN_NO_ERROR in each case.  If we make it all the way to the
      bottom, we have a real discovery to return. */
-  *return_abspath = NULL;
-
-  copyfrom_relpath = copyfrom_path+1; /* Skip the initial '/' */
+  *new_base_contents = NULL;
+  *new_contents = NULL;
+  *new_base_props = NULL;
+  *new_props = NULL;
 
   /* Subtract the dest_dir's URL from the repository "root" URL to get
      the absolute FS path represented by dest_dir. */
@@ -3336,118 +3202,229 @@ locate_copyfrom(svn_wc__db_t *db,
     ancestor_abspath = svn_dirent_dirname(ancestor_abspath, scratch_pool);
 
   /* Verify hypothetical ancestor */
-  {
-    const char *repos_relpath, *repos_uuid;
+  err = svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                   &repos_uuid,
+                                   db, ancestor_abspath,
+                                   scratch_pool, scratch_pool);
 
-    err = svn_wc__db_scan_base_repos(&repos_relpath, NULL, &repos_uuid,
-                                     db, ancestor_abspath,
-                                     scratch_pool, scratch_pool);
-
-    if (err && ((err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY) ||
-                (err->apr_err == SVN_ERR_WC_PATH_FOUND)))
-      {
-        svn_error_clear(err);
-        return SVN_NO_ERROR;
-      }
-    else
-      SVN_ERR(err);
-
-    /* If we got this far, we know that the ancestor dir exists, and
-       that it's a working copy too.  But is it from the same
-       repository?  And does it represent the URL we expect it to? */
-    if (strcmp(dir_repos_uuid, repos_uuid) != 0)
+  if (err && ((err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY) ||
+              (err->apr_err == SVN_ERR_WC_PATH_FOUND)))
+    {
+      svn_error_clear(err);
       return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
 
-    if (strcmp(ancestor_relpath, repos_relpath) != 0)
-      return SVN_NO_ERROR;
-  }
+  /* If we got this far, we know that the ancestor dir exists, and
+     that it's a working copy too.  But is it from the same
+     repository?  And does it represent the URL we expect it to? */
+  if ((strcmp(dir_repos_uuid, repos_uuid) != 0)
+      || (strcmp(dir_repos_root_url, repos_root_url) != 0)
+      || (strcmp(ancestor_relpath, repos_relpath) != 0))
+    return SVN_NO_ERROR;
 
   /* Add the remaining components to cwd, then add the remaining relpath to
      where we hope the copyfrom_relpath file exists. */
-  file_abspath = svn_dirent_join(ancestor_abspath,
+  local_abspath = svn_dirent_join(ancestor_abspath,
                                  svn_dirent_skip_ancestor(ancestor_relpath,
                                                           copyfrom_relpath),
                                  scratch_pool);
 
   /* Verify file in expected location */
   {
-    svn_node_kind_t kind;
-    svn_revnum_t addition_rev = SVN_INVALID_REVNUM;
-    const char *repos_relpath, *repos_uuid;
+    svn_revnum_t rev, changed_rev;
+    svn_wc__db_status_t status, base_status;
+    svn_boolean_t conflicted, have_base;
+    const svn_checksum_t *checksum;
 
-    /* First: does the proposed file path even exist? */
-    SVN_ERR(svn_io_check_path(file_abspath, &kind, scratch_pool));
-    if (kind != svn_node_file)
-      return SVN_NO_ERROR;
+    err = svn_wc__db_read_info(&status, NULL, &rev, &repos_relpath,
+                               &repos_root_url, &repos_uuid, &changed_rev,
+                               NULL, NULL, NULL, NULL, &checksum, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, &have_base,
+                               NULL, &conflicted, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool);
 
-    /* Next: is the file under version control?   */
-    err = svn_wc__db_scan_base_repos(&repos_relpath, NULL, &repos_uuid,
-                                     db, file_abspath,
-                                     scratch_pool, scratch_pool);
-
-    if (err && ((err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY) ||
-                (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)))
+    if (err && ((err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
+                (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))))
       {
         svn_error_clear(err);
-
-        /* ### Our entries handling made us handle the following
-               scenario: An older version of a file was copied at
-               exactly the expected location. Reproduced this behavior
-               until we can really querry the entire workingcopy. */
-
-        err = svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL,
-                                       &repos_relpath, NULL, &repos_uuid,
-                                       &addition_rev, db, file_abspath,
-                                       scratch_pool, scratch_pool);
-
-        if (err && ((err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
-              (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))))
-          {
-            svn_error_clear(err);
-
-            return SVN_NO_ERROR;
-          }
-        else
-          SVN_ERR(err);
+        return SVN_NO_ERROR;
       }
     else
       SVN_ERR(err);
 
-    if (strcmp(dir_repos_uuid, repos_uuid))
-      return SVN_NO_ERROR;
-
-    if (strcmp(copyfrom_relpath, repos_relpath))
-      return SVN_NO_ERROR;
-
-    if (SVN_IS_VALID_REVNUM(addition_rev) && addition_rev == copyfrom_rev)
+    /* Check if we have an added node with the right copyfrom information, as
+       this is what you would see on a file move. */
+       
+    if (status == svn_wc__db_status_added)
       {
-        /* We found the right file as copy source */
-        *return_abspath = apr_pstrdup(result_pool, file_abspath);
+        const char *op_root_abspath;
+        const char *original_repos_relpath, *original_root_url;
+        const char *original_uuid;
+        svn_revnum_t original_rev;
+
+        SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
+                                         &repos_relpath, &repos_root_url,
+                                         &repos_uuid, &original_repos_relpath,
+                                         &original_root_url, &original_uuid,
+                                         &original_rev,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+        if (status == svn_wc__db_status_copied
+            || status == svn_wc__db_status_moved_here)
+          {
+            original_repos_relpath = svn_relpath_join(
+                                    original_repos_relpath,
+                                    svn_dirent_skip_ancestor(op_root_abspath,
+                                                             local_abspath),
+                                    scratch_pool);
+
+            /* If the repository location matches our exact guess and
+               the file's recorded revisions tell us that the file had the
+               same contents at the copyfrom_revision, we can use this
+               data as new_base */
+            if (strcmp(original_repos_relpath, copyfrom_relpath) == 0
+                && strcmp(original_root_url, dir_repos_root_url) == 0
+                && strcmp(original_uuid, dir_repos_uuid) == 0
+                && strcmp(repos_relpath, copyfrom_relpath) == 0
+                && strcmp(repos_root_url, dir_repos_root_url) == 0
+                && strcmp(repos_uuid, dir_repos_uuid) == 0
+
+                && SVN_IS_VALID_REVNUM(changed_rev)
+                && changed_rev <= copyfrom_rev
+                && copyfrom_rev <= original_rev)
+              {
+                svn_node_kind_t kind;
+                svn_boolean_t text_changed;
+
+                /* WORKING_NODE has the right new-BASE information,
+                   so we have at least a partial result. */
+                SVN_ERR(svn_wc__db_pristine_read(new_base_contents,
+                                                 db, local_abspath, checksum,
+                                                 result_pool, scratch_pool));
+                SVN_ERR(svn_wc__get_pristine_props(new_base_props,
+                                                   db, local_abspath,
+                                                   result_pool, scratch_pool));
+
+                /* If the node is conflicted, that might have happened because
+                   the node was deleted. Which might indicate that we have
+                   a file move. In this case we like the real file data */
+                if (!conflicted
+                    && status == svn_wc__db_status_copied)
+                  return SVN_NO_ERROR; /* A local copy is no local modification
+                                          that we should keep */
+
+                /* ### TODO: Add verification to check that the conflict
+                       tells us that this is the right thing to do.
+
+                   ### Pre 1.7 we just assumed that it is ok without checking for
+                       conflicts, so this is not a regression */
+
+                SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+
+                if (kind != svn_node_file)
+                  return SVN_NO_ERROR; /* Nothing to copy */
+
+                SVN_ERR(svn_wc__internal_text_modified_p(&text_changed, db,
+                                                         local_abspath, FALSE,
+                                                         TRUE, scratch_pool));
+
+                if (!text_changed)
+                  return SVN_NO_ERROR; /* Take the easy route */
+
+                SVN_ERR(svn_stream_open_readonly(new_contents, local_abspath,
+                                                 result_pool, scratch_pool));
+
+                SVN_ERR(svn_wc__get_actual_props(new_props, db, local_abspath,
+                                                 result_pool, scratch_pool));
+
+                return SVN_NO_ERROR;
+              }
+          }
+      }
+
+    if (!have_base)
+      return SVN_NO_ERROR;
+
+    base_status = status;
+
+    if (status != svn_wc__db_status_normal)
+      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &rev,
+                                       &repos_relpath, &repos_root_url,
+                                       &repos_uuid, &changed_rev, NULL,
+                                       NULL, NULL, NULL, &checksum, NULL,
+                                       NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+    if (base_status != svn_wc__db_status_normal)
+      return SVN_NO_ERROR; /* No interesting BASE_NODE */
+
+    if (!repos_relpath || !repos_root_url || !repos_uuid)
+      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                         &repos_uuid,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+    /* Is it from the same repository */
+    if ((strcmp(dir_repos_uuid, repos_uuid) != 0)
+        || (strcmp(dir_repos_root_url, repos_root_url) != 0)
+        || (strcmp(copyfrom_relpath, repos_relpath) != 0))
+      return SVN_NO_ERROR;
+
+    /* Ok, we know that we look at the right node, but do we have the
+       right revision?
+
+       To be sure that the base node has the right properties and text,
+       the node must be the same in copyfrom_rev and changed_rev, which
+       is only true within this specific range
+       */
+    if (!(SVN_IS_VALID_REVNUM(changed_rev)
+          && changed_rev <= copyfrom_rev
+          && copyfrom_rev <= rev))
+      {
         return SVN_NO_ERROR;
       }
+
+    /* BASE_NODE has the right new-BASE information,
+       so we have at least a partial result. */
+    SVN_ERR(svn_wc__db_pristine_read(new_base_contents,
+                                     db, local_abspath, checksum,
+                                     result_pool, scratch_pool));
+
+    SVN_ERR(svn_wc__db_base_get_props(new_base_props,
+                                      db, local_abspath, result_pool,
+                                      scratch_pool));
+
+    /* If the node is in status normal, the user probably intended to make
+       a copy of this in-wc node, so copy its local changes over to
+       the new file. */
+    if (status == svn_wc__db_status_normal)
+      {
+        svn_node_kind_t kind;
+        svn_boolean_t text_changed;
+
+        SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+
+        if (kind != svn_node_file)
+          return SVN_NO_ERROR; /* Nothing to copy */
+
+        SVN_ERR(svn_wc__internal_text_modified_p(&text_changed, db,
+                                                 local_abspath, FALSE,
+                                                 TRUE, scratch_pool));
+
+        if (!text_changed)
+            return SVN_NO_ERROR; /* Take the easy route */
+
+        SVN_ERR(svn_stream_open_readonly(new_contents, local_abspath,
+                                         result_pool, scratch_pool));
+
+        SVN_ERR(svn_wc__get_actual_props(new_props, db, local_abspath,
+                                         result_pool, scratch_pool));
+      }
   }
-
-  /* Do we actually have valid revisions for the file?  (See Issue
-     #2977.) */
-  {
-    svn_revnum_t wc_rev, change_rev;
-
-    SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &wc_rev, NULL, NULL, NULL,
-                                     &change_rev, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, db, file_abspath,
-                                     scratch_pool, scratch_pool));
-
-    if (!SVN_IS_VALID_REVNUM(wc_rev) || !SVN_IS_VALID_REVNUM(change_rev))
-      return SVN_NO_ERROR;
-
-    /* Do we have the the right *version* of the file? */
-    if (! ((change_rev <= copyfrom_rev) && (copyfrom_rev <= wc_rev)))
-      return SVN_NO_ERROR;
-  }
-
-  /* Success!  We found the exact file we wanted! */
-  *return_abspath = apr_pstrdup(result_pool, file_abspath);
-
   return SVN_NO_ERROR;
 }
 
@@ -3476,104 +3453,71 @@ copy_regular_props(apr_hash_t *props_in,
 
 /* Do the "with history" part of add_file().
 
-   Attempt to locate COPYFROM_PATH@COPYFROM_REV within the existing
-   working copy.  If found, copy it to PATH, and install it as a
-   normal versioned file.  (Local edits are copied as well.)  If not
-   found, then resort to fetching the file in a special RA request.
+   Attempt to locate COPYFROM_PATH@COPYFROM_REV within the existing working
+   copy.  If a node with such a base is found, copy the base *and working*
+   text and properties from there.  If not found, fetch the text and
+   properties from the repository by calling PB->edit_baton->fetch_func.
 
-   After the file is fully installed, call the editor's open_file() on
-   it, so that any subsequent apply_textdelta() commands coming from
-   the server can further alter the file.
+   Store the copied base and working text in new temporary files in the adm
+   tmp area of the parent directory, whose baton is PB.  Set
+   TFB->copied_text_base_* and TFB->copied_working_text to their paths and
+   checksums.  Set TFB->copied_*_props to the copied properties.
+
+   After this function returns, subsequent apply_textdelta() commands coming
+   from the server may further alter the file before it is installed.
+
+   Ensure the resulting text base is in the pristine store, and set
+   TFB->copied_text_base_* to its readable abspath and checksums.
 */
 static svn_error_t *
-add_file_with_history(const char *path,
-                      struct dir_baton *pb,
+add_file_with_history(struct dir_baton *pb,
                       const char *copyfrom_path,
                       svn_revnum_t copyfrom_rev,
                       struct file_baton *tfb,
-                      apr_pool_t *pool)
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = pb->edit_baton;
-  apr_hash_t *base_props, *working_props;
-  svn_error_t *err;
   svn_stream_t *copied_stream;
-  const char *src_local_abspath;
+  const char *copied_text_base_tmp_abspath;
   svn_wc__db_t *db = eb->db;
-  const char *dir_repos_relpath, *dir_repos_root, *dir_repos_uuid;
+  svn_stream_t *new_base_contents, *new_contents;
+  apr_hash_t *new_base_props, *new_props;
 
-  /* The file_pool can stick around for a *long* time, so we want to
-     use a subpool for any temporary allocations. */
-  apr_pool_t *subpool = svn_pool_create(pool);
+  SVN_ERR_ASSERT(copyfrom_path[0] == '/');
 
   tfb->added_with_history = TRUE;
 
   /* Attempt to locate the copyfrom_path in the working copy first. */
-
-  SVN_ERR(svn_wc__db_scan_base_repos(&dir_repos_relpath, &dir_repos_root,
-                                     &dir_repos_uuid, db, pb->local_abspath,
-                                     subpool, subpool));
-
-  err = locate_copyfrom(eb->db, copyfrom_path, copyfrom_rev, pb->local_abspath,
-                        dir_repos_uuid, dir_repos_relpath,
-                        &src_local_abspath, subpool, subpool);
-
-  if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
+  SVN_ERR(locate_copyfrom(&new_base_contents, &new_contents,
+                          &new_base_props, &new_props,
+                          db, pb->local_abspath,
+                          copyfrom_path+1, /* Create repos_relpath */
+                          copyfrom_rev, result_pool, scratch_pool));
 
   /* Open the text base for writing (this will get us a temporary file).  */
   SVN_ERR(svn_wc__open_writable_base(&copied_stream,
-                                     &tfb->copied_text_base_abspath,
+                                     &copied_text_base_tmp_abspath,
   /* Compute an MD5 checksum for the stream as we write stuff into it.
      ### this is temporary. in many cases, we already *know* the checksum
      ### since it is a copy. */
                                      &tfb->copied_text_base_md5_checksum,
                                      &tfb->copied_text_base_sha1_checksum,
                                      db, pb->local_abspath,
-                                     pool, pool));
+                                     result_pool, scratch_pool));
 
-  if (src_local_abspath != NULL) /* Found a file to copy */
+  if (new_base_contents && new_base_props)
     {
       /* Copy the existing file's text-base over to the (temporary)
          new text-base, where the file baton expects it to be.  Get
          the text base and props from the usual place or from the
          revert place, depending on scheduling. */
-      svn_stream_t *source_text_base;
-      const svn_wc_entry_t *src_entry;
+      SVN_ERR(svn_stream_copy3(new_base_contents, copied_stream,
+                               eb->cancel_func, eb->cancel_baton,
+                               scratch_pool));
 
-      SVN_ERR(svn_wc__get_entry(&src_entry, db, src_local_abspath, FALSE,
-                            svn_node_file, FALSE, subpool, subpool));
-
-      SVN_ERR(svn_wc__get_ultimate_base_contents(&source_text_base,
-                                                 db, src_local_abspath,
-                                                 subpool, subpool));
-
-      /* If this has no base, should we use an empty stream?
-       * This assert wants to verify that there are no such callers. */
-      SVN_ERR_ASSERT(source_text_base != NULL);
-
-      if (src_entry->schedule == svn_wc_schedule_replace
-          && src_entry->copyfrom_url)
-        {
-          SVN_ERR(svn_wc__get_revert_props(&base_props, db,
-                                           src_local_abspath, pool, subpool));
-          /* The old working props are lost, just like the old
-             working file text is.  Just use the base props. */
-          working_props = base_props;
-        }
-      else
-        {
-          SVN_ERR(svn_wc__get_pristine_props(&base_props,
-                                             db, src_local_abspath,
-                                             pool, subpool));
-          SVN_ERR(svn_wc__get_actual_props(&working_props,
-                                           db, src_local_abspath,
-                                           pool, subpool));
-        }
-
-      SVN_ERR(svn_stream_copy3(source_text_base, copied_stream,
-                               eb->cancel_func, eb->cancel_baton, pool));
+      if (!new_props)
+        new_props = new_base_props;
     }
   else  /* Couldn't find a file to copy  */
     {
@@ -3590,40 +3534,51 @@ add_file_with_history(const char *path,
          to the root of the repository so skip the first '/'. */
       SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path + 1, copyfrom_rev,
                              copied_stream,
-                             NULL, &base_props, pool));
+                             NULL, &new_base_props, scratch_pool));
       SVN_ERR(svn_stream_close(copied_stream));
-      working_props = base_props;
+
+      /* Filter out wc-props */
+      /* ### Do we get new values as modification or should these really
+             be installed? */
+      new_base_props = svn_prop_hash_dup(copy_regular_props(new_base_props,
+                                                             scratch_pool),
+                                         result_pool);
+
+      new_props = new_base_props;
     }
 
-  /* Loop over whatever props we have in memory, and add all
-     regular props to hashes in the baton. Skip entry and wc
-     properties, these are only valid for the original file. */
-  tfb->copied_base_props = copy_regular_props(base_props, pool);
-  tfb->copied_working_props = copy_regular_props(working_props, pool);
+  SVN_ERR(svn_wc__db_pristine_install(db, copied_text_base_tmp_abspath,
+                                      tfb->copied_text_base_sha1_checksum,
+                                      tfb->copied_text_base_md5_checksum,
+                                      scratch_pool));
 
-  if (src_local_abspath != NULL)
+  tfb->copied_base_props = new_base_props;
+   /* ### Currently we always have to set this even though we don't have
+          a real copy, or update_tests.py 60 "add_moved_file_has_props" fails
+    */
+  tfb->copied_working_props = new_props;
+
+  if (new_contents)
     {
       /* If we copied an existing file over, we need to copy its
          working text too, to preserve any local mods.  (We already
          read its working *props* into tfb->copied_working_props.) */
-      svn_boolean_t text_changed;
+      const char *temp_dir_abspath;
+      svn_stream_t *tmp_contents;
 
-      SVN_ERR(svn_wc__internal_text_modified_p(&text_changed, eb->db,
-                                               src_local_abspath, FALSE,
-                                               TRUE, subpool));
+        /* Make a unique file name for the copied working text. */
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath,
+                                             db, pb->local_abspath,
+                                             scratch_pool, scratch_pool));
 
-      if (text_changed)
-        {
-          /* Make a unique file name for the copied_working_text. */
-          SVN_ERR(get_empty_tmp_file(&tfb->copied_working_text, eb->db,
-                                     pb->local_abspath, pool, pool));
+      SVN_ERR(svn_stream_open_unique(&tmp_contents, &tfb->copied_working_text,
+                                     temp_dir_abspath, svn_io_file_del_none,
+                                     result_pool, scratch_pool));
 
-          SVN_ERR(svn_io_copy_file(src_local_abspath, tfb->copied_working_text,
-                                   TRUE, subpool));
-        }
+      SVN_ERR(svn_stream_copy3(new_contents, tmp_contents, eb->cancel_func,
+                               eb->cancel_baton,
+                               scratch_pool));
     }
-
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -3645,7 +3600,9 @@ add_file(const char *path,
   svn_wc__db_kind_t wc_kind;
   svn_wc__db_status_t status;
   apr_pool_t *subpool;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
+  svn_boolean_t versioned_locally_and_present;
+  svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_error_t *err;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
@@ -3677,10 +3634,78 @@ add_file(const char *path,
   subpool = svn_pool_create(pool);
 
 
+  /* It may not be named the same as the administrative directory. */
+  if (svn_wc_is_adm_dir(fb->name, pool))
+    return svn_error_createf(
+       SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+       _("Failed to add file '%s': object of the same name as the "
+         "administrative directory"),
+       svn_dirent_local_style(fb->local_abspath, pool));
+
+  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
+
+  err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             &conflicted, NULL,
+                             eb->db, fb->local_abspath, subpool, subpool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+      wc_kind = svn_wc__db_kind_unknown;
+      status = svn_wc__db_status_normal;
+      conflicted = TRUE;  /* TRUE here causes us to check for a conflict */
+
+      versioned_locally_and_present = FALSE;
+    }
+  else
+    versioned_locally_and_present = IS_NODE_PRESENT(status);
+
+
   /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  fb->local_abspath, subpool));
-  if (already_conflicted)
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    fb->local_abspath, subpool));
+
+  /* Do some user convenience in a specific tree conflicted state.
+   * When we flagged a tree conflict for a local unversioned node
+   * vs. an incoming add, and we find that this unversioned node is
+   * no longer in the way, automatically pull in the versioned node
+   * and remove the conflict marker. */
+  if (conflicted
+      && status == svn_wc__db_status_not_present
+      && kind == svn_node_none)
+    {
+      /* Right, the node status matches (not_present) and there is no
+       * unversioned obstruction in the file system (anymore?). If it
+       * has a tree conflict with reason 'unversioned', remove that. */
+      const svn_wc_conflict_description2_t *previous_tc;
+      SVN_ERR(svn_wc__get_tree_conflict(&previous_tc,
+                                        eb->wc_ctx,
+                                        fb->local_abspath,
+                                        subpool, subpool));
+      if (previous_tc
+          && previous_tc->reason == svn_wc_conflict_reason_unversioned)
+        {
+          /* Remove tree conflict. */
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                                  fb->local_abspath,
+                                                  NULL, subpool));
+
+          /* Verify that all conflicts are gone now. Since we don't ever have
+           * text/prop conflicts next to tree conflicts, this should always
+           * set CONFLICTED to FALSE. Making sure doesn't hurt though. */
+          SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                          fb->local_abspath, subpool));
+        }
+    }
+
+  /* Now the usual conflict handling: skip. */
+  if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
@@ -3695,89 +3720,46 @@ add_file(const char *path,
       return SVN_NO_ERROR;
     }
 
-  /* It may not be named the same as the administrative directory. */
-  if (svn_wc_is_adm_dir(fb->name, pool))
-    return svn_error_createf(
-       SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("Failed to add file '%s': object of the same name as the "
-         "administrative directory"),
-       svn_dirent_local_style(fb->local_abspath, pool));
 
-  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
-
-  err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL,
-                             eb->db, fb->local_abspath, subpool, subpool);
-
-  if (err)
+  if (versioned_locally_and_present)
     {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+      /* What to do with a versioned or schedule-add file:
 
-      svn_error_clear(err);
-      wc_kind = svn_wc__db_kind_unknown;
-      status = svn_wc__db_status_normal;
-    }
+         If the UUID doesn't match the parent's, or the URL isn't a child of
+         the parent dir's URL, it's an error.
 
-  /* An obstructing dir (or unknown, just to be paranoid) is an error. */
-  if (kind == svn_node_dir || kind == svn_node_unknown ||
-      (wc_kind != svn_wc__db_kind_unknown &&
-       wc_kind != svn_wc__db_kind_file &&
-       wc_kind != svn_wc__db_kind_symlink && IS_NODE_PRESENT(status)))
-    {
-      fb->already_notified = TRUE;
-      do_notification(eb, fb->local_abspath, svn_node_file,
-                      svn_wc_notify_update_obstruction, pool);
+         Set add_existed so that user notification is delayed until after any
+         text or prop conflicts have been found.
 
-      return svn_error_createf(
-               SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("Failed to add file '%s': a non-file object of the "
-                 "same name already exists"),
-               svn_dirent_local_style(fb->local_abspath, subpool));
-    }
+         Whether the incoming add is a symlink or a file will only be known in
+         close_file(), when the props are known. So with a locally added file
+         or symlink, let close_file() check for a tree conflict.
 
-  /* An unversioned, obstructing file may be OK. */
-  if (kind == svn_node_file &&
-      (wc_kind == svn_wc__db_kind_unknown || !IS_NODE_PRESENT(status)))
-    {
-      fb->obstruction_found = TRUE;
+         We will never see missing files here, because these would be
+         re-added during the crawler phase. */
+      svn_boolean_t local_is_file;
+      svn_boolean_t is_file_external;
 
-      if (!eb->allow_unver_obstructions)
+      /* Is the local node a copy or move */
+      if (status == svn_wc__db_status_added)
+        SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
+                                         eb->db, fb->local_abspath,
+                                         subpool, subpool));
+
+      /* Is there something that is a file? */
+      local_is_file = (wc_kind == svn_wc__db_kind_file
+                       || wc_kind == svn_wc__db_kind_symlink);
+
+      if (local_is_file)
         {
-          do_notification(eb, fb->local_abspath, svn_node_file,
-                          svn_wc_notify_update_obstruction, pool);
-
-          return svn_error_createf(
-             SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-             _("Failed to add file '%s': an unversioned "
-               "file of the same name already exists"),
-             svn_dirent_local_style(fb->local_abspath, subpool));
-        }
-    }
-  else if (wc_kind == svn_wc__db_kind_file ||
-           wc_kind == svn_wc__db_kind_symlink)
-    {
-      if (IS_NODE_PRESENT(status) &&
-          status != svn_wc__db_status_deleted)
-        {
-          svn_boolean_t wc_root, switched;
+          svn_boolean_t wc_root;
+          svn_boolean_t switched;
 
           SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched,
                                         eb->db, fb->local_abspath, pool));
 
           err = NULL;
-
-          if (wc_root)
-            {
-              err = svn_error_createf(
-                         SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                         _("Failed to add file '%s': a file "
-                           "from another repository with the same name "
-                           "already exists"),
-                         svn_dirent_local_style(fb->local_abspath, pool));
-            }
 
           if (switched && !eb->switch_relpath)
             {
@@ -3800,100 +3782,108 @@ add_file(const char *path,
             }
         }
 
-      /* What to do with a versioned or schedule-add file:
-
-         If the UUID doesn't match the parent's, or the URL isn't a child of
-         the parent dir's URL, it's an error.
-
-         A file already added without history is OK.  Set add_existed so that
-         user notification is delayed until after any text or prop conflicts
-         have been found.
-
-         A file added with history is a tree conflict.
-
-         We will never see missing files here, because these would be
-         re-added during the crawler phase. */
-
-      /* Specialize the added case to added, copied, moved */
-      if (status == svn_wc__db_status_added)
+      /* Find out if this is a file external, because we want to allow pulling
+       * in a file external onto an existing node -- because that's how
+       * externals are currently implemented. :( */
+      err = svn_wc__node_is_file_external(&is_file_external, eb->wc_ctx,
+                                          fb->local_abspath, subpool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
-          SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
-                                           eb->db, fb->local_abspath,
-                                           subpool, subpool));
+          svn_error_clear(err);
+          is_file_external = FALSE;
+        }
+      else
+        SVN_ERR(err);
+
+      /* Don't perform tree conflict checking if
+       *  - if we are in a deleted subtree
+       *  - if this is a file external
+       *  - if this is a normal file addition and we  we are switching
+       */
+      if (! pb->in_deleted_and_tree_conflicted_subtree
+          && ! is_file_external
+          && (eb->switch_relpath != NULL
+              || !local_is_file
+              || status != svn_wc__db_status_added))
+        {
+          SVN_ERR(check_tree_conflict(&tree_conflict, eb,
+                                      fb->local_abspath,
+                                      svn_wc_conflict_action_add,
+                                      svn_node_file, fb->new_relpath,
+                                      subpool));
         }
 
-      switch (status)
+      if (tree_conflict == NULL)
+        /* We have a node in WORKING and we've decided not to flag a
+         * conflict, so merge it with the incoming add. */
+        fb->add_existed = TRUE;
+      else
+        /* We have a tree conflict of a local add vs. an incoming add.
+         * We want to update BASE only, scheduling WORKING as a replace
+         * of BASE so that WORKING/ACTUAL stay unchanged. */
+        fb->adding_base_under_local_add = TRUE;
+
+    }
+  else if (kind != svn_node_none)
+    {
+      /* There's an unversioned node at this path. */
+      fb->obstruction_found = TRUE;
+
+      /* Unversioned, obstructing files are handled by text merge/conflict,
+       * if unversioned obstructions are allowed. */
+      if (! (kind == svn_node_file && eb->allow_unver_obstructions))
         {
-          case svn_wc__db_status_absent:
-          case svn_wc__db_status_excluded:
-            /* Ignore these hidden states. Allow pulling them (back) in. */
-            break;
-          case svn_wc__db_status_not_present:
-            break;
-          case svn_wc__db_status_added:
-            /* ### BH: I think this case should be conditional with something
-                       like allow_unver_obstructions, as this changes the
-                       base of locally added files.
-               ### BH: Always generate tree conflict? */
-            fb->add_existed = TRUE;
-            break;
-          default:
-            /* svn_wc__db_status_normal,
-             * svn_wc__db_status_moved_here,
-             * svn_wc__db_status_copied,
-             * svn_wc__db_status_deleted,
-             * svn_wc__db_status_incomplete,
-             * svn_wc__db_status_base_deleted
-             */
-            {
-              svn_wc_conflict_description2_t *tree_conflict = NULL;
+          /* ### Instead of skipping, this should bring in the BASE node
+           * and mark some sort of obstruction-conflict. Come, o single-db! */
+          fb->skip_this = TRUE;
 
-              /* Check for conflicts only when we haven't already recorded
-               * a tree-conflict on a parent node. */
-              if (!pb->in_deleted_and_tree_conflicted_subtree)
-                SVN_ERR(check_tree_conflict(&tree_conflict, eb,
-                                            fb->local_abspath,
-                                            svn_wc_conflict_action_add,
-                                            svn_node_file, fb->new_relpath,
-                                            subpool));
+          /* If we are skipping an add, we need to tell the WC that
+           * there's a node supposed to be here which we don't have. */
+          SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, fb->local_abspath,
+                                                  fb->new_relpath,
+                                                  eb->repos_root,
+                                                  eb->repos_uuid,
+                                                  (eb->target_revision?
+                                                   *eb->target_revision
+                                                   : SVN_INVALID_REVNUM),
+                                                  svn_wc__db_kind_file,
+                                                  svn_wc__db_status_not_present,
+                                                  NULL, NULL, subpool));
+          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
-              if (tree_conflict != NULL)
-                {
-                  svn_skel_t *work_item;
-
-                  /* Record the conflict so that the file is skipped silently
-                     by the other callbacks. */
-                  SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                                          eb->db,
-                                                          pb->local_abspath,
-                                                          tree_conflict,
-                                                          subpool));
-                  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
-                                            work_item, pool));
-
-                  SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
-                  fb->skip_this = TRUE;
-                  fb->already_notified = TRUE;
-
-                  do_notification(eb, fb->local_abspath, svn_node_unknown,
-                                  svn_wc_notify_tree_conflict, subpool);
-
-                  return SVN_NO_ERROR;
-                }
-            }
-            break;
+          /* Mark a conflict */
+          SVN_ERR(create_tree_conflict(&tree_conflict, eb,
+                                       fb->local_abspath,
+                                       svn_wc_conflict_reason_unversioned,
+                                       svn_wc_conflict_action_add,
+                                       svn_node_file,
+                                       fb->new_relpath, subpool, subpool));
+          SVN_ERR_ASSERT(tree_conflict != NULL);
         }
+    }
+
+  if (tree_conflict != NULL)
+    {
+      fb->obstruction_found = TRUE;
+
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                              fb->local_abspath,
+                                              tree_conflict,
+                                              subpool));
+
+      fb->already_notified = TRUE;
+      do_notification(eb, fb->local_abspath, svn_node_unknown,
+                      svn_wc_notify_tree_conflict, subpool);
+    }
+
+  /* Now, if this is an add with history, do the history part. */
+  if (copyfrom_path && !fb->skip_this)
+    {
+      SVN_ERR(add_file_with_history(pb, copyfrom_path, copyfrom_rev,
+                                    fb, pool, subpool));
     }
 
   svn_pool_destroy(subpool);
-
-  /* Now, if this is an add with history, do the history part. */
-  if (copyfrom_path)
-    {
-      SVN_ERR(add_file_with_history(path, pb, copyfrom_path, copyfrom_rev,
-                                    fb, pool));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -3911,7 +3901,7 @@ open_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
   svn_node_kind_t kind;
-  svn_boolean_t already_conflicted;
+  svn_boolean_t conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
 
   /* the file_pool can stick around for a *long* time, so we want to use
@@ -3942,13 +3932,14 @@ open_file(const char *path,
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, &fb->old_revision, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &conflicted, NULL,
                                eb->db, fb->local_abspath, subpool, subpool));
 
   /* Is this path a conflict victim? */
-  SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
-                                  fb->local_abspath, pool));
-  if (already_conflicted)
+  if (conflicted)
+    SVN_ERR(node_already_conflicted(&conflicted, eb->db,
+                                    fb->local_abspath, pool));
+  if (conflicted)
     {
       SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
@@ -3970,17 +3961,14 @@ open_file(const char *path,
   if (!pb->in_deleted_and_tree_conflicted_subtree)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 svn_wc_conflict_action_edit, svn_node_file,
-                                fb->new_relpath, pool));
+                                fb->new_relpath, subpool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict)
     {
-      svn_skel_t *work_item;
-
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
-                                              eb->db, pb->local_abspath,
-                                              tree_conflict, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                              fb->local_abspath,
+                                              tree_conflict, subpool));
 
       if (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
           tree_conflict->reason == svn_wc_conflict_reason_replaced)
@@ -3995,7 +3983,7 @@ open_file(const char *path,
 
       fb->already_notified = TRUE;
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_tree_conflict, pool);
+                      svn_wc_notify_tree_conflict, subpool);
     }
 
   svn_pool_destroy(subpool);
@@ -4039,10 +4027,10 @@ apply_textdelta(void *file_baton,
   {
     const svn_checksum_t *checksum;
 
-    SVN_ERR(svn_wc__get_ultimate_base_md5_checksum(&checksum,
-                                                   fb->edit_baton->db,
-                                                   fb->local_abspath,
-                                                   pool, pool));
+    SVN_ERR(svn_wc__get_ultimate_base_checksums(NULL, &checksum,
+                                                fb->edit_baton->db,
+                                                fb->local_abspath,
+                                                pool, pool));
     recorded_base_checksum
       = checksum ? svn_checksum_to_cstring(checksum, pool) : NULL;
     if (recorded_base_checksum && expected_base_checksum
@@ -4080,8 +4068,10 @@ apply_textdelta(void *file_baton,
     }
   else
     {
-      if (fb->copied_text_base_abspath)
-        SVN_ERR(svn_stream_open_readonly(&source, fb->copied_text_base_abspath,
+      if (fb->copied_text_base_sha1_checksum)
+        SVN_ERR(svn_wc__db_pristine_read(&source, fb->edit_baton->db,
+                                         fb->local_abspath,
+                                         fb->copied_text_base_sha1_checksum,
                                          handler_pool, handler_pool));
       else
         source = svn_stream_empty(handler_pool);
@@ -4140,7 +4130,7 @@ static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
                  const svn_string_t *value,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
@@ -4157,10 +4147,13 @@ change_file_prop(void *file_baton,
   /* Special case: If use-commit-times config variable is set we
      cache the last-changed-date propval so we can use it to set
      the working file's timestamp. */
-  if (eb->use_commit_times
-      && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
-      && value)
-    fb->last_changed_date = apr_pstrdup(fb->pool, value->data);
+  if (value
+      && eb->use_commit_times
+      && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0))
+    {
+      /* propchange is already in the right pool */
+      fb->last_changed_date = propchange->value->data;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -4183,16 +4176,16 @@ change_file_prop(void *file_baton,
  * sensitive to eol translation, keyword substitution, and performing
  * all actions accumulated the parent directory's work queue.
  *
- * If there's a new text base, NEW_TEXT_BASE_TMP_ABSPATH must be the full
- * pathname of the new text base, somewhere in the administrative area
- * of the working file.  It will be installed as the new text base for
- * this file, and removed after a successful run of the generated log
- * commands.
+ * If there's a new text base, it must be in the pristine store and
+ * NEW_TEXT_BASE_SHA1_CHECKSUM must be its SHA-1 checksum (else NULL).
+ * After this function returns, the caller should install it as the new
+ * text base for this file.
  *
  * Set *CONTENT_STATE to the state of the contents after the
  * installation.
  *
- * POOL is used for all bookkeeping work during the installation.
+ * Return values are allocated in RESULT_POOL and temporary allocations
+ * are performed in SCRATCH_POOL.
  */
 static svn_error_t *
 merge_file(svn_skel_t **work_items,
@@ -4200,8 +4193,9 @@ merge_file(svn_skel_t **work_items,
            const char **install_from,
            svn_wc_notify_state_t *content_state,
            struct file_baton *fb,
-           const char *new_text_base_tmp_abspath,
-           apr_pool_t *pool)
+           const svn_checksum_t *new_text_base_sha1_checksum,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = fb->edit_baton;
   struct dir_baton *pb = fb->dir_baton;
@@ -4210,16 +4204,24 @@ merge_file(svn_skel_t **work_items,
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
-  const svn_wc_entry_t *entry;
+  const char *new_text_base_tmp_abspath;
+  svn_wc__db_t *db = eb->db;
+  apr_pool_t *pool = result_pool;
+  svn_boolean_t file_exists = TRUE;
+  svn_wc__db_status_t status;
+  svn_boolean_t have_base;
+  svn_revnum_t revision;
+  const char *file_external = NULL;
+  svn_error_t *err;
 
   /*
      When this function is called on file F, we assume the following
      things are true:
 
-         - The new pristine text of F, if any, is present at
-           NEW_TEXT_BASE_TMP_ABSPATH
+         - The new pristine text of F is present in the pristine store
+           iff NEW_TEXT_BASE_SHA1_CHECKSUM is not NULL.
 
-         - The .svn/entries file still reflects the old version of F.
+         - The WC metadata still reflects the old version of F.
            (We can still access the old pristine base text of F.)
 
      The goal is to update the local working copy of F to reflect
@@ -4231,8 +4233,37 @@ merge_file(svn_skel_t **work_items,
   *install_pristine = FALSE;
   *install_from = NULL;
 
-  SVN_ERR(svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
-                            svn_node_file, FALSE, pool, pool));
+  if (new_text_base_sha1_checksum != NULL)
+    SVN_ERR(svn_wc__db_pristine_get_path(&new_text_base_tmp_abspath,
+                                         eb->db, fb->local_abspath,
+                                         new_text_base_sha1_checksum,
+                                         pool, scratch_pool));
+  else
+    new_text_base_tmp_abspath = NULL;
+
+  err = svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, &have_base, NULL,
+                             NULL, NULL,
+                             db, fb->local_abspath,
+                             scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      file_exists = FALSE;
+
+      status = svn_wc__db_status_not_present;
+      revision = SVN_INVALID_REVNUM;
+      have_base = FALSE;
+    }
+  else
+    SVN_ERR(err);
+
+  if (file_exists)
+    SVN_ERR(svn_wc__db_temp_get_file_external(&file_external, eb->db,
+                                              fb->local_abspath,
+                                              scratch_pool, scratch_pool));
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
@@ -4264,8 +4295,8 @@ merge_file(svn_skel_t **work_items,
          be FB->COPIED_TEXT_BASE_ABSPATH.  */
       is_locally_modified = TRUE;
     }
-  else if (entry && entry->file_external_path
-           && entry->schedule == svn_wc_schedule_add)
+  else if (file_external &&
+           status ==svn_wc__db_status_added)
     {
       is_locally_modified = FALSE; /* ### Or a conflict will be raised */
     }
@@ -4279,24 +4310,47 @@ merge_file(svn_skel_t **work_items,
                                                FALSE /* compare_textbases */,
                                                pool));
     }
-  else if (new_text_base_tmp_abspath)
+  else if (new_text_base_sha1_checksum && !fb->obstruction_found)
     {
+      svn_stream_t *pristine_stream;
+
       /* We have a new pristine to install. Is the file modified relative
          to this new pristine?  */
+      SVN_ERR(svn_wc__db_pristine_read(&pristine_stream,
+                                       eb->db, fb->local_abspath,
+                                       new_text_base_sha1_checksum,
+                                       pool, pool));
       SVN_ERR(svn_wc__internal_versioned_file_modcheck(&is_locally_modified,
                                                        eb->db,
                                                        fb->local_abspath,
-                                                       new_text_base_tmp_abspath,
+                                                       pristine_stream,
                                                        FALSE, pool));
     }
   else
     {
-      /* No other potential changes, so the working file is NOT modified.  */
-      is_locally_modified = FALSE;
+      /* No other potential changes, so the working file is NOT modified.
+         Except when we have a local obstruction! */
+
+      if (fb->obstruction_found)
+        is_locally_modified = TRUE;
+      else
+        is_locally_modified = FALSE;
     }
 
-  if (entry && entry->schedule == svn_wc_schedule_replace)
-    is_replaced = TRUE;
+  if (have_base)
+    {
+      svn_wc__db_status_t base_status;
+
+      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revision, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       db, fb->local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      if (status == svn_wc__db_status_added
+          && base_status != svn_wc__db_status_not_present)
+        is_replaced = TRUE;
+    }
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -4322,7 +4376,7 @@ merge_file(svn_skel_t **work_items,
    So the first thing we do is figure out where we are in the
    matrix. */
 
-  if (new_text_base_tmp_abspath)
+  if (new_text_base_sha1_checksum)
     {
       if (is_replaced)
         {
@@ -4354,10 +4408,17 @@ merge_file(svn_skel_t **work_items,
                  ### base, but the rest of libsvn_wc appears to compensate
                  ### for this fact (even tho it is schedule_normal!!).
                  ### in any case, let's do the working copy file install
-                 ### from the revert base for file externals.  */
-              if (entry && entry->file_external_path)
+                 ### from the revert base for file externals.
+
+                 ### Sheesh^2: If the file external is based on a copy from
+                 ### a different 'related' location we receive copyfrom info
+                 ### on the add. And in that specific case (externals_tests
+                 ### 25, "update that modifies a file external") we have a
+                 ### status normal instead of added. */
+              if (file_external)
                 {
-                  SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_add);
+                  SVN_ERR_ASSERT(status == svn_wc__db_status_added
+                                 || status == svn_wc__db_status_normal);
 
                   /* The revert-base will be installed later in this function.
                      To tell the caller to install the new working text from
@@ -4409,11 +4470,18 @@ merge_file(svn_skel_t **work_items,
                                           *path_ext ? "." : "",
                                           *path_ext ? path_ext : "");
               else
-                oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
-                                          entry->revision,
-                                          *path_ext ? "." : "",
-                                          *path_ext ? path_ext : "");
+                {
+                  svn_revnum_t old_rev = revision;
 
+                  /* ### BH: Why is this necessary? */
+                  if (!SVN_IS_VALID_REVNUM(old_rev))
+                    old_rev = 0;
+
+                  oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                                            old_rev,
+                                            *path_ext ? "." : "",
+                                            *path_ext ? path_ext : "");
+                }
               newrev_str = apr_psprintf(pool, ".r%ld%s%s",
                                         *eb->target_revision,
                                         *path_ext ? "." : "",
@@ -4429,8 +4497,11 @@ merge_file(svn_skel_t **work_items,
                                              pool, pool));
                   delete_left = TRUE;
                 }
-              else if (fb->copied_text_base_abspath)
-                merge_left = fb->copied_text_base_abspath;
+              else if (fb->copied_text_base_sha1_checksum)
+                SVN_ERR(svn_wc__db_pristine_get_path(&merge_left, eb->db,
+                                                     fb->local_abspath,
+                                                     fb->copied_text_base_sha1_checksum,
+                                                     pool, pool));
               else
                 SVN_ERR(svn_wc__ultimate_base_text_path_to_read(
                   &merge_left, eb->db, fb->local_abspath, pool, pool));
@@ -4488,8 +4559,11 @@ merge_file(svn_skel_t **work_items,
 
       apr_hash_t *keywords;
 
-      SVN_ERR(svn_wc__get_keywords(&keywords, eb->db, fb->local_abspath, NULL,
-                                   pool, pool));
+      SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
+                                         &keywords,
+                                         NULL,
+                                         eb->db, fb->local_abspath,
+                                         pool, pool));
       if (magic_props_changed || keywords)
         {
           /* Special edge-case: it's possible that this file installation
@@ -4523,52 +4597,35 @@ merge_file(svn_skel_t **work_items,
         }
     }
 
-  /* Deal with installation of the new textbase, if appropriate. */
-#ifdef SVN_EXPERIMENTAL_PRISTINE
-  /* The WC-NG equivalent is putting the pristine's checksum into the DB,
-     which is done in close_file(). */
-#else
-  if (new_text_base_tmp_abspath)
-    {
-      const char *text_base_abspath;
-
-      /* Move the temp text-base file to its final destination.
-       * text_base_abspath is the appropriate path: the "revert-base" path
-       * if the node is replaced, else the usual text-base path. */
-      SVN_ERR(svn_wc__ultimate_base_text_path(&text_base_abspath,
-                                              eb->db, fb->local_abspath,
-                                              pool, pool));
-      SVN_ERR(svn_wc__loggy_move(&work_item, eb->db, pb->local_abspath,
-                                 new_text_base_tmp_abspath,
-                                 text_base_abspath,
-                                 pool));
-      *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
-    }
-#endif
-
   /* Installing from a pristine will handle timestamps and recording.
      However, if we are NOT creating a new working copy file, then create
      work items to handle text-timestamp and working-size.  */
   if (!*install_pristine
       && !is_locally_modified
-      && (fb->adding_file || entry->schedule == svn_wc_schedule_normal))
+      && (fb->adding_file || status == svn_wc__db_status_normal))
     {
+      apr_time_t set_date = 0;
       /* Adjust working copy file unless this file is an allowed
          obstruction. */
       if (fb->last_changed_date && !fb->obstruction_found)
         {
-          SVN_ERR(svn_wc__loggy_set_timestamp(
-                    &work_item, eb->db, pb->local_abspath,
-                    fb->local_abspath, fb->last_changed_date,
-                    pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
+          /* Ignore invalid dates */
+          err = svn_time_from_cstring(&set_date, fb->last_changed_date,
+                                      pool);
+
+          if (err)
+            {
+              svn_error_clear(err);
+              set_date = 0;
+            }
         }
 
-      /* ### what if the file is locally-deleted? or if there is an
-         ### obstruction. OP_RECORD_FILEINFO will deal with a missing
-         ### file, but what if this is NOT our file? (ie. obstruction)  */
+      /* If this would have been an obstruction, we wouldn't be here,
+         because we would have installed an obstruction or tree conflict
+         instead */
       SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,
                                                fb->local_abspath,
+                                               set_date,
                                                pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
     }
@@ -4576,7 +4633,7 @@ merge_file(svn_skel_t **work_items,
   /* Set the returned content state. */
 
   /* This is kind of interesting.  Even if no new text was
-     installed (i.e., NEW_TEXT_ABSPATH was null), we could still
+     installed (i.e., NEW_TEXT_BASE_ABSPATH was null), we could still
      report a pre-existing conflict state.  Say a file, already
      in a state of textual conflict, receives prop mods during an
      update.  Then we'll notify that it has text conflicts.  This
@@ -4584,7 +4641,7 @@ merge_file(svn_skel_t **work_items,
 
   if (merge_outcome == svn_wc_merge_conflict)
     *content_state = svn_wc_notify_state_conflicted;
-  else if (new_text_base_tmp_abspath)
+  else if (new_text_base_sha1_checksum)
     {
       if (is_locally_modified)
         *content_state = svn_wc_notify_state_merged;
@@ -4612,22 +4669,23 @@ close_file(void *file_baton,
   svn_checksum_t *expected_md5_checksum = NULL;
   svn_checksum_t *new_text_base_md5_checksum;
   svn_checksum_t *new_text_base_sha1_checksum;
-  const char *new_text_base_abspath;
   apr_hash_t *new_base_props = NULL;
   apr_hash_t *new_actual_props = NULL;
   apr_array_header_t *entry_props;
-  apr_array_header_t *wc_props;
+  apr_array_header_t *dav_props;
   apr_array_header_t *regular_props;
   svn_boolean_t install_pristine;
-  const char *install_from;
+  const char *install_from = NULL;
   apr_hash_t *current_base_props = NULL;
   apr_hash_t *current_actual_props = NULL;
-  svn_skel_t *all_work_items;
+  apr_hash_t *local_actual_props = NULL;
+  svn_skel_t *all_work_items = NULL;
   svn_skel_t *work_item;
   svn_revnum_t new_changed_rev;
   apr_time_t new_changed_date;
   svn_node_kind_t kind;
   const char *new_changed_author;
+  apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
 
   if (fb->skip_this)
     {
@@ -4648,31 +4706,26 @@ close_file(void *file_baton,
     {
       new_text_base_md5_checksum = fb->new_text_base_md5_checksum;
       new_text_base_sha1_checksum = fb->new_text_base_sha1_checksum;
-      new_text_base_abspath = fb->new_text_base_tmp_abspath;
       SVN_ERR_ASSERT(new_text_base_md5_checksum &&
-                     new_text_base_sha1_checksum &&
-                     new_text_base_abspath);
+                     new_text_base_sha1_checksum);
     }
   else if (fb->added_with_history)
     {
-      SVN_ERR_ASSERT(! fb->new_text_base_tmp_abspath);
+      SVN_ERR_ASSERT(! fb->new_text_base_sha1_checksum);
       new_text_base_md5_checksum = fb->copied_text_base_md5_checksum;
       new_text_base_sha1_checksum = fb->copied_text_base_sha1_checksum;
-      new_text_base_abspath = fb->copied_text_base_abspath;
       SVN_ERR_ASSERT(new_text_base_md5_checksum &&
-                     new_text_base_sha1_checksum &&
-                     new_text_base_abspath);
+                     new_text_base_sha1_checksum);
     }
   else
     {
-      SVN_ERR_ASSERT(! fb->new_text_base_tmp_abspath
-                     && ! fb->copied_text_base_abspath);
+      SVN_ERR_ASSERT(! fb->new_text_base_sha1_checksum
+                     && ! fb->copied_text_base_sha1_checksum);
       new_text_base_md5_checksum = NULL;
       new_text_base_sha1_checksum = NULL;
-      new_text_base_abspath = NULL;
     }
 
-  if (new_text_base_abspath && expected_md5_checksum
+  if (new_text_base_md5_checksum && expected_md5_checksum
       && !svn_checksum_match(expected_md5_checksum, new_text_base_md5_checksum))
     return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
             _("Checksum mismatch for '%s':\n"
@@ -4682,22 +4735,6 @@ close_file(void *file_baton,
             expected_md5_digest,
             svn_checksum_to_cstring_display(new_text_base_md5_checksum, pool));
 
-#ifdef SVN_EXPERIMENTAL_PRISTINE
-  /* If we had a text change, drop the pristine into its proper place. */
-  /* ### Caution: there is as yet no code to ever remove these pristine
-     files when they are superseded. */
-  /* The WC-NG way is to install the new pristine text in two steps: move it
-     into the pristine store now, and then later in a single transaction
-     update the BASE_NODE to include a reference to this pristine text's
-     checksum.  In the old WC-1 way, installation of this file happens later
-     (in merge_file()) as a single move into place, being part of the loggy
-     action of updating the WC metadata. */
-  if (fb->new_text_base_tmp_abspath)
-    SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->new_text_base_tmp_abspath,
-                                        new_text_base_sha1_checksum,
-                                        new_text_base_md5_checksum, pool));
-#endif
-
   SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, fb->local_abspath, TRUE, pool));
   if (kind == svn_node_none && ! fb->adding_file)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -4705,7 +4742,7 @@ close_file(void *file_baton,
                              svn_dirent_local_style(fb->local_abspath, pool));
 
   /* Gather the changes for each kind of property.  */
-  SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, &wc_props,
+  SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, &dav_props,
                                &regular_props, pool));
 
   /* Extract the changed_* and lock state information.  */
@@ -4753,6 +4790,14 @@ close_file(void *file_baton,
 
   /* ### some of this feels like voodoo... */
 
+  if (kind != svn_node_none)
+    SVN_ERR(svn_wc__get_actual_props(&local_actual_props,
+                                     eb->db, fb->local_abspath,
+                                     pool, pool));
+  if (local_actual_props == NULL)
+    local_actual_props = apr_hash_make(pool);
+
+
   if (fb->copied_base_props)
     {
       /* The BASE props are given by the source of the copy. We may also
@@ -4763,13 +4808,11 @@ close_file(void *file_baton,
     }
   else if (kind != svn_node_none)
     {
-      /* This node already exists. Grab its properties.  */
+      /* This node already exists. Grab its properties. */
       SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
                                          eb->db, fb->local_abspath,
                                          pool, pool));
-      SVN_ERR(svn_wc__get_actual_props(&current_actual_props,
-                                       eb->db, fb->local_abspath,
-                                       pool, pool));
+      current_actual_props = local_actual_props;
     }
 
   /* Note: even if the node existed before, it may not have
@@ -4781,93 +4824,169 @@ close_file(void *file_baton,
   if (current_actual_props == NULL)
     current_actual_props = apr_hash_make(pool);
 
+  /* Catch symlink-ness change.
+   * add_file() doesn't know whether the incoming added node is a file or
+   * a symlink, because symlink-ness is saved in a prop :(
+   * So add_file() cannot notice when update wants to add a symlink where
+   * locally there already is a file scheduled for addition, or vice versa.
+   * It sees incoming symlinks as simple files and may wrongly try to offer
+   * a text conflict. So flag a tree conflict here. */
+  if (fb->adding_file && fb->add_existed)
+    {
+      int i;
+      svn_boolean_t local_is_link = FALSE;
+      svn_boolean_t incoming_is_link = FALSE;
+
+      local_is_link = apr_hash_get(local_actual_props,
+                                SVN_PROP_SPECIAL,
+                                APR_HASH_KEY_STRING) != NULL;
+
+      /* Jump through hoops to get the proper props in case of
+       * a copy. (see the fb->copied_base_props condition above) */
+      if (fb->copied_base_props)
+        {
+          incoming_is_link = fb->copied_working_props
+                             && apr_hash_get(fb->copied_working_props,
+                                             SVN_PROP_SPECIAL,
+                                             APR_HASH_KEY_STRING) != NULL;
+        }
+      else
+        {
+          for (i = 0; i < regular_props->nelts; ++i)
+            {
+              const svn_prop_t *prop = &APR_ARRAY_IDX(regular_props, i,
+                                                      svn_prop_t);
+
+              if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
+                {
+                  incoming_is_link = TRUE;
+                }
+            }
+        }
+
+
+      if (local_is_link != incoming_is_link)
+        {
+          svn_wc_conflict_description2_t *tree_conflict = NULL;
+
+          fb->adding_base_under_local_add = TRUE;
+          fb->obstruction_found = TRUE;
+          fb->add_existed = FALSE;
+
+          SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
+                                      svn_wc_conflict_action_add, svn_node_file,
+                                      fb->new_relpath, pool));
+          SVN_ERR_ASSERT(tree_conflict != NULL);
+          SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
+                                                  fb->local_abspath,
+                                                  tree_conflict,
+                                                  scratch_pool));
+
+          fb->already_notified = TRUE;
+          do_notification(eb, fb->local_abspath, svn_node_unknown,
+                          svn_wc_notify_tree_conflict, pool);
+        }
+    }
+
   prop_state = svn_wc_notify_state_unknown;
 
-  /* Merge the 'regular' props into the existing working proplist. */
-  /* This will merge the old and new props into a new prop db, and
-     write <cp> commands to the logfile to install the merged
-     props.  */
-  SVN_ERR(svn_wc__merge_props(&prop_state,
-                              &new_base_props,
-                              &new_actual_props,
-                              eb->db,
-                              fb->local_abspath,
-                              svn_wc__db_kind_file,
-                              NULL /* left_version */,
-                              NULL /* right_version */,
-                              NULL /* server_baseprops (update, not merge)  */,
-                              current_base_props,
-                              current_actual_props,
-                              regular_props,
-                              TRUE /* base_merge */,
-                              FALSE /* dry_run */,
-                              eb->conflict_func, eb->conflict_baton,
-                              eb->cancel_func, eb->cancel_baton,
-                              pool,
-                              pool));
-  /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
-  SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
-
-  /* We are going to write a new set of BASE properties. Create a work item
-     to update the old-style props file.  */
-  SVN_ERR(build_write_base_props(&all_work_items, fb->local_abspath,
-                                 svn_wc__db_kind_file, new_base_props,
-                                 pool));
-
-  {
-    apr_hash_t *props;
-    apr_array_header_t *prop_diffs;
-
-    /* ### grr. the BASE/ACTUAL props changes need to occur before the
-       ### merge_file() work. we may be able to solve this by shifting
-       ### some of the code blocks in this function up to here. in any
-       ### case, get the old-style props files written now, before
-       ### merge_file. the in-database values are going to occur later
-       ### (skew!), but we'll get that fixed before switching over to
-       ### db properties.  */
-    props = new_actual_props;
-    SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
-                           pool));
-    if (prop_diffs->nelts == 0)
-      props = NULL;
-
-    SVN_ERR(build_write_actual_props(&work_item, fb->local_abspath,
-                                     svn_wc__db_kind_file,
-                                     props,
-                                     pool));
-    all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-  }
-
-  /* Do the hard work. This will queue some additional work.  */
-  SVN_ERR(merge_file(&work_item, &install_pristine, &install_from,
-                     &content_state, fb, new_text_base_abspath, pool));
-  all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-
-  if (install_pristine)
+  if (! fb->adding_base_under_local_add)
     {
-      svn_boolean_t record_fileinfo;
+      /* Merge the 'regular' props into the existing working proplist. */
+      /* This will merge the old and new props into a new prop db, and
+         write <cp> commands to the logfile to install the merged
+         props.  */
+      SVN_ERR(svn_wc__merge_props(&prop_state,
+                                  &new_base_props,
+                                  &new_actual_props,
+                                  eb->db,
+                                  fb->local_abspath,
+                                  svn_wc__db_kind_file,
+                                  NULL /* left_version */,
+                                  NULL /* right_version */,
+                                  NULL /* server_baseprops (update, not merge)  */,
+                                  current_base_props,
+                                  current_actual_props,
+                                  regular_props, /* propchanges */
+                                  TRUE /* base_merge */,
+                                  FALSE /* dry_run */,
+                                  eb->conflict_func, eb->conflict_baton,
+                                  eb->cancel_func, eb->cancel_baton,
+                                  pool,
+                                  pool));
+      /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
+      SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
-      /* If we are installing from the pristine contents, then go ahead and
-         record the fileinfo. That will be the "proper" values. Installing
-         from some random file means the fileinfo does NOT correspond to
-         the pristine (in which case, the fileinfo will be cleared for
-         safety's sake).  */
-      record_fileinfo = install_from == NULL;
+    /* Merge the text. This will queue some additional work.  */
+    SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
+                       &content_state, fb, new_text_base_sha1_checksum,
+                       pool, scratch_pool));
 
-      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                            eb->db,
-                                            fb->local_abspath,
-                                            install_from,
-                                            eb->use_commit_times,
-                                            record_fileinfo,
-                                            pool, pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+    if (install_pristine)
+      {
+        svn_boolean_t record_fileinfo;
+
+        /* If we are installing from the pristine contents, then go ahead and
+           record the fileinfo. That will be the "proper" values. Installing
+           from some random file means the fileinfo does NOT correspond to
+           the pristine (in which case, the fileinfo will be cleared for
+           safety's sake).  */
+        record_fileinfo = install_from == NULL;
+
+        SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                              eb->db,
+                                              fb->local_abspath,
+                                              install_from,
+                                              eb->use_commit_times,
+                                              record_fileinfo,
+                                              pool, pool));
+        all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+      }
+
+    }
+  else
+    {
+      /* Adding a BASE node under a locally added node.
+       * The incoming add becomes the revert-base! */
+      svn_wc_notify_state_t no_prop_state;
+      apr_hash_t *copied_base_props;
+      apr_hash_t *no_new_actual_props = NULL;
+      apr_hash_t *no_working_props = apr_hash_make(pool);
+
+      copied_base_props = fb->copied_base_props;
+      if (! copied_base_props)
+        copied_base_props = apr_hash_make(pool);
+
+
+      /* Store the incoming props (sent as propchanges) in new_base_props.
+       * Keep the actual props unchanged. */
+      SVN_ERR(svn_wc__merge_props(&no_prop_state,
+                                  &new_base_props,
+                                  &no_new_actual_props,
+                                  eb->db,
+                                  fb->local_abspath,
+                                  svn_wc__db_kind_file,
+                                  NULL /* left_version */,
+                                  NULL /* right_version */,
+                                  NULL /* server_baseprops (update, not merge)  */,
+                                  copied_base_props,
+                                  no_working_props,
+                                  regular_props, /* propchanges */
+                                  TRUE /* base_merge */,
+                                  FALSE /* dry_run */,
+                                  eb->conflict_func, eb->conflict_baton,
+                                  eb->cancel_func, eb->cancel_baton,
+                                  pool,
+                                  pool));
+
+      prop_state = svn_wc_notify_state_unchanged;
+      new_actual_props = local_actual_props;
     }
 
   /* Now that all the state has settled, should we update the readonly
      status of the working file? The LOCK_STATE will signal what we should
      do for this node.  */
-  if (new_text_base_abspath == NULL
+  if (new_text_base_sha1_checksum == NULL
       && lock_state == svn_wc_notify_lock_state_unlocked)
     {
       /* If a lock was removed and we didn't update the text contents, we
@@ -4892,12 +5011,16 @@ close_file(void *file_baton,
       all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
     }
 
-  if (fb->copied_text_base_abspath)
+  /* Remove the copied text base file if we're no longer using it. */
+  if (fb->copied_text_base_sha1_checksum)
     {
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
-                                           fb->copied_text_base_abspath,
-                                           pool, pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+      /* ### TODO: Add a WQ item to remove this pristine if unreferenced:
+         svn_wc__wq_build_pristine_remove(&work_item,
+                                          eb->db, fb->local_abspath,
+                                          fb->copied_text_base_sha1_checksum,
+                                          pool);
+         all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+      */
     }
 
   /* ### NOTE: from this point onwards, we make several changes to the
@@ -4908,14 +5031,10 @@ close_file(void *file_baton,
 
   /* Insert/replace the BASE node with all of the new metadata.  */
   {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
       /* Set the 'checksum' column of the file's BASE_NODE row to
        * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
        * checksum is already in the pristine store. */
     const svn_checksum_t *new_checksum = new_text_base_sha1_checksum;
-#else
-    const svn_checksum_t *new_checksum = new_text_base_md5_checksum;
-#endif
     const char *serialised;
 
     /* If we don't have a NEW checksum, then the base must not have changed.
@@ -4929,9 +5048,6 @@ close_file(void *file_baton,
                                          &new_checksum, NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
                                          pool, pool));
-        /* SVN_EXPERIMENTAL_PRISTINE:
-           new_checksum is originally MD-5 but will later be SHA-1.  That's
-           OK here because we just read it and write it back. */
       }
 
     if (kind != svn_node_none)
@@ -4949,15 +5065,12 @@ close_file(void *file_baton,
                                      new_changed_author,
                                      new_checksum,
                                      SVN_INVALID_FILESIZE,
+                                     (dav_props && dav_props->nelts > 0)
+                                        ? prop_hash_from_array(dav_props, pool)
+                                        : NULL,
                                      NULL /* conflict */,
                                      all_work_items,
                                      pool));
-
-    /* This writes a whole bunch of log commands to install wcprops.  */
-    /* ### no it doesn't. this immediately modifies them. */
-    SVN_ERR(svn_wc__db_base_set_dav_cache(eb->db, fb->local_abspath,
-                                          prop_hash_from_array(wc_props, pool),
-                                          pool));
 
     /* ### ugh. deal with preserving the file external value in the database.
        ### there is no official API, so we do it this way. maybe we should
@@ -4987,15 +5100,7 @@ close_file(void *file_baton,
      that tree. We need to schedule this file for deletion.  */
   if (fb->dir_baton->in_deleted_and_tree_conflicted_subtree && fb->adding_file)
     {
-      /* ### temporary hack. we should simply write a WORKING_NODE.  */
-
-      svn_wc_entry_t tmp_entry;
-
-      tmp_entry.schedule = svn_wc_schedule_delete;
-      SVN_ERR(svn_wc__entry_modify(eb->db, fb->local_abspath,
-                                   svn_node_file,
-                                   &tmp_entry, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                   pool));
+      SVN_ERR(svn_wc__db_temp_op_delete(eb->db, fb->local_abspath, pool));
     }
 
   /* If this file was locally-added and is now being added by the update, we
@@ -5008,32 +5113,29 @@ close_file(void *file_baton,
 
   /* Now we need to update the ACTUAL tree, with the result of the
      properties merge. */
-  {
-    apr_hash_t *props;
-    apr_array_header_t *prop_diffs;
+  if (! fb->adding_base_under_local_add)
+    {
+      apr_hash_t *props;
+      apr_array_header_t *prop_diffs;
 
-    SVN_ERR_ASSERT(new_actual_props != NULL);
+      SVN_ERR_ASSERT(new_actual_props != NULL);
 
-    /* If the ACTUAL props are the same as the BASE props, then we
-       should "write" a NULL. This will remove the props from the
-       ACTUAL_NODE row, and remove the old-style props file, indicating
-       "no change".  */
-    props = new_actual_props;
-    SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
-                           pool));
-    if (prop_diffs->nelts == 0)
-      props = NULL;
+      /* If the ACTUAL props are the same as the BASE props, then we
+         should "write" a NULL. This will remove the props from the
+         ACTUAL_NODE row, and remove the old-style props file, indicating
+         "no change".  */
+      props = new_actual_props;
+      SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
+                             pool));
+      if (prop_diffs->nelts == 0)
+        props = NULL;
 
-    SVN_ERR(build_write_actual_props(&work_item, fb->local_abspath,
-                                     svn_wc__db_kind_file,
-                                     props,
-                                     pool));
-    SVN_ERR(svn_wc__db_op_set_props(eb->db, fb->local_abspath,
-                                    props,
-                                    NULL /* conflict */,
-                                    work_item,
-                                    pool));
-  }
+      SVN_ERR(svn_wc__db_op_set_props(eb->db, fb->local_abspath,
+                                      props,
+                                      NULL /* conflict */,
+                                      NULL /* work_item */,
+                                      pool));
+    }
 
   /* ### we may as well run whatever is in the queue right now. this
      ### starts out with some crap node data via construct_base_node(),
@@ -5048,8 +5150,8 @@ close_file(void *file_baton,
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
 
-  /* Skip notifications about files which were already notified for
-     another reason */
+  /* Send a notification to the callback function.  (Skip notifications
+     about files which were already notified for another reason.) */
   if (eb->notify_func && !fb->already_notified)
     {
       const svn_string_t *mime_type;
@@ -5089,6 +5191,309 @@ close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
+/* Helper for svn_wc__do_update_cleanup().
+ *
+ * Tweak the information for LOCAL_ABSPATH in DB.  If NEW_REPOS_RELPATH is
+ * non-NULL update the entry to the new url specified by NEW_REPOS_RELPATH,
+ * NEW_REPOS_ROOT_URL, NEW_REPOS_UUID..  If NEW_REV is valid, make this the
+ * node's working revision.
+ *
+ * If ALLOW_REMOVAL is TRUE the tweaks might cause the node for
+ * LOCAL_ABSPATH to be removed from the WC; if ALLOW_REMOVAL is FALSE this
+ * will not happen.
+ */
+static svn_error_t *
+tweak_node(svn_wc__db_t *db,
+           const char *local_abspath,
+           svn_wc__db_kind_t kind,
+           const char *new_repos_relpath,
+           const char *new_repos_root_url,
+           const char *new_repos_uuid,
+           svn_revnum_t new_rev,
+           svn_boolean_t allow_removal,
+           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t db_kind;
+  svn_revnum_t revision;
+  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  svn_boolean_t set_repos_relpath = FALSE;
+  svn_error_t *err;
+
+  err = svn_wc__db_base_get_info(&status, &db_kind, &revision,
+                                 &repos_relpath, &repos_root_url,
+                                 &repos_uuid, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, db, local_abspath,
+                                 scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      /* ### Tweaking should never be necessary for nodes that don't
+         ### have a base node, but we still get here from many tests */
+      svn_error_clear(err);
+      return SVN_NO_ERROR; /* No BASE_NODE -> Added node */
+    }
+  else
+    SVN_ERR(err);
+
+  SVN_ERR_ASSERT(db_kind == kind);
+
+  /* As long as this function is only called as a helper to
+     svn_wc__do_update_cleanup, then it's okay to remove any entry
+     under certain circumstances:
+
+     If the entry is still marked 'deleted', then the server did not
+     re-add it.  So it's really gone in this revision, thus we remove
+     the entry.
+
+     If the entry is still marked 'absent' and yet is not the same
+     revision as new_rev, then the server did not re-add it, nor
+     re-absent it, so we can remove the entry.
+
+     ### This function cannot always determine whether removal is
+     ### appropriate, hence the ALLOW_REMOVAL flag.  It's all a bit of a
+     ### mess. */
+  if (allow_removal
+      && (status == svn_wc__db_status_not_present
+          || (status == svn_wc__db_status_absent && revision != new_rev)))
+    {
+      return svn_error_return(
+                svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                scratch_pool));
+
+    }
+
+  if (new_repos_relpath != NULL)
+    {
+      if (!repos_relpath)
+        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                           &repos_uuid, db, local_abspath,
+                                           scratch_pool, scratch_pool));
+
+      if (strcmp(repos_relpath, new_repos_relpath))
+          set_repos_relpath = TRUE;
+    }
+
+  if (SVN_IS_VALID_REVNUM(new_rev) && new_rev == revision)
+    new_rev = SVN_INVALID_REVNUM;
+
+  if (SVN_IS_VALID_REVNUM(new_rev) || set_repos_relpath)
+    SVN_ERR(svn_wc__db_temp_op_set_rev_and_repos_relpath(db, local_abspath,
+                                                         new_rev,
+                                                         set_repos_relpath,
+                                                         new_repos_relpath,
+                                                         repos_root_url,
+                                                         repos_uuid,
+                                                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* The main body of svn_wc__do_update_cleanup. */
+static svn_error_t *
+tweak_entries(svn_wc__db_t *db,
+              const char *dir_abspath,
+              const char *new_repos_relpath,
+              const char *new_repos_root_url,
+              const char *new_repos_uuid,
+              svn_revnum_t new_rev,
+              svn_wc_notify_func2_t notify_func,
+              void *notify_baton,
+              svn_depth_t depth,
+              apr_hash_t *exclude_paths,
+              apr_pool_t *pool)
+{
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
+  int i;
+
+  /* Skip an excluded path and its descendants. */
+  if (apr_hash_get(exclude_paths, dir_abspath, APR_HASH_KEY_STRING))
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(pool);
+
+  /* Tweak "this_dir" */
+  SVN_ERR(tweak_node(db, dir_abspath, svn_wc__db_kind_dir,
+                     new_repos_relpath, new_repos_root_url, new_repos_uuid,
+                     new_rev, FALSE /* allow_removal */, iterpool));
+
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
+  /* Early out */
+  if (depth <= svn_depth_empty)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__db_base_get_children(&children, db, dir_abspath,
+                                       pool, iterpool));
+  for (i = 0; i < children->nelts; i++)
+    {
+      const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+      svn_wc__db_kind_t kind;
+      svn_wc__db_status_t status;
+
+      const char *child_repos_relpath = NULL;
+      svn_boolean_t excluded;
+
+      svn_pool_clear(iterpool);
+
+      /* Derive the new URL for the current (child) entry */
+      if (new_repos_relpath)
+        child_repos_relpath = svn_relpath_join(new_repos_relpath,
+                                               child_basename, iterpool);
+
+      child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
+      excluded = (apr_hash_get(exclude_paths, child_abspath,
+                               APR_HASH_KEY_STRING) != NULL);
+
+      if (excluded)
+        continue;
+
+      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   db, child_abspath, iterpool, iterpool));
+
+      /* If a file, or deleted, excluded or absent dir, then tweak the
+         entry but don't recurse.
+
+         ### how does this translate into wc_db land? */
+      if (kind == svn_wc__db_kind_file
+            || status == svn_wc__db_status_not_present
+            || status == svn_wc__db_status_absent
+            || status == svn_wc__db_status_excluded)
+        {
+          SVN_ERR(tweak_node(db, child_abspath, kind,
+                             child_repos_relpath, new_repos_root_url,
+                             new_repos_uuid, new_rev,
+                             TRUE /* allow_removal */, iterpool));
+        }
+
+      /* If a directory and recursive... */
+      else if ((depth == svn_depth_infinity
+                || depth == svn_depth_immediates)
+               && (kind == svn_wc__db_kind_dir))
+        {
+          svn_depth_t depth_below_here = depth;
+
+          if (depth == svn_depth_immediates)
+            depth_below_here = svn_depth_empty;
+
+          SVN_ERR(tweak_entries(db, child_abspath, child_repos_relpath,
+                                new_repos_root_url, new_repos_uuid,
+                                new_rev, notify_func, notify_baton,
+                                depth_below_here,
+                                exclude_paths, iterpool));
+        }
+    }
+
+  /* Cleanup */
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Modify the entry of working copy LOCAL_ABSPATH, presumably after an update
+   completes.   If LOCAL_ABSPATH doesn't exist, this routine does nothing.
+
+   Set the entry's 'url' and 'working revision' fields to BASE_URL and
+   NEW_REVISION.  If BASE_URL is null, the url field is untouched; if
+   NEW_REVISION in invalid, the working revision field is untouched.
+   The modifications are mutually exclusive.
+
+   If REPOS is non-NULL, set the repository root of the entry to REPOS, but
+   only if REPOS is an ancestor of the entries URL (after possibly modifying
+   it).  In addition to that requirement, if the LOCAL_ABSPATH refers to a
+   directory, the repository root is only set if REPOS is an ancestor of the
+   URLs all file entries which don't already have a repository root set.  This
+   prevents the entries file from being corrupted by this operation.
+
+   If LOCAL_ABSPATH is a directory, then, walk entries below LOCAL_ABSPATH
+   according to DEPTH thusly:
+
+   If DEPTH is svn_depth_infinity, perform the following actions on
+   every entry below PATH; if svn_depth_immediates, svn_depth_files,
+   or svn_depth_empty, perform them only on LOCAL_ABSPATH.
+
+   If NEW_REVISION is valid, then tweak every entry to have this new
+   working revision (excluding files that are scheduled for addition
+   or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
+   all urls to be "telescoping" children of the base_url.
+
+   EXCLUDE_PATHS is a hash containing const char * pathnames.  Entries
+   for pathnames contained in EXCLUDE_PATHS are not touched by this
+   function.  These pathnames should be absolute paths.
+*/
+static svn_error_t *
+do_update_cleanup(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          svn_depth_t depth,
+                          const char *new_repos_relpath,
+                          const char *new_repos_root_url,
+                          const char *new_repos_uuid,
+                          svn_revnum_t new_revision,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_hash_t *exclude_paths,
+                          apr_pool_t *pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_error_t *err;
+
+  if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
+    return SVN_NO_ERROR;
+
+  err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
+                             db, local_abspath, pool, pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+
+  switch (status)
+    {
+      case svn_wc__db_status_excluded:
+      case svn_wc__db_status_absent:
+      case svn_wc__db_status_not_present:
+        return SVN_NO_ERROR;
+
+      /* Explicitly ignore other statii */
+      default:
+        break;
+    }
+
+  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
+    {
+      /* Parent not updated so don't remove PATH entry.  */
+      SVN_ERR(tweak_node(db, local_abspath, kind,
+                         new_repos_relpath, new_repos_root_url, new_repos_uuid,
+                         new_revision, FALSE /* allow_removal */, pool));
+    }
+  else if (kind == svn_wc__db_kind_dir)
+    {
+      SVN_ERR(tweak_entries(db, local_abspath, new_repos_relpath,
+                            new_repos_root_url, new_repos_uuid, new_revision,
+                            notify_func, notify_baton,
+                            depth, exclude_paths, pool));
+    }
+  else
+    return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                             _("Unrecognized node kind: '%s'"),
+                             svn_dirent_local_style(local_abspath, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* An svn_delta_editor_t function. */
 static svn_error_t *
@@ -5096,20 +5501,6 @@ close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-
-  /* If there is a target and that target is missing, then it
-     apparently wasn't re-added by the update process, so we'll
-     pretend that the editor deleted the entry.  The helper function
-     do_entry_deletion() will take care of the necessary steps.  */
-  if ((*eb->target_basename) &&
-      svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
-    {
-      /* Still passing NULL for THEIR_URL. A case where THEIR_URL
-       * is needed in this call is rare or even non-existant.
-       * ### TODO: Construct a proper THEIR_URL anyway. See also
-       * NULL handling code in do_entry_deletion(). */
-      SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
-    }
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
@@ -5139,16 +5530,17 @@ close_edit(void *edit_baton,
      will only remove the deleted entry!  */
   if (! eb->target_deleted)
     {
-      SVN_ERR(svn_wc__do_update_cleanup(eb->db, eb->target_abspath,
-                                        eb->requested_depth,
-                                        eb->switch_relpath,
-                                        eb->repos_root,
-                                        eb->repos_uuid,
-                                        *(eb->target_revision),
-                                        eb->notify_func,
-                                        eb->notify_baton,
-                                        eb->skipped_trees,
-                                        eb->pool));
+      SVN_ERR(do_update_cleanup(eb->db,
+                                eb->target_abspath,
+                                eb->requested_depth,
+                                eb->switch_relpath,
+                                eb->repos_root,
+                                eb->repos_uuid,
+                                *(eb->target_revision),
+                                eb->notify_func,
+                                eb->notify_baton,
+                                eb->skipped_trees,
+                                eb->pool));
     }
 
   /* The edit is over, free its pool.
@@ -5157,7 +5549,6 @@ close_edit(void *edit_baton,
      should also make eb->pool not be a subpool (see make_editor),
      and change callers of svn_client_{checkout,update,switch} to do
      better pool management. ### */
-  eb->close_edit_complete = TRUE;
   svn_pool_destroy(eb->pool);
 
   return SVN_NO_ERROR;
@@ -5265,7 +5656,6 @@ make_editor(svn_revnum_t *target_revision,
   eb->fetch_func               = fetch_func;
   eb->fetch_baton              = fetch_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
-  eb->close_edit_complete      = FALSE;
   eb->skipped_trees            = apr_hash_make(edit_pool);
   eb->ext_patterns             = preserved_exts;
 
@@ -5303,11 +5693,12 @@ make_editor(svn_revnum_t *target_revision,
   if (!depth_is_sticky)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
-                                                inner_editor,
-                                                inner_baton,
+                                                wc_ctx->db,
                                                 anchor_abspath,
                                                 target_basename,
-                                                wc_ctx->db,
+                                                TRUE /* read_base */,
+                                                inner_editor,
+                                                inner_baton,
                                                 result_pool));
 
   return svn_delta_get_cancellation_editor(cancel_func,
@@ -5565,7 +5956,7 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
   if (!*wc_root && switched == NULL )
     return SVN_NO_ERROR; /* No more info needed */
 
-  svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
+  svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
 
   /* Check if the node is recorded in the parent */
   if (*wc_root)
@@ -5692,7 +6083,7 @@ svn_wc_get_actual_target2(const char **anchor,
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
   if (!(is_wc_root || is_switched) || (kind != svn_wc__db_kind_dir))
     {
-      svn_dirent_split(path, anchor, target, result_pool);
+      svn_dirent_split(anchor, target, path, result_pool);
     }
   else
     {
@@ -5725,15 +6116,17 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                        void *cancel_baton,
                        svn_wc_notify_func2_t notify_func,
                        void *notify_baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
+  const char *dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
   const char *tmp_text_base_abspath;
   svn_checksum_t *new_text_base_md5_checksum;
   svn_checksum_t *new_text_base_sha1_checksum;
   const char *source_abspath = NULL;
-  svn_skel_t *all_work_items;
+  svn_skel_t *all_work_items = NULL;
   svn_skel_t *work_item;
   const char *original_root_url;
   const char *original_repos_relpath;
@@ -5742,6 +6135,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
+  svn_error_t *err;
+  apr_pool_t *pool = scratch_pool;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(new_base_contents != NULL);
@@ -5749,6 +6144,60 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* We should have a write lock on this file's parent directory.  */
   SVN_ERR(svn_wc__write_check(db, dir_abspath, pool));
+
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             db, local_abspath, scratch_pool, scratch_pool);
+
+  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    return svn_error_return(err);
+  else if(err)
+    svn_error_clear(err);
+  else
+    switch (status)
+      {
+        case svn_wc__db_status_not_present:
+        case svn_wc__db_status_deleted:
+          break;
+        default:
+          return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                                   _("Node '%s' exists."),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+      }
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               db, dir_abspath, scratch_pool, scratch_pool));
+
+  switch (status)
+    {
+      case svn_wc__db_status_normal:
+      case svn_wc__db_status_added:
+        break;
+      case svn_wc__db_status_deleted:
+        return
+          svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                            _("Can't add '%s' to a parent directory"
+                              " scheduled for deletion"),
+                            svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
+      default:
+        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, err,
+                                 _("Can't find parent directory's node while"
+                                   " trying to add '%s'"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+    }
+  if (kind != svn_wc__db_kind_dir)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Can't schedule an addition of '%s'"
+                               " below a not-directory node"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
@@ -5783,57 +6232,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       copyfrom_rev = SVN_INVALID_REVNUM;  /* Just to be sure.  */
     }
 
-  /* If we're replacing the file then we need to save the destination file's
-     original text base and prop base before replacing it. This allows us to
-     revert the entire change.
-
-     Note: We don't do this when the file was already replaced before because
-     the revert-base is already present and has the original text base.
-
-     ### This block can be removed once the new pristine store is in place */
-  {
-    svn_error_t *err;
-    svn_wc__db_status_t status;
-
-    err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, db, local_abspath, pool, pool);
-    if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-      {
-        /* There is no BASE node. Thus, we'll have nothing to save.  */
-        svn_error_clear(err);
-      }
-    else if (err)
-      return svn_error_return(err);
-    else if (status == svn_wc__db_status_normal ||
-             status == svn_wc__db_status_incomplete)
-      {
-        svn_boolean_t have_work;
-
-        SVN_ERR(svn_wc__db_read_info(
-                  &status, NULL, NULL,
-                  NULL, NULL, NULL, NULL, NULL, NULL,
-                  NULL, NULL, NULL, NULL, NULL, NULL,
-                  NULL, NULL, NULL, NULL,
-                  NULL, NULL, &have_work,
-                  NULL, NULL,
-                  db, local_abspath,
-                  pool, pool));
-
-        /* If there is a WORKING node present AND it is not an "add",
-           then we need to move the base/props. If an add is present,
-           that would imply we've done this move before.  */
-        if (have_work
-            && status != svn_wc__db_status_added
-            && status != svn_wc__db_status_obstructed_add)
-          {
-            /* Move around some files to keep them safe for a possible
-               future revert operation.  */
-            SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath, pool));
-          }
-      }
-  }
-
   /* Set CHANGED_* to reflect the entry props in NEW_BASE_PROPS, and
      filter NEW_BASE_PROPS so it contains only regular props. */
   {
@@ -5857,10 +6255,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Add some work items to install the properties.  */
   {
-    SVN_ERR(build_write_base_props(&all_work_items,
-                                   local_abspath, svn_wc__db_kind_file,
-                                   new_base_props, pool));
-
     if (new_props == NULL)
       {
         actual_props = NULL;
@@ -5876,16 +6270,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
         else
           actual_props = new_props;
       }
-
-    /* ### ideally, this would be queued to go along with the call to
-       ### db_op_set_props(), but we need correct ACTUAL props for some
-       ### of the work associated with creation of the WORKING node.
-       ### so... we'll lump it all together, and queue it on the set_props
-       ### (ie. all database state is correct/final).  */
-    SVN_ERR(build_write_actual_props(&work_item, local_abspath,
-                                     svn_wc__db_kind_file,
-                                     actual_props, pool));
-    all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
   }
 
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
@@ -5925,22 +6309,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      text base.  */
   if (copyfrom_url != NULL)
     {
-      /* Write out log commands to set up the new text base and its checksum.
-         (Install it as the normal text base, not the 'revert base'.) */
-#ifdef SVN_EXPERIMENTAL_PRISTINE
       SVN_ERR(svn_wc__db_pristine_install(db, tmp_text_base_abspath,
                                           new_text_base_sha1_checksum,
                                           new_text_base_md5_checksum, pool));
-#else
-      const char *text_base_abspath;
-
-      SVN_ERR(svn_wc__text_base_path(&text_base_abspath, db, local_abspath,
-                                     pool));
-      SVN_ERR(svn_wc__loggy_move(&work_item, db, dir_abspath,
-                                 tmp_text_base_abspath, text_base_abspath,
-                                 pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-#endif
     }
   else
     {
@@ -6017,8 +6388,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                   original_root_url,
                                   original_uuid,
                                   copyfrom_rev,
-                                  /* SVN_EXPERIMENTAL_PRISTINE: use SHA-1 */
-                                  new_text_base_md5_checksum,
+                                  new_text_base_sha1_checksum,
                                   NULL /* conflict */,
                                   NULL /* work_items */,
                                   pool));

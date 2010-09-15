@@ -34,6 +34,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_opt_private.h"
 
 
 /*** Code. ***/
@@ -81,11 +82,18 @@ svn_cl__export(apr_getopt_t *os,
       /* If given the cwd, pretend we weren't given anything. */
       if (strcmp("", to) == 0)
         to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+      else
+        /* svn_cl__eat_peg_revisions() but only on one target */
+        SVN_ERR(svn_opt__split_arg_at_peg_revision(&to, NULL, to, pool));
     }
 
+  if (svn_path_is_url(to))
+    return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                              NULL,
+                                              _("'%s' is not a local path"),
+                                              to));
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, TRUE, FALSE, pool));
+    SVN_ERR(svn_cl__notifier_mark_export(ctx->notify_baton2));
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
