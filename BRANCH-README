@@ -1,0 +1,9 @@
+This branch contains a series of patches which make the dotted leader in the
+output of 'make check' a status bar for the progress of the individual python
+tests.  It does this by loading the tests as modules, rather than just shelling
+out to run them.
+
+Unfortunately, there was some breakage associated with running the tests in 
+parallel, and when using different src and build directories (as is common
+on Windows).  So I've stashed the patches on this branch, in the hopes that
+one day I'll come back and fix 'em.
