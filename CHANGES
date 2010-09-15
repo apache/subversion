@@ -1,3 +1,25 @@
+Version 1.6.13
+(?? Sep 2010, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.13
+
+  User-visible changes:
+   * don't drop properties when doing foreign repo merges (issue #3623)
+   * improve auto-props failure error message (r961970)
+   * improve error message for 403 status with ra_neon (r876615)
+   * don't allow 'merge --reintegrate' for 2-url merges (r959004)
+   * improve handling of missing fsfs.conf in with hotcopy (r980811, -1449)
+   * escape unsafe characters in a URL during export (issue #3683)
+   * don't leak stale locks in FSFS (r959760)
+   * better detect broken working copies using mod_dav_svn (r979045)
+   * make rev files read-only (r981921)
+   * properly canonicalize a URL (r984928, -31)
+
+  Developer-visible changes:
+   * make ruby bindings compatible with Ruby 1.9 (r957507)
+   * use the repos verify API in JavaHL (r948916)
+   * teach ra_serf to parse md5 checksums with update editors (r979429)
+
+
 Version 1.6.12
 (21 Jun 2010, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.12
