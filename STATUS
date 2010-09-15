@@ -275,18 +275,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r981921
-   fsfs: make rev files read-only.
-   Justification:
-     They should never be changed.  Revprop edits are one suspected cause of
-     rev file corruption; this *may* (total guess) prevent the corruption.
-   Thread:
-     http://svn.haxx.se/dev/archive-2010-08/0060.shtml
-   Backport branch:
-     ^/subversion/branches/1.6.x-r981921
-   Votes:
-     +1: danielsh, jerenkrantz, hwright
-
  * r984928, r984931
    Fix an URL canonicalization assertion seen in the wild (kde.org).
    Notes:
