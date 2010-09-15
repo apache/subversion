@@ -1580,10 +1580,11 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
     Path checkedTargetPath(targetPath);
     SVN_JNI_ERR(checkedTargetPath.error_occured(), );
 
+    // Should parameterize the following, instead of defaulting to FALSE
     SVN_JNI_ERR(svn_client_patch(checkedPatchPath.c_str(),
                                  checkedTargetPath.c_str(),
-                                 dryRun, stripCount, reverse, ignoreWhitespace,
-                                 removeTempfiles,
+                                 dryRun, stripCount, FALSE, reverse,
+                                 ignoreWhitespace, removeTempfiles,
                                  PatchCallback::callback, callback,
                                  ctx, requestPool.pool(),
                                  requestPool.pool()), );
