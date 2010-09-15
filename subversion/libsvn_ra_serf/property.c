@@ -162,6 +162,16 @@ svn_ra_serf__get_ver_prop(apr_hash_t *props,
   return NULL;
 }
 
+const svn_string_t *
+svn_ra_serf__get_prop_string(apr_hash_t *props,
+                             const char *path,
+                             const char *ns,
+                             const char *name)
+{
+  return svn_ra_serf__get_ver_prop_string(props, path, SVN_INVALID_REVNUM,
+                                          ns, name);
+}
+
 const char *
 svn_ra_serf__get_prop(apr_hash_t *props,
                       const char *path,

@@ -88,7 +88,7 @@ string_first_non_whitespace(const char *str, apr_size_t len)
 
   for (i = 0; i < len; i++)
     {
-      if (! apr_isspace(str[i]))
+      if (! svn_ctype_isspace(str[i]))
         return i;
     }
 
@@ -389,6 +389,34 @@ svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
 
 
 void
+svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
+{
+  /* In most cases, there will be pre-allocated memory left
+   * to just write the new byte at the end of the used section
+   * and terminate the string properly.
+   */
+  apr_size_t old_len = str->len;
+  if (str->blocksize > old_len + 1)
+    {
+      char *dest = str->data;
+
+      dest[old_len] = byte;
+      dest[old_len+1] = '\0';
+
+      str->len = old_len+1;
+    }
+  else
+    {
+      /* we need to re-allocate the string buffer
+       * -> let the more generic implementation take care of that part
+       */
+      char b = byte;
+      svn_stringbuf_appendbytes(str, &b, 1);
+    }
+}
+
+
+void
 svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
                           apr_size_t count)
 {
@@ -464,7 +492,7 @@ svn_stringbuf_strip_whitespace(svn_stringbuf_t *str)
   str->blocksize -= offset;
 
   /* Now that we've trimmed the front, trim the end, wasting more RAM. */
-  while ((str->len > 0) && apr_isspace(str->data[str->len - 1]))
+  while ((str->len > 0) && svn_ctype_isspace(str->data[str->len - 1]))
     str->len--;
   str->data[str->len] = '\0';
 }
@@ -506,12 +534,12 @@ svn_cstring_split_append(apr_array_header_t *array,
     {
       if (chop_whitespace)
         {
-          while (apr_isspace(*p))
+          while (svn_ctype_isspace(*p))
             p++;
 
           {
             char *e = p + (strlen(p) - 1);
-            while ((e >= p) && (apr_isspace(*e)))
+            while ((e >= p) && (svn_ctype_isspace(*e)))
               e--;
             *(++e) = '\0';
           }
@@ -615,24 +643,27 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
                       apr_uint64_t minval, apr_uint64_t maxval,
                       int base)
 {
-  apr_int64_t parsed;
+  apr_int64_t val;
+  char *endptr;
 
   /* We assume errno is thread-safe. */
   errno = 0; /* APR-0.9 doesn't always set errno */
 
   /* ### We're throwing away half the number range here.
-   * ### Maybe implement our own number parser? */
-  parsed = apr_strtoi64(str, NULL, base);
-  if (errno != 0)
+   * ### APR needs a apr_strtoui64() function. */
+  val = apr_strtoi64(str, &endptr, base);
+  if (errno == EINVAL || endptr == str || str[0] == '\0' || *endptr != '\0')
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Could not convert '%s' into a number"),
                                str));
-  if (parsed < 0 || parsed < minval || parsed > maxval)
+  if ((errno == ERANGE && (val == APR_INT64_MIN || val == APR_INT64_MAX)) ||
+      val < 0 || (apr_uint64_t)val < minval || (apr_uint64_t)val > maxval)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                               _("Number '%s' is out of range"), str));
-  *n = parsed;
+                               _("Number '%s' is out of range '[%lu, %lu]'"),
+                               str, minval, maxval));
+  *n = val;
   return SVN_NO_ERROR;
 }
 
@@ -646,10 +677,10 @@ svn_cstring_atoui64(apr_uint64_t *n, const char *str)
 svn_error_t *
 svn_cstring_atoui(unsigned int *n, const char *str)
 {
-  apr_uint64_t parsed;
+  apr_uint64_t val;
 
-  SVN_ERR(svn_cstring_strtoui64(&parsed, str, 0, APR_UINT32_MAX, 10));
-  *n = (unsigned int)parsed;
+  SVN_ERR(svn_cstring_strtoui64(&val, str, 0, APR_UINT32_MAX, 10));
+  *n = (unsigned int)val;
   return SVN_NO_ERROR;
 }
 
@@ -658,22 +689,25 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
                      apr_int64_t minval, apr_int64_t maxval,
                      int base)
 {
-  apr_int64_t parsed;
+  apr_int64_t val;
+  char *endptr;
 
   /* We assume errno is thread-safe. */
   errno = 0; /* APR-0.9 doesn't always set errno */
 
-  parsed = apr_strtoi64(str, NULL, base);
-  if (errno != 0)
+  val = apr_strtoi64(str, &endptr, base);
+  if (errno == EINVAL || endptr == str || str[0] == '\0' || *endptr != '\0')
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                _("Could not convert '%s' into a number"),
                                str));
-  if (parsed < minval || parsed > maxval)
+  if ((errno == ERANGE && (val == APR_INT64_MIN || val == APR_INT64_MAX)) ||
+      val < minval || val > maxval)
     return svn_error_return(
              svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                               _("Number '%s' is out of range"), str));
-  *n = parsed;
+                               _("Number '%s' is out of range '[%ld, %ld]'"),
+                               str, minval, maxval));
+  *n = val;
   return SVN_NO_ERROR;
 }
 
@@ -687,10 +721,9 @@ svn_cstring_atoi64(apr_int64_t *n, const char *str)
 svn_error_t *
 svn_cstring_atoi(int *n, const char *str)
 {
-  apr_int64_t parsed;
+  apr_int64_t val;
 
-  SVN_ERR(svn_cstring_strtoi64(&parsed, str, APR_INT32_MIN,
-                               APR_INT32_MAX, 10));
-  *n = (int)parsed;
+  SVN_ERR(svn_cstring_strtoi64(&val, str, APR_INT32_MIN, APR_INT32_MAX, 10));
+  *n = (int)val;
   return SVN_NO_ERROR;
 }

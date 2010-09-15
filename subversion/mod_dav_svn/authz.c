@@ -32,17 +32,12 @@
 #include "dav_svn.h"
 
 
-/* Convert incoming REV and PATH from request R into a version-resource URI
-   for REPOS and perform a GET subrequest on it.  This will invoke any authz
-   modules loaded into apache.  Return TRUE if the subrequest succeeds, FALSE
-   otherwise. If REV is SVN_INVALID_REVNUM, then we look at HEAD.
-*/
-static svn_boolean_t
-allow_read(request_rec *r,
-           const dav_svn_repos *repos,
-           const char *path,
-           svn_revnum_t rev,
-           apr_pool_t *pool)
+svn_boolean_t
+dav_svn__allow_read(request_rec *r,
+                    const dav_svn_repos *repos,
+                    const char *path,
+                    svn_revnum_t rev,
+                    apr_pool_t *pool)
 {
   const char *uri;
   request_rec *subreq;
@@ -176,7 +171,7 @@ authz_read(svn_boolean_t *allowed,
     }
 
   /* We have a (rev, path) pair to check authorization on. */
-  *allowed = allow_read(arb->r, arb->repos, revpath, rev, pool);
+  *allowed = dav_svn__allow_read(arb->r, arb->repos, revpath, rev, pool);
 
   return SVN_NO_ERROR;
 }
@@ -195,10 +190,10 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton)
 
 
 svn_boolean_t
-dav_svn__allow_read(const dav_resource *resource,
-                   svn_revnum_t rev,
-                   apr_pool_t *pool)
+dav_svn__allow_read_resource(const dav_resource *resource,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool)
 {
-  return allow_read(resource->info->r, resource->info->repos,
-                    resource->info->repos_path, rev, pool);
+  return dav_svn__allow_read(resource->info->r, resource->info->repos,
+                             resource->info->repos_path, rev, pool);
 }

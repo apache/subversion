@@ -594,6 +594,26 @@ def missing_dirs2(sbox):
   os.mkdir(sbox.ospath('A/B_new/F'))
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='  ', wc_rev='1'),
+      'A/mu'              : Item(status='  ', wc_rev='1'),
+      'A/C'               : Item(status='  ', wc_rev='1'),
+      'A/D'               : Item(status='~ ', wc_rev='?'),
+      'A/B'               : Item(status='  ', wc_rev='1'),
+      'A/B/F'             : Item(status='  ', wc_rev='1'),
+      'A/B/E'             : Item(status='! ', wc_rev='?'),
+      'A/B/lambda'        : Item(status='  ', wc_rev='1'),
+      'iota'              : Item(status='  ', wc_rev='1'),
+      'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
+      'A/B_new/E'         : Item(status='! ', wc_rev='?'),
+      'A/B_new/F'         : Item(status='~ ', wc_rev='?'),
+      'A/B_new/lambda'    : Item(status='  ', wc_rev='-', copied='+'),
+    })
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_status.tweak('A/D', 'A/B_new/F', status='! ')
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 def delete_and_keep_local(sbox):
   "check status delete and delete --keep-local"
@@ -643,7 +663,7 @@ test_list = [ None,
               x3_1_4_6,
               x3_1_6_12,
               missing_dirs,
-              XFail(missing_dirs2),
+              missing_dirs2,
               XFail(delete_and_keep_local),
              ]
 
