@@ -1140,6 +1140,7 @@ struct post_commit_baton
   svn_boolean_t keep_changelists;
   svn_boolean_t keep_locks;
   apr_hash_t *checksums;
+  svn_depth_t depth;
 };
 
 static svn_error_t *
@@ -1183,7 +1184,8 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
 
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
       && (item->kind == svn_node_dir)
-      && (item->copyfrom_url))
+      && (item->copyfrom_url)
+      && btn->depth >= svn_depth_immediates)
     loop_recurse = TRUE;
 
   remove_lock = (! btn->keep_locks && (item->state_flags
@@ -1683,6 +1685,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       btn.keep_changelists = keep_changelists;
       btn.keep_locks = keep_locks;
       btn.checksums = checksums;
+      btn.depth = depth;
 
       /* Make a note that our commit is finished. */
       commit_in_progress = FALSE;
