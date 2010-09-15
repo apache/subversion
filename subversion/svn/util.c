@@ -764,9 +764,9 @@ svn_cl__get_log_message(const char **log_msg,
               && item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
             unlock = 'U';
 
-          svn_stringbuf_appendbytes(tmp_message, &text_mod, 1);
-          svn_stringbuf_appendbytes(tmp_message, &prop_mod, 1);
-          svn_stringbuf_appendbytes(tmp_message, &unlock, 1);
+          svn_stringbuf_appendbyte(tmp_message, text_mod);
+          svn_stringbuf_appendbyte(tmp_message, prop_mod);
+          svn_stringbuf_appendbyte(tmp_message, unlock);
           if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
             /* History included via copy/move. */
             svn_stringbuf_appendcstr(tmp_message, "+ ");

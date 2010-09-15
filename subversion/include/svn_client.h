@@ -53,18 +53,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/**
-   ### @todo  Multiple Targets
-    - Up for debate:  an update on multiple targets is *not* atomic.
-    Right now, svn_client_update only takes one path.  What's
-    debatable is whether this should ever change.  On the one hand,
-    it's kind of losing to have the client application loop over
-    targets and call svn_client_update() on each one;  each call to
-    update initializes a whole new repository session (network
-    overhead, etc.)  On the other hand, it's a very simple
-    implementation, and allows for the possibility that different
-    targets may come from different repositories.  */
-
 
 /**
  * Get libsvn_client version information.
@@ -1200,6 +1188,17 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * it passing @a ctx->cancel_baton at various places during the update.
  *
  * Use @a pool for any temporary allocation.
+ *
+ *  @todo  Multiple Targets
+ *  - Up for debate:  an update on multiple targets is *not* atomic.
+ *  Right now, svn_client_update only takes one path.  What's
+ *  debatable is whether this should ever change.  On the one hand,
+ *  it's kind of losing to have the client application loop over
+ *  targets and call svn_client_update() on each one;  each call to
+ *  update initializes a whole new repository session (network
+ *  overhead, etc.)  On the other hand, it's a very simple
+ *  implementation, and allows for the possibility that different
+ *  targets may come from different repositories.
  *
  * @since New in 1.5.
  */
@@ -5230,6 +5229,15 @@ typedef svn_error_t *(*svn_client_patch_func_t)(
  * stripped from paths obtained from the patch. It is an error if a
  * negative strip count is passed.
  *
+ * If @a old_patch_target_names is @c TRUE, use target names from the old
+ * side of the patch, rather than using target names from the new side of
+ * the patch. For instance, if a unidiff header contains
+ *   --- foo.c
+ *   +++ foo.c.new
+ * and @a old_patch_target_names is @c TRUE, the name "foo.c" will be used
+ * for the target, and if @a old_patch_target_names is @c FALSE, the target
+ * name "foo.c.new" will be used.
+ *
  * If @a reverse is @c TRUE, apply patches in reverse, deleting lines
  * the patch would add and adding lines the patch would delete.
  * This is useful when applying a unidiff which was created with the
@@ -5261,6 +5269,7 @@ svn_client_patch(const char *patch_abspath,
                  const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
+                 svn_boolean_t old_patch_target_names,
                  svn_boolean_t reverse,
                  svn_boolean_t ignore_whitespace,
                  svn_boolean_t remove_tempfiles,

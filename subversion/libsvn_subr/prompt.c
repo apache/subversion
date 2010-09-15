@@ -147,7 +147,7 @@ prompt(const char **result,
                 SVN_ERR_MALFUNCTION();
             }
 
-          svn_stringbuf_appendbytes(strbuf, &c, 1);
+          svn_stringbuf_appendbyte(strbuf, c);
         }
     }
   else

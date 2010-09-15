@@ -686,6 +686,12 @@ $(DISTDIR)/$(CYRUS_SASL_DIST):
 $(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST)
 	[ -d $(CYRUS_SASL_OBJDIR) ] || mkdir -p $(CYRUS_SASL_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(CYRUS_SASL_DIST)
+	# fixes build on Debian:
+	sed 's/#elif WITH_DES/#elif defined(WITH_DES)/' \
+		< $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c \
+		> $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c.patched
+	mv $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c.patched \
+		$(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c
 	touch $@
 
 # configure cyrus-sasl
