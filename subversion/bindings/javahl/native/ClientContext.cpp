@@ -97,20 +97,20 @@ ClientContext::~ClientContext()
     env->DeleteGlobalRef(m_jctx);
 }
 
-svn_client_ctx_t *
-ClientContext::getContext(CommitMessage *message)
+svn_error_t *
+ClientContext::getContext(svn_client_ctx_t **ctx, CommitMessage *message)
 {
     SVN::Pool *requestPool = JNIUtil::getRequestPool();
     apr_pool_t *pool = requestPool->pool();
     svn_auth_baton_t *ab;
-    svn_client_ctx_t *ctx = persistentCtx;
-    //SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
+
+    *ctx = persistentCtx;
 
     const char *configDir = m_configDir.c_str();
     if (m_configDir.length() == 0)
         configDir = NULL;
-    SVN_JNI_ERR(svn_config_get_config(&(ctx->config), configDir, pool), NULL);
-    svn_config_t *config = (svn_config_t *) apr_hash_get(ctx->config,
+    SVN_ERR(svn_config_get_config(&((*ctx)->config), configDir, pool));
+    svn_config_t *config = (svn_config_t *) apr_hash_get((*ctx)->config,
                                                          SVN_CONFIG_CATEGORY_CONFIG,
                                                          APR_HASH_KEY_STRING);
 
@@ -118,10 +118,8 @@ ClientContext::getContext(CommitMessage *message)
     apr_array_header_t *providers;
 
     /* Populate the registered providers with the platform-specific providers */
-    SVN_JNI_ERR(svn_auth_get_platform_specific_client_providers(&providers,
-                                                                config,
-                                                                pool),
-                NULL);
+    SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers,
+                                                            config, pool));
 
     /* Use the prompter (if available) to prompt for password and cert
      * caching. */
@@ -150,11 +148,10 @@ ClientContext::getContext(CommitMessage *message)
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     /* The server-cert, client-cert, and client-cert-password providers. */
-    SVN_JNI_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                        "windows",
-                                                        "ssl_server_trust",
-                                                        pool),
-                NULL);
+    SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                    "windows",
+                                                    "ssl_server_trust",
+                                                    pool));
 
     if (provider)
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -202,11 +199,11 @@ ClientContext::getContext(CommitMessage *message)
         svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                                m_passWord.c_str());
 
-    ctx->auth_baton = ab;
-    ctx->log_msg_baton3 = message;
+    (*ctx)->auth_baton = ab;
+    (*ctx)->log_msg_baton3 = message;
     m_cancelOperation = false;
 
-    return ctx;
+    return SVN_NO_ERROR;
 }
 
 void
