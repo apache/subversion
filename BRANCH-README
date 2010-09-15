@@ -1,0 +1,62 @@
+This branch exists to experiment with a common bindings object model, 
+starting with implementing a C++ binding layer, and as described in
+notes/object-model.txt.  It is hoped that this layer will serve as a base
+for creating object-oriented bindings for other languages.
+
+Currently, this is a "pie in the sky" idea, though, so I'm putting this work
+on a branch, without any knowledge of how or when I'll continue working on it.
+
+ * Short-term tasks:
+   - Implement bindings for the following APIs in libsvn_client
+     (these were not chosen arbitrarily, they represent all the
+      non-deprecated APIs in the client library):
+     * svn_client_version()
+     * svn_client_checkout3()
+     * svn_client_update3()
+     * svn_client_switch2()
+     * svn_client_add4()
+     * svn_client_mkdir4()
+     * svn_client_delete4()
+     * svn_client_import4()
+     * svn_client_commit5()
+     * svn_client_status5()
+     * svn_client_log5()
+     * svn_client_blame5()
+     * svn_client_diff5()
+     * svn_client_diff_peg5()
+     * svn_client_diff_summarize2()
+     * svn_client_diff_summarize_peg2()
+     * svn_client_merge3()
+     * svn_client_merge_reintegrate()
+     * svn_client_merge_peg3()
+     * svn_client_suggest_merge_sources()
+     * svn_client_mergeinfo_get_merged()
+     * svn_client_mergeinfo_log()
+     * svn_client_mergeinfo_log_merged()
+     * svn_client_mergeinfo_log_eligible()
+     * svn_client_cleanup()
+     * svn_client_upgrade()
+     * svn_client_relocate()
+     * svn_client_revert2()
+     * svn_client_resolve()
+     * svn_client_copy6()
+     * svn_client_move6()
+     * svn_client_propset4()
+     * svn_client_propget3()
+     * svn_client_revprop_set2()
+     * svn_client_proplist3()
+     * svn_client_export5()
+     * svn_client_list2()
+     * svn_client_cat2()
+     * svn_client_add_to_changelist()
+     * svn_client_remove_from_changelists()
+     * svn_client_get_changelists()
+     * svn_client_lock()
+     * svn_client_unlock()
+     * svn_client_info2()
+     * svn_client_path()
+
+ * Long-term tasks:
+   - Documentation
+   - Wrap with swig
+   - Implement bindings for libraries other than libsvn_client
