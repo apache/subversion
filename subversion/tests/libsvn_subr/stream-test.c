@@ -128,7 +128,7 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
 
   for (total = 0, repeat = repeat_iter = 1, c = 0; total < num_bytes; total++)
     {
-      svn_stringbuf_appendbytes(buffer, &c, 1);
+      svn_stringbuf_appendbyte(buffer, c);
 
       repeat_iter--;
       if (repeat_iter == 0)

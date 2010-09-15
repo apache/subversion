@@ -389,6 +389,34 @@ svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
 
 
 void
+svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
+{
+  /* In most cases, there will be pre-allocated memory left
+   * to just write the new byte at the end of the used section
+   * and terminate the string properly.
+   */
+  apr_size_t old_len = str->len;
+  if (str->blocksize > old_len + 1)
+    {
+      char *dest = str->data;
+
+      dest[old_len] = byte;
+      dest[old_len+1] = '\0';
+
+      str->len = old_len+1;
+    }
+  else
+    {
+      /* we need to re-allocate the string buffer
+       * -> let the more generic implementation take care of that part
+       */
+      char b = byte;
+      svn_stringbuf_appendbytes(str, &b, 1);
+    }
+}
+
+
+void
 svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
                           apr_size_t count)
 {
