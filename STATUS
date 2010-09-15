@@ -275,17 +275,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r959760
-   Fix the FSFS lock deletion code to properly clean up lock information
-   instead of allowing stale lock data to remain indefinitely.
-   Justification:
-     Today, FSFS repositories that make use of user locks will consume
-     unnecessary disk space and incur unnecessary processing penalties
-     due to stale lock information (which is, thankfully, ignored as
-     irrelevant rather than escalated as an error condition).
-   Votes:
-     +1: cmpilato, jerenkrantz, hwright
-
  * r979045
    Teach mod_dav_svn to pass a base_checksum to libsvn_ra_neon's update
    editor. This enhances the early detection of broken working copies,
