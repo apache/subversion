@@ -1,0 +1,49 @@
+                           Subversion C++ bindings
+
+Introduction
+------------
+The Subversion C++ bindings are an attempt to hide some of the complexity of
+the underlying C libraries, while exposing functionality in an object-oriented
+manner.  They are intended to be consumed externally, as well as form the basis
+of creating an object-oriented model for other language wrappers (see
+notes/object-model.txt for details).
+
+
+Design Principles
+-----------------
+The bindings generally follow the same patterns as the libraries, but with
+some of the following paradigms:
+
+ * Don't require users to provide pools
+   - The C++ libraries manage pools internally, rather than require consumers
+     to do so.
+
+ * Implement abstract classes instead of provide a callback / baton pair
+
+ * Contextual information (such as svn_client_ctx_t) is stored in the client
+   object, rather than in a separate object.
+
+ * Creation, duplication, and other "object management" functions are
+   implemented as constructors, copy constructors and other "logical" ways.
+
+
+Tests
+-----
+These bindings have their own test suite.  The purpose of the test suite is
+*not* to test the functionality of Subversion, but rather to test the fidelity
+of the bindings themselves.  Please focus on that when writing tests for these
+bindings.  The tests are located in the test/ directory.
+
+
+A Word About Style
+------------------
+Styles are like noses: everybody has one, and they are all different.  Rather
+than try to reinvent a completely new C++ style, we've chosen to use a
+published style which has been thoroughly vetted.  Please don't take it
+personally.
+
+As much as possible, these bindings strive to follow the "Google C++ Style
+Guide", available here:
+http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml
+The exception is the in formatting of the code itself, which attempts to follow
+the standard Subversion style.
