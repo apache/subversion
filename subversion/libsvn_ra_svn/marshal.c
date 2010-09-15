@@ -832,6 +832,21 @@ svn_error_t *svn_ra_svn_parse_proplist(const apr_array_header_t *list,
 
 /* --- READING AND WRITING COMMANDS AND RESPONSES --- */
 
+svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err)
+{
+  svn_error_t *this_link;
+
+  SVN_ERR_ASSERT(err);
+
+  for (this_link = err;
+       this_link && (this_link->apr_err == SVN_ERR_RA_SVN_CMD_ERR);
+       this_link = this_link->child)
+    ;
+
+  SVN_ERR_ASSERT(this_link);
+  return this_link;
+}
+
 svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
                                                apr_pool_t *pool)
 {
@@ -956,7 +971,9 @@ svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
 
       if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
         {
-          write_err = svn_ra_svn_write_cmd_failure(conn, iterpool, err->child);
+          write_err = svn_ra_svn_write_cmd_failure(
+                          conn, iterpool,
+                          svn_ra_svn__locate_real_error_child(err));
           svn_error_clear(err);
           if (write_err)
             return write_err;
