@@ -134,17 +134,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r959760
-   Fix the FSFS lock deletion code to properly clean up lock information
-   instead of allowing stale lock data to remain indefinitely.
-   Justification:
-     Today, FSFS repositories that make use of user locks will consume
-     unnecessary disk space and incur unnecessary processing penalties
-     due to stale lock information (which is, thankfully, ignored as
-     irrelevant rather than escalated as an error condition).
-   Votes:
-     +1: cmpilato, jerenkrantz
-
  * r958024, r961055, r964167
    Fix issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo for
    merge target'.
@@ -159,46 +148,6 @@ Candidate changes:
      is a comment tweak to the new test.
    Votes:
      +1: pburba
-
- * r979045
-   Teach mod_dav_svn to pass a base_checksum to libsvn_ra_neon's update
-   editor. This enhances the early detection of broken working copies,
-   which is good for general stability.
-   Justification:
-     While this is technically a protocol change it is fully forward
-     and backwards compatible as it adds passing of an optional string.
-     Even if we don't add this to 1.6.x, 1.6.x will see the string when
-     connecting to newer servers and not parsing the value just makes
-     the working copy less stable. There are no API changes.
-
-     Trivial stability fix.
-   Branch:
-     ^/subversion/branches/1.6.x-r979045
-   Notes:
-     The mod_dav_svn change needs a small backport fix as the brigade
-     functions are not available in 1.6.
-   Votes:
-     +1: rhuijben, jerenkrantz
-
- * r981921
-   fsfs: make rev files read-only.
-   Justification:
-     They should never be changed.  Revprop edits are one suspected cause of
-     rev file corruption; this *may* (total guess) prevent the corruption.
-   Thread:
-     http://svn.haxx.se/dev/archive-2010-08/0060.shtml
-   Backport branch:
-     ^/subversion/branches/1.6.x-r981921
-   Votes:
-     +1: danielsh, jerenkrantz
-
- * r984928, r984931
-   Fix an URL canonicalization assertion seen in the wild (kde.org).
-   Notes:
-    r984928 is the main fix.
-    r984931 is an obvious fix (edits a comment).
-   Votes:
-     +1: danielsh, jerenkrantz
 
  * r879757, r880320, r943796
    Let ra_serf work with current serf releases.
@@ -216,6 +165,7 @@ Candidate changes:
 
  * r989658
    SVNPathAuthz short_circuit ignores the authz path rules with repo prefix.
+   This fixes issue 3695.
    Justification:
      Having broken authz is bad.
    Votes:
@@ -229,7 +179,7 @@ Candidate changes:
      This is a 1.6.x-only fix, trunk isn't affected.
      The branch is ^/subversion/branches/1.6.x-issue3700
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
 Veto-blocked changes:
 =====================
@@ -324,3 +274,54 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r959760
+   Fix the FSFS lock deletion code to properly clean up lock information
+   instead of allowing stale lock data to remain indefinitely.
+   Justification:
+     Today, FSFS repositories that make use of user locks will consume
+     unnecessary disk space and incur unnecessary processing penalties
+     due to stale lock information (which is, thankfully, ignored as
+     irrelevant rather than escalated as an error condition).
+   Votes:
+     +1: cmpilato, jerenkrantz, hwright
+
+ * r979045
+   Teach mod_dav_svn to pass a base_checksum to libsvn_ra_neon's update
+   editor. This enhances the early detection of broken working copies,
+   which is good for general stability.
+   Justification:
+     While this is technically a protocol change it is fully forward
+     and backwards compatible as it adds passing of an optional string.
+     Even if we don't add this to 1.6.x, 1.6.x will see the string when
+     connecting to newer servers and not parsing the value just makes
+     the working copy less stable. There are no API changes.
+
+     Trivial stability fix.
+   Branch:
+     ^/subversion/branches/1.6.x-r979045
+   Notes:
+     The mod_dav_svn change needs a small backport fix as the brigade
+     functions are not available in 1.6.
+   Votes:
+     +1: rhuijben, jerenkrantz, hwright
+
+ * r981921
+   fsfs: make rev files read-only.
+   Justification:
+     They should never be changed.  Revprop edits are one suspected cause of
+     rev file corruption; this *may* (total guess) prevent the corruption.
+   Thread:
+     http://svn.haxx.se/dev/archive-2010-08/0060.shtml
+   Backport branch:
+     ^/subversion/branches/1.6.x-r981921
+   Votes:
+     +1: danielsh, jerenkrantz, hwright
+
+ * r984928, r984931
+   Fix an URL canonicalization assertion seen in the wild (kde.org).
+   Notes:
+    r984928 is the main fix.
+    r984931 is an obvious fix (edits a comment).
+   Votes:
+     +1: danielsh, jerenkrantz, hwright
