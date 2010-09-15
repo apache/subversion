@@ -275,26 +275,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r979045
-   Teach mod_dav_svn to pass a base_checksum to libsvn_ra_neon's update
-   editor. This enhances the early detection of broken working copies,
-   which is good for general stability.
-   Justification:
-     While this is technically a protocol change it is fully forward
-     and backwards compatible as it adds passing of an optional string.
-     Even if we don't add this to 1.6.x, 1.6.x will see the string when
-     connecting to newer servers and not parsing the value just makes
-     the working copy less stable. There are no API changes.
-
-     Trivial stability fix.
-   Branch:
-     ^/subversion/branches/1.6.x-r979045
-   Notes:
-     The mod_dav_svn change needs a small backport fix as the brigade
-     functions are not available in 1.6.
-   Votes:
-     +1: rhuijben, jerenkrantz, hwright
-
  * r981921
    fsfs: make rev files read-only.
    Justification:
