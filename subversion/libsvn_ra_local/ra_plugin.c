@@ -115,12 +115,12 @@ get_username(svn_ra_session_t *session,
   if (*sess->username)
     {
       SVN_ERR(svn_fs_create_access(&access_ctx, sess->username,
-                                   pool));
+                                   session->pool));
       SVN_ERR(svn_fs_set_access(sess->fs, access_ctx));
 
       /* Make sure this context is disassociated when the pool gets
          destroyed. */
-      apr_pool_cleanup_register(pool, sess->fs, cleanup_access,
+      apr_pool_cleanup_register(session->pool, sess->fs, cleanup_access,
                                 apr_pool_cleanup_null);
     }
 
@@ -341,14 +341,16 @@ deltify_etc(const svn_commit_info_t *commit_info,
             void *baton, apr_pool_t *pool)
 {
   struct deltify_etc_baton *db = baton;
-  svn_error_t *err1, *err2;
+  svn_error_t *err1 = SVN_NO_ERROR;
+  svn_error_t *err2;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
   /* Invoke the original callback first, in case someone's waiting to
      know the revision number so they can go off and annotate an
      issue or something. */
-  err1 = (*db->callback)(commit_info, db->callback_baton, pool);
+  if (*db->callback)
+    err1 = (*db->callback)(commit_info, db->callback_baton, pool);
 
   /* Maybe unlock the paths. */
   if (db->lock_tokens)
@@ -435,6 +437,7 @@ ignore_warnings(void *baton,
 
 static svn_error_t *
 svn_ra_local__open(svn_ra_session_t *session,
+                   const char **corrected_url,
                    const char *repos_URL,
                    const svn_ra_callbacks2_t *callbacks,
                    void *callback_baton,
@@ -443,6 +446,10 @@ svn_ra_local__open(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess;
   const char *fs_path;
+
+  /* We don't support redirections in ra-local. */
+  if (corrected_url)
+    *corrected_url = NULL;
 
   /* Allocate and stash the session_sess args we have already. */
   sess = apr_pcalloc(pool, sizeof(*sess));
@@ -1323,6 +1330,7 @@ static svn_error_t *
 svn_ra_local__get_locks(svn_ra_session_t *session,
                         apr_hash_t **locks,
                         const char *path,
+                        svn_depth_t depth,
                         apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
@@ -1330,8 +1338,8 @@ svn_ra_local__get_locks(svn_ra_session_t *session,
 
   /* Kinda silly to call the repos wrapper, since we have no authz
      func to give it.  But heck, why not. */
-  return svn_repos_fs_get_locks(locks, sess->repos, abs_path,
-                                NULL, NULL, pool);
+  return svn_repos_fs_get_locks2(locks, sess->repos, abs_path, depth,
+                                 NULL, NULL, pool);
 }
 
 

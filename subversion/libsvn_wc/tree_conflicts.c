@@ -27,9 +27,6 @@
 #include "svn_pools.h"
 
 #include "tree_conflicts.h"
-#include "log.h"
-#include "entries.h"
-#include "lock.h"
 #include "wc.h"
 
 #include "private/svn_skel.h"
@@ -419,11 +416,6 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
 }
 
 
-/*
- * This function could be static, but we need to link to it
- * in a unit test in tests/libsvn_wc/, so it isn't.
- * (and we use it to serialize tree conflicts in log.c :( )
- */
 svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
                              apr_hash_t *conflicts,

@@ -376,7 +376,7 @@ typedef struct svn_diff_file_options_t
   /** Whether to treat all end-of-line markers the same when comparing lines.
    * The default is @c FALSE. */
   svn_boolean_t ignore_eol_style;
-  /** Whether the '@@' lines of the unified diff output should include a prefix
+  /** Whether the "@@" lines of the unified diff output should include a prefix
     * of the nearest preceding line that starts with a character that might be
     * the initial character of a C language identifier.  The default is
     * @c FALSE.
@@ -777,6 +777,7 @@ svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
  */
 typedef enum svn_diff_operation_kind_e
 {
+  svn_diff_op_unchanged,
   svn_diff_op_added,
   svn_diff_op_deleted,
   svn_diff_op_copied,
@@ -786,64 +787,173 @@ typedef enum svn_diff_operation_kind_e
 }svn_diff_operation_kind_t;
 
 /**
- * A single hunk inside a patch
+ * A single hunk inside a patch.
+ *
+ * The lines of text comprising the hunk can be interpreted in three ways:
+ *   - diff text       The hunk as it appears in the unidiff patch file,
+ *                     including the hunk header line ("@@ ... @@")
+ *   - original text   The text the patch was based on.
+ *   - modified text   The result of patching the original text.
+ *
+ * For example, consider a hunk with the following diff text:
+ *
+ * @verbatim
+     @@ -1,5 +1,5 @@
+      #include <stdio.h>
+      int main(int argc, char *argv[]) {
+     -        printf("Hello World!\n");
+     +        printf("I like Subversion!\n");
+      } @endverbatim
+ *
+ * The original text of this hunk is:
+ *
+ * @verbatim
+     #include <stdio.h>
+     int main(int argc, char *argv[]) {
+             printf("Hello World!\n");
+     } @endverbatim
+ *
+ * And the modified text is:
+ *
+ * @verbatim
+     #include <stdio.h>
+     int main(int argc, char *argv[]) {
+             printf("I like Subversion!\n");
+     } @endverbatim
+ *
+ * @see svn_diff_hunk_readline_diff_text()
+ * @see svn_diff_hunk_readline_original_text()
+ * @see svn_diff_hunk_readline_modified_text()
  *
  * @since New in 1.7. */
-typedef struct svn_hunk_t {
-  /** The hunk's unidiff text as it appeared in the patch file,
-   *  without range information. */
-  svn_stream_t *diff_text;
+typedef struct svn_diff_hunk_t svn_diff_hunk_t;
+
+/**
+ * Allocate @a *stringbuf in @a result_pool, and read into it one line
+ * of the diff text of @a hunk. The first line returned is the hunk header.
+ * Any subsequent lines are unidiff data (starting with '+', '-', or ' ').
+ * If the @a hunk is being interpreted in reverse (i.e. the reverse
+ * parameter of svn_diff_parse_next_patch() was @c TRUE), the diff
+ * text will be returned in reversed form.
+ * The line-terminator is detected automatically and stored in @a *eol
+ * if @a eol is not NULL.
+ * If EOF is reached and the stream does not end with a newline character,
+ * and @a eol is not NULL, @a *eol is set to NULL.
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
+                                 svn_stringbuf_t **stringbuf,
+                                 const char **eol,
+                                 svn_boolean_t *eof,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/**
+ * Allocate @a *stringbuf in @a result_pool, and read into it one line
+ * of the original text of @a hunk.
+ * The line-terminator is detected automatically and stored in @a *eol
+ * if @a eol is not NULL.
+ * If EOF is reached and the stream does not end with a newline character,
+ * and @a eol is not NULL, @a *eol is set to NULL.
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @see svn_diff_hunk_t
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
+                                     svn_stringbuf_t **stringbuf,
+                                     const char **eol,
+                                     svn_boolean_t *eof,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_diff_hunk_readline_original_text(), but it returns lines from
+ * the modified text of the hunk.
+ *
+ * @see svn_diff_hunk_t
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
+                                     svn_stringbuf_t **stringbuf,
+                                     const char **eol,
+                                     svn_boolean_t *eof,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+/** Reset the diff text of @a hunk so it can be read again from the start.
+ * @since New in 1.7. */
+svn_error_t *
+svn_diff_hunk_reset_diff_text(const svn_diff_hunk_t *hunk);
+
+/** Reset the original text of @a hunk so it can be read again from the start.
+ * @since New in 1.7. */
+svn_error_t *
+svn_diff_hunk_reset_original_text(const svn_diff_hunk_t *hunk);
+
+/** Reset the modified text of @a hunk so it can be read again from the start.
+ * @since New in 1.7. */
+svn_error_t *
+svn_diff_hunk_reset_modified_text(const svn_diff_hunk_t *hunk);
+
+/** Return the line offset of the original hunk text,
+ * as parsed from the hunk header.
+ * @since New in 1.7. */
+svn_linenum_t
+svn_diff_hunk_get_original_start(const svn_diff_hunk_t *hunk);
+
+/** Return the number of lines in the original @a hunk text,
+ * as parsed from the hunk header.
+ * @since New in 1.7. */
+svn_linenum_t
+svn_diff_hunk_get_original_length(const svn_diff_hunk_t *hunk);
+
+/** Return the line offset of the modified @a hunk text,
+ * as parsed from the hunk header.
+ * @since New in 1.7. */
+svn_linenum_t
+svn_diff_hunk_get_modified_start(const svn_diff_hunk_t *hunk);
+
+/** Return the number of lines in the modified @a hunk text,
+ * as parsed from the hunk header.
+ * @since New in 1.7. */
+svn_linenum_t
+svn_diff_hunk_get_modified_length(const svn_diff_hunk_t *hunk);
+
+/** Return the number of lines of leading context of @a hunk,
+ * i.e. the number of lines starting with ' ' before the first line
+ * that starts with a '+' or '-'.
+ * @since New in 1.7. */
+svn_linenum_t
+svn_diff_hunk_get_leading_context(const svn_diff_hunk_t *hunk);
+
+/** Return the number of lines of trailing context of @a hunk,
+ * i.e. the number of lines starting with ' ' after the last line
+ * that starts with a '+' or '-'.
+ * @since New in 1.7. */
+svn_linenum_t
+svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk);
+
+/**
+ * Data type to manage parsing of properties in patches.
+ * 
+ * @since New in 1.7. */
+typedef struct svn_prop_patch_t {
+  const char *name;
+
+  /** Represents the operation performed on the property */
+  svn_diff_operation_kind_t operation;
 
   /**
-   * The original and modified texts in the hunk range.
-   * Derived from the diff text.
-   *
-   * For example, consider a hunk such as:
-   *   @@ -1,5 +1,5 @@
-   *    #include <stdio.h>
-   *    int main(int argc, char *argv[])
-   *    {
-   *   -        printf("Hello World!\n");
-   *   +        printf("I like Subversion!\n");
-   *    }
-   *
-   * Then, the original text described by the hunk is:
-   *   #include <stdio.h>
-   *   int main(int argc, char *argv[])
-   *   {
-   *           printf("Hello World!\n");
-   *   }
-   *
-   * And the modified text described by the hunk is:
-   *   #include <stdio.h>
-   *   int main(int argc, char *argv[])
-   *   {
-   *           printf("I like Subversion!\n");
-   *   }
-   *
-   * Because these streams make use of line filtering and transformation,
-   * they should only be read line-by-line with svn_stream_readline().
-   * Reading them with svn_stream_read() will not yield the expected result,
-   * because it will return the unidiff text from the patch file unmodified.
-   * The streams support resetting.
-   */
-  svn_stream_t *original_text;
-  svn_stream_t *modified_text;
-
-  /**
-   * Hunk ranges as they appeared in the patch file.
-   * All numbers are lines, not bytes. */
-  svn_linenum_t original_start;
-  svn_linenum_t original_length;
-  svn_linenum_t modified_start;
-  svn_linenum_t modified_length;
-
-  /** Number of lines starting with ' ' before first '+' or '-'. */
-  svn_linenum_t leading_context;
-
-  /** Number of lines starting with ' ' after last '+' or '-'. */
-  svn_linenum_t trailing_context;
-} svn_hunk_t;
+   * An array containing an svn_diff_hunk_t object for each hunk parsed
+   * from the patch associated with our property name */
+  apr_array_header_t *hunks;
+} svn_prop_patch_t;
 
 /**
  * Data type to manage parsing of patches.
@@ -864,18 +974,22 @@ typedef struct svn_patch_t {
   const char *new_filename;
 
   /**
-   * An array containing an svn_hunk_t object for each hunk parsed
+   * An array containing an svn_diff_hunk_t object for each hunk parsed
    * from the patch. */
   apr_array_header_t *hunks;
 
   /**
-   * A hash table containing an array of svn_hunk_t object for each property
-   * parsed from the patch. The property names act as keys.  */
-  apr_hash_t *property_hunks;
+   * A hash table keyed by property names containing svn_prop_patch_t
+   * object for each property parsed from the patch. */
+  apr_hash_t *prop_patches;
 
   /**
    * Represents the operation performed on the file. */
   svn_diff_operation_kind_t operation;
+
+  /**
+   * Indicates whether the patch is being interpreted in reverse. */
+  svn_boolean_t reverse;
 } svn_patch_t;
 
 /**
@@ -898,11 +1012,12 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
 
 /**
  * Dispose of @a patch, closing any streams used by it.
+ * Use @a scratch_pool for all temporary allocations.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_close_patch(const svn_patch_t *patch);
+svn_diff_close_patch(const svn_patch_t *patch, apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

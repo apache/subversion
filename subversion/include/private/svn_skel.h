@@ -163,11 +163,11 @@ void svn_skel__prepend_str(const char *value,
                            apr_pool_t *result_pool);
 
 
-/* Parse SKEL as an integer. SCRATCH_POOL is used for temporary memory.
-   NOTE: this function assumes the input is valid -- there is no way to
-   return an error.  */
-apr_int64_t svn_skel__parse_int(const svn_skel_t *skel,
-                                apr_pool_t *scratch_pool);
+/* Parse SKEL as an integer and return the result in *N.
+ * SCRATCH_POOL is used for temporary memory.  */
+svn_error_t *
+svn_skel__parse_int(apr_int64_t *n, const svn_skel_t *skel,
+                    apr_pool_t *scratch_pool);
 
 
 /* Return a string whose contents are a concrete representation of

@@ -56,11 +56,20 @@ struct svn_wc__db_t {
   apr_pool_t *state_pool;
 };
 
+/* Hold information about an owned lock */
+typedef struct svn_wc__db_wclock_t
+{
+  /* Relative path of the lock root */
+  const char *local_relpath;
+  /* Number of levels locked (0 for infinity) */
+  int levels;
+} svn_wc__db_wclock_t;
+
 /** Hold information about a WCROOT.
  *
  * This structure is referenced by all per-directory handles underneath it.
  */
-typedef struct {
+typedef struct svn_wc__db_wcroot_t {
   /* Location of this wcroot in the filesystem.  */
   const char *abspath;
 
@@ -75,6 +84,10 @@ typedef struct {
      format has not (yet) been determined, this will be UNKNOWN_FORMAT.  */
   int format;
 
+  /* Array of svn_wc__db_wclock_t fields (not pointers!).
+     Typically just one or two locks maximum. */
+  apr_array_header_t *owned_locks;
+
 } svn_wc__db_wcroot_t;
 
 /**  Pristine Directory Handle
@@ -83,13 +96,6 @@ typedef struct {
  * a given working copy directory.
  */
 typedef struct svn_wc__db_pdh_t {
-  /* This (versioned) working copy directory is obstructing what *should*
-     be a file in the parent directory (according to its metadata).
-
-     Note: this PDH should probably be ignored (or not created).
-
-     ### obstruction is only possible with per-dir wc.db databases.  */
-  svn_boolean_t obstructed_file;
 
   /* The absolute path to this working copy directory. */
   const char *local_abspath;
@@ -99,9 +105,6 @@ typedef struct svn_wc__db_pdh_t {
 
   /* The parent directory's per-dir information. */
   struct svn_wc__db_pdh_t *parent;
-
-  /* Whether this process owns a write-lock on this directory. */
-  svn_boolean_t locked;
 
   /* Hold onto the old-style access baton that corresponds to this PDH.  */
   svn_wc_adm_access_t *adm_access;
@@ -160,6 +163,21 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
 const char *
 svn_wc__db_pdh_compute_relpath(const svn_wc__db_pdh_t *pdh,
                                apr_pool_t *result_pool);
+
+/* Gets or opens the PDH of the parent directory of CHILD_PDH.
+   (This function doesn't verify if the PDHs are related) */
+svn_error_t *
+svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
+                                  svn_wc__db_t *db,
+                                  svn_wc__db_pdh_t *child_pdh,
+                                  svn_sqlite__mode_t smode,
+                                  apr_pool_t *scratch_pool);
+
+/* Assert that the given PDH is usable.
+   NOTE: the expression is multiply-evaluated!!  */
+#define VERIFY_USABLE_PDH(pdh) SVN_ERR_ASSERT(  \
+    (pdh)->wcroot != NULL                       \
+    && (pdh)->wcroot->format == SVN_WC__VERSION)
 
 /* */
 svn_error_t *

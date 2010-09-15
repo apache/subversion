@@ -121,6 +121,7 @@ typedef struct report_baton_t {
   /* The common ancestor URL of all paths included in the report. */
   char *ancestor;
   void *set_locks_baton;
+  svn_depth_t depth;
   svn_client_ctx_t *ctx;
   /* Pool to store locks in. */
   apr_pool_t *pool;
@@ -161,14 +162,17 @@ reporter_link_path(void *report_baton, const char *path, const char *url,
   const char *ancestor;
   apr_size_t len;
 
-  ancestor = svn_dirent_get_longest_ancestor(url, rb->ancestor, pool);
+  ancestor = svn_uri_get_longest_ancestor(url, rb->ancestor, pool);
 
   /* If we got a shorter ancestor, truncate our current ancestor.
      Note that svn_dirent_get_longest_ancestor will allocate its return
      value even if it identical to one of its arguments. */
   len = strlen(ancestor);
   if (len < strlen(rb->ancestor))
-    rb->ancestor[len] = '\0';
+    {
+      rb->ancestor[len] = '\0';
+      rb->depth = svn_depth_infinity;
+    }
 
   return rb->wrapped_reporter->link_path(rb->wrapped_report_baton, path, url,
                                          revision, depth, start_empty,
@@ -188,14 +192,14 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
 
   /* Open an RA session to our common ancestor and grab the locks under it.
    */
-  SVN_ERR(svn_client__open_ra_session_internal(&ras, rb->ancestor, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ras, NULL, rb->ancestor, NULL,
                                                NULL, FALSE, TRUE,
                                                rb->ctx, subpool));
 
   /* The locks need to live throughout the edit.  Note that if the
      server doesn't support lock discovery, we'll just not do locky
      stuff. */
-  err = svn_ra_get_locks(ras, &locks, "", rb->pool);
+  err = svn_ra_get_locks2(ras, &locks, "", rb->depth, rb->pool);
   if (err && ((err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
               || (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)))
     {
@@ -249,6 +253,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
+                   svn_boolean_t depth_as_sticky,
                    const apr_array_header_t *changelists,
                    svn_client_status_func_t status_func,
                    void *status_baton,
@@ -390,7 +395,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                                     pool, pool));
 
       /* Open a repository session to the URL. */
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL,
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL,
                                                    dir_abspath,
                                                    NULL, FALSE, TRUE,
                                                    ctx, pool));
@@ -435,6 +440,7 @@ svn_client_status5(svn_revnum_t *result_rev,
         {
           svn_revnum_t revnum;
           report_baton_t rb;
+          svn_depth_t status_depth;
 
           if (revision->kind == svn_opt_revision_head)
             {
@@ -452,17 +458,27 @@ svn_client_status5(svn_revnum_t *result_rev,
                                                       pool));
             }
 
+          if (depth_as_sticky)
+            status_depth = depth;
+          else
+            status_depth = svn_depth_unknown; /* Use depth from WC */
+
           /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR(svn_ra_do_status2(ra_session, &rb.wrapped_reporter,
                                     &rb.wrapped_report_baton,
-                                    target_basename, revnum, depth, editor,
-                                    edit_baton, pool));
+                                    target_basename, revnum, status_depth,
+                                    editor, edit_baton, pool));
 
           /* Init the report baton. */
           rb.ancestor = apr_pstrdup(pool, URL); /* Edited later */
           rb.set_locks_baton = set_locks_baton;
           rb.ctx = ctx;
           rb.pool = pool;
+
+          if (depth == svn_depth_unknown)
+            rb.depth = svn_depth_infinity;
+          else
+            rb.depth = depth;
 
           SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                         SVN_RA_CAPABILITY_DEPTH, pool));
@@ -605,8 +621,8 @@ create_client_status(svn_client_status_t **cst,
   (*cst)->switched = status->switched;
 
   if (status->kind == svn_node_dir)
-    SVN_ERR(svn_wc__temp_get_wclocked(&(*cst)->locked, wc_ctx, local_abspath,
-                                      scratch_pool));
+    SVN_ERR(svn_wc_locked2(NULL, &(*cst)->locked, wc_ctx, local_abspath,
+                           scratch_pool));
 
   (*cst)->copied = status->copied;
   (*cst)->revision = status->revision;

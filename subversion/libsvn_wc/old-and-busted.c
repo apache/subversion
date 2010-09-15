@@ -164,7 +164,7 @@ read_str(const char **result,
             svn_stringbuf_appendbytes(s, start, *buf - start);
           (*buf)++;
           SVN_ERR(read_escaped(&c, buf, end));
-          svn_stringbuf_appendbytes(s, &c, 1);
+          svn_stringbuf_appendbyte(s, c);
           start = *buf;
         }
       else
@@ -1307,7 +1307,7 @@ svn_wc_entry(const svn_wc_entry_t **entry,
 
       const char *dir_abspath;
 
-      svn_dirent_split(local_abspath, &dir_abspath, &entry_name, pool);
+      svn_dirent_split(&dir_abspath, &entry_name, local_abspath, pool);
 
       dir_access = svn_wc__adm_retrieve_internal2(db, dir_abspath, pool);
     }

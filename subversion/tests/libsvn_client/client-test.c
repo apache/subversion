@@ -342,16 +342,8 @@ test_patch(const svn_test_opts_t *opts,
 
   /* Check out the HEAD revision */
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
-
-  if (cwd[0] == '/')
-    repos_url = apr_pstrcat(pool, "file://", cwd,
-                            "/test-patch-repos", NULL);
-  else
-    /* On Windows CWD is always in "X:/..." style */
-    repos_url = apr_pstrcat(pool, "file:///", cwd,
-                            "/test-patch-repos", NULL);
-
-  repos_url = svn_uri_canonicalize(repos_url, pool);
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-patch-repos",
+                                           pool));
 
   /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
      directly inside a 1.6 wc doesn't work reliably, an intervening
@@ -387,7 +379,7 @@ test_patch(const svn_test_opts_t *opts,
   pcb.patched_tempfiles = apr_hash_make(pool);
   pcb.reject_tempfiles = apr_hash_make(pool);
   pcb.state_pool = pool;
-  SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE,
+  SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE, FALSE,
                            FALSE, FALSE, patch_collection_func, &pcb,
                            ctx, pool, pool));
   SVN_ERR(svn_io_file_close(patch_file, pool));
@@ -408,6 +400,151 @@ test_patch(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_wc_add_scenarios(const svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *repos_url;
+  const char *wc_path;
+  svn_revnum_t committed_rev;
+  svn_client_ctx_t *ctx;
+  svn_opt_revision_t rev, peg_rev;
+  const char *new_dir_path;
+  const char *ex_file_path;
+  const char *ex_dir_path;
+  const char *ex2_dir_path;
+
+  /* Create a filesytem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-wc-add-repos",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-wc-add-repos",
+                                           pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
+
+  /* Remove old test data from the previous run */
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
+  svn_test_add_dir_cleanup(wc_path);
+
+  rev.kind = svn_opt_revision_head;
+  peg_rev.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+  /* Checkout greek tree as wc_path */
+  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path, &peg_rev, &rev,
+                               svn_depth_infinity, FALSE, FALSE, ctx, pool));
+
+  /* Now checkout again as wc_path/NEW */
+  new_dir_path = svn_dirent_join(wc_path, "NEW", pool);
+  SVN_ERR(svn_client_checkout3(NULL, repos_url, new_dir_path, &peg_rev, &rev,
+                               svn_depth_infinity, FALSE, FALSE,
+                               ctx, pool));
+
+  ex_dir_path = svn_dirent_join(wc_path, "NEW_add", pool);
+  ex2_dir_path = svn_dirent_join(wc_path, "NEW_add2", pool);
+  SVN_ERR(svn_io_dir_make(ex_dir_path, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_dir_make(ex2_dir_path, APR_OS_DEFAULT, pool));
+
+  SVN_ERR(svn_io_open_uniquely_named(NULL, &ex_file_path, wc_path, "new_file",
+                                     NULL, svn_io_file_del_none, pool, pool));
+
+  /* Now use an access baton to do some add operations like an old client
+     might do */
+  {
+    svn_wc_adm_access_t *adm_access, *adm2;
+    svn_boolean_t locked;
+
+    SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, wc_path, TRUE, -1, NULL, NULL,
+                             pool));
+
+    /* ### The above svn_wc_adm_open3 creates a new svn_wc__db_t
+       ### instance.  The svn_wc_add3 below doesn't work while the
+       ### original svn_wc__db_t created by svn_client_create_context
+       ### remains open.  Closing the wc-context gets around the
+       ### problem but is obviously a hack. */
+    SVN_ERR(svn_wc_context_destroy(ctx->wc_ctx));
+    SVN_ERR(svn_wc_context_create(&ctx->wc_ctx, NULL, pool, pool));
+
+    /* Fix up copy as add with history */
+    SVN_ERR(svn_wc_add3(new_dir_path, adm_access, svn_depth_infinity,
+                        repos_url, committed_rev, NULL, NULL, NULL, NULL,
+                        pool));
+
+    /* Verify if the paths are locked now */
+    SVN_ERR(svn_wc_locked(&locked, wc_path, pool));
+    SVN_TEST_ASSERT(locked && "wc_path locked");
+    SVN_ERR(svn_wc_locked(&locked, new_dir_path, pool));
+    SVN_TEST_ASSERT(locked && "new_path locked");
+
+    SVN_ERR(svn_wc_adm_retrieve(&adm2, adm_access, new_dir_path, pool));
+    SVN_TEST_ASSERT(adm2 != NULL && "available in set");
+
+    /* Add local (new) file */
+    SVN_ERR(svn_wc_add3(ex_file_path, adm_access, svn_depth_unknown, NULL,
+                        SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+
+    /* Add local (new) directory */
+    SVN_ERR(svn_wc_add3(ex_dir_path, adm_access, svn_depth_infinity, NULL,
+                        SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+
+    SVN_ERR(svn_wc_adm_retrieve(&adm2, adm_access, ex_dir_path, pool));
+    SVN_TEST_ASSERT(adm2 != NULL && "available in set");
+
+    /* Add empty directory with copy trail */
+    SVN_ERR(svn_wc_add3(ex2_dir_path, adm_access, svn_depth_infinity,
+                        repos_url, committed_rev, NULL, NULL, NULL, NULL,
+                        pool));
+
+    SVN_ERR(svn_wc_adm_retrieve(&adm2, adm_access, ex2_dir_path, pool));
+    SVN_TEST_ASSERT(adm2 != NULL && "available in set");
+
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+  }
+
+  /* Some simple status calls to verify that the paths are added */
+  {
+    svn_wc_status3_t *status;
+
+    SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, new_dir_path, pool, pool));
+
+    SVN_TEST_ASSERT(status->node_status == svn_wc_status_added
+                    && status->copied
+                    && !strcmp(status->repos_relpath, "NEW"));
+
+    SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, ex_file_path, pool, pool));
+
+    SVN_TEST_ASSERT(status->node_status == svn_wc_status_added
+                    && !status->copied);
+
+    SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, ex_dir_path, pool, pool));
+
+    SVN_TEST_ASSERT(status->node_status == svn_wc_status_added
+                    && !status->copied);
+
+    SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, ex2_dir_path, pool, pool));
+
+    SVN_TEST_ASSERT(status->node_status == svn_wc_status_added
+                    && status->copied);
+  }
+
+  /* ### Add a commit? */
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -418,5 +555,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_args_to_target_array,
                    "test svn_client_args_to_target_array"),
     SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
+    SVN_TEST_OPTS_PASS(test_wc_add_scenarios, "test svn_wc_add3 scenarios"),
     SVN_TEST_NULL
   };

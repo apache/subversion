@@ -49,15 +49,6 @@ extern "C" {
 */
 #undef SVN__SUPPORT_BASE_MERGE
 
-
-typedef enum svn_wc__props_kind_t
-{
-  svn_wc__props_base = 0,
-  svn_wc__props_revert,
-  svn_wc__props_working
-} svn_wc__props_kind_t;
-
-
 /* Internal function for diffing props. See svn_wc_get_prop_diffs2(). */
 svn_error_t *
 svn_wc__internal_propdiff(apr_array_header_t **propchanges,
@@ -148,27 +139,12 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
    changing the working file. */
 svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 
-
-/* Delete PROPS_KIND props for LOCAL_ABSPATH */
-svn_error_t *
-svn_wc__props_delete(svn_wc__db_t *db,
-                     const char *local_abspath,
-                     svn_wc__props_kind_t props_kind,
-                     apr_pool_t *pool);
-
 /* Set *MODIFIED_P TRUE if the props for LOCAL_ABSPATH have been modified. */
 svn_error_t *
 svn_wc__props_modified(svn_boolean_t *modified_p,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool);
-
-/* Install LOCAL_ABSPATHs working props as base props. */
-svn_error_t *
-svn_wc__working_props_committed(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool);
-
 
 /* Internal version of svn_wc_get_pristine_props().  */
 svn_error_t *
@@ -182,17 +158,6 @@ svn_wc__get_pristine_props(apr_hash_t **props,
 /* Internal version of svn_wc_prop_list2().  */
 svn_error_t *
 svn_wc__get_actual_props(apr_hash_t **props,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
-
-
-/* Load the revert props for ENTRY at PATH returning them in *REVERT_PROPS_P.
-   Returned hash/values are allocated in RESULT_POOL. All temporary
-   allocations are made in SCRATCH_POOL.  */
-svn_error_t *
-svn_wc__get_revert_props(apr_hash_t **revert_props_p,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

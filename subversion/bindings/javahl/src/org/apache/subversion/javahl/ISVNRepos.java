@@ -28,10 +28,21 @@ import java.io.OutputStream;
 import java.io.InputStream;
 import java.io.File;
 
-import org.apache.subversion.javahl.SVNAdmin.MessageReceiver;
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
 
-public interface ISVNAdmin {
+public interface ISVNRepos {
+
+	/**
+	 * interface to receive the messages
+	 */
+	public static interface MessageReceiver
+	{
+	    /**
+	     * receive one message line
+	     * @param message   one line of message
+	     */
+	    public void receiveMessageLine(String message);
+	}
 
 	/**
 	 * release the native peer (should not depend on finalize)
@@ -126,7 +137,6 @@ public interface ISVNAdmin {
 	 * load the data of a dump into a repository,
 	 * @param path              the path to the repository
 	 * @param dataInput         the data input source
-	 * @param messageOutput     the target for processing messages
 	 * @param ignoreUUID        ignore any UUID found in the input stream
 	 * @param forceUUID         set the repository UUID to any found in the
 	 *                          stream
@@ -134,6 +144,7 @@ public interface ISVNAdmin {
 	 * @param usePostCommitHook use the post-commit hook when processing commits
 	 * @param relativePath      the directory in the repository, where the data
 	 *                          in put optional.
+	 * @param callback          the target for processing messages
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.5
 	 */
@@ -206,10 +217,12 @@ public interface ISVNAdmin {
 	/**
 	 * list all locks in the repository
 	 * @param path              the path to the repository
+     * @param depth             the depth to recurse
 	 * @throws ClientException  throw in case of problem
-	 * @since 1.2
+	 * @since 1.7
 	 */
-	public abstract Set<Lock> lslocks(File path) throws ClientException;
+	public abstract Set<Lock> lslocks(File path, Depth depth)
+            throws ClientException;
 
 	/**
 	 * remove multiple locks from the repository

@@ -48,7 +48,6 @@ svn_cl__copy(apr_getopt_t *os,
   apr_array_header_t *targets, *sources;
   const char *src_path, *dst_path;
   svn_boolean_t srcs_are_urls, dst_is_url;
-  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
   int i;
 
@@ -90,9 +89,6 @@ svn_cl__copy(apr_getopt_t *os,
   if ((! srcs_are_urls) && (! dst_is_url))
     {
       /* WC->WC */
-      if (! opt_state->quiet)
-        SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                     FALSE, FALSE, FALSE, pool));
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
@@ -114,15 +110,18 @@ svn_cl__copy(apr_getopt_t *os,
             display like: "Adding   dir1/foo-copy.c", which could be a
             bogus path.
       */
+      ctx->notify_func2 = NULL;
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
       /* URL->WC : Use checkout-style notification. */
-      if (! opt_state->quiet)
-        SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                     TRUE, FALSE, FALSE, pool));
+      SVN_ERR(svn_cl__notifier_mark_checkout(ctx->notify_baton2));
     }
-  /* else URL -> URL, meaning that no notification is needed. */
+  else
+    {
+      /* URL -> URL, meaning that no notification is needed. */
+      ctx->notify_func2 = NULL;
+    }
 
   if (! dst_is_url)
     {
@@ -138,17 +137,16 @@ svn_cl__copy(apr_getopt_t *os,
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                        NULL, ctx->config, pool));
 
-  err = svn_client_copy5(&commit_info, sources, dst_path, TRUE,
+  err = svn_client_copy6(sources, dst_path, TRUE,
                          opt_state->parents, opt_state->ignore_externals,
-                         opt_state->revprop_table, ctx, pool);
+                         opt_state->revprop_table,
+                         svn_cl__print_commit_info, NULL,
+                         ctx, pool);
 
   if (ctx->log_msg_func3)
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
   else if (err)
     return svn_error_return(err);
-
-  if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 
   return SVN_NO_ERROR;
 }

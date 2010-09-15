@@ -152,7 +152,7 @@ svn_fs_bdb__lock_get(svn_lock_t **lock_p,
   if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
     {
       SVN_ERR(svn_fs_bdb__lock_delete(fs, lock_token, trail, pool));
-      return SVN_FS__ERR_LOCK_EXPIRED(fs, lock_token);
+      return SVN_FS__ERR_LOCK_EXPIRED(fs, lock_token, pool);
     }
 
   *lock_p = lock;
@@ -191,6 +191,7 @@ get_lock(svn_lock_t **lock_p,
 svn_error_t *
 svn_fs_bdb__locks_get(svn_fs_t *fs,
                       const char *path,
+                      svn_depth_t depth,
                       svn_fs_get_locks_callback_t get_locks_func,
                       void *get_locks_baton,
                       trail_t *trail,
@@ -225,9 +226,11 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
         SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
     }
 
+  /* If we're only looking at PATH itself (depth = empty), stop here. */
+  if (depth == svn_depth_empty)
+    return SVN_NO_ERROR;
+
   /* Now go hunt for possible children of PATH. */
-  if (strcmp(path, "/") != 0)
-    lookup_path = apr_pstrcat(pool, path, "/", NULL);
 
   svn_fs_base__trail_debug(trail, "lock-tokens", "cursor");
   db_err = bfd->lock_tokens->cursor(bfd->lock_tokens, trail->db_txn,
@@ -246,6 +249,8 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
 
   /* As long as the prefix of the returned KEY matches LOOKUP_PATH we
      know it is either LOOKUP_PATH or a decendant thereof.  */
+  if (strcmp(path, "/") != 0)
+    lookup_path = apr_pstrcat(pool, path, "/", NULL);
   while ((! db_err)
          && strncmp(lookup_path, key.data, strlen(lookup_path)) == 0)
     {
@@ -259,6 +264,18 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
       /* Create a usable path and token in temporary memory. */
       child_path = apr_pstrmemdup(subpool, key.data, key.size);
       lock_token = apr_pstrmemdup(subpool, value.data, value.size);
+
+      if ((depth == svn_depth_files) || (depth == svn_depth_immediates))
+        {
+          /* On the assumption that we only store locks for files,
+             depth=files and depth=immediates should boil down to the
+             same set of results.  So just see if CHILD_PATH is an
+             immediate child of PATH.  If not, we don't care about
+             this item.   */
+          const char *rel_uri = svn_uri_is_child(path, child_path, subpool);
+          if (!rel_uri || (svn_path_component_count(rel_uri) != 1))
+            goto loop_it;
+        }
 
       /* Get the lock for CHILD_PATH.  */
       err = get_lock(&lock, fs, child_path, lock_token, trail, subpool);
@@ -279,6 +296,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
             }
         }
 
+    loop_it:
       svn_fs_base__result_dbt(&key);
       svn_fs_base__result_dbt(&value);
       db_err = svn_bdb_dbc_get(cursor, &key, &value, DB_NEXT);

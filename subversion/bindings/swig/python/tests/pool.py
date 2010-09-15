@@ -219,7 +219,7 @@ class PoolTestCase(unittest.TestCase):
     svn_pool_destroy(svn_pool_create())
 
 def suite():
-  return unittest.makeSuite(PoolTestCase, 'test')
+  return unittest.defaultTestLoader.loadTestsFromTestCase(PoolTestCase)
 
 if __name__ == '__main__':
   runner = unittest.TextTestRunner()

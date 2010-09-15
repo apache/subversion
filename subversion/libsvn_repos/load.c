@@ -34,9 +34,11 @@
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
 #include "svn_subst.h"
+#include "svn_ctype.h"
 
 #include <apr_lib.h>
 
+#include "private/svn_dep_compat.h"
 #include "private/svn_mergeinfo_private.h"
 
 /*----------------------------------------------------------------------*/
@@ -280,11 +282,36 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                         apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_t *mergeinfo;
-  apr_hash_t *final_mergeinfo = apr_hash_make(subpool);
+  svn_mergeinfo_t mergeinfo, predates_stream_mergeinfo;
+  svn_mergeinfo_t final_mergeinfo = apr_hash_make(subpool);
   apr_hash_index_t *hi;
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
+
+  /* Issue #3020
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16
+     Remove mergeinfo older than the oldest revision in the dump stream
+     and adjust its revisions by the difference between the head rev of
+     the target repository and the current dump stream rev. */
+  if (rb->pb->oldest_old_rev > 1)
+    {
+      SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
+        &predates_stream_mergeinfo, mergeinfo,
+        rb->pb->oldest_old_rev - 1, 0,
+        TRUE, subpool, subpool));
+      SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
+        &mergeinfo, mergeinfo,
+        rb->pb->oldest_old_rev - 1, 0,
+        FALSE, subpool, subpool));
+      SVN_ERR(svn_mergeinfo__adjust_mergeinfo_rangelists(
+        &predates_stream_mergeinfo, predates_stream_mergeinfo,
+        -rb->rev_offset, subpool, subpool));
+    }
+  else
+    {
+      predates_stream_mergeinfo = NULL;
+    }
+
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source;
@@ -350,6 +377,11 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
       apr_hash_set(final_mergeinfo, merge_source,
                    APR_HASH_KEY_STRING, rangelist);
     }
+
+  if (predates_stream_mergeinfo)
+      SVN_ERR(svn_mergeinfo_merge(final_mergeinfo, predates_stream_mergeinfo,
+                                  subpool));
+
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
 
   /* Mergeinfo revision sources for r0 and r1 are invalid; you can't merge r0
@@ -419,9 +451,11 @@ parse_property_block(svn_stream_t *stream,
       else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
           char *keybuf;
+          apr_uint64_t len;
 
+          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX, 10));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
-                                  stream, atoi(buf + 2), proppool));
+                                  stream, (apr_size_t)len, proppool));
 
           /* Read a val length line */
           SVN_ERR(svn_stream_readline(stream, &strbuf, "\n", &eof, proppool));
@@ -435,8 +469,10 @@ parse_property_block(svn_stream_t *stream,
             {
               svn_string_t propstring;
               char *valbuf;
+              apr_int64_t val;
 
-              propstring.len = atoi(buf + 2);
+              SVN_ERR(svn_cstring_atoi64(&val, buf + 2));
+              propstring.len = (apr_size_t)val;
               SVN_ERR(read_key_or_val(&valbuf, actual_length,
                                       stream, propstring.len, proppool));
               propstring.data = valbuf;
@@ -493,9 +529,11 @@ parse_property_block(svn_stream_t *stream,
       else if ((buf[0] == 'D') && (buf[1] == ' '))
         {
           char *keybuf;
+          apr_uint64_t len;
 
+          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX, 10));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
-                                  stream, atoi(buf + 2), proppool));
+                                  stream, (apr_size_t)len, proppool));
 
           /* We don't expect these in revision properties, and if we see
              one when we don't have a delete_node_property callback,
@@ -612,7 +650,7 @@ parse_format_version(const char *versionstring, int *version)
     return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                             _("Malformed dumpfile header"));
 
-  value = atoi(p+1);
+  SVN_ERR(svn_cstring_atoi(&value, p + 1));
 
   if (value > SVN_REPOS_DUMPFILE_FORMAT_VERSION)
     return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
@@ -705,7 +743,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
             return stream_ran_dry();
         }
 
-      if ((linebuf->len == 0) || (apr_isspace(linebuf->data[0])))
+      if ((linebuf->len == 0) || (svn_ctype_isspace(linebuf->data[0])))
         continue; /* empty line ... loop */
 
       /*** Found the beginning of a new record. ***/
@@ -754,7 +792,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
                                      APR_HASH_KEY_STRING)))
         {
           /* ### someday, switch modes of operation here. */
-          version = atoi(value);
+          SVN_ERR(svn_cstring_atoi(&version, value));
         }
       /* Or is this bogosity?! */
       else
@@ -1059,6 +1097,10 @@ new_revision_record(void **revision_baton,
           pb->notify->old_revision = rb->rev;
           pb->notify_func(pb->notify_baton, pb->notify, rb->pool);
         }
+
+      /* Stash the oldest "old" revision committed from the load stream. */
+      if (!SVN_IS_VALID_REVNUM(pb->oldest_old_rev))
+        pb->oldest_old_rev = rb->rev;
     }
 
   /* If we're parsing revision 0, only the revision are (possibly)
@@ -1415,10 +1457,6 @@ close_revision(void *baton)
       else
         return svn_error_return(err);
     }
-
-  /* Stash the oldest "old" revision committed from the load stream. */
-  if (!SVN_IS_VALID_REVNUM(pb->oldest_old_rev))
-    pb->oldest_old_rev = *old_rev;
 
   /* Run post-commit hook, if so commanded.  */
   if (pb->use_post_commit_hook)

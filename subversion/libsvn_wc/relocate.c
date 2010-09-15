@@ -30,8 +30,6 @@
 #include "svn_path.h"
 
 #include "wc.h"
-#include "entries.h"
-#include "lock.h"
 #include "props.h"
 
 #include "svn_private_config.h"
@@ -120,7 +118,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
      and that only for DAV RA implementations that rely on the DAV
      cache. */
   SVN_ERR(svn_wc__db_global_relocate(wc_ctx->db, local_abspath, new_repos_root,
-                                     FALSE, scratch_pool));
+                                     scratch_pool));
 
   if (!recurse)
     {

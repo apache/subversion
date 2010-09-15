@@ -61,41 +61,7 @@ svn_wc__ensure_directory(const char *path,
   else if (kind == svn_node_none)
     {
       /* The dir doesn't exist, and it's our job to change that. */
-      svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
-
-      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          /* Tried to create the dir, and encountered some problem
-             other than non-existence of intermediate dirs.  We can't
-             ensure the desired directory's existence, so just return
-             the error. */
-          return err;
-        }
-      else if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        /* (redundant conditional and comment) */
-        {
-          /* Okay, so the problem is a missing intermediate
-             directory.  We don't know which one, so we recursively
-             back up one level and try again. */
-          const char *shorter = svn_dirent_dirname(path, pool);
-
-          /* Clear the error. */
-          svn_error_clear(err);
-
-          if (shorter[0] == '\0')
-            {
-              /* A weird and probably rare situation. */
-              return svn_error_create(0, NULL,
-                                      _("Unable to make any directories"));
-            }
-          else  /* We have a valid path, so recursively ensure it. */
-            {
-              SVN_ERR(svn_wc__ensure_directory(shorter, pool));
-              return svn_wc__ensure_directory(path, pool);
-            }
-        }
-
-      SVN_ERR(err);
+      SVN_ERR(svn_io_make_dir_recursively(path, pool));
     }
   else  /* No problem, the dir already existed, so just leave. */
     SVN_ERR_ASSERT(kind == svn_node_dir);
@@ -566,8 +532,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
     {
       svn_error_t *err;
       err= svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, FALSE,
-                             svn_node_unknown, FALSE, result_pool,
-                             scratch_pool);
+                             svn_node_unknown, result_pool, scratch_pool);
 
       if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
         svn_error_clear(err);
@@ -678,7 +643,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
       && old_status->conflicted
       && old_status->node_status != svn_wc_status_obstructed
       && (old_status->kind == svn_node_file 
-          || old_status->kind != svn_wc_status_missing))
+          || old_status->node_status != svn_wc_status_missing))
     {
       svn_boolean_t text_conflict_p, prop_conflict_p;
 

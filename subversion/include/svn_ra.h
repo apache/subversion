@@ -65,7 +65,7 @@ svn_ra_version(void);
  * @a close_baton as appropriate.
  *
  * @a path is relative to the "root" of the session, defined by the
- * @a repos_URL passed to svn_ra_open3() vtable call.
+ * @a repos_URL passed to svn_ra_open4() vtable call.
  *
  * @a name is the name of the property to fetch. If the property is present,
  * then it is returned in @a value. Otherwise, @a *value is set to @c NULL.
@@ -294,7 +294,7 @@ typedef struct svn_ra_reporter3_t
    * implementor should assume the directory has no entries or props.
    *
    * This will *override* any previous set_path() calls made on parent
-   * paths.  @a path is relative to the URL specified in svn_ra_open3().
+   * paths.  @a path is relative to the URL specified in svn_ra_open4().
    *
    * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
    *
@@ -445,7 +445,7 @@ typedef struct svn_ra_reporter_t
 /** A collection of callbacks implemented by libsvn_client which allows
  * an RA layer to "pull" information from the client application, or
  * possibly store information.  libsvn_client passes this vtable to
- * svn_ra_open3().
+ * svn_ra_open4().
  *
  * Each routine takes a @a callback_baton originally provided with the
  * vtable.
@@ -580,8 +580,19 @@ svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
 typedef struct svn_ra_session_t svn_ra_session_t;
 
 /**
- * Open a repository session to @a repos_URL.  Return an opaque object
- * representing this session in @a *session_p, allocated in @a pool.
+ * Open a repository access session to the repository at @a repos_URL,
+ * or inform the caller regarding a correct URL by which to access
+ * that repository.
+ *
+ * If @a repos_URL can be used successfully to access the repository,
+ * set @a *session_p to an opaque object representing a repository
+ * session for the repository and (if @a corrected_url is non-NULL)
+ * set @a *corrected_url to NULL.  If there's a better URL that the
+ * caller should try and @a corrected_url is non-NULL, set
+ * @a *session_p to NULL and @a *corrected_url to the corrected URL.  If
+ * there's a better URL that the caller should try, and @a
+ * corrected_url is NULL, return an #SVN_ERR_RA_SESSION_URL_MISMATCH
+ * error.  Allocate all returned items in @a pool.
  *
  * Return @c SVN_ERR_RA_UUID_MISMATCH if @a uuid is non-NULL and not equal
  * to the UUID of the repository at @c repos_URL.
@@ -598,8 +609,25 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @see svn_client_open_ra_session().
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_ra_open4(svn_ra_session_t **session_p,
+             const char **corrected_url,
+             const char *repos_URL,
+             const char *uuid,
+             const svn_ra_callbacks2_t *callbacks,
+             void *callback_baton,
+             apr_hash_t *config,
+             apr_pool_t *pool);
+
+/** Similar to svn_ra_open4(), but with @a corrected_url always passed
+ * as @c NULL.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_open3(svn_ra_session_t **session_p,
              const char *repos_URL,
@@ -777,8 +805,8 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  * or @c SVN_PROP_REVISION_AUTHOR.
  *
  * Before @c close_edit returns, but after the commit has succeeded,
- * it will invoke @a callback with the new revision number, the
- * commit date (as a <tt>const char *</tt>), commit author (as a
+ * it will invoke @a callback (if non-NULL) with the new revision number,
+ * the commit date (as a <tt>const char *</tt>), commit author (as a
  * <tt>const char *</tt>), and @a callback_baton as arguments.  If
  * @a callback returns an error, that error will be returned from @c
  * close_edit, otherwise @c close_edit will return successfully
@@ -1155,7 +1183,10 @@ svn_ra_do_switch(svn_ra_session_t *session,
  * represented by the @a session's URL, or empty if the entire directory
  * is meant to be examined.
  *
- * Get status only as deeply as @a depth indicates.
+ * Get status as deeply as @a depth indicates. If @a depth is
+ * #svn_depth_unknown, get the status down to the ambient depth of the
+ * working copy. If @a depth is deeper than the working copy, include changes
+ * that would be needed to populate the working copy to that depth.
  *
  * The caller may not perform any RA operations using @a session
  * before finishing the report, and may not perform any RA operations
@@ -1565,8 +1596,9 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * empty file.  In the following calls, the delta will be against the
  * fulltext contents for the previous call.
  *
- * If @a include_merged_revisions is TRUE, revisions which a included as a
- * result of a merge between @a start and @a end will be included.
+ * If @a include_merged_revisions is TRUE, revisions which are
+ * included as a result of a merge between @a start and @a end will be
+ * included.
  *
  * @note This functionality is not available in pre-1.1 servers.  If the
  * server doesn't implement it, an alternative (but much slower)
@@ -1689,6 +1721,11 @@ svn_ra_get_lock(svn_ra_session_t *session,
  * Set @a *locks to a hashtable which represents all locks on or
  * below @a path.
  *
+ * @a depth limits the returned locks to those associated with paths
+ * within the specified depth of @a path, and must be one of the
+ * following values:  #svn_depth_empty, #svn_depth_files,
+ * #svn_depth_immediates, or #svn_depth_infinity.
+ *
  * The hashtable maps (const char *) absolute fs paths to (const
  * svn_lock_t *) structures.  The hashtable -- and all keys and
  * values -- are allocated in @a pool.
@@ -1700,8 +1737,23 @@ svn_ra_get_lock(svn_ra_session_t *session,
  * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
  * returned.
  *
- * @since New in 1.2.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_ra_get_locks2(svn_ra_session_t *session,
+                  apr_hash_t **locks,
+                  const char *path,
+                  svn_depth_t depth,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_locks2(), but with @a depth always passed as
+ * #svn_depth_infinity.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_locks(svn_ra_session_t *session,
                  apr_hash_t **locks,

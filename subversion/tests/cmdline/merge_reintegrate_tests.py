@@ -171,7 +171,7 @@ def basic_reintegrate(sbox):
     'mu'           : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -208,7 +208,7 @@ def basic_reintegrate(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
 
   # Test issue #3640:
   # 
@@ -229,7 +229,7 @@ def basic_reintegrate(sbox):
     'mu'           : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_MOVED_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_MOVED_path, {
     })
@@ -267,7 +267,7 @@ def basic_reintegrate(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_MOVED_path)
 
 #----------------------------------------------------------------------
 def reintegrate_with_rename(sbox):
@@ -452,8 +452,8 @@ def reintegrate_with_rename(sbox):
     'D/G/tauprime' : Item(status='A '),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    ''             : Item(status=' G'),
-    'D/G/tauprime' : Item(status=' G'),
+    ''             : Item(status=' U'),
+    'D/G/tauprime' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -509,7 +509,7 @@ def reintegrate_with_rename(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
 
   # Finally, commit the result of the merge (r10).
   expected_output = wc.State(wc_dir, {
@@ -642,7 +642,7 @@ def reintegrate_branch_never_merged_to(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
 
   # Finally, commit the result of the merge (r9).
   expected_output = wc.State(wc_dir, {
@@ -670,7 +670,7 @@ def reintegrate_fail_on_modified_wc(sbox):
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
     ".*Cannot reintegrate into a working copy that has local modifications.*",
-    None, None, None, None, True, False, '--reintegrate')
+    None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
 def reintegrate_fail_on_mixed_rev_wc(sbox):
@@ -693,7 +693,7 @@ def reintegrate_fail_on_mixed_rev_wc(sbox):
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
     ".*Cannot reintegrate into mixed-revision working copy.*",
-    None, None, None, None, True, False, '--reintegrate')
+    None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
 def reintegrate_fail_on_switched_wc(sbox):
@@ -738,7 +738,7 @@ def reintegrate_fail_on_switched_wc(sbox):
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
     ".*Cannot reintegrate into a working copy with a switched subtree.*",
-    None, None, None, None, True, False, '--reintegrate')
+    None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3603 'allow reintegrate merges into WCs with
@@ -816,7 +816,7 @@ def reintegrate_on_shallow_wc(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
   # Now revert the reintegrate and make a second change on the
   # branch in r4, but this time change a subtree that corresponds
@@ -848,7 +848,7 @@ def reintegrate_on_shallow_wc(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
 def reintegrate_fail_on_stale_source(sbox):
@@ -925,7 +925,7 @@ def reintegrate_fail_on_stale_source(sbox):
                                        expected_status,
                                        expected_skip,
                                        [], None, None, None, None, True, True,
-                                       '--reintegrate')
+                                       '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
 def merge_file_with_space_in_its_path(sbox):
@@ -1114,9 +1114,9 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D'         : Item(status=' U'),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    ''   : Item(status=' G'),
+    ''   : Item(status=' U'),
     'mu' : Item(status=' G'),
-    'D'  : Item(status=' G'),
+    'D'  : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1176,7 +1176,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
   # Make some more changes to A_COPY so that the same revisions have *not*
   # been uniformly applied from A to A_COPY.  In this case the reintegrate
@@ -1350,9 +1350,9 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D/gamma_moved' : Item(status=' U'),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    ''              : Item(status=' G'),
+    ''              : Item(status=' U'),
     'mu'            : Item(status=' G'),
-    'D'             : Item(status=' G'),
+    'D'             : Item(status=' U'),
     'D/gamma_moved' : Item(status=' G'),
     })
   expected_elision_output = wc.State(A_path, {
@@ -1397,8 +1397,21 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     'D/G/pi'        : Item("This is the file 'pi'.\n"),
     'D/G/rho'       : Item("New content"),
     'D/G/tau'       : Item("This is the file 'tau'.\n"),
+    # Why do we expect mergeinfo of '/A_COPY/D/G/tauprime:2-9' on
+    # A/D/G/tauprime?  Because this --reintegrate merge is effectively a
+    # two URL merge of %URL%/A@9 %URL%/A_COPY@9 to 'A'.  Since %URL%/A@9 and
+    # %URL%/A_COPY@9 have a common ancestor in %URL%/A@1 we expect this 2-URL
+    # merge to record mergeinfo and a component of that mergeinfo describes
+    # the merge of %URL%/A_COPY@2 to %URL%/A_COPY@9.  We see that above on
+    # A.  But we also get it on A's subtrees with explicit mergeinfo, namely
+    # A/D/G/tauprime.  Now I know what you are thinking, "'A_COPY/D/G/tauprime'
+    # doesn't even exist until r9!", and you are quite right.  But this
+    # inheritance of bogus mergeinfo is a known problem, see
+    # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8,
+    # and is not what this test is about, so we won't fail because of it.
     'D/gamma_moved' : Item(
-      "Even newer content", props={SVN_PROP_MERGEINFO :
+      "Even newer content", props={SVN_PROP_MERGEINFO : 
+                                   '/A/D/gamma_moved:2-15\n'
                                    '/A_COPY/D/gamma_moved:2-19\n'
                                    '/A_COPY_3/D/gamma:9'}),
     'D/H'           : Item(),
@@ -1416,7 +1429,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
 def multiple_reintegrates_from_the_same_branch(sbox):
@@ -1514,7 +1527,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
     'B/E/beta' : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    '' : Item(status=' G'),
+    '' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })
@@ -1576,7 +1589,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 1, '--reintegrate')
+                                       None, 1, 1, '--reintegrate', A_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      "2nd Reintegrate feature branch back to 'A'",
                                      wc_dir)
@@ -1732,7 +1745,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0, '--reintegrate')
+                                       None, 1, 0, '--reintegrate', A2_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3577 '1.7 subtree mergeinfo recording breaks reintegrate'.
@@ -1863,7 +1876,7 @@ def reintegrate_with_subtree_merges(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
@@ -1983,7 +1996,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     'C/nu'     : Item(status=' U'),
     })
   expected_mergeinfo_output = wc.State(A_path, {
-    ''     : Item(status=' G'),
+    ''     : Item(status=' U'),
     'C/nu' : Item(status=' G'),
     })
   expected_elision_output = wc.State(A_path, {
@@ -2057,8 +2070,167 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 1, "--reintegrate")
+                                       None, 1, 1, "--reintegrate", A_path)
+
+#----------------------------------------------------------------------
+# Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo
+# for merge target'.
+def two_URL_merge_removes_valid_mergefino_from_target(sbox):
+  "2-URL merge removes valid mergefino from target"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  lambda_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "lambda")
+  mu_path          = os.path.join(wc_dir, "A", "mu")
+  A_COPY_path      = os.path.join(wc_dir, "A_COPY")
+  A_COPY_2_path    = os.path.join(wc_dir, "A_COPY_2")
   
+  # Branch A@1 to A_COPY r2
+  # Branch A@1 to A_COPY_2 in r3.
+  # Make some changes under 'A' in r4-7.
+  wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=2)
+
+  # r8 - A simple text edit on the A_COPY branch.
+  svntest.main.file_write(lambda_COPY_path, "Edit on 'branch 1'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', "Work on 'branch 1'.",
+                                     wc_dir)
+
+  # r9 - Sync the A_COPY branch with A up the HEAD (r8).  Now A_COPY
+  # differs from A only by the change made in r8 and by the mergeinfo
+  # '/A:2-8' on A_COPY which was set to describe the merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Sync A to A_COPY.',
+                                     wc_dir)
+
+  # r10 - A simple text edit on our "trunk" A.
+  svntest.main.file_write(mu_path, "Edit on 'trunk'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', "Work on 'trunk'",
+                                     wc_dir)
+
+  # r11 - Sync the A_COPY_2 branch with A up to HEAD (r10).
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'merge', sbox.repo_url + '/A',
+                                     A_COPY_2_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Sync A to A_COPY_2.',
+                                     wc_dir)
+
+  # Confirm that the mergeinfo on each branch is what we expect.
+  svntest.actions.run_and_verify_svn(None,
+                                     [A_COPY_path + ' - /A:2-8\n'],
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     '-R', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [A_COPY_2_path + ' - /A:3-10\n'],
+                                     [], 'pg', SVN_PROP_MERGEINFO,
+                                     '-R', A_COPY_2_path)
+
+  # Now say we want to apply the changes made on the first branch (A_COPY)
+  # to the second branch (A_COPY_2).  One way to do this is a 2-URL merge
+  # between A at the revision last synced to A_COPY and A_COPY_2 at HEAD (r11),
+  # i.e.:
+  #
+  #   svn merge ^/A@8 ^/A_COPY@11 A_COPY_2_WC
+  #
+  # Recall from the note on r9 that this diff is simply the one text change
+  # made on branch 1 and some mergeinfo:
+  # 
+  #   >svn diff ^/A@8 ^/A_COPY@11
+  #   Index: B/lambda
+  #   ===================================================================
+  #   --- B/lambda    (.../A) (revision 8)
+  #   +++ B/lambda    (.../A_COPY)    (revision 11)
+  #   @@ -1 +1 @@
+  #   -This is the file 'lambda'.
+  #   +Edit on 'branch 1'.
+  #
+  #   Property changes on: .
+  #   ___________________________________________________________________
+  #   Added: svn:mergeinfo
+  #      Merged /A:r2-8
+  #
+  # The mergeinfo diff is already represented in A_COPY_2's mergeinfo, so the
+  # result of the merge should be the text change to lambda and the addition
+  # of mergeinfo showing that the history of A_COPY is now part of A_COPY_2,
+  # i.e. '/A_COPY:2-11'
+  #
+  # Before issue #3648 was fixed this test failed because the valid mergeinfo
+  # '/A:r3-8' on A_COPY_2 was removed by the merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_COPY_2_path, {
+    ''         : Item(status=' G'),
+    'B/lambda' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_2_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_2_path, {
+    })
+  expected_status = wc.State(A_COPY_2_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='M '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=11)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO :
+                              '/A:3-10\n/A_COPY:2-11'}),
+    'B'         : Item(),
+    'mu'        : Item("Edit on 'trunk'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("Edit on 'branch 1'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, {})
+  svntest.actions.run_and_verify_merge(A_COPY_2_path, 8, 11,
+                                       sbox.repo_url + '/A',
+                                       sbox.repo_url + '/A_COPY',
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 1)
+
 ########################################################################
 # Run the tests
 
@@ -2082,6 +2254,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               reintegrate_with_self_referential_mergeinfo,
               added_subtrees_with_mergeinfo_break_reintegrate,
+              two_URL_merge_removes_valid_mergefino_from_target,
              ]
 
 if __name__ == '__main__':

@@ -23,16 +23,19 @@
 
 package org.apache.subversion.javahl.callback;
 
+import org.apache.subversion.javahl.ISVNClient;
+
 /**
  * This interface is invoked before each patch in a
- * SVNClientInterface.patch call.
+ * {@link ISVNClient#patch} call.
  */
 public interface PatchCallback
 {
     /**
-     * the method will be called for every line in a file.
-     * @param path        the path.
-     * @param properties  the properties on the path.
+     * the method will be called for every patch.
+     * @param pathFromPatchfile        the path in the path file
+     * @param patchPath                the path of the patch
+     * @param rejectPath               the path of the reject file
      * @return            return TRUE to filter out the prospective patch
      */
     public boolean singlePatch(String pathFromPatchfile, String patchPath,

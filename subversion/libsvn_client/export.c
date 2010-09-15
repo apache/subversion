@@ -326,11 +326,11 @@ copy_versioned_files(const char *from,
                                     from_abspath, pool));
       if (is_added)
         {
-          const char *copyfrom_url;
-          SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, NULL, NULL,
-                                                 ctx->wc_ctx, from_abspath,
-                                                 pool, pool));
-          if (! copyfrom_url)
+          const char *is_copied;
+          SVN_ERR(svn_wc__node_get_copyfrom_info(&is_copied, NULL, NULL,
+                                                 NULL, NULL, ctx->wc_ctx,
+                                                 from_abspath, pool, pool));
+          if (! is_copied)
             return SVN_NO_ERROR;
         }
     }
@@ -349,21 +349,26 @@ copy_versioned_files(const char *from,
 
   if (from_kind == svn_node_dir)
     {
+      apr_fileperms_t perm = APR_OS_DEFAULT;
+
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
          care. */
 
-      /* Skip retrieving the umask on windows. Apr does not implement setting
+      /* Keep the source directory's permissions if applicable.
+         Skip retrieving the umask on windows. Apr does not implement setting
          filesystem privileges on Windows.
          Retrieving the file permissions with APR_FINFO_PROT | APR_FINFO_OWNER
          is documented to be 'incredibly expensive' */
-#ifdef WIN32
-      err = svn_io_dir_make(to, APR_OS_DEFAULT, pool);
-#else
-      apr_finfo_t finfo;
-      SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
-      err = svn_io_dir_make(to, finfo.protection, pool);
+#ifndef WIN32
+      if (revision->kind == svn_opt_revision_working)
+        {
+          apr_finfo_t finfo;
+          SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
+          perm = finfo.protection;
+        }
 #endif
+      err = svn_io_dir_make(to, perm, pool);
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
@@ -708,7 +713,12 @@ add_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
   const char *full_path = svn_dirent_join(eb->root_path, path, pool);
-  const char *full_url = svn_uri_join(eb->root_url, path, pool);
+
+  /* PATH is not canonicalized, i.e. it may still contain spaces etc.
+   * but EB->root_url is. */
+  const char *full_url = svn_path_url_add_component2(eb->root_url,
+                                                     path,
+                                                     pool);
 
   fb->edit_baton = eb;
   fb->path = full_path;
@@ -937,6 +947,11 @@ svn_client_export5(svn_revnum_t *result_rev,
   SVN_ERR_ASSERT(peg_revision != NULL);
   SVN_ERR_ASSERT(revision != NULL);
 
+  if (svn_path_is_url(to))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                              _("'%s' is not a local path"),
+                                              to));
+    
   peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision, from);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 
@@ -1083,7 +1098,8 @@ svn_client_export5(svn_revnum_t *result_rev,
               SVN_ERR(svn_client__fetch_externals(eb->externals,
                                                   from, to_abspath,
                                                   repos_root_url, depth, TRUE,
-                                                  &use_sleep, ctx, pool));
+                                                  native_eol, &use_sleep,
+                                                  ctx, pool));
             }
         }
       else if (kind == svn_node_none)

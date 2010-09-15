@@ -50,11 +50,8 @@ struct svn_stream_t {
   svn_read_fn_t read_fn;
   svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
-  svn_io_reset_fn_t reset_fn;
   svn_io_mark_fn_t mark_fn;
   svn_io_seek_fn_t seek_fn;
-  svn_io_line_filter_cb_t line_filter_cb;
-  svn_io_line_transformer_cb_t line_transformer_cb;
 };
 
 
@@ -70,11 +67,8 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->read_fn = NULL;
   stream->write_fn = NULL;
   stream->close_fn = NULL;
-  stream->reset_fn = NULL;
   stream->mark_fn = NULL;
   stream->seek_fn = NULL;
-  stream->line_filter_cb = NULL;
-  stream->line_transformer_cb = NULL;
   return stream;
 }
 
@@ -106,12 +100,6 @@ svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
 }
 
 void
-svn_stream_set_reset(svn_stream_t *stream, svn_io_reset_fn_t reset_fn)
-{
-  stream->reset_fn = reset_fn;
-}
-
-void
 svn_stream_set_mark(svn_stream_t *stream, svn_io_mark_fn_t mark_fn)
 {
   stream->mark_fn = mark_fn;
@@ -121,21 +109,6 @@ void
 svn_stream_set_seek(svn_stream_t *stream, svn_io_seek_fn_t seek_fn)
 {
   stream->seek_fn = seek_fn;
-}
-
-void
-svn_stream_set_line_filter_callback(svn_stream_t *stream,
-                                    svn_io_line_filter_cb_t line_filter_cb)
-{
-  stream->line_filter_cb = line_filter_cb;
-}
-
-void
-svn_stream_set_line_transformer_callback(
-  svn_stream_t *stream,
-  svn_io_line_transformer_cb_t line_transformer_cb)
-{
-  stream->line_transformer_cb = line_transformer_cb;
 }
 
 svn_error_t *
@@ -157,10 +130,8 @@ svn_stream_write(svn_stream_t *stream, const char *data, apr_size_t *len)
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream)
 {
-  if (stream->reset_fn == NULL)
-    return svn_error_create(SVN_ERR_STREAM_RESET_NOT_SUPPORTED, NULL, NULL);
-
-  return stream->reset_fn(stream->baton);
+  return svn_error_return(
+            svn_stream_seek(stream, NULL));
 }
 
 svn_error_t *
@@ -233,45 +204,6 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   return svn_stream_write(stream, translated, &len);
 }
 
-/* If a line filter callback was set on STREAM, invoke it on LINE,
- * and indicate in *FILTERED whether the line should be filtered.
- * If no line filter callback was set on STREAM, just set *FILTERED to FALSE.
- */
-static svn_error_t *
-line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
-            apr_pool_t *pool)
-{
-  apr_pool_t *scratch_pool;
-
-  if (! stream->line_filter_cb)
-    {
-      *filtered = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  scratch_pool = svn_pool_create(pool);
-  SVN_ERR(stream->line_filter_cb(filtered, line, stream->baton, scratch_pool));
-  svn_pool_destroy(scratch_pool);
-  return SVN_NO_ERROR;
-}
-
-/* Run the line transformer callback of STREAM with LINE as input,
- * and expect the transformation result to be returned in BUF,
- * allocated in POOL. */
-static svn_error_t *
-line_transformer(svn_stream_t *stream, svn_stringbuf_t **buf,
-                 const char *line, apr_pool_t *pool, apr_pool_t *scratch_pool)
-{
-  *buf = NULL;  /* so we can assert that the callback has set it non-null */
-  SVN_ERR(stream->line_transformer_cb(buf, line, stream->baton,
-                                      pool, scratch_pool));
-
-  /* Die if the line transformer didn't provide any output. */
-  SVN_ERR_ASSERT(*buf);
-
-  return SVN_NO_ERROR;
-}
-
 /* Scan STREAM for an end-of-line indicatior, and return it in *EOL.
  * Set *EOL to NULL if the stream runs out before an end-of-line indicator
  * is found. */
@@ -318,84 +250,58 @@ stream_readline(svn_stringbuf_t **stringbuf,
                 apr_pool_t *pool)
 {
   svn_stringbuf_t *str;
-  apr_pool_t *iterpool;
-  svn_boolean_t filtered;
   const char *eol_str;
+  apr_size_t numbytes;
+  const char *match;
+  char c;
+
+  /* Since we're reading one character at a time, let's at least
+     optimize for the 90% case.  90% of the time, we can avoid the
+     stringbuf ever having to realloc() itself if we start it out at
+     80 chars.  */
+  str = svn_stringbuf_create_ensure(80, pool);
+
+  if (detect_eol)
+    {
+      SVN_ERR(scan_eol(&eol_str, stream, pool));
+      if (eol)
+        *eol = eol_str;
+      if (! eol_str)
+        {
+          /* No newline until EOF, EOL_STR can be anything. */
+          eol_str = APR_EOL_STR;
+        }
+    }
+  else
+    eol_str = *eol;
+
+  /* Read into STR up to and including the next EOL sequence. */
+  match = eol_str;
+  while (*match)
+    {
+      numbytes = 1;
+      SVN_ERR(svn_stream_read(stream, &c, &numbytes));
+      if (numbytes != 1)
+        {
+          /* a 'short' read means the stream has run out. */
+          *eof = TRUE;
+          if (detect_eol && eol)
+            *eol = NULL;
+          *stringbuf = str;
+          return SVN_NO_ERROR;
+        }
+
+      if (c == *match)
+        match++;
+      else
+        match = eol_str;
+
+      svn_stringbuf_appendbyte(str, c);
+    }
 
   *eof = FALSE;
-
-  iterpool = svn_pool_create(pool);
-  do
-    {
-      apr_size_t numbytes;
-      const char *match;
-      char c;
-
-      svn_pool_clear(iterpool);
-
-      /* Since we're reading one character at a time, let's at least
-         optimize for the 90% case.  90% of the time, we can avoid the
-         stringbuf ever having to realloc() itself if we start it out at
-         80 chars.  */
-      str = svn_stringbuf_create_ensure(80, iterpool);
-
-      if (detect_eol)
-        {
-          SVN_ERR(scan_eol(&eol_str, stream, iterpool));
-          if (eol)
-            *eol = eol_str;
-          if (! eol_str)
-            {
-              /* No newline until EOF, EOL_STR can be anything. */
-              eol_str = APR_EOL_STR;
-            }
-        }
-      else
-        eol_str = *eol;
-
-      /* Read into STR up to and including the next EOL sequence. */
-      match = eol_str;
-      numbytes = 1;
-      while (*match)
-        {
-          SVN_ERR(svn_stream_read(stream, &c, &numbytes));
-          if (numbytes != 1)
-            {
-              /* a 'short' read means the stream has run out. */
-              *eof = TRUE;
-              /* We know we don't have a whole EOL sequence, but ensure we
-               * don't chop off any partial EOL sequence that we may have. */
-              match = eol_str;
-              /* Process this short (or empty) line just like any other
-               * except with *EOF set. */
-              break;
-            }
-
-          if (c == *match)
-            match++;
-          else
-            match = eol_str;
-
-          svn_stringbuf_appendbytes(str, &c, 1);
-        }
-
-      svn_stringbuf_chop(str, match - eol_str);
-
-      SVN_ERR(line_filter(stream, &filtered, str->data, iterpool));
-    }
-  while (filtered && ! *eof);
-  /* Not destroying the iterpool just yet since we still need STR
-   * which is allocated in it. */
-
-  if (filtered)
-    *stringbuf = svn_stringbuf_create_ensure(0, pool);
-  else if (stream->line_transformer_cb)
-    SVN_ERR(line_transformer(stream, stringbuf, str->data, pool, iterpool));
-  else
-    *stringbuf = svn_stringbuf_dup(str, pool);
-
-  /* Done. RIP iterpool. */
-  svn_pool_destroy(iterpool);
+  svn_stringbuf_chop(str, match - eol_str);
+  *stringbuf = str;
 
   return SVN_NO_ERROR;
 }
@@ -519,14 +425,9 @@ write_handler_empty(void *baton, const char *data, apr_size_t *len)
 }
 
 static svn_error_t *
-reset_handler_empty(void *baton)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 mark_handler_empty(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
+  *mark = NULL; /* Seek to start of stream marker */
   return SVN_NO_ERROR;
 }
 
@@ -545,7 +446,6 @@ svn_stream_empty(apr_pool_t *pool)
   stream = svn_stream_create(NULL, pool);
   svn_stream_set_read(stream, read_handler_empty);
   svn_stream_set_write(stream, write_handler_empty);
-  svn_stream_set_reset(stream, reset_handler_empty);
   svn_stream_set_mark(stream, mark_handler_empty);
   svn_stream_set_seek(stream, seek_handler_empty);
   return stream;
@@ -625,12 +525,6 @@ write_handler_disown(void *baton, const char *buffer, apr_size_t *len)
 }
 
 static svn_error_t *
-reset_handler_disown(void *baton)
-{
-  return svn_stream_reset(baton);
-}
-
-static svn_error_t *
 mark_handler_disown(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
   return svn_stream_mark(baton, mark, pool);
@@ -649,7 +543,6 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
 
   svn_stream_set_read(s, read_handler_disown);
   svn_stream_set_write(s, write_handler_disown);
-  svn_stream_set_reset(s, reset_handler_disown);
   svn_stream_set_mark(s, mark_handler_disown);
   svn_stream_set_seek(s, seek_handler_disown);
 
@@ -707,19 +600,6 @@ close_handler_apr(void *baton)
 }
 
 static svn_error_t *
-reset_handler_apr(void *baton)
-{
-  apr_off_t offset;
-  struct baton_apr *btn = baton;
-
-  /* If we're reading from a range, reset to the start of the range.
-   * Otherwise, reset to the start of the file. */
-  offset = btn->start >= 0 ? btn->start : 0;
-
-  return svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool);
-}
-
-static svn_error_t *
 mark_handler_apr(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
   struct baton_apr *btn = baton;
@@ -736,10 +616,25 @@ static svn_error_t *
 seek_handler_apr(void *baton, svn_stream_mark_t *mark)
 {
   struct baton_apr *btn = baton;
-  struct mark_apr *mark_apr;
 
-  mark_apr = (struct mark_apr *)mark;
-  SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &mark_apr->off, btn->pool));
+  if (mark != NULL)
+    {
+      struct mark_apr *mark_apr;
+
+      mark_apr = (struct mark_apr *)mark;
+      SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &mark_apr->off, btn->pool));
+    }
+  else
+    {
+      apr_off_t offset;
+
+      /* If we're reading from a range, reset to the start of the range.
+       * Otherwise, reset to the start of the file. */
+      offset = btn->start >= 0 ? btn->start : 0;
+
+      SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -817,7 +712,6 @@ svn_stream_from_aprfile2(apr_file_t *file,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
-  svn_stream_set_reset(stream, reset_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
 
@@ -895,7 +789,6 @@ svn_stream_from_aprfile_range_readonly(apr_file_t *file,
   baton->end = end;
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_range_handler_apr);
-  svn_stream_set_reset(stream, reset_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
 
@@ -1424,20 +1317,13 @@ write_handler_stringbuf(void *baton, const char *data, apr_size_t *len)
 }
 
 static svn_error_t *
-reset_handler_stringbuf(void *baton)
-{
-  struct stringbuf_stream_baton *btn = baton;
-  btn->amt_read = 0;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 mark_handler_stringbuf(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
   struct stringbuf_stream_baton *btn;
   struct stringbuf_stream_mark *stringbuf_stream_mark;
 
   btn = baton;
+
   stringbuf_stream_mark = apr_palloc(pool, sizeof(*stringbuf_stream_mark));
   stringbuf_stream_mark->pos = btn->amt_read;
   *mark = (svn_stream_mark_t *)stringbuf_stream_mark;
@@ -1447,12 +1333,18 @@ mark_handler_stringbuf(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 static svn_error_t *
 seek_handler_stringbuf(void *baton, svn_stream_mark_t *mark)
 {
-  struct stringbuf_stream_baton *btn;
-  struct stringbuf_stream_mark *stringbuf_stream_mark;
+  struct stringbuf_stream_baton *btn = baton;
 
-  btn = baton;
-  stringbuf_stream_mark = (struct stringbuf_stream_mark *)mark;
-  btn->amt_read = stringbuf_stream_mark->pos;
+  if (mark != NULL)
+    {
+      struct stringbuf_stream_mark *stringbuf_stream_mark;
+
+      stringbuf_stream_mark = (struct stringbuf_stream_mark *)mark;
+      btn->amt_read = stringbuf_stream_mark->pos;
+    }
+  else
+    btn->amt_read = 0;
+
   return SVN_NO_ERROR;
 }
 
@@ -1472,7 +1364,6 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_stringbuf);
   svn_stream_set_write(stream, write_handler_stringbuf);
-  svn_stream_set_reset(stream, reset_handler_stringbuf);
   svn_stream_set_mark(stream, mark_handler_stringbuf);
   svn_stream_set_seek(stream, seek_handler_stringbuf);
   return stream;
@@ -1484,6 +1375,11 @@ struct string_stream_baton
   apr_size_t amt_read;
 };
 
+/* svn_stream_mark_t for streams backed by stringbufs. */
+struct string_stream_mark {
+    apr_size_t pos; 
+};
+
 static svn_error_t *
 read_handler_string(void *baton, char *buffer, apr_size_t *len)
 {
@@ -1493,6 +1389,38 @@ read_handler_string(void *baton, char *buffer, apr_size_t *len)
   *len = (*len > left_to_read) ? left_to_read : *len;
   memcpy(buffer, btn->str->data + btn->amt_read, *len);
   btn->amt_read += *len;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+mark_handler_string(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
+{
+  struct string_stream_baton *btn;
+  struct string_stream_mark *marker;
+
+  btn = baton;
+
+  marker = apr_palloc(pool, sizeof(*marker));
+  marker->pos = btn->amt_read;
+  *mark = (svn_stream_mark_t *)marker;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+seek_handler_string(void *baton, svn_stream_mark_t *mark)
+{
+  struct string_stream_baton *btn = baton;
+
+  if (mark != NULL)
+    {
+      struct string_stream_mark *marker;
+
+      marker = (struct string_stream_mark *)mark;
+      btn->amt_read = marker->pos;
+    }
+  else
+    btn->amt_read = 0;
+
   return SVN_NO_ERROR;
 }
 
@@ -1511,6 +1439,8 @@ svn_stream_from_string(const svn_string_t *str,
   baton->amt_read = 0;
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_string);
+  svn_stream_set_mark(stream, mark_handler_string);
+  svn_stream_set_seek(stream, seek_handler_string);
   return stream;
 }
 

@@ -53,18 +53,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/**
-   ### @todo  Multiple Targets
-    - Up for debate:  an update on multiple targets is *not* atomic.
-    Right now, svn_client_update only takes one path.  What's
-    debatable is whether this should ever change.  On the one hand,
-    it's kind of losing to have the client application loop over
-    targets and call svn_client_update() on each one;  each call to
-    update initializes a whole new repository session (network
-    overhead, etc.)  On the other hand, it's a very simple
-    implementation, and allows for the possibility that different
-    targets may come from different repositories.  */
-
 
 /**
  * Get libsvn_client version information.
@@ -469,12 +457,6 @@ typedef struct svn_client_commit_item3_t
    * same lifetime as this data structure.
    */
   apr_array_header_t *outgoing_prop_changes;
-
-  /** adm_access of this item
-   *
-   * @since New in 1.7.
-   * ### This will be obsoleted by WC-NG. */
-  svn_wc_adm_access_t *adm_access;
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.
@@ -804,7 +786,8 @@ typedef struct svn_client_diff_summarize_t
   /** Change kind */
   svn_client_diff_summarize_kind_t summarize_kind;
 
-  /** Properties changed? */
+  /** Properties changed?  For consistency with 'svn status' output,
+   * this should be false if summarize_kind is _added or _deleted. */
   svn_boolean_t prop_changed;
 
   /** File or dir */
@@ -1206,6 +1189,17 @@ svn_client_checkout(svn_revnum_t *result_rev,
  *
  * Use @a pool for any temporary allocation.
  *
+ *  @todo  Multiple Targets
+ *  - Up for debate:  an update on multiple targets is *not* atomic.
+ *  Right now, svn_client_update only takes one path.  What's
+ *  debatable is whether this should ever change.  On the one hand,
+ *  it's kind of losing to have the client application loop over
+ *  targets and call svn_client_update() on each one;  each call to
+ *  update initializes a whole new repository session (network
+ *  overhead, etc.)  On the other hand, it's a very simple
+ *  implementation, and allows for the possibility that different
+ *  targets may come from different repositories.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -1456,8 +1450,7 @@ svn_client_add(const char *path,
  *
  * If @a paths contains URLs, use the authentication baton in @a ctx
  * and @a message to immediately attempt to commit the creation of the
- * directories in @a paths in the repository.  If the commit succeeds,
- * allocate (in @a pool) and populate @a *commit_info_p.
+ * directories in @a paths in the repository.
  *
  * Else, create the directories on disk, and attempt to schedule them
  * for addition (using svn_client_add(), whose docstring you should
@@ -1481,8 +1474,29 @@ svn_client_add(const char *path,
  * @a ctx->notify_baton2 and the path of the new directory.  Note that this is
  * only called for items added to the working copy.
  *
- * @since New in 1.5.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_mkdir4(const apr_array_header_t *paths,
+                  svn_boolean_t make_parents,
+                  const apr_hash_t *revprop_table,
+                  svn_commit_callback2_t commit_callback,
+                  void *commit_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_mkdir4(), but returns the @a commit_info_p directly,
+ * rather than through @a commit_callback.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mkdir3(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
@@ -1532,9 +1546,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * If the paths in @a paths are URLs, use the authentication baton in
  * @a ctx and @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to
  * immediately attempt to commit a deletion of the URLs from the
- * repository.  If the commit succeeds, allocate (in @a pool) and
- * populate @a *commit_info_p.  Every path must belong to the same
- * repository.
+ * repository.  Every path must belong to the same repository.
  *
  * Else, schedule the working copy paths in @a paths for removal from
  * the repository.  Each path's parent must be under revision control.
@@ -1567,8 +1579,30 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the deleted
  * item.
  *
- * @since New in 1.5.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_delete4(const apr_array_header_t *paths,
+                   svn_boolean_t force,
+                   svn_boolean_t keep_local,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_delete4(), but returns the @a commit_info_p directly,
+ * rather than through @a commit_callback.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_delete3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
@@ -1618,8 +1652,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
 /** Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx,
  * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message
- * for the (implied) commit.  Set @a *commit_info_p to the results of the
- * commit, allocated in @a pool.  If some components of @a url do not exist
+ * for the (implied) commit.  If some components of @a url do not exist
  * then create parent directories as necessary.
  *
  * This function reads an unversioned tree from disk and skips any ".svn"
@@ -1671,8 +1704,32 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
- * @since New in 1.5.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_import4(const char *path,
+                   const char *url,
+                   svn_depth_t depth,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_import4(), but returns the @a commit_info_p directly,
+ * rather than through @a commit_callback.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_import3(svn_commit_info_t **commit_info_p,
                    const char *path,
@@ -1773,12 +1830,36 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Use @a pool for any temporary allocations.
  *
- * If no error is returned and @a (*commit_info_p)->revision is set to
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_commit5(const apr_array_header_t *targets,
+                   svn_depth_t depth,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelists,
+                   const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_commit5(), but returns the @a commit_info_p directly,
+ * rather than through @a commit_callback.
+ *
+ * Also, if no error is returned and @a (*commit_info_p)->revision is set to
  * #SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
@@ -2057,6 +2138,10 @@ typedef svn_error_t *(*svn_client_status_func_t)(
  * definition, and with #svn_wc_notify_status_completed
  * after each.
  *
+ * If @a depth_as_sticky is set and @a depth is not
+ * #svn_depth_unknown, then the status is calculated as if depth_is_sticky
+ * was passed to an equivalent update command.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose statuses are
  * reported; that is, don't report status about any item unless
@@ -2077,6 +2162,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
+                   svn_boolean_t depth_as_sticky,
                    const apr_array_header_t *changelists,
                    svn_client_status_func_t status_func,
                    void *status_baton,
@@ -2084,7 +2170,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
 /**
  * Same as svn_client_status5(), but using #svn_wc_status_func3_t
- * instead of #svn_wc_status_func4_t.
+ * instead of #svn_wc_status_func4_t and depth_as_sticky set to TRUE.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -2212,9 +2298,6 @@ svn_client_status(svn_revnum_t *result_rev,
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
- *
- * If @a start->kind or @a end->kind is #svn_opt_revision_unspecified,
- * return the error #SVN_ERR_CLIENT_BAD_REVISION.
  *
  * Use @a pool for any temporary allocation.
  *
@@ -2524,6 +2607,10 @@ svn_client_blame(const char *path_or_url,
  * against their copyfrom source, and will appear in the diff output
  * in their entirety, as if they were newly added.
  *
+ * If @a use_git_diff_format is TRUE, then the git's extended diff format
+ * will be used.
+ * ### Do we need to say more about the format? A reference perhaps?
+ *
  * Generated headers are encoded using @a header_encoding.
  *
  * Diff output will not be generated for binary files, unless @a
@@ -2568,6 +2655,7 @@ svn_client_diff5(const apr_array_header_t *diff_options,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t use_git_diff_format,
                  const char *header_encoding,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
@@ -2577,10 +2665,9 @@ svn_client_diff5(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff5(), but with @a show_copies_as_adds set to
- * @c FALSE.
+ * @c FALSE and @a use_git_diff_format set to @c FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
- *
  * @since New in 1.5.
  */
 SVN_DEPRECATED
@@ -2609,7 +2696,6 @@ svn_client_diff4(const apr_array_header_t *diff_options,
  * FALSE, set @a depth to #svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
- *
  * @since New in 1.3.
  */
 SVN_DEPRECATED
@@ -2635,7 +2721,6 @@ svn_client_diff3(const apr_array_header_t *diff_options,
  * @c APR_LOCALE_CHARSET.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
- *
  * @since New in 1.2.
  */
 SVN_DEPRECATED
@@ -2701,6 +2786,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t use_git_diff_format,
                      const char *header_encoding,
                      apr_file_t *outfile,
                      apr_file_t *errfile,
@@ -2710,7 +2796,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff_peg5(), but with @a show_copies_as_adds set to
- * @c FALSE.
+ * @c FALSE and @a use_git_diff_format set to @c FALSE.
  *
  * @since New in 1.5.
  */
@@ -2740,7 +2826,6 @@ svn_client_diff_peg4(const apr_array_header_t *diff_options,
  * FALSE, set @a depth to #svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
- *
  * @since New in 1.3.
  */
 SVN_DEPRECATED
@@ -2765,7 +2850,6 @@ svn_client_diff_peg3(const apr_array_header_t *diff_options,
  * @c APR_LOCALE_CHARSET.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
- *
  * @since New in 1.2.
  */
 SVN_DEPRECATED
@@ -3424,7 +3508,8 @@ svn_client_revert(const apr_array_header_t *paths,
  * resolution support.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
- * Use svn_client_resolve() instead.
+ * Use svn_client_resolve() with @a conflict_choice == @c
+ * svn_wc_conflict_choose_merged instead.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3528,10 +3613,7 @@ typedef struct svn_client_copy_source_t
  *
  * If @a dst_path is a URL, use the authentication baton
  * in @a ctx and @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to immediately
- * attempt to commit the copy action in the repository.  If the commit
- * succeeds, allocate (in @a pool) and populate @a *commit_info_p.  If
- * @a dst_path is not a URL, and the copy succeeds, set @a
- * *commit_info_p to @c NULL.
+ * attempt to commit the copy action in the repository.
  *
  * If @a dst_path is not a URL, then this is just a variant of
  * svn_client_add(), where the @a sources are scheduled for addition
@@ -3558,8 +3640,32 @@ typedef struct svn_client_copy_source_t
  * for each item added at the new location, passing the new, relative path of
  * the added item.
  *
- * @since New in 1.6.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_copy6(const apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
+                 const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_copy6(), but returns the @a commit_info_p directly,
+ * rather than through @a commit_callback.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy5(svn_commit_info_t **commit_info_p,
                  const apr_array_header_t *sources,
@@ -3667,8 +3773,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *   - The authentication baton in @a ctx and @a ctx->log_msg_func/@a
  *     ctx->log_msg_baton are used to commit the move.
  *
- *   - The move operation will be immediately committed.  If the
- *     commit succeeds, allocate (in @a pool) and populate @a *commit_info_p.
+ *   - The move operation will be immediately committed.
  *
  * If @a src_paths are working copy paths:
  *
@@ -3686,8 +3791,6 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *   - If one of @a src_paths contains locally modified and/or unversioned
  *     items and @a force is not set, the move will fail. If @a force is set
  *     such items will be removed.
- *
- *   - If the move succeeds, set @a *commit_info_p to @c NULL.
  *
  * The parent of @a dst_path must already exist.
  *
@@ -3726,8 +3829,32 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *
  * ### Is this really true?  What about svn_wc_notify_commit_replaced()? ###
  *
- * @since New in 1.5.
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_move6(const apr_array_header_t *src_paths,
+                 const char *dst_path,
+                 svn_boolean_t force,
+                 svn_boolean_t move_as_child,
+                 svn_boolean_t make_parents,
+                 const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_move6(), but returns the @a commit_info_p directly,
+ * rather than through @a commit_callback.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move5(svn_commit_info_t **commit_info_p,
                  const apr_array_header_t *src_paths,
@@ -3846,8 +3973,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * supported on URLs.  The authentication baton in @a ctx and @a
  * ctx->log_msg_func3/@a ctx->log_msg_baton3 will be used to
  * immediately attempt to commit the property change in the
- * repository.  If the commit succeeds, allocate (in @a pool) and
- * populate @a *commit_info_p.
+ * repository.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * #SVN_PROP_PREFIX), then the caller is responsible for ensuring that
@@ -3875,10 +4001,36 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
+ * If @a commit_callback is non-NULL, then for each successful commit, call
+ * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
+ * the commit.
+ *
  * Use @a pool for all memory allocation.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_client_propset4(const char *propname,
+                    const svn_string_t *propval,
+                    const char *target,
+                    svn_depth_t depth,
+                    svn_boolean_t skip_checks,
+                    svn_revnum_t base_revision_for_url,
+                    const apr_array_header_t *changelists,
+                    const apr_hash_t *revprop_table,
+                    svn_commit_callback2_t commit_callback,
+                    void *commit_baton, 
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_propset4(), but returns the @a commit_info_p directly,
+ * rather than through @a commit_callback.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propset3(svn_commit_info_t **commit_info_p,
                     const char *propname,
@@ -3891,7 +4043,6 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
-
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
  * always #SVN_INVALID_REVNUM; @a commit_info_p always @c NULL; @a
@@ -5072,6 +5223,15 @@ typedef svn_error_t *(*svn_client_patch_func_t)(
  * stripped from paths obtained from the patch. It is an error if a
  * negative strip count is passed.
  *
+ * If @a old_patch_target_names is @c TRUE, use target names from the old
+ * side of the patch, rather than using target names from the new side of
+ * the patch. For instance, if a unidiff header contains
+ *   --- foo.c
+ *   +++ foo.c.new
+ * and @a old_patch_target_names is @c TRUE, the name "foo.c" will be used
+ * for the target, and if @a old_patch_target_names is @c FALSE, the target
+ * name "foo.c.new" will be used.
+ *
  * If @a reverse is @c TRUE, apply patches in reverse, deleting lines
  * the patch would add and adding lines the patch would delete.
  * This is useful when applying a unidiff which was created with the
@@ -5103,6 +5263,7 @@ svn_client_patch(const char *patch_abspath,
                  const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
+                 svn_boolean_t old_patch_target_names,
                  svn_boolean_t reverse,
                  svn_boolean_t ignore_whitespace,
                  svn_boolean_t remove_tempfiles,

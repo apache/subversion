@@ -34,6 +34,7 @@ import fnmatch
 import re
 import subprocess
 import glob
+import string
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
@@ -79,6 +80,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.libintl_path = None
     self.zlib_path = 'zlib'
     self.openssl_path = None
+    self.jdk_path = None
     self.junit_path = None
     self.swig_path = None
     self.vs_version = '2002'
@@ -126,6 +128,8 @@ class GeneratorBase(gen_base.GeneratorBase):
       elif opt == '--with-libintl':
         self.libintl_path = val
         self.enable_nls = 1
+      elif opt == '--with-jdk':
+        self.jdk_path = val
       elif opt == '--with-junit':
         self.junit_path = val
       elif opt == '--with-zlib':
@@ -833,6 +837,11 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
 
+    # Expect rb_errinfo() to be avilable in Ruby 1.9+,
+    # rather than ruby_errinfo.
+    if (self.ruby_major_version > 1 or self.ruby_minor_version > 8):
+      fakedefines.extend(["HAVE_RB_ERRINFO"])
+
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
     elif cfg == 'Release':
@@ -1207,19 +1216,31 @@ class WinGeneratorBase(GeneratorBase):
     "Find the right Ruby library name to link swig bindings with"
     self.ruby_includes = []
     self.ruby_libdir = None
+    self.ruby_version = None
+    self.ruby_major_version = None
+    self.ruby_minor_version = None
     proc = os.popen('ruby -rrbconfig -e ' + escape_shell_arg(
+                    "puts Config::CONFIG['ruby_version'];"
                     "puts Config::CONFIG['LIBRUBY'];"
                     "puts Config::CONFIG['archdir'];"
                     "puts Config::CONFIG['libdir'];"), 'r')
     try:
-      libruby = proc.readline()[:-1]
-      if libruby:
-        msg = 'Found installed ruby.'
-        self.ruby_lib = libruby
-        self.ruby_includes.append(proc.readline()[:-1])
-        self.ruby_libdir = proc.readline()[:-1]
+      rubyver = proc.readline()[:-1]
+      if rubyver:
+        self.ruby_version = rubyver
+        self.ruby_major_version = string.atoi(self.ruby_version[0])
+        self.ruby_minor_version = string.atoi(self.ruby_version[2])
+        libruby = proc.readline()[:-1]
+        if libruby:
+          msg = 'Found installed ruby %s' % rubyver
+          self.ruby_lib = libruby
+          self.ruby_includes.append(proc.readline()[:-1])
+          self.ruby_libdir = proc.readline()[:-1]
       else:
-        msg = 'Could not detect Ruby version.'
+        msg = 'Could not detect Ruby version, assuming 1.8.'
+        self.ruby_version = "1.8"
+        self.ruby_major_version = 1
+        self.ruby_minor_version = 8
         self.ruby_lib = 'msvcrt-ruby18.lib'
       print('%s\n  Ruby bindings will be linked with %s\n'
              % (msg, self.ruby_lib))
@@ -1242,39 +1263,41 @@ class WinGeneratorBase(GeneratorBase):
       pass
 
   def _find_jdk(self):
-    self.jdk_path = None
-    jdk_ver = None
-    try:
+    if not self.jdk_path:
+      jdk_ver = None
       try:
-        # Python >=3.0
-        import winreg
-      except ImportError:
-        # Python <3.0
-        import _winreg as winreg
-      key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+        try:
+          # Python >=3.0
+          import winreg
+        except ImportError:
+          # Python <3.0
+          import _winreg as winreg
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
                            r"SOFTWARE\JavaSoft\Java Development Kit")
-      # Find the newest JDK version.
-      num_values = winreg.QueryInfoKey(key)[1]
-      for i in range(num_values):
-        (name, value, key_type) = winreg.EnumValue(key, i)
-        if name == "CurrentVersion":
-          jdk_ver = value
-          break
-
-      # Find the JDK path.
-      if jdk_ver is not None:
-        key = winreg.OpenKey(key, jdk_ver)
+        # Find the newest JDK version.
         num_values = winreg.QueryInfoKey(key)[1]
         for i in range(num_values):
           (name, value, key_type) = winreg.EnumValue(key, i)
-          if name == "JavaHome":
-            self.jdk_path = value
+          if name == "CurrentVersion":
+            jdk_ver = value
             break
-      winreg.CloseKey(key)
-    except (ImportError, EnvironmentError):
-      pass
-    if self.jdk_path:
-      print("Found JDK version %s in %s\n" % (jdk_ver, self.jdk_path))
+
+        # Find the JDK path.
+        if jdk_ver is not None:
+          key = winreg.OpenKey(key, jdk_ver)
+          num_values = winreg.QueryInfoKey(key)[1]
+          for i in range(num_values):
+            (name, value, key_type) = winreg.EnumValue(key, i)
+            if name == "JavaHome":
+              self.jdk_path = value
+              break
+        winreg.CloseKey(key)
+      except (ImportError, EnvironmentError):
+        pass
+      if self.jdk_path:
+        print("Found JDK version %s in %s\n" % (jdk_ver, self.jdk_path))
+    else:
+      print("Using JDK in %s\n" % (self.jdk_path))
 
   def _find_swig(self):
     # Require 1.3.24. If not found, assume 1.3.25.

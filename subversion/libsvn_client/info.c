@@ -87,20 +87,25 @@ build_info_for_entry(svn_info_t **info,
                      const char *local_abspath,
                      apr_pool_t *pool)
 {
-  svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  svn_info_t *tmpinfo;
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;
   svn_boolean_t is_copy_target;
-  const svn_wc_entry_t *entry;
   const char *lock_token, *lock_owner, *lock_comment;
   apr_time_t lock_date;
   const svn_checksum_t *checksum;
+  svn_node_kind_t kind;
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, TRUE, FALSE,
-                                      pool, pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, pool));
 
-  SVN_ERR(svn_wc_read_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE, pool));
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath, pool));
+
+  tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  tmpinfo->kind = kind;
+
   SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
                                pool, pool));
 
@@ -131,7 +136,8 @@ build_info_for_entry(svn_info_t **info,
   if (! SVN_IS_VALID_REVNUM(tmpinfo->rev))
     tmpinfo->rev = 0;
 
-  SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
+  SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
+                                         &copyfrom_url, &copyfrom_rev,
                                          &is_copy_target, wc_ctx,
                                          local_abspath, pool, pool));
   if (is_copy_target)
@@ -158,14 +164,19 @@ build_info_for_entry(svn_info_t **info,
   if (tmpinfo->depth == svn_depth_unknown)
     tmpinfo->depth = svn_depth_infinity;
 
-  /* entry-specific stuff */
+  SVN_ERR(svn_wc__node_get_schedule(&tmpinfo->schedule, NULL,
+                                    wc_ctx, local_abspath, pool));
+
+  /* Some random stuffs we don't have wc-ng apis for yet */
+  SVN_ERR(svn_wc__node_get_info_bits(&tmpinfo->text_time,
+                                     &tmpinfo->conflict_old,
+                                     &tmpinfo->conflict_new,
+                                     &tmpinfo->conflict_wrk,
+                                     &tmpinfo->prejfile,
+                                     wc_ctx, local_abspath, pool, pool));
+
+  /* Some defaults */
   tmpinfo->has_wc_info          = TRUE;
-  tmpinfo->schedule             = entry->schedule;
-  tmpinfo->text_time            = entry->text_time;
-  tmpinfo->conflict_old         = entry->conflict_old;
-  tmpinfo->conflict_new         = entry->conflict_new;
-  tmpinfo->conflict_wrk         = entry->conflict_wrk;
-  tmpinfo->prejfile             = entry->prejfile;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size64               = SVN_INVALID_FILESIZE;
 
@@ -324,49 +335,40 @@ info_found_node_callback(const char *local_abspath,
                          apr_pool_t *pool)
 {
   struct found_entry_baton *fe_baton = walk_baton;
+  svn_info_t *info = NULL;
+  const svn_wc_conflict_description2_t *tree_conflict = NULL;
+  svn_error_t *err;
 
-  if (svn_wc__changelist_match(fe_baton->wc_ctx, local_abspath,
-                               fe_baton->changelist_hash, pool))
+  if (! svn_wc__changelist_match(fe_baton->wc_ctx, local_abspath,
+                                 fe_baton->changelist_hash, pool))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
+                                    local_abspath, pool, pool));
+
+  err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
+                             pool);
+  if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      && tree_conflict)
     {
-      svn_info_t *info;
-      const svn_wc_conflict_description2_t *tmp_conflict;
-      svn_error_t *err;
+      svn_error_clear(err);
 
-      err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
-                                 pool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          /* Check for a tree conflict, and if there is one, send a minimal
-             info struct. */
-          const svn_wc_conflict_description2_t *tree_conflict;
-
-          SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
-                                            local_abspath, pool, pool));
-
-          if (tree_conflict)
-            {
-              svn_error_clear(err);
-
-              SVN_ERR(build_info_for_unversioned(&info, pool));
-              SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
-                                                  NULL,
-                                                  fe_baton->wc_ctx,
-                                                  local_abspath, FALSE, FALSE,
-                                                  pool, pool));
-            }
-          else
-            return svn_error_return(err);
-        }
-      else if (err)
-        return svn_error_return(err);
-
-      SVN_ERR(svn_wc__get_tree_conflict(&tmp_conflict, fe_baton->wc_ctx,
-                                        local_abspath, pool, pool));
-      if (tmp_conflict)
-        info->tree_conflict = svn_wc__cd2_to_cd(tmp_conflict, pool);
-      SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, local_abspath,
-                                 info, pool));
+      SVN_ERR(build_info_for_unversioned(&info, pool));
+      SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
+                                          NULL,
+                                          fe_baton->wc_ctx,
+                                          local_abspath, FALSE, FALSE,
+                                          pool, pool));
     }
+  else if (err)
+    return svn_error_return(err);
+
+  SVN_ERR_ASSERT(info != NULL);
+
+  if (tree_conflict)
+    info->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
+  SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, local_abspath,
+                             info, pool));
   return SVN_NO_ERROR;
 }
 
@@ -498,6 +500,9 @@ svn_client_info3(const char *abspath_or_url,
   svn_info_t *info;
   svn_error_t *err;
 
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_empty;
+
   if ((revision == NULL
        || revision->kind == svn_opt_revision_unspecified)
       && (peg_revision == NULL
@@ -527,7 +532,7 @@ svn_client_info3(const char *abspath_or_url,
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_URL, pool));
   SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_UUID, pool));
 
-  svn_uri_split(url, &parent_url, &base_name, pool);
+  svn_uri_split(&parent_url, &base_name, url, pool);
   base_name = svn_path_uri_decode(base_name, pool);
 
   /* Get the dirent for the URL itself. */
@@ -565,7 +570,7 @@ svn_client_info3(const char *abspath_or_url,
                                  url, rev);
 
       /* Open a new RA session to the item's parent. */
-      SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session,
+      SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session, NULL,
                                                    parent_url, NULL,
                                                    NULL, FALSE, TRUE,
                                                    ctx, pool));
@@ -629,7 +634,8 @@ svn_client_info3(const char *abspath_or_url,
 pre_1_2_recurse:
       if (peg_revision->kind == svn_opt_revision_head)
         {
-          err = svn_ra_get_locks(ra_session, &locks, "", pool);
+          err = svn_ra_get_locks2(ra_session, &locks, "", depth,
+                                  pool);
 
           /* Catch specific errors thrown by old mod_dav_svn or svnserve. */
           if (err &&

@@ -125,6 +125,9 @@ extern "C" {
 /* The minimum format number that supports packed revprop shards. */
 #define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 5
 
+/* The minimum format number that supports a configuration file (fsfs.conf) */
+#define SVN_FS_FS__MIN_CONFIG_FILE 4
+
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are

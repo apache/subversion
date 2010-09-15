@@ -27,8 +27,9 @@ import org.apache.subversion.javahl.callback.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -47,7 +48,7 @@ class SVNTests extends TestCase
      * our admin object, mostly used for creating,dumping and loading
      * repositories
      */
-    protected ISVNAdmin admin;
+    protected ISVNRepos admin;
 
     /**
      * the subversion client, what we want to test.
@@ -201,11 +202,11 @@ class SVNTests extends TestCase
         if (this.fsType == null)
         {
             this.fsType =
-                System.getProperty("test.fstype", ISVNAdmin.FSFS).toLowerCase();
-            if (!(ISVNAdmin.FSFS.equals(this.fsType) ||
-                  ISVNAdmin.BDB.equals(this.fsType)))
+                System.getProperty("test.fstype", ISVNRepos.FSFS).toLowerCase();
+            if (!(ISVNRepos.FSFS.equals(this.fsType) ||
+                  ISVNRepos.BDB.equals(this.fsType)))
             {
-                this.fsType = ISVNAdmin.FSFS;
+                this.fsType = ISVNRepos.FSFS;
             }
         }
 
@@ -226,7 +227,7 @@ class SVNTests extends TestCase
         createDirectories();
 
         // create and configure the needed subversion objects
-        admin = new SVNAdmin();
+        admin = new SVNRepos();
         initClient();
 
         // build and dump the sample repository
@@ -236,8 +237,10 @@ class SVNTests extends TestCase
         admin.create(greekRepos, true,false, null, this.fsType);
         addExpectedCommitItem(greekFiles.getAbsolutePath(), null, null,
                               NodeKind.none, CommitItemStateFlags.Add);
-        client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
-                        null, Depth.infinity, false, false, null);
+        client.doImport(greekFiles.getAbsolutePath(),
+                       makeReposUrl(greekRepos).toString(),
+                        Depth.infinity, false, false, null, 
+                        new MyCommitMessage(), null);
         admin.dump(greekRepos, new FileOutputStream(greekDump),
                    null, null, false, false, null);
     }
@@ -271,13 +274,74 @@ class SVNTests extends TestCase
     {
         this.client = new SVNClient();
         this.client.notification2(new MyNotifier());
-        this.client.commitMessageHandler(new MyCommitMessage());
+        this.client.setPrompt(new DefaultPromptUserPassword());
         this.client.username("jrandom");
-        this.client.password("rayjandom");
+        this.client.setProgressCallback(new DefaultProgressListener());
         this.client.setConfigDirectory(this.conf.getAbsolutePath());
         this.expectedCommitItems = new HashMap<String, MyCommitItem>();
     }
+    /**
+     * the default prompt : never prompts the user, provides defaults answers
+     */
+    private static class DefaultPromptUserPassword implements UserPasswordCallback
+    {
 
+        public int askTrustSSLServer(String info, boolean allowPermanently) 
+        {
+            return UserPasswordCallback.AcceptTemporary;
+        }
+
+        public String askQuestion(String realm, String question, boolean showAnswer)
+        {
+            return "";
+        }
+
+        public boolean askYesNo(String realm, String question, boolean yesIsDefault)
+        {
+            return yesIsDefault;
+        }
+
+        public String getPassword()
+        {
+            return "rayjandom";
+        }
+
+        public String getUsername()
+        {
+            return "jrandom";
+        }
+
+        public boolean prompt(String realm, String username)
+        {
+            return false;
+        }
+
+        public boolean prompt(String realm, String username, boolean maySave)
+        {
+            return false;
+        }
+
+        public String askQuestion(String realm, String question,
+                boolean showAnswer, boolean maySave) 
+        {
+            return "";
+        }
+
+        public boolean userAllowedSave() 
+        {
+            return false;
+        }
+    }
+
+    private static class DefaultProgressListener implements ProgressCallback 
+    {
+
+        public void onProgress(ProgressEvent event) 
+        {
+            // Do nothing, just receive the event
+        }
+        
+    }
     /**
      * build a sample directory with test files to be used as import for
      * the sample repository. Create also the master working copy test set.
@@ -356,14 +420,22 @@ class SVNTests extends TestCase
      * Create the url for the repository to be used for the tests.
      * @param file  the directory of the repository
      * @return the URL for the repository
+     * @throws SubversionException 
      */
-    protected String makeReposUrl(File file)
+    protected URI makeReposUrl(File file) throws SubversionException
     {
-        // split the common part of the root directory
-        String path = file.getAbsolutePath()
-            .substring(this.rootDir.getAbsolutePath().length() + 1);
-        // append to the root url
-        return rootUrl + path.replace(File.separatorChar, '/');
+       try
+       {
+            // split the common part of the root directory
+            String path = file.getAbsolutePath()
+                 .substring(this.rootDir.getAbsolutePath().length() + 1);
+            // append to the root url
+            return new URI(rootUrl + path.replace(File.separatorChar, '/'));
+       }
+       catch (URISyntaxException ex)
+       {
+           throw new SubversionException(ex.getMessage());
+       }
     }
 
     /**
@@ -445,7 +517,7 @@ class SVNTests extends TestCase
         /**
          * the url of the repository (used by SVNClient)
          */
-        protected String url;
+        protected URI url;
 
         /**
          * the expected layout of the working copy after the next subversion
@@ -598,7 +670,7 @@ class SVNTests extends TestCase
          * Returns the url of repository
          * @return  the url
          */
-        public String getUrl()
+        public URI getUrl()
         {
             return url;
         }
@@ -657,12 +729,12 @@ class SVNTests extends TestCase
             throws SubversionException, IOException
         {
             // build a clean working directory
-            String uri = makeReposUrl(repos);
+            URI uri = makeReposUrl(repos);
             workingCopy = new File(workingCopies, this.testName);
             removeDirOrFile(workingCopy);
             // checkout the repository
-            client.checkout(uri, workingCopy.getAbsolutePath(), null, null,
-                    Depth.infinity, false, false);
+            client.checkout(uri.toString(), workingCopy.getAbsolutePath(),
+                   null, null, Depth.infinity, false, false);
             // sanity check the working with its expected status
             checkStatus();
             return workingCopy;
@@ -717,7 +789,7 @@ class SVNTests extends TestCase
      * internal class to receive the request for the log messages to check if
      * the expected commit items are presented
      */
-    class MyCommitMessage implements CommitMessage
+    class MyCommitMessage implements CommitMessageCallback
     {
         /**
          * Retrieve a commit message from the user based on the items

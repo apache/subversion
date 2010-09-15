@@ -20,16 +20,17 @@
  * ====================================================================
  * @endcopyright
  *
- * @file org_apache_subversion_javahl_SVNAdmin.cpp
- * @brief Implementation of the native methods in the Java class SVNAdmin
+ * @file org_apache_subversion_javahl_SVNRepos.cpp
+ * @brief Implementation of the native methods in the Java class SVNRepos
  */
 
-#include "../include/org_apache_subversion_javahl_SVNAdmin.h"
+#include "../include/org_apache_subversion_javahl_SVNRepos.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"
 #include "JNIByteArray.h"
-#include "SVNAdmin.h"
+#include "SVNRepos.h"
+#include "EnumMapper.h"
 #include "Revision.h"
 #include "InputStream.h"
 #include "OutputStream.h"
@@ -40,45 +41,45 @@
 #include "svn_private_config.h"
 
 JNIEXPORT jlong JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_ctNative
+Java_org_apache_subversion_javahl_SVNRepos_ctNative
 (JNIEnv *env, jobject jthis)
 {
-  JNIEntry(SVNAdmin, ctNative);
-  SVNAdmin *obj = new SVNAdmin;
+  JNIEntry(SVNRepos, ctNative);
+  SVNRepos *obj = new SVNRepos;
   return obj->getCppAddr();
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_dispose
+Java_org_apache_subversion_javahl_SVNRepos_dispose
 (JNIEnv *env, jobject jthis)
 {
-  JNIEntry(SVNAdmin, dispose);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, dispose);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  cl->dispose(jthis);
+  cl->dispose();
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_finalize
+Java_org_apache_subversion_javahl_SVNRepos_finalize
 (JNIEnv *env, jobject jthis)
 {
-  JNIEntry(SVNAdmin, finalize);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, finalize);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl != NULL)
     cl->finalize();
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_create
+Java_org_apache_subversion_javahl_SVNRepos_create
 (JNIEnv *env, jobject jthis, jobject jpath, jboolean jdisableFsyncCommit,
  jboolean jkeepLog, jobject jconfigpath, jstring jfstype)
 {
-  JNIEntry(SVNAdmin, create);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, create);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -102,12 +103,12 @@ Java_org_apache_subversion_javahl_SVNAdmin_create
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_deltify
+Java_org_apache_subversion_javahl_SVNRepos_deltify
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jrevisionStart,
  jobject jrevisionStop)
 {
-  JNIEntry(SVNAdmin, deltify);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, deltify);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -130,13 +131,13 @@ Java_org_apache_subversion_javahl_SVNAdmin_deltify
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_dump
+Java_org_apache_subversion_javahl_SVNRepos_dump
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jdataout,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jincremental,
  jboolean juseDeltas, jobject jnotifyCallback)
 {
-  JNIEntry(SVNAdmin, dump);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, dump);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -167,12 +168,12 @@ Java_org_apache_subversion_javahl_SVNAdmin_dump
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_hotcopy
+Java_org_apache_subversion_javahl_SVNRepos_hotcopy
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jtargetPath,
  jboolean jcleanLogs)
 {
-  JNIEntry(SVNAdmin, hotcopy);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, hotcopy);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -191,11 +192,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_hotcopy
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_listDBLogs
+Java_org_apache_subversion_javahl_SVNRepos_listDBLogs
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jreceiver)
 {
-  JNIEntry(SVNAdmin, listDBLogs);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, listDBLogs);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -214,11 +215,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_listDBLogs
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_listUnusedDBLogs
+Java_org_apache_subversion_javahl_SVNRepos_listUnusedDBLogs
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jreceiver)
 {
-  JNIEntry(SVNAdmin, listUnusedDBLogs);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, listUnusedDBLogs);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -237,13 +238,13 @@ Java_org_apache_subversion_javahl_SVNAdmin_listUnusedDBLogs
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_load
+Java_org_apache_subversion_javahl_SVNRepos_load
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jinputData,
  jboolean jignoreUUID, jboolean jforceUUID, jboolean jusePreCommitHook,
  jboolean jusePostCommitHook, jstring jrelativePath, jobject jnotifyCallback)
 {
-  JNIEntry(SVNAdmin, load);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, load);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -271,11 +272,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_load
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_lstxns
+Java_org_apache_subversion_javahl_SVNRepos_lstxns
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jmessageReceiver)
 {
-  JNIEntry(SVNAdmin, lstxns);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, lstxns);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -294,11 +295,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_lstxns
 }
 
 JNIEXPORT jlong JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_recover
+Java_org_apache_subversion_javahl_SVNRepos_recover
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
 {
-  JNIEntry(SVNAdmin, recover);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, recover);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -315,11 +316,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_recover
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_rmtxns
+Java_org_apache_subversion_javahl_SVNRepos_rmtxns
 (JNIEnv *env, jobject jthis, jobject jpath, jobjectArray jtransactions)
 {
-  JNIEntry(SVNAdmin, rmtxns);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, rmtxns);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -338,13 +339,13 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmtxns
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
+Java_org_apache_subversion_javahl_SVNRepos_setRevProp
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jrevision,
  jstring jpropName, jstring jpropValue, jboolean jusePreRevPropChangeHook,
  jboolean jusePostRevPropChangeHook)
 {
-  JNIEntry(SVNAdmin, setRevProp);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, setRevProp);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -373,12 +374,12 @@ Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_verify
+Java_org_apache_subversion_javahl_SVNRepos_verify
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jrevisionStart,
  jobject jrevisionEnd, jobject jcallback)
 {
-  JNIEntry(SVNAdmin, verify);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, verify);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -406,11 +407,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_verify
 }
 
 JNIEXPORT jobject JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_lslocks
-(JNIEnv *env, jobject jthis, jobject jpath)
+Java_org_apache_subversion_javahl_SVNRepos_lslocks
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jdepth)
 {
-  JNIEntry(SVNAdmin, lslocks);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, lslocks);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -421,15 +422,15 @@ Java_org_apache_subversion_javahl_SVNAdmin_lslocks
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  return cl->lslocks(path);
+  return cl->lslocks(path, EnumMapper::toDepth(jdepth));
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_rmlocks
+Java_org_apache_subversion_javahl_SVNRepos_rmlocks
 (JNIEnv *env, jobject jthis, jobject jpath, jobjectArray jlocks)
 {
-  JNIEntry(SVNAdmin, rmlocks);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, rmlocks);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -448,11 +449,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmlocks
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_upgrade
+Java_org_apache_subversion_javahl_SVNRepos_upgrade
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
 {
-  JNIEntry(SVNAdmin, upgrade);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, upgrade);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
@@ -469,11 +470,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_upgrade
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_pack
+Java_org_apache_subversion_javahl_SVNRepos_pack
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jnotifyCallback)
 {
-  JNIEntry(SVNAdmin, pack);
-  SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+  JNIEntry(SVNRepos, pack);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));

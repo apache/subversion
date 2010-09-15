@@ -59,7 +59,7 @@ repository) is:
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
   min-unpacked-rev    File containing the oldest revision not in a pack file
-  min-unpacked_revprop File containing the oldest revision of unpacked revprop
+  min-unpacked-revprop File containing the oldest revision of unpacked revprop
   rep-cache.db        SQLite database mapping rep checksums to locations
   revprops.db         SQLite database of the packed revision properties
 
@@ -102,10 +102,8 @@ When representation sharing is enabled, the filesystem tracks
 representation checksum and location mappings using a SQLite database in
 "rep-cache.db".  The database has a single table, which stores the sha1
 hash text as the primary key, mapped to the representation revision, offset,
-size and expanded size.  A final field, reuse count, is currently used
-for distinguishing representations which are shared.  This file is not
-required, and may be removed at an abritrary time, with the subsequent
-loss of rep-sharing capabilities.
+size and expanded size.  This file is not required, and may be removed at an
+abritrary time, with the subsequent loss of rep-sharing capabilities.
 
 Filesystem formats
 ------------------
@@ -500,7 +498,8 @@ names are the first 3 characters of the digest filename.
 
 Also stored in the digest file for a given FS path are pointers to
 other digest files which contain information associated with other FS
-paths that are our path's immediate children.
+paths that are beneath our path (an immediate child thereof, or a
+grandchild, or a great-grandchild, ...).
 
 To answer the question, "Does path FOO have a lock associated with
 it?", one need only generate the MD5 digest of FOO's
@@ -515,4 +514,4 @@ To inquire about locks on children of the path FOO, you would
 reference the same path as above, but look for a list of children in
 that file (instead of lock information).  Children are listed as MD5
 digests, too, so you would simply iterate over those digests and
-consult the files they reference, and so on, recursively.
+consult the files they reference for lock information.

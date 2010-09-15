@@ -185,6 +185,15 @@ svn_config_get_config(apr_hash_t **cfg_hash,
                       apr_pool_t *pool);
 
 
+/** Set @a *cfgp to an empty @c svn_config_t structure,
+ * allocated in @a result_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_config_create(svn_config_t **cfgp,
+                  apr_pool_t *result_pool);
+
 /** Read configuration data from @a file (a file or registry path) into
  * @a *cfgp, allocated in @a pool.
  *

@@ -220,20 +220,28 @@ static svn_error_t *
 return_response_err(svn_ra_serf__handler_t *handler,
                     svn_ra_serf__simple_request_context_t *ctx)
 {
+  svn_error_t *err;
+
+  /* Ye Olde Fallback Error */
+  err = svn_error_compose_create(
+            ctx->server_error.error,
+            svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                              "%s of '%s': %d %s",
+                              handler->method, handler->path,
+                              ctx->status, ctx->reason));
+
   /* Try to return one of the standard errors for 301, 404, etc.,
      then look for an error embedded in the response.  */
-  return svn_error_compose_create(
-    svn_ra_serf__error_on_status(ctx->status, handler->path),
-    svn_error_compose_create(
-      ctx->server_error.error,
-      svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                        "%s of '%s': %d %s",
-                        handler->method, handler->path,
-                        ctx->status, ctx->reason)));
+  return svn_error_compose_create(svn_ra_serf__error_on_status(ctx->status,
+                                                               handler->path,
+                                                               ctx->location),
+                                  err);
 }
 
-static serf_bucket_t *
-create_checkout_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_checkout_body(serf_bucket_t **bkt,
+                     void *baton,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
@@ -257,7 +265,8 @@ create_checkout_body(void *baton,
   svn_ra_serf__add_tag_buckets(body_bkt, "D:apply-to-version", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:checkout");
 
-  return body_bkt;
+  *bkt = body_bkt;
+  return SVN_NO_ERROR;
 }
 
 /* Implements svn_ra_serf__response_handler_t */
@@ -627,6 +636,46 @@ checkout_file(file_context_t *file)
   return SVN_NO_ERROR;
 }
 
+/* Helper function for proppatch_walker() below. */
+static svn_error_t *
+get_encoding_and_cdata(const char **encoding_p,
+                       serf_bucket_t **cdata_bkt_p,
+                       serf_bucket_alloc_t *alloc,
+                       const svn_string_t *value,
+                       apr_pool_t *pool)
+{
+  const char *encoding;
+  const char *cdata;
+  apr_size_t len; /* of cdata */
+
+  SVN_ERR_ASSERT(value);
+
+  /* If a property is XML-safe, XML-encode it.  Else, base64-encode
+     it. */
+  if (svn_xml_is_xml_safe(value->data, value->len))
+    {
+      svn_stringbuf_t *xml_esc = NULL;
+      svn_xml_escape_cdata_string(&xml_esc, value, pool);
+      encoding = NULL;
+      cdata = xml_esc->data;
+      len = xml_esc->len;
+    }
+  else
+    {
+      const svn_string_t *base64ed = svn_base64_encode_string2(value, TRUE,
+                                                               pool);
+      encoding = "base64";
+      cdata = base64ed->data;
+      len = base64ed->len;
+    }
+
+  /* ENCODING, CDATA, and LEN are now set. */
+
+  *encoding_p = encoding;
+  *cdata_bkt_p = SERF_BUCKET_SIMPLE_STRING_LEN(cdata, len, alloc);
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 proppatch_walker(void *baton,
                  const char *ns, apr_ssize_t ns_len,
@@ -635,14 +684,10 @@ proppatch_walker(void *baton,
                  apr_pool_t *pool)
 {
   serf_bucket_t *body_bkt = baton;
+  serf_bucket_t *cdata_bkt;
   serf_bucket_alloc_t *alloc;
-  svn_boolean_t binary_prop;
+  const char *encoding;
   char *prop_name;
-
-  if (svn_xml_is_xml_safe(val->data, val->len))
-    binary_prop = FALSE;
-  else
-    binary_prop = TRUE;
 
   /* Use the namespace prefix instead of adding the xmlns attribute to support
      property names containing ':' */
@@ -654,28 +699,18 @@ proppatch_walker(void *baton,
 
   alloc = body_bkt->allocator;
 
+  SVN_ERR(get_encoding_and_cdata(&encoding, &cdata_bkt, alloc, val, pool));
+
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
-                                    "V:encoding", binary_prop ? "base64" : NULL,
+                                    "V:encoding", encoding,
                                     NULL);
-
-  if (binary_prop)
-    {
-      serf_bucket_t *tmp_bkt;
-      val = svn_base64_encode_string2(val, TRUE, pool);
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(val->data, val->len, alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-    }
-  else
-    {
-      svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc, val->data, val->len);
-    }
-
-
+  serf_bucket_aggregate_append(body_bkt, cdata_bkt);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, prop_name);
+
   return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_proppatch_headers(serf_bucket_t *headers,
                         void *baton,
                         apr_pool_t *pool)
@@ -706,11 +741,13 @@ setup_proppatch_headers(serf_bucket_t *headers,
         }
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_proppatch_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_proppatch_body(serf_bucket_t **bkt,
+                      void *baton,
                       serf_bucket_alloc_t *alloc,
                       apr_pool_t *pool)
 {
@@ -732,9 +769,9 @@ create_proppatch_body(void *baton,
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", NULL);
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
-      svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
-                                  SVN_INVALID_REVNUM,
-                                  proppatch_walker, body_bkt, pool);
+      SVN_ERR(svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
+                                          SVN_INVALID_REVNUM,
+                                          proppatch_walker, body_bkt, pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:set");
@@ -745,9 +782,9 @@ create_proppatch_body(void *baton,
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:remove", NULL);
       svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
-      svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
-                                  SVN_INVALID_REVNUM,
-                                  proppatch_walker, body_bkt, pool);
+      SVN_ERR(svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
+                                          SVN_INVALID_REVNUM,
+                                          proppatch_walker, body_bkt, pool));
 
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
       svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:remove");
@@ -755,7 +792,8 @@ create_proppatch_body(void *baton,
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:propertyupdate");
 
-  return body_bkt;
+  *bkt = body_bkt;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t*
@@ -797,8 +835,10 @@ proppatch_resource(proppatch_context_t *proppatch,
   return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_put_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_put_body(serf_bucket_t **body_bkt,
+                void *baton,
                 serf_bucket_alloc_t *alloc,
                 apr_pool_t *pool)
 {
@@ -821,18 +861,22 @@ create_put_body(void *baton,
   offset = 0;
   apr_file_seek(ctx->svndiff, APR_SET, &offset);
 
-  return serf_bucket_file_create(ctx->svndiff, alloc);
+  *body_bkt = serf_bucket_file_create(ctx->svndiff, alloc);
+  return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_empty_put_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_empty_put_body(serf_bucket_t **body_bkt,
+                      void *baton,
                       serf_bucket_alloc_t *alloc,
                       apr_pool_t *pool)
 {
-  return SERF_BUCKET_SIMPLE_STRING("", alloc);
+  *body_bkt = SERF_BUCKET_SIMPLE_STRING("", alloc);
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_put_headers(serf_bucket_t *headers,
                   void *baton,
                   apr_pool_t *pool)
@@ -877,7 +921,7 @@ setup_put_headers(serf_bucket_t *headers,
   return APR_SUCCESS;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_copy_file_headers(serf_bucket_t *headers,
                         void *baton,
                         apr_pool_t *pool)
@@ -896,10 +940,10 @@ setup_copy_file_headers(serf_bucket_t *headers,
   serf_bucket_headers_set(headers, "Depth", "0");
   serf_bucket_headers_set(headers, "Overwrite", "T");
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_copy_dir_headers(serf_bucket_t *headers,
                        void *baton,
                        apr_pool_t *pool)
@@ -940,10 +984,10 @@ setup_copy_dir_headers(serf_bucket_t *headers,
                apr_pstrdup(dir->commit->pool, dir->name), APR_HASH_KEY_STRING,
                (void*)1);
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static apr_status_t
+static svn_error_t *
 setup_delete_headers(serf_bucket_t *headers,
                      void *baton,
                      apr_pool_t *pool)
@@ -973,11 +1017,13 @@ setup_delete_headers(serf_bucket_t *headers,
         }
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
-static serf_bucket_t *
-create_delete_body(void *baton,
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_delete_body(serf_bucket_t **body_bkt,
+                   void *baton,
                    serf_bucket_alloc_t *alloc,
                    apr_pool_t *pool)
 {
@@ -991,7 +1037,8 @@ create_delete_body(void *baton,
   svn_ra_serf__merge_lock_token_list(ctx->lock_token_hash, ctx->path,
                                      body, alloc, pool);
 
-  return body;
+  *body_bkt = body;
+  return SVN_NO_ERROR;
 }
 
 /* Helper function to write the svndiff stream to temporary file. */
@@ -1013,6 +1060,18 @@ svndiff_stream_write(void *file_baton,
 
 
 /* POST against 'me' resource handlers. */
+
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_txn_post_body(serf_bucket_t **body_bkt,
+                     void *baton,
+                     serf_bucket_alloc_t *alloc,
+                     apr_pool_t *pool)
+{
+  *body_bkt = SERF_BUCKET_SIMPLE_STRING("( create-txn )", alloc);
+  return SVN_NO_ERROR;
+}
+
 
 /* Handler baton for POST request. */
 typedef struct
@@ -1093,6 +1152,9 @@ open_root(void *edit_baton,
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));
       handler->method = "POST";
+      handler->body_type = SVN_SKEL_MIME_TYPE;
+      handler->body_delegate = create_txn_post_body;
+      handler->body_delegate_baton = NULL;
       handler->path = ctx->session->me_resource;
       handler->conn = ctx->session->conns[0];
       handler->session = ctx->session;
@@ -1992,8 +2054,9 @@ close_edit(void *edit_baton,
     }
 
   /* Inform the WC that we did a commit.  */
-  SVN_ERR(ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
-                        ctx->callback_baton, pool));
+  if (ctx->callback)
+    SVN_ERR(ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
+                          ctx->callback_baton, pool));
 
   /* If we're using activities, DELETE our completed activity.  */
   if (ctx->activity_url)

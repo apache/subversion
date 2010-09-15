@@ -116,9 +116,10 @@ svn_client__derive_location(const char **url,
     {
       if (ra_session == NULL)
         {
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, *url, NULL,
-                                                       NULL, FALSE, TRUE, ctx,
-                                                       scratch_pool));
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
+                                                       *url, NULL, NULL,
+                                                       FALSE, TRUE,
+                                                       ctx, scratch_pool));
         }
       SVN_ERR(svn_client__get_revision_number(peg_revnum, NULL, ctx->wc_ctx,
                                               NULL, ra_session, peg_revision,
@@ -146,7 +147,8 @@ svn_client__entry_location(const char **url,
       || peg_rev_kind == svn_opt_revision_head)
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
-  SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
+  SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
+                                         &copyfrom_url, &copyfrom_rev,
                                          NULL, wc_ctx, local_abspath,
                                          result_pool, scratch_pool));
 

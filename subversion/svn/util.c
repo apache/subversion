@@ -66,7 +66,8 @@
 
 
 svn_error_t *
-svn_cl__print_commit_info(svn_commit_info_t *commit_info,
+svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
+                          void *baton,
                           apr_pool_t *pool)
 {
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
@@ -167,7 +168,7 @@ svn_cl__edit_file_externally(const char *path,
   int sys_err;
   apr_status_t apr_err;
 
-  svn_dirent_split(path, &base_dir, &file_name, pool);
+  svn_dirent_split(&base_dir, &file_name, path, pool);
 
   SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
 
@@ -763,9 +764,9 @@ svn_cl__get_log_message(const char **log_msg,
               && item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
             unlock = 'U';
 
-          svn_stringbuf_appendbytes(tmp_message, &text_mod, 1);
-          svn_stringbuf_appendbytes(tmp_message, &prop_mod, 1);
-          svn_stringbuf_appendbytes(tmp_message, &unlock, 1);
+          svn_stringbuf_appendbyte(tmp_message, text_mod);
+          svn_stringbuf_appendbyte(tmp_message, prop_mod);
+          svn_stringbuf_appendbyte(tmp_message, unlock);
           if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
             /* History included via copy/move. */
             svn_stringbuf_appendcstr(tmp_message, "+ ");
@@ -828,8 +829,8 @@ svn_cl__get_log_message(const char **log_msg,
           for (len = message->len - 1; len >= 0; len--)
             {
               /* FIXME: should really use an UTF-8 whitespace test
-                 rather than apr_isspace, which is locale dependant */
-              if (! apr_isspace(message->data[len]))
+                 rather than svn_ctype_isspace, which is ASCII only */
+              if (! svn_ctype_isspace(message->data[len]))
                 break;
             }
           if (len < 0)

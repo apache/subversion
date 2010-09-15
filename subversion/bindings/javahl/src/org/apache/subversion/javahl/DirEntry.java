@@ -26,7 +26,7 @@ package org.apache.subversion.javahl;
 import java.util.Date;
 
 /**
- * A general subversion directory entry. Used for SVNClientInterface.list
+ * A general subversion directory entry. Used for {@link ISVNClient#list}.
  */
 public class DirEntry implements java.io.Serializable
 {

@@ -92,7 +92,7 @@ txn_body_lock(void *baton, trail_t *trail)
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
   if (kind == svn_node_dir)
-    return SVN_FS__ERR_NOT_FILE(trail->fs, args->path);
+    return SVN_FS__ERR_NOT_FILE(trail->fs, args->path, trail->pool);
 
   /* While our locking implementation easily supports the locking of
      nonexistent paths, we deliberately choose not to allow such madness. */
@@ -112,7 +112,7 @@ txn_body_lock(void *baton, trail_t *trail)
 
   /* There better be a username attached to the fs. */
   if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
-    return SVN_FS__ERR_NO_USER(trail->fs);
+    return SVN_FS__ERR_NO_USER(trail->fs, trail->pool);
 
   /* Is the caller attempting to lock an out-of-date working file? */
   if (SVN_IS_VALID_REVNUM(args->current_rev))
@@ -178,7 +178,8 @@ txn_body_lock(void *baton, trail_t *trail)
         {
           /* Sorry, the path is already locked. */
           return SVN_FS__ERR_PATH_ALREADY_LOCKED(trail->fs,
-                                                      existing_lock);
+                                                 existing_lock,
+                                                 trail->pool);
         }
       else
         {
@@ -280,21 +281,22 @@ txn_body_unlock(void *baton, trail_t *trail)
       if (args->token == NULL)
         return svn_fs_base__err_no_lock_token(trail->fs, args->path);
       else if (strcmp(lock_token, args->token) != 0)
-        return SVN_FS__ERR_NO_SUCH_LOCK(trail->fs, args->path);
+        return SVN_FS__ERR_NO_SUCH_LOCK(trail->fs, args->path, trail->pool);
 
       SVN_ERR(svn_fs_bdb__lock_get(&lock, trail->fs, lock_token,
                                    trail, trail->pool));
 
       /* There better be a username attached to the fs. */
       if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
-        return SVN_FS__ERR_NO_USER(trail->fs);
+        return SVN_FS__ERR_NO_USER(trail->fs, trail->pool);
 
       /* And that username better be the same as the lock's owner. */
       if (strcmp(trail->fs->access_ctx->username, lock->owner) != 0)
-        return SVN_FS__ERR_LOCK_OWNER_MISMATCH
-          (trail->fs,
+        return SVN_FS__ERR_LOCK_OWNER_MISMATCH(
+           trail->fs,
            trail->fs->access_ctx->username,
-           lock->owner);
+           lock->owner,
+           trail->pool);
     }
 
   /* Remove a row from each of the locking tables. */
@@ -396,6 +398,7 @@ svn_fs_base__get_lock(svn_lock_t **lock,
 struct locks_get_args
 {
   const char *path;
+  svn_depth_t depth;
   svn_fs_get_locks_callback_t get_locks_func;
   void *get_locks_baton;
 };
@@ -405,7 +408,7 @@ static svn_error_t *
 txn_body_get_locks(void *baton, trail_t *trail)
 {
   struct locks_get_args *args = baton;
-  return svn_fs_bdb__locks_get(trail->fs, args->path,
+  return svn_fs_bdb__locks_get(trail->fs, args->path, args->depth,
                                args->get_locks_func, args->get_locks_baton,
                                trail, trail->pool);
 }
@@ -414,6 +417,7 @@ txn_body_get_locks(void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_base__get_locks(svn_fs_t *fs,
                        const char *path,
+                       svn_depth_t depth,
                        svn_fs_get_locks_callback_t get_locks_func,
                        void *get_locks_baton,
                        apr_pool_t *pool)
@@ -422,6 +426,7 @@ svn_fs_base__get_locks(svn_fs_t *fs,
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   args.path = svn_fs__canonicalize_abspath(path, pool);
+  args.depth = depth;
   args.get_locks_func = get_locks_func;
   args.get_locks_baton = get_locks_baton;
   return svn_fs_base__retry_txn(fs, txn_body_get_locks, &args, FALSE, pool);
@@ -490,7 +495,8 @@ svn_fs_base__allow_locked_operation(const char *path,
   if (recurse)
     {
       /* Discover all locks at or below the path. */
-      SVN_ERR(svn_fs_bdb__locks_get(trail->fs, path, get_locks_callback,
+      SVN_ERR(svn_fs_bdb__locks_get(trail->fs, path, svn_depth_infinity,
+                                    get_locks_callback,
                                     trail->fs, trail, pool));
     }
   else

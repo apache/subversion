@@ -19,21 +19,8 @@
 #
 #
 import unittest, os
-
-from sys import version_info # For Python version check
-if version_info[0] >= 3:
-  # Python >=3.0
-  from io import StringIO
-else:
-  # Python <3.0
-  try:
-    from cStringIO import StringIO
-  except ImportError:
-    from StringIO import StringIO
-
 from svn import core, repos, fs
-
-from trac.versioncontrol.tests.svn_fs import REPOS_PATH
+import utils
 
 class RevRange:
   """ Proxy object for a revision range, used for comparison. """
@@ -58,22 +45,16 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
        created by dumping the repository generated for command line log
        tests 16.  If it needs to be updated (mergeinfo format changes, for
        example), we can go there to get a new version."""
-    dumpfile = open(os.path.join(os.path.split(__file__)[0],
-                                 'data', 'mergeinfo.dump'), 'rb')
-    # Remove any existing repository to ensure a fresh start
-    self.tearDown()
-    self.repos = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
-    repos.svn_repos_load_fs2(self.repos, dumpfile, StringIO(),
-                             repos.svn_repos_load_uuid_ignore, '',
-                             0, 0, None)
+    self.temper = utils.Temper()
+    (self.repos, _, _) = self.temper.alloc_known_repo('data/mergeinfo.dump',
+                                                      suffix='-mergeinfo')
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)
 
   def tearDown(self):
-    self.fs = None
-    self.repos = None
-    if os.path.exists(REPOS_PATH):
-      repos.delete(REPOS_PATH)
+    del self.fs
+    del self.repos
+    self.temper.cleanup()
 
   def test_mergeinfo_parse(self):
     """Test svn_mergeinfo_parse()"""
@@ -176,7 +157,8 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
 
 
 def suite():
-    return unittest.makeSuite(SubversionMergeinfoTestCase, 'test')
+    return unittest.defaultTestLoader.loadTestsFromTestCase(
+      SubversionMergeinfoTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

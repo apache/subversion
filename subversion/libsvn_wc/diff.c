@@ -58,8 +58,6 @@
 #include "wc.h"
 #include "props.h"
 #include "adm_files.h"
-#include "lock.h"
-#include "entries.h"
 #include "translate.h"
 
 #include "svn_private_config.h"
@@ -155,7 +153,6 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-#ifdef SVN_EXPERIMENTAL_PRISTINE
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
@@ -188,34 +185,6 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
                                            result_pool, scratch_pool));
       return SVN_NO_ERROR;
     }
-#else
-  svn_error_t *err;
-
-  err = svn_wc__text_base_path_to_read(result_abspath, db, local_abspath,
-                                       result_pool, scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    svn_error_clear(err);
-  else
-    return svn_error_return(err);
-
-  err = svn_wc__text_revert_path_to_read(result_abspath, db, local_abspath,
-                                         result_pool);
-
-  /* If there is no revert base to diff either, don't attempt to diff it.
-     ### This is a band-aid.
-     ### In WC-NG, files added within a copied subtree are marked "copied",
-     ### which will cause the code below to end up calling
-     ### eb->callbacks->file_changed() with a non-existent text-base.
-     ### Not sure how to properly tell apart a file added within a copied
-     ### subtree from a copied file. But eventually we'll have to get the
-     ### base text from the pristine store anyway and use tempfiles (or
-     ### streams, hopefully) for diffing, so this hack will just go away. */
-  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    svn_error_clear(err);
-  else
-    return svn_error_return(err);
-#endif
 
   *result_abspath = NULL;
   return SVN_NO_ERROR;
@@ -257,6 +226,9 @@ struct edit_baton {
 
   /* Should this diff not compare copied files with their source? */
   svn_boolean_t show_copies_as_adds;
+
+  /* Are we producing a git-style diff? */
+  svn_boolean_t use_git_diff_format;
 
   /* Possibly diff repos against text-bases instead of working files. */
   svn_boolean_t use_text_base;
@@ -381,6 +353,7 @@ make_edit_baton(struct edit_baton **edit_baton,
                 svn_depth_t depth,
                 svn_boolean_t ignore_ancestry,
                 svn_boolean_t show_copies_as_adds,
+                svn_boolean_t use_git_diff_format,
                 svn_boolean_t use_text_base,
                 svn_boolean_t reverse_order,
                 const apr_array_header_t *changelists,
@@ -404,6 +377,7 @@ make_edit_baton(struct edit_baton **edit_baton,
   eb->depth = depth;
   eb->ignore_ancestry = ignore_ancestry;
   eb->show_copies_as_adds = show_copies_as_adds;
+  eb->use_git_diff_format = use_git_diff_format;
   eb->use_text_base = use_text_base;
   eb->reverse_order = reverse_order;
   eb->changelist_hash = changelist_hash;
@@ -587,6 +561,7 @@ file_diff(struct dir_baton *db,
   const char *empty_file;
   svn_boolean_t replaced;
   svn_wc__db_status_t status;
+  const char *original_repos_relpath;
   svn_revnum_t revision;
   svn_revnum_t revert_base_revnum;
   svn_boolean_t have_base;
@@ -616,16 +591,16 @@ file_diff(struct dir_baton *db,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, local_abspath, pool, pool));
 
-  replaced = ((status == svn_wc__db_status_added
-               || status == svn_wc__db_status_obstructed_add)
+  replaced = ((status == svn_wc__db_status_added)
               && have_base
               && base_status != svn_wc__db_status_not_present);
 
   /* Now refine ADDED to one of: ADDED, COPIED, MOVED_HERE. Note that only
      the latter two have corresponding pristine info to diff against.  */
   if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, eb->db, local_abspath,
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
+                                     &original_repos_relpath, NULL, NULL,
+                                     NULL, eb->db, local_abspath,
                                      pool, pool));
 
   /* A wc-wc diff of replaced files actually shows a diff against the
@@ -689,11 +664,15 @@ file_diff(struct dir_baton *db,
   * If the item is schedule-add *with history*, then we usually want
   * to see the usual working vs. text-base comparison, which will show changes
   * made since the file was copied.  But in case we're showing copies as adds,
-  * we need to compare the copied file to the empty file. */
+  * we need to compare the copied file to the empty file. If we're doing a git
+  * diff, and the file was copied, we need to report the file as added and
+  * diff it against the text base, so that a "copied" git diff header, and
+  * possibly a diff against the copy source, will be generated for it. */
   if ((! replaced && status == svn_wc__db_status_added) ||
      (replaced && ! eb->ignore_ancestry) ||
      ((status == svn_wc__db_status_copied ||
-       status == svn_wc__db_status_moved_here) && eb->show_copies_as_adds))
+       status == svn_wc__db_status_moved_here) &&
+         (eb->show_copies_as_adds || eb->use_git_diff_format)))
     {
       const char *translated = NULL;
       const char *working_mimetype;
@@ -718,28 +697,30 @@ file_diff(struct dir_baton *db,
               pool, pool));
 
       SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL, NULL, path,
-                                        empty_file,
+                                        (! eb->show_copies_as_adds &&
+                                         eb->use_git_diff_format &&
+                                         status != svn_wc__db_status_added) ?
+                                          textbase : empty_file,
                                         translated,
                                         0, revision,
                                         NULL,
                                         working_mimetype,
-                                        NULL, SVN_INVALID_REVNUM,
-                                        propchanges, baseprops,
-                                        eb->callback_baton,
+                                        original_repos_relpath,
+                                        SVN_INVALID_REVNUM, propchanges,
+                                        baseprops, eb->callback_baton,
                                         pool));
     }
   else
     {
-      svn_boolean_t modified;
       const char *translated = NULL;
       apr_hash_t *baseprops;
       const char *base_mimetype;
       const char *working_mimetype;
       apr_hash_t *workingprops;
       apr_array_header_t *propchanges;
+      svn_boolean_t modified;
 
       /* Here we deal with showing pure modifications. */
-
       SVN_ERR(svn_wc__internal_text_modified_p(&modified, eb->db,
                                                local_abspath, FALSE, TRUE,
                                                pool));
@@ -765,9 +746,9 @@ file_diff(struct dir_baton *db,
           /* We don't want the normal pristine properties (which are
              from the WORKING tree). We want the pristines associated
              with the BASE tree, which are saved as "revert" props.  */
-          SVN_ERR(svn_wc__get_revert_props(&baseprops,
-                                           eb->db, local_abspath,
-                                           pool, pool));
+          SVN_ERR(svn_wc__db_base_get_props(&baseprops,
+                                            eb->db, local_abspath,
+                                            pool, pool));
         }
       else
         {
@@ -779,6 +760,10 @@ file_diff(struct dir_baton *db,
 
           SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
                                              pool, pool));
+
+          /* baseprops will be NULL for added nodes */
+          if (!baseprops)
+            baseprops = apr_hash_make(pool);
         }
       base_mimetype = get_prop_mimetype(baseprops);
 
@@ -1537,7 +1522,7 @@ apply_textdelta(void *file_baton,
                                      NULL, NULL, NULL, eb->db,
                                      fb->local_abspath, pool, pool));
 
-  svn_dirent_split(fb->wc_path, &parent, &base_name, fb->pool);
+  svn_dirent_split(&parent, &base_name, fb->wc_path, fb->pool);
 
   /* If the node is added-with-history, then this is not actually
      an add, but a modification. */
@@ -1842,6 +1827,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
                         svn_boolean_t show_copies_as_adds,
+                        svn_boolean_t use_git_diff_format,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         const apr_array_header_t *changelists,
@@ -1861,6 +1847,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                           anchor_path, target,
                           callbacks, callback_baton,
                           depth, ignore_ancestry, show_copies_as_adds,
+                          use_git_diff_format,
                           use_text_base, reverse_order, changelists,
                           cancel_func, cancel_baton,
                           result_pool));
@@ -1889,11 +1876,12 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   if (depth == svn_depth_unknown)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
-                                                inner_editor,
-                                                inner_baton,
+                                                wc_ctx->db,
                                                 anchor_abspath,
                                                 target,
-                                                wc_ctx->db,
+                                                FALSE /* read_base */,
+                                                inner_editor,
+                                                inner_baton,
                                                 result_pool));
 
   return svn_delta_get_cancellation_editor(cancel_func,
@@ -1915,6 +1903,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              svn_boolean_t show_copies_as_adds,
+             svn_boolean_t use_git_diff_format,
              const apr_array_header_t *changelists,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
@@ -1937,7 +1926,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
       target = "";
     }
   else
-    svn_dirent_split(target_path, &anchor_path, &target, pool);
+    svn_dirent_split(&anchor_path, &target, target_path, pool);
 
   SVN_ERR(make_edit_baton(&eb,
                           wc_ctx->db,
@@ -1945,6 +1934,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
                           target,
                           callbacks, callback_baton,
                           depth, ignore_ancestry, show_copies_as_adds,
+                          use_git_diff_format,
                           FALSE, FALSE, changelists,
                           cancel_func, cancel_baton,
                           pool));

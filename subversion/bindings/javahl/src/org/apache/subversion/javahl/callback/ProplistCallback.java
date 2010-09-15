@@ -24,10 +24,11 @@
 package org.apache.subversion.javahl.callback;
 
 import java.util.Map;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * This interface is used to property lists for each path in a
- * SVNClientInterface.properties call.
+ * {@link ISVNClient#properties} call.
  */
 public interface ProplistCallback
 {

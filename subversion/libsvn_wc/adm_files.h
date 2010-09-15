@@ -52,41 +52,6 @@ svn_boolean_t svn_wc__adm_area_exists(const char *adm_abspath,
                                       apr_pool_t *pool);
 
 
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-/* Atomically rename a temporary text-base file TMP_TEXT_BASE_ABSPATH to its
-   canonical location.  LOCAL_ABSPATH in DB is the working file whose
-   text-base is to be moved.  The tmp file should be closed already. */
-svn_error_t *
-svn_wc__sync_text_base(svn_wc__db_t *db,
-                       const char *local_abspath,
-                       const char *tmp_text_base_path,
-                       apr_pool_t *scratch_pool);
-#endif
-
-
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-/* Set *RESULT_ABSPATH to the absolute path to where LOCAL_ABSPATH's
-   "normal text-base" file is or should be created.  The file does not
-   necessarily exist.
-
-   "Normal text-base" means the base of the copied file, if copied or moved,
-   else nothing if it's a simple add (even if replacing an existing node),
-   else the ultimate base. */
-svn_error_t *
-svn_wc__text_base_path(const char **result_abspath,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       apr_pool_t *pool);
-#endif
-
-/* Set *RESULT_ABSPATH to the deterministic absolute path to where
-   LOCAL_ABSPATH's temporary text-base file is or should be created. */
-svn_error_t *
-svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
-                                         svn_wc__db_t *db,
-                                         const char *local_abspath,
-                                         apr_pool_t *pool);
-
 /* Set *CONTENTS to a readonly stream on the pristine text of the working
  * version of the file LOCAL_ABSPATH in DB.  If the file is locally copied
  * or moved to this path, this means the pristine text of the copy source,
@@ -124,25 +89,6 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
-
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-/* Set *RESULT_ABSPATH to the absolute path to LOCAL_ABSPATH's revert file. */
-svn_error_t *
-svn_wc__text_revert_path(const char **result_abspath,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *pool);
-#endif
-
-/* Set *PROP_PATH to PATH's PROPS_KIND properties file.
-   PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. Valid values for NODE_KIND are svn_node_dir
-   and svn_node_file. */
-svn_error_t *svn_wc__prop_path(const char **prop_path,
-                               const char *path,
-                               svn_wc__db_kind_t node_kind,
-                               svn_wc__props_kind_t props_kind,
-                               apr_pool_t *pool);
 
 /* Set *RESULT_ABSPATH to the absolute path to a readable file containing
    the WC-1 "normal text-base" of LOCAL_ABSPATH in DB.
@@ -183,19 +129,6 @@ svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
-#ifndef SVN_EXPERIMENTAL_PRISTINE
-/* Set *RESULT_ABSPATH to the path of the WC-1 "revert-base" text of the
-   versioned file LOCAL_ABSPATH in DB.
-
-   If the node LOCAL_ABSPATH has no such pristine text, return an error of
-   type SVN_ERR_WC_PATH_UNEXPECTED_STATUS.  */
-svn_error_t *
-svn_wc__text_revert_path_to_read(const char **result_abspath,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *result_pool);
-#endif
-
 /* Set *RESULT_ABSPATH to the path of the ultimate base text of the
    versioned file LOCAL_ABSPATH in DB.  In WC-1 terms this means the
    "normal text-base" or, if the node is replaced by a copy or move, the
@@ -221,15 +154,29 @@ svn_wc__ultimate_base_text_path_to_read(const char **result_abspath,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool);
 
-/* Set *MD5_CHECKSUM to the MD-5 checksum of the BASE_NODE pristine text
- * of LOCAL_ABSPATH in DB, or to NULL if it has no BASE_NODE.
- * Allocate *MD5_CHECKSUM in RESULT_POOL. */
+/* Set *SHA1_CHECKSUM and *MD5_CHECKSUM to the SHA-1 and MD-5 checksums of
+ * the BASE_NODE pristine text of LOCAL_ABSPATH in DB, or to NULL if it has
+ * no BASE_NODE.  SHA1_CHECKSUM or MD5_CHECKSUM may be NULL if not required.
+ * Allocate the checksums in RESULT_POOL. */
 svn_error_t *
-svn_wc__get_ultimate_base_md5_checksum(const svn_checksum_t **md5_checksum,
-                                       svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *result_pool,
-                                       apr_pool_t *scratch_pool);
+svn_wc__get_ultimate_base_checksums(const svn_checksum_t **sha1_checksum,
+                                    const svn_checksum_t **md5_checksum,
+                                    svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
+/* Set *SHA1_CHECKSUM and *MD5_CHECKSUM to the SHA-1 and MD-5 checksums of
+ * the WORKING_NODE pristine text of LOCAL_ABSPATH in DB, or to NULL if it has
+ * no WORKING_NODE.  SHA1_CHECKSUM or MD5_CHECKSUM may be NULL if not required.
+ * Allocate the checksums in RESULT_POOL. */
+svn_error_t *
+svn_wc__get_working_checksums(const svn_checksum_t **sha1_checksum,
+                              const svn_checksum_t **md5_checksum,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 
 
@@ -267,9 +214,13 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/* Blow away the admistrative directory associated with DIR_ABSPATH */
+/* Blow away the admistrative directory associated with DIR_ABSPATH.
+   For single-db this doesn't perform actual work unless the wcroot is passed.
+ */
 svn_error_t *svn_wc__adm_destroy(svn_wc__db_t *db,
                                  const char *dir_abspath,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
                                  apr_pool_t *scratch_pool);
 
 

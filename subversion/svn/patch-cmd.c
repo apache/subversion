@@ -72,12 +72,9 @@ svn_cl__patch(apr_getopt_t *os,
                                   APR_ARRAY_IDX(targets, 0, const char *),
                                   pool));
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
-
   SVN_ERR(svn_client_patch(abs_patch_path, abs_target_path,
                            opt_state->dry_run, opt_state->strip_count,
+                           opt_state->old_patch_target_names,
                            opt_state->reverse_diff,
                            opt_state->ignore_whitespace,
                            TRUE, NULL, NULL, ctx, pool, pool));

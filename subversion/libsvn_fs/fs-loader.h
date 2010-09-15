@@ -190,7 +190,7 @@ typedef struct fs_vtable_t
                          svn_boolean_t break_lock, apr_pool_t *pool);
   svn_error_t *(*get_lock)(svn_lock_t **lock, svn_fs_t *fs,
                            const char *path, apr_pool_t *pool);
-  svn_error_t *(*get_locks)(svn_fs_t *fs, const char *path,
+  svn_error_t *(*get_locks)(svn_fs_t *fs, const char *path, svn_depth_t depth,
                             svn_fs_get_locks_callback_t get_locks_func,
                             void *get_locks_baton,
                             apr_pool_t *pool);

@@ -24,10 +24,11 @@
 package org.apache.subversion.javahl.callback;
 
 import org.apache.subversion.javahl.Info2;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * This interface is used to retrieve info each result in a
- * SVNClientInterface.info2 call.
+ * {@link ISVNClient#info2} call.
  */
 public interface InfoCallback
 {

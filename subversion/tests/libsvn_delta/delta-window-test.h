@@ -26,9 +26,9 @@
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
-#include <apr_lib.h>
 
 #include "svn_delta.h"
+#include "svn_ctype.h"
 
 static apr_off_t
 delta_window_size_estimate(const svn_txdelta_window_t *window)
@@ -99,7 +99,7 @@ delta_window_print(const svn_txdelta_window_t *window,
           for (tmp = offset; tmp < offset + length; ++tmp)
             {
               int const dat = window->new_data->data[tmp];
-              if (apr_iscntrl(dat) || !apr_isascii(dat))
+              if (svn_ctype_iscntrl(dat) || !svn_ctype_isascii(dat))
                 fprintf(stream, "\\%3.3o", dat & 0xff);
               else if (dat == '\\')
                 fputs("\\\\", stream);

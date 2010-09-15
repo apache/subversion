@@ -685,7 +685,9 @@ ra_svn_get_schemes(apr_pool_t *pool)
 
 
 
-static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
+static svn_error_t *ra_svn_open(svn_ra_session_t *session,
+                                const char **corrected_url,
+                                const char *url,
                                 const svn_ra_callbacks2_t *callbacks,
                                 void *callback_baton,
                                 apr_hash_t *config,
@@ -696,6 +698,10 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   const char *tunnel, **tunnel_argv;
   apr_uri_t uri;
   svn_config_t *cfg, *cfg_client;
+
+  /* We don't support server-prescribed redirections in ra-svn. */
+  if (corrected_url)
+    *corrected_url = NULL;
 
   SVN_ERR(parse_url(url, &uri, sess_pool));
 
@@ -885,8 +891,10 @@ static svn_error_t *ra_svn_end_commit(void *baton)
                                  &(commit_info->author),
                                  &(commit_info->post_commit_err)));
 
-  return ccb->callback(commit_info, ccb->callback_baton, ccb->pool);
+  if (ccb->callback)
+    SVN_ERR(ccb->callback(commit_info, ccb->callback_baton, ccb->pool));
 
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
@@ -2207,17 +2215,52 @@ static svn_error_t *ra_svn_get_lock(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Copied from svn_ra_get_path_relative_to_root() and de-vtable-ized
+   to prevent a dependency cycle. */
+static svn_error_t *path_relative_to_root(svn_ra_session_t *session,
+                                          const char **rel_path,
+                                          const char *url,
+                                          apr_pool_t *pool)
+{
+  const char *root_url;
+
+  SVN_ERR(ra_svn_get_repos_root(session, &root_url, pool));
+  if (strcmp(root_url, url) == 0)
+    {
+      *rel_path = "";
+    }
+  else
+    {
+      *rel_path = svn_uri_is_child(root_url, url, pool);
+      if (! *rel_path)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("'%s' isn't a child of repository root "
+                                   "URL '%s'"),
+                                 url, root_url);
+      *rel_path = svn_path_uri_decode(*rel_path, pool);
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
                                      apr_hash_t **locks,
                                      const char *path,
+                                     svn_depth_t depth,
                                      apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
   apr_array_header_t *list;
+  const char *abs_path;
   int i;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-locks", "c", path));
+  /* Figure out the repository abspath from PATH. */
+  abs_path = svn_path_url_add_component2(sess->url, path, pool);
+  SVN_ERR(path_relative_to_root(session, &abs_path, abs_path, pool));
+  abs_path = apr_pstrcat(pool, "/", abs_path, NULL);
+
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-locks", "c(w)", path,
+                               svn_depth_to_word(depth)));
 
   /* Servers before 1.2 doesn't support locking.  Check this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
@@ -2237,7 +2280,27 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Lock element not a list"));
       SVN_ERR(parse_lock(elt->u.list, pool, &lock));
-      apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
+
+      /* Filter out unwanted paths.  Since Subversion only allows
+         locks on files, we can treat depth=immediates the same as
+         depth=files for filtering purposes.  Meaning, we'll keep
+         this lock if:
+
+         a) its path is the very path we queried, or
+         b) we've asked for a fully recursive answer, or
+         c) we've asked for depth=files or depth=immediates, and this
+            lock is on an immediate child of our query path.
+      */
+      if ((strcmp(abs_path, lock->path) == 0) || (depth == svn_depth_infinity))
+        {
+          apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
+        }
+      else if ((depth == svn_depth_files) || (depth == svn_depth_immediates))
+        {
+          const char *rel_uri = svn_uri_is_child(abs_path, lock->path, pool);
+          if (rel_uri && (svn_path_component_count(rel_uri) == 1))
+            apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
+        }
     }
 
   return SVN_NO_ERROR;

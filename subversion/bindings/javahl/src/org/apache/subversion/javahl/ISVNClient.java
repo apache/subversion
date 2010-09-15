@@ -198,15 +198,6 @@ public interface ISVNClient
     void setProgressCallback(ProgressCallback listener);
 
     /**
-     * Sets the commit message handler. This allows more complex commit message
-     * with the list of the elements to be commited as input.
-     * @param messageHandler    callback for entering commit messages
-     *                          if this is set the message parameter is ignored.
-     * @since 1.0
-     */
-    void commitMessageHandler(CommitMessage messageHandler);
-
-    /**
      * Sets a file for deletion.
      * @param path      path or url to be deleted
      * @param message   if path is a url, this will be the commit message.
@@ -218,8 +209,9 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void remove(Set<String> path, String message, boolean force,
-                boolean keepLocal, Map<String, String> revpropTable)
+    void remove(Set<String> path, boolean force, boolean keepLocal,
+                Map<String, String> revpropTable, CommitMessageCallback handler,
+                CommitCallback callback)
             throws ClientException;
 
     /**
@@ -284,10 +276,10 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    long commit(Set<String> path, String message, Depth depth,
-                boolean noUnlock, boolean keepChangelist,
-                Collection<String> changelists,
-                Map<String, String> revpropTable)
+    void commit(Set<String> path, Depth depth, boolean noUnlock,
+                boolean keepChangelist, Collection<String> changelists,
+                Map<String, String> revpropTable, CommitMessageCallback handler,
+                CommitCallback callback)
             throws ClientException;
 
     /**
@@ -308,9 +300,10 @@ public interface ISVNClient
      * @throws ClientException If the copy operation fails.
      * @since 1.7
      */
-    void copy(List<CopySource> sources, String destPath, String message,
+    void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
-              boolean ignoreExternals, Map<String, String> revpropTable)
+              boolean ignoreExternals, Map<String, String> revpropTable,
+              CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -331,9 +324,10 @@ public interface ISVNClient
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
-    void move(Set<String> srcPaths, String destPath, String message,
-              boolean force, boolean moveAsChild, boolean makeParents,
-              Map<String, String> revpropTable)
+    void move(Set<String> srcPaths, String destPath, boolean force,
+              boolean moveAsChild, boolean makeParents,
+              Map<String, String> revpropTable,
+              CommitMessageCallback handler, CommitCallback callback)
         throws ClientException;
 
     /**
@@ -348,8 +342,9 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void mkdir(Set<String> path, String message, boolean makeParents,
-               Map<String, String> revpropTable)
+    void mkdir(Set<String> path, boolean makeParents,
+               Map<String, String> revpropTable,
+               CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -429,9 +424,10 @@ public interface ISVNClient
      *
      * @since 1.5
      */
-    void doImport(String path, String url, String message, Depth depth,
+    void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
-                  Map<String, String> revpropTable)
+                  Map<String, String> revpropTable,
+                  CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -620,11 +616,11 @@ public interface ISVNClient
      *
      * @param target Path or URL.
      * @param pegRevision Revision at which to interpret
-     * <code>target</code>.  If {@link RevisionKind#unspecified} or
+     * <code>target</code>.  If {@link Revision.Kind#unspecified} or
      * <code>null</code>, behave identically to {@link
-     * #diffSummarize(String, Revision, String, Revision, int,
-     * boolean, DiffSummaryCallback)}, using <code>path</code> for
-     * both of that method's targets.
+     * #diffSummarize(String, Revision, String, Revision, Depth,
+     * Collection, boolean, DiffSummaryCallback)}, using
+     * <code>path</code> for both of that method's targets.
      * @param startRevision Beginning of range for comparsion of
      * <code>target</code>.
      * @param endRevision End of range for comparsion of
@@ -682,7 +678,7 @@ public interface ISVNClient
      */
     void propertySet(String path, String name, String value, Depth depth,
                      Collection<String> changelists, boolean force,
-                     Map<String, String> revpropTable)
+                     Map<String, String> revpropTable, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -695,7 +691,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void propertyRemove(String path, String name, Depth depth,
-                        Collection<String> changelists)
+                        Collection<String> changelists, CommitCallback callback)
             throws ClientException;
 
     /**
@@ -711,7 +707,8 @@ public interface ISVNClient
      * @since 1.5
      */
     void propertyCreate(String path, String name, String value, Depth depth,
-                        Collection<String> changelists, boolean force)
+                        Collection<String> changelists, boolean force,
+                        CommitCallback callback)
             throws ClientException;
 
     /**

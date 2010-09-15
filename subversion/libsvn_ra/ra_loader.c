@@ -268,7 +268,8 @@ svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
+svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
+                          const char **corrected_url_p,
                           const char *repos_URL,
                           const char *uuid,
                           const svn_ra_callbacks2_t *callbacks,
@@ -276,6 +277,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                           apr_hash_t *config,
                           apr_pool_t *pool)
 {
+  apr_pool_t *sesspool = svn_pool_create(pool);
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
@@ -294,6 +296,10 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
   const char *store_pp_plaintext
     = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
+  const char *corrected_url;
+
+  /* Initialize the return variable. */
+  *session_p = NULL;
 
   if (callbacks->auth_baton)
     {
@@ -357,7 +363,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
 
           /* Find out where we're about to connect to, and
            * try to pick a server group based on the destination. */
-          apr_err = apr_uri_parse(pool, repos_URL, &repos_URI);
+          apr_err = apr_uri_parse(sesspool, repos_URL, &repos_URI);
           /* ### Should apr_uri_parse leave hostname NULL?  It doesn't
            * for "file:///" URLs, only for bogus URLs like "bogus".
            * If this is the right behavior for apr_uri_parse, maybe we
@@ -367,7 +373,8 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                                      _("Illegal repository URL '%s'"),
                                      repos_URL);
           server_group = svn_config_find_group(servers, repos_URI.hostname,
-                                               SVN_CONFIG_SECTION_GROUPS, pool);
+                                               SVN_CONFIG_SECTION_GROUPS,
+                                               sesspool);
 
           if (server_group)
             {
@@ -458,12 +465,12 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
 
           if (! initfunc)
             SVN_ERR(load_ra_module(&initfunc, NULL, defn->ra_name,
-                                   pool));
+                                   sesspool));
           if (! initfunc)
             /* Library not found. */
             continue;
 
-          SVN_ERR(initfunc(svn_ra_version(), &vtable, pool));
+          SVN_ERR(initfunc(svn_ra_version(), &vtable, sesspool));
 
           SVN_ERR(check_ra_version(vtable->get_version(), scheme));
 
@@ -477,25 +484,36 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                              repos_URL);
 
   /* Create the session object. */
-  session = apr_pcalloc(pool, sizeof(*session));
+  session = apr_pcalloc(sesspool, sizeof(*session));
   session->vtable = vtable;
-  session->pool = pool;
+  session->pool = sesspool;
 
   /* Ask the library to open the session. */
-  SVN_ERR_W(vtable->open_session(session, repos_URL, callbacks, callback_baton,
-                               config, pool),
+  SVN_ERR_W(vtable->open_session(session, &corrected_url, repos_URL,
+                                 callbacks, callback_baton, config, sesspool),
             apr_psprintf(pool, "Unable to connect to a repository at URL '%s'",
                          repos_URL));
-
+  
+  /* If the session open stuff detected a server-provided URL
+     correction (a 301 or 302 redirect response during the initial
+     OPTIONS request), then kill the session so the caller can decide
+     what to do. */
+  if (corrected_url_p && corrected_url)
+    {
+      *corrected_url_p = apr_pstrdup(pool, corrected_url);
+      svn_pool_destroy(sesspool);
+      return SVN_NO_ERROR;
+    }
+  
   /* Check the UUID. */
   if (uuid)
     {
       const char *repository_uuid;
 
       SVN_ERR(vtable->get_uuid(session, &repository_uuid, pool));
-
       if (strcmp(uuid, repository_uuid) != 0)
         {
+          svn_pool_destroy(sesspool);
           return svn_error_createf(SVN_ERR_RA_UUID_MISMATCH, NULL,
                                    _("Repository UUID '%s' doesn't match "
                                      "expected UUID '%s'"),
@@ -623,6 +641,28 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
   return session->vtable->rev_prop(session, rev, name, value, pool);
 }
 
+struct ccw_baton
+{
+  svn_commit_callback2_t original_callback;
+  void *original_baton;
+
+  svn_ra_session_t *session;
+};
+
+/* Wrapper which populates the repos_root field of the commit_info struct */
+static svn_error_t *
+commit_callback_wrapper(const svn_commit_info_t *commit_info,
+                        void *baton,
+                        apr_pool_t *pool)
+{
+  struct ccw_baton *ccwb = baton;
+  svn_commit_info_t *ci = svn_commit_info_dup(commit_info, pool);
+  
+  SVN_ERR(svn_ra_get_repos_root2(ccwb->session, &ci->repos_root, pool));
+
+  return ccwb->original_callback(ci, ccwb->original_baton, pool);
+}
+
 svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -633,10 +673,21 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
+  /* Allocate this in a pool, since the callback will be called long after
+     this function as returned. */
+  struct ccw_baton *ccwb = apr_palloc(pool, sizeof(*ccwb));
+
+  ccwb->original_callback = callback;
+  ccwb->original_baton = callback_baton;
+  ccwb->session = session;
+
   return session->vtable->get_commit_editor(session, editor, edit_baton,
-                                            revprop_table, callback,
-                                            callback_baton, lock_tokens,
-                                            keep_locks, pool);
+                                            revprop_table,
+                                            callback
+                                                ? commit_callback_wrapper
+                                                : NULL,
+                                            callback ? ccwb : NULL,
+                                            lock_tokens, keep_locks, pool);
 }
 
 svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
@@ -1014,13 +1065,26 @@ svn_error_t *svn_ra_get_lock(svn_ra_session_t *session,
   return session->vtable->get_lock(session, lock, path, pool);
 }
 
+svn_error_t *svn_ra_get_locks2(svn_ra_session_t *session,
+                               apr_hash_t **locks,
+                               const char *path,
+                               svn_depth_t depth,
+                               apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT(*path != '/');
+  SVN_ERR_ASSERT((depth == svn_depth_empty) ||
+                 (depth == svn_depth_files) ||
+                 (depth == svn_depth_immediates) ||
+                 (depth == svn_depth_infinity));
+  return session->vtable->get_locks(session, locks, path, depth, pool);
+}
+
 svn_error_t *svn_ra_get_locks(svn_ra_session_t *session,
                               apr_hash_t **locks,
                               const char *path,
                               apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(*path != '/');
-  return session->vtable->get_locks(session, locks, path, pool);
+  return svn_ra_get_locks2(session, locks, path, svn_depth_infinity, pool);
 }
 
 svn_error_t *svn_ra_replay(svn_ra_session_t *session,

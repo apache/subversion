@@ -23,5 +23,11 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
+svnversion . /1.6.x | find "S" > nul:
+IF ERRORLEVEL 1 (
+  ECHO --- Building 1.6.x: Skipping bindings ---
+  EXIT /B 0
+)
+
 msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 /t:__JAVAHL__ /t:__SWIG_PYTHON__ /t:__SWIG_PERL__ /t:__JAVAHL_TESTS__
 IF ERRORLEVEL 1 EXIT /B 1 

@@ -1154,7 +1154,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
 
 /** Determine what has changed under a @a root.
  *
- * Allocate and return a hash @a *changed_paths_p containing descriptions
+ * Allocate and return a hash @a *changed_paths2_p containing descriptions
  * of the paths changed under @a root.  The hash is keyed with
  * <tt>const char *</tt> paths, and has #svn_fs_path_change2_t * values.
  *
@@ -1169,7 +1169,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
+svn_fs_paths_changed2(apr_hash_t **changed_paths2_p,
                       svn_fs_root_t *root,
                       apr_pool_t *pool);
 
@@ -2126,6 +2126,11 @@ typedef svn_error_t *(*svn_fs_get_locks_callback_t)(void *baton,
  * get_locks_func / @a get_locks_baton.  Use @a pool for necessary
  * allocations.
  *
+ * @a depth limits the reported locks to those associated with paths
+ * within the specified depth of @a path, and must be one of the
+ * following values:  #svn_depth_empty, #svn_depth_files,
+ * #svn_depth_immediates, or #svn_depth_infinity.
+ *
  * If the @a get_locks_func callback implementation returns an error,
  * lock iteration will terminate and that error will be returned by
  * this function.
@@ -2137,7 +2142,24 @@ typedef svn_error_t *(*svn_fs_get_locks_callback_t)(void *baton,
  * start a new Berkeley DB transaction (which is most of this svn_fs
  * API).  Yes, this is a nasty implementation detail to have to be
  * aware of.  We hope to fix this problem in the future.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_fs_get_locks2(svn_fs_t *fs,
+                  const char *path,
+                  svn_depth_t depth,
+                  svn_fs_get_locks_callback_t get_locks_func,
+                  void *get_locks_baton,
+                  apr_pool_t *pool);
+
+/** 
+ * Similar to svn_fs_get_locks2(), but with @a depth always passed as
+ * svn_depth_infinity.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_get_locks(svn_fs_t *fs,
                  const char *path,

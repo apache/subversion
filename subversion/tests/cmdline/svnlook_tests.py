@@ -267,11 +267,22 @@ def test_print_property_diffs(sbox):
   if len(output) != len(expected_output):
     raise svntest.Failure
 
+  canonical_iota_path = iota_path.replace(os.path.sep, '/')
+
   # replace wcdir/iota with iota in expected_output
   for i in range(len(expected_output)):
-    expected_output[i] = expected_output[i].replace(iota_path, 'iota')
+    expected_output[i] = expected_output[i].replace(canonical_iota_path, 
+                                                    'iota')
 
-  svntest.verify.compare_and_display_lines('', '', expected_output, output)
+  # Check that the header filenames match.
+  if expected_output[2].split()[1] != output[2].split()[1]:
+    raise svntest.Failure
+  if expected_output[3].split()[1] != output[3].split()[1]:
+    raise svntest.Failure
+
+  svntest.verify.compare_and_display_lines('', '', 
+                                           expected_output[4:],
+                                           output[4:])
 
 #----------------------------------------------------------------------
 # Check that svnlook info repairs allows inconsistent line endings in logs.
@@ -520,11 +531,22 @@ def diff_ignore_eolstyle(sbox):
                          '--ignore-eol-style', repo_dir, '/A/mu')
     rev += 1
 
+    canonical_mu_path = mu_path.replace(os.path.sep, '/')
+
     # replace wcdir/A/mu with A/mu in expected_output
     for i in range(len(expected_output)):
-      expected_output[i] = expected_output[i].replace(mu_path, 'A/mu')
+      expected_output[i] = expected_output[i].replace(canonical_mu_path, 
+                                                      'A/mu')
 
-    svntest.verify.compare_and_display_lines('', '', expected_output, output)
+    # Check that the header filenames match.
+    if expected_output[2].split()[1] != output[2].split()[1]:
+      raise svntest.Failure
+    if expected_output[3].split()[1] != output[3].split()[1]:
+      raise svntest.Failure
+
+    svntest.verify.compare_and_display_lines('', '', 
+                                             expected_output[4:],
+                                             output[4:])
 
 
 #----------------------------------------------------------------------
@@ -674,9 +696,7 @@ fp.close()"""
 # list all tests here, starting with None:
 test_list = [ None,
               test_misc,
-              ### it would be nice to XFail this, but it throws an assertion
-              ### which leaves a core dump. let's not leave turds right now.
-              Skip(delete_file_in_moved_dir),
+              delete_file_in_moved_dir,
               test_print_property_diffs,
               info_bad_newlines,
               changed_copy_info,

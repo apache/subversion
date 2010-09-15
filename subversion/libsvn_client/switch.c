@@ -294,8 +294,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Rely on svn_wc__acquire_write_lock setting ANCHOR_ABSPATH even
      when it returns SVN_ERR_WC_LOCKED */
-  err = svn_wc__acquire_write_lock(&anchor_abspath, ctx->wc_ctx,
-                                   local_abspath, pool, pool);
+  err = svn_wc__acquire_write_lock(&anchor_abspath,
+                                   ctx->wc_ctx, local_abspath, TRUE,
+                                   pool, pool);
   if (err && err->apr_err != SVN_ERR_WC_LOCKED)
     return svn_error_return(err);
 

@@ -57,6 +57,7 @@
 #include "svn_utf.h"
 #include "svn_config.h"
 #include "svn_private_config.h"
+#include "svn_ctype.h"
 
 #include "private/svn_atomic.h"
 
@@ -222,14 +223,7 @@ io_check_path(const char *path,
 
   if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
-  else if (APR_STATUS_IS_ENOTDIR(apr_err)
-#ifdef WIN32
-           /* On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
-            * invalid-pathname error but not this one, so we include it. */
-           /* ### This fix should go into APR. */
-           || (APR_TO_OS_ERROR(apr_err) == ERROR_INVALID_NAME)
-#endif
-           )
+  else if (SVN__APR_STATUS_IS_ENOTDIR(apr_err))
     *kind = svn_node_none;
   else if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't check path '%s'"),
@@ -243,20 +237,20 @@ io_check_path(const char *path,
 }
 
 
-/* Wrapper for apr_file_open(). */
+/* Wrapper for apr_file_open(), taking an APR-encoded filename. */
 static apr_status_t
 file_open(apr_file_t **f,
-          const char *fname,
+          const char *fname_apr,
           apr_int32_t flag,
           apr_fileperms_t perm,
           svn_boolean_t retry_on_failure,
           apr_pool_t *pool)
 {
-  apr_status_t status = apr_file_open(f, fname, flag, perm, pool);
+  apr_status_t status = apr_file_open(f, fname_apr, flag, perm, pool);
 
   if (retry_on_failure)
     {
-      WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+      WIN32_RETRY_LOOP(status, apr_file_open(f, fname_apr, flag, perm, pool));
     }
   return status;
 }
@@ -292,7 +286,9 @@ svn_io_check_special_path(const char *path,
 struct temp_file_cleanup_s
 {
   apr_pool_t *pool;
-  const char *name;
+  /* The (APR-encoded) full path of the file to be removed, or NULL if
+   * nothing to do. */
+  const char *fname_apr;
 };
 
 
@@ -302,10 +298,10 @@ temp_file_plain_cleanup_handler(void *baton)
   struct  temp_file_cleanup_s *b = baton;
   apr_status_t apr_err = APR_SUCCESS;
 
-  if (b->name)
+  if (b->fname_apr)
     {
-      apr_err = apr_file_remove(b->name, b->pool);
-      WIN32_RETRY_LOOP(apr_err, apr_file_remove(b->name, b->pool));
+      apr_err = apr_file_remove(b->fname_apr, b->pool);
+      WIN32_RETRY_LOOP(apr_err, apr_file_remove(b->fname_apr, b->pool));
     }
 
   return apr_err;
@@ -354,7 +350,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
       baton = apr_palloc(result_pool, sizeof(*baton));
 
       baton->pool = result_pool;
-      baton->name = NULL;
+      baton->fname_apr = NULL;
 
       /* Because cleanups are run LIFO, we need to make sure to register
          our cleanup before the apr_file_close cleanup:
@@ -447,7 +443,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
       else
         {
           if (delete_when == svn_io_file_del_on_pool_cleanup)
-            baton->name = apr_pstrdup(result_pool, unique_name_apr);
+            baton->fname_apr = apr_pstrdup(result_pool, unique_name_apr);
 
           if (file)
             *file = try_file;
@@ -786,7 +782,8 @@ svn_io_copy_file(const char *src,
   return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
-/* Wrapper for apr_file_perms_set(). */
+#if !defined(WIN32) && !defined(__OS2__)
+/* Wrapper for apr_file_perms_set(), taking a UTF8-encoded filename. */
 static svn_error_t *
 file_perms_set(const char *fname, apr_fileperms_t perms,
                apr_pool_t *pool)
@@ -803,35 +800,32 @@ file_perms_set(const char *fname, apr_fileperms_t perms,
   else
     return SVN_NO_ERROR;
 }
+#endif /* !WIN32 && !__OS2__ */
 
 svn_error_t *
 svn_io_copy_perms(const char *src,
                   const char *dst,
                   apr_pool_t *pool)
 {
-  /* ### On Windows, apr_file_perms_set always returns APR_ENOTIMPL,
+  /* ### On Windows or OS/2, apr_file_perms_set always returns APR_ENOTIMPL,
          and the path passed to apr_file_perms_set must be encoded
          in the platform-specific path encoding; not necessary UTF-8.
          We need a platform-specific implementation to get the
          permissions right. */
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
   {
-    apr_file_t *src_file;
-    apr_file_t *dst_file;
     apr_finfo_t finfo;
+    svn_node_kind_t kind;
+    svn_boolean_t is_special;
     svn_error_t *err;
 
     /* If DST is a symlink, don't bother copying permissions. */
-    SVN_ERR(svn_io_file_open(&dst_file, dst, APR_READ, APR_OS_DEFAULT, pool));
-    SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_TYPE, dst_file, pool));
-    SVN_ERR(svn_io_file_close(dst_file, pool));
-    if (finfo.filetype == APR_LNK)
+    SVN_ERR(svn_io_check_special_path(dst, &kind, &is_special, pool));
+    if (is_special)
       return SVN_NO_ERROR;
 
-    SVN_ERR(svn_io_file_open(&src_file, src, APR_READ, APR_OS_DEFAULT, pool));
-    SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file, pool));
-    SVN_ERR(svn_io_file_close(src_file, pool));
+    SVN_ERR(svn_io_stat(&finfo, src, APR_FINFO_PROT, pool));
     err = file_perms_set(dst, finfo.protection, pool);
     if (err)
       {
@@ -852,7 +846,7 @@ svn_io_copy_perms(const char *src,
           }
       }
   }
-#endif /* ! WIN32 */
+#endif /* !WIN32 && !__OS2__ */
 
   return SVN_NO_ERROR;
 }
@@ -1032,14 +1026,19 @@ svn_error_t *svn_io_file_create(const char *file,
 {
   apr_file_t *f;
   apr_size_t written;
+  svn_error_t *err;
 
   SVN_ERR(svn_io_file_open(&f, file,
                            (APR_WRITE | APR_CREATE | APR_EXCL),
                            APR_OS_DEFAULT,
                            pool));
-  SVN_ERR(svn_io_file_write_full(f, contents, strlen(contents),
-                                 &written, pool));
-  return svn_io_file_close(f, pool);
+  err= svn_io_file_write_full(f, contents, strlen(contents),
+                              &written, pool);
+
+
+  return svn_error_return(
+                        svn_error_compose_create(err,
+                                                 svn_io_file_close(f, pool)));
 }
 
 svn_error_t *svn_io_dir_file_copy(const char *src_path,
@@ -1239,7 +1238,7 @@ svn_io_file_checksum(unsigned char digest[],
 
 /*** Permissions and modes. ***/
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
 /* Given the file specified by PATH, attempt to create an
    identical version of it owned by the current user.  This is done by
    moving it to a temporary location, copying the file back to its old
@@ -1454,7 +1453,7 @@ io_set_file_perms(const char *path,
                             _("Can't change perms of file '%s'"),
                             svn_dirent_local_style(path, pool));
 }
-#endif /* !WIN32 */
+#endif /* !WIN32 && !__OS2__ */
 
 
 svn_error_t *
@@ -1473,9 +1472,9 @@ svn_io_set_file_read_only(const char *path,
                           svn_boolean_t ignore_enoent,
                           apr_pool_t *pool)
 {
-  /* On Windows, just set the file attributes -- on unix call
+  /* On Windows and OS/2, just set the file attributes -- on unix call
      our internal function which attempts to honor the umask. */
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
   return io_set_file_perms(path, TRUE, FALSE, FALSE, FALSE,
                            ignore_enoent, pool);
 #else
@@ -1505,9 +1504,9 @@ svn_io_set_file_read_write(const char *path,
                            svn_boolean_t ignore_enoent,
                            apr_pool_t *pool)
 {
-  /* On Windows, just set the file attributes -- on unix call
+  /* On Windows and OS/2, just set the file attributes -- on unix call
      our internal function which attempts to honor the umask. */
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
   return io_set_file_perms(path, TRUE, TRUE, FALSE, FALSE,
                            ignore_enoent, pool);
 #else
@@ -1537,9 +1536,9 @@ svn_io_set_file_executable(const char *path,
                            svn_boolean_t ignore_enoent,
                            apr_pool_t *pool)
 {
-  /* On Windows, just exit -- on unix call our internal function
+  /* On Windows and OS/2, just exit -- on unix call our internal function
   which attempts to honor the umask. */
-#ifndef WIN32
+#if (!defined(WIN32) && !defined(__OS2__))
   return io_set_file_perms(path, FALSE, FALSE, TRUE, executable,
                            ignore_enoent, pool);
 #else
@@ -1553,7 +1552,7 @@ svn_io_is_file_executable(svn_boolean_t *executable,
                           const char *path,
                           apr_pool_t *pool)
 {
-#if defined(APR_HAS_USER) && !defined(WIN32)
+#if defined(APR_HAS_USER) && !defined(WIN32) &&!defined(__OS2__)
   apr_finfo_t file_info;
   apr_status_t apr_err;
   apr_uid_t uid;
@@ -1580,7 +1579,7 @@ svn_io_is_file_executable(svn_boolean_t *executable,
   else
     *executable = (file_info.protection & APR_WEXECUTE);
 
-#else  /* defined(WIN32) || !defined(APR_HAS_USER) */
+#else  /* WIN32 || __OS2__ || !APR_HAS_USER */
   *executable = FALSE;
 #endif
 
@@ -1589,9 +1588,10 @@ svn_io_is_file_executable(svn_boolean_t *executable,
 
 
 /*** File locking. ***/
+#if !defined(WIN32) && !defined(__OS2__)
 /* Clear all outstanding locks on ARG, an open apr_file_t *. */
 static apr_status_t
-svn_io__file_clear_and_close(void *arg)
+file_clear_locks(void *arg)
 {
   apr_status_t apr_err;
   apr_file_t *f = arg;
@@ -1601,26 +1601,15 @@ svn_io__file_clear_and_close(void *arg)
   if (apr_err)
     return apr_err;
 
-  /* Close the file. */
-  apr_err = apr_file_close(f);
-  if (apr_err)
-    return apr_err;
-
   return 0;
 }
+#endif
 
-
-svn_error_t *svn_io_file_lock(const char *lock_file,
-                              svn_boolean_t exclusive,
-                              apr_pool_t *pool)
-{
-  return svn_io_file_lock2(lock_file, exclusive, FALSE, pool);
-}
-
-svn_error_t *svn_io_file_lock2(const char *lock_file,
-                               svn_boolean_t exclusive,
-                               svn_boolean_t nonblocking,
-                               apr_pool_t *pool)
+svn_error_t *
+svn_io_file_lock2(const char *lock_file,
+                  svn_boolean_t exclusive,
+                  svn_boolean_t nonblocking,
+                  apr_pool_t *pool)
 {
   int locktype = APR_FLOCK_SHARED;
   apr_file_t *lockfile_handle;
@@ -1660,9 +1649,13 @@ svn_error_t *svn_io_file_lock2(const char *lock_file,
         }
     }
 
+/* On Windows and OS/2 file locks are automatically released when
+   the file handle closes */
+#if !defined(WIN32) && !defined(__OS2__)
   apr_pool_cleanup_register(pool, lockfile_handle,
-                            svn_io__file_clear_and_close,
+                            file_clear_locks,
                             apr_pool_cleanup_null);
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -1849,8 +1842,8 @@ svn_io_remove_file2(const char *path,
   apr_status_t apr_err;
   const char *path_apr;
 
-#ifdef WIN32
-  /* Set the file writable but only on Windows, because Windows
+#if defined(WIN32) || defined(__OS2__)
+  /* Set the file writable but only on Windows & OS/2, because Windows and OS/2
      will not allow us to remove files that are read-only. */
   SVN_ERR(svn_io_set_file_read_write(path, TRUE, scratch_pool));
 #endif /* WIN32 */
@@ -1924,7 +1917,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
   svn_error_t *err;
   apr_pool_t *subpool;
   apr_hash_t *dirents;
-  apr_hash_index_t *ent;
+  apr_hash_index_t *hi;
 
   /* Check for pending cancellation request.
      If we need to bail out, do so early. */
@@ -1934,7 +1927,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
 
   subpool = svn_pool_create(pool);
 
-  err = svn_io_get_dirents2(&dirents, path, subpool);
+  err = svn_io_get_dirents3(&dirents, path, TRUE, subpool, subpool);
   if (err)
     {
       /* if the directory doesn't exist, our mission is accomplished */
@@ -1946,15 +1939,14 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
       return svn_error_return(err);
     }
 
-  for (ent = apr_hash_first(subpool, dirents); ent; ent = apr_hash_next(ent))
+  for (hi = apr_hash_first(subpool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      char *fullpath;
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      const char *fullpath;
 
-      apr_hash_this(ent, &key, NULL, &val);
-      fullpath = svn_dirent_join(path, key, subpool);
-      if (((svn_io_dirent_t *)val)->kind == svn_node_dir)
+      fullpath = svn_dirent_join(path, name, subpool);
+      if (dirent->kind == svn_node_dir)
         {
           /* Don't check for cancellation, the callee will immediately do so */
           SVN_ERR(svn_io_remove_dir2(fullpath, FALSE, cancel_func,
@@ -1983,59 +1975,50 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
                          const char *path,
                          apr_pool_t *pool)
 {
-  apr_status_t status;
-  apr_dir_t *this_dir;
-  apr_finfo_t this_entry;
-  apr_int32_t flags = APR_FINFO_NAME;
+  return svn_error_return(svn_io_get_dirents3(dirents, path, TRUE,
+                                              pool, pool));
+}
 
-  *dirents = apr_hash_make(pool);
+svn_io_dirent2_t *
+svn_io_dirent2_create(apr_pool_t *result_pool)
+{
+  svn_io_dirent2_t *dirent = apr_pcalloc(result_pool, sizeof(*dirent));
 
-  SVN_ERR(svn_io_dir_open(&this_dir, path, pool));
+  /*dirent->kind = svn_node_none;
+  dirent->special = FALSE;*/
+  dirent->filesize = SVN_INVALID_FILESIZE;
+  /*dirent->mtime = 0;*/
 
-  for (status = apr_dir_read(&this_entry, flags, this_dir);
-       status == APR_SUCCESS;
-       status = apr_dir_read(&this_entry, flags, this_dir))
-    {
-      if ((this_entry.name[0] == '.')
-          && ((this_entry.name[1] == '\0')
-              || ((this_entry.name[1] == '.')
-                  && (this_entry.name[2] == '\0'))))
-        {
-          continue;
-        }
-      else
-        {
-          const char *name;
-          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
-          apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, name);
-        }
-    }
+  return dirent;
+}
 
-  if (! (APR_STATUS_IS_ENOENT(status)))
-    return svn_error_wrap_apr(status, _("Can't read directory '%s'"),
-                              svn_dirent_local_style(path, pool));
-
-  status = apr_dir_close(this_dir);
-  if (status)
-    return svn_error_wrap_apr(status, _("Error closing directory '%s'"),
-                              svn_dirent_local_style(path, pool));
-
-  return SVN_NO_ERROR;
+svn_io_dirent2_t *
+svn_io_dirent2_dup(const svn_io_dirent2_t *item,
+                   apr_pool_t *result_pool)
+{
+  return apr_pmemdup(result_pool,
+                     item,
+                     sizeof(*item));
 }
 
 svn_error_t *
-svn_io_get_dirents2(apr_hash_t **dirents,
+svn_io_get_dirents3(apr_hash_t **dirents,
                     const char *path,
-                    apr_pool_t *pool)
+                    svn_boolean_t only_check_type,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   apr_status_t status;
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
-  *dirents = apr_hash_make(pool);
+  if (!only_check_type)
+    flags |= APR_FINFO_SIZE | APR_FINFO_MTIME;
 
-  SVN_ERR(svn_io_dir_open(&this_dir, path, pool));
+  *dirents = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_io_dir_open(&this_dir, path, scratch_pool));
 
   for (status = apr_dir_read(&this_entry, flags, this_dir);
        status == APR_SUCCESS;
@@ -2051,13 +2034,19 @@ svn_io_get_dirents2(apr_hash_t **dirents,
       else
         {
           const char *name;
-          svn_io_dirent_t *dirent = apr_palloc(pool, sizeof(*dirent));
+          svn_io_dirent2_t *dirent = svn_io_dirent2_create(result_pool);
 
-          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
+          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, result_pool));
 
           map_apr_finfo_to_node_kind(&(dirent->kind),
                                      &(dirent->special),
                                      &this_entry);
+
+          if (!only_check_type)
+            {
+              dirent->filesize = this_entry.size;
+              dirent->mtime = this_entry.mtime;
+            }
 
           apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
         }
@@ -2065,25 +2054,54 @@ svn_io_get_dirents2(apr_hash_t **dirents,
 
   if (! (APR_STATUS_IS_ENOENT(status)))
     return svn_error_wrap_apr(status, _("Can't read directory '%s'"),
-                              svn_dirent_local_style(path, pool));
+                              svn_dirent_local_style(path, scratch_pool));
 
   status = apr_dir_close(this_dir);
   if (status)
     return svn_error_wrap_apr(status, _("Error closing directory '%s'"),
-                              svn_dirent_local_style(path, pool));
+                              svn_dirent_local_style(path, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_io_get_dirents(apr_hash_t **dirents,
+svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                    const char *path,
-                   apr_pool_t *pool)
+                   svn_boolean_t ignore_enoent,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
-  /* Note that in C, padding is not allowed at the beginning of structs,
-     so this is actually portable, since the kind field of svn_io_dirent_t
-     is first in that struct. */
-  return svn_io_get_dirents2(dirents, path, pool);
+  apr_finfo_t finfo;
+  svn_io_dirent2_t *dirent;
+  svn_error_t *err;
+
+  err = svn_io_stat(&finfo, path,
+                    APR_FINFO_TYPE | APR_FINFO_LINK
+                    | APR_FINFO_SIZE | APR_FINFO_MTIME,
+                    scratch_pool);
+
+  if (err && ignore_enoent && 
+      (APR_STATUS_IS_ENOENT(err->apr_err)
+       || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      dirent = svn_io_dirent2_create(result_pool);
+      SVN_ERR_ASSERT(dirent->kind == svn_node_none);
+
+      *dirent_p = dirent;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
+  dirent = svn_io_dirent2_create(result_pool);
+  map_apr_finfo_to_node_kind(&(dirent->kind), &(dirent->special), &finfo);
+
+  dirent->filesize = finfo.size;
+  dirent->mtime = finfo.mtime;
+
+  *dirent_p = dirent;
+
+  return SVN_NO_ERROR;
 }
 
 /* Pool userdata key for the error file passed to svn_io_start_cmd(). */
@@ -2634,11 +2652,15 @@ svn_io_detect_mimetype2(const char **mimetype,
 
 
   /* Right now, this function is going to be really stupid.  It's
-     going to examine the first block of data, and make sure that 85%
+     going to examine the first block of data, and make sure that 15%
      of the bytes are such that their value is in the ranges 0x07-0x0D
-     or 0x20-0x7F, and that 100% of those bytes is not 0x00.
+     or 0x20-0x7F, and that none of those bytes is 0x00.  If those
+     criteria are not met, we're calling it binary.
 
-     If those criteria are not met, we're calling it binary. */
+     NOTE:  Originally, I intended to target 85% of the bytes being in
+     the specified ranges, but I flubbed the condition.  At any rate,
+     folks aren't complaining, so I'm not sure that it's worth
+     adjusting this retroactively now.  --cmpilato  */
   if (amt_read > 0)
     {
       apr_size_t i;
@@ -2852,12 +2874,19 @@ svn_io_write_unique(const char **tmp_path,
                     apr_pool_t *pool)
 {
   apr_file_t *new_file;
+  svn_error_t *err;
 
   SVN_ERR(svn_io_open_unique_file3(&new_file, tmp_path, dirpath,
                                    delete_when, pool, pool));
-  SVN_ERR(svn_io_file_write_full(new_file, buf, nbytes, NULL, pool));
-  SVN_ERR(svn_io_file_flush_to_disk(new_file, pool));
-  return svn_io_file_close(new_file, pool);
+
+  err = svn_io_file_write_full(new_file, buf, nbytes, NULL, pool);
+
+  if (!err)
+    err = svn_io_file_flush_to_disk(new_file, pool);
+
+  return svn_error_return(
+                  svn_error_compose_create(err,
+                                           svn_io_file_close(new_file, pool)));
 }
 
 
@@ -2949,7 +2978,7 @@ svn_io_file_rename(const char *from_path, const char *to_path,
 
   status = apr_file_rename(from_path_apr, to_path_apr, pool);
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__OS2__)
   /* If the target file is read only NTFS reports EACCESS and
      FAT/FAT32 reports EEXIST */
   if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
@@ -2962,7 +2991,7 @@ svn_io_file_rename(const char *from_path, const char *to_path,
       status = apr_file_rename(from_path_apr, to_path_apr, pool);
     }
   WIN32_RETRY_LOOP(status, apr_file_rename(from_path_apr, to_path_apr, pool));
-#endif /* WIN32 */
+#endif /* WIN32 || __OS2__ */
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't move '%s' to '%s'"),
@@ -3123,6 +3152,10 @@ svn_io_dir_open(apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Forward declaration */
+static apr_status_t
+dir_is_empty(const char *dir, apr_pool_t *pool);
+
 
 svn_error_t *
 svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)
@@ -3135,10 +3168,22 @@ svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)
   status = apr_dir_remove(dirname_apr, pool);
 
 #ifdef WIN32
-  if (APR_TO_OS_ERROR(status) != ERROR_DIR_NOT_EMPTY)
-    {
-      WIN32_RETRY_LOOP(status, apr_dir_remove(dirname_apr, pool));
-    }
+  {
+    svn_boolean_t retry = TRUE;
+
+    if (APR_TO_OS_ERROR(status) == ERROR_DIR_NOT_EMPTY)
+      {
+        apr_status_t empty_status = dir_is_empty(dirname_apr, pool);
+
+        if (APR_STATUS_IS_ENOTEMPTY(empty_status))
+          retry = FALSE;
+      }
+    
+    if (retry)
+      {
+        WIN32_RETRY_LOOP(status, apr_dir_remove(dirname_apr, pool));
+      }
+  }
 #endif
   if (status)
     return svn_error_wrap_apr(status, _("Can't remove directory '%s'"),
@@ -3176,11 +3221,11 @@ svn_io_dir_read(apr_finfo_t *finfo,
 
 
 svn_error_t *
-svn_io_dir_walk(const char *dirname,
-                apr_int32_t wanted,
-                svn_io_walk_func_t walk_func,
-                void *walk_baton,
-                apr_pool_t *pool)
+svn_io_dir_walk2(const char *dirname,
+                 apr_int32_t wanted,
+                 svn_io_walk_func_t walk_func,
+                 void *walk_baton,
+                 apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_dir_t *handle;
@@ -3249,11 +3294,11 @@ svn_io_dir_walk(const char *dirname,
           SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
                                      subpool));
           full_path = svn_dirent_join(dirname, name_utf8, subpool);
-          SVN_ERR(svn_io_dir_walk(full_path,
-                                  wanted,
-                                  walk_func,
-                                  walk_baton,
-                                  subpool));
+          SVN_ERR(svn_io_dir_walk2(full_path,
+                                   wanted,
+                                   walk_func,
+                                   walk_baton,
+                                   subpool));
         }
       else if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
         {
@@ -3267,9 +3312,10 @@ svn_io_dir_walk(const char *dirname,
                                subpool));
         }
       /* else:
-         some other type of file; skip it.
+         Some other type of file; skip it for now.  We've reserved the
+         right to expand our coverage here in the future, though,
+         without revving this API.
       */
-
     }
 
   svn_pool_destroy(subpool);
@@ -3382,11 +3428,11 @@ svn_io_write_version_file(const char *path,
                               format_contents, strlen(format_contents),
                               svn_io_file_del_none, pool));
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__OS2__)
   /* make the destination writable, but only on Windows, because
      Windows does not let us replace read-only files. */
   SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
-#endif /* WIN32 */
+#endif /* WIN32 || __OS2__ */
 
   /* rename the temp file as the real destination */
   SVN_ERR(svn_io_file_rename(path_tmp, path, pool));
@@ -3404,15 +3450,17 @@ svn_io_read_version_file(int *version,
   apr_file_t *format_file;
   char buf[80];
   apr_size_t len;
+  svn_error_t *err;
 
   /* Read a chunk of data from PATH */
   SVN_ERR(svn_io_file_open(&format_file, path, APR_READ,
                            APR_OS_DEFAULT, pool));
   len = sizeof(buf);
-  SVN_ERR(svn_io_file_read(format_file, buf, &len, pool));
+  err = svn_io_file_read(format_file, buf, &len, pool);
 
   /* Close the file. */
-  SVN_ERR(svn_io_file_close(format_file, pool));
+  SVN_ERR(svn_error_compose_create(err,
+                                   svn_io_file_close(format_file, pool)));
 
   /* If there was no data in PATH, return an error. */
   if (len == 0)
@@ -3429,8 +3477,11 @@ svn_io_read_version_file(int *version,
         char c = buf[i];
 
         if (i > 0 && (c == '\r' || c == '\n'))
-          break;
-        if (! apr_isdigit(c))
+          {
+            buf[i] = '\0';
+            break;
+          }
+        if (! svn_ctype_isdigit(c))
           return svn_error_createf
             (SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
              _("First line of '%s' contains non-digit"),
@@ -3439,7 +3490,7 @@ svn_io_read_version_file(int *version,
   }
 
   /* Convert to integer. */
-  *version = atoi(buf);
+  SVN_ERR(svn_cstring_atoi(version, buf));
 
   return SVN_NO_ERROR;
 }
@@ -3453,48 +3504,65 @@ contents_identical_p(svn_boolean_t *identical_p,
                      const char *file2,
                      apr_pool_t *pool)
 {
-  svn_error_t *err1;
-  svn_error_t *err2;
+  svn_error_t *err;
   apr_size_t bytes_read1, bytes_read2;
   char *buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
+  svn_boolean_t done1 = FALSE;
+  svn_boolean_t done2 = FALSE;
 
   SVN_ERR(svn_io_file_open(&file1_h, file1, APR_READ, APR_OS_DEFAULT,
                            pool));
-  SVN_ERR(svn_io_file_open(&file2_h, file2, APR_READ, APR_OS_DEFAULT,
-                           pool));
+
+  err = svn_io_file_open(&file2_h, file2, APR_READ, APR_OS_DEFAULT,
+                         pool);
+
+  if (err)
+    return svn_error_return(
+               svn_error_compose_create(err,
+                                        svn_io_file_close(file1_h, pool)));
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
-  do
+  while (! (done1 || done2))
     {
-      err1 = svn_io_file_read_full(file1_h, buf1,
-                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1, pool);
-      if (err1 && !APR_STATUS_IS_EOF(err1->apr_err))
-        return err1;
-
-      err2 = svn_io_file_read_full(file2_h, buf2,
-                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2, pool);
-      if (err2 && !APR_STATUS_IS_EOF(err2->apr_err))
+      err = svn_io_file_read_full(file1_h, buf1,
+                                  SVN__STREAM_CHUNK_SIZE, &bytes_read1, pool);
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
         {
-          svn_error_clear(err1);
-          return err2;
+          svn_error_clear(err);
+          err = NULL;
+          done1 = TRUE;
         }
+      else if (err)
+        break;
+
+      err = svn_io_file_read_full(file2_h, buf2,
+                                  SVN__STREAM_CHUNK_SIZE, &bytes_read2, pool);
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
+        {
+          svn_error_clear(err);
+          err = NULL;
+          done2 = TRUE;
+        }
+      else if (err)
+        break;
 
       if ((bytes_read1 != bytes_read2)
+          || (done1 != done2)
           || (memcmp(buf1, buf2, bytes_read1)))
         {
           *identical_p = FALSE;
           break;
         }
-    } while (! err1 && ! err2);
+    }
 
-  svn_error_clear(err1);
-  svn_error_clear(err2);
-
-  SVN_ERR(svn_io_file_close(file1_h, pool));
-  return svn_io_file_close(file2_h, pool);
+  return svn_error_return(
+           svn_error_compose_create(
+                err,
+                svn_error_compose_create(svn_io_file_close(file1_h, pool),
+                                         svn_io_file_close(file2_h, pool))));
 }
 
 
@@ -3665,7 +3733,7 @@ temp_file_create(apr_file_t **new_file,
 #endif
 }
 
-/* Wrapper for apr_file_name_get(). */
+/* Wrapper for apr_file_name_get(), passing out a UTF8-encoded filename. */
 svn_error_t *
 svn_io_file_name_get(const char **filename,
                      apr_file_t *file,
@@ -3718,7 +3786,7 @@ svn_io_open_unique_file3(apr_file_t **file,
       case svn_io_file_del_on_pool_cleanup:
         baton = apr_palloc(result_pool, sizeof(*baton));
         baton->pool = result_pool;
-        baton->name = NULL;
+        baton->fname_apr = NULL;
 
         /* Because cleanups are run LIFO, we need to make sure to register
            our cleanup before the apr_file_close cleanup:
@@ -3740,9 +3808,9 @@ svn_io_open_unique_file3(apr_file_t **file,
   SVN_ERR(temp_file_create(&tempfile, &tempname, dirpath, flags,
                            result_pool, scratch_pool));
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__OS2__)
   /* ### file_mktemp() creates files with mode 0600.
-   * ### As of r40264, tempfiles created by svn_io_open_unique_file3()
+   * ### As of r880338, tempfiles created by svn_io_open_unique_file3()
    * ### often end up being copied or renamed into the working copy.
    * ### This will cause working files having mode 0600 while users might
    * ### expect to see 644 or 664. Ideally, permissions should be tweaked
@@ -3763,12 +3831,7 @@ svn_io_open_unique_file3(apr_file_t **file,
     *unique_path = tempname; /* Was allocated in result_pool */
 
   if (baton)
-    {
-      if (unique_path)
-        baton->name = *unique_path;
-      else
-        baton->name = tempname; /* Was allocated in result_pool */
-    }
+    SVN_ERR(cstring_from_utf8(&baton->fname_apr, tempname, result_pool));
 
   return SVN_NO_ERROR;
 }

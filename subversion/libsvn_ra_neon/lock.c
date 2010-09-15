@@ -32,6 +32,7 @@
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_path.h"
+#include "svn_string.h"
 #include "svn_time.h"
 #include "svn_private_config.h"
 
@@ -209,8 +210,9 @@ lock_from_baton(svn_lock_t **lock,
         {
           if (strncmp("Second-", timeout_str, strlen("Second-")) == 0)
             {
-              int time_offset = atoi(&(timeout_str[7]));
-
+              int time_offset;
+              
+              SVN_ERR(svn_cstring_atoi(&time_offset, &(timeout_str[7])));
               lck->expiration_date = lck->creation_date
                 + apr_time_from_sec(time_offset);
             }
@@ -259,7 +261,7 @@ do_lock(svn_lock_t **lock,
                                _("Failed to parse URI '%s'"), url);
     }
 
-  req = svn_ra_neon__request_create(ras, "LOCK", uri.path, pool);
+  SVN_ERR(svn_ra_neon__request_create(&req, ras, "LOCK", uri.path, pool));
   ne_uri_free(&uri);
 
   lrb->pool = pool;
@@ -532,7 +534,7 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
   url = apr_pstrdup(pool, uri.path);
   ne_uri_free(&uri);
 
-  req = svn_ra_neon__request_create(ras, "PROPFIND", url, pool);
+  SVN_ERR(svn_ra_neon__request_create(&req, ras, "PROPFIND", url, pool));
 
   lrb->pool = pool;
   lrb->xml_table = lock_elements;

@@ -331,17 +331,6 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* Retrieve the oldest revision of the node at REL_PATH at REV since
-   it was last copied (if applicable), and store it in OLDEST_REV.  If
-   REL_PATH does not exist in that REV, set *OLDEST_REV to
-   SVN_INVALID_REVNUM.  Use POOL for temporary allocations. */
-svn_error_t *
-svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
-                               svn_ra_session_t *ra_session,
-                               const char *rel_path,
-                               svn_revnum_t rev,
-                               apr_pool_t *pool);
-
 /* A default error handler for use with svn_wc_walk_entries3().  Returns
    ERR in all cases. */
 svn_error_t *
@@ -360,7 +349,9 @@ svn_client__default_walker_error_handler(const char *path,
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
-/* Open an RA session, returning it in *RA_SESSION.
+/* Open an RA session, returning it in *RA_SESSION or a corrected URL
+   in *CORRECTED_URL.  (This function mirrors svn_ra_open4(), which
+   see, regarding the interpretation and handling of these two parameters.)
 
    The root of the session is specified by BASE_URL and BASE_DIR.
 
@@ -386,6 +377,7 @@ svn_client__default_walker_error_handler(const char *path,
    avoid confusion with the public API svn_client_open_ra_session(). */
 svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
+                                     const char **corrected_url,
                                      const char *base_url,
                                      const char *base_dir_abspath,
                                      const apr_array_header_t *commit_items,
@@ -395,23 +387,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      apr_pool_t *pool);
 
 
-
-/* ---------------------------------------------------------------- */
-
-/*** Commit ***/
-
-/* Get the commit_baton to be used in couple with commit_callback. */
-svn_error_t *svn_client__commit_get_baton(void **baton,
-                                          svn_commit_info_t **info,
-                                          apr_pool_t *pool);
-
-/* The commit_callback function for storing svn_client_commit_info_t
-   pointed by commit_baton. If the commit_info supplied by get_baton
-   points to NULL after close_edit, it means the commit is a no-op.
-*/
-svn_error_t *svn_client__commit_callback(const svn_commit_info_t *commit_info,
-                                         void *baton,
-                                         apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -866,13 +841,14 @@ typedef struct
 svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
-                                 const char *dir_abspath,
+                                 const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
                                  svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 
 /* Recursively crawl each absolute working copy path SRC in COPY_PAIRS,
@@ -888,7 +864,8 @@ svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
                                   const apr_array_header_t *copy_pairs,
                                   svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
 /* A qsort()-compatible sort routine for sorting an array of
@@ -919,12 +896,6 @@ svn_client__condense_commit_items(const char **base_url,
    NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
    common absolute path prefix of the committed paths.  It can be NULL.
 
-   If NEW_TEXT_BASE_ABSPATHS is not NULL, create in the temporary-text-base
-   directory a copy of the working version of each file transmitted, but
-   with keywords and eol translated to repository-normal form, and set
-   *NEW_TEXT_BASE_ABSPATHS to a hash that maps (const char *) paths (from
-   the items' paths) to the (const char *) abspaths of these files.
-
    If MD5_CHECKSUMS is not NULL, set *MD5_CHECKSUMS to a hash containing,
    for each file transmitted, a mapping from the commit-item's (const
    char *) path to the (const svn_checksum_t *) MD5 checksum of its new text
@@ -938,7 +909,6 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **new_text_base_abspaths,
                       apr_hash_t **md5_checksums,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
@@ -1008,6 +978,8 @@ svn_client__handle_externals(apr_hash_t *externals_old,
    behaves as for svn_client__handle_externals(), except that ambient
    depths are presumed to be svn_depth_infinity.
 
+   NATIVE_EOL is the value passed as NATIVE_EOL when exporting.
+
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
    is required.
@@ -1020,6 +992,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
                             const char *repos_root_url,
                             svn_depth_t requested_depth,
                             svn_boolean_t is_export,
+                            const char *native_eol,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
@@ -1063,6 +1036,20 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
                                  const char *log_msg,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
+
+/* Return a potentially translated version of local file LOCAL_ABSPATH
+   in NORMAL_STREAM.  REVISION must be one of the following: BASE, COMMITTED,
+   WORKING.  Uses SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_client__get_normalized_stream(svn_stream_t **normal_stream,
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
+                                  const svn_opt_revision_t *revision,
+                                  svn_boolean_t expand_keywords,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
 /* Return true if KIND is a revision kind that is dependent on the working

@@ -298,7 +298,8 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
         SVN_ERR(svn_repos__hooks_pre_revprop_change(repos, rev, author, name,
                                                     new_value, action, pool));
 
-      SVN_ERR(svn_fs_change_rev_prop(repos->fs, rev, name, new_value, pool));
+      SVN_ERR(svn_fs_change_rev_prop2(repos->fs, rev, name, NULL, 
+                                      new_value, pool));
 
       if (use_post_revprop_change_hook)
         SVN_ERR(svn_repos__hooks_post_revprop_change(repos, rev, author,  name,
@@ -528,10 +529,8 @@ get_locks_callback(void *baton,
 
   /* If there's auth to deal with, deal with it. */
   if (b->authz_read_func)
-    {
-      SVN_ERR(b->authz_read_func(&readable, b->head_root, lock->path,
-                                 b->authz_read_baton, pool));
-    }
+    SVN_ERR(b->authz_read_func(&readable, b->head_root, lock->path,
+                               b->authz_read_baton, pool));
 
   /* If we can read this lock path, add the lock to the return hash. */
   if (readable)
@@ -543,19 +542,23 @@ get_locks_callback(void *baton,
 
 
 svn_error_t *
-svn_repos_fs_get_locks(apr_hash_t **locks,
-                       svn_repos_t *repos,
-                       const char *path,
-                       svn_repos_authz_func_t authz_read_func,
-                       void *authz_read_baton,
-                       apr_pool_t *pool)
+svn_repos_fs_get_locks2(apr_hash_t **locks,
+                        svn_repos_t *repos,
+                        const char *path,
+                        svn_depth_t depth,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool)
 {
   apr_hash_t *all_locks = apr_hash_make(pool);
   svn_revnum_t head_rev;
   struct get_locks_baton_t baton;
 
-  /* Locks are always said to apply to HEAD revision, so we'll check
-     to see if locked-paths are readable in HEAD as well. */
+  SVN_ERR_ASSERT((depth == svn_depth_empty) ||
+                 (depth == svn_depth_files) ||
+                 (depth == svn_depth_immediates) ||
+                 (depth == svn_depth_infinity));
+
   SVN_ERR(svn_fs_youngest_rev(&head_rev, repos->fs, pool));
 
   /* Populate our callback baton. */
@@ -567,8 +570,8 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
                                head_rev, pool));
 
   /* Get all the locks. */
-  SVN_ERR(svn_fs_get_locks(repos->fs, path, get_locks_callback,
-                           &baton, pool));
+  SVN_ERR(svn_fs_get_locks2(repos->fs, path, depth,
+                            get_locks_callback, &baton, pool));
 
   *locks = baton.locks;
   return SVN_NO_ERROR;
@@ -685,7 +688,7 @@ svn_repos_fs_pack2(svn_repos_t *repos,
 
 
 /*
- * vim:ts=4:sw=4:expandtab:tw=80:fo=tcroq
+ * vim:ts=4:sw=2:expandtab:tw=80:fo=tcroq
  * vim:isk=a-z,A-Z,48-57,_,.,-,>
  * vim:cino=>1s,e0,n0,f0,{.5s,}0,^-.5s,=.5s,t0,+1s,c3,(0,u0,\:0
  */

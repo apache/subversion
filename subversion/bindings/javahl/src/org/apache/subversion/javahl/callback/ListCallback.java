@@ -25,10 +25,11 @@ package org.apache.subversion.javahl.callback;
 
 import org.apache.subversion.javahl.Lock;
 import org.apache.subversion.javahl.DirEntry;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * This interface is used to receive every single line for a file on a
- * the SVNClientInterface.blame call.
+ * the {@link ISVNClient#blame} call.
  */
 public interface ListCallback
 {

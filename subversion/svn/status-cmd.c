@@ -171,7 +171,7 @@ print_status(void *baton,
              apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
-  svn_client_status_t *tweaked_status;
+
   svn_revnum_t revision;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
@@ -179,7 +179,6 @@ print_status(void *baton,
   const char *local_abspath;
 
   local_abspath = status->local_abspath;
-  tweaked_status = svn_client_status_dup(status, sb->cl_pool);
 
   /* ### The revision information with associates are based on what
    * ### _read_info() returns. The svn_wc_status_func4_t callback is
@@ -187,8 +186,14 @@ print_status(void *baton,
    * ### WORKING nodes on its own. Until we've agreed on how the CLI should
    * ### handle the revision information, we use this appproach to stay compat
    * ### with our testsuite. */
-  if (status->versioned)
+  if (status->versioned
+      && !SVN_IS_VALID_REVNUM(status->revision)
+      && !status->copied)
     {
+      svn_client_status_t *tweaked_status
+                 = svn_client_status_dup(status, sb->cl_pool);
+
+      /* Retrieve some data from the original version of the replaced node */
       SVN_ERR(svn_wc__node_get_working_rev_info(&revision, &changed_rev,
                                                 &changed_date,
                                                 &changed_author,
@@ -199,6 +204,8 @@ print_status(void *baton,
       tweaked_status->changed_rev = changed_rev;
       tweaked_status->changed_date = changed_date;
       tweaked_status->changed_author = changed_author;
+
+      status = tweaked_status;
     }
 
   /* If the path is part of a changelist, then we don't print
@@ -211,7 +218,7 @@ print_status(void *baton,
       const char *cl_key = apr_pstrdup(sb->cl_pool, status->changelist);
       struct status_cache *scache = apr_pcalloc(sb->cl_pool, sizeof(*scache));
       scache->path = apr_pstrdup(sb->cl_pool, path);
-      scache->status = svn_client_status_dup(tweaked_status, sb->cl_pool);
+      scache->status = svn_client_status_dup(status, sb->cl_pool);
 
       path_array =
         apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);
@@ -227,7 +234,7 @@ print_status(void *baton,
       return SVN_NO_ERROR;
     }
 
-  return print_status_normal_or_xml(baton, path, tweaked_status, pool);
+  return print_status_normal_or_xml(baton, path, status, pool);
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -254,11 +261,6 @@ svn_cl__status(apr_getopt_t *os,
 
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;
-
-  /* The notification callback, leave the notifier as NULL in XML mode */
-  if (! opt_state->xml)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
 
   sb.had_print_error = FALSE;
 
@@ -314,6 +316,7 @@ svn_cl__status(apr_getopt_t *os,
                                              opt_state->update,
                                              opt_state->no_ignore,
                                              opt_state->ignore_externals,
+                                             FALSE /* depth_as_sticky */,
                                              opt_state->changelists,
                                              print_status, &sb,
                                              iterpool),

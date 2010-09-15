@@ -20,22 +20,22 @@ Revision-number: 1
 Prop-content-length: 132
 Content-length: 132
 
-K 7
-svn:log
-V 0
-
 K 10
 svn:author
 V 3
 lgo
-K 13
-svn:mergeinfo
-V 10
-/trunk:1:2
 K 8
 svn:date
 V 27
 2007-12-07T20:53:40.322712Z
+K 7
+svn:log
+V 0
+
+K 13
+svn:mergeinfo
+V 10
+/trunk:1:2
 PROPS-END
 
 Node-path: test.txt
@@ -64,10 +64,6 @@ Revision-number: 2
 Prop-content-length: 124
 Content-length: 124
 
-K 7
-svn:log
-V 26
-Import greek tree on trunk
 K 10
 svn:author
 V 3
@@ -76,6 +72,10 @@ K 8
 svn:date
 V 27
 2007-12-07T20:56:45.939703Z
+K 7
+svn:log
+V 26
+Import greek tree on trunk
 PROPS-END
 
 Node-path: trunk/A
@@ -310,10 +310,6 @@ Revision-number: 3
 Prop-content-length: 127
 Content-length: 127
 
-K 7
-svn:log
-V 29
-* trunk/A/D/H/psi: extra line
 K 10
 svn:author
 V 3
@@ -322,6 +318,10 @@ K 8
 svn:date
 V 27
 2007-12-07T21:12:26.232653Z
+K 7
+svn:log
+V 29
+* trunk/A/D/H/psi: extra line
 PROPS-END
 
 Node-path: trunk/A/D/H/psi

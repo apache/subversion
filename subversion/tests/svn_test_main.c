@@ -29,7 +29,6 @@
 
 #include <apr_pools.h>
 #include <apr_general.h>
-#include <apr_lib.h>
 
 #include "svn_cmdline.h"
 #include "svn_opt.h"
@@ -38,6 +37,7 @@
 #include "svn_test.h"
 #include "svn_io.h"
 #include "svn_path.h"
+#include "svn_ctype.h"
 #include "svn_private_config.h"
 
 
@@ -49,6 +49,13 @@ const char **test_argv;
 
 /* Test option: Print more output */
 static svn_boolean_t verbose_mode = FALSE;
+
+/* Test option: Trap SVN_ERR_ASSERT failures in the code under test. Default
+ * is false so the test can easily be run in a debugger with the debugger
+ * catching the assertion failure. Test suites should enable this in order
+ * to be able to continue with other sub-tests and report the results even
+ * when a test hits an assertion failure. */
+static svn_boolean_t trap_assertion_failures = FALSE;
 
 /* Test option: Print only unexpected results */
 static svn_boolean_t quiet_mode = FALSE;
@@ -62,6 +69,7 @@ enum {
   fstype_opt,
   list_opt,
   verbose_opt,
+  trap_assert_opt,
   quiet_opt,
   config_opt,
   server_minor_version_opt
@@ -82,6 +90,8 @@ static const apr_getopt_option_t cl_options[] =
   {"server-minor-version", server_minor_version_opt, 1,
                     N_("set the minor version for the server ('3', '4',\n"
                        "'5', or '6')")},
+  {"trap-assertion-failures", trap_assert_opt, 0,
+                    N_("catch and report SVN_ERR_ASSERT failures")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
   {0,               0, 0, 0}
@@ -107,6 +117,7 @@ cleanup_rmtree(void *data)
 
       /* Ignore errors here. */
       svn_error_t *err = svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
+      svn_error_clear(err);
       if (verbose_mode)
         {
           if (err)
@@ -127,6 +138,7 @@ svn_test_add_dir_cleanup(const char *path)
     {
       const char *abspath;
       svn_error_t *err = svn_path_get_absolute(&abspath, path, cleanup_pool);
+      svn_error_clear(err);
       if (!err)
         apr_pool_cleanup_register(cleanup_pool, abspath, cleanup_rmtree,
                                   apr_pool_cleanup_null);
@@ -250,7 +262,7 @@ do_test_num(const char *progname,
         printf("WARNING: Test docstring exceeds 50 characters\n");
       if (msg[len - 1] == '.')
         printf("WARNING: Test docstring ends in a period (.)\n");
-      if (apr_isupper(msg[0]))
+      if (svn_ctype_isupper(msg[0]))
         printf("WARNING: Test docstring is capitalized\n");
     }
   if (desc->msg == NULL)
@@ -350,6 +362,9 @@ main(int argc, const char *argv[])
         case verbose_opt:
           verbose_mode = TRUE;
           break;
+        case trap_assert_opt:
+          trap_assertion_failures = TRUE;
+          break;
         case quiet_opt:
           quiet_mode = TRUE;
           break;
@@ -383,6 +398,9 @@ main(int argc, const char *argv[])
   cleanup_pool = svn_pool_create(pool);
   test_pool = svn_pool_create(pool);
 
+  if (trap_assertion_failures)
+    svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
+
   if (argc >= 2)  /* notice command-line arguments */
     {
       if (! strcmp(argv[1], "list") || list_mode)
@@ -407,7 +425,7 @@ main(int argc, const char *argv[])
         {
           for (i = 1; i < argc; i++)
             {
-              if (apr_isdigit(argv[i][0]))
+              if (svn_ctype_isdigit(argv[i][0]))
                 {
                   ran_a_test = TRUE;
                   test_num = atoi(argv[i]);

@@ -62,6 +62,9 @@ struct handle_external_item_change_baton
   /* Passed through to svn_client_* functions. */
   svn_client_ctx_t *ctx;
 
+  /* Passed to svn_client_exportX() */
+  const char *native_eol;
+
   svn_boolean_t *timestamp_sleep;
   svn_boolean_t is_export;
 
@@ -116,7 +119,7 @@ relegate_dir_external(void *baton,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
-      svn_dirent_split(b->local_abspath, &parent_dir, &dirname, scratch_pool);
+      svn_dirent_split(&parent_dir, &dirname, b->local_abspath, scratch_pool);
 
       /* Reserve the new dir name. */
       SVN_ERR(svn_io_open_uniquely_named(NULL, &new_path,
@@ -221,8 +224,8 @@ switch_dir_external(const char *path,
 
                   /* Get the repos root of the new URL. */
                   SVN_ERR(svn_client__open_ra_session_internal
-                          (&ra_session, url, NULL, NULL, FALSE, TRUE,
-                           ctx, subpool));
+                          (&ra_session, NULL, url, NULL, NULL,
+                           FALSE, TRUE, ctx, subpool));
                   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
                                                  subpool));
 
@@ -274,9 +277,10 @@ switch_dir_external(const char *path,
       baton.cancel_baton = ctx->cancel_baton;
 
       /* Buh-bye, old and busted ... */
-      SVN_ERR(svn_wc__call_with_write_lock(relegate_dir_external, &baton,
-                                           ctx->wc_ctx, local_abspath,
-                                           pool, pool));
+      SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, local_abspath,
+                                         FALSE, pool, pool));
+      
+      SVN_ERR(relegate_dir_external(&baton, pool, pool));
     }
   else
     {
@@ -362,7 +366,7 @@ switch_file_external(const char *path,
            url, dest_wc_repos_root_url);
 
       SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, anchor_abspath,
-                                         subpool, subpool));
+                                         FALSE, subpool, subpool));
     }
 
   err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE, subpool);
@@ -439,8 +443,8 @@ switch_file_external(const char *path,
       if (err)
         goto cleanup;
 
-      err = svn_wc_register_file_external(ctx->wc_ctx, local_abspath, url,
-                                          peg_revision, revision, subpool);
+      err = svn_wc__register_file_external(ctx->wc_ctx, local_abspath, url,
+                                           peg_revision, revision, subpool);
       if (err)
         goto cleanup;
     }
@@ -854,7 +858,8 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
             SVN_ERR(svn_client_export4(NULL, new_item->url, local_abspath,
                                        &(new_item->peg_revision),
                                        &(new_item->revision),
-                                       TRUE, FALSE, svn_depth_infinity, NULL,
+                                       TRUE, FALSE, svn_depth_infinity, 
+                                       ib->native_eol,
                                        ib->ctx, ib->iter_pool));
           else
             SVN_ERR(svn_client__checkout_internal
@@ -872,7 +877,8 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
             SVN_ERR(svn_client_export4(NULL, new_item->url, local_abspath,
                                        &(new_item->peg_revision),
                                        &(new_item->revision),
-                                       FALSE, TRUE, svn_depth_infinity, NULL,
+                                       FALSE, TRUE, svn_depth_infinity,
+                                       ib->native_eol,
                                        ib->ctx, ib->iter_pool));
           else
             SVN_ERR(switch_file_external(local_abspath,
@@ -909,7 +915,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       if (! lock_existed)
         {
           SVN_ERR(svn_wc__acquire_write_lock(NULL, ib->ctx->wc_ctx,
-                                             local_abspath,
+                                             local_abspath, FALSE,
                                              ib->iter_pool,
                                              ib->iter_pool));
         }
@@ -1067,6 +1073,9 @@ struct handle_externals_desc_change_baton
   svn_boolean_t *timestamp_sleep;
   svn_boolean_t is_export;
 
+  /* Passed to svn_client_exportX() */
+  const char *native_eol;
+
   apr_pool_t *pool;
 };
 
@@ -1157,6 +1166,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.repos_root_url    = cb->repos_root_url;
   ib.ctx               = cb->ctx;
   ib.is_export         = cb->is_export;
+  ib.native_eol        = cb->native_eol;
   ib.timestamp_sleep   = cb->timestamp_sleep;
   ib.pool              = cb->pool;
   ib.iter_pool         = svn_pool_create(cb->pool);
@@ -1261,6 +1271,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
   cb.ctx               = ctx;
   cb.timestamp_sleep   = timestamp_sleep;
   cb.is_export         = FALSE;
+  cb.native_eol        = NULL;
   cb.pool              = pool;
 
   return svn_hash_diff(cb.externals_old, cb.externals_new,
@@ -1275,6 +1286,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
                             const char *repos_root_url,
                             svn_depth_t requested_depth,
                             svn_boolean_t is_export,
+                            const char *native_eol,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
@@ -1292,6 +1304,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
   cb.to_abspath        = to_abspath;
   cb.repos_root_url    = repos_root_url;
   cb.timestamp_sleep   = timestamp_sleep;
+  cb.native_eol        = native_eol;
   cb.is_export         = is_export;
   cb.pool              = pool;
 
@@ -1367,7 +1380,7 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
           SVN_ERR(svn_client_status5(NULL, ctx, fullpath,
                                      &(external->revision),
                                      depth, get_all, update,
-                                     no_ignore, FALSE, NULL,
+                                     no_ignore, FALSE, FALSE, NULL,
                                      status_func, status_baton,
                                      iterpool));
         }

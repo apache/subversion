@@ -44,7 +44,7 @@ separated list of test numbers; the default is to run all the tests in it.
 # A few useful constants
 LINE_LENGTH = 45
 
-import os, sys, subprocess, imp
+import os, re, subprocess, sys, imp
 from datetime import datetime
 
 import getopt
@@ -70,7 +70,7 @@ class TestHarness:
   '''Test harness for Subversion tests.
   '''
 
-  def __init__(self, abs_srcdir, abs_builddir, logfile,
+  def __init__(self, abs_srcdir, abs_builddir, logfile, faillogfile,
                base_url=None, fs_type=None, http_library=None,
                server_minor_version=None, verbose=None,
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
@@ -91,6 +91,7 @@ class TestHarness:
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
     self.logfile = logfile
+    self.faillogfile = faillogfile
     self.base_url = base_url
     self.fs_type = fs_type
     self.http_library = http_library
@@ -200,6 +201,27 @@ class TestHarness:
       print('  %d test%s FAILED'
             % (len(failed_list), 's'*min(len(failed_list) - 1, 1)))
 
+    # Copy the truly interesting verbose logs to a separate file, for easier
+    # viewing.
+    if xpassed or failed_list:
+      faillog = open(self.faillogfile, 'wb')
+      last_start_lineno = None
+      last_start_re = re.compile('^(FAIL|SKIP|XFAIL|PASS|START|CLEANUP|END):')
+      for lineno, line in enumerate(log_lines):
+        # Iterate the lines.  If it ends a test we're interested in, dump that
+        # test to FAILLOG.  If it starts a test (at all), remember the line
+        # number (in case we need it later).
+        if line in xpassed or line in failed_list:
+          faillog.write('[[[\n')
+          faillog.writelines(log_lines[last_start_lineno : lineno+1])
+          faillog.write(']]]\n\n')
+        if last_start_re.match(line):
+          last_start_lineno = lineno + 1
+      faillog.close()
+    elif os.path.exists(self.faillogfile):
+      print("WARNING: no failures, but '%s' exists from a previous run."
+            % self.faillogfile)
+
     self._close_log()
     return failed
 
@@ -228,6 +250,7 @@ class TestHarness:
                  '--srcdir=' + os.path.join(self.srcdir, progdir)]
       if self.config_file is not None:
         cmdline.append('--config-file=' + self.config_file)
+      cmdline.append('--trap-assertion-failures')
     else:
       print('Don\'t know what to do about ' + progbase)
       sys.exit(1)
@@ -467,10 +490,12 @@ def main():
 
   if log_to_stdout:
     logfile = None
+    faillogfile = None
   else:
     logfile = os.path.abspath('tests.log')
+    faillogfile = os.path.abspath('fails.log')
 
-  th = TestHarness(args[0], args[1], logfile,
+  th = TestHarness(args[0], args[1], logfile, faillogfile,
                    base_url, fs_type, http_library, server_minor_version,
                    verbose, cleanup, enable_sasl, parallel, config_file,
                    fsfs_sharding, fsfs_packing)

@@ -44,20 +44,13 @@ extern "C" {
 
 
 #define SVN_WC__PROP_REJ_EXT  ".prej"
-#define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
-#define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
-#define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
-                                               file */
-
-
-
 
 /* We can handle this format or anything lower, and we (should) error
  * on anything higher.
  *
  * There is no format version 0; we started with 1.
  *
- * The change from 1 to 2 was the introduction of SVN_WC__WORK_EXT.
+ * The change from 1 to 2 was the introduction of the ".svn-work" extension.
  * For example, ".svn/props/foo" became ".svn/props/foo.svn-work".
  *
  * The change from 2 to 3 was the introduction of the entry attribute
@@ -72,7 +65,8 @@ extern "C" {
  * == 1.3.x shipped with format 4
  *
  * The change from 4 to 5 was the addition of support for replacing files
- * with history.
+ * with history (the "revert base"). This was introduced in 1.4.0, but
+ # buggy until 1.4.6.
  *
  * The change from 5 to 6 was the introduction of caching of property
  * modification state and certain properties in the entries file.
@@ -115,16 +109,24 @@ extern "C" {
  * any existing locks to a level of 0. The 'md5_checksum' column was
  * added to PRISTINE for future use.
  *
- * The change from 16 to 17 added a '.svn/pristine' dir and ...
- * ### IN PROGRESS
+ * The change from 16 to 17 added a '.svn/pristine' dir and moved the text
+ * bases into the Pristine Store (the PRISTINE table and '.svn/pristine'
+ * dir), and removed the '/.svn/text-base' dir.
+ *
+ * The change from 17 to 18 moved the properties from separate files in the
+ * props and prop-base directory (and .svn for the dir itself) into the
+ * wc.db file, and then removes the props and prop-base dir.
+ *
+ * The change from 18 to 19 introduces the 'single DB' per working copy.
+ * All metadata is held in a single '.svn/wc.db' in the root directory of
+ * the working copy.
  *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 16
-
+#define SVN_WC__VERSION 19
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
@@ -157,7 +159,7 @@ extern "C" {
 #define SVN_WC__USES_DAV_CACHE 13
 
 /* A version < this does not store properties in wc.db.  */
-#define SVN_WC__PROPS_IN_DB 17
+#define SVN_WC__PROPS_IN_DB 18
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
@@ -241,11 +243,15 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
  * If @a sha1_checksum is non-NULL, use it instead of @a md5_checksum to
  * identify the node's pristine text.
  * ### NOT YET IMPLEMENTED.
+ *
+ * Set TOP_OF_RECURSE to TRUE to show that this the top of a possibly
+ * recursive commit operation.
  */
 svn_error_t *
 svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    const char *local_abspath,
                                    svn_boolean_t recurse,
+                                   svn_boolean_t top_of_recurse,
                                    svn_revnum_t new_revnum,
                                    apr_time_t new_date,
                                    const char *rev_author,
@@ -289,12 +295,6 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_ENTRIES             "entries"
 #define SVN_WC__ADM_TMP                 "tmp"
-#define SVN_WC__ADM_TEXT_BASE           "text-base"
-#define SVN_WC__ADM_PROPS               "props"
-#define SVN_WC__ADM_PROP_BASE           "prop-base"
-#define SVN_WC__ADM_DIR_PROPS           "dir-props"
-#define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
-#define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_PRISTINE            "pristine"
 #define SVN_WC__ADM_NONEXISTENT_PATH    "nonexistent-path"
 
@@ -465,17 +465,21 @@ svn_wc__walker_default_error_handler(const char *path,
  * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
  * @c svn_depth_immediates, or @c svn_depth_unknown.
  *
+ * If @a read_base is TRUE, always read the depth data from BASE_NODE
+ * instead of from WORKING when that exists.
+ *
  * Allocations are done in POOL.
  */
 svn_error_t *
 svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void **edit_baton,
-                                    const svn_delta_editor_t *wrapped_editor,
-                                    void *wrapped_edit_baton,
+                                    svn_wc__db_t *db,
                                     const char *anchor_abspath,
                                     const char *target,
-                                    svn_wc__db_t *db,
-                                    apr_pool_t *pool);
+                                    svn_boolean_t read_base,
+                                    const svn_delta_editor_t *wrapped_editor,
+                                    void *wrapped_edit_baton,
+                                    apr_pool_t *result_pool);
 
 
 /* Similar to svn_wc_conflicted_p3(), but with a wc_db parameter in place of
@@ -494,8 +498,8 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
  *
  * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
- * and compare the result with BASE_FILE_ABSPATH.  If COMPARE_TEXTBASES is
- * false, translate BASE_FILE_ABSPATH's EOL style and keywords to working-copy
+ * and compare the result with PRISTINE_STREAM.  If COMPARE_TEXTBASES is
+ * false, translate PRISTINE_STREAM's EOL style and keywords to working-copy
  * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
  * result with VERSIONED_FILE_ABSPATH.
  */
@@ -503,7 +507,7 @@ svn_error_t *
 svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                          svn_wc__db_t *db,
                                          const char *versioned_file_abspath,
-                                         const char *base_file_abspath,
+                                         svn_stream_t *pristine_stream,
                                          svn_boolean_t compare_textbases,
                                          apr_pool_t *scratch_pool);
 
@@ -527,15 +531,6 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
                                      const svn_delta_editor_t *editor,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
-
-/* Internal version of svn_wc_get_ancestry(). */
-svn_error_t *
-svn_wc__internal_get_ancestry(const char **url,
-                              svn_revnum_t *rev,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
 
 /* Library-internal version of svn_wc_ensure_adm4(). */
 svn_error_t *
@@ -581,6 +576,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               apr_pool_t *scratch_pool);
 
 
+/* Library-internal version of svn_wc__node_is_replaced(). */
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              svn_wc__db_t *db,
@@ -588,6 +584,7 @@ svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                              apr_pool_t *scratch_pool);
 
 
+/* Library-internal version of svn_wc__node_get_url(). */
 svn_error_t *
 svn_wc__internal_node_get_url(const char **url,
                               svn_wc__db_t *db,
@@ -596,11 +593,33 @@ svn_wc__internal_node_get_url(const char **url,
                               apr_pool_t *scratch_pool);
 
 
+/* Library-internal version of svn_wc__node_is_file_external(). */
 svn_error_t *
 svn_wc__internal_is_file_external(svn_boolean_t *file_external,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
                                   apr_pool_t *scratch_pool);
+
+/* Library-internal version of svn_wc__node_get_schedule(). */
+svn_error_t *
+svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
+                                   svn_boolean_t *copied,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *scratch_pool);
+
+/* Internal version of svn_wc__node_get_copyfrom_info */
+svn_error_t *
+svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
+                                   const char **copyfrom_repos_relpath,
+                                   const char **copyfrom_url,
+                                   svn_revnum_t *copyfrom_rev,
+                                   svn_boolean_t *is_copy_target,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
@@ -615,6 +634,13 @@ svn_wc__upgrade_sdb(int *result_format,
                     int start_format,
                     apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_wc__wipe_postupgrade(const char *dir_abspath,
+                         svn_boolean_t whole_admin,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool);
 
 /* Check whether a node is a working copy root or switched.
  *
@@ -636,6 +662,15 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
+
+/* Ensure LOCAL_ABSPATH is still locked in DB.  Returns the error
+ * SVN_ERR_WC_NOT_LOCKED if this is not the case.
+ */
+svn_error_t *
+svn_wc__write_check(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

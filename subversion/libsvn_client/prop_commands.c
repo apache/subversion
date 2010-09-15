@@ -97,7 +97,7 @@ struct propset_walk_baton
   void *notify_baton;
 };
 
-/* An node-walk callback for svn_client_propset3.
+/* An node-walk callback for svn_client_propset4.
  *
  * For LOCAL_ABSPATH, set the property named wb->PROPNAME to the value
  * wb->PROPVAL, where "wb" is the WALK_BATON of type "struct
@@ -118,7 +118,8 @@ propset_walk_cb(const char *local_abspath,
 
   err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->propname, wb->propval,
                          wb->force, wb->notify_func, wb->notify_baton, pool);
-  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
+  if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
+              || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
@@ -189,13 +190,14 @@ do_url_propset(const char *propname,
 }
 
 static svn_error_t *
-propset_on_url(svn_commit_info_t **commit_info_p,
-               const char *propname,
+propset_on_url(const char *propname,
                const svn_string_t *propval,
                const char *target,
                svn_boolean_t skip_checks,
                svn_revnum_t base_revision_for_url,
                const apr_hash_t *revprop_table,
+               svn_commit_callback2_t commit_callback,
+               void *commit_baton,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
@@ -204,7 +206,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   svn_node_kind_t node_kind;
   const char *message;
   const svn_delta_editor_t *editor;
-  void *commit_baton, *edit_baton;
+  void *edit_baton;
   apr_hash_t *commit_revprops;
   svn_error_t *err;
 
@@ -215,7 +217,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, target,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, target,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
@@ -268,10 +270,9 @@ propset_on_url(svn_commit_info_t **commit_info_p,
                                            message, ctx, pool));
 
   /* Fetch RA commit editor. */
-  SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    svn_client__commit_callback,
+                                    commit_callback,
                                     commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
@@ -290,10 +291,56 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   return editor->close_edit(edit_baton, pool);
 }
 
+/* Baton for set_props_cb */
+struct set_props_baton
+{
+  svn_client_ctx_t *ctx;
+  const char *local_abspath;
+  svn_depth_t depth;
+  svn_node_kind_t kind;
+  const char *propname;
+  const svn_string_t *propval;
+  svn_boolean_t skip_checks;
+  apr_hash_t *changelist_hash;
+};
+
+/* Working copy lock callback for svn_client_propset4 */
+static svn_error_t *
+set_props_cb(void *baton,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  struct set_props_baton *bt = baton;
+
+  if (bt->depth >= svn_depth_files && bt->kind == svn_node_dir)
+    {
+      struct propset_walk_baton wb;
+
+      wb.wc_ctx = bt->ctx->wc_ctx;
+      wb.propname = bt->propname;
+      wb.propval = bt->propval;
+      wb.force = bt->skip_checks;
+      wb.changelist_hash = bt->changelist_hash;
+      wb.notify_func = bt->ctx->notify_func2;
+      wb.notify_baton = bt->ctx->notify_baton2;
+      SVN_ERR(svn_wc__node_walk_children(bt->ctx->wc_ctx, bt->local_abspath,
+                                         FALSE, propset_walk_cb, &wb,
+                                         bt->depth, bt->ctx->cancel_func,
+                                         bt->ctx->cancel_baton, scratch_pool));
+    }
+  else if (svn_wc__changelist_match(bt->ctx->wc_ctx, bt->local_abspath,
+                                    bt->changelist_hash, scratch_pool))
+    {
+      SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath,
+                               bt->propname, bt->propval, bt->skip_checks,
+                               bt->ctx->notify_func2, bt->ctx->notify_baton2,
+                               scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
-svn_client_propset3(svn_commit_info_t **commit_info_p,
-                    const char *propname,
+svn_client_propset4(const char *propname,
                     const svn_string_t *propval,
                     const char *target,
                     svn_depth_t depth,
@@ -301,6 +348,8 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_revnum_t base_revision_for_url,
                     const apr_array_header_t *changelists,
                     const apr_hash_t *revprop_table,
+                    svn_commit_callback2_t commit_callback,
+                    void *commit_baton,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
@@ -351,9 +400,9 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                                  _("Setting property '%s' on non-local target "
                                    "'%s' is not supported"), propname, target);
 
-      return propset_on_url(commit_info_p, propname, propval, target,
-                            skip_checks, base_revision_for_url, revprop_table,
-                            ctx, pool);
+      return propset_on_url(propname, propval, target, skip_checks,
+                            base_revision_for_url, revprop_table,
+                            commit_callback, commit_baton, ctx, pool);
     }
   else
     {
@@ -361,6 +410,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       apr_hash_t *changelist_hash = NULL;
       const char *target_abspath;
       svn_error_t *err;
+      struct set_props_baton baton;
 
       SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
@@ -383,29 +433,18 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       else
         SVN_ERR(err);
 
-      if (depth >= svn_depth_files && kind == svn_node_dir)
-        {
-          struct propset_walk_baton wb;
+      baton.ctx = ctx;
+      baton.local_abspath = target_abspath;
+      baton.depth = depth;
+      baton.kind = kind;
+      baton.propname = propname;
+      baton.propval = propval;
+      baton.skip_checks = skip_checks;
+      baton.changelist_hash = changelist_hash;
 
-          wb.wc_ctx = ctx->wc_ctx;
-          wb.propname = propname;
-          wb.propval = propval;
-          wb.force = skip_checks;
-          wb.changelist_hash = changelist_hash;
-          wb.notify_func = ctx->notify_func2;
-          wb.notify_baton = ctx->notify_baton2;
-          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, target_abspath,
-                                             FALSE, propset_walk_cb, &wb,
-                                             depth, ctx->cancel_func,
-                                             ctx->cancel_baton, pool));
-        }
-      else if (svn_wc__changelist_match(ctx->wc_ctx, target_abspath,
-                                        changelist_hash, pool))
-        {
-          SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target_abspath, propname,
-                                   propval, skip_checks, ctx->notify_func2,
-                                   ctx->notify_baton2, pool));
-        }
+      SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
+                                           ctx->wc_ctx, target_abspath, FALSE,
+                                           pool, pool));
 
       return SVN_NO_ERROR;
     }
@@ -438,7 +477,7 @@ svn_client_revprop_set2(const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
                                                NULL, FALSE, TRUE, ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
@@ -930,7 +969,7 @@ svn_client_revprop_get(const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
                                                NULL, FALSE, TRUE, ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
@@ -1274,7 +1313,7 @@ svn_client_revprop_list(apr_hash_t **props,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
                                                NULL, FALSE, TRUE, ctx, pool));
 
   /* Resolve the revision into something real, and return that to the

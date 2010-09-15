@@ -16,10 +16,6 @@ Revision-number: 1
 Prop-content-length: 115
 Content-length: 115
 
-K 7
-svn:log
-V 14
-initial layout
 K 10
 svn:author
 V 6
@@ -28,6 +24,10 @@ K 8
 svn:date
 V 27
 2005-11-07T22:09:30.282710Z
+K 7
+svn:log
+V 14
+initial layout
 PROPS-END
 
 Node-path: branches
@@ -58,13 +58,9 @@ PROPS-END
 
 
 Revision-number: 2
-Prop-content-length: 106
-Content-length: 106
+Prop-content-length: 111
+Content-length: 111
 
-K 7
-svn:log
-V 6
-a file
 K 10
 svn:author
 V 6
@@ -73,6 +69,10 @@ K 8
 svn:date
 V 27
 2005-11-07T22:09:44.146564Z
+K 7
+svn:log
+V 10
+add a file
 PROPS-END
 
 Node-path: trunk/foo.txt
@@ -92,11 +92,6 @@ Revision-number: 3
 Prop-content-length: 113
 Content-length: 113
 
-K 7
-svn:log
-V 12
-Make a tag.
-
 K 10
 svn:author
 V 6
@@ -105,6 +100,11 @@ K 8
 svn:date
 V 27
 2005-11-07T22:10:03.753668Z
+K 7
+svn:log
+V 12
+make a tag.
+
 PROPS-END
 
 Node-path: tags/a-tag
