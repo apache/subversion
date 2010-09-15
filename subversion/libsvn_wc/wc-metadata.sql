@@ -618,6 +618,21 @@ PRAGMA user_version =
    BASE nodes and on top of other WORKING nodes, due to nested tree structure
    changes. The layers are modelled using the "op_depth" column.
 
+   An 'operation depth' refers to the number of directory levels down from
+   the WC root at which a tree-change operation (delete, add?, copy, move)
+   was performed.  A row's 'op_depth' does NOT refer to the depth of its own
+   'local_relpath', but rather to the depth of the nearest tree change that
+   affects that node.
+
+   The row with op_depth=0 for any given local relpath represents the "base"
+   node that is created and updated by checkout, update, switch and commit
+   post-processing.  The row with the highest op_depth for a particular
+   local_relpath represents the working version.  Any rows with intermediate
+   op_depth values are not normally visible to the user but may become
+   visible after reverting local changes.
+
+   ### The following text needs revision
+
    Each row in BASE_NODE has an associated row NODE_DATA. Additionally, each
    row in WORKING_NODE has one or more associated rows in NODE_DATA.
 
@@ -691,14 +706,14 @@ CREATE TABLE NODES (
 
   /* WC state fields */
 
-  /* In case 'op_depth' is equal to 0, this is part of the BASE tree; in
-     that case, all presence values except 'base-deleted' are allowed.
+  /* Is this node "present" or has it been excluded for some reason?
 
+     In case 'op_depth' is equal to 0, this is part of the BASE tree; in
+     that case, all presence values except 'base-deleted' are allowed.
 
      In case 'op_depth' is greater than 0, this is part of a layer of
      working nodes; in that case, the following presence values apply:
 
-     Is this node "present" or has it been excluded for some reason?
      Only allowed values: normal, not-present, incomplete, base-deleted.
      (the others do not make sense for the WORKING tree)
 
