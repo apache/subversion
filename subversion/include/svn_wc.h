@@ -1258,10 +1258,12 @@ typedef struct svn_wc_notify_t {
    * hunk the notification is for. They are line-based
    * offsets and lengths parsed from the unidiff hunk header.
    * @since New in 1.7. */
+  /* @{ */
   svn_linenum_t hunk_original_start;
   svn_linenum_t hunk_original_length;
   svn_linenum_t hunk_modified_start;
   svn_linenum_t hunk_modified_length;
+  /* @} */
 
   /** The line at which a hunk was matched (and applied).
    * @since New in 1.7. */
