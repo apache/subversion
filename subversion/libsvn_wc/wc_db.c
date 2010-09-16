@@ -8803,6 +8803,10 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_node;
+  svn_boolean_t have_node_row;
+#endif
   apr_int64_t original_repos_id;
   const char *original_repos_relpath;
   svn_revnum_t original_revision;
@@ -8822,10 +8826,29 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
 
   /* Examine the current WORKING_NODE row's copyfrom information. If there
      is no WORKING node, then simply exit.  */
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt_node, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE_1));
+  SVN_ERR(svn_sqlite__bindf(stmt_node, "is",
+                            pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_node_row, stmt_node));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR(assert_working_rows_match(have_row, have_node_row, stmt, stmt_node,
+                                    local_relpath, scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt_node));
+#else
+  stmt = stmt_node;
+  have_row = have_node_row;
+#endif
+#endif
+
   if (!have_row)
     return svn_error_return(svn_sqlite__reset(stmt));
 
@@ -8875,10 +8898,22 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
 
   /* The child's copyfrom information is derivable from the parent.
      The data should be reset to null, indicating the derivation.  */
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_UPDATE_COPYFROM_TO_INHERIT));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__update(NULL, stmt));
+#endif
+
+#ifdef SVN_WC__NODES
+  /* Should probably use the op_depth from query above and simplify this
+     query. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt_node, pdh->wcroot->sdb,
+                                    STMT_UPDATE_COPYFROM_TO_INHERIT_1));
+  SVN_ERR(svn_sqlite__bindf(stmt_node, "is",
+                            pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__update(NULL, stmt_node));
+#endif
 
   return SVN_NO_ERROR;
 }
