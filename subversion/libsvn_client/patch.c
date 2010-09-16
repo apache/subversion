@@ -898,7 +898,6 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
   *matched = lines_matched && hunk_eof && hunk_line->len == 0;
 
   SVN_ERR(seek_to_line(content_info, saved_line, iterpool));
-  content_info->eof = FALSE;
 
   svn_pool_destroy(iterpool);
 
