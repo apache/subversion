@@ -27,7 +27,7 @@
 #include <apr_pools.h>
 #include "svn_client.h"
 
-#include "Pool.h"
+#include "JNIPool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "Revision.h"

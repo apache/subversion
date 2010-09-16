@@ -33,7 +33,7 @@
 #include "svn_client.h"
 
 #include <jni.h>
-#include "Pool.h"
+#include "JNIPool.h"
 #include "JNIStringHolder.h"
 
 class Prompter;

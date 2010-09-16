@@ -28,7 +28,7 @@
 #include "Path.h"
 #include "svn_path.h"
 #include "JNIUtil.h"
-#include "Pool.h"
+#include "JNIPool.h"
 
 /**
  * Constructor

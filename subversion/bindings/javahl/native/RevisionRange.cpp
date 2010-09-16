@@ -31,7 +31,7 @@
 #include "JNIUtil.h"
 #include "RevisionRange.h"
 #include "Revision.h"
-#include "Pool.h"
+#include "JNIPool.h"
 
 RevisionRange::RevisionRange(jobject jrevisionRange)
 {

@@ -25,7 +25,7 @@
  */
 
 #include "Prompter.h"
-#include "Pool.h"
+#include "JNIPool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "../include/org_apache_subversion_javahl_callback_UserPasswordCallback.h"

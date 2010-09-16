@@ -30,7 +30,7 @@
 #include <jni.h>
 #include <apr_tables.h>
 
-#include "Pool.h"
+#include "JNIPool.h"
 #include "Array.h"
 
 /**

@@ -29,7 +29,7 @@
 
 #include <jni.h>
 #include "svn_io.h"
-#include "Pool.h"
+#include "JNIPool.h"
 
 /**
  * This class contains a Java objects implementing the interface InputStream and

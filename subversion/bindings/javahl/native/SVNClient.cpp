@@ -30,7 +30,7 @@
 #include "DiffSummaryReceiver.h"
 #include "ClientContext.h"
 #include "Prompter.h"
-#include "Pool.h"
+#include "JNIPool.h"
 #include "Targets.h"
 #include "Revision.h"
 #include "RevisionRange.h"

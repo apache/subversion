@@ -29,7 +29,7 @@
 
 #include <list>
 #include <vector>
-#include "Pool.h"
+#include "JNIPool.h"
 struct apr_pool_t;
 struct svn_error;
 class JNIMutex;

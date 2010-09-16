@@ -28,7 +28,7 @@
 #define STRINGARRAY_H
 
 #include <jni.h>
-#include "Pool.h"
+#include "JNIPool.h"
 
 struct apr_array_header_t;
 

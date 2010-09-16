@@ -28,7 +28,7 @@
 #define REVPROPTABLE_H
 
 #include <jni.h>
-#include "Pool.h"
+#include "JNIPool.h"
 
 struct apr_hash_t;
 

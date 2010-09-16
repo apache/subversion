@@ -24,7 +24,7 @@
  * @brief Implementation of the class Pool
  */
 
-#include "Pool.h"
+#include "JNIPool.h"
 #include "JNIUtil.h"
 #include "JNIMutex.h"
 #include "JNICriticalSection.h"

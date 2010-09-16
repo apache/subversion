@@ -57,7 +57,7 @@ extern "C" {
 #include "JNICriticalSection.h"
 #include "JNIThreadData.h"
 #include "JNIStringHolder.h"
-#include "Pool.h"
+#include "JNIPool.h"
 
 // Static members of JNIUtil are allocated here.
 apr_pool_t *JNIUtil::g_pool = NULL;

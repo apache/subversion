@@ -28,7 +28,7 @@
 #define TARGETS_H
 
 #include <jni.h>
-#include "Pool.h"
+#include "JNIPool.h"
 #include "StringArray.h"
 
 struct apr_array_header_t;
