@@ -23,7 +23,7 @@
 
 #include "../svn_test.h"
 
-#include "../../bindings/c++/Client.h"
+#include "Client.h"
 
 using namespace SVN;
 

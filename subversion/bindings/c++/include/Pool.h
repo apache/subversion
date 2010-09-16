@@ -27,8 +27,6 @@
 #ifndef POOL_H
 #define POOL_H
 
-#include "Core.h"
-
 #include "svn_pools.h"
 
 namespace SVN

@@ -23,7 +23,7 @@
 
 #include "../svn_test.h"
 
-#include "../../bindings/c++/Pool.h"
+#include "Pool.h"
 
 using namespace SVN;
 
