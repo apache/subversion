@@ -212,6 +212,16 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r997471
+   Client-side workaround for issue #3709 ("Inconsistency between "svn
+   list" and "svn checkout").
+   Justification:
+     Fixes issue #3709 for clients talking to servers that lack the
+   Notes:
+     Depends on the r997457 group.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
