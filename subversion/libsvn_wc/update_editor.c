@@ -1969,7 +1969,6 @@ do_entry_deletion(struct edit_baton *eb,
   svn_boolean_t conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
-  svn_boolean_t hidden;
   svn_skel_t *work_item;
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
