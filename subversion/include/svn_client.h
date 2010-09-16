@@ -1067,13 +1067,15 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *              notification.
  * @param[in] pool  Used for any temporary allocation.
  *
- * @return #SVN_ERR_UNSUPPORTED_FEATURE if @a URL refers to a file rather
+ * @return A pointer to an #svn_error_t of the type (this list is not
+ *         exhaustive): <br>
+ *         #SVN_ERR_UNSUPPORTED_FEATURE if @a URL refers to a file rather
  *         than a directory; <br>
  *         #SVN_ERR_RA_ILLEGAL_URL if @a URL does not exist; <br>
  *         #SVN_ERR_CLIENT_BAD_REVISION if @a revision is not one of
  *         #svn_opt_revision_number, #svn_opt_revision_head, or
- *         #svn_opt_revision_date; <br>
- *         #SVN_NO_ERROR otherwise.
+ *         #svn_opt_revision_date. <br>
+ *         If no error occurred, return #SVN_NO_ERROR.
  *
  * @since New in 1.5.
  *
