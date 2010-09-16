@@ -171,6 +171,34 @@ Candidate changes:
    Votes:
      +1: kameshj
 
+ * r997457, r997466
+   Fix some error transmission problems in svnserve.
+   Justification:
+     It's hard to automatically react to a particular error code when
+     you can't accurately receive it from the server.
+   Notes:
+     r997457 fixes svnserve to send only the "real" error across the
+     wire in places where there is more than one level of magic
+     wrapping errors.
+     r997466 teaches the client to forgive still-broken servers by
+     ignoring wrapping errors and digging down to find the "real"
+     error itself.  And forgiveness is, as they say, divine.
+   Branch:
+     ^/subversion/branches/1.6.x-r997457
+   Votes:
+     +1: cmpilato
+
+ * r996884
+   Hide unreadable directory children in mod_dav_svn's GET response.
+   Justification:
+     We might as well be as tight security-wise as we can, even if
+     we've publicly stated for years that this was an expected leak of
+     information.  Not showing unreadable subdirs, for example, prevents
+     folks from clicking that sucker in the browser only to get an authz
+     failure.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
