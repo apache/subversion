@@ -68,6 +68,15 @@ select presence, kind, checksum, translated_size,
 from working_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_WORKING_NODE_1
+select presence, kind, checksum, translated_size,
+  changed_revision, changed_date, changed_author, depth, symlink_target,
+  repos_id, repos_path, revision,
+  moved_here, moved_to, last_mod_time, properties
+from nodes
+where wc_id = ?1 and local_relpath = ?2 and op_depth > 0 order by op_depth desc
+limit 1;
+
 -- STMT_SELECT_ACTUAL_NODE
 select prop_reject, changelist, conflict_old, conflict_new,
 conflict_working, tree_conflict_data, properties
