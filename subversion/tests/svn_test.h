@@ -125,7 +125,7 @@ struct svn_test_descriptor_t
 extern struct svn_test_descriptor_t test_funcs[];
 
 /* A null initializer for the test descriptor. */
-#define SVN_TEST_NULL  {0}
+#define SVN_TEST_NULL  { svn_test_pass, NULL, NULL, NULL, NULL }
 
 /* Initializer for PASS tests */
 #define SVN_TEST_PASS2(func, msg)  {svn_test_pass, func, NULL, msg}
