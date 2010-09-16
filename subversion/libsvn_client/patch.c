@@ -1160,54 +1160,55 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   else if (original_start > 0 && content_info->stream)
     {
       svn_linenum_t saved_line = content_info->current_line;
-      svn_linenum_t modified_start;
 
-      /* Check if the hunk is already applied.
-       * We only check for an exact match here, and don't bother checking
-       * for already applied patches with offset/fuzz, because such a
-       * check would be ambiguous. */
-      if (fuzz == 0)
+      /* Scan for a match at the line where the hunk thinks it
+       * should be going. */
+      SVN_ERR(seek_to_line(content_info, original_start, scratch_pool));
+      if (content_info->current_line != original_start)
         {
-          modified_start = svn_diff_hunk_get_modified_start(hunk);
-          if (modified_start == 0)
-            {
-              /* Patch wants to delete the file. */
-              already_applied = target->locally_deleted;
-            }
-          else
-            {
-              SVN_ERR(seek_to_line(content_info, modified_start,
-                                   scratch_pool));
-              SVN_ERR(scan_for_match(&matched_line, content_info,
-                                     hunk, TRUE,
-                                     modified_start + 1,
-                                     fuzz, ignore_whitespace, TRUE,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool));
-              already_applied = (matched_line == modified_start);
-            }
+          /* Seek failed. */
+          matched_line = 0;
         }
       else
-        already_applied = FALSE;
+        SVN_ERR(scan_for_match(&matched_line, content_info, hunk, TRUE,
+                               original_start + 1, fuzz,
+                               ignore_whitespace, FALSE,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 
-      if (! already_applied)
+      if (matched_line != original_start)
         {
-          /* Scan for a match at the line where the hunk thinks it
-           * should be going. */
-          SVN_ERR(seek_to_line(content_info, original_start, scratch_pool));
-          if (content_info->current_line != original_start)
+          /* Check if the hunk is already applied.
+           * We only check for an exact match here, and don't bother checking
+           * for already applied patches with offset/fuzz, because such a
+           * check would be ambiguous. */
+          if (fuzz == 0)
             {
-              /* Seek failed. */
-              matched_line = 0;
+              svn_linenum_t modified_start;
+
+              modified_start = svn_diff_hunk_get_modified_start(hunk);
+              if (modified_start == 0)
+                {
+                  /* Patch wants to delete the file. */
+                  already_applied = target->locally_deleted;
+                }
+              else
+                {
+                  SVN_ERR(seek_to_line(content_info, modified_start,
+                                       scratch_pool));
+                  SVN_ERR(scan_for_match(&matched_line, content_info,
+                                         hunk, TRUE,
+                                         modified_start + 1,
+                                         fuzz, ignore_whitespace, TRUE,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool));
+                  already_applied = (matched_line == modified_start);
+                }
             }
           else
-            SVN_ERR(scan_for_match(&matched_line, content_info, hunk, TRUE,
-                                   original_start + 1, fuzz,
-                                   ignore_whitespace, FALSE,
-                                   cancel_func, cancel_baton,
-                                   scratch_pool));
+            already_applied = FALSE;
 
-          if (matched_line != original_start)
+          if (! already_applied)
             {
               /* Scan the whole file again from the start. */
               SVN_ERR(seek_to_line(content_info, 1, scratch_pool));
