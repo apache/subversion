@@ -2469,9 +2469,7 @@ add_directory(const char *path,
                                                   db->new_relpath,
                                                   eb->repos_root,
                                                   eb->repos_uuid,
-                                                  (eb->target_revision?
-                                                   *eb->target_revision
-                                                   : SVN_INVALID_REVNUM),
+                                                  *eb->target_revision,
                                                   svn_wc__db_kind_dir,
                                                   svn_wc__db_status_not_present,
                                                   NULL, NULL, pool));
@@ -3842,9 +3840,7 @@ add_file(const char *path,
                                                   fb->new_relpath,
                                                   eb->repos_root,
                                                   eb->repos_uuid,
-                                                  (eb->target_revision?
-                                                   *eb->target_revision
-                                                   : SVN_INVALID_REVNUM),
+                                                  *eb->target_revision,
                                                   svn_wc__db_kind_file,
                                                   svn_wc__db_status_not_present,
                                                   NULL, NULL, subpool));
