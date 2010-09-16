@@ -404,8 +404,6 @@ assert_text_columns_equal(svn_sqlite__stmt_t *stmt1,
   return SVN_NO_ERROR;
 }
 
-#endif
-
 static svn_error_t *
 assert_base_rows_match(svn_boolean_t have_row1,
                        svn_boolean_t have_row2,
@@ -461,7 +459,9 @@ assert_base_rows_match(svn_boolean_t have_row1,
   return SVN_NO_ERROR;
 }
 
-#endif
+#endif /* SVN_WC__NODES_ONLY */
+
+#endif /* SVN_WC__NODES */
 
 /* Scan from LOCAL_RELPATH upwards through parent nodes until we find a parent
    that has values in the 'repos_id' and 'repos_relpath' columns.  Return
@@ -697,7 +697,9 @@ static svn_error_t *
 insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   const insert_base_baton_t *pibb = baton;
+#ifndef SVN_WC__NODES_ONLY
   svn_sqlite__stmt_t *stmt;
+#endif
 #ifdef SVN_WC__NODES
   svn_sqlite__stmt_t *stmt_node;
 #endif
@@ -955,7 +957,9 @@ insert_working_node(void *baton,
 {
   const insert_working_baton_t *piwb = baton;
   const char *parent_relpath;
+#ifndef SVN_WC__NODES_ONLY
   svn_sqlite__stmt_t *stmt;
+#endif
 #ifdef SVN_WC__NODES
   svn_sqlite__stmt_t *stmt_node;
   apr_int64_t op_depth;
@@ -2062,10 +2066,8 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-#ifndef SVN_WC__NODES_ONLY
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-#endif
 #ifdef SVN_WC__NODES
   svn_sqlite__stmt_t *stmt_nodes;
   svn_boolean_t have_node_row;
@@ -2095,8 +2097,14 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                             pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_node_row, stmt_nodes));
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(assert_base_rows_match(have_row, have_node_row, stmt, stmt_nodes,
                                  local_relpath, scratch_pool));
+#else
+  /* Lets assume the two queries return compatible data */
+  have_row = have_node_row;
+  stmt = stmt_nodes;
+#endif
 #endif
 
   if (have_row)
