@@ -48,9 +48,9 @@
 #include "../svn_test.h"
 
 
-#define ROOT_ONE "http://example.com/one/"
-#define ROOT_TWO "http://example.com/two/"
-#define ROOT_THREE "http://example.com/three/"
+#define ROOT_ONE "http://example.com/one"
+#define ROOT_TWO "http://example.com/two"
+#define ROOT_THREE "http://example.com/three"
 
 #define UUID_ONE "uuid1"
 #define UUID_TWO "uuid2"
@@ -75,7 +75,7 @@
 #define MD5_2 "5d41402abc4b2a76b9719d911017c592"
 #define SHA1_1 "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
 
-#define I_TC_DATA "((conflict F file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
+#define I_TC_DATA "((conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
 
 static const char * const TESTING_DATA = (
    /* Load our test data.
