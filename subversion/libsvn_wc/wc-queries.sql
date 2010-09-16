@@ -629,6 +629,17 @@ UPDATE WORKING_NODE SET
   copyfrom_revnum = null
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_COPYFROM_TO_INHERIT_1
+UPDATE NODES SET
+  repos_id = null,
+  repos_path = null,
+  revision = null
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND op_depth IN (SELECT op_depth FROM nodes
+                   WHERE wc_id = ?1 AND local_relpath = ?2
+                   ORDER BY op_depth DESC
+                   LIMIT 1);
+
 -- STMT_DETERMINE_TREE_FOR_RECORDING
 SELECT 0 FROM BASE_NODE WHERE wc_id = ?1 AND local_relpath = ?2
 UNION
