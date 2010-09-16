@@ -381,12 +381,11 @@ static const char * const TESTING_DATA = (
    "  null, null, null, 0, null, null, '()', 0); "
    " "
 #endif
-#ifdef SVN_WC__NODES
-#endif
    "insert into actual_node values ("
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
    "'" I_TC_DATA "', null, null, null, null);"
    "  "
+#ifndef SVN_WC__NODES_ONLY
    "insert into base_node values ("
    "  1, 'M', null, null, '', 'normal', 'dir', "
    "  1, null, null, "
@@ -397,6 +396,17 @@ static const char * const TESTING_DATA = (
    "  null, null, "
    "  null, null, null, null, null, "
    "  null, null, null, 0, null, null, '()', 0); "
+#endif
+#ifdef SVN_WC__NODES
+   "insert into nodes values ("
+   "  1, 'M', 0, '', null, null, 1, 'normal', null,"
+   "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+   "  '()', null, null, null, null, null);"
+   "insert into nodes values ("
+   "  1, 'M/M-a', 0, 'M', null, null, 1, 'not-present', null,"
+   "  null, null, 'file', 1, null, null,  null,"
+   "  '()', null, null, null, null, null);"
+#endif
    );
 
 
@@ -410,11 +420,19 @@ static const char * const M_TESTING_DATA = (
    "insert into repository values (2, '" ROOT_TWO "', '" UUID_TWO "'); "
    "insert into wcroot values (1, null); "
 
+#ifndef SVN_WC__NODES_ONLY
    "insert into base_node values ("
    "  1, '', 1, 'M', null, 'normal', 'dir', "
    "  1, null, null, "
    "  1, " TIME_1s ", '" AUTHOR_1 "', 'infinity', null, null, '()', null, 0, "
    "  null); "
+#endif
+#ifdef SVN_WC__NODES
+   "insert into nodes values ("
+   "  1, '', 0, null, 1, 'M', 1, 'normal', 'infinity',"
+   "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+   "  '()', null, null, null, null, null);"
+#endif
    );
 
 WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
