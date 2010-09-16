@@ -25,6 +25,9 @@
 
 #include "Pool.h"
 #include "Revision.h"
+#include "../Utility.h"
+
+#include <sstream>
 
 using namespace SVN;
 
@@ -68,6 +71,22 @@ test_revision(apr_pool_t *p)
   return SVN_NO_ERROR;
 }
 
+#define TEST_STR "Mary had a little lamb.\n"
+static svn_error_t *
+test_streams(apr_pool_t *p)
+{
+  Pool pool;
+  std::ostringstream oss;
+
+  svn_stream_t *out = Private::Utility::ostream_wrapper(oss, pool);
+  apr_size_t len = strlen(TEST_STR);
+
+  SVN_ERR(svn_stream_write(out, TEST_STR, &len));
+  SVN_TEST_ASSERT(oss.str() == TEST_STR);
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -77,5 +96,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test Pool class"),
     SVN_TEST_PASS2(test_revision,
                    "test Revision class"),
+    SVN_TEST_PASS2(test_streams,
+                   "test stream wrapping"),
     SVN_TEST_NULL
   };
