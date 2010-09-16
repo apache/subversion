@@ -30,7 +30,7 @@
 #include "JNIPool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
-#include "Revision.h"
+#include "JNIRevision.h"
 #include "CopySources.h"
 
 CopySources::CopySources(Array &copySources)

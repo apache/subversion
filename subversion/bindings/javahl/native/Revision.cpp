@@ -24,7 +24,7 @@
  * @brief Implementation of the class Revision
  */
 
-#include "Revision.h"
+#include "JNIRevision.h"
 #include "JNIUtil.h"
 #include "EnumMapper.h"
 

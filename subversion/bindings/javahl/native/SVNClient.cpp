@@ -32,7 +32,7 @@
 #include "Prompter.h"
 #include "JNIPool.h"
 #include "Targets.h"
-#include "Revision.h"
+#include "JNIRevision.h"
 #include "RevisionRange.h"
 #include "BlameCallback.h"
 #include "ProplistCallback.h"

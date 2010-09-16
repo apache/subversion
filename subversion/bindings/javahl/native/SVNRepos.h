@@ -30,7 +30,7 @@
 #include <jni.h>
 #include "svn_repos.h"
 #include "SVNBase.h"
-#include "Revision.h"
+#include "JNIRevision.h"
 #include "OutputStream.h"
 #include "InputStream.h"
 #include "MessageReceiver.h"

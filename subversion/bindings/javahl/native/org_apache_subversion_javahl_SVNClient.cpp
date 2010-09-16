@@ -30,7 +30,7 @@
 #include "JNIStringHolder.h"
 #include "JNIByteArray.h"
 #include "SVNClient.h"
-#include "Revision.h"
+#include "JNIRevision.h"
 #include "RevisionRange.h"
 #include "EnumMapper.h"
 #include "CommitMessage.h"

@@ -31,7 +31,7 @@
 #include "JNIByteArray.h"
 #include "SVNRepos.h"
 #include "EnumMapper.h"
-#include "Revision.h"
+#include "JNIRevision.h"
 #include "InputStream.h"
 #include "OutputStream.h"
 #include "MessageReceiver.h"
