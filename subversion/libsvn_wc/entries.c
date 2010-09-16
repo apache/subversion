@@ -1677,6 +1677,7 @@ insert_working_node(svn_sqlite__db_t *sdb,
 {
   svn_sqlite__stmt_t *stmt;
 
+#ifndef SVN_WC__NODES_ONLY
   /* ### NODE_DATA when switching to NODE_DATA, replace the
      query below with STMT_INSERT_WORKING_NODE_DATA_2
      and adjust the parameters bound. Can't do that yet. */
@@ -1748,68 +1749,59 @@ insert_working_node(svn_sqlite__db_t *sdb,
 
   /* Execute and reset the insert clause. */
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
+#endif
 
-#ifdef SVN_WC__NODE_DATA
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_INSERT_WORKING_NODE_DATA_1));
-
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, working_node->wc_id));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 2, working_node->local_relpath));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 3,
-               (*working_node->local_relpath == '\0') ? 1 : 2));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 4, working_node->parent_relpath));
-
-  /* ### need rest of values */
-  if (working_node->presence == svn_wc__db_status_normal)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "normal"));
-  else if (working_node->presence == svn_wc__db_status_not_present)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "not-present"));
-  else if (working_node->presence == svn_wc__db_status_base_deleted)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "base-deleted"));
-  else if (working_node->presence == svn_wc__db_status_incomplete)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "incomplete"));
-  else if (working_node->presence == svn_wc__db_status_excluded)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "excluded"));
-
-  if (working_node->kind == svn_node_none)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 6, "unknown"));
-  else
-    SVN_ERR(svn_sqlite__bind_text(stmt, 6,
-                                  svn_node_kind_to_word(working_node->kind)));
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isisnnnnsnrisnnni",
+                            working_node->wc_id, working_node->local_relpath,
+                            (working_node->parent_relpath == NULL ? 1 : 2),
+                            working_node->parent_relpath,
+                            /* Setting depth for files? */
+                            svn_depth_to_word(working_node->depth),
+                            working_node->changed_rev,
+                            working_node->changed_date,
+                            working_node->changed_author,
+                            working_node->last_mod_time));
 
   if (working_node->copyfrom_repos_path)
     {
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 7,
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 5,
                                      working_node->copyfrom_repos_id));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 8,
+      SVN_ERR(svn_sqlite__bind_text(stmt, 6,
                                     working_node->copyfrom_repos_path));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 9, working_node->copyfrom_revnum));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 7, working_node->copyfrom_revnum));
     }
 
-  if (working_node->checksum)
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 10, working_node->checksum,
+  if (working_node->presence == svn_wc__db_status_normal)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "normal"));
+  else if (working_node->presence == svn_wc__db_status_not_present)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "not-present"));
+  else if (working_node->presence == svn_wc__db_status_base_deleted)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "base-deleted"));
+  else if (working_node->presence == svn_wc__db_status_incomplete)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "incomplete"));
+  else if (working_node->presence == svn_wc__db_status_excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "excluded"));
+
+  if (working_node->kind == svn_node_none)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 10, "unknown"));
+  else
+    SVN_ERR(svn_sqlite__bind_text(stmt, 10,
+                                  svn_node_kind_to_word(working_node->kind)));
+
+  if (working_node->kind == svn_wc__db_kind_file)
+    SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, working_node->checksum,
                                       scratch_pool));
-
-  if (SVN_IS_VALID_REVNUM(working_node->changed_rev))
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 11, working_node->changed_rev));
-  if (working_node->changed_date)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 12, working_node->changed_date));
-  if (working_node->changed_author)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 13, working_node->changed_author));
-
-  SVN_ERR(svn_sqlite__bind_text(stmt, 14,
-                                svn_depth_to_word(working_node->depth)));
 
   if (working_node->properties)
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, working_node->properties,
                                         scratch_pool));
 
-  /* ### we should bind 'symlink_target' (16) as appropriate.  */
+  if (working_node->translated_size != SVN_INVALID_FILESIZE)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 16, working_node->translated_size));
 
-  /* Execute and reset the insert clause. */
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
-
 #endif
 
   return SVN_NO_ERROR;
