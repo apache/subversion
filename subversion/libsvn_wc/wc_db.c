@@ -4990,12 +4990,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   SVN_ERR(assert_base_rows_match(*have_base, local_have_nodes_base,
                                  stmt_base, stmt_nodes_base,
                                  local_relpath, scratch_pool));
-#if 0
-  /* Too many regression test fail at present */
   SVN_ERR(assert_working_rows_match(*have_work, local_have_nodes_work,
                                     stmt_work, stmt_nodes_work,
                                     local_relpath, scratch_pool));
-#endif
 #else
   /* Lets assume the queries return compatible data */
   *have_base = local_have_nodes_base;
