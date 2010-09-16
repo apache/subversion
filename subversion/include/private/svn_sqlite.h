@@ -165,7 +165,7 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 svn_error_t *
 svn_sqlite__bindf(svn_sqlite__stmt_t *stmt, const char *fmt, ...);
 
-/* Error-handling wrapper around sqlite3_bind_int64. */
+/* Error-handling wrapper around sqlite3_bind_int. */
 svn_error_t *
 svn_sqlite__bind_int(svn_sqlite__stmt_t *stmt, int slot, int val);
 
