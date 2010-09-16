@@ -862,60 +862,43 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
                                            NULL, FALSE,
                                            content_info->keywords, FALSE,
                                            iterpool));
-      lines_read++;
       SVN_ERR(read_line(content_info, &target_line, iterpool, iterpool));
-      if (! hunk_eof)
-        {
-          if (lines_read <= fuzz && leading_context > fuzz)
-            lines_matched = TRUE;
-          else if (lines_read > hunk_length - fuzz &&
-                   trailing_context > fuzz)
-            lines_matched = TRUE;
-          else
-            {
-              if (ignore_whitespace)
-                {
-                  char *stripped_hunk_line = apr_pstrdup(pool,
-                                                         hunk_line_translated);
-                  char *stripped_target_line = apr_pstrdup(pool, target_line);
 
-                  apr_collapse_spaces(stripped_hunk_line,
-                                      hunk_line_translated);
-                  apr_collapse_spaces(stripped_target_line, target_line);
-                  lines_matched = ! strcmp(stripped_hunk_line,
-                                           stripped_target_line);
-                }
-              else 
-                lines_matched = ! strcmp(hunk_line_translated, target_line);
+      lines_read++;
+
+      /* If the last line doesn't have a newline, we get EOF but still
+       * have a non-empty line to compare. */
+      if ((hunk_eof && hunk_line->len == 0) ||
+          (content_info->eof && strlen(target_line) == 0))
+        break;
+
+      /* Leading/trailing fuzzy lines always match. */
+      if ((lines_read <= fuzz && leading_context > fuzz) ||
+          (lines_read > hunk_length - fuzz && trailing_context > fuzz))
+        lines_matched = TRUE;
+      else
+        {
+          if (ignore_whitespace)
+            {
+              char *hunk_line_trimmed;
+              char *target_line_trimmed;
+
+              hunk_line_trimmed = apr_pstrdup(iterpool, hunk_line_translated);
+              target_line_trimmed = apr_pstrdup(iterpool, target_line);
+              apr_collapse_spaces(hunk_line_trimmed, hunk_line_trimmed);
+              apr_collapse_spaces(target_line_trimmed, target_line_trimmed);
+              lines_matched = ! strcmp(hunk_line_trimmed, target_line_trimmed);
             }
+          else
+            lines_matched = ! strcmp(hunk_line_translated, target_line);
         }
     }
-  while (lines_matched && ! (hunk_eof || content_info->eof));
+  while (lines_matched);
 
-  if (hunk_eof)
-    *matched = lines_matched;
-  else if (content_info->eof)
-    {
-      /* If the target has no newline at end-of-file, we get an EOF
-       * indication for the target earlier than we do get it for the hunk. */
-      if (match_modified)
-        SVN_ERR(svn_diff_hunk_readline_modified_text(hunk, &hunk_line,
-                                                     NULL, &hunk_eof,
-                                                     iterpool, iterpool));
-      else
-        SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_line,
-                                                     NULL, &hunk_eof,
-                                                     iterpool, iterpool));
+  *matched = lines_matched && hunk_eof && hunk_line->len == 0;
 
-      /* When comparing modified text we require that all lines match, else
-       * a hunk that adds a newline at the end will be treated as already
-       * applied even if it isn't. */
-      if (! match_modified && hunk_line->len == 0 && hunk_eof)
-        *matched = lines_matched;
-      else
-        *matched = FALSE;
-    }
   SVN_ERR(seek_to_line(content_info, saved_line, iterpool));
+  content_info->eof = FALSE;
 
   svn_pool_destroy(iterpool);
 
