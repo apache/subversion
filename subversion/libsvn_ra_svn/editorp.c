@@ -899,7 +899,9 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
               svn_error_clear(editor->abort_edit(edit_baton, subpool));
               svn_ra_svn__set_block_handler(conn, blocked_write, &state);
             }
-          write_err = svn_ra_svn_write_cmd_failure(conn, subpool, err->child);
+          write_err = svn_ra_svn_write_cmd_failure(
+                          conn, subpool,
+                          svn_ra_svn__locate_real_error_child(err));
           if (!write_err)
             write_err = svn_ra_svn_flush(conn, subpool);
           svn_ra_svn__set_block_handler(conn, NULL, NULL);

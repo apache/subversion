@@ -826,6 +826,21 @@ svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
 
 /* --- READING AND WRITING COMMANDS AND RESPONSES --- */
 
+svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err)
+{
+  svn_error_t *this_link;
+
+  SVN_ERR_ASSERT(err);
+
+  for (this_link = err;
+       this_link && (this_link->apr_err == SVN_ERR_RA_SVN_CMD_ERR);
+       this_link = this_link->child)
+    ;
+
+  SVN_ERR_ASSERT(this_link);
+  return this_link;
+}
+
 svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
                                                apr_pool_t *pool)
 {
@@ -854,12 +869,27 @@ svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
          easily change that, so "" means a nonexistent message. */
       if (!*message)
         message = NULL;
-      err = svn_error_create((apr_status_t)apr_err, err, message);
-      err->file = apr_pstrdup(err->pool, file);
-      err->line = (long)line;
+      
+      /* Skip over links in the error chain that were intended only to
+         exist on the server (to wrap real errors intended for the
+         client) but accidentally got included in the server's actual
+         response. */
+      if ((apr_status_t)apr_err != SVN_ERR_RA_SVN_CMD_ERR)
+        {
+          err = svn_error_create((apr_status_t)apr_err, err, message);
+          err->file = apr_pstrdup(err->pool, file);
+          err->line = (long)line;
+        }
     }
 
   svn_pool_destroy(subpool);
+
+  /* If we get here, then we failed to find a real error in the error
+     chain that the server proported to be sending us.  That's bad. */
+  if (! err)
+    err = svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                           _("Malformed error list"));
+    
   return err;
 }
 
@@ -935,7 +965,9 @@ svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
 
       if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
         {
-          write_err = svn_ra_svn_write_cmd_failure(conn, iterpool, err->child);
+          write_err = svn_ra_svn_write_cmd_failure(
+                          conn, iterpool,
+                          svn_ra_svn__locate_real_error_child(err));
           svn_error_clear(err);
           if (write_err)
             return write_err;
