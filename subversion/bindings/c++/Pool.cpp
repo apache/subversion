@@ -41,6 +41,12 @@ Pool::Pool(SVN::Pool::Pool &parent)
   m_pool = svn_pool_create(parent.pool());
 }
 
+void *
+Pool::alloc(apr_size_t sz)
+{
+  return apr_palloc(m_pool, sz);
+}
+
 Pool::~Pool()
 {
   if (m_pool)

@@ -57,6 +57,8 @@ namespace SVN
       Pool();
       Pool(Pool &parent);
       ~Pool();
+
+      void *alloc(apr_size_t sz);
       apr_pool_t *pool() const;
       void clear() const;
   };

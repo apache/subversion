@@ -34,6 +34,8 @@ test_pools(apr_pool_t *p)
   // We ignore the passed in pool, in favor of creating our own.
   Pool pool;
 
+  void *mem = pool.alloc(1000);
+
   pool.clear();
 
   return SVN_NO_ERROR;
