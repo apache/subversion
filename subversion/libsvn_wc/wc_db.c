@@ -2105,7 +2105,8 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
   have_row = have_node_row;
   stmt = stmt_nodes;
 #endif
-#endif
+
+#endif /* SVN_WC__NODES */
 
   if (have_row)
     {
@@ -2237,7 +2238,9 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
     }
 
 #ifdef SVN_WC__NODES
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#endif
 #endif
 
   /* Note: given the composition, no need to wrap for tracing.  */
