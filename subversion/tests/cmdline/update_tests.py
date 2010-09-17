@@ -40,8 +40,7 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update, \
-  server_has_mergeinfo
+from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
 
 ######################################################################
 # Tests
@@ -3503,248 +3502,6 @@ def mergeinfo_update_elision(sbox):
 
 
 #----------------------------------------------------------------------
-# If the update editor receives add_file(foo, copyfrom='blah'), it
-# should attempt to locate 'blah' in the wc, and then copy it into place.
-
-def update_handles_copyfrom(sbox):
-  "update should make use of copyfrom args"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Make a backup copy of the working copy.
-  wc_backup = sbox.add_wc_path('backup')
-  svntest.actions.duplicate_dir(wc_dir, wc_backup)
-
-  # Copy 'rho' to 'glub'
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  glub_path = os.path.join(wc_dir, 'A', 'D', 'G', 'glub')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'copy', rho_path, glub_path)
-
-  # Commit that change, creating r2.
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/glub' : Item(verb='Adding'),
-    })
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/glub' : Item(status='  ', wc_rev=2),
-    })
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
-  # Make a local edits to rho in the backup working copy - both text and props
-  rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append(rho2_path, "Some new text.\n")
-  svntest.main.run_svn(None, 'propset', 'Kubla', 'Khan', rho2_path)
-
-  # Now try updating our backup working copy: it should receive glub,
-  # but with copyfrom args of rho@1, and thus copy the existing
-  # (edited) rho to glub.  In other words, both rho and glub should be
-  # identical and contain the same local edits.
-
-  expected_output = svntest.wc.State(wc_backup, { })
-  expected_output = wc.State(wc_backup, {
-    'A/D/G/glub' : Item(status='A '),  ### perhaps update should show 'A +' ??
-    })
-
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\nSome new text.\n",
-                      props={'Kubla' : 'Khan'})
-  expected_disk.add({
-    'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n",
-                        props={'Kubla' : 'Khan'})
-    })
-
-  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_status.tweak('A/D/G/rho', wc_rev=2, status='MM')
-  expected_status.add({
-    'A/D/G/glub' : Item(status='MM', wc_rev=2),
-    })
-
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        check_props = True)
-
-#----------------------------------------------------------------------
-# if the update_editor receives add_file(copyfrom=...), and the
-# copyfrom_path simply isn't available in the working copy, it should
-# fall back to doing an RA request to fetch the file.
-
-def copyfrom_degrades_gracefully(sbox):
-  "update degrades well if copyfrom_path unavailable"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Make a backup copy of the working copy.
-  wc_backup = sbox.add_wc_path('backup')
-  svntest.actions.duplicate_dir(wc_dir, wc_backup)
-
-  # Move 'alpha' to 'glub'
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  glub_path = os.path.join(wc_dir, 'A', 'D', 'G', 'glub')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mv', alpha_path, glub_path)
-
-  # Commit that change, creating r2.
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E/alpha' : Item(verb='Deleting'),
-    'A/D/G/glub' : Item(verb='Adding'),
-    })
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/glub' : Item(status='  ', wc_rev=2),
-    })
-  expected_status.remove('A/B/E/alpha')
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
-  # In the 2nd working copy, update just one side of the move -- so that
-  # alpha gets deleted, but glub not yet added.
-  E_path = os.path.join(wc_backup, 'A', 'B', 'E')
-
-  expected_output = svntest.wc.State(E_path, {
-      'alpha' : Item(status='D '),
-      })
-
-  expected_disk = wc.State('', {
-      'beta'  : wc.StateItem("This is the file 'beta'.\n"),
-      })
-
-  expected_status = svntest.wc.State(E_path, {
-    ''           : Item(status='  '),
-    'beta'     : Item(status='  '),
-    })
-  expected_status.tweak(wc_rev=2)
-
-  svntest.actions.run_and_verify_update(E_path,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status)
-
-  # Now update the entire working copy, which should cause an
-  # add_file(glub, copyfrom_path=alpha)... except alpha is already gone.
-  # Update editor should gracefully fetch it via RA request.
-  expected_output = svntest.wc.State(wc_backup, { })
-  expected_output = wc.State(wc_backup, {
-    'A/D/G/glub' : Item(status='A '),
-    })
-
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/B/E/alpha')
-  expected_disk.add({
-    'A/D/G/glub' : Item("This is the file 'alpha'.\n"),
-    })
-
-  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_status.remove('A/B/E/alpha')
-  expected_status.add({
-    'A/D/G/glub' : Item(status='  ', wc_rev=2),
-    })
-
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status)
-
-#----------------------------------------------------------------------
-# If the update editor receives add_file(foo, copyfrom='blah'), it
-# should attempt to locate 'blah' in the wc, and then copy it into
-# place.  Furthermore, the new file should be able to receive
-# subsequent txdeltas coming from the server.
-
-def update_handles_copyfrom_with_txdeltas(sbox):
-  "update uses copyfrom & accepts further txdeltas"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Make a backup copy of the working copy.
-  wc_backup = sbox.add_wc_path('backup')
-  svntest.actions.duplicate_dir(wc_dir, wc_backup)
-
-  # Copy 'rho' to 'glub'
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  glub_path = os.path.join(wc_dir, 'A', 'D', 'G', 'glub')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'copy', rho_path, glub_path)
-
-  # Commit that change, creating r2.
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/glub' : Item(verb='Adding'),
-    })
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/glub' : Item(status='  ', wc_rev=2),
-    })
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
-  # Make additional edits to glub...
-  svntest.main.file_append_binary(glub_path, "Some new text.\n")
-  svntest.main.run_svn(None, 'propset', 'Kubla', 'Khan', glub_path)
-
-  # Commit the changes, creating r3.
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/glub' : Item(verb='Sending'),
-    })
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'A/D/G/glub' : Item(status='  ', wc_rev=3),
-    })
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
-  # Make a local edit to rho in the backup working copy.
-  rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
-  svntest.main.file_write(rho2_path,
-                          "New first line.\nThis is the file 'rho'.\n",
-                          "wb")
-
-  # Now try updating our backup working copy: it should receive glub,
-  # but with copyfrom args of rho@1, and thus copy the existing rho to
-  # glub.  Furthermore, it should then apply the extra r3 edits to the
-  # copied file.
-
-  expected_output = svntest.wc.State(wc_backup, { })
-  expected_output = wc.State(wc_backup, {
-    'A/D/G/glub' : Item(status='A '),  ### perhaps update should show 'A +' ??
-    })
-
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/rho',
-                      contents="New first line.\nThis is the file 'rho'.\n")
-  expected_disk.add({
-    'A/D/G/glub' : Item("New first line.\nThis is the file 'rho'.\n"
-                        + "Some new text.\n",
-                        props={'Kubla' : 'Khan'})
-    })
-
-  expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
-  expected_status.tweak('A/D/G/rho', wc_rev=3, status='M ')
-  expected_status.add({
-    'A/D/G/glub' : Item(status='M ', wc_rev=3),
-    })
-
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        check_props = True)
-
-#----------------------------------------------------------------------
 # Very obscure bug: Issue #2977.
 # Let's say there's a revision with
 #   $ svn mv b c
@@ -4951,105 +4708,6 @@ def tree_conflicts_on_update_3(sbox):
                         expected_status,
                         expected_info = expected_info) ] )
 
-#----------------------------------------------------------------------
-# Test for issue #3354 'update fails when file with local mods is moved
-# and modified'
-def update_moves_and_modifies_an_edited_file(sbox):
-  "update moves and modifies a file with edits"
-
-  # r1: Create our standard greek test tree.
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Make a second working copy
-  other_wc = sbox.add_wc_path('other')
-  svntest.actions.duplicate_dir(wc_dir, other_wc)
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-
-  # Some paths we'll care about
-  E_path           = os.path.join(wc_dir, "A", "B", "E")
-  alpha_path       = os.path.join(wc_dir, "A", "B", "E", "alpha")
-  alpha_moved_path = os.path.join(wc_dir, "A", "B", "E", "alpha.moved")
-  other_alpha_path = os.path.join(other_wc, "A", "B", "E", "alpha")
-  other_E_path     = os.path.join(other_wc, "A", "B", "E")
-
-  # r2: Move A/B/E/alpha to A/B/E/alpha.moved in the first WC.
-  svntest.actions.run_and_verify_svn(None, None, [], 'move',
-                                     alpha_path, alpha_moved_path)
-
-  expected_output = wc.State(wc_dir, {
-    'A/B/E/alpha'       : Item(verb='Deleting'),
-    'A/B/E/alpha.moved' : Item(verb='Adding')
-    })
-
-  expected_status.add({'A/B/E/alpha.moved' : Item(status='  ', wc_rev=2)})
-  expected_status.remove('A/B/E/alpha')
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
-  # r3: Make a text mod to A/B/E/alpha.moved in the first WC.
-  new_content_for_alpha = 'alpha, modified after move\n'
-  svntest.main.file_write(alpha_moved_path, new_content_for_alpha)
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E/alpha.moved' : Item(verb='Sending'),
-    })
-
-  expected_status.tweak('A/B/E/alpha.moved', wc_rev=3)
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        wc_dir)
-
-  # Make a text mod to A/B/E/alpha in the second WC then
-  # update the second WC.
-  new_content_for_other_alpha = 'alpha, modified\n'
-  svntest.main.file_write(other_alpha_path, new_content_for_other_alpha)
-
-  expected_output = wc.State(other_E_path, {
-    'alpha'       : Item(status='  ', treeconflict='C'),
-    'alpha.moved' : Item(status='C '),
-    })
-
-  expected_status = wc.State(other_E_path, {
-    ''            : Item(status='  ', wc_rev=3),
-    'alpha'       : Item(status='A ', wc_rev='-', copied='+', treeconflict='C'),
-    'alpha.moved' : Item(status='C ', wc_rev=3),
-    'beta'        : Item(status='  ', wc_rev=3),
-    })
-
-  expected_disk = wc.State('', {
-    'alpha'              : Item(new_content_for_other_alpha),
-    'alpha.moved'        : Item("<<<<<<< .mine\n" +
-                                new_content_for_other_alpha +
-                                "=======\n" +
-                                new_content_for_alpha +
-                                ">>>>>>> .r3\n"),
-    'alpha.moved.copied' : Item("This is the file 'alpha'.\n"),
-    'alpha.moved.r3'     : Item(new_content_for_alpha),
-    'alpha.moved.mine'   : Item(new_content_for_other_alpha),
-    'beta'               : Item("This is the file 'beta'.\n"),
-    })
-
-  # This update should succeed and leave A/B/E/alpha as scheduled for
-  # addition with the local edit made prior to the update (i.e. this is
-  # a tree conflict with the incoming delete half of the move in r2).
-  # A/B/E/alpha.moved should also be present and have a text conflict
-  # as a result of the incoming text edit in r3.
-  #
-  # Prior to the fix for issue #3354 this update failed and left the
-  # WC locked.
-  expected_skip = wc.State(other_E_path, { })
-
-  svntest.actions.run_and_verify_update(other_E_path,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None,
-                                        True, other_E_path,
-                                        '--accept', 'postpone')
-
 # Issue #3334: a modify-on-deleted tree conflict should leave the node
 # updated to the target revision but still scheduled for deletion.
 def tree_conflict_uc1_update_deleted_tree(sbox):
@@ -5596,94 +5254,6 @@ def mergeinfo_updates_merge_with_local_mods(sbox):
                                      A_COPY_path)
 
 #----------------------------------------------------------------------
-# Test for receiving modified properties on added files that were originally
-# moved from somewhere else. (Triggers locate_copyfrom behavior)
-def add_moved_file_has_props(sbox):
-  """update adding moved file receives modified props"""
-  sbox.build()
-
-  wc_dir = sbox.wc_dir
-
-  G = os.path.join(os.path.join(wc_dir, 'A', 'D', 'G'))
-  pi  = os.path.join(G, 'pi')
-  G_new = os.path.join(wc_dir, 'G_new')
-
-  # Give pi some property
-  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'native', pi)
-  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'added eol-style')
-
-  svntest.actions.run_and_verify_svn(None, 'At revision 2.', [], 'up', wc_dir)
-
-  # Now move pi to a different place
-  svntest.main.run_svn(None, 'mkdir', G_new)
-  svntest.main.run_svn(None, 'mv', pi, G_new)
-  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'Moved pi to G_new')
-
-  svntest.actions.run_and_verify_svn(None, 'At revision 3.', [], 'up', wc_dir)
-
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.remove('A/D/G/pi')
-  expected_status.add({
-    'G_new'    : Item (status='  ', wc_rev=3),
-    'G_new/pi' : Item (status='  ', wc_rev=3),
-  })
-
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  svntest.main.run_svn(None, 'up', '-r', '0', G_new)
-  svntest.main.run_svn(None, 'up', wc_dir)
-
-  # This shouldn't show property modifications, but at r982550 it did.
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-#----------------------------------------------------------------------
-# Test for receiving modified properties on added files that were originally
-# moved from somewhere else. (Triggers locate_copyfrom behavior). This is
-# an extended variant that has another property change on the new path
-def add_moved_file_has_props2(sbox):
-  """update adding moved node receives 2* props"""
-  sbox.build()
-
-  wc_dir = sbox.wc_dir
-
-  G = os.path.join(os.path.join(wc_dir, 'A', 'D', 'G'))
-  pi  = os.path.join(G, 'pi')
-  G_new = os.path.join(wc_dir, 'G_new')
-
-  # Give pi some property
-  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'native', pi)
-  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'added eol-style')
-
-  svntest.actions.run_and_verify_svn(None, 'At revision 2.', [], 'up', wc_dir)
-
-  # Now move pi to a different place
-  svntest.main.run_svn(None, 'mkdir', G_new)
-  svntest.main.run_svn(None, 'mv', pi, G_new)
-  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 'CR', os.path.join(G_new, 'pi'))
-
-  svntest.main.run_svn(None, 'ci', wc_dir, '-m', 'Moved pi to G_new')
-
-  svntest.actions.run_and_verify_svn(None, 'At revision 3.', [], 'up', wc_dir)
-
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.remove('A/D/G/pi')
-  expected_status.add({
-    'G_new'    : Item (status='  ', wc_rev=3),
-    'G_new/pi' : Item (status='  ', wc_rev=3),
-  })
-
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  svntest.main.run_svn(None, 'up', '-r', '0', G_new)
-  svntest.main.run_svn(None, 'up', wc_dir)
-
-  # This shouldn't show local modifications, but currently it
-  # shows a property conflict on G_new/pi.
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-
 # A regression test for a 1.7-dev crash upon updating a WC to a different
 # revision when it contained an excluded dir.
 def update_with_excluded_subdir(sbox):
@@ -5792,11 +5362,6 @@ test_list = [ None,
               update_conflicted,
               SkipUnless(mergeinfo_update_elision,
                          server_has_mergeinfo),
-              SkipUnless(update_handles_copyfrom,
-                         server_sends_copyfrom_on_update),
-              copyfrom_degrades_gracefully,
-              SkipUnless(update_handles_copyfrom_with_txdeltas,
-                         server_sends_copyfrom_on_update),
               update_copied_from_replaced_and_changed,
               update_copied_and_deleted_prop,
               update_accept_conflicts,
@@ -5809,7 +5374,6 @@ test_list = [ None,
               tree_conflicts_on_update_2_2,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
-              update_moves_and_modifies_an_edited_file,
               tree_conflict_uc1_update_deleted_tree,
               XFail(tree_conflict_uc2_schedule_re_add),
               set_deep_depth_on_target_with_shallow_children,
@@ -5817,8 +5381,6 @@ test_list = [ None,
               XFail(update_deleted_locked_files),
               XFail(update_empty_hides_entries),
               mergeinfo_updates_merge_with_local_mods,
-              add_moved_file_has_props,
-              XFail(add_moved_file_has_props2),
               update_with_excluded_subdir,
               XFail(update_with_file_lock_and_keywords_property_set)
              ]

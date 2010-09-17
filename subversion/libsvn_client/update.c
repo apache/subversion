@@ -98,7 +98,6 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t ignore_externals,
                 svn_boolean_t allow_unver_obstructions,
                 svn_boolean_t *timestamp_sleep,
-                svn_boolean_t send_copyfrom_args,
                 svn_boolean_t innerupdate,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
@@ -244,12 +243,8 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
-  SVN_ERR(svn_ra_do_update2(ra_session,
-                            &reporter, &report_baton,
-                            revnum,
-                            target,
-                            depth,
-                            send_copyfrom_args,
+  SVN_ERR(svn_ra_do_update2(ra_session, &reporter, &report_baton,
+                            revnum, target, depth, FALSE,
                             update_editor, update_edit_baton, pool));
 
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -321,7 +316,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
-                            svn_boolean_t send_copyfrom_args,
                             svn_boolean_t innerupdate,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
@@ -343,8 +337,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   err = update_internal(result_rev, local_abspath, anchor_abspath,
                          revision, depth, depth_is_sticky,
                          ignore_externals, allow_unver_obstructions,
-                         timestamp_sleep, send_copyfrom_args,
-                         innerupdate, ctx, pool);
+                         timestamp_sleep, innerupdate, ctx, pool);
 
   err = svn_error_compose_create(
             err,
@@ -398,7 +391,7 @@ svn_client_update3(apr_array_header_t **result_revs,
                                             revision, depth, depth_is_sticky,
                                             ignore_externals,
                                             allow_unver_obstructions,
-                                            &sleep, TRUE, FALSE, ctx, subpool);
+                                            &sleep, FALSE, ctx, subpool);
 
           if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
             {
