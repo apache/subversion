@@ -55,7 +55,7 @@ class Exception : public std::exception
   do {                                                  \
     svn_error_t *svn_err__temp = (expr);                \
     if (svn_err__temp)                                  \
-      throw Exception(svn_err__temp)                    \
+      throw Exception(svn_err__temp);                   \
   } while (0)
 
 #endif // COMMON_H
