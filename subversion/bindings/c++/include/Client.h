@@ -28,8 +28,12 @@
 #define CLIENT_H
 
 #include "Version.h"
+#include "Revision.h"
+#include "Pool.h"
 
 #include "svn_client.h"
+
+#include <ostream>
 
 namespace SVN
 {
@@ -37,15 +41,21 @@ namespace SVN
   class Client
   {
     private:
+      Pool m_pool;
+      svn_client_ctx_t *m_ctx;
 
     public:
       /** The constructor. */
       Client();
 
-      Version getVersion();
-
       /** The destructor needs to be public. */
       virtual ~Client();
+
+      Version getVersion();
+
+      void cat(std::ostream &stream, const std::string &path_or_url);
+      void cat(std::ostream &stream, const std::string &path_or_url,
+               const Revision &peg_revision, const Revision &revision);
   };
 }
 

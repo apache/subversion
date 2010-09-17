@@ -23,10 +23,20 @@
  */
 
 #include "Client.h"
+#include "Pool.h"
+#include "Utility.h"
+
+#include "Common.h"
 
 namespace SVN {
 
 Client::Client()
+  : m_pool()
+{
+  svn_error_clear(svn_client_create_context(&m_ctx, m_pool.pool()));
+}
+
+Client::~Client()
 {
 }
 
@@ -36,8 +46,22 @@ Client::getVersion()
   return Version(svn_client_version());
 }
 
-Client::~Client()
+void
+Client::cat(std::ostream &stream, const std::string &path_or_url)
 {
+  cat(stream, path_or_url, Revision::HEAD, Revision::HEAD);
+}
+
+void
+Client::cat(std::ostream &stream, const std::string &path_or_url,
+    const Revision &peg_revision, const Revision &revision)
+{
+  Pool pool;
+  svn_stream_t *out = Private::Utility::ostream_wrapper(stream, pool);
+
+  SVN_CPP_ERR(svn_client_cat2(out, path_or_url.c_str(),
+                              peg_revision.revision(),
+                              revision.revision(), m_ctx, pool.pool()));
 }
 
 }

@@ -47,7 +47,7 @@ on a branch, without any knowledge of how or when I'll continue working on it.
      * svn_client_proplist3()
      * svn_client_export5()
      * svn_client_list2()
-     * svn_client_cat2()
+     * svn_client_cat2()                            [DONE]
      * svn_client_add_to_changelist()
      * svn_client_remove_from_changelists()
      * svn_client_get_changelists()
