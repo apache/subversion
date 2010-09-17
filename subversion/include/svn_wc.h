@@ -5367,10 +5367,6 @@ svn_wc_get_actual_target(const char *path,
  * whenever external changes are encountered, giving the callback a chance
  * to store the external information for processing.
  *
- * If @a fetch_func is non-NULL, then use it (with @a fetch_baton) as
- * a fallback for retrieving repository files whenever 'copyfrom' args
- * are sent into editor->add_file().
- *
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
@@ -5421,8 +5417,6 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t allow_unver_obstructions,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
-                          svn_wc_get_file_t fetch_func,
-                          void *fetch_baton,
                           svn_wc_conflict_resolver_func_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
@@ -5436,7 +5430,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
 
 /** Similar to svn_wc_get_update_editor4, but uses access batons and relative
  * path instead of a working copy context-abspath pair and
- * svn_wc_traversal_info_t instead of an externals callback.
+ * svn_wc_traversal_info_t instead of an externals callback.  Also, 
+ * @a fetch_func and @a fetch_baton are ignored.
  *
  * If @a ti is non-NULL, record traversal info in @a ti, for use by
  * post-traversal accessors such as svn_wc_edited_externals().
@@ -5548,8 +5543,6 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t allow_unver_obstructions,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
-                          svn_wc_get_file_t fetch_func,
-                          void *fetch_baton,
                           svn_wc_conflict_resolver_func_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
@@ -5563,8 +5556,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
 
 /** Similar to svn_wc_get_switch_editor4, but uses access batons and relative
  * path instead of a working copy context and svn_wc_traversal_info_t instead
- * of an externals callback. This function doesn't support an external file
- * fetcher.
+ * of an externals callback.
  *
  * If @a ti is non-NULL, record traversal info in @a ti, for use by
  * post-traversal accessors such as svn_wc_edited_externals().
