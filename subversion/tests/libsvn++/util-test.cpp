@@ -25,6 +25,7 @@
 
 #include "Pool.h"
 #include "Revision.h"
+#include "Common.h"
 #include "../Utility.h"
 
 #include <sstream>
@@ -87,6 +88,23 @@ test_streams(apr_pool_t *p)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_exceptions(apr_pool_t *p)
+{
+  svn_error_t *err = svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+
+  try
+    {
+      throw Exception(err);
+    }
+  catch (Exception ex)
+    {
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -98,5 +116,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test Revision class"),
     SVN_TEST_PASS2(test_streams,
                    "test stream wrapping"),
+    SVN_TEST_PASS2(test_exceptions,
+                   "test error and exception handling"),
     SVN_TEST_NULL
   };
