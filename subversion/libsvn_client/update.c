@@ -45,49 +45,6 @@
 /*** Code. ***/
 
 
-/* Context baton for file_fetcher below. */
-struct ff_baton
-{
-  svn_client_ctx_t *ctx;       /* client context used to open ra session */
-  const char *repos_root;      /* repository root URL */
-  svn_ra_session_t *session;   /* the secondary ra session itself */
-  apr_pool_t *pool;            /* the pool where the ra session is allocated */
-};
-
-
-/* Implementation of svn_wc_get_file_t.  A feeble callback wrapper
-   around svn_ra_get_file(), so that the update_editor can use it to
-   fetch any file, any time. */
-static svn_error_t *
-file_fetcher(void *baton,
-             const char *path,
-             svn_revnum_t revision,
-             svn_stream_t *stream,
-             svn_revnum_t *fetched_rev,
-             apr_hash_t **props,
-             apr_pool_t *pool)
-{
-  struct ff_baton *ffb = (struct ff_baton *)baton;
-  const char *dirpath, *base_name, *session_url, *old_session_url;
-
-  svn_relpath_split(&dirpath, &base_name, path, pool);
-  session_url = svn_path_url_add_component2(ffb->repos_root, 
-                                            dirpath, pool);
-
-  if (ffb->session)
-    SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ffb->session,
-                                              session_url, ffb->pool));
-  else
-    SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session), NULL,
-                                                 session_url, NULL, NULL,
-                                                 FALSE, TRUE,
-                                                 ffb->ctx, ffb->pool));
-
-  return svn_ra_get_file(ffb->session, base_name, revision, stream,
-                         fetched_rev, props, pool);
-}
-
-
 static svn_error_t *
 update_internal(svn_revnum_t *result_rev,
                 const char *local_abspath,
@@ -119,7 +76,6 @@ update_internal(svn_revnum_t *result_rev,
   svn_ra_session_t *ra_session;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
-  struct ff_baton *ffb;
   svn_client__external_func_baton_t efb;
   svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
@@ -215,12 +171,6 @@ update_internal(svn_revnum_t *result_rev,
      a strict sense, however.) */
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
-  /* Build a baton for the file-fetching callback. */
-  ffb = apr_pcalloc(pool, sizeof(*ffb));
-  ffb->ctx = ctx;
-  ffb->repos_root = repos_root;
-  ffb->pool = pool;
-
   /* Build a baton for the externals-info-gatherer callback. */
   efb.externals_new = apr_hash_make(pool);
   efb.externals_old = apr_hash_make(pool);
@@ -234,7 +184,6 @@ update_internal(svn_revnum_t *result_rev,
                                     target, use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     diff3_cmd, preserved_exts,
-                                    file_fetcher, ffb,
                                     ctx->conflict_func, ctx->conflict_baton,
                                     svn_client__external_info_gatherer, &efb,
                                     ctx->cancel_func, ctx->cancel_baton,
