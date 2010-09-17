@@ -71,10 +71,11 @@ initialize_area(svn_revnum_t *result_rev,
                              repos_root, uuid, revnum, depth, pool));
   /* Have update fix the incompleteness. */
   return svn_error_return(svn_client__update_internal(result_rev, local_abspath,
-                                    revision, depth, TRUE, ignore_externals,
-                                    allow_unver_obstructions,
-                                    use_sleep, FALSE, innercheckout,
-                                    ctx, pool));
+                                                      revision, depth, TRUE,
+                                                      ignore_externals,
+                                                      allow_unver_obstructions,
+                                                      use_sleep, innercheckout,
+                                                      ctx, pool));
 }
 
 
@@ -219,7 +220,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                                 revision, depth, TRUE,
                                                 ignore_externals,
                                                 allow_unver_obstructions,
-                                                use_sleep, FALSE, innercheckout,
+                                                use_sleep, innercheckout,
                                                 ctx, pool);
             }
           else
