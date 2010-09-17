@@ -405,6 +405,27 @@ assert_text_columns_equal(svn_sqlite__stmt_t *stmt1,
 }
 
 static svn_error_t *
+assert_blob_columns_equal(svn_sqlite__stmt_t *stmt1,
+                          svn_sqlite__stmt_t *stmt2,
+                          int column,
+                          apr_pool_t *scratch_pool)
+{
+  apr_size_t len1, len2;
+  const void *val1 = svn_sqlite__column_blob(stmt1, column, &len1, NULL);
+  const void *val2 = svn_sqlite__column_blob(stmt2, column, &len2, NULL);
+
+  if (!len1 && !len2)
+    return SVN_NO_ERROR;
+
+  if (len1 != len2 || memcmp(val1, val2, len1))
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             "Blob of length %ld in statement 1 differs "
+                             "from blob of length %ld in statement 2",
+                             len1, len2);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 assert_base_rows_match(svn_boolean_t have_row1,
                        svn_boolean_t have_row2,
                        svn_sqlite__stmt_t *stmt1,
@@ -453,7 +474,8 @@ assert_base_rows_match(svn_boolean_t have_row1,
     SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 12)
                    == svn_sqlite__column_int64(stmt2, 12));
 
-    /* 14: verify props? */
+    /* verify props */
+    SVN_ERR(assert_blob_columns_equal(stmt1, stmt2, 13, scratch_pool));
   }
 
   return SVN_NO_ERROR;
@@ -511,6 +533,10 @@ assert_working_rows_match(svn_boolean_t have_row1,
   SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 14)
                  == svn_sqlite__column_int64(stmt2, 14));
   /* properties */
+#if 0
+  /* Disabled for now as base-deleted don't match */
+  SVN_ERR(assert_blob_columns_equal(stmt1, stmt2, 15, scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -2429,10 +2455,29 @@ svn_wc__db_base_get_props(apr_hash_t **props,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   svn_error_t *err;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_node;
+  svn_boolean_t have_node_row;
+#endif
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_SELECT_BASE_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(get_statement_for_path(&stmt_node, db, local_abspath,
+                                 STMT_SELECT_BASE_PROPS_1, scratch_pool));
+  SVN_ERR(svn_sqlite__step(&have_node_row, stmt_node));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR_ASSERT(have_row == have_node_row);
+  SVN_ERR(assert_blob_columns_equal(stmt, stmt_node, 0, scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt_node));
+#else
+  stmt = stmt_node;
+  have_row = have_node_row;
+#endif
+#endif
   if (!have_row)
     {
       err = svn_sqlite__reset(stmt);
@@ -5411,10 +5456,34 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_node;
+  svn_boolean_t have_node_row;
+#endif
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_SELECT_WORKING_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+
+#ifdef SVN_WC__NODES
+  SVN_ERR(get_statement_for_path(&stmt_node, db, local_abspath,
+                                 STMT_SELECT_WORKING_PROPS_1, scratch_pool));
+  SVN_ERR(svn_sqlite__step(&have_node_row, stmt_node));
+
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR_ASSERT(have_row == have_node_row);
+#if 0
+  /* Disabled for now as base-deleted don't match */
+  SVN_ERR(assert_blob_columns_equal(stmt, stmt_node, 0, scratch_pool));
+#endif
+  SVN_ERR(svn_sqlite__reset(stmt_node));
+#else
+  stmt = stmt_node;
+  have_row = have_node_row;
+#endif
+#endif
 
   /* If there is a WORKING row, then examine its status:
 
