@@ -841,7 +841,6 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 #ifdef SVN_WC__NODES
   SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE));
-  { svn_revnum_t rev = pibb->changed_rev;
   SVN_ERR(svn_sqlite__bindf(stmt_node, "isisisr"
                             "tstr"               /* 8 - 11 */
                             "isnnnnns",          /* 12 - 19 */
@@ -856,12 +855,11 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             (pibb->kind == svn_wc__db_kind_dir) ? /* 9 */
                                svn_depth_to_word(pibb->depth) : NULL,
                             kind_map, pibb->kind, /* 10 */
-                            rev,                  /* 11 */
+                            pibb->changed_rev,    /* 11 */
                             pibb->changed_date,   /* 12 */
                             pibb->changed_author, /* 13 */
                             (pibb->kind == svn_wc__db_kind_symlink) ?
                                 pibb->target : NULL)); /* 19 */
-  }
 
   if (pibb->kind == svn_wc__db_kind_file) {
     SVN_ERR(svn_sqlite__bind_checksum(stmt_node, 14, pibb->checksum,
