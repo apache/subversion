@@ -2018,18 +2018,18 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *repos_relpath,
-                                const char *repos_root_url,
-                                const char *repos_uuid,
-                                svn_revnum_t revision,
-                                svn_wc__db_kind_t kind,
-                                svn_wc__db_status_t status,
-                                const svn_skel_t *conflict,
-                                const svn_skel_t *work_items,
-                                apr_pool_t *scratch_pool)
+static svn_error_t *
+add_absent_excluded_not_present_node(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const char *repos_relpath,
+                                     const char *repos_root_url,
+                                     const char *repos_uuid,
+                                     svn_revnum_t revision,
+                                     svn_wc__db_kind_t kind,
+                                     svn_wc__db_status_t status,
+                                     const svn_skel_t *conflict,
+                                     const svn_skel_t *work_items,
+                                     apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
@@ -2084,6 +2084,46 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *repos_relpath,
+                                const char *repos_root_url,
+                                const char *repos_uuid,
+                                svn_revnum_t revision,
+                                svn_wc__db_kind_t kind,
+                                svn_wc__db_status_t status,
+                                const svn_skel_t *conflict,
+                                const svn_skel_t *work_items,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(status == svn_wc__db_status_absent
+                 || status == svn_wc__db_status_excluded);
+
+  return add_absent_excluded_not_present_node(
+    db, local_abspath, repos_relpath, repos_root_url, repos_uuid, revision,
+    kind, status, conflict, work_items, scratch_pool);
+}
+
+
+svn_error_t *
+svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const char *repos_relpath,
+                                     const char *repos_root_url,
+                                     const char *repos_uuid,
+                                     svn_revnum_t revision,
+                                     svn_wc__db_kind_t kind,
+                                     const svn_skel_t *conflict,
+                                     const svn_skel_t *work_items,
+                                     apr_pool_t *scratch_pool)
+{
+  return add_absent_excluded_not_present_node(
+    db, local_abspath, repos_relpath, repos_root_url, repos_uuid, revision,
+    kind, svn_wc__db_status_not_present, conflict, work_items, scratch_pool);
 }
 
 
