@@ -915,10 +915,10 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Create a new not-present symlink node. */
-  SVN_ERR(svn_wc__db_base_add_absent_node(
+  SVN_ERR(svn_wc__db_base_add_not_present_node(
             db, svn_dirent_join(local_abspath, "Q", pool),
             "Q", ROOT_ONE, UUID_ONE, 3,
-            svn_wc__db_kind_symlink, svn_wc__db_status_not_present,
+            svn_wc__db_kind_symlink,
             NULL, NULL,
             pool));
 

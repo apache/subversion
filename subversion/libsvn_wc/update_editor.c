@@ -2465,13 +2465,12 @@ add_directory(const char *path,
 
           /* If we are skipping an add, we need to tell the WC that
            * there's a node supposed to be here which we don't have. */
-          SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, db->local_abspath,
+          SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, db->local_abspath,
                                                   db->new_relpath,
                                                   eb->repos_root,
                                                   eb->repos_uuid,
                                                   *eb->target_revision,
                                                   svn_wc__db_kind_dir,
-                                                  svn_wc__db_status_not_present,
                                                   NULL, NULL, pool));
           SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
@@ -3836,13 +3835,12 @@ add_file(const char *path,
 
           /* If we are skipping an add, we need to tell the WC that
            * there's a node supposed to be here which we don't have. */
-          SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, fb->local_abspath,
+          SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, fb->local_abspath,
                                                   fb->new_relpath,
                                                   eb->repos_root,
                                                   eb->repos_uuid,
                                                   *eb->target_revision,
                                                   svn_wc__db_kind_file,
-                                                  svn_wc__db_status_not_present,
                                                   NULL, NULL, subpool));
           SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
 
