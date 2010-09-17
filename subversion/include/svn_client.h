@@ -322,6 +322,10 @@ svn_client_get_ssl_client_cert_pw_prompt_provider(
  *
  * A brief word on operative and peg revisions.
  *
+ * If the kind of the peg revision is #svn_opt_revision_unspecified, then it
+ * defaults to #svn_opt_revision_head for URLs and #svn_opt_revision_working
+ * for local paths.
+ *
  * For deeper insight, please see the
  * <a href="http://svnbook.red-bean.com/nightly/en/svn.advanced.pegrevs.html">
  * Peg and Operative Revisions</a> section of the Subversion Book.
@@ -4687,26 +4691,30 @@ svn_client_ls(apr_hash_t **dirents,
  */
 
 /**
- * Output the content of file identified by @a path_or_url and @a
- * revision to the stream @a out.  The actual node revision selected
- * is determined by the path as it exists in @a peg_revision.  If @a
- * peg_revision->kind is #svn_opt_revision_unspecified, then it defaults
- * to #svn_opt_revision_head for URLs or #svn_opt_revision_working
- * for WC targets.
+ * Output the content of a file.
  *
- * If @a path_or_url is not a local path, then if @a revision is of
- * kind #svn_opt_revision_previous (or some other kind that requires
- * a local path), an error will be returned, because the desired
- * revision cannot be determined.
+ * @param[in] out           The stream to which the content will be written.
+ * @param[in] path_or_url   The path or URL of the file.
+ * @param[in] peg_revision  The peg revision.
+ * @param[in] revision  The operative revision.
+ * @param[in] ctx   The standard client context, used for possible
+ *                  authentication.
+ * @param[in] pool  Used for any temporary allocation.
  *
- * Use the authentication baton cached in @a ctx to authenticate against the
- * repository.
+ * @todo Add an expansion/translation flag?
  *
- * Perform all allocations from @a pool.
- *
- * ### @todo Add an expansion/translation flag?
+ * @return A pointer to an #svn_error_t of the type (this list is not
+ *         exhaustive): <br>
+ *         An unspecified error if @a revision is of kind
+ *         #svn_opt_revision_previous (or some other kind that requires
+ *         a local path), because the desired revision cannot be
+ *         determined. <br>
+ *         If no error occurred, return #SVN_NO_ERROR.
  *
  * @since New in 1.2.
+ *
+ * @see #svn_client_ctx_t <br> @ref clnt_revisions for
+ *      a discussion of operative and peg revisions.
  */
 svn_error_t *
 svn_client_cat2(svn_stream_t *out,
