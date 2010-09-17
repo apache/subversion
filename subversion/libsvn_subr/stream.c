@@ -832,6 +832,7 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
 {
   struct baton_apr *btn = baton;
   svn_error_t *err;
+  svn_boolean_t eof;
 
   if (*len == 1)
     {
@@ -847,8 +848,8 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
         }
     }
   else
-    err = svn_io_file_read_full2(btn->file, buffer, *len, len, 
-                                 TRUE, btn->pool);
+    err = svn_io_file_read_full2(btn->file, buffer, *len, len,
+                                 &eof, btn->pool);
 
   return err;
 }

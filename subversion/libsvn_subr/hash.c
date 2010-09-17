@@ -347,7 +347,7 @@ svn_hash_read(apr_hash_t *hash,
           size_t keylen;
           int parsed_len;
           void *keybuf;
-          
+
           /* Get the length of the key */
           SVN_ERR(svn_cstring_atoi(&parsed_len, buf + 2));
           keylen = parsed_len;
@@ -356,7 +356,7 @@ svn_hash_read(apr_hash_t *hash,
           keybuf = apr_palloc(pool, keylen + 1);
           SVN_ERR(svn_io_file_read_full2(srcfile,
                                          keybuf, keylen,
-                                         &num_read, FALSE, pool));
+                                         &num_read, NULL, pool));
           ((char *) keybuf)[keylen] = '\0';
 
           /* Suck up extra newline after key data */
@@ -382,7 +382,7 @@ svn_hash_read(apr_hash_t *hash,
               valbuf = apr_palloc(pool, vallen + 1);
               SVN_ERR(svn_io_file_read_full2(srcfile,
                                              valbuf, vallen,
-                                             &num_read, FALSE, pool));
+                                             &num_read, NULL, pool));
               ((char *) valbuf)[vallen] = '\0';
 
               /* Suck up extra newline after val data */

@@ -1830,8 +1830,9 @@ svn_io_file_read(apr_file_t *file,
 
 /** Wrapper for apr_file_read_full().
  *
- * If @a eof_is_ok is set, no svn_error_t error object
- * will be created upon EOF.
+ * If @a hit_eof is not NULL, EOF will be indicated there and no
+ * svn_error_t error object will be created upon EOF.
+ *
  * @since New in 1.7
  */
 svn_error_t *
@@ -1839,12 +1840,12 @@ svn_io_file_read_full2(apr_file_t *file,
                         void *buf,
                         apr_size_t nbytes,
                         apr_size_t *bytes_read,
-                        svn_boolean_t eof_is_ok,
+                        svn_boolean_t *hit_eof,
                         apr_pool_t *pool);
 
 
-/** Similar to svn_io_file_read_full2 with eof_is_ok being set
- * to @c FALSE.
+/** Similar to svn_io_file_read_full2 with hit_eof being set
+ * to @c NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API
  */

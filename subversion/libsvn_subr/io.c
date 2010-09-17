@@ -2875,12 +2875,18 @@ svn_io_file_read(apr_file_t *file, void *buf,
 svn_error_t *
 svn_io_file_read_full2(apr_file_t *file, void *buf,
                         apr_size_t nbytes, apr_size_t *bytes_read,
-                        svn_boolean_t eof_is_ok,
+                        svn_boolean_t *hit_eof,
                         apr_pool_t *pool)
 {
   apr_status_t status = apr_file_read_full(file, buf, nbytes, bytes_read);
-  if (APR_STATUS_IS_EOF(status) && eof_is_ok)
-    return SVN_NO_ERROR;
+  if (hit_eof)
+    if (APR_STATUS_IS_EOF(status))
+      {
+        *hit_eof = TRUE;
+        return SVN_NO_ERROR;
+      }
+    else
+      *hit_eof = FALSE;
 
   return do_io_file_wrapper_cleanup
     (file, status,
@@ -3590,8 +3596,8 @@ contents_identical_p(svn_boolean_t *identical_p,
   char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
-  svn_boolean_t done1 = FALSE;
-  svn_boolean_t done2 = FALSE;
+  svn_boolean_t eof1 = FALSE;
+  svn_boolean_t eof2 = FALSE;
 
   SVN_ERR(svn_io_file_open(&file1_h, file1, APR_READ, APR_OS_DEFAULT,
                            pool));
@@ -3605,33 +3611,21 @@ contents_identical_p(svn_boolean_t *identical_p,
                                         svn_io_file_close(file1_h, pool)));
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
-  while (! (done1 || done2))
+  while (!err && !eof1 && !eof2)
     {
-      err = svn_io_file_read_full(file1_h, buf1,
-                                  SVN__STREAM_CHUNK_SIZE, &bytes_read1, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        {
-          svn_error_clear(err);
-          err = NULL;
-          done1 = TRUE;
-        }
-      else if (err)
-        break;
+      err = svn_io_file_read_full2(file1_h, buf1,
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1,
+                                   &eof1, pool);
+      if (err)
+          break;
 
-      err = svn_io_file_read_full(file2_h, buf2,
-                                  SVN__STREAM_CHUNK_SIZE, &bytes_read2, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        {
-          svn_error_clear(err);
-          err = NULL;
-          done2 = TRUE;
-        }
-      else if (err)
-        break;
+      err = svn_io_file_read_full2(file2_h, buf2,
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2,
+                                   &eof2, pool);
+      if (err)
+          break;
 
-      if ((bytes_read1 != bytes_read2)
-          || (done1 != done2)
-          || (memcmp(buf1, buf2, bytes_read1)))
+      if ((bytes_read1 != bytes_read2) || memcmp(buf1, buf2, bytes_read1))
         {
           *identical_p = FALSE;
           break;

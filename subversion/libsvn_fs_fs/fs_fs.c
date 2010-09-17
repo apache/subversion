@@ -3161,7 +3161,7 @@ create_rep_state_body(struct rep_state **rep_state,
 
   /* We are dealing with a delta, find out what version. */
   SVN_ERR(svn_io_file_read_full2(rs->apr_file, buf, sizeof(buf),
-                                 NULL, FALSE, pool));
+                                 NULL, NULL, pool));
   if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
     return svn_error_create
       (SVN_ERR_FS_CORRUPT, NULL,
@@ -3606,7 +3606,7 @@ get_contents(struct rep_read_baton *rb,
       if (((apr_off_t) copy_len) > rs->end - rs->off)
         copy_len = (apr_size_t) (rs->end - rs->off);
       SVN_ERR(svn_io_file_read_full2(rs->apr_file, cur, copy_len, NULL,
-                                     FALSE, rb->pool));
+                                     NULL, rb->pool));
       rs->off += copy_len;
       *len = copy_len;
       return SVN_NO_ERROR;
@@ -3683,7 +3683,7 @@ get_contents(struct rep_read_baton *rb,
                     }
                   SVN_ERR(svn_io_file_read_full2(rs->apr_file, sbuf,
                                                  lwindow->sview_len,
-                                                 NULL, FALSE, rb->pool));
+                                                 NULL, NULL, rb->pool));
                   rs->off += lwindow->sview_len;
                 }
               else
@@ -6992,7 +6992,7 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
   b->remaining -= bytes_to_read;
 
   return svn_io_file_read_full2(b->file, buffer, (apr_size_t) bytes_to_read,
-                                len, FALSE, b->pool);
+                                len, NULL, b->pool);
 }
 
 /* Part of the recovery procedure.  Read the directory noderev at offset
