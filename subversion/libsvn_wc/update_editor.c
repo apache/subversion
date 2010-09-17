@@ -5902,11 +5902,10 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t my_kind;
 
-  /* Go ahead and initialize our return value to the most common
-     (code-wise) values. */
   if (!kind)
     kind = &my_kind;
 
+  /* Initialize our return values to the most common (code-wise) values. */
   *wc_root = TRUE;
   if (switched)
     *switched = FALSE;
