@@ -1093,40 +1093,6 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                requestPool.pool()), );
 }
 
-jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
-                                  Revision &pegRevision)
-{
-    SVN::Pool requestPool;
-    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
-    Path intPath(path);
-    SVN_JNI_ERR(intPath.error_occured(), NULL);
-
-    size_t size = 0;
-    svn_stream_t *read_stream = createReadStream(requestPool.pool(),
-                                                 intPath.c_str(), revision,
-                                                 pegRevision, size);
-    if (read_stream == NULL)
-        return NULL;
-
-    JNIEnv *env = JNIUtil::getEnv();
-    // size will be set to the number of bytes available.
-    jbyteArray jcontent = env->NewByteArray(size);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jbyte *jbytes = env->GetByteArrayElements(jcontent, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    svn_error_t *err = svn_stream_read(read_stream, (char *) jbytes, &size);
-    env->ReleaseByteArrayElements(jcontent, jbytes, 0);
-    SVN_JNI_ERR(err, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    return jcontent;
-}
-
 void SVNClient::streamFileContent(const char *path, Revision &revision,
                                   Revision &pegRevision, jobject outputStream,
                                   size_t bufSize)

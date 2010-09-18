@@ -1309,33 +1309,6 @@ Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
                     jignoreAncestry ? true : false, receiver);
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_org_apache_subversion_javahl_SVNClient_fileContent
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision)
-{
-  JNIEntry(SVNClient, fileContent);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return NULL;
-    }
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  Revision revision(jrevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  Revision pegRevision(jpegRevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  return cl->fileContent(path, revision, pegRevision);
-}
-
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_streamFileContent
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
