@@ -11,7 +11,7 @@ on a branch, without any knowledge of how or when I'll continue working on it.
      (these were not chosen arbitrarily, they represent all the
       non-deprecated APIs in the client library):
      * svn_client_version()                         [DONE]
-     * svn_client_checkout3()
+     * svn_client_checkout3()                       [DONE]
      * svn_client_update3()
      * svn_client_switch2()
      * svn_client_add4()

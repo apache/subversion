@@ -64,4 +64,28 @@ Client::cat(std::ostream &stream, const std::string &path_or_url,
                               revision.revision(), m_ctx, pool.pool()));
 }
 
+Revision
+Client::checkout(const std::string &url, const std::string path)
+{
+  return checkout(url, path, Revision::HEAD, Revision::HEAD,
+                  svn_depth_infinity, false, false);
+}
+
+Revision
+Client::checkout(const std::string &url, const std::string path,
+                 const Revision &peg_revision, const Revision &revision,
+                 svn_depth_t depth, bool ignore_externals,
+                 bool allow_unver_obstructions)
+{
+  Pool pool;
+  svn_revnum_t result_rev;
+
+  SVN_CPP_ERR(svn_client_checkout3(&result_rev, url.c_str(), path.c_str(),
+                                   peg_revision.revision(),
+                                   revision.revision(), depth,
+                                   ignore_externals, allow_unver_obstructions,
+                                   m_ctx, pool.pool()));
+  return Revision::getNumberRev(result_rev);
+}
+
 }

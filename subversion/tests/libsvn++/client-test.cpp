@@ -34,7 +34,7 @@ using namespace SVN;
 
 static svn_error_t *
 create_greek_repo(svn_repos_t **repos,
-                  const char *repos_name,
+                  const char *repos_path,
                   const svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
@@ -43,7 +43,8 @@ create_greek_repo(svn_repos_t **repos,
   svn_fs_root_t *txn_root;
   svn_revnum_t committed_rev;
 
-  SVN_ERR(svn_test__create_repos(repos, repos_name, opts, pool));
+  SVN_ERR(svn_io_remove_dir2(repos_path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_test__create_repos(repos, repos_path, opts, pool));
   fs = svn_repos_fs(*repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -73,7 +74,10 @@ test_cat(const svn_test_opts_t *opts,
   Pool pool;
   svn_repos_t *repos;
   const char *repos_url;
+  const char *wc_path;
+  const char *cwd;
   std::string iota_url;
+  std::string iota_path;
 
   SVN_ERR(create_greek_repo(&repos, "test-cpp-client-repos", opts,
                             pool.pool()));
@@ -87,6 +91,44 @@ test_cat(const svn_test_opts_t *opts,
   client.cat(stream, iota_url);
   SVN_TEST_ASSERT(stream.str() == "This is the file 'iota'.\n");
 
+  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool.pool()));
+  wc_path = svn_dirent_join(cwd, "test-cpp-client-wc", pool.pool());
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool.pool()));
+  client.checkout(repos_url, wc_path);
+
+  iota_path = svn_dirent_join(wc_path, "iota", pool.pool());
+  stream.clear();
+  stream.str("");
+  client.cat(stream, iota_path);
+  SVN_TEST_ASSERT(stream.str() == "This is the file 'iota'.\n");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_checkout(const svn_test_opts_t *opts,
+              apr_pool_t *ap)
+{
+  Pool pool;
+  svn_repos_t *repos;
+  const char *repos_url;
+  const char *wc_path;
+  const char *cwd;
+
+  SVN_ERR(create_greek_repo(&repos, "test-cpp-client-repos", opts,
+                            pool.pool()));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-cpp-client-repos",
+                                           pool.pool()));
+
+  Client client;
+
+  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool.pool()));
+  wc_path = svn_dirent_join(cwd, "test-cpp-client-wc", pool.pool());
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool.pool()));
+  Revision result_rev = client.checkout(repos_url, wc_path);
+
+  SVN_TEST_ASSERT(result_rev.revision()->value.number == 1);
+
   return SVN_NO_ERROR;
 }
 
@@ -99,5 +141,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test get client version"),
     SVN_TEST_OPTS_PASS(test_cat,
                        "test client cat"),
+    SVN_TEST_OPTS_PASS(test_checkout,
+                       "test client checkout"),
     SVN_TEST_NULL
   };

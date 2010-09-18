@@ -56,6 +56,12 @@ namespace SVN
       void cat(std::ostream &stream, const std::string &path_or_url);
       void cat(std::ostream &stream, const std::string &path_or_url,
                const Revision &peg_revision, const Revision &revision);
+
+      Revision checkout(const std::string &url, const std::string path);
+      Revision checkout(const std::string &url, const std::string path,
+                        const Revision &peg_revisio, const Revision &revision,
+                        svn_depth_t depth, bool ignore_externals,
+                        bool allow_unver_obstructions);
   };
 }
 
