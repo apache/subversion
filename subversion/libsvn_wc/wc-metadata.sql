@@ -384,8 +384,8 @@ CREATE TABLE WORKING_NODE (
   parent_relpath  TEXT,
 
   /* Is this node "present" or has it been excluded for some reason?
-     Only allowed values: normal, not-present, incomplete, base-deleted.
-     (the others do not make sense for the WORKING tree)
+     Only allowed values: normal, not-present, incomplete, base-deleted,
+     excluded.  (the others do not make sense for the WORKING tree)
 
      normal: this node has been added/copied/moved-here. There may be an
        underlying BASE node at this location, implying this is a replace.
@@ -407,7 +407,11 @@ CREATE TABLE WORKING_NODE (
 
      base-deleted: the underlying BASE node has been marked for deletion due
        to a delete or a move-away (see the moved_to column to determine
-       which), and has not been replaced.  */
+       which), and has not been replaced.
+
+     excluded: this node is administratively excluded (sparse WC). This must
+       be a child (or grandchild etc.) of a copied directory.
+  */
   presence  TEXT NOT NULL,
 
   /* the kind of the new node. may be "unknown" if the node is not present. */
@@ -732,8 +736,8 @@ CREATE TABLE NODES (
      In case 'op_depth' is greater than 0, this is part of a layer of
      working nodes; in that case, the following presence values apply:
 
-     Only allowed values: normal, not-present, incomplete, base-deleted.
-     (the others do not make sense for the WORKING tree)
+     Only allowed values: normal, not-present, incomplete, base-deleted,
+     excluded.  (the others do not make sense for the WORKING tree)
 
      normal: this node has been added/copied/moved-here. There may be an
        underlying BASE node at this location, implying this is a replace.
@@ -755,7 +759,11 @@ CREATE TABLE NODES (
 
      base-deleted: the underlying BASE node has been marked for deletion due
        to a delete or a move-away (see the moved_to column to determine
-       which), and has not been replaced.  */
+       which), and has not been replaced.
+
+     excluded: this node is administratively excluded (sparse WC). This must
+       be a child (or grandchild etc.) of a copied directory.
+  */
   presence  TEXT NOT NULL,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */

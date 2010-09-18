@@ -1288,12 +1288,11 @@ revert_entry(svn_depth_t *depth,
          sure we leave a not-present node behind */
       if (was_not_present)
         {
-          SVN_ERR(svn_wc__db_base_add_absent_node(
+          SVN_ERR(svn_wc__db_base_add_not_present_node(
                     db, local_abspath,
                     repos_relpath, repos_root_url, repos_uuid,
                     base_revision,
                     base_kind,
-                    svn_wc__db_status_not_present,
                     NULL, NULL,
                     pool));
         }

@@ -68,6 +68,15 @@ select presence, kind, checksum, translated_size,
 from working_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_WORKING_NODE_1
+select presence, kind, checksum, translated_size,
+  changed_revision, changed_date, changed_author, depth, symlink_target,
+  repos_id, repos_path, revision,
+  moved_here, moved_to, last_mod_time, properties
+from nodes
+where wc_id = ?1 and local_relpath = ?2 and op_depth > 0 order by op_depth desc
+limit 1;
+
 -- STMT_SELECT_ACTUAL_NODE
 select prop_reject, changelist, conflict_old, conflict_new,
 conflict_working, tree_conflict_data, properties
@@ -147,9 +156,18 @@ where wc_id = ?1 and local_relpath = ?2;
 select properties from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_BASE_PROPS_1
+select properties from nodes
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_WORKING_PROPS
 SELECT properties, presence FROM WORKING_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_SELECT_WORKING_PROPS_1
+SELECT properties, presence FROM NODES
+WHERE wc_id = ?1 AND local_relpath = ?2
+AND op_depth > 0 ORDER BY op_depth DESC LIMIT 1;
 
 -- STMT_SELECT_ACTUAL_PROPS
 select properties from actual_node
@@ -619,6 +637,17 @@ UPDATE WORKING_NODE SET
   copyfrom_repos_path = null,
   copyfrom_revnum = null
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_COPYFROM_TO_INHERIT_1
+UPDATE NODES SET
+  repos_id = null,
+  repos_path = null,
+  revision = null
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND op_depth IN (SELECT op_depth FROM nodes
+                   WHERE wc_id = ?1 AND local_relpath = ?2
+                   ORDER BY op_depth DESC
+                   LIMIT 1);
 
 -- STMT_DETERMINE_TREE_FOR_RECORDING
 SELECT 0 FROM BASE_NODE WHERE wc_id = ?1 AND local_relpath = ?2

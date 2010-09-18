@@ -183,7 +183,6 @@ parse_range(svn_linenum_t *start, svn_linenum_t *length, char *range)
 /* Try to parse a hunk header in string HEADER, putting parsed information
  * into HUNK. Return TRUE if the header parsed correctly. ATAT is the
  * character string used to delimit the hunk header.
- * If REVERSE is TRUE, invert the hunk header while parsing it.
  * Do all allocations in POOL. */
 static svn_boolean_t
 parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
