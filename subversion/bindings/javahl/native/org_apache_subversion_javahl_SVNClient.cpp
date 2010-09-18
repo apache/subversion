@@ -32,6 +32,7 @@
 #include "SVNClient.h"
 #include "Revision.h"
 #include "RevisionRange.h"
+#include "OutputStream.h"
 #include "EnumMapper.h"
 #include "CommitMessage.h"
 #include "Prompter.h"
@@ -1333,7 +1334,11 @@ Java_org_apache_subversion_javahl_SVNClient_streamFileContent
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->streamFileContent(path, revision, pegRevision, jstream, bufSize);
+  OutputStream dataOut(jstream);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->streamFileContent(path, revision, pegRevision, dataOut);
 }
 
 JNIEXPORT jstring JNICALL
