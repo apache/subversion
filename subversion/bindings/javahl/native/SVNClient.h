@@ -197,9 +197,6 @@ class SVNClient :public SVNBase
   SVNClient(jobject jthis_in);
   virtual ~SVNClient();
  private:
-  svn_stream_t *createReadStream(apr_pool_t *pool, const char *path,
-                                 Revision &revision, Revision &pegRevision,
-                                 size_t &size);
   /**
    * Shared implementation for diff() APIs. When pegRevision is
    * provided, revision1 and revision2 equate to startRevision and
