@@ -1195,41 +1195,16 @@ svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
                                           Revision &pegRevision, size_t &size)
 {
     svn_stream_t *read_stream = NULL;
+    svn_client_ctx_t *ctx = context.getContext(NULL);
+    if (ctx == NULL)
+        return NULL;
 
-    if (revision.revision()->kind == svn_opt_revision_working)
-    {
-        // We want the working copy. Going back to the server returns
-        // base instead (which is not what we want).
-        apr_file_t *file = NULL;
-        apr_finfo_t finfo;
-        apr_status_t apr_err = apr_stat(&finfo, path, APR_FINFO_MIN, pool);
-        if (apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        apr_err = apr_file_open(&file, path, APR_READ, 0, pool);
-        if (apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        read_stream = svn_stream_from_aprfile2(file, TRUE, pool);
-        size = finfo.size;
-    }
-    else
-    {
-        svn_client_ctx_t *ctx = context.getContext(NULL);
-        if (ctx == NULL)
-            return NULL;
-
-        svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
-        read_stream = svn_stream_from_stringbuf(buf, pool);
-        SVN_JNI_ERR(svn_client_cat2(read_stream, path, pegRevision.revision(),
-                                    revision.revision(), ctx, pool),
-                    NULL);
-        size = buf->len;
-    }
+    svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
+    read_stream = svn_stream_from_stringbuf(buf, pool);
+    SVN_JNI_ERR(svn_client_cat2(read_stream, path, pegRevision.revision(),
+                                revision.revision(), ctx, pool),
+                NULL);
+    size = buf->len;
 
     return read_stream;
 }
