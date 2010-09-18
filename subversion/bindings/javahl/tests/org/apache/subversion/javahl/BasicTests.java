@@ -1827,7 +1827,7 @@ public class BasicTests extends SVNTests
         // get the content from the repository
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         client.streamFileContent(thisTest.getWCPath() + "/A/mu", null, null,
-                                 100, baos);
+                                 baos);
 
         byte[] content = baos.toByteArray();
         byte[] testContent = thisTest.getWc().getItemContent("A/mu").getBytes();

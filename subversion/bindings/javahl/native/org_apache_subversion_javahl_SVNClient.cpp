@@ -1313,7 +1313,7 @@ Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_streamFileContent
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jint bufSize, jobject jstream)
+ jobject jpegRevision, jobject jstream)
 {
   JNIEntry(SVNClient, streamFileContent);
   SVNClient *cl = SVNClient::getCppObject(jthis);

@@ -480,7 +480,7 @@ public class SVNClient implements ISVNClient
     {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
 
-        streamFileContent(path, revision, pegRevision, 2048, stream);
+        streamFileContent(path, revision, pegRevision, stream);
         return stream.toByteArray();
     }
 
@@ -488,7 +488,7 @@ public class SVNClient implements ISVNClient
      * @since 1.0
      */
     public native void streamFileContent(String path, Revision revision,
-                                         Revision pegRevision, int bufferSize,
+                                         Revision pegRevision,
                                          OutputStream stream)
             throws ClientException;
 
