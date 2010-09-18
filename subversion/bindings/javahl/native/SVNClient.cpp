@@ -1122,9 +1122,18 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
         return;
 
     size_t contentSize = 0;
-    svn_stream_t *read_stream = createReadStream(requestPool.pool(), path,
-                                                 revision, pegRevision,
-                                                 contentSize);
+    svn_client_ctx_t *ctx = context.getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    svn_stringbuf_t *buf = svn_stringbuf_create("", requestPool.pool());
+    svn_stream_t *read_stream = svn_stream_from_stringbuf(buf,
+                                                          requestPool.pool());
+    SVN_JNI_ERR(svn_client_cat2(read_stream, path, pegRevision.revision(),
+                                revision.revision(), ctx, requestPool.pool()),
+                );
+    contentSize = buf->len;
+
     if (read_stream == NULL)
         return;
 
@@ -1154,25 +1163,6 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
 
     env->ReleaseByteArrayElements(buffer, bufData, 0);
     return;
-}
-
-svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
-                                          Revision &revision,
-                                          Revision &pegRevision, size_t &size)
-{
-    svn_stream_t *read_stream = NULL;
-    svn_client_ctx_t *ctx = context.getContext(NULL);
-    if (ctx == NULL)
-        return NULL;
-
-    svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
-    read_stream = svn_stream_from_stringbuf(buf, pool);
-    SVN_JNI_ERR(svn_client_cat2(read_stream, path, pegRevision.revision(),
-                                revision.revision(), ctx, pool),
-                NULL);
-    size = buf->len;
-
-    return read_stream;
 }
 
 jbyteArray SVNClient::revProperty(const char *path,
