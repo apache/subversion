@@ -75,8 +75,6 @@ class SVNClient :public SVNBase
              BlameCallback *callback);
   void relocate(const char *from, const char *to, const char *path,
                 bool recurse);
-  jbyteArray fileContent(const char *path, Revision &revision,
-                         Revision &pegRevision);
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);

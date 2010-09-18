@@ -26,6 +26,7 @@ package org.apache.subversion.javahl;
 import org.apache.subversion.javahl.callback.*;
 
 import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
 
 import java.util.Collection;
 import java.util.Set;
@@ -473,9 +474,15 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.2
      */
-    public native byte[] fileContent(String path, Revision revision,
-                                     Revision pegRevision)
-            throws ClientException;
+    public byte[] fileContent(String path, Revision revision,
+                              Revision pegRevision)
+            throws ClientException
+    {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+        streamFileContent(path, revision, pegRevision, 2048, stream);
+        return stream.toByteArray();
+    }
 
     /**
      * @since 1.0
