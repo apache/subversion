@@ -790,7 +790,7 @@ public interface ISVNClient
      * @since 1.0
      */
     void streamFileContent(String path, Revision revision, Revision pegRevision,
-                           int bufferSize, OutputStream stream)
+                           OutputStream stream)
         throws ClientException;
 
     /**
