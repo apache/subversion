@@ -30,8 +30,14 @@
 #include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_io.h"
+#include "svn_private_config.h"
+
+#include <apr_network_io.h>
 
 #include "load_editor.h"
+
+#define SVNRDUMP_PROP_LOCK "rdump-lock"
+#define LOCK_RETRIES 10
 
 #ifdef SVN_DEBUG
 #define LDR_DBG(x) SVN_DBG(x)
@@ -50,6 +56,58 @@ commit_callback(const svn_commit_info_t *commit_info,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_lock(svn_ra_session_t *session, apr_pool_t *pool)
+{
+  char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
+  svn_string_t *mylocktoken, *reposlocktoken;
+  apr_status_t apr_err;
+  apr_pool_t *subpool;
+  int i;
+
+  apr_err = apr_gethostname(hostname_str, sizeof(hostname_str), pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get local hostname"));
+
+  mylocktoken = svn_string_createf(pool, "%s:%s", hostname_str,
+                                   svn_uuid_generate(pool));
+
+  subpool = svn_pool_create(pool);
+
+  for (i = 0; i < LOCK_RETRIES; ++i)
+    {
+      svn_pool_clear(subpool);
+
+      SVN_ERR(svn_ra_rev_prop(session, 0, SVNRDUMP_PROP_LOCK, &reposlocktoken,
+                              subpool));
+
+      if (reposlocktoken)
+        {
+          /* Did we get it? If so, we're done, otherwise we sleep. */
+          if (strcmp(reposlocktoken->data, mylocktoken->data) == 0)
+            return SVN_NO_ERROR;
+          else
+            {
+              SVN_ERR(svn_cmdline_printf
+                      (pool, _("Failed to get lock on destination "
+                               "repos, currently held by '%s'\n"),
+                       reposlocktoken->data));
+
+              apr_sleep(apr_time_from_sec(1));
+            }
+        }
+      else if (i < LOCK_RETRIES - 1)
+        {
+          /* Except in the very last iteration, try to set the lock. */
+          SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNRDUMP_PROP_LOCK,
+                                         mylocktoken, subpool));
+        }
+    }
+
+  return svn_error_createf(APR_EINVAL, NULL,
+                           _("Couldn't get lock on destination repos "
+                             "after %d attempts"), i);
+}
 
 static svn_error_t *
 new_revision_record(void **revision_baton,
@@ -539,13 +597,11 @@ drive_dumpstream_loader(svn_stream_t *stream,
   struct parse_baton *pb;
   pb = parse_baton;
 
-  /* ### TODO: Figure out if we're allowed to set revprops before
-     ### we're too late and mess up the repository. svnsync uses some
-     ### sort of locking mechanism. */
-
+  SVN_ERR(get_lock(session, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
   SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,
                                       NULL, NULL, pool));
+  SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNRDUMP_PROP_LOCK, NULL, pool));
 
   return SVN_NO_ERROR;
 }
