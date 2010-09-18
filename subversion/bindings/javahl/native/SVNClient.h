@@ -47,6 +47,7 @@ class InfoCallback;
 class CommitCallback;
 class ListCallback;
 class StatusCallback;
+class OutputStream;
 class PatchCallback;
 class ChangelistCallback;
 class CommitMessage;
@@ -76,8 +77,7 @@ class SVNClient :public SVNBase
   void relocate(const char *from, const char *to, const char *path,
                 bool recurse);
   void streamFileContent(const char *path, Revision &revision,
-                         Revision &pegRevision, jobject outputStream,
-                         size_t bufSize);
+                         Revision &pegRevision, OutputStream &outputStream);
   void propertySet(const char *path, const char *name, const char *value,
                    svn_depth_t depth, StringArray &changelists, bool force,
                    RevpropTable &revprops, CommitCallback *callback);

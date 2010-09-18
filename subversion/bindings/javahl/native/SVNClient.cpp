@@ -33,6 +33,7 @@
 #include "Pool.h"
 #include "Targets.h"
 #include "Revision.h"
+#include "OutputStream.h"
 #include "RevisionRange.h"
 #include "BlameCallback.h"
 #include "ProplistCallback.h"
@@ -1094,8 +1095,8 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
 }
 
 void SVNClient::streamFileContent(const char *path, Revision &revision,
-                                  Revision &pegRevision, jobject outputStream,
-                                  size_t bufSize)
+                                  Revision &pegRevision,
+                                  OutputStream &outputStream)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1103,66 +1104,14 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
     SVN_JNI_ERR(intPath.error_occured(), );
 
     JNIEnv *env = JNIUtil::getEnv();
-    jclass outputStreamClass = env->FindClass("java/io/OutputStream");
-    if (outputStreamClass == NULL)
-        return;
-
-    jmethodID writeMethod = env->GetMethodID(outputStreamClass, "write",
-                                             "([BII)V");
-    if (writeMethod == NULL)
-        return;
-
-    // Create the buffer.
-    jbyteArray buffer = env->NewByteArray(bufSize);
-    if (JNIUtil::isJavaExceptionThrown())
-        return;
-
-    jbyte *bufData = env->GetByteArrayElements(buffer, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-        return;
-
-    size_t contentSize = 0;
     svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
-    svn_stringbuf_t *buf = svn_stringbuf_create("", requestPool.pool());
-    svn_stream_t *read_stream = svn_stream_from_stringbuf(buf,
-                                                          requestPool.pool());
-    SVN_JNI_ERR(svn_client_cat2(read_stream, path, pegRevision.revision(),
+    SVN_JNI_ERR(svn_client_cat2(outputStream.getStream(requestPool),
+                                path, pegRevision.revision(),
                                 revision.revision(), ctx, requestPool.pool()),
                 );
-    contentSize = buf->len;
-
-    if (read_stream == NULL)
-        return;
-
-    while (contentSize > 0)
-    {
-        size_t readSize = bufSize > contentSize ? contentSize : bufSize;
-        svn_error_t *err;
-
-        err = svn_stream_read(read_stream, (char *)bufData, &readSize);
-        if (err != NULL)
-        {
-            env->ReleaseByteArrayElements(buffer, bufData, 0);
-            svn_stream_close(read_stream);
-            SVN_JNI_ERR(err, );
-        }
-
-        env->ReleaseByteArrayElements(buffer, bufData, JNI_COMMIT);
-        env->CallVoidMethod(outputStream, writeMethod, buffer, 0, readSize);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            env->ReleaseByteArrayElements(buffer, bufData, 0);
-            svn_stream_close(read_stream);
-            return;
-        }
-        contentSize -= readSize;
-    }
-
-    env->ReleaseByteArrayElements(buffer, bufData, 0);
-    return;
 }
 
 jbyteArray SVNClient::revProperty(const char *path,
