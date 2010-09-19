@@ -131,7 +131,7 @@ def run_load_test(sbox, dumpfile_name):
 # Tests
 
 def basic_dump(sbox):
-  "dump the standard sbox repos"
+  "dump: standard sbox repos"
   sbox.build(read_only = True, create_wc = False)
 
   out = \
@@ -143,11 +143,11 @@ def basic_dump(sbox):
     raise svntest.Failure('No valid output')
 
 def revision_0_dump(sbox):
-  "dump revision zero"
+  "dump: revision zero"
   run_dump_test(sbox, "revision-0.dump")
 
 def revision_0_load(sbox):
-  "load revision zero"
+  "load: revision zero"
   run_load_test(sbox, "revision-0.dump")
 
 # skeleton.dump repository layout
@@ -161,15 +161,15 @@ def revision_0_load(sbox):
 #       README      (Added r6)
 
 def skeleton_load(sbox):
-  "skeleton repository"
+  "load: skeleton repository"
   run_load_test(sbox, "skeleton.dump")
 
 def copy_and_modify_dump(sbox):
-  "copy and modify dump"
+  "dump: copy and modify"
   run_dump_test(sbox, "copy-and-modify.dump")
 
 def copy_and_modify_load(sbox):
-  "copy and modify load"
+  "load: copy and modify"
   run_load_test(sbox, "copy-and-modify.dump")
   
 ########################################################################
@@ -182,8 +182,8 @@ test_list = [ None,
               revision_0_dump,
               revision_0_load,
               skeleton_load,
-              copy_and_modify_load,
               copy_and_modify_dump,
+              copy_and_modify_load,
              ]
 
 if __name__ == '__main__':
