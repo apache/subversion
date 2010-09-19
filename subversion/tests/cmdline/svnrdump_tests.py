@@ -180,6 +180,14 @@ def no_author_load(sbox):
   "load: copy revs with no svn:author revprops"
   run_load_test(sbox, "no-author.dump")
 
+def copy_from_previous_version_and_modify_dump(sbox):
+  "dump: copy from previous version and modify"
+  run_dump_test(sbox, "copy-from-previous-version-and-modify.dump")
+  
+def copy_from_previous_version_and_modify_load(sbox):
+  "load: copy from previous version and modify"
+  run_load_test(sbox, "copy-from-previous-version-and-modify.dump")
+
 ########################################################################
 # Run the tests
 
@@ -192,6 +200,8 @@ test_list = [ None,
               skeleton_load,
               copy_and_modify_dump,
               copy_and_modify_load,
+              copy_from_previous_version_and_modify_dump,
+              copy_from_previous_version_and_modify_load,
               no_author_dump,
               no_author_load,
              ]
