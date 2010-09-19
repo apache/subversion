@@ -41,6 +41,11 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 Wimp = svntest.testcase.Wimp
 
+# Mismatched headers during dumping operation
+mismatched_headers_re = \
+    "Prop-delta: |Text-content-sha1: |Text-copy-source-md5: |" \
+    "Text-copy-source-sha1: |Text-delta-base-sha1: .*"
+
 ######################################################################
 # Helper routines
 
@@ -80,7 +85,8 @@ def run_dump_test(sbox, dumpfile_name):
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile)
+    "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
+    None, mismatched_headers_re)
 
 def run_load_test(sbox, dumpfile_name):
   """Load a dumpfile using 'svnrdump load', dump it with 'svnadmin
@@ -177,7 +183,7 @@ test_list = [ None,
               revision_0_load,
               skeleton_load,
               copy_and_modify_load,
-              Wimp("Need to fix headers in RA layer", copy_and_modify_dump),
+              copy_and_modify_dump,
              ]
 
 if __name__ == '__main__':
