@@ -196,6 +196,10 @@ def modified_in_place_load(sbox):
   "load: modified in place"
   run_load_test(sbox, "modified-in-place.dump")
 
+def move_and_modify_in_the_same_revision_dump(sbox):
+  "dump: move parent & modify child file in same rev"
+  run_dump_test(sbox, "move-and-modify.dump")
+
 ########################################################################
 # Run the tests
 
@@ -214,6 +218,7 @@ test_list = [ None,
               modified_in_place_load,
               no_author_dump,
               no_author_load,
+              Wimp("TODO", move_and_modify_in_the_same_revision_dump),
              ]
 
 if __name__ == '__main__':
