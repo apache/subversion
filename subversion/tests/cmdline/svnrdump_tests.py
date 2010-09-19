@@ -188,6 +188,14 @@ def copy_from_previous_version_and_modify_load(sbox):
   "load: copy from previous version and modify"
   run_load_test(sbox, "copy-from-previous-version-and-modify.dump")
 
+def modified_in_place_dump(sbox):
+  "dump: modified in place"
+  run_dump_test(sbox, "modified-in-place.dump")
+
+def modified_in_place_load(sbox):
+  "load: modified in place"
+  run_load_test(sbox, "modified-in-place.dump")
+
 ########################################################################
 # Run the tests
 
@@ -202,6 +210,8 @@ test_list = [ None,
               copy_and_modify_load,
               copy_from_previous_version_and_modify_dump,
               copy_from_previous_version_and_modify_load,
+              modified_in_place_dump,
+              modified_in_place_load,
               no_author_dump,
               no_author_load,
              ]
