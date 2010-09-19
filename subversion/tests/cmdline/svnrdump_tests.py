@@ -172,6 +172,14 @@ def copy_and_modify_load(sbox):
   "load: copy and modify"
   run_load_test(sbox, "copy-and-modify.dump")
   
+def no_author_dump(sbox):
+  "dump: copy revs with no svn:author revprops"
+  run_dump_test(sbox, "no-author.dump")
+
+def no_author_load(sbox):
+  "load: copy revs with no svn:author revprops"
+  run_load_test(sbox, "no-author.dump")
+
 ########################################################################
 # Run the tests
 
@@ -184,6 +192,8 @@ test_list = [ None,
               skeleton_load,
               copy_and_modify_dump,
               copy_and_modify_load,
+              no_author_dump,
+              no_author_load,
              ]
 
 if __name__ == '__main__':
