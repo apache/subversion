@@ -29,7 +29,7 @@ Planned work
 
 * [DONE] client support: svn_client_revprop_set2()
 
-* svnsync:
+* svnsync and svnrdump:
   - TODO: use the new RA API to resolve the race condition in locking.
   - TODO: upgrade svn_ra_change_rev_prop() callers
 
