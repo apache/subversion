@@ -207,6 +207,10 @@ def move_and_modify_in_the_same_revision_dump(sbox):
   "dump: move parent & modify child file in same rev"
   run_dump_test(sbox, "move-and-modify.dump")
 
+def move_and_modify_in_the_same_revision_load(sbox):
+  "load: move parent & modify child file in same rev"
+  run_load_test(sbox, "move-and-modify.dump")
+
 def tag_empty_trunk_dump(sbox):
   "dump: tag empty trunk"
   run_dump_test(sbox, "tag-empty-trunk.dump")
@@ -231,6 +235,14 @@ def copy_parent_modify_prop_load(sbox):
   "load: copy parent and modify prop"
   run_load_test(sbox, "copy-parent-modify-prop.dump")
 
+def copy_revprops_dump(sbox):
+  "dump: copy revprops other than svn:*"
+  run_dump_test(sbox, "revprops.dump")
+
+def copy_revprops_load(sbox):
+  "load: copy revprops other than svn:*"
+  run_load_test(sbox, "revprops.dump")
+
 ########################################################################
 # Run the tests
 
@@ -253,9 +265,12 @@ test_list = [ None,
               dir_prop_change_load,
               copy_parent_modify_prop_dump,
               copy_parent_modify_prop_load,
+              copy_revprops_dump,
+              Wimp("TODO", copy_revprops_load),
               no_author_dump,
               no_author_load,
               Wimp("TODO", move_and_modify_in_the_same_revision_dump),
+              Wimp("TODO", move_and_modify_in_the_same_revision_load),
              ]
 
 if __name__ == '__main__':
