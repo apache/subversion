@@ -36,7 +36,7 @@
 
 #include "load_editor.h"
 
-#define SVNRDUMP_PROP_LOCK "rdump-lock"
+#define SVNRDUMP_PROP_LOCK SVN_PROP_PREFIX "rdump-lock"
 #define LOCK_RETRIES 10
 
 #ifdef SVN_DEBUG
