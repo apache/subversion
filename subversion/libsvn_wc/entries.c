@@ -1727,7 +1727,8 @@ insert_working_node(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisnnnnsnrisnnni",
                             working_node->wc_id, working_node->local_relpath,
-                            (working_node->parent_relpath == NULL ? 1 : 2),
+                            (working_node->parent_relpath == NULL
+                             ? (apr_int64_t)1 : (apr_int64_t)2),
                             working_node->parent_relpath,
                             /* Setting depth for files? */
                             svn_depth_to_word(working_node->depth),

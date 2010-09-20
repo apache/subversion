@@ -8663,7 +8663,8 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath,
-                                (*mcb->local_relpath == '\0') ? 1 : 2));
+                                (*mcb->local_relpath == '\0'
+                                 ? (apr_int64_t)1 : (apr_int64_t)2)));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
@@ -8693,7 +8694,8 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath,
-                                (*mcb->local_relpath == '\0') ? 1 : 2));
+                                (*mcb->local_relpath == '\0'
+                                 ? (apr_int64_t)1 : (apr_int64_t)2)));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
