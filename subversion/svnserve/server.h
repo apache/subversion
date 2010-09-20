@@ -101,6 +101,9 @@ typedef struct serve_params_t {
 
   /* A filehandle open for writing logs to; possibly NULL. */
   apr_file_t *log_file;
+
+  /* Size of the in-memory cache (used by FSFS only). */
+  apr_uint64_t memory_cache_size;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */
