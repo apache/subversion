@@ -586,12 +586,12 @@ list_directory(const svn_test_opts_t *opts,
 }
 
 
-/* If EXPR raises SVN_ERR_BAD_OLD_VALUE, continue; else, fail
+/* If EXPR raises SVN_ERR_FS_PROP_BASEVALUE_MISMATCH, continue; else, fail
  * the test. */
 #define FAILS_WITH_BOV(expr) \
   do { \
       svn_error_t *__err = (expr); \
-      if (!__err || __err->apr_err != SVN_ERR_BAD_OLD_VALUE) \
+      if (!__err || __err->apr_err != SVN_ERR_FS_PROP_BASEVALUE_MISMATCH) \
         return svn_error_create(SVN_ERR_TEST_FAILED, __err, \
                                 "svn_fs_change_rev_prop2() failed to " \
                                 "detect unexpected old value"); \
