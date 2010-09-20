@@ -215,6 +215,14 @@ def tag_empty_trunk_load(sbox):
   "load: tag empty trunk"
   run_load_test(sbox, "tag-empty-trunk.dump")
 
+def dir_prop_change_dump(sbox):
+  "dump: directory property changes"
+  run_dump_test(sbox, "dir-prop-change.dump")
+  
+def dir_prop_change_load(sbox):
+  "load: directory property changes"
+  run_load_test(sbox, "dir-prop-change.dump")
+
 ########################################################################
 # Run the tests
 
@@ -233,6 +241,8 @@ test_list = [ None,
               modified_in_place_load,
               tag_empty_trunk_dump,
               tag_empty_trunk_load,
+              dir_prop_change_dump,
+              dir_prop_change_load,
               no_author_dump,
               no_author_load,
               Wimp("TODO", move_and_modify_in_the_same_revision_dump),
