@@ -231,10 +231,6 @@ left outer join base_node on base_node.wc_id = working_node.wc_id
   and base_node.local_relpath = working_node.local_relpath
 where working_node.wc_id = ?1 and working_node.local_relpath = ?2;
 
--- STMT_SELECT_PARENT_STUB_INFO
-select presence = 'not-present', revnum from base_node
-where wc_id = ?1 and local_relpath = ?2;
-
 -- STMT_DELETE_LOCK
 delete from lock
 where repos_id = ?1 and repos_relpath = ?2;
