@@ -77,12 +77,7 @@ cleanup_internal(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   int wc_format;
-#ifdef SVN_WC__SINGLE_DB
   const char *cleanup_abspath;
-#else
-  const apr_array_header_t *children;
-  int i;
-#endif
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* Check cancellation; note that this catches recursive calls too. */
@@ -92,14 +87,9 @@ cleanup_internal(svn_wc__db_t *db,
   /* Can we even work with this directory?  */
   SVN_ERR(can_be_cleaned(&wc_format, db, adm_abspath, iterpool));
 
-#ifdef SVN_WC__SINGLE_DB
   /* ### This fails if ADM_ABSPATH is locked indirectly via a
      ### recursive lock on an ancestor. */
   SVN_ERR(svn_wc__db_wclock_obtain(db, adm_abspath, -1, TRUE, iterpool));
-#else
-  /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR(svn_wc__db_wclock_obtain(db, adm_abspath, 0, TRUE, iterpool));
-#endif
 
   /* Run our changes before the subdirectories. We may not have to recurse
      if we blow away a subdir.  */
@@ -107,39 +97,6 @@ cleanup_internal(svn_wc__db_t *db,
     SVN_ERR(svn_wc__wq_run(db, adm_abspath, cancel_func, cancel_baton,
                            iterpool));
 
-#ifndef SVN_WC__SINGLE_DB
-  /* Recurse on versioned, existing subdirectories.  */
-  SVN_ERR(svn_wc__db_read_children(&children, db, adm_abspath,
-                                   scratch_pool, iterpool));
-  for (i = 0; i < children->nelts; i++)
-    {
-      const char *name = APR_ARRAY_IDX(children, i, const char *);
-      const char *entry_abspath;
-      svn_wc__db_kind_t kind;
-
-      svn_pool_clear(iterpool);
-      entry_abspath = svn_dirent_join(adm_abspath, name, iterpool);
-
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, entry_abspath, FALSE, iterpool));
-
-      if (kind == svn_wc__db_kind_dir)
-        {
-          svn_node_kind_t disk_kind;
-
-          SVN_ERR(svn_io_check_path(entry_abspath, &disk_kind, iterpool));
-          if (disk_kind == svn_node_dir)
-            SVN_ERR(cleanup_internal(db, entry_abspath,
-                                     cancel_func, cancel_baton,
-                                     iterpool));
-        }
-    }
-#endif
-
-#ifndef SVN_WC__SINGLE_DB
-  /* Purge the DAV props at and under ADM_ABSPATH. */
-  /* ### in single-db mode, we need do this purge at the top-level only. */
-  SVN_ERR(svn_wc__db_base_clear_dav_cache_recursive(db, adm_abspath, iterpool));
-#else
   SVN_ERR(svn_wc__db_get_wcroot(&cleanup_abspath, db, adm_abspath,
                                 iterpool, iterpool));
 
@@ -150,8 +107,6 @@ cleanup_internal(svn_wc__db_t *db,
    */
   if (strcmp(cleanup_abspath, adm_abspath) == 0)
     {
-#endif
-
     /* Cleanup the tmp area of the admin subdir, if running the log has not
        removed it!  The logs have been run, so anything left here has no hope
        of being useful. */
@@ -159,9 +114,7 @@ cleanup_internal(svn_wc__db_t *db,
 
       /* Remove unreferenced pristine texts */
       SVN_ERR(svn_wc__db_pristine_cleanup(db, adm_abspath, iterpool));
-#ifdef SVN_WC__SINGLE_DB
     }
-#endif
 
   /* All done, toss the lock */
   SVN_ERR(svn_wc__db_wclock_release(db, adm_abspath, iterpool));
@@ -195,12 +148,10 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
   SVN_ERR(cleanup_internal(db, local_abspath, cancel_func, cancel_baton,
                            scratch_pool));
 
-#ifdef SINGLE_DB
-  /* Purge the DAV props at and under LOCAL_ABSPATH. */
-  /* ### in single-db mode, we need do this purge at the top-level only. */
+  /* The DAV cache suffers from flakiness from time to time, and the
+     pre-1.7 prescribed workarounds aren't as user-friendly in WC-NG. */
   SVN_ERR(svn_wc__db_base_clear_dav_cache_recursive(db, local_abspath,
                                                     scratch_pool));
-#endif
 
   /* We're done with this DB, so proactively close it.  */
   SVN_ERR(svn_wc__db_close(db));

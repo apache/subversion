@@ -205,7 +205,7 @@ switch_dir_external(const char *path,
                                                   revision, svn_depth_unknown,
                                                   FALSE, FALSE, FALSE,
                                                   timestamp_sleep, TRUE,
-                                                  TRUE, ctx, subpool));
+                                                  ctx, subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }

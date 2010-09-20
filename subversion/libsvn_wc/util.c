@@ -532,8 +532,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
     {
       svn_error_t *err;
       err= svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, FALSE,
-                             svn_node_unknown, FALSE, result_pool,
-                             scratch_pool);
+                             svn_node_unknown, result_pool, scratch_pool);
 
       if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
         svn_error_clear(err);

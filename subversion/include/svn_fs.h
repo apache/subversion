@@ -1896,8 +1896,8 @@ svn_fs_revision_proplist(apr_hash_t **table_p,
  * - @a name is the name of the property to change.
  * - if @a old_value_p is not @c NULL, then @a *old_value_p is the expected old
  *   value of the property, and changing the value will fail with error
- *   #SVN_ERR_BAD_PROPERTY_VALUE if the present value of the property is not @a
- *   *old_value_p.
+ *   #SVN_ERR_BAD_OLD_VALUE if the present value of the property is not @a
+ *   *old_value_p.  (This is an atomic test-and-set).
  * - @a value is the new value of the property, or zero if the property should
  *   be removed altogether.
  *

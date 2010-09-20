@@ -213,17 +213,6 @@ svn_wc__wq_build_base_remove(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-#ifndef SVN_WC__SINGLE_DB
-/* Handle the old "KILLME" concept -- perform the actual deletion of a
-   subdir (or just its admin area) during post-commit processing of a
-   deleted subdir.  */
-svn_error_t *
-svn_wc__wq_add_killme(svn_wc__db_t *db,
-                      const char *adm_abspath,
-                      svn_boolean_t adm_only,
-                      apr_pool_t *scratch_pool);
-#endif
-
 
 /* ### Temporary helper to store text conflict marker locations as a wq
    ### operation. Eventually the data must be stored in the pristine store+db

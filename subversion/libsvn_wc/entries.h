@@ -52,18 +52,8 @@ extern "C" {
  * If you specify FILE/DIR, and the entry is *something else*, then
  * SVN_ERR_NODE_UNEXPECTED_KIND will be returned.
  *
- * For directory nodes, sometimes the caller may want the "stub" from the
- * parent directory. This is usually to examine the DELETED flag. When
- * this is desired, pass TRUE for NEED_PARENT_STUB. It is illegal to pass
- * TRUE if KIND == FILE.
- *
  * If KIND == UNKNOWN, and you request the parent stub, and the node turns
  * out to NOT be a directory, then SVN_ERR_NODE_UNEXPECTED_KIND is returned.
- *
- * If KIND == UNKNOWN, and you request the actual file/dir data (by setting
- * NEED_PARENT_STUB to FALSE), and the node turns out to be a DIR (as
- * specified by the parent), but the subdirectory is NOT present (obstructed
- * or missing), then SVN_ERR_NODE_UNEXPECTED_KIND is returned.
  *
  * NOTE: if SVN_ERR_NODE_UNEXPECTED_KIND is returned, then the ENTRY *IS*
  * valid and may be examined. For any other error, ENTRY *IS NOT* valid.
@@ -81,7 +71,6 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                   const char *local_abspath,
                   svn_boolean_t allow_unversioned,
                   svn_node_kind_t kind,
-                  svn_boolean_t need_parent_stub,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 

@@ -99,33 +99,43 @@ Overview of BASE_NODE columns:
     - The Node-Rev, Content and Last-Change column groups take one of the
       states shown in the table below, according to the 'presence':
 
+                                    Has           Has       Has
       'presence'      Meaning       Node-Rev?     Content?  Last-Change?
       ----------      -----------   -----------   --------  ------------
-      normal      =>  Present       Existing      Yes       Yes
-      incomplete  =>  Incomplete    Existing[*]   No[*]     No
-      absent      =>  Unauthz       Existing      No        No
-      excluded    =>  Unwanted      Existing      No        No
-      not-present =>  Nonexistent   Nonexistent   No        No
+      normal      =>  Present       Yes           Yes       Yes
+      incomplete  =>  Incomplete    Yes           Partial   No ### ?
+      absent      =>  Unauthz       Yes           No        No
+      excluded    =>  Unwanted      Yes           No        No
+      not-present =>  Nonexistent   No            No        No
 
-    - [*] If presence==incomplete, this node refers to an existing node-rev
-      but its Content is not stored.  This is intended to be a temporary
-      state, during an update.  Node-Rev is sometimes specified as just a
-      revnum.  Sometimes the Content is specified as kind==dir with a depth,
-      but in this case there is no guarantee about rows representing the
-      children.
+    - If presence==incomplete, this node refers to an existing node-rev but
+      its Content is not fully and correctly stored.  In particular, if it
+      is a directory, some rows that should represent its children may not
+      exist or may be in the wrong state.  This is intended to be a
+      temporary state, e.g. during an update.
+
+    - If presence==absent or ==excluded, this row refers to a node that
+      exists in the repo, but the node is not stored in the WC.
+
+    - If presence==not-present, this row indicates that its parent in the WC
+      is a directory that, in its pristine state, would have a child of this
+      name.  However, this child was updated or switched to a node-revision
+      that does not exist.  Information about which node-revision it was
+      updated or switched to is lost; only the fact that it is currently not
+      present is remembered.
+
+    - The order of precedence of the negative presence values is:
+        'excluded' if administratively excluded from the WC, else
+        'absent' if server doesn't authorize reading the path, else
+        'not-present' if it does not exist in repo.
 
   Node-Rev columns: (repos_id, repos_relpath, revnum)
 
-    - Always points to the corresponding repository node-rev.
+    - The Node-Rev group points to the corresponding repository node-rev.
 
-    - Points to an existing node-rev, unless presence==not-present in which
-      case it points to a nonexistent node-rev.
-
-    - ### A comment on 'repos_id' and 'repos_relpath' says they may be null;
-      is this true and wanted?
-
-    - ### A comment on 'revnum' says, "this could be NULL for non-present
-      nodes -- no info"; is this true and wanted?
+    - If not used (as specified by the 'presence' table above), the values
+      are undefined.
+      ### Perhaps we should set them to null to make it clearer.
 
   Content columns: (kind, properties, depth, target, checksum)
                     ----  ----------  -----  ------  --------
@@ -141,7 +151,7 @@ Overview of BASE_NODE columns:
 
     - If kind==dir, the children are represented by the existence of other
       BASE_NODE rows.  For each immediate child of 'repos_relpath'@'revnum'
-      that is included by 'depth', a BASE_NODE row exists with its
+      in the repo, subject to 'depth', a BASE_NODE row exists with its
       'local_relpath' being this node's 'local_relpath' plus the child's
       basename.  (Rows may also exist for additional children which are
       outside the scope of 'depth' or do not exist as children of this
@@ -156,8 +166,6 @@ Overview of BASE_NODE columns:
 
   Last-Change columns: (changed_rev, changed_date, changed_author)
 
-    - Last-Change info is present iff presence==normal, otherwise null.
-
     - Specifies the revision in which the content was last changed before
       Node-Rev, following copies and not counting the copy operation itself
       as a change.
@@ -167,6 +175,9 @@ Overview of BASE_NODE columns:
       the last change of this node's content.
 
     - Includes a copy of the corresponding date and author rev-props.
+
+    - If not used (as specified by the 'presence' table above), all null.
+      ### Not checked; in practice these columns may have undefined values.
 
   Working file status: (translated_size, last_mod_time)
 
@@ -187,11 +198,18 @@ Overview of BASE_NODE columns:
 
   (dav_cache)
 
+    - Content is opaque to libsvn_wc.  ### ?
+
+    - Lifetime is managed by the WC: values cleared to null at certain times.
+      ### To be documented.
+
   (incomplete_children)
 
     - Obsolete, unused.
 
   (file_external)
+
+    - ### To be obsoleted?
 */
 
 CREATE TABLE BASE_NODE (
@@ -366,8 +384,8 @@ CREATE TABLE WORKING_NODE (
   parent_relpath  TEXT,
 
   /* Is this node "present" or has it been excluded for some reason?
-     Only allowed values: normal, not-present, incomplete, base-deleted.
-     (the others do not make sense for the WORKING tree)
+     Only allowed values: normal, not-present, incomplete, base-deleted,
+     excluded.  (the others do not make sense for the WORKING tree)
 
      normal: this node has been added/copied/moved-here. There may be an
        underlying BASE node at this location, implying this is a replace.
@@ -389,7 +407,11 @@ CREATE TABLE WORKING_NODE (
 
      base-deleted: the underlying BASE node has been marked for deletion due
        to a delete or a move-away (see the moved_to column to determine
-       which), and has not been replaced.  */
+       which), and has not been replaced.
+
+     excluded: this node is administratively excluded (sparse WC). This must
+       be a child (or grandchild etc.) of a copied directory.
+  */
   presence  TEXT NOT NULL,
 
   /* the kind of the new node. may be "unknown" if the node is not present. */
@@ -611,141 +633,27 @@ PRAGMA user_version =
 -- define: SVN_WC__VERSION
 ;
 
-/* ------------------------------------------------------------------------- */
-
-/* The NODE_DATA table describes the way WORKING nodes are layered on top of
-   BASE nodes and on top of other WORKING nodes, due to nested tree structure
-   changes. The layers are modelled using the "op_depth" column.
-
-   Each row in BASE_NODE has an associated row NODE_DATA. Additionally, each
-   row in WORKING_NODE has one or more associated rows in NODE_DATA.
-
-   This table contains only those data elements which apply to BASE as well as
-   all WORKING layers; fields applicable only to the currently visible WORKING
-   node or BASE node are located in the WORKING_NODE and BASE_NODE tables.
-
-   ### This table is to be integrated into the SCHEMA statement as soon
-       the experimental status of NODE_DATA is lifted.
-
-   For illustration, with a scenario like this:
-
-     # (0)
-     svn rm foo
-     svn cp ^/moo foo   # (1)
-     svn rm foo/bar
-     touch foo/bar
-     svn add foo/bar    # (2)
-
-   , these are the NODE_DATA for the path foo/bar (before single-db, the
-   numbering of op_depth is still a bit different):
-   
-   (0)  BASE_NODE ----->  NODE_DATA (op_depth == 0)
-   (1)                    NODE_DATA (op_depth == 1) ( <----_ )
-   (2)                    NODE_DATA (op_depth == 2)   <----- WORKING_NODE
-   
-   0 is the original data for foo/bar before 'svn rm foo' (if it existed).
-   1 is the data for foo/bar copied in from ^/moo/bar. (There would also be a
-     WORKING_NODE for the path foo, with original_* pointing at ^/moo.)
-   2 is the to-be-committed data for foo/bar, created by 'svn add foo/bar'.
-
-   An 'svn revert foo/bar' would remove the NODE_DATA of (2) (and possibly 
-   rewire the WORKING_NODE to represent a child of the operation (1)).
-   So foo/bar would be a copy of ^/moo/bar again.
- */
--- STMT_CREATE_NODE_DATA
-CREATE TABLE NODE_DATA (
-  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
-  local_relpath  TEXT NOT NULL,
-  op_depth INTEGER NOT NULL,
-
-  /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot.  Since a wcroot will
-     never have a WORKING node the parent_relpath will never be null. */
-  /* ### would be nice to make this column NOT NULL.  */
-  parent_relpath  TEXT,
-
-  /* In case 'op_depth' is equal to 0, this is part of the BASE tree; in
-     that case, all presence values except 'base-deleted' are allowed.
-
-
-     In case 'op_depth' is greater than 0, this is part of a layer of
-     working nodes; in that case, the following presence values apply:
-
-     Is this node "present" or has it been excluded for some reason?
-     Only allowed values: normal, not-present, incomplete, base-deleted.
-     (the others do not make sense for the WORKING tree)
-
-     normal: this node has been added/copied/moved-here. There may be an
-       underlying BASE node at this location, implying this is a replace.
-       Scan upwards from here looking for copyfrom or moved_here values
-       to detect the type of operation constructing this node.
-
-     not-present: the node (or parent) was originally copied or moved-here.
-       A subtree of that source has since been deleted. There may be
-       underlying BASE node to replace. For a move-here or copy-here, the
-       records are simply removed rather than switched to not-present.
-       Note this reflects a deletion only. It is not possible move-away
-       nodes from the WORKING tree. The purported destination would receive
-       a copy from the original source of a copy-here/move-here, or if the
-       nodes were plain adds, those nodes would be shifted to that target
-       for addition.
-
-     incomplete: nodes are being added into the WORKING tree, and the full
-       information about this node is not (yet) present.
-
-     base-deleted: the underlying BASE node has been marked for deletion due
-       to a delete or a move-away (see the moved_to column to determine
-       which), and has not been replaced.  */
-  presence  TEXT NOT NULL,
-
-  /* the kind of the new node. may be "unknown" if the node is not present. */
-  kind  TEXT NOT NULL,
-
-  /* If this node was moved here or copied here, then the following fields may
-     have information about their source node. See BASE_NODE.changed_* for
-     more information.
-
-     For an added or not-present node, these are null.  */
-  changed_revision  INTEGER,
-  changed_date      INTEGER,  /* an APR date/time (usec since 1970) */
-  changed_author    TEXT,
-
-  /* NULL depth means "default" (typically svn_depth_infinity) */
-  /* ### depth on WORKING? seems this is a BASE-only concept. how do
-     ### you do "files" on an added-directory? can't really ignore
-     ### the subdirs! */
-  /* ### maybe a WC-to-WC copy can retain a depth?  */
-  depth  TEXT,
-
-  /* The SHA-1 checksum of the pristine text, if this node is a file and was
-     moved here or copied here, else NULL. */
-  checksum  TEXT,
-
-  /* for kind==symlink, this specifies the target. */
-  symlink_target  TEXT,
-
-  /* Where this node was copied/moved from. All copyfrom_* fields are set
-     only on the root of the operation, and are NULL for all children. */
-  original_repos_id  INTEGER REFERENCES REPOSITORY (id),
-  original_repos_path  TEXT,
-  original_revision  INTEGER,
-
-  /* serialized skel of this node's properties. NULL if we
-     have no information about the properties (a non-present node). */
-  properties  BLOB,
-
-  PRIMARY KEY (wc_id, local_relpath, op_depth)
-
-  );
-
-CREATE INDEX I_NODE_PARENT ON NODE_DATA (wc_id, parent_relpath);
-CREATE INDEX I_NODE_PATH ON NODE_DATA (wc_id, local_relpath);
 
 /* ------------------------------------------------------------------------- */
 
 /* The NODES table describes the way WORKING nodes are layered on top of
    BASE nodes and on top of other WORKING nodes, due to nested tree structure
    changes. The layers are modelled using the "op_depth" column.
+
+   An 'operation depth' refers to the number of directory levels down from
+   the WC root at which a tree-change operation (delete, add?, copy, move)
+   was performed.  A row's 'op_depth' does NOT refer to the depth of its own
+   'local_relpath', but rather to the depth of the nearest tree change that
+   affects that node.
+
+   The row with op_depth=0 for any given local relpath represents the "base"
+   node that is created and updated by checkout, update, switch and commit
+   post-processing.  The row with the highest op_depth for a particular
+   local_relpath represents the working version.  Any rows with intermediate
+   op_depth values are not normally visible to the user but may become
+   visible after reverting local changes.
+
+   ### The following text needs revision
 
    Each row in BASE_NODE has an associated row NODE_DATA. Additionally, each
    row in WORKING_NODE has one or more associated rows in NODE_DATA.
@@ -820,16 +728,16 @@ CREATE TABLE NODES (
 
   /* WC state fields */
 
-  /* In case 'op_depth' is equal to 0, this is part of the BASE tree; in
-     that case, all presence values except 'base-deleted' are allowed.
+  /* Is this node "present" or has it been excluded for some reason?
 
+     In case 'op_depth' is equal to 0, this is part of the BASE tree; in
+     that case, all presence values except 'base-deleted' are allowed.
 
      In case 'op_depth' is greater than 0, this is part of a layer of
      working nodes; in that case, the following presence values apply:
 
-     Is this node "present" or has it been excluded for some reason?
-     Only allowed values: normal, not-present, incomplete, base-deleted.
-     (the others do not make sense for the WORKING tree)
+     Only allowed values: normal, not-present, incomplete, base-deleted,
+     excluded.  (the others do not make sense for the WORKING tree)
 
      normal: this node has been added/copied/moved-here. There may be an
        underlying BASE node at this location, implying this is a replace.
@@ -851,7 +759,11 @@ CREATE TABLE NODES (
 
      base-deleted: the underlying BASE node has been marked for deletion due
        to a delete or a move-away (see the moved_to column to determine
-       which), and has not been replaced.  */
+       which), and has not been replaced.
+
+     excluded: this node is administratively excluded (sparse WC). This must
+       be a child (or grandchild etc.) of a copied directory.
+  */
   presence  TEXT NOT NULL,
 
   /* NULL depth means "default" (typically svn_depth_infinity) */

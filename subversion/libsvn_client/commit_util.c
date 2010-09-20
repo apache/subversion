@@ -859,46 +859,6 @@ harvest_committables(apr_hash_t *committables,
                      and depth says not to go there. */
                   continue;
                 }
-#ifndef SVN_WC__SINGLE_DB
-              else
-                {
-                  svn_boolean_t obstructed;
-
-                  SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed,
-                                                            ctx->wc_ctx,
-                                                            this_abspath,
-                                                            iterpool));
-
-                  if (obstructed)
-                    {
-                      /* A missing, schedule-delete child dir is
-                         allowable.  Just don't try to recurse. */
-                      svn_node_kind_t childkind;
-                      SVN_ERR(svn_io_check_path(this_abspath,
-                                                &childkind,
-                                                iterpool));
-                      if (childkind == svn_node_none && this_is_deleted)
-                        {
-                          if (svn_wc__changelist_match(ctx->wc_ctx,
-                                                       this_abspath,
-                                                       changelists,
-                                                       iterpool))
-                            {
-                              SVN_ERR(add_committable(
-                                            committables, this_abspath,
-                                            this_kind, 
-                                            repos_root_url, this_repos_relpath,
-                                            SVN_INVALID_REVNUM,
-                                            NULL,
-                                            SVN_INVALID_REVNUM,
-                                            SVN_CLIENT_COMMIT_ITEM_DELETE,
-                                            result_pool, iterpool));
-                              continue; /* don't recurse! */
-                            }
-                        }
-                    }
-                }
-#endif
             }
 
           {
