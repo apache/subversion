@@ -207,6 +207,14 @@ def move_and_modify_in_the_same_revision_dump(sbox):
   "dump: move parent & modify child file in same rev"
   run_dump_test(sbox, "move-and-modify.dump")
 
+def tag_empty_trunk_dump(sbox):
+  "dump: tag empty trunk"
+  run_dump_test(sbox, "tag-empty-trunk.dump")
+
+def tag_empty_trunk_load(sbox):
+  "load: tag empty trunk"
+  run_load_test(sbox, "tag-empty-trunk.dump")
+
 ########################################################################
 # Run the tests
 
@@ -223,6 +231,8 @@ test_list = [ None,
               copy_from_previous_version_and_modify_load,
               modified_in_place_dump,
               modified_in_place_load,
+              tag_empty_trunk_dump,
+              tag_empty_trunk_load,
               no_author_dump,
               no_author_load,
               Wimp("TODO", move_and_modify_in_the_same_revision_dump),
