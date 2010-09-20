@@ -150,7 +150,7 @@ class ExpectedOutput:
             return True
       return False
     else:
-      raise "is_regex and except_re are mutually exclusive"
+      raise Exception("is_regex and except_re are mutually exclusive")
 
   def is_equivalent_list(self, expected, actual):
     "Return whether EXPECTED and ACTUAL are equivalent."
