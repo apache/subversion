@@ -56,6 +56,14 @@ commit_callback(const svn_commit_info_t *commit_info,
   return SVN_NO_ERROR;
 }
 
+/* Acquire a lock (of sorts) on the repository associated with the
+ * given RA SESSION. This lock is just a revprop change attempt in a
+ * time-delay loop. This function is duplicated by svnsync in main.c.
+ *
+ * ### TODO: Make this function more generic and
+ * expose it through a header for use by other Subversion
+ * applications to avoid duplication.
+ */
 static svn_error_t *
 get_lock(svn_ra_session_t *session, apr_pool_t *pool)
 {
