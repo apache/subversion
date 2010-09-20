@@ -223,6 +223,14 @@ def dir_prop_change_load(sbox):
   "load: directory property changes"
   run_load_test(sbox, "dir-prop-change.dump")
 
+def copy_parent_modify_prop_dump(sbox):
+  "dump: copy parent and modify prop"
+  run_dump_test(sbox, "copy-parent-modify-prop.dump")
+
+def copy_parent_modify_prop_load(sbox):
+  "load: copy parent and modify prop"
+  run_load_test(sbox, "copy-parent-modify-prop.dump")
+
 ########################################################################
 # Run the tests
 
@@ -243,6 +251,8 @@ test_list = [ None,
               tag_empty_trunk_load,
               dir_prop_change_dump,
               dir_prop_change_load,
+              copy_parent_modify_prop_dump,
+              copy_parent_modify_prop_load,
               no_author_dump,
               no_author_load,
               Wimp("TODO", move_and_modify_in_the_same_revision_dump),
