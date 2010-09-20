@@ -225,6 +225,15 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r962377, r962378
+   Fix svnsync handling of directory copyfrom.
+   Justification:
+     Could lead to sync'd repositories being different from the master.
+   Concerns:
+     http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
