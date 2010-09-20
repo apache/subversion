@@ -709,8 +709,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
         }
       else
         {
-          /* There was NOT a 'not-present' BASE_NODE in the parent
-             directory. And there is no BASE_NODE in this directory.
+          /* There is NO 'not-present' BASE_NODE for this node.
              Therefore, we are looking at some kind of add/copy
              rather than a replace.  */
 
