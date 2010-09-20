@@ -7312,7 +7312,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
               && !svn_string_compare(wanted_value, present_value)))
         {
           /* What we expected isn't what we found. */
-          return svn_error_createf(SVN_ERR_BAD_OLD_VALUE, NULL,
+          return svn_error_createf(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH, NULL,
                                    _("revprop '%s' has unexpected value in "
                                      "filesystem"),
                                    cb->name);

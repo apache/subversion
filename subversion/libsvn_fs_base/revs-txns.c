@@ -270,7 +270,7 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
               && !svn_string_compare(wanted_value, present_value)))
         {
           /* What we expected isn't what we found. */
-          return svn_error_createf(SVN_ERR_BAD_OLD_VALUE, NULL,
+          return svn_error_createf(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH, NULL,
                                    _("revprop '%s' has unexpected value in "
                                      "filesystem"),
                                    name);
