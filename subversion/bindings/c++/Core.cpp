@@ -25,6 +25,8 @@
 #include "Core.h"
 #include "Pool.h"
 
+#include "Common.h"
+
 #include "svn_error.h"
 #include "svn_dso.h"
 
@@ -54,31 +56,26 @@ Core::Core()
   globalInit();
 }
 
-bool
+void
 Core::globalInit()
 {
   // This method should only be run once.
   static bool run = false;
 
   if (run)
-    return true;
+    return;
 
   run = true;
 
-  if (!initLocale())
-    return false;
-
-  if (!initAPR())
-    return false;
+  initLocale();
+  initAPR();
 
   m_global_pool = svn_pool_create(NULL);
   if (m_global_pool == NULL)
-    return false;
-
-  return true;
+    throw Exception("libsvn++: Cannot initialize global pool");
 }
 
-bool
+void
 Core::initLocale()
 {
   /* C programs default to the "C" locale. But because svn is supposed
@@ -86,79 +83,64 @@ Core::initLocale()
      environment.  */
   if (!setlocale(LC_ALL, ""))
     {
-      if (stderr)
+      char buf[512];
+      const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
+      const char **env_var = &env_vars[0], *env_val = NULL;
+      while (*env_var)
         {
-          const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
-          const char **env_var = &env_vars[0], *env_val = NULL;
-          while (*env_var)
-            {
-              env_val = getenv(*env_var);
-              if (env_val && env_val[0])
-                break;
-              ++env_var;
-            }
-
-          if (!*env_var)
-            {
-              /* Unlikely. Can setlocale fail if no env vars are set? */
-              --env_var;
-              env_val = "not set";
-            }
-
-          fprintf(stderr,
-                  "%s: error: cannot set LC_ALL locale\n"
-                  "%s: error: environment variable %s is %s\n"
-                  "%s: error: please check that your locale name is "
-                  "correct\n",
-                  "svnjavahl", "svnjavahl", *env_var, env_val, "svnjavahl");
+          env_val = getenv(*env_var);
+          if (env_val && env_val[0])
+            break;
+          ++env_var;
         }
-      return false;
-    }
 
-  return true;
+      if (!*env_var)
+        {
+          /* Unlikely. Can setlocale fail if no env vars are set? */
+          --env_var;
+          env_val = "not set";
+        }
+
+        snprintf(buf, sizeof(buf),
+                "%s: error: cannot set LC_ALL locale\n"
+                "%s: error: environment variable %s is %s\n"
+                "%s: error: please check that your locale name is "
+                "correct\n",
+                "svnjavahl", "svnjavahl", *env_var, env_val, "svnjavahl");
+
+        throw Exception(buf);
+    }
 }
 
-bool
+void
 Core::initAPR()
 {
   svn_error_t *err;
+  char err_buf[256];
 
   /* Initialize the APR subsystem, and register an atexit() function
    * to Uninitialize that subsystem at program exit. */
   apr_status_t status = apr_initialize();
   if (status)
     {
-      if (stderr)
-        {
-          char buf[1024];
-          apr_strerror(status, buf, sizeof(buf) - 1);
-          fprintf(stderr,
-                  "%s: error: cannot initialize APR: %s\n",
-                  "svnjavahl", buf);
-        }
-      return false;
+      char buf[1024];
+      apr_strerror(status, buf, sizeof(buf) - 1);
+      snprintf(err_buf, sizeof(err_buf),
+               "%s: error: cannot initialize APR: %s\n",
+               "svnjavahl", buf);
+      throw Exception(err_buf);
     }
 
   /* This has to happen before any pools are created. */
-  if ((err = svn_dso_initialize2()))
-    {
-      if (stderr && err->message)
-        fprintf(stderr, "%s", err->message);
-
-      svn_error_clear(err);
-      return false;
-    }
+  SVN_CPP_ERR(svn_dso_initialize2());
 
   if (0 > atexit(Core::dispose))
     {
-      if (stderr)
-        fprintf(stderr,
-                "%s: error: atexit registration failed\n",
-                "svnjavahl");
-      return false;
+      snprintf(err_buf, sizeof(err_buf),
+               "%s: error: atexit registration failed\n",
+               "svnjavahl");
+      throw Exception(err_buf);
     }
-
-  return true;
 }
 
 void

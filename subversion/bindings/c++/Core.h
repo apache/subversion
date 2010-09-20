@@ -47,9 +47,9 @@ namespace Private
       Core();
 
       /** Various initialization routines. */
-      bool globalInit();
-      bool initLocale();
-      bool initAPR();
+      void globalInit();
+      void initLocale();
+      void initAPR();
 
       /** Ensure the singleton exists.  This should be called from each of
           the various accessors. */

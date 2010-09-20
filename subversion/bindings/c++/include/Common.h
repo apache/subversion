@@ -42,6 +42,8 @@ class Exception : public std::exception
         Exception object will ensure the error is cleared. */
     Exception(svn_error_t *err);
 
+    Exception(const std::string &message);
+
     virtual ~Exception() throw ();
 
     virtual const char *what() const throw();

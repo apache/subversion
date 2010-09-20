@@ -46,6 +46,11 @@ Exception::Exception(svn_error_t *err)
   svn_error_clear(err);
 }
 
+Exception::Exception(const std::string &message)
+  : m_description(message)
+{
+}
+
 Exception::~Exception() throw ()
 {
 }
