@@ -640,13 +640,13 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 {
   struct dump_edit_baton *eb = file_baton;
 
-  LDR_DBG(("apply_textdelta %p\n", file_baton));
-
   /* Custom handler_baton allocated in a separate pool */
   apr_pool_t *handler_pool = svn_pool_create(pool);
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   hb->pool = handler_pool;
   hb->eb = eb;
+
+  LDR_DBG(("apply_textdelta %p\n", file_baton));
 
   /* Use a temporary file to measure the text-content-length */
   SVN_ERR(svn_stream_open_unique(&(hb->delta_filestream), &hb->delta_abspath,
