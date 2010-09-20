@@ -586,12 +586,12 @@ list_directory(const svn_test_opts_t *opts,
 }
 
 
-/* If EXPR raises SVN_ERR_BAD_PROPERTY_VALUE, continue; else, fail
+/* If EXPR raises SVN_ERR_BAD_OLD_VALUE, continue; else, fail
  * the test. */
-#define FAILS_WITH_BPV(expr) \
+#define FAILS_WITH_BOV(expr) \
   do { \
       svn_error_t *__err = (expr); \
-      if (!__err || __err->apr_err != SVN_ERR_BAD_PROPERTY_VALUE) \
+      if (!__err || __err->apr_err != SVN_ERR_BAD_OLD_VALUE) \
         return svn_error_create(SVN_ERR_TEST_FAILED, __err, \
                                 "svn_fs_change_rev_prop2() failed to " \
                                 "detect unexpected old value"); \
@@ -662,18 +662,18 @@ revision_props(const svn_test_opts_t *opts,
 
       /* Value of "flower" is 's1'. */
 
-      FAILS_WITH_BPV(svn_fs_change_rev_prop2(fs, 0, "flower", &s2_p, s1_p, pool));
+      FAILS_WITH_BOV(svn_fs_change_rev_prop2(fs, 0, "flower", &s2_p, s1_p, pool));
       s1_dup = svn_string_dup(&s1, pool);
       SVN_ERR(svn_fs_change_rev_prop2(fs, 0, "flower", &s1_dup, s2_p, pool));
 
       /* Value of "flower" is 's2'. */
 
-      FAILS_WITH_BPV(svn_fs_change_rev_prop2(fs, 0, "flower", &s1_p, NULL, pool));
+      FAILS_WITH_BOV(svn_fs_change_rev_prop2(fs, 0, "flower", &s1_p, NULL, pool));
       SVN_ERR(svn_fs_change_rev_prop2(fs, 0, "flower", &s2_p, NULL, pool));
 
       /* Value of "flower" is <not set>. */
 
-      FAILS_WITH_BPV(svn_fs_change_rev_prop2(fs, 0, "flower", &s2_p, s1_p, pool));
+      FAILS_WITH_BOV(svn_fs_change_rev_prop2(fs, 0, "flower", &s2_p, s1_p, pool));
       SVN_ERR(svn_fs_change_rev_prop2(fs, 0, "flower", &unset, s1_p, pool));
 
       /* Value of "flower" is 's1'. */
