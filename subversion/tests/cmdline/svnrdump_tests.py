@@ -41,7 +41,14 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 Wimp = svntest.testcase.Wimp
 
-# Mismatched headers during dumping operation
+## Mismatched headers during dumping operation
+# Text-copy-source-* and *-sha1 headers are not provided by the RA
+# layer. `svnadmin dump` is able to provide them because it works on
+# the FS layer. Also, svnrdump attaches "Prop-delta: true" with
+# everything whether it's really a delta or a new prop (delta from
+# /dev/null). This is really harmless, but `svnadmin dump` contains
+# the logic for differentiating between these two cases.
+
 mismatched_headers_re = \
     "Prop-delta: |Text-content-sha1: |Text-copy-source-md5: |" \
     "Text-copy-source-sha1: |Text-delta-base-sha1: .*"
