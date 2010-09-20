@@ -3120,7 +3120,7 @@ public class BasicTests extends SVNTests
         // we expect the tree conflict to turn the existing item into
         // a scheduled-add with history.
         tcTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.added);
-        tcTest.getWc().setItemTextStatus("A/B/F/alpha", StatusKind.normal);
+        tcTest.getWc().setItemTextStatus("A/B/F/alpha", Status.Kind.normal);
 
         // check the status of the working copy of the tc test
         tcTest.checkStatus();
