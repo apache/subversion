@@ -35,7 +35,13 @@ namespace SVN
 class Exception : public std::exception
 {
   private:
+    void assembleErrorMessage(svn_error_t *err, int depth,
+                              apr_status_t parent_apr_err,
+                              std::string &buffer);
+
     std::string m_description;
+    std::string m_source;
+    int m_apr_err;
 
   public:
     /** A constructor to build an exception from a Subversion error.  The
@@ -47,6 +53,8 @@ class Exception : public std::exception
     virtual ~Exception() throw ();
 
     virtual const char *what() const throw();
+    const std::string &getSource();
+    int getAPRErr();
 };
 
 }
