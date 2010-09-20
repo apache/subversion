@@ -33,6 +33,12 @@
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
+#ifdef SVN_DEBUG
+#define LDR_DBG(x) SVN_DBG(x)
+#else
+#define LDR_DBG(x) while(0)
+#endif
+
 /* The baton used by the dump editor. */
 struct dump_edit_baton {
   /* The output stream we write the dumpfile to */
@@ -315,6 +321,8 @@ open_root(void *edit_baton,
   struct dump_edit_baton *eb = edit_baton;
   /* Allocate a special pool for the edit_baton to avoid pool
      lifetime issues */
+
+  LDR_DBG(("open_root\n"));
   eb->pool = svn_pool_create(pool);
   eb->props = apr_hash_make(eb->pool);
   eb->deleted_props = apr_hash_make(eb->pool);
@@ -333,6 +341,8 @@ delete_entry(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   const char *mypath = apr_pstrdup(pool, path);
+
+  LDR_DBG(("delete_entry %s\n", path));
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
@@ -357,6 +367,8 @@ add_directory(const char *path,
   struct dir_baton *new_db
     = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb, pb, TRUE, pool);
   svn_boolean_t is_copy;
+
+  LDR_DBG(("add_directory %s\n", path));
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
@@ -398,6 +410,8 @@ open_directory(const char *path,
   const char *copyfrom_path = NULL;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
 
+  LDR_DBG(("open_directory %s\n", path));
+
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
 
@@ -425,6 +439,8 @@ close_directory(void *dir_baton,
   struct dump_edit_baton *eb = db->eb;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
+
+  LDR_DBG(("close_directory %p\n", dir_baton));
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(eb, &(eb->dump_props_pending), TRUE, pool));
@@ -459,6 +475,8 @@ add_file(const char *path,
   struct dir_baton *pb = parent_baton;
   void *val;
   svn_boolean_t is_copy;
+
+  LDR_DBG(("add_file %s\n", path));
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
@@ -500,6 +518,8 @@ open_file(const char *path,
   const char *copyfrom_path = NULL;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
 
+  LDR_DBG(("open_file %s\n", path));
+
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props_pending), TRUE, pool));
 
@@ -529,6 +549,8 @@ change_dir_prop(void *parent_baton,
                 apr_pool_t *pool)
 {
   struct dir_baton *db = parent_baton;
+
+  LDR_DBG(("change_dir_prop %p\n", parent_baton));
 
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
@@ -565,6 +587,8 @@ change_file_prop(void *file_baton,
                  apr_pool_t *pool)
 {
   struct dump_edit_baton *eb = file_baton;
+
+  LDR_DBG(("change_file_prop %p\n", file_baton));
 
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
@@ -614,6 +638,8 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 {
   struct dump_edit_baton *eb = file_baton;
 
+  LDR_DBG(("apply_textdelta %p\n", file_baton));
+
   /* Custom handler_baton allocated in a separate pool */
   apr_pool_t *handler_pool = svn_pool_create(pool);
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
@@ -649,6 +675,8 @@ close_file(void *file_baton,
   apr_file_t *delta_file;
   svn_stream_t *delta_filestream;
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
+
+  LDR_DBG(("close_file %p\n", file_baton));
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(eb, &(eb->dump_props_pending), FALSE, pool));
@@ -737,6 +765,7 @@ static svn_error_t *
 close_edit(void *edit_baton, apr_pool_t *pool)
 {
   struct dump_edit_baton *eb = edit_baton;
+  LDR_DBG(("close_edit\n"));
   svn_pool_destroy(eb->pool);
 
   return SVN_NO_ERROR;
