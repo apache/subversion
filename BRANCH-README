@@ -25,7 +25,7 @@ Planned work
   - [DONE] unit test: prop_tests.py 34: atomic_over_ra()
   - TODO: ensure consistent error code (replacing SVN_ERR_BAD_PROPERTY_VALUE)
   - TODO: use "409 Conflict" DAV response (within the 207 Multi-Status response)
-  - TODO: ra_dav: marshal error chains over the wire
+  - TODO: ra_dav: preserve err->apr_err from server to client (like in ra_svn)
 
 * [DONE] client support: svn_client_revprop_set2()
 
@@ -59,7 +59,9 @@ correct error message).
       (mod_dav doesn't XML-encode dav_error->desc)
     - extend ra_neon/ra_serf's start_207()/start_207_element() parsers
   plan2:
-    (?)
+    - preserve just the outermost err->apr_err of the error chain
+  plan3:
+    - return s/500/412/ in the 207 body; ref: Jon Foster's [PATCH 3/3]
 
 
 Potential work
