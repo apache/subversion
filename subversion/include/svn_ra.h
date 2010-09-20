@@ -747,15 +747,19 @@ svn_ra_get_dated_revision(svn_ra_session_t *session,
  * If @a value is @c NULL, delete the named revision property.
  *
  * If the server advertises the #SVN_RA_CAPABILITY_ATOMIC_REVPROPS capability
- * and @a old_value_p is not @c NULL, then the property will be changed
- * iff its current value is @a *old_value_p.  (Note that @a *old_value_p
- * may be @c NULL, representing that the property must be currently unset.)
+ * and @a old_value_p is not @c NULL, then changing the property will fail with
+ * error #SVN_ERR_FS_PROP_BASEVALUE_MISMATCH if the present value of the
+ * property is not @a *old_value_p.  (This is an atomic test-and-set).
+ * @a *old_value_p may be @c NULL, representing that the property must be not
+ * already set.
  *
  * If the capability is not advertised, then @a old_value_p MUST be @c NULL.
  *
  * Please note that properties attached to revisions are @em unversioned.
  *
  * Use @a pool for memory allocation.
+ *
+ * @see svn_fs_change_rev_prop2().
  *
  * @since New in 1.7.
  */
