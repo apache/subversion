@@ -219,6 +219,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 13,
              "Unknown string value of token")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_BAD_OLD_VALUE,
+             SVN_ERR_BAD_CATEGORY_START + 14,
+             "Old value doesn't match repository")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
