@@ -322,7 +322,6 @@ open_root(void *edit_baton,
   /* Allocate a special pool for the edit_baton to avoid pool
      lifetime issues */
 
-  LDR_DBG(("open_root\n"));
   eb->pool = svn_pool_create(pool);
   eb->props = apr_hash_make(eb->pool);
   eb->deleted_props = apr_hash_make(eb->pool);
@@ -330,6 +329,8 @@ open_root(void *edit_baton,
 
   *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
                                edit_baton, NULL, FALSE, pool);
+  LDR_DBG(("open_root %p\n", *root_baton));
+
   return SVN_NO_ERROR;
 }
 
