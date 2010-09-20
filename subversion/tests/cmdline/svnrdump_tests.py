@@ -243,6 +243,14 @@ def copy_revprops_load(sbox):
   "load: copy revprops other than svn:*"
   run_load_test(sbox, "revprops.dump")
 
+def url_encoding_dump(sbox):
+  "dump: url encoding issues"
+  run_dump_test(sbox, "url-encoding-bug.dump")
+
+def url_encoding_load(sbox):
+  "load: url encoding issues"
+  run_load_test(sbox, "url-encoding-bug.dump")
+
 ########################################################################
 # Run the tests
 
@@ -265,6 +273,8 @@ test_list = [ None,
               dir_prop_change_load,
               copy_parent_modify_prop_dump,
               copy_parent_modify_prop_load,
+              url_encoding_dump,
+              url_encoding_load,
               copy_revprops_dump,
               Wimp("TODO", copy_revprops_load),
               no_author_dump,

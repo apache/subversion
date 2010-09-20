@@ -119,7 +119,7 @@ make_dir_baton(const char *path,
   new_db->copyfrom_rev = copyfrom_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
-  new_db->deleted_entries = apr_hash_make(pool);
+  new_db->deleted_entries = apr_hash_make(eb->pool);
 
   return new_db;
 }
@@ -341,7 +341,6 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  const char *mypath = apr_pstrdup(pool, path);
 
   LDR_DBG(("delete_entry %s\n", path));
 
@@ -350,7 +349,7 @@ delete_entry(const char *path,
 
   /* Add this path to the deleted_entries of the parent directory
      baton. */
-  apr_hash_set(pb->deleted_entries, mypath, APR_HASH_KEY_STRING, pb);
+  apr_hash_set(pb->deleted_entries, path, APR_HASH_KEY_STRING, pb);
 
   return SVN_NO_ERROR;
 }
@@ -438,16 +437,19 @@ close_directory(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct dump_edit_baton *eb = db->eb;
+  apr_pool_t *iterpool;
   apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(pool);
 
   LDR_DBG(("close_directory %p\n", dir_baton));
+
+  /* Create a pool just for iterations to allocate a loop variable */
+  iterpool = svn_pool_create(pool);
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(eb, &(eb->dump_props_pending), TRUE, pool));
 
-  /* Dump the directory entries */
-  for (hi = apr_hash_first(pool, db->deleted_entries); hi;
+  /* Dump the deleted directory entries */
+  for (hi = apr_hash_first(iterpool, db->deleted_entries); hi;
        hi = apr_hash_next(hi))
     {
       const void *key;
@@ -455,12 +457,11 @@ close_directory(void *dir_baton,
       apr_hash_this(hi, &key, NULL, NULL);
       path = key;
 
-      svn_pool_clear(iterpool);
-
       SVN_ERR(dump_node(db->eb, path, svn_node_unknown, svn_node_action_delete,
-                        FALSE, NULL, SVN_INVALID_REVNUM, iterpool));
+                        FALSE, NULL, SVN_INVALID_REVNUM, pool));
     }
 
+  svn_hash__clear(db->deleted_entries, pool);
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
