@@ -709,44 +709,17 @@ read_one_entry(const svn_wc_entry_t **new_entry,
         }
       else
         {
-          /* If we are reading child directories, then we need to
-             correctly populate the DELETED flag. WC_DB normally
-             wants to provide all of a directory's metadata from
-             its own area. But this information is stored only in
-             the parent directory, so we need to call a custom API
-             to fetch this value.
+          /* There was NOT a 'not-present' BASE_NODE in the parent
+             directory. And there is no BASE_NODE in this directory.
+             Therefore, we are looking at some kind of add/copy
+             rather than a replace.  */
 
-             ### we should start generating BASE_NODE rows for THIS_DIR
-             ### in the subdir. future step because it is harder.  */
-          if (kind == svn_wc__db_kind_dir && *entry->name != '\0')
-            {
-              SVN_ERR(svn_wc__db_temp_is_dir_deleted(&entry->deleted,
-                                                     &entry->revision,
-                                                     db, entry_abspath,
-                                                     scratch_pool));
-            }
-          if (entry->deleted)
-            {
-              /* There was a DELETED marker in the parent, meaning
-                 that we truly are shadowing a base node. It isn't
-                 called a 'replace' though (the BASE is pretending
-                 not to exist).  */
-              entry->schedule = svn_wc_schedule_add;
-            }
-          else
-            {
-              /* There was NOT a 'not-present' BASE_NODE in the parent
-                 directory. And there is no BASE_NODE in this directory.
-                 Therefore, we are looking at some kind of add/copy
-                 rather than a replace.  */
+          /* ### if this looks like a plain old add, then rev=0.  */
+          if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
+              && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
+            entry->revision = 0;
 
-              /* ### if this looks like a plain old add, then rev=0.  */
-              if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
-                  && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
-                entry->revision = 0;
-
-              entry->schedule = svn_wc_schedule_add;
-            }
+          entry->schedule = svn_wc_schedule_add;
         }
 
       /* If we don't have "real" data from the entry (obstruction),

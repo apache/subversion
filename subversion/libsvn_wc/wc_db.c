@@ -7568,58 +7568,6 @@ svn_wc__db_temp_borrow_sdb(svn_sqlite__db_t **sdb,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
-                               svn_revnum_t *base_revision,
-                               svn_wc__db_t *db,
-                               const char *local_dir_abspath,
-                               apr_pool_t *scratch_pool)
-{
-  const char *parent_abspath;
-  const char *base_name;
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
-  SVN_ERR_ASSERT(not_present != NULL);
-  SVN_ERR_ASSERT(base_revision != NULL);
-
-  svn_dirent_split(&parent_abspath, &base_name, local_dir_abspath,
-                   scratch_pool);
-
-  /* The parent should be a working copy if this function is called.
-     Basically, the child is in an "added" state, which is not possible
-     for a working copy root.  */
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              parent_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  /* Build the local_relpath for the requested directory.  */
-  local_relpath = svn_dirent_join(local_relpath, base_name, scratch_pool);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_PARENT_STUB_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
-
-  /* There MAY be a BASE_NODE row in the parent directory. It is entirely
-     possible the parent only has WORKING_NODE rows. If there is no BASE_NODE,
-     then we certainly aren't looking at a 'not-present' row.  */
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  *not_present = have_row && svn_sqlite__column_int(stmt, 0);
-  if (*not_present)
-    {
-      *base_revision = svn_sqlite__column_revnum(stmt, 1);
-    }
-  /* else don't touch *BASE_REVISION.  */
-
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
 svn_error_t *
 svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
                                  svn_wc__db_t *db,
