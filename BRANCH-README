@@ -30,7 +30,8 @@ Planned work
 * [DONE] client support: svn_client_revprop_set2()
 
 * svnsync and svnrdump:
-  - TODO: use the new RA API to resolve the race condition in locking.
+  - [DONE] use the new RA API to resolve the race condition in locking.
+  - TODO: deal with pre-1.7 servers
   - TODO: upgrade svn_ra_change_rev_prop() callers
 
 
@@ -51,8 +52,8 @@ Currently, ra_local and ra_svn have the original error code in the chain, but
 mod_dav_svn only has a generic SVN_ERR_RA_DAV_* error code (despite having the
 correct error message).
 
-* TODO: verify ra_local and ra_svn claims above
-* NONEED: extend ra_dav to transmit more error information over the wire
+* [DONE] verify ra_local and ra_svn claims above
+* [DONE] extend ra_dav to transmit more error information over the wire
   plan1:
     - nest a "<S:errcode>42</S:errcode>" tag inside the <D:responsedescription> tag.
     - mod_dav_svn implementation?  
@@ -63,6 +64,7 @@ correct error message).
   plan3:
     - return s/500/412/ in the 207 body; ref: Jon Foster's [PATCH 3/3]
     - no need to transmit error chains or apr_err codes; special-cased.
+  (plan3 has been implemented)
 
 
 Potential work
