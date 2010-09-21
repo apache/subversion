@@ -3418,17 +3418,34 @@ svn_client_upgrade(const char *dir,
  */
 
 /**
- * Modify a working copy directory @a dir, changing any
- * repository URLs that begin with @a from to begin with @a to instead,
- * recursing into subdirectories if @a recurse is TRUE.
+ * Recursively modify a working copy rooted at @a wcroot_dir, changing any
+ * repository URLs that begin with @a from to begin with @a to instead.
  *
- * @param dir Working copy directory
+ * @param wcroot_dir Working copy root directory
  * @param from Original URL
  * @param to New URL
- * @param recurse Whether to recurse
  * @param ctx svn_client_ctx_t
  * @param pool The pool from which to perform memory allocations
+ *
+ * @since New in 1.7
  */
+svn_error_t *
+svn_client_relocate2(const char *wcroot_dir,
+                     const char *from,
+                     const char *to,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_relocate2().
+ *
+ * @note As of the 1.7 API, @a dir is required to be a working copy
+ * root directory, and @a recurse is required to be TRUE.
+ *
+ * @deprecated Provided for limited backwards compatibility with the
+ * 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_relocate(const char *dir,
                     const char *from,
@@ -3436,7 +3453,6 @@ svn_client_relocate(const char *dir,
                     svn_boolean_t recurse,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
-
 
 /** @} */
 
