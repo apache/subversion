@@ -310,7 +310,13 @@ maybe_unlock(svn_ra_session_t *session,
 }
 
 /* Acquire a lock (of sorts) on the repository associated with the
- * given RA SESSION.
+ * given RA SESSION. This lock is just a revprop change attempt in a
+ * time-delay loop. This function is duplicated by svnrdump in
+ * load_editor.c.
+ *
+ * ### TODO: Make this function more generic and
+ * expose it through a header for use by other Subversion
+ * applications to avoid duplication.
  */
 static svn_error_t *
 get_lock(const svn_string_t **lock_string_p,

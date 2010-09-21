@@ -2105,7 +2105,7 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.streamFileContent(path,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
-                          bufferSize, stream);
+                          stream);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {

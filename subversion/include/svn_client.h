@@ -316,6 +316,22 @@ svn_client_get_ssl_client_cert_pw_prompt_provider(
 /** @} */
 
 /**
+ * Revisions and Peg Revisions
+ *
+ * @defgroup clnt_revisions Revisions and Peg Revisions
+ *
+ * A brief word on operative and peg revisions.
+ *
+ * If the kind of the peg revision is #svn_opt_revision_unspecified, then it
+ * defaults to #svn_opt_revision_head for URLs and #svn_opt_revision_working
+ * for local paths.
+ *
+ * For deeper insight, please see the
+ * <a href="http://svnbook.red-bean.com/nightly/en/svn.advanced.pegrevs.html">
+ * Peg and Operative Revisions</a> section of the Subversion Book.
+ */
+
+/**
  * Commit operations
  *
  * @defgroup clnt_commit Client commit subsystem
@@ -881,7 +897,7 @@ typedef struct svn_client_ctx_t
   void *cancel_baton;
 
   /** notification function, defaulting to a function that forwards
-   * to notify_func().
+   * to notify_func().  If @a NULL, it will not be invoked.
    * @since New in 1.2. */
   svn_wc_notify_func2_t notify_func2;
 
@@ -1028,56 +1044,47 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 
 
 /**
- * Checkout a working copy of @a URL at @a revision, looked up at @a
- * peg_revision, using @a path as the root directory of the newly
- * checked out working copy, and authenticating with the
- * authentication baton cached in @a ctx.  If @a result_rev is not @c
- * NULL, set @a *result_rev to the value of the revision actually
- * checked out from the repository.
+ * Checkout a working copy from a repository.
  *
- * If @a peg_revision->kind is #svn_opt_revision_unspecified, then it
- * defaults to #svn_opt_revision_head.
+ * @param[out] result_rev   If non-NULL, the value of the revision checked
+ *              out form the repository.
+ * @param[in] URL       The repository URL of the checkout source.
+ * @param[in] path      The root of the new working copy.
+ * @param[in] peg_revision  The peg revision.
+ * @param[in] revision  The operative revision.
+ * @param[in] depth     The depth of the operation.  If #svn_depth_unknown,
+ *              then behave as if for #svn_depth_infinity, except in the case
+ *              of resuming a previous checkout of @a path (i.e., updating),
+ *              in which case use the depth of the existing working copy.
+ * @param[in] ignore_externals  If @c TRUE, don't process externals
+ *              definitions as part of this operation.
+ * @param[in] allow_unver_obstructions  If @c TRUE, then tolerate existing
+ *              unversioned items that obstruct incoming paths.  Only
+ *              obstructions of the same type (file or dir) as the added
+ *              item are tolerated.  The text of obstructing files is left
+ *              as-is, effectively treating it as a user modification after
+ *              the checkout.  Working properties of obstructing items are
+ *              set equal to the base properties. <br>
+ *              If @c FALSE, then abort if there are any unversioned
+ *              obstructing items.
+ * @param[in] ctx   The standard client context, used for authentication and
+ *              notification.
+ * @param[in] pool  Used for any temporary allocation.
  *
- * @a revision must be of kind #svn_opt_revision_number,
- * #svn_opt_revision_head, or #svn_opt_revision_date.  If
- * @a revision does not meet these requirements, return the error
- * #SVN_ERR_CLIENT_BAD_REVISION.
- *
- * If @a depth is #svn_depth_infinity, check out fully recursively.
- * Else if it is #svn_depth_immediates, check out @a URL and its
- * immediate entries (subdirectories will be present, but will be at
- * depth #svn_depth_empty themselves); else #svn_depth_files,
- * check out @a URL and its file entries, but no subdirectories; else
- * if #svn_depth_empty, check out @a URL as an empty directory at
- * that depth, with no entries present.
- *
- * If @a depth is #svn_depth_unknown, then behave as if for
- * #svn_depth_infinity, except in the case of resuming a previous
- * checkout of @a path (i.e., updating), in which case use the depth
- * of the existing working copy.
- *
- * If @a ignore_externals is set, don't process externals definitions
- * as part of this operation.
- *
- * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
- * @a ctx->notify_baton2 as the checkout progresses.
- *
- * If @a allow_unver_obstructions is TRUE then the checkout tolerates
- * existing unversioned items that obstruct added paths from @a URL.  Only
- * obstructions of the same type (file or dir) as the added item are
- * tolerated.  The text of obstructing files is left as-is, effectively
- * treating it as a user modification after the checkout.  Working
- * properties of obstructing items are set equal to the base properties.
- * If @a allow_unver_obstructions is FALSE then the checkout will abort
- * if there are any unversioned obstructing items.
- *
- * If @a URL refers to a file rather than a directory, return the
- * error #SVN_ERR_UNSUPPORTED_FEATURE.  If @a URL does not exist,
- * return the error #SVN_ERR_RA_ILLEGAL_URL.
- *
- * Use @a pool for any temporary allocation.
+ * @return A pointer to an #svn_error_t of the type (this list is not
+ *         exhaustive): <br>
+ *         #SVN_ERR_UNSUPPORTED_FEATURE if @a URL refers to a file rather
+ *         than a directory; <br>
+ *         #SVN_ERR_RA_ILLEGAL_URL if @a URL does not exist; <br>
+ *         #SVN_ERR_CLIENT_BAD_REVISION if @a revision is not one of
+ *         #svn_opt_revision_number, #svn_opt_revision_head, or
+ *         #svn_opt_revision_date. <br>
+ *         If no error occurred, return #SVN_NO_ERROR.
  *
  * @since New in 1.5.
+ *
+ * @see #svn_depth_t <br> #svn_client_ctx_t <br> @ref clnt_revisions for
+ *      a discussion of operative and peg revisions.
  */
 svn_error_t *
 svn_client_checkout3(svn_revnum_t *result_rev,
@@ -4690,26 +4697,30 @@ svn_client_ls(apr_hash_t **dirents,
  */
 
 /**
- * Output the content of file identified by @a path_or_url and @a
- * revision to the stream @a out.  The actual node revision selected
- * is determined by the path as it exists in @a peg_revision.  If @a
- * peg_revision->kind is #svn_opt_revision_unspecified, then it defaults
- * to #svn_opt_revision_head for URLs or #svn_opt_revision_working
- * for WC targets.
+ * Output the content of a file.
  *
- * If @a path_or_url is not a local path, then if @a revision is of
- * kind #svn_opt_revision_previous (or some other kind that requires
- * a local path), an error will be returned, because the desired
- * revision cannot be determined.
+ * @param[in] out           The stream to which the content will be written.
+ * @param[in] path_or_url   The path or URL of the file.
+ * @param[in] peg_revision  The peg revision.
+ * @param[in] revision  The operative revision.
+ * @param[in] ctx   The standard client context, used for possible
+ *                  authentication.
+ * @param[in] pool  Used for any temporary allocation.
  *
- * Use the authentication baton cached in @a ctx to authenticate against the
- * repository.
+ * @todo Add an expansion/translation flag?
  *
- * Perform all allocations from @a pool.
- *
- * ### @todo Add an expansion/translation flag?
+ * @return A pointer to an #svn_error_t of the type (this list is not
+ *         exhaustive): <br>
+ *         An unspecified error if @a revision is of kind
+ *         #svn_opt_revision_previous (or some other kind that requires
+ *         a local path), because the desired revision cannot be
+ *         determined. <br>
+ *         If no error occurred, return #SVN_NO_ERROR.
  *
  * @since New in 1.2.
+ *
+ * @see #svn_client_ctx_t <br> @ref clnt_revisions for
+ *      a discussion of operative and peg revisions.
  */
 svn_error_t *
 svn_client_cat2(svn_stream_t *out,

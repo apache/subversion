@@ -1827,7 +1827,7 @@ public class BasicTests extends SVNTests
         // get the content from the repository
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         client.streamFileContent(thisTest.getWCPath() + "/A/mu", null, null,
-                                 100, baos);
+                                 baos);
 
         byte[] content = baos.toByteArray();
         byte[] testContent = thisTest.getWc().getItemContent("A/mu").getBytes();
@@ -3118,10 +3118,9 @@ public class BasicTests extends SVNTests
                 tcTest.getWc().getItemContent("A/B/E/alpha"));
         tcTest.getWc().setItemWorkingCopyRevision("A/B/F/alpha", 2);
         // we expect the tree conflict to turn the existing item into
-        // a scheduled-add with history.  We expect the modifications in
-        // the local file to have been copied to the new file.
+        // a scheduled-add with history.
         tcTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.added);
-        tcTest.getWc().setItemTextStatus("A/B/F/alpha", Status.Kind.modified);
+        tcTest.getWc().setItemTextStatus("A/B/F/alpha", Status.Kind.normal);
 
         // check the status of the working copy of the tc test
         tcTest.checkStatus();

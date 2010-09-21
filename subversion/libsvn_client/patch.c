@@ -862,59 +862,41 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
                                            NULL, FALSE,
                                            content_info->keywords, FALSE,
                                            iterpool));
-      lines_read++;
       SVN_ERR(read_line(content_info, &target_line, iterpool, iterpool));
-      if (! hunk_eof)
-        {
-          if (lines_read <= fuzz && leading_context > fuzz)
-            lines_matched = TRUE;
-          else if (lines_read > hunk_length - fuzz &&
-                   trailing_context > fuzz)
-            lines_matched = TRUE;
-          else
-            {
-              if (ignore_whitespace)
-                {
-                  char *stripped_hunk_line = apr_pstrdup(pool,
-                                                         hunk_line_translated);
-                  char *stripped_target_line = apr_pstrdup(pool, target_line);
 
-                  apr_collapse_spaces(stripped_hunk_line,
-                                      hunk_line_translated);
-                  apr_collapse_spaces(stripped_target_line, target_line);
-                  lines_matched = ! strcmp(stripped_hunk_line,
-                                           stripped_target_line);
-                }
-              else 
-                lines_matched = ! strcmp(hunk_line_translated, target_line);
+      lines_read++;
+
+      /* If the last line doesn't have a newline, we get EOF but still
+       * have a non-empty line to compare. */
+      if ((hunk_eof && hunk_line->len == 0) ||
+          (content_info->eof && strlen(target_line) == 0))
+        break;
+
+      /* Leading/trailing fuzzy lines always match. */
+      if ((lines_read <= fuzz && leading_context > fuzz) ||
+          (lines_read > hunk_length - fuzz && trailing_context > fuzz))
+        lines_matched = TRUE;
+      else
+        {
+          if (ignore_whitespace)
+            {
+              char *hunk_line_trimmed;
+              char *target_line_trimmed;
+
+              hunk_line_trimmed = apr_pstrdup(iterpool, hunk_line_translated);
+              target_line_trimmed = apr_pstrdup(iterpool, target_line);
+              apr_collapse_spaces(hunk_line_trimmed, hunk_line_trimmed);
+              apr_collapse_spaces(target_line_trimmed, target_line_trimmed);
+              lines_matched = ! strcmp(hunk_line_trimmed, target_line_trimmed);
             }
+          else
+            lines_matched = ! strcmp(hunk_line_translated, target_line);
         }
     }
-  while (lines_matched && ! (hunk_eof || content_info->eof));
+  while (lines_matched);
 
-  if (hunk_eof)
-    *matched = lines_matched;
-  else if (content_info->eof)
-    {
-      /* If the target has no newline at end-of-file, we get an EOF
-       * indication for the target earlier than we do get it for the hunk. */
-      if (match_modified)
-        SVN_ERR(svn_diff_hunk_readline_modified_text(hunk, &hunk_line,
-                                                     NULL, &hunk_eof,
-                                                     iterpool, iterpool));
-      else
-        SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_line,
-                                                     NULL, &hunk_eof,
-                                                     iterpool, iterpool));
+  *matched = lines_matched && hunk_eof && hunk_line->len == 0;
 
-      /* When comparing modified text we require that all lines match, else
-       * a hunk that adds a newline at the end will be treated as already
-       * applied even if it isn't. */
-      if (! match_modified && hunk_line->len == 0 && hunk_eof)
-        *matched = lines_matched;
-      else
-        *matched = FALSE;
-    }
   SVN_ERR(seek_to_line(content_info, saved_line, iterpool));
 
   svn_pool_destroy(iterpool);
@@ -1160,54 +1142,55 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   else if (original_start > 0 && content_info->stream)
     {
       svn_linenum_t saved_line = content_info->current_line;
-      svn_linenum_t modified_start;
 
-      /* Check if the hunk is already applied.
-       * We only check for an exact match here, and don't bother checking
-       * for already applied patches with offset/fuzz, because such a
-       * check would be ambiguous. */
-      if (fuzz == 0)
+      /* Scan for a match at the line where the hunk thinks it
+       * should be going. */
+      SVN_ERR(seek_to_line(content_info, original_start, scratch_pool));
+      if (content_info->current_line != original_start)
         {
-          modified_start = svn_diff_hunk_get_modified_start(hunk);
-          if (modified_start == 0)
-            {
-              /* Patch wants to delete the file. */
-              already_applied = target->locally_deleted;
-            }
-          else
-            {
-              SVN_ERR(seek_to_line(content_info, modified_start,
-                                   scratch_pool));
-              SVN_ERR(scan_for_match(&matched_line, content_info,
-                                     hunk, TRUE,
-                                     modified_start + 1,
-                                     fuzz, ignore_whitespace, TRUE,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool));
-              already_applied = (matched_line == modified_start);
-            }
+          /* Seek failed. */
+          matched_line = 0;
         }
       else
-        already_applied = FALSE;
+        SVN_ERR(scan_for_match(&matched_line, content_info, hunk, TRUE,
+                               original_start + 1, fuzz,
+                               ignore_whitespace, FALSE,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 
-      if (! already_applied)
+      if (matched_line != original_start)
         {
-          /* Scan for a match at the line where the hunk thinks it
-           * should be going. */
-          SVN_ERR(seek_to_line(content_info, original_start, scratch_pool));
-          if (content_info->current_line != original_start)
+          /* Check if the hunk is already applied.
+           * We only check for an exact match here, and don't bother checking
+           * for already applied patches with offset/fuzz, because such a
+           * check would be ambiguous. */
+          if (fuzz == 0)
             {
-              /* Seek failed. */
-              matched_line = 0;
+              svn_linenum_t modified_start;
+
+              modified_start = svn_diff_hunk_get_modified_start(hunk);
+              if (modified_start == 0)
+                {
+                  /* Patch wants to delete the file. */
+                  already_applied = target->locally_deleted;
+                }
+              else
+                {
+                  SVN_ERR(seek_to_line(content_info, modified_start,
+                                       scratch_pool));
+                  SVN_ERR(scan_for_match(&matched_line, content_info,
+                                         hunk, TRUE,
+                                         modified_start + 1,
+                                         fuzz, ignore_whitespace, TRUE,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool));
+                  already_applied = (matched_line == modified_start);
+                }
             }
           else
-            SVN_ERR(scan_for_match(&matched_line, content_info, hunk, TRUE,
-                                   original_start + 1, fuzz,
-                                   ignore_whitespace, FALSE,
-                                   cancel_func, cancel_baton,
-                                   scratch_pool));
+            already_applied = FALSE;
 
-          if (matched_line != original_start)
+          if (! already_applied)
             {
               /* Scan the whole file again from the start. */
               SVN_ERR(seek_to_line(content_info, 1, scratch_pool));
