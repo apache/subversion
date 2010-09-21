@@ -21,18 +21,71 @@
  * @endcopyright
  *
  * @file OutputStream.cpp
- * @brief Implementation of the class OutputStream
+ * @brief Implementation of the class OutputStream and OutputStreamBuf
  */
 
 #include "OutputStream.h"
 #include "JNIUtil.h"
 #include "JNIByteArray.h"
 
+#include <iostream>
+
+OutputStreamBuf::OutputStreamBuf(OutputStream &target)
+  : m_target(target)
+{
+}
+
+int
+OutputStreamBuf::sync()
+{
+  std::streamsize n = pptr() - pbase();
+  if (n > 0)
+    {
+      apr_size_t len = n;
+      svn_error_t *err = OutputStream::write(&m_target, pbase(), &len);
+      if (err)
+        {
+          svn_error_clear(err);
+          return -1;
+        }
+    }
+  return 0;
+}
+
+int
+OutputStreamBuf::overflow(int ch)
+{
+  std::streamsize n = pptr() - pbase();
+
+  if (n && sync())
+    return EOF;
+
+  if (ch != EOF)
+    {
+      char cbuf[1];
+      cbuf[0] = ch;
+      apr_size_t len = 1;
+      
+      svn_error_t *err = OutputStream::write(&m_target, cbuf, &len);
+      if (err)
+        {
+          svn_error_clear(err);
+          return EOF;
+        }
+    }
+
+  pbump(-n);
+  return 0;
+}
+
+
 /**
  * Create an OutputStream object.
  * @param jthis the Java object to be stored
  */
 OutputStream::OutputStream(jobject jthis)
+  : m_jnibuf(*this),
+    m_jniostream(&m_jnibuf)
 {
   m_jthis = jthis;
 }
@@ -143,4 +196,10 @@ svn_error_t *OutputStream::close(void *baton)
   // No need to check for exception here because we return anyway.
 
   return SVN_NO_ERROR;
+}
+
+std::ostream &
+OutputStream::to_ostream()
+{
+  return m_jniostream;
 }

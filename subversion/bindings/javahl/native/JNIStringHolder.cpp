@@ -39,6 +39,7 @@ JNIStringHolder::JNIStringHolder(jstring jtext)
       return;
     }
   m_str = JNIUtil::getEnv()->GetStringUTFChars(jtext, NULL);
+  m_string = m_str;
   m_jtext = jtext;
   m_env = JNIUtil::getEnv();
 }
@@ -53,4 +54,10 @@ const char *
 JNIStringHolder::pstrdup(apr_pool_t *pool)
 {
   return (m_str ? apr_pstrdup(pool, m_str) : NULL);
+}
+
+const std::string &
+JNIStringHolder::str()
+{
+  return m_string;
 }

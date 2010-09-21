@@ -55,6 +55,10 @@
 #include "version.h"
 #include <iostream>
 
+#include "Client.h"
+#include "Revision.h"
+#include "Common.h"
+
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNClient_ctNative
 (JNIEnv *env, jobject jthis)
@@ -1326,11 +1330,11 @@ Java_org_apache_subversion_javahl_SVNClient_streamFileContent
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Revision revision(jrevision);
+  SVN::Revision revision = Revision::fromJ(jrevision);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Revision pegRevision(jpegRevision);
+  SVN::Revision pegRevision = Revision::fromJ(jpegRevision);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1338,7 +1342,15 @@ Java_org_apache_subversion_javahl_SVNClient_streamFileContent
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->streamFileContent(path, revision, pegRevision, dataOut);
+  try
+    {
+      cl->getClient().cat(dataOut.to_ostream(), path.str(), revision,
+                          pegRevision);
+    }
+  catch (SVN::Exception ex)
+    {
+      // Throw a matching Java exception
+    }
 }
 
 JNIEXPORT jstring JNICALL

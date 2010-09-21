@@ -57,6 +57,8 @@ class RevpropTable;
 #include "svn_client.h"
 #include "SVNBase.h"
 
+#include "Client.h"
+
 class SVNClient :public SVNBase
 {
  public:
@@ -76,8 +78,6 @@ class SVNClient :public SVNBase
              BlameCallback *callback);
   void relocate(const char *from, const char *to, const char *path,
                 bool recurse);
-  void streamFileContent(const char *path, Revision &revision,
-                         Revision &pegRevision, OutputStream &outputStream);
   void propertySet(const char *path, const char *name, const char *value,
                    svn_depth_t depth, StringArray &changelists, bool force,
                    RevpropTable &revprops, CommitCallback *callback);
@@ -190,6 +190,7 @@ class SVNClient :public SVNBase
                      bool ignoreAncestry, DiffSummaryReceiver &receiver);
 
   ClientContext &getClientContext();
+  SVN::Client &getClient();
 
   const char *getLastPath();
   void dispose();
@@ -211,6 +212,7 @@ class SVNClient :public SVNBase
 
   Path m_lastPath;
   ClientContext context;
+  SVN::Client m_client;
 };
 
 #endif // SVNCLIENT_H

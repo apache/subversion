@@ -30,6 +30,8 @@
 #include <jni.h>
 #include <apr_pools.h>
 
+#include <string>
+
 class JNIStringHolder
 {
  public:
@@ -37,9 +39,11 @@ class JNIStringHolder
   ~JNIStringHolder();
   operator const char *() { return m_str; }
   const char *pstrdup(apr_pool_t *pool);
+  const std::string &str();
 
  protected:
   const char *m_str;
+  std::string m_string;
   JNIEnv *m_env;
   jstring m_jtext;
 };

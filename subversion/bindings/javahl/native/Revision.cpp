@@ -24,6 +24,8 @@
  * @brief Implementation of the class Revision
  */
 
+#include "Revision.h"
+
 #include "JNIRevision.h"
 #include "JNIUtil.h"
 #include "EnumMapper.h"
@@ -177,4 +179,31 @@ Revision::makeJRevision(svn_revnum_t rev)
     return NULL;
 
   return jrevision;
+}
+
+SVN::Revision
+Revision::fromJ(jobject jrevision)
+{
+  Revision rev(jrevision);
+  const svn_opt_revision_t *revision = rev.revision();
+
+  switch (revision->kind)
+    {
+      case svn_opt_revision_unspecified:
+        return SVN::Revision::UNSPECIFIED;
+      case svn_opt_revision_number:
+        return SVN::Revision::getNumberRev(revision->value.number);
+      case svn_opt_revision_date:
+        return SVN::Revision::getDateRev(revision->value.date);
+      case svn_opt_revision_committed:
+        return SVN::Revision::COMMITTED;
+      case svn_opt_revision_previous:
+        return SVN::Revision::PREVIOUS;
+      case svn_opt_revision_base:
+        return SVN::Revision::BASE;
+      case svn_opt_revision_working:
+        return SVN::Revision::WORKING;
+      case svn_opt_revision_head:
+        return SVN::Revision::HEAD;
+    }
 }

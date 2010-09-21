@@ -24,11 +24,16 @@
  * @brief Interface of the class Revision
  */
 
-#ifndef REVISION_H
-#define REVISION_H
+#ifndef JNIREVISION_H
+#define JNIREVISION_H
 
 #include <jni.h>
 #include "svn_opt.h"
+
+namespace SVN
+{
+  class Revision;
+}
 
 class Revision
 {
@@ -50,6 +55,7 @@ class Revision
    * Make a Revision Java object.
    */
   static jobject makeJRevision(svn_revnum_t rev);
+  static SVN::Revision fromJ(jobject jrevision);
 };
 
-#endif // REVISION_H
+#endif // JNIREVISION_H
