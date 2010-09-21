@@ -27,6 +27,9 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include "Types.h"
+#include "Common.h"
+#include "Callback.h"
 #include "Version.h"
 #include "Revision.h"
 #include "Pool.h"
@@ -34,6 +37,8 @@
 #include "svn_client.h"
 
 #include <ostream>
+#include <string>
+#include <vector>
 
 namespace SVN
 {
@@ -62,6 +67,14 @@ namespace SVN
                         const Revision &peg_revisio, const Revision &revision,
                         svn_depth_t depth, bool ignore_externals,
                         bool allow_unver_obstructions);
+
+      void commit(const std::vector<std::string> &targets,
+                  Callback::Commit &callback);
+      void commit(const std::vector<std::string> &targets,
+                  svn_depth_t depth, bool keep_locks, bool keep_changelists,
+                  const std::vector<std::string> &changelists,
+                  const PropTable &revprop_table,
+                  Callback::Commit &callback);
   };
 }
 

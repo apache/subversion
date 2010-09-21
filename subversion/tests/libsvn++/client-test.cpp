@@ -24,11 +24,16 @@
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 
+#include "Common.h"
 #include "Client.h"
 #include "Pool.h"
 
 #include <sstream>
 #include <iostream>
+
+#define REPOS_NAME  "test-cpp-client-repos"
+#define WCS_ROOT    "test-wcs"
+#define WC_PATH     "test-cpp-client-wc"
 
 using namespace SVN;
 
@@ -79,9 +84,8 @@ test_cat(const svn_test_opts_t *opts,
   std::string iota_url;
   std::string iota_path;
 
-  SVN_ERR(create_greek_repo(&repos, "test-cpp-client-repos", opts,
-                            pool.pool()));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-cpp-client-repos",
+  SVN_ERR(create_greek_repo(&repos, REPOS_NAME, opts, pool.pool()));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, REPOS_NAME,
                                            pool.pool()));
   iota_url = svn_path_url_add_component2(repos_url, "iota", pool.pool());
 
@@ -115,19 +119,105 @@ test_checkout(const svn_test_opts_t *opts,
   const char *wc_path;
   const char *cwd;
 
-  SVN_ERR(create_greek_repo(&repos, "test-cpp-client-repos", opts,
-                            pool.pool()));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-cpp-client-repos",
+  SVN_ERR(create_greek_repo(&repos, REPOS_NAME, opts, pool.pool()));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, REPOS_NAME,
                                            pool.pool()));
 
   Client client;
 
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool.pool()));
-  wc_path = svn_dirent_join(cwd, "test-cpp-client-wc", pool.pool());
+  wc_path = svn_dirent_join(cwd, WCS_ROOT, pool.pool());
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool.pool()));
+  svn_test_add_dir_cleanup(wc_path);
+
+  wc_path = svn_dirent_join(wc_path, WC_PATH, pool.pool());
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool.pool()));
   Revision result_rev = client.checkout(repos_url, wc_path);
 
   SVN_TEST_ASSERT(result_rev.revision()->value.number == 1);
+
+  return SVN_NO_ERROR;
+}
+
+// A class which counts the number of commits
+class CommitHandler : public Callback::Commit
+{
+  public:
+    CommitHandler()
+      : commit_count(0)
+    {
+    }
+
+    void sendInfo(const CommitInfo &info)
+    {
+      ++commit_count;
+    }
+
+    // Making this public just makes life easier.
+    int commit_count;
+};
+
+// A class which throws and exception on commit
+class CommitHandlerEx : public Callback::Commit
+{
+  public:
+    void sendInfo(const CommitInfo &info)
+    {
+      throw Exception("This commit is exceptional!");
+    }
+};
+
+static svn_error_t *
+test_commit(const svn_test_opts_t *opts,
+            apr_pool_t *ap)
+{
+  Pool pool;
+  svn_repos_t *repos;
+  const char *wc_path;
+  const char *repos_url;
+  const char *cwd;
+
+  SVN_ERR(create_greek_repo(&repos, REPOS_NAME, opts, pool.pool()));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, REPOS_NAME,
+                                           pool.pool()));
+
+  Client client;
+  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool.pool()));
+  wc_path = svn_dirent_join(cwd, WCS_ROOT, pool.pool());
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool.pool()));
+  svn_test_add_dir_cleanup(wc_path);
+
+  wc_path = svn_dirent_join(wc_path, WC_PATH, pool.pool());
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool.pool()));
+  client.checkout(repos_url, wc_path);
+
+  const char *iota_path = svn_dirent_join(wc_path, "iota", pool.pool());
+  apr_size_t written;
+  apr_file_t *iota_file;
+  SVN_ERR(svn_io_file_open(&iota_file, iota_path, APR_WRITE, APR_OS_DEFAULT,
+                           pool.pool()));
+  SVN_ERR(svn_io_file_write_full(iota_file, "12345", 5, &written, pool.pool()));
+
+  std::vector<std::string> targets;
+  targets.push_back(wc_path);
+  CommitHandler handler;
+  client.commit(targets, handler);
+
+  SVN_TEST_ASSERT(handler.commit_count == 1);
+
+  SVN_ERR(svn_io_file_write_full(iota_file, "67890", 5, &written, pool.pool()));
+  try
+    {
+      CommitHandlerEx handler_ex;
+      client.commit(targets, handler_ex);
+
+      // Shouldn't get here, 'cause an exception should be thrown
+      return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
+    }
+  catch (Exception ex)
+    {
+      SVN_TEST_ASSERT(ex.getAPRErr() == SVN_ERR_CPP_EXCEPTION);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -143,5 +233,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test client cat"),
     SVN_TEST_OPTS_PASS(test_checkout,
                        "test client checkout"),
+    SVN_TEST_OPTS_PASS(test_commit,
+                       "test client commit"),
     SVN_TEST_NULL
   };

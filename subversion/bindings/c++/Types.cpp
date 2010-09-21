@@ -19,41 +19,27 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file Types.h
- * @brief Some helpful types
  */
 
-#ifndef TYPES_H
-#define TYPES_H
+#include "Common.h"
+#include "Pool.h"
+#include "Types.h"
 
-#include "Revision.h"
-
-#include <map>
-#include <string>
+#include "svn_time.h"
 
 namespace SVN
 {
 
-// Typedefs
-typedef std::map<std::string, std::string> PropTable;
-
-
-// C-struct wrapper classes
-class CommitInfo
+CommitInfo::CommitInfo(const svn_commit_info_t *info)
+  : m_author(info->author),
+    m_post_commit_err(info->post_commit_err == NULL ? ""
+                                                : info->post_commit_err),
+    m_repos_root(info->repos_root == NULL ? "" : info->repos_root),
+    m_revision(info->revision)
 {
-  private:
-    Revision m_revision;
-    apr_time_t m_date;
-    std::string m_author;
-    std::string m_post_commit_err;
-    std::string m_repos_root;
+  Pool pool;
 
-  public:
-    CommitInfo(const svn_commit_info_t *info);
-};
-
+  SVN_CPP_ERR(svn_time_from_cstring(&m_date, info->date, pool.pool()));
 }
 
-
-#endif // TYPES_H
+}

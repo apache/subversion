@@ -88,4 +88,30 @@ Client::checkout(const std::string &url, const std::string path,
   return Revision::getNumberRev(result_rev);
 }
 
+void
+Client::commit(const std::vector<std::string> &targets,
+               Callback::Commit &callback)
+{
+  commit(targets, svn_depth_infinity, false, false, std::vector<std::string>(),
+         PropTable(), callback);
+}
+
+void
+Client::commit(const std::vector<std::string> &targets,
+               svn_depth_t depth, bool keep_locks, bool keep_changelists,
+               const std::vector<std::string> &changelists,
+               const PropTable &revprop_table,
+               Callback::Commit &callback)
+{
+  Pool pool;
+
+  SVN_CPP_ERR(svn_client_commit5(
+                Private::Utility::make_string_array(targets, pool),
+                depth, keep_locks, keep_changelists,
+                Private::Utility::make_string_array(changelists, pool),
+                Private::Utility::make_prop_table(revprop_table, pool),
+                Callback::Commit::callback, &callback,
+                m_ctx, pool.pool()));
+}
+
 }

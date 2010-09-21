@@ -39,12 +39,13 @@ namespace SVN
     private:
       /** The constructors. */
       Revision(svn_opt_revision_kind kind);
-      Revision(svn_revnum_t revnum);
       Revision(apr_time_t date, bool foo);
 
       svn_opt_revision_t m_revision;
 
     public:
+      Revision(svn_revnum_t revnum);
+
       /** The destructor needs to be public. */
       virtual ~Revision();
 

@@ -20,40 +20,39 @@
  * ====================================================================
  * @endcopyright
  *
- * @file Types.h
- * @brief Some helpful types
  */
 
-#ifndef TYPES_H
-#define TYPES_H
+#include "Pool.h"
+#include "Core.h"
+#include "Types.h"
+#include "Common.h"
+#include "Callback.h"
 
-#include "Revision.h"
+#include "svn_error.h"
+#include "svn_pools.h"
 
-#include <map>
-#include <string>
+#include <iostream>
 
-namespace SVN
+namespace SVN {
+
+namespace Callback {
+
+svn_error_t *
+Commit::callback(const svn_commit_info_t *commit_info,
+                 void *baton, apr_pool_t *pool)
 {
+  if (baton)
+    try
+      {
+        reinterpret_cast<Commit *>(baton)->sendInfo(CommitInfo(commit_info));
+      }
+    catch (Exception ex)
+      {
+        return ex.c_err();
+      }
 
-// Typedefs
-typedef std::map<std::string, std::string> PropTable;
-
-
-// C-struct wrapper classes
-class CommitInfo
-{
-  private:
-    Revision m_revision;
-    apr_time_t m_date;
-    std::string m_author;
-    std::string m_post_commit_err;
-    std::string m_repos_root;
-
-  public:
-    CommitInfo(const svn_commit_info_t *info);
-};
-
+  return SVN_NO_ERROR;
 }
 
-
-#endif // TYPES_H
+}
+}
