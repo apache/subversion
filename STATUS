@@ -171,9 +171,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r997457
    Votes:
-     +1: cmpilato
-     +1: danielsh (but why weren't other svn_ra_svn_write_cmd_failure()
-                   calls updated?)
+     +1: cmpilato, danielsh
 
  * r996884
    Hide unreadable directory children in mod_dav_svn's GET response.
