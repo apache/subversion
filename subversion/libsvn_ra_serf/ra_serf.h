@@ -673,6 +673,9 @@ typedef struct svn_ra_serf__server_error_t {
   /* Have we seen an error tag? */
   svn_boolean_t in_error;
 
+  /* Have we seen a HTTP "412 Precondition Failed" error? */
+  svn_boolean_t contains_precondition_error;
+
   /* Should we be collecting the XML cdata? */
   svn_boolean_t collect_cdata;
 

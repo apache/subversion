@@ -836,6 +836,7 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
             {
               server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
               server_err->has_xml_response = TRUE;
+              server_err->contains_precondition_error = FALSE;
               server_err->cdata = svn_stringbuf_create("", pool);
               server_err->collect_cdata = FALSE;
               server_err->parser.pool = server_err->error->pool;
@@ -945,6 +946,34 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
   return svn_error_return(err);
 }
 
+/* Given a string like "HTTP/1.1 500 (status)" in BUF, parse out the numeric
+   status code into *STATUS_CODE_OUT.  Ignores leading whitespace. */
+static svn_error_t *
+parse_dav_status(int *status_code_out, svn_stringbuf_t *buf,
+                 apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  const char *token;
+  char *tok_status;
+  svn_stringbuf_t *temp_buf = svn_stringbuf_dup(buf, scratch_pool);
+
+  svn_stringbuf_strip_whitespace(temp_buf);
+  token = apr_strtok(temp_buf->data, " \t\r\n", &tok_status);
+  if (token)
+    token = apr_strtok(NULL, " \t\r\n", &tok_status);
+  if (!token)
+    return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                             "Malformed DAV:status CDATA '%s'",
+                             buf->data);
+  err = svn_cstring_atoi(status_code_out, token);
+  if (err)
+    return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
+                             "Malformed DAV:status CDATA '%s'",
+                             buf->data);
+
+  return SVN_NO_ERROR;
+}
+
 /*
  * Expat callback invoked on a start element tag for a 207 response.
  */
@@ -963,6 +992,14 @@ start_207(svn_ra_serf__xml_parser_t *parser,
       ctx->in_error = TRUE;
     }
   else if (ctx->in_error && strcmp(name.name, "responsedescription") == 0)
+    {
+      /* Start collecting cdata. */
+      svn_stringbuf_setempty(ctx->cdata);
+      ctx->collect_cdata = TRUE;
+    }
+  else if (ctx->in_error &&
+           strcmp(name.namespace, "DAV:") == 0 &&
+           strcmp(name.name, "status") == 0)
     {
       /* Start collecting cdata. */
       svn_stringbuf_setempty(ctx->cdata);
@@ -993,7 +1030,22 @@ end_207(svn_ra_serf__xml_parser_t *parser,
       ctx->collect_cdata = FALSE;
       ctx->error->message = apr_pstrmemdup(ctx->error->pool, ctx->cdata->data,
                                            ctx->cdata->len);
-      ctx->error->apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
+      if (ctx->contains_precondition_error)
+        ctx->error->apr_err = SVN_ERR_FS_PROP_BASEVALUE_MISMATCH;
+      else
+        ctx->error->apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
+    }
+  else if (ctx->in_error &&
+           strcmp(name.namespace, "DAV:") == 0 &&
+           strcmp(name.name, "status") == 0)
+    {
+      int status_code;
+
+      ctx->collect_cdata = FALSE;
+
+      SVN_ERR(parse_dav_status(&status_code, ctx->cdata, parser->pool));
+      if (status_code == 412)
+        ctx->contains_precondition_error = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -1044,6 +1096,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
         {
           server_err->error = svn_error_create(APR_SUCCESS, NULL, NULL);
           server_err->has_xml_response = TRUE;
+          server_err->contains_precondition_error = FALSE;
           server_err->cdata = svn_stringbuf_create("", pool);
           server_err->collect_cdata = FALSE;
           server_err->parser.pool = server_err->error->pool;
