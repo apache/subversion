@@ -76,11 +76,11 @@ make_string_array(const std::vector<std::string> &vec, Pool &pool)
 }
 
 apr_hash_t *
-make_prop_table(const std::map<std::string, std::string> &props, Pool &pool)
+make_prop_table(const PropTable &props, Pool &pool)
 {
   apr_hash_t *hash = apr_hash_make(pool.pool());
 
-  for (std::map<std::string, std::string>::const_iterator it = props.begin();
+  for (PropTable::const_iterator it = props.begin();
        it != props.end(); ++it)
     {
       svn_string_t *str = svn_string_ncreate(it->second.data(),

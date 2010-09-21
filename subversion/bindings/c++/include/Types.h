@@ -20,44 +20,22 @@
  * ====================================================================
  * @endcopyright
  *
- * @file Utility.h
- * @brief Some utility functions
+ * @file Types.h
+ * @brief Some helpful types
  */
 
-#ifndef UTILITY_H
-#define UTILITY_H
+#ifndef TYPES_H
+#define TYPES_H
 
-#include "Types.h"
-#include "Pool.h"
-
-#include "svn_pools.h"
-#include "svn_io.h"
-
-#include <ostream>
-#include <vector>
-#include <string>
 #include <map>
+#include <string>
 
 namespace SVN
 {
 
-namespace Private
-{
-
-namespace Utility
-{
-
-svn_stream_t *
-ostream_wrapper(std::ostream &stream, Pool &pool);
-
-apr_array_header_t *
-make_string_array(const std::vector<std::string> &vec, Pool &pool);
-
-apr_hash_t *
-make_prop_table(const PropTable &props, Pool &pool);
+typedef std::map<std::string, std::string> PropTable;
 
 }
-}
-}
 
-#endif // UTILITY_H
+
+#endif // TYPES_H

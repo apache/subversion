@@ -138,7 +138,7 @@ static svn_error_t *
 test_map_wrapping(apr_pool_t *p)
 {
   Pool pool;
-  std::map<std::string, std::string> map;
+  PropTable map;
 
   map["one"] = "the lonliest number\000\001";
   map["two"] = "as bad as one\000\002";
@@ -146,7 +146,7 @@ test_map_wrapping(apr_pool_t *p)
   apr_hash_t *hash = Private::Utility::make_prop_table(map, pool);
   SVN_TEST_ASSERT(apr_hash_count(hash) == map.size());
 
-  std::map<std::string, std::string>::const_iterator it = map.begin();
+  PropTable::const_iterator it = map.begin();
   for (apr_hash_index_t *hi = apr_hash_first(pool.pool(), hash); hi;
         hi = apr_hash_next(hi), ++it)
     {
