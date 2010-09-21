@@ -290,7 +290,7 @@ maybe_unlock(svn_ra_session_t *session,
              const svn_string_t *mylocktoken,
              apr_pool_t *scratch_pool)
 {
-  const svn_string_t *reposlocktoken;
+  svn_string_t *reposlocktoken;
 
   SVN_ERR(svn_ra_rev_prop(session, 0, SVNSYNC_PROP_LOCK, &reposlocktoken,
                           scratch_pool));
