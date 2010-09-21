@@ -486,17 +486,15 @@ static const char * const TESTING_DATA = (
    "  null, null, null, null, null, "
    "  null, null, null, 0, null, null, '()', 0); "
 #endif
-#ifdef SVN_WC__NODES_not_enabled_yet
+#ifdef SVN_WC__NODES
    "insert into nodes values ("
-   "  1, 'M', null, null, '', 'normal', 'dir', "
-   "  1, null, null, "
-   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
-   "  null); "
+   "  1, 'M', 0, '', null, null, null, 'normal', null, "
+   "  1, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null, '()', "
+   "  null, null, null, null, null);"
    "insert into nodes values ("
-   "  1, 'M/M-a', 'M', 'not-present', 'file', "
-   "  null, null, "
-   "  null, null, null, null, null, "
-   "  null, null, null, 0, null, null, '()', 0); "
+   "  1, 'M/M-a', 1, 'M', null, null, null, 'not-present', null, "
+   "  null, null, 'file', null, null, null, null, '()', "
+   "  null, 0, null, null, null);"
 #endif
    );
 
