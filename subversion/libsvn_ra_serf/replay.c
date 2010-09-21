@@ -184,7 +184,8 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       push_state(parser, ctx, REPORT);
 
       /* Before we can continue, we need the revision properties. */
-      SVN_ERR_ASSERT(svn_ra_serf__propfind_is_done(ctx->prop_ctx));
+      SVN_ERR_ASSERT(!ctx->prop_ctx
+                     || svn_ra_serf__propfind_is_done(ctx->prop_ctx));
 
       /* Create a pool for the commit editor. */
       ctx->dst_rev_pool = svn_pool_create(ctx->src_rev_pool);
@@ -757,13 +758,14 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           /* Request all properties of a certain revision. */
           replay_ctx->report_target = report_target;
           replay_ctx->revs_props = apr_hash_make(replay_ctx->src_rev_pool);
-          replay_ctx->prop_ctx = prop_ctx;
           SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx,
                                              replay_ctx->revs_props, session,
                                              session->conns[0], report_target,
                                              rev,  "0", all_props,
                                              TRUE, NULL,
                                              replay_ctx->src_rev_pool));
+
+          replay_ctx->prop_ctx = prop_ctx;
 
           /* Send the replay report request. */
           handler = apr_pcalloc(replay_ctx->src_rev_pool, sizeof(*handler));
