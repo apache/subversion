@@ -23,7 +23,7 @@ Planned work
   - [DONE] ra_svn: Add a 'change-rev-prop2' verb.
   - [DONE] ra_dav: Extend PROPPATCH: see notes/http-and-webdav/webdav-protocol
   - [DONE] unit test: prop_tests.py 34: atomic_over_ra()
-  - TODO: verify consistent error code: SVN_ERR_FS_PROP_BASEVALUE_MISMATCH
+  - [DONE] verify consistent error code: SVN_ERR_FS_PROP_BASEVALUE_MISMATCH
   - [DONE] use 409 DAV response (within the 207 response). (using 412)
   - [DONE] ra_dav: preserve err->apr_err from server to client (like in ra_svn)
 
@@ -31,6 +31,7 @@ Planned work
 
 * svnsync and svnrdump:
   - TODO: use the new RA API to resolve the race condition in locking.
+  - TODO: review get_lock() cancellation
   - TODO: upgrade svn_ra_change_rev_prop() callers
 
 
