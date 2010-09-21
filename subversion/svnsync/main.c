@@ -284,6 +284,14 @@ check_lib_versions(void)
 }
 
 
+/* Does ERR mean "the current value of the revprop isn't equal to
+   the *OLD_VALUE_P you gave me"?
+ */
+static svn_boolean_t is_atomicity_error(svn_error_t *err)
+{
+  return svn_error_has_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH);
+}
+
 /* Remove the lock on SESSION iff the lock is owned by MYLOCKTOKEN. */
 static svn_error_t *
 maybe_unlock(svn_ra_session_t *session,
@@ -305,13 +313,20 @@ maybe_unlock(svn_ra_session_t *session,
  * given RA SESSION.
  */
 static svn_error_t *
-get_lock(svn_ra_session_t *session, apr_pool_t *pool)
+get_lock(const svn_string_t **lock_string_p,
+         svn_ra_session_t *session,
+         apr_pool_t *pool)
 {
   char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
   svn_string_t *mylocktoken, *reposlocktoken;
   apr_status_t apr_err;
+  svn_boolean_t be_atomic;
   apr_pool_t *subpool;
   int i;
+
+  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                pool));
 
   apr_err = apr_gethostname(hostname_str, sizeof(hostname_str), pool);
   if (apr_err)
@@ -319,6 +334,9 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
 
   mylocktoken = svn_string_createf(pool, "%s:%s", hostname_str,
                                    svn_uuid_generate(pool));
+
+  /* If we succeed, this is what the property will be set to. */
+  *lock_string_p = mylocktoken;
 
   subpool = svn_pool_create(pool);
 
@@ -357,9 +375,27 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
         }
       else if (i < SVNSYNC_LOCK_RETRIES - 1)
         {
+          const svn_string_t *unset = NULL;
+
           /* Except in the very last iteration, try to set the lock. */
-          SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK,
-                                         mylocktoken, subpool));
+          err = svn_ra_change_rev_prop2(session, 0, SVNSYNC_PROP_LOCK,
+                                        be_atomic ? &unset : NULL,
+                                        mylocktoken, subpool);
+
+          if (be_atomic && err && is_atomicity_error(err))
+            /* Someone else has the lock.  Let's loop. */
+            svn_error_clear(err);
+          else if (be_atomic && err == SVN_NO_ERROR)
+            /* We have the lock. 
+
+               However, for compatibility with concurrent svnsync's that don't
+               support atomicity, loop anyway to double-check that they haven't
+               overwritten our lock.
+             */
+            continue;
+          else
+            /* Genuine error, or we aren't atomic and need to loop. */
+            SVN_ERR(err);
         }
     }
 
@@ -407,12 +443,23 @@ with_locked(svn_ra_session_t *session,
             apr_pool_t *pool)
 {
   svn_error_t *err, *err2;
+  const svn_string_t *lock_string;
+  svn_boolean_t be_atomic;
 
-  SVN_ERR(get_lock(session, pool));
+  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                pool));
+
+  SVN_ERR(get_lock(&lock_string, session, pool));
 
   err = func(session, baton, pool);
 
-  err2 = svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK, NULL, pool);
+  err2 = svn_ra_change_rev_prop2(session, 0, SVNSYNC_PROP_LOCK,
+                                 be_atomic ? &lock_string : NULL, NULL, pool);
+  if (is_atomicity_error(err2))
+    err2 = svn_error_quick_wrap(err2,
+                                _("svnsync lock was stolen; can't remove it"));
+
 
   return svn_error_compose_create(err, svn_error_return(err2));
 }
