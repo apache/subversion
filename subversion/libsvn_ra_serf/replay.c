@@ -90,7 +90,7 @@ typedef struct {
   replay_info_t *parent;
 } prop_info_t;
 
-typedef struct {
+typedef struct replay_context_t {
   apr_pool_t *src_rev_pool;
   apr_pool_t *dst_rev_pool;
 
@@ -124,6 +124,9 @@ typedef struct {
 
   /* Keep a reference to the XML parser ctx to report any errors. */
   svn_ra_serf__xml_parser_t *parser_ctx;
+
+  /* The propfind for the revision properties of the current revision */
+  svn_ra_serf__propfind_context_t *prop_ctx;
 
 } replay_context_t;
 
@@ -179,6 +182,9 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       strcmp(name.name, "editor-report") == 0)
     {
       push_state(parser, ctx, REPORT);
+
+      /* Before we can continue, we need the revision properties. */
+      SVN_ERR_ASSERT(svn_ra_serf__propfind_is_done(ctx->prop_ctx));
 
       /* Create a pool for the commit editor. */
       ctx->dst_rev_pool = svn_pool_create(ctx->src_rev_pool);
@@ -751,6 +757,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           /* Request all properties of a certain revision. */
           replay_ctx->report_target = report_target;
           replay_ctx->revs_props = apr_hash_make(replay_ctx->src_rev_pool);
+          replay_ctx->prop_ctx = prop_ctx;
           SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx,
                                              replay_ctx->revs_props, session,
                                              session->conns[0], report_target,
