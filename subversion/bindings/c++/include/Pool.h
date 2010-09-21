@@ -55,7 +55,9 @@ namespace SVN
 
     public:
       Pool();
-      Pool(Pool &parent);
+
+      // Explicit to avoid being called as an assignment operator.
+      explicit Pool(Pool &parent);
       ~Pool();
 
       void *alloc(apr_size_t sz);
