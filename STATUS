@@ -313,17 +313,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r879757, r880320, r943796
-   Let ra_serf work with current serf releases.
-   Justification:
-     Having a dud client is bad. This seems to be the minimal required changes.
-   Backport branch:
-     ^/subversion/branches/1.6.x-r879757
-   Notes:
-     r879757 is the main fix.  r880320 is a follow up fix.  r943796 ensures
-     connection resets are treated the same.
-     This change passes davautocheck as of serf 0.7.0.  (serf 0.4.0-0.6.1
-     will not work with 1.6.x without fix introduced in r1401 in serf.)
-   Votes:
-     +1: jerenkrantz, lgo, rhuijben
