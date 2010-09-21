@@ -28,6 +28,7 @@
 
 #include <exception>
 #include <string>
+#include <map>
 
 namespace SVN
 {
@@ -49,12 +50,16 @@ class Exception : public std::exception
     Exception(svn_error_t *err);
 
     Exception(const std::string &message);
+    Exception(int apr_err, const std::string &message);
+    Exception(int apr_err);
 
     virtual ~Exception() throw ();
 
     virtual const char *what() const throw();
     const std::string &getSource();
     int getAPRErr();
+
+    svn_error_t *c_err();
 };
 
 }

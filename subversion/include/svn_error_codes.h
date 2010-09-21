@@ -1345,6 +1345,11 @@ SVN_ERROR_START
              "SQLite busy at transaction rollback; "
              "resetting all busy SQLite statements to allow rollback")
 
+  /** @since New in 1.x */
+  SVN_ERRDEF(SVN_ERR_CPP_EXCEPTION,
+             SVN_ERR_MISC_CATEGORY_START + 35,
+             "An error has occurred in the C++ bindings")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,

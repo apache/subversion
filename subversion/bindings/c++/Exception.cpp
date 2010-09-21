@@ -88,8 +88,22 @@ Exception::Exception(svn_error_t *err)
 }
 
 Exception::Exception(const std::string &message)
-  : m_description(message)
+  : m_description(message),
+    m_apr_err(SVN_ERR_CPP_EXCEPTION)
 {
+}
+
+Exception::Exception(int apr_err, const std::string &message)
+  : m_description(message),
+    m_apr_err(apr_err)
+{
+}
+
+Exception::Exception(int apr_err)
+  : m_apr_err(apr_err)
+{
+  char buf[256];
+  m_description = svn_strerror(apr_err, buf, sizeof(buf));
 }
 
 Exception::~Exception() throw ()
@@ -112,6 +126,14 @@ int
 Exception::getAPRErr()
 {
   return m_apr_err;
+}
+
+svn_error_t *
+Exception::c_err()
+{
+  return svn_error_create(m_apr_err, NULL,
+                          m_description.size() > 0 ? m_description.c_str()
+                            : NULL);
 }
 
 
