@@ -41,11 +41,16 @@
 #define KEY_NEW_PROPVAL "value"
 
 #define USAGE_MSG \
-  "Usage: %s URL REVISION PROPNAME VALUES_SKEL HTTP_LIBRARY\n" \
+  "Usage: %s URL REVISION PROPNAME VALUES_SKEL HTTP_LIBRARY WANT_ERROR\n" \
   "\n" \
   "VALUES_SKEL is a proplist skel containing pseudo-properties '%s' \n" \
   "and '%s'.  A pseudo-property missing from the skel is interpreted \n" \
-  "as unset.\n"
+  "as unset.\n" \
+  "\n" \
+  "WANT_ERROR is 1 if the propchange is expected to fail due to the atomicity,"\
+  "and 0 if it is expected to succeed.  If the expectation matches reality," \
+  "the exit code shall be zero.\n"
+
 
 
 /* implements svn_auth_simple_prompt_func_t */
@@ -134,12 +139,14 @@ change_rev_prop(const char *url,
                 const svn_string_t *propval,
                 const svn_string_t *old_value,
                 const char *http_library,
+                svn_boolean_t want_error,
                 apr_pool_t *pool)
 {
   svn_ra_callbacks2_t *callbacks;
   svn_ra_session_t *sess;
   apr_hash_t *config;
   svn_boolean_t capable;
+  svn_error_t *err;
 
   SVN_ERR(svn_ra_create_callbacks(&callbacks, pool));
   SVN_ERR(construct_auth_baton(&callbacks->auth_baton, pool));
@@ -152,15 +159,32 @@ change_rev_prop(const char *url,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
   if (capable)
-    SVN_ERR(svn_ra_change_rev_prop2(sess, revision, propname,
-                                    &old_value, propval, pool));
+    {
+      err = svn_ra_change_rev_prop2(sess, revision, propname,
+                                    &old_value, propval, pool);
+
+      if (want_error && err
+          && svn_error_has_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH))
+        {
+          /* Expectation was matched.  Get out. */
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else if (! want_error && ! err)
+        /* Expectation was matched.  Get out. */
+      	return SVN_NO_ERROR;
+      else if (want_error && ! err)
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "An error was expected but not seen");
+      else
+      	/* A real (non-SVN_ERR_FS_PROP_BASEVALUE_MISMATCH) error. */
+      	return svn_error_return(err);
+    }
   else
     /* Running under --server-minor-version? */
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "Server doesn't advertise "
                             "SVN_RA_CAPABILITY_ATOMIC_REVPROPS");
-
-  return SVN_NO_ERROR;
 }
 
 /* Parse SKEL_CSTR according to the description in USAGE_MSG. */
@@ -194,8 +218,9 @@ main(int argc, const char *argv[])
   svn_string_t *old_propval;
   const char *http_library;
   char *digits_end = NULL;
+  svn_boolean_t want_error;
 
-  if (argc != 6)
+  if (argc != 7)
     {
       fprintf(stderr, USAGE_MSG, argv[0], KEY_OLD_PROPVAL, KEY_NEW_PROPVAL);
       exit(1);
@@ -216,6 +241,7 @@ main(int argc, const char *argv[])
   propname = argv[3];
   SVN_INT_ERR(extract_values_from_skel(&old_propval, &propval, argv[4], pool));
   http_library = argv[5];
+  want_error = !strcmp(argv[6], "1");
 
   if ((! SVN_IS_VALID_REVNUM(revision)) || (! digits_end) || *digits_end)
     SVN_INT_ERR(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -223,7 +249,7 @@ main(int argc, const char *argv[])
 
   /* Do something. */
   err = change_rev_prop(url, revision, propname, propval, old_propval,
-                        http_library, pool);
+                        http_library, want_error, pool);
   if (err)
     {
       svn_handle_error2(err, stderr, FALSE, "atomic-ra-revprop-change: ");

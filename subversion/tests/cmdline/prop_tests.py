@@ -2008,10 +2008,9 @@ def atomic_over_ra(sbox):
 
   def FAILS_WITH_BPV(not_the_old_value, proposed_value):
     if svntest.main.server_has_atomic_revprop():
-      expected_stderr = ".*revprop 'flower' has unexpected value.*"
       svntest.actions.run_and_verify_atomic_ra_revprop_change(
-         None, None, expected_stderr, 1, repo_url, 0, 'flower',
-         not_the_old_value, proposed_value)
+         None, None, [], 0, repo_url, 0, 'flower',
+         not_the_old_value, proposed_value, True)
     else:
       expect_old_server_fail(not_the_old_value, proposed_value)
 
@@ -2019,7 +2018,7 @@ def atomic_over_ra(sbox):
     if svntest.main.server_has_atomic_revprop():
       svntest.actions.run_and_verify_atomic_ra_revprop_change(
          None, None, [], 0, repo_url, 0, 'flower',
-         yes_the_old_value, proposed_value)
+         yes_the_old_value, proposed_value, False)
     else:
       expect_old_server_fail(yes_the_old_value, proposed_value)
 
