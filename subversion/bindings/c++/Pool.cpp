@@ -33,10 +33,10 @@ namespace SVN {
 
 Pool::Pool()
 {
-  m_pool = svn_pool_create(SVN::Private::Core::getCore()->getGlobalPool());
+  m_pool = svn_pool_create(Private::Core::getCore()->getGlobalPool());
 }
 
-Pool::Pool(SVN::Pool &parent)
+Pool::Pool(Pool &parent)
 {
   m_pool = svn_pool_create(parent.pool());
 }
