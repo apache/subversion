@@ -756,6 +756,11 @@ make_subcommand_baton(opt_baton_t *opt_baton,
   return b;
 }
 
+static svn_error_t *
+open_target_session(svn_ra_session_t **to_session_p,
+                    subcommand_baton_t *baton,
+                    apr_pool_t *pool);
+
 
 /*** `svnsync init' ***/
 
@@ -895,9 +900,7 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
                              _("Path '%s' is not a URL"), from_url);
 
   baton = make_subcommand_baton(opt_baton, to_url, from_url, 0, 0, pool);
-  SVN_ERR(svn_ra_open4(&to_session, NULL, baton->to_url, NULL,
-                       &(baton->sync_callbacks), baton, baton->config, pool));
-  SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
+  SVN_ERR(open_target_session(&to_session, baton, pool));
   if (opt_baton->disable_locking)
     SVN_ERR(do_initialize(to_session, baton, pool));
   else
@@ -974,6 +977,23 @@ open_source_session(svn_ra_session_t **from_session,
   SVN_ERR(svn_ra_open4(from_session, NULL, from_url, from_uuid_str->data,
                        callbacks, baton, config, pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Set *TARGET_SESSION_P to an RA session associated with the target
+ * repository of the synchronization.
+ */
+static svn_error_t *
+open_target_session(svn_ra_session_t **target_session_p,
+                    subcommand_baton_t *baton,
+                    apr_pool_t *pool)
+{
+  svn_ra_session_t *target_session;
+  SVN_ERR(svn_ra_open4(&target_session, NULL, baton->to_url, NULL,
+                       &(baton->sync_callbacks), baton, baton->config, pool));
+  SVN_ERR(check_if_session_is_at_repos_root(target_session, baton->to_url, pool));
+
+  *target_session_p = target_session;
   return SVN_NO_ERROR;
 }
 
@@ -1395,9 +1415,7 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
     }
 
   baton = make_subcommand_baton(opt_baton, to_url, from_url, 0, 0, pool);
-  SVN_ERR(svn_ra_open4(&to_session, NULL, baton->to_url, NULL,
-                       &(baton->sync_callbacks), baton, baton->config, pool));
-  SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
+  SVN_ERR(open_target_session(&to_session, baton, pool));
   if (opt_baton->disable_locking)
     SVN_ERR(do_synchronize(to_session, baton, pool));
   else
@@ -1631,9 +1649,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
       
   baton = make_subcommand_baton(opt_baton, to_url, from_url,
                                 start_rev, end_rev, pool);
-  SVN_ERR(svn_ra_open4(&to_session, NULL, baton->to_url, NULL,
-                       &(baton->sync_callbacks), baton, baton->config, pool));
-  SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
+  SVN_ERR(open_target_session(&to_session, baton, pool));
   if (opt_baton->disable_locking)
     SVN_ERR(do_copy_revprops(to_session, baton, pool));
   else
@@ -1675,9 +1691,7 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
 
   /* Open an RA session to the mirror repository URL. */
   baton = make_subcommand_baton(opt_baton, to_url, NULL, 0, 0, pool);
-  SVN_ERR(svn_ra_open4(&to_session, NULL, baton->to_url, NULL,
-                       &(baton->sync_callbacks), baton, baton->config, pool));
-  SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
+  SVN_ERR(open_target_session(&to_session, baton, pool));
 
   /* Verify that the repos has been initialized for synchronization. */
   SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
