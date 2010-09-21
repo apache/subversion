@@ -299,12 +299,18 @@ maybe_unlock(svn_ra_session_t *session,
              apr_pool_t *scratch_pool)
 {
   svn_string_t *reposlocktoken;
+  svn_boolean_t be_atomic;
+
+  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                scratch_pool));
 
   SVN_ERR(svn_ra_rev_prop(session, 0, SVNSYNC_PROP_LOCK, &reposlocktoken,
                           scratch_pool));
   if (reposlocktoken && strcmp(reposlocktoken->data, mylocktoken->data) == 0)
-    SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK, NULL,
-                                   scratch_pool));
+    SVN_ERR(svn_ra_change_rev_prop2(session, 0, SVNSYNC_PROP_LOCK, 
+                                    be_atomic ? &mylocktoken : NULL, NULL,
+                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
