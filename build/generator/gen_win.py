@@ -892,6 +892,7 @@ class WinGeneratorBase(GeneratorBase):
 
     fakeincludes = [ self.path("subversion/include"),
                      self.path("subversion"),
+                     self.path("subversion/bindings/c++/include"),
                      self.apath(self.apr_path, "include"),
                      self.apath(self.apr_util_path, "include") ]
 
