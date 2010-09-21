@@ -116,7 +116,7 @@ Candidate changes:
     group.
     The rest of the issue #3242 fixes have already been backported in r934494.
    Votes:
-     +1: pburba
+     +1: pburba, stsp
 
  * r948512, r949307
    Fix issue #3646 'record-only merges create self-referential mergeinfo'.
