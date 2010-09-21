@@ -464,7 +464,8 @@ with_locked(svn_ra_session_t *session,
                                  be_atomic ? &lock_string : NULL, NULL, pool);
   if (is_atomicity_error(err2))
     err2 = svn_error_quick_wrap(err2,
-                                _("svnsync lock was stolen; can't remove it"));
+                                _("svnsync's lock was stolen; "
+                                  "can't remove it"));
 
 
   return svn_error_compose_create(err, svn_error_return(err2));
