@@ -284,6 +284,23 @@ check_lib_versions(void)
 }
 
 
+/* Remove the lock on SESSION iff the lock is owned by MYLOCKTOKEN. */
+static svn_error_t *
+maybe_unlock(svn_ra_session_t *session,
+             const svn_string_t *mylocktoken,
+             apr_pool_t *scratch_pool)
+{
+  const svn_string_t *reposlocktoken;
+
+  SVN_ERR(svn_ra_rev_prop(session, 0, SVNSYNC_PROP_LOCK, &reposlocktoken,
+                          scratch_pool));
+  if (reposlocktoken && strcmp(reposlocktoken->data, mylocktoken->data) == 0)
+    SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK, NULL,
+                                   scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Acquire a lock (of sorts) on the repository associated with the
  * given RA SESSION. This lock is just a revprop change attempt in a
  * time-delay loop. This function is duplicated by svnrdump in
@@ -314,12 +331,21 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
 #define SVNSYNC_LOCK_RETRIES 10
   for (i = 0; i < SVNSYNC_LOCK_RETRIES; ++i)
     {
+      svn_error_t *err;
+
       svn_pool_clear(subpool);
-      SVN_ERR(check_cancel(NULL));
+
+      /* If we're cancelled, don't leave a stray lock behind. */
+      err = check_cancel(NULL);
+      if (err && err->apr_err == SVN_ERR_CANCELLED)
+      	return svn_error_compose_create(
+      	             maybe_unlock(session, mylocktoken, subpool),
+      	             err);
+      else
+      	SVN_ERR(err);
 
       SVN_ERR(svn_ra_rev_prop(session, 0, SVNSYNC_PROP_LOCK, &reposlocktoken,
                               subpool));
-
       if (reposlocktoken)
         {
           /* Did we get it?   If so, we're done, otherwise we sleep. */
