@@ -23,9 +23,9 @@ Planned work
   - [DONE] ra_svn: Add a 'change-rev-prop2' verb.
   - [DONE] ra_dav: Extend PROPPATCH: see notes/http-and-webdav/webdav-protocol
   - [DONE] unit test: prop_tests.py 34: atomic_over_ra()
-  - TODO: ensure consistent error code (replacing SVN_ERR_BAD_PROPERTY_VALUE)
-  - TODO: use "409 Conflict" DAV response (within the 207 Multi-Status response)
-  - TODO: ra_dav: preserve err->apr_err from server to client (like in ra_svn)
+  - TODO: verify consistent error code: SVN_ERR_FS_PROP_BASEVALUE_MISMATCH
+  - [DONE] use 409 DAV response (within the 207 response). (using 412)
+  - [DONE] ra_dav: preserve err->apr_err from server to client (like in ra_svn)
 
 * [DONE] client support: svn_client_revprop_set2()
 
@@ -52,7 +52,7 @@ mod_dav_svn only has a generic SVN_ERR_RA_DAV_* error code (despite having the
 correct error message).
 
 * TODO: verify ra_local and ra_svn claims above
-* TODO: extend ra_dav to transmit more error information over the wire
+* NONEED: extend ra_dav to transmit more error information over the wire
   plan1:
     - nest a "<S:errcode>42</S:errcode>" tag inside the <D:responsedescription> tag.
     - mod_dav_svn implementation?  
@@ -62,6 +62,7 @@ correct error message).
     - preserve just the outermost err->apr_err of the error chain
   plan3:
     - return s/500/412/ in the 207 body; ref: Jon Foster's [PATCH 3/3]
+    - no need to transmit error chains or apr_err codes; special-cased.
 
 
 Potential work
@@ -69,8 +70,6 @@ Potential work
 
 * svn_log__ interface
   - extend svn_log__change_rev_prop() with a "was old value provided?" boolean
-
-* [needsdesign] specific error code for the "expectation didn't match" condition?
 
 * repos layer hooks interface
   - pass the old value to pre-revprop-change
