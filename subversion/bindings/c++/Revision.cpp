@@ -31,6 +31,7 @@ const Revision Revision::COMMITTED(svn_opt_revision_committed);
 const Revision Revision::PREVIOUS(svn_opt_revision_previous);
 const Revision Revision::BASE(svn_opt_revision_base);
 const Revision Revision::WORKING(svn_opt_revision_working);
+const Revision Revision::UNSPECIFIED(svn_opt_revision_unspecified);
 
 Revision::Revision(svn_opt_revision_kind kind)
 {

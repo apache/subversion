@@ -61,6 +61,7 @@ namespace SVN
       const static Revision PREVIOUS;
       const static Revision BASE;
       const static Revision WORKING;
+      const static Revision UNSPECIFIED;
   };
 }
 
