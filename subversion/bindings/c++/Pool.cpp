@@ -36,7 +36,7 @@ Pool::Pool()
   m_pool = svn_pool_create(SVN::Private::Core::getCore()->getGlobalPool());
 }
 
-Pool::Pool(SVN::Pool::Pool &parent)
+Pool::Pool(SVN::Pool &parent)
 {
   m_pool = svn_pool_create(parent.pool());
 }
