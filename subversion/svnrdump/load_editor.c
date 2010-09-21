@@ -182,6 +182,8 @@ new_node_record(void **node_baton,
   void *commit_edit_baton;
   char *ancestor_path;
   apr_array_header_t *residual_open_path;
+  char *residual_compose_path;
+  char *relpath_compose;
   const char *nb_dirname;
   apr_size_t residual_close_count;
   int i;
@@ -304,8 +306,14 @@ new_node_record(void **node_baton,
         
       for (i = 0; i < residual_open_path->nelts; i ++)
         {
-          SVN_ERR(commit_editor->open_directory(APR_ARRAY_IDX(residual_open_path,
-                                                              i, const char *),
+          relpath_compose =
+            svn_relpath_join(rb->db->relpath,
+                             APR_ARRAY_IDX(residual_open_path, i, const char *),
+                             rb->pool);
+          residual_compose_path =
+            svn_relpath_skip_ancestor(ancestor_path,
+                                      relpath_compose);
+          SVN_ERR(commit_editor->open_directory(residual_compose_path,
                                                 rb->db->baton,
                                                 rb->rev - 1,
                                                 rb->pool, &child_baton));
@@ -313,10 +321,7 @@ new_node_record(void **node_baton,
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
-          child_db->relpath = svn_relpath_join(rb->db->relpath,
-                                               APR_ARRAY_IDX(residual_open_path,
-                                                             i, const char *),
-                                               rb->pool);
+          child_db->relpath = relpath_compose;
           child_db->parent = rb->db;
           rb->db = child_db;
         }
