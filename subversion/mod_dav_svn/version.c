@@ -1015,22 +1015,22 @@ deliver_report(request_rec *r,
 
   if (doc->root->ns == ns)
     {
-      const char *cleaned_uri, *relative_path, *repos_path;
-      int trailing_slash;
-      /* During SVNPathAuthz short_circuit
-       * resource->info->repos->repo_name becomes NULL.*/
+      /* If the "SVNPathAuthz short_circuit" directive is used,
+         resource->info->repos->repo_name becomes NULL.  */
       if (resource->info->repos->repo_name == NULL)
         {
+          const char *cleaned_uri, *relative_path, *repos_path;
+          int trailing_slash;
           dav_error *err;
+
           err = dav_svn_split_uri(r, r->uri, dav_svn__get_root_dir(r),
                                   &cleaned_uri, &trailing_slash,
                                   &(resource->info->repos->repo_name), 
                                   &relative_path, &repos_path);
           if (err)
-            {
-              return err;
-            }
+            return err;
         }
+
       /* ### note that these report names should have symbols... */
 
       if (strcmp(doc->root->name, "update-report") == 0)
