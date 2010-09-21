@@ -1349,7 +1349,9 @@ Java_org_apache_subversion_javahl_SVNClient_streamFileContent
     }
   catch (SVN::Exception ex)
     {
-      // Throw a matching Java exception
+      JNIUtil::throwNativeException(JAVA_PACKAGE"/ClientException",
+                                    ex.what(), ex.getSource().c_str(),
+                                    ex.getAPRErr());
     }
 }
 
