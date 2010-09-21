@@ -1053,7 +1053,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
           server_err->parser.cdata = cdata_207;
           server_err->parser.done = &ctx->done;
           server_err->parser.ignore_errors = TRUE;
-    }
+        }
       else
         {
           ctx->done = TRUE;

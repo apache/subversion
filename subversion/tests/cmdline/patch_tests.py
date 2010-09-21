@@ -3189,7 +3189,7 @@ def patch_reverse_revert(sbox):
   ]
 
   # Set mu contents
-  svntest.main.file_write(mu_path, ''.join(mu_contents_pre_patch))
+  svntest.main.file_write(mu_path, ''.join(mu_contents_pre_patch), 'wb')
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu'       : Item(verb='Sending'),
     })
@@ -3256,7 +3256,7 @@ def patch_reverse_revert(sbox):
     "-This is the file 'beta'.\n",
   ]
 
-  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
 
   gamma_contents = "It is the file 'gamma'.\n"
   iota_contents = "This is the file 'iota'.\nSome more bytes\n"

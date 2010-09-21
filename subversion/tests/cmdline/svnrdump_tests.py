@@ -41,6 +41,18 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 Wimp = svntest.testcase.Wimp
 
+## Mismatched headers during dumping operation
+# Text-copy-source-* and *-sha1 headers are not provided by the RA
+# layer. `svnadmin dump` is able to provide them because it works on
+# the FS layer. Also, svnrdump attaches "Prop-delta: true" with
+# everything whether it's really a delta or a new prop (delta from
+# /dev/null). This is really harmless, but `svnadmin dump` contains
+# the logic for differentiating between these two cases.
+
+mismatched_headers_re = \
+    "Prop-delta: |Text-content-sha1: |Text-copy-source-md5: |" \
+    "Text-copy-source-sha1: |Text-delta-base-sha1: .*"
+
 ######################################################################
 # Helper routines
 
@@ -80,7 +92,8 @@ def run_dump_test(sbox, dumpfile_name):
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile)
+    "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
+    None, mismatched_headers_re)
 
 def run_load_test(sbox, dumpfile_name):
   """Load a dumpfile using 'svnrdump load', dump it with 'svnadmin
@@ -125,7 +138,7 @@ def run_load_test(sbox, dumpfile_name):
 # Tests
 
 def basic_dump(sbox):
-  "dump the standard sbox repos"
+  "dump: standard sbox repos"
   sbox.build(read_only = True, create_wc = False)
 
   out = \
@@ -137,11 +150,11 @@ def basic_dump(sbox):
     raise svntest.Failure('No valid output')
 
 def revision_0_dump(sbox):
-  "dump revision zero"
+  "dump: revision zero"
   run_dump_test(sbox, "revision-0.dump")
 
 def revision_0_load(sbox):
-  "load revision zero"
+  "load: revision zero"
   run_load_test(sbox, "revision-0.dump")
 
 # skeleton.dump repository layout
@@ -155,17 +168,89 @@ def revision_0_load(sbox):
 #       README      (Added r6)
 
 def skeleton_load(sbox):
-  "skeleton repository"
+  "load: skeleton repository"
   run_load_test(sbox, "skeleton.dump")
 
 def copy_and_modify_dump(sbox):
-  "copy and modify dump"
+  "dump: copy and modify"
   run_dump_test(sbox, "copy-and-modify.dump")
 
 def copy_and_modify_load(sbox):
-  "copy and modify load"
+  "load: copy and modify"
   run_load_test(sbox, "copy-and-modify.dump")
   
+def no_author_dump(sbox):
+  "dump: copy revs with no svn:author revprops"
+  run_dump_test(sbox, "no-author.dump")
+
+def no_author_load(sbox):
+  "load: copy revs with no svn:author revprops"
+  run_load_test(sbox, "no-author.dump")
+
+def copy_from_previous_version_and_modify_dump(sbox):
+  "dump: copy from previous version and modify"
+  run_dump_test(sbox, "copy-from-previous-version-and-modify.dump")
+  
+def copy_from_previous_version_and_modify_load(sbox):
+  "load: copy from previous version and modify"
+  run_load_test(sbox, "copy-from-previous-version-and-modify.dump")
+
+def modified_in_place_dump(sbox):
+  "dump: modified in place"
+  run_dump_test(sbox, "modified-in-place.dump")
+
+def modified_in_place_load(sbox):
+  "load: modified in place"
+  run_load_test(sbox, "modified-in-place.dump")
+
+def move_and_modify_in_the_same_revision_dump(sbox):
+  "dump: move parent & modify child file in same rev"
+  run_dump_test(sbox, "move-and-modify.dump")
+
+def move_and_modify_in_the_same_revision_load(sbox):
+  "load: move parent & modify child file in same rev"
+  run_load_test(sbox, "move-and-modify.dump")
+
+def tag_empty_trunk_dump(sbox):
+  "dump: tag empty trunk"
+  run_dump_test(sbox, "tag-empty-trunk.dump")
+
+def tag_empty_trunk_load(sbox):
+  "load: tag empty trunk"
+  run_load_test(sbox, "tag-empty-trunk.dump")
+
+def dir_prop_change_dump(sbox):
+  "dump: directory property changes"
+  run_dump_test(sbox, "dir-prop-change.dump")
+  
+def dir_prop_change_load(sbox):
+  "load: directory property changes"
+  run_load_test(sbox, "dir-prop-change.dump")
+
+def copy_parent_modify_prop_dump(sbox):
+  "dump: copy parent and modify prop"
+  run_dump_test(sbox, "copy-parent-modify-prop.dump")
+
+def copy_parent_modify_prop_load(sbox):
+  "load: copy parent and modify prop"
+  run_load_test(sbox, "copy-parent-modify-prop.dump")
+
+def copy_revprops_dump(sbox):
+  "dump: copy revprops other than svn:*"
+  run_dump_test(sbox, "revprops.dump")
+
+def copy_revprops_load(sbox):
+  "load: copy revprops other than svn:*"
+  run_load_test(sbox, "revprops.dump")
+
+def url_encoding_dump(sbox):
+  "dump: url encoding issues"
+  run_dump_test(sbox, "url-encoding-bug.dump")
+
+def url_encoding_load(sbox):
+  "load: url encoding issues"
+  run_load_test(sbox, "url-encoding-bug.dump")
+
 ########################################################################
 # Run the tests
 
@@ -176,8 +261,26 @@ test_list = [ None,
               revision_0_dump,
               revision_0_load,
               skeleton_load,
+              copy_and_modify_dump,
               copy_and_modify_load,
-              Wimp("Need to fix headers in RA layer", copy_and_modify_dump),
+              copy_from_previous_version_and_modify_dump,
+              copy_from_previous_version_and_modify_load,
+              modified_in_place_dump,
+              modified_in_place_load,
+              tag_empty_trunk_dump,
+              tag_empty_trunk_load,
+              dir_prop_change_dump,
+              dir_prop_change_load,
+              copy_parent_modify_prop_dump,
+              copy_parent_modify_prop_load,
+              url_encoding_dump,
+              url_encoding_load,
+              copy_revprops_dump,
+              Wimp("TODO", copy_revprops_load),
+              no_author_dump,
+              no_author_load,
+              Wimp("TODO", move_and_modify_in_the_same_revision_dump),
+              Wimp("TODO", move_and_modify_in_the_same_revision_load),
              ]
 
 if __name__ == '__main__':

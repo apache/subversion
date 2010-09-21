@@ -738,6 +738,12 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 48,
              "Filesystem has no such checksum-representation index record")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH,
+             SVN_ERR_FS_CATEGORY_START + 49,
+             "Property value in filesystem differs from the provided "
+             "base value")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
