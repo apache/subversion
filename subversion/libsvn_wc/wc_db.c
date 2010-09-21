@@ -1457,15 +1457,34 @@ which_trees_exist(svn_boolean_t *base_exists,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_nodes;
+  svn_boolean_t have_nodes_row;
+#endif
 
   *base_exists = FALSE;
   *working_exists = FALSE;
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_DETERMINE_TREE_FOR_RECORDING));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, sdb,
+                                    STMT_DETERMINE_TREE_FOR_RECORDING_1));
+  SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+  stmt = stmt_nodes;
+  have_row = have_nodes_row;
+#endif
+#endif
+
   if (have_row)
     {
       int value = svn_sqlite__column_int(stmt, 0);
@@ -8355,7 +8374,11 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__bind_text(stmt, 3, incomplete ? "incomplete" : "normal"));
   SVN_ERR(svn_sqlite__update(&affected_node_rows, stmt));
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR_ASSERT(affected_rows == affected_node_rows);
+#else
+  affected_rows = affected_node_rows;
+#endif
 #endif
 
   if (affected_rows > 0)
