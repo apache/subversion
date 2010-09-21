@@ -608,6 +608,10 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
                                      stmt, data_stmt,
                                      current_relpath,
                                      scratch_pool));
+      SVN_ERR(svn_sqlite__reset(data_stmt));
+#else
+      have_row = have_data_row;
+      stmt = data_stmt;
 #endif
 #endif
 
@@ -633,7 +637,6 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
             }
 
 #ifdef SVN_WC__NODES
-          SVN_ERR(svn_sqlite__reset(data_stmt));
 #endif
           return svn_error_compose_create(err, svn_sqlite__reset(stmt));
         }
@@ -654,14 +657,8 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
                                                                       NULL),
                                               relpath_suffix,
                                               result_pool);
-#ifdef SVN_WC__NODES
-          SVN_ERR(svn_sqlite__reset(data_stmt));
-#endif
           return svn_sqlite__reset(stmt);
         }
-#ifdef SVN_WC__NODES
-      SVN_ERR(svn_sqlite__reset(data_stmt));
-#endif
 #ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__reset(stmt));
 #endif
