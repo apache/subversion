@@ -97,17 +97,15 @@ make_dir_baton(const char *path,
   struct dir_baton *new_db = apr_pcalloc(pool, sizeof(*new_db));
   const char *abspath;
 
-  /* Disallow a path relative to nothing. */
-  SVN_ERR_ASSERT_NO_RETURN(!path || pb);
-
   /* Construct the full path of this node. */
   if (pb)
     abspath = svn_uri_join("/", path, pool);
   else
-    abspath = "/";
+    abspath = apr_pstrdup(pool, "/");
 
-  /* Remove leading slashes from copyfrom paths. */
-  if (copyfrom_path && strcmp(copyfrom_path, "/"))
+  /* Strip leading slash from copyfrom_path so that the path is
+     canonical and svn_relpath_join can be used */
+  if (copyfrom_path)
     copyfrom_path = ((*copyfrom_path == '/') ?
                      copyfrom_path + 1 : copyfrom_path);
 
@@ -349,7 +347,8 @@ delete_entry(const char *path,
 
   /* Add this path to the deleted_entries of the parent directory
      baton. */
-  apr_hash_set(pb->deleted_entries, path, APR_HASH_KEY_STRING, pb);
+  apr_hash_set(pb->deleted_entries, apr_pstrdup(pb->eb->pool, path),
+               APR_HASH_KEY_STRING, pb);
 
   return SVN_NO_ERROR;
 }
