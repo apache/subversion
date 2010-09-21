@@ -23,12 +23,16 @@
 
 #include "../svn_test.h"
 
+#include "svn_string.h"
+
 #include "Pool.h"
 #include "Revision.h"
 #include "Common.h"
 #include "../Utility.h"
 
 #include <sstream>
+#include <string>
+#include <vector>
 
 using namespace SVN;
 
@@ -105,6 +109,61 @@ test_exceptions(apr_pool_t *p)
   return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
 }
 
+static svn_error_t *
+test_vector_wrapping(apr_pool_t *p)
+{
+  Pool pool;
+  std::vector<std::string> vec;
+
+  vec.push_back("Mary");
+  vec.push_back("had");
+  vec.push_back("a");
+  vec.push_back("little");
+  vec.push_back("lamb");
+
+  apr_array_header_t *arr = Private::Utility::make_string_array(vec, pool);
+  SVN_TEST_ASSERT(arr->nelts == vec.size());
+
+  std::vector<std::string>::const_iterator it = vec.begin();
+  for (int i = 0; i < arr->nelts; ++i, ++it)
+    {
+      const char *str = APR_ARRAY_IDX(arr, i, const char *);
+      SVN_TEST_ASSERT(*it == str);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_map_wrapping(apr_pool_t *p)
+{
+  Pool pool;
+  std::map<std::string, std::string> map;
+
+  map["one"] = "the lonliest number\000\001";
+  map["two"] = "as bad as one\000\002";
+
+  apr_hash_t *hash = Private::Utility::make_prop_table(map, pool);
+  SVN_TEST_ASSERT(apr_hash_count(hash) == map.size());
+
+  std::map<std::string, std::string>::const_iterator it = map.begin();
+  for (apr_hash_index_t *hi = apr_hash_first(pool.pool(), hash); hi;
+        hi = apr_hash_next(hi), ++it)
+    {
+      const char *key = 
+                reinterpret_cast<const char *>(svn__apr_hash_index_key(hi));
+      const std::string &map_val = it->second;
+      svn_string_t *str1 =
+                reinterpret_cast<svn_string_t *>(svn__apr_hash_index_val(hi));
+      svn_string_t *str2 =
+                svn_string_ncreate(map_val.data(), map_val.size(), pool.pool());
+
+      SVN_TEST_ASSERT(svn_string_compare(str1, str2));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -118,5 +177,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test stream wrapping"),
     SVN_TEST_PASS2(test_exceptions,
                    "test error and exception handling"),
+    SVN_TEST_PASS2(test_vector_wrapping,
+                   "test various vector to array transforms"),
+    SVN_TEST_PASS2(test_map_wrapping,
+                   "test various map to hash transforms"),
     SVN_TEST_NULL
   };

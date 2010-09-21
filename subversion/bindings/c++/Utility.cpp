@@ -27,6 +27,9 @@
 #include "Utility.h"
 #include "Pool.h"
 
+#include <map>
+#include <iostream>
+
 
 static svn_error_t *
 write_handler_ostream(void *baton, const char *data, apr_size_t *len)
@@ -55,6 +58,37 @@ ostream_wrapper(std::ostream &ostream, Pool &pool)
   svn_stream_set_write(stream, write_handler_ostream);
 
   return stream;
+}
+
+apr_array_header_t *
+make_string_array(const std::vector<std::string> &vec, Pool &pool)
+{
+  apr_array_header_t *arr = apr_array_make(pool.pool(), vec.size(),
+                                           sizeof(const char *));
+
+  for (std::vector<std::string>::const_iterator it = vec.begin();
+       it < vec.end(); ++it)
+    {
+      APR_ARRAY_PUSH(arr, const char *) = it->c_str();
+    }
+
+  return arr;
+}
+
+apr_hash_t *
+make_prop_table(const std::map<std::string, std::string> &props, Pool &pool)
+{
+  apr_hash_t *hash = apr_hash_make(pool.pool());
+
+  for (std::map<std::string, std::string>::const_iterator it = props.begin();
+       it != props.end(); ++it)
+    {
+      svn_string_t *str = svn_string_ncreate(it->second.data(),
+                                             it->second.size(), pool.pool());
+      apr_hash_set(hash, it->first.c_str(), APR_HASH_KEY_STRING, str);
+    }
+
+  return hash;
 }
 
 }
