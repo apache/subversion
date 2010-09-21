@@ -31,7 +31,6 @@ Planned work
 
 * svnsync and svnrdump:
   - TODO: use the new RA API to resolve the race condition in locking.
-  - TODO: review get_lock() cancellation
   - TODO: upgrade svn_ra_change_rev_prop() callers
 
 
