@@ -60,7 +60,7 @@ dav_svn__allow_read(request_rec *r,
   allow_read_bypass = dav_svn__get_pathauthz_bypass(r);
   if (allow_read_bypass != NULL)
     {
-      if (allow_read_bypass(r, path, repos->repo_name) == OK)
+      if (allow_read_bypass(r, path, repos->repo_basename) == OK)
         return TRUE;
       else
         return FALSE;
