@@ -318,7 +318,7 @@ Veto-blocked changes:
      A new fix for this bug was implemented in r1000060, and this
      original one reverted.
    Votes:
-     +1: kameshj, rhuijben
+     +1: kameshj
      -1: cmpilato ("Fix is incorrect -- 'repo_name' is not the basename of
                     the repository, but the value from SVNReposName.")
 
