@@ -280,8 +280,7 @@ test_list = [ None,
               no_author_dump,
               no_author_load,
               move_and_modify_in_the_same_revision_dump,
-              Wimp("TODO", move_and_modify_in_the_same_revision_load,
-                   svntest.main.is_ra_type_file),
+              move_and_modify_in_the_same_revision_load,
              ]
 
 if __name__ == '__main__':
