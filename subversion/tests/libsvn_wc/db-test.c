@@ -419,7 +419,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-d', 1, 'J', 2, 'moved/file', 2, 'normal', null,"
-  "  1, null, 'file', 2, " TIME_2s ", '" AUTHOR_2 "', '$md5 $ " MD5_1 " ',"
+  "  1, null, 'file', 2, " TIME_2s ", '" AUTHOR_2 "', '$md5 $" MD5_1 "',"
   " '()', 10, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'not-present', null,"
