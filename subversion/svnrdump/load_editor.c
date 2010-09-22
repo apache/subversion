@@ -182,7 +182,6 @@ new_node_record(void **node_baton,
   void *commit_edit_baton;
   char *ancestor_path;
   apr_array_header_t *residual_open_path;
-  char *residual_compose_path;
   char *relpath_compose;
   const char *nb_dirname;
   apr_size_t residual_close_count;
@@ -310,10 +309,7 @@ new_node_record(void **node_baton,
             svn_relpath_join(rb->db->relpath,
                              APR_ARRAY_IDX(residual_open_path, i, const char *),
                              rb->pool);
-          residual_compose_path =
-            svn_relpath_skip_ancestor(ancestor_path,
-                                      relpath_compose);
-          SVN_ERR(commit_editor->open_directory(residual_compose_path,
+          SVN_ERR(commit_editor->open_directory(relpath_compose,
                                                 rb->db->baton,
                                                 rb->rev - 1,
                                                 rb->pool, &child_baton));
