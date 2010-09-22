@@ -59,6 +59,18 @@
 #include "Revision.h"
 #include "Common.h"
 
+#define JNI_CPP_ERR(expr)                                               \
+  do {                                                                  \
+    try {                                                               \
+      (expr);                                                           \
+    } catch (SVN::Exception ex) {                                       \
+      JNIUtil::throwNativeException(JAVA_PACKAGE"/ClientException",     \
+                                    ex.what(), ex.getSource().c_str(),  \
+                                    ex.getAPRErr());                    \
+      return;                                                           \
+    }                                                                   \
+  } while (0)
+
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNClient_ctNative
 (JNIEnv *env, jobject jthis)
@@ -1354,17 +1366,8 @@ Java_org_apache_subversion_javahl_SVNClient_streamFileContent
   if (JNIUtil::isExceptionThrown())
     return;
 
-  try
-    {
-      cl->getClient().cat(dataOut.to_ostream(), path.str(), revision,
-                          pegRevision);
-    }
-  catch (SVN::Exception ex)
-    {
-      JNIUtil::throwNativeException(JAVA_PACKAGE"/ClientException",
-                                    ex.what(), ex.getSource().c_str(),
-                                    ex.getAPRErr());
-    }
+  JNI_CPP_ERR(cl->getClient().cat(dataOut.to_ostream(), path.str(), revision,
+              pegRevision));
 }
 
 JNIEXPORT jstring JNICALL
