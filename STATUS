@@ -148,16 +148,6 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r989658
-   SVNPathAuthz short_circuit ignores the authz path rules with repo prefix.
-   This fixes issue 3695.
-   Justification:
-     Having broken authz is bad.
-   Votes:
-     +1: kameshj, rhuijben
-     +0: cmpilato ("Why is repo_name NULL?  Why not populate it in some more
-                    central place instead of down in the REPORT handler?")
-
  * r997457, r997466
    Fix some error transmission problems in svnserve.
    Justification:
@@ -309,6 +299,16 @@ Veto-blocked changes:
            svn_io_dir_walk() which we should not do in a back-port.
            Discussing on list.)
      -1: cmpilato (Changes semantics of svn_io_dir_walk()).
+
+ * r989658
+   SVNPathAuthz short_circuit ignores the authz path rules with repo prefix.
+   This fixes issue 3695.
+   Justification:
+     Having broken authz is bad.
+   Votes:
+     +1: kameshj, rhuijben
+     -1: cmpilato ("Fix is incorrect -- 'repo_name' is not the basename of
+                    the repository, but the value from SVNReposName.")
 
 Approved changes:
 =================
