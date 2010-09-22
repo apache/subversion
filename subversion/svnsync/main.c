@@ -339,6 +339,21 @@ get_lock(const svn_string_t **lock_string_p,
   SVN_ERR(svn_ra_has_capability(session, &be_atomic,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
+  if (! be_atomic)
+    {
+      /* Pre-1.7 server.  Can't lock without a race condition.
+         See issue #3546.
+       */
+      svn_error_t *err;
+
+      err = svn_error_create(
+              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+              _("Target server does not support atomic revision property "
+                "edits; consider upgrading it to 1.7 or using an external "
+                "locking program"));
+      svn_handle_warning2(stderr, err, "svnsync: ");
+      svn_error_clear(err);
+    }
 
   apr_err = apr_gethostname(hostname_str, sizeof(hostname_str), pool);
   if (apr_err)
