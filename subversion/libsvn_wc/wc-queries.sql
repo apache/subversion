@@ -215,7 +215,7 @@ update nodes set properties = ?3
 where wc_id = ?1 and local_relpath = ?2
   and op_depth in
    (select op_depth from nodes
-    where wc_id = ?1 and local_relpath = ?2
+    where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
     order by op_depth desc
     limit 1);
 
@@ -312,7 +312,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 update nodes set translated_size = ?3, last_mod_time = ?4
 where wc_id = ?1 and local_relpath = ?2
   and op_depth = (select op_depth from nodes
-                  where wc_id = ?1 and local_relpath = ?2
+                  where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
                   order by op_depth desc
                   limit 1);
 
@@ -401,7 +401,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 update NODES set depth = ?3
 where wc_id = ?1 and local_relpath = ?2 and
       op_depth in (select op_depth from NODES
-                   where wc_id = ?1 and local_relpath = ?2
+                   where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
                    order by op_depth desc
                    limit 1);
 
@@ -449,7 +449,7 @@ where wc_id = ?1 and local_relpath =?2;
 update nodes set presence = ?3
 where wc_id = ?1 and local_relpath = ?2
   and op_depth in (select op_depth from nodes
-                   where wc_id = ?1 and local_relpath = ?2
+                   where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
                    order by op_depth desc
                    limit 1);
 
@@ -666,7 +666,7 @@ UPDATE NODES SET
   revision = null
 WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth IN (SELECT op_depth FROM nodes
-                   WHERE wc_id = ?1 AND local_relpath = ?2
+                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
                    ORDER BY op_depth DESC
                    LIMIT 1);
 
@@ -680,7 +680,7 @@ SELECT 0 FROM NODES WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 UNION
 SELECT 1 FROM NODES WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth IN (SELECT op_depth FROM nodes
-                   WHERE wc_id = ?1 AND local_relpath = ?2
+                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
                    ORDER BY op_depth DESC
                    LIMIT 1);
 
@@ -735,7 +735,7 @@ select wc_id, ?3 as local_relpath, ?4 as op_depth, ?5 as parent_relpath,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 from NODES
-where wc_id = ?1 and local_relpath = ?2
+where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
 order by op_depth desc
 limit 1;
 
