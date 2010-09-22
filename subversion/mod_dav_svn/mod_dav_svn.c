@@ -608,7 +608,7 @@ dav_svn__get_pathauthz_bypass(request_rec *r)
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
-  if (conf->path_authz_method==CONF_PATHAUTHZ_BYPASS)
+  if (conf->path_authz_method == CONF_PATHAUTHZ_BYPASS)
     return pathauthz_bypass_func;
   return NULL;
 }
