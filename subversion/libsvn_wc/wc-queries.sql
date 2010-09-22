@@ -256,6 +256,19 @@ left outer join base_node on base_node.wc_id = working_node.wc_id
   and base_node.local_relpath = working_node.local_relpath
 where working_node.wc_id = ?1 and working_node.local_relpath = ?2;
 
+-- STMT_SELECT_DELETION_INFO_1
+select nodes_base.presence, nodes_work.presence, nodes_work.moved_to
+from nodes nodes_work
+left outer join nodes nodes_base on nodes_base.wc_id = nodes_work.wc_id
+  and nodes_base.local_relpath = nodes_work.local_relpath
+  and nodes_base.op_depth = 0
+where nodes_work.wc_id = ?1 and nodes_work.local_relpath = ?2
+  and nodes_work.op_depth = (select op_depth from nodes
+                             where wc_id = ?1 and local_relpath = ?2
+                                              and op_depth > 0
+                             order by op_depth desc
+                             limit 1);
+
 -- STMT_DELETE_LOCK
 delete from lock
 where repos_id = ?1 and repos_relpath = ?2;
