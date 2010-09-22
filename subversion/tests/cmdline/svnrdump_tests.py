@@ -65,9 +65,12 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
-def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None):
+def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
+                  subdir = None):
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
-  dump' and check that the same dumpfile is produced"""
+  dump' and check that the same dumpfile is produced or that
+  expected_dumpfile_name is produced if provided. Additionally, the
+  subdir argument appends itself to the URL"""
 
   # Create an empty sanbox repository
   build_repos(sbox)
@@ -83,12 +86,16 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None):
                            'rb').readlines()
 
   svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile)
+  
+  repo_url = sbox.repo_url
+  if subdir:
+    repo_url = repo_url + subdir
 
   # Create a dump file using svnrdump
   svnrdump_dumpfile = \
       svntest.actions.run_and_verify_svnrdump(None, svntest.verify.AnyOutput,
                                               [], 0, '-q', 'dump',
-                                              sbox.repo_url)
+                                              repo_url)
 
   if expected_dumpfile_name:
     svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
@@ -273,6 +280,16 @@ def copy_revprops_load(sbox):
   "load: copy revprops other than svn:*"
   run_load_test(sbox, "revprops.dump")
 
+def only_trunk_dump(sbox):
+  "dump: subdirectory"
+  run_dump_test(sbox, "trunk-only.dump", subdir="/trunk",
+                expected_dumpfile_name="trunk-only.expected.dump")
+
+def only_trunk_A_with_changes_dump(sbox):
+  "dump: subdirectory with changes on root"
+  run_dump_test(sbox, "trunk-A-changes.dump", subdir="/trunk/A",
+           expected_dumpfile_name="trunk-A-changes.expected.dump")
+
 def url_encoding_dump(sbox):
   "dump: url encoding issues"
   run_dump_test(sbox, "url-encoding-bug.dump")
@@ -325,6 +342,8 @@ test_list = [ None,
               url_encoding_load,
               copy_revprops_dump,
               copy_revprops_load,
+              only_trunk_dump,
+              Wimp("TODO", only_trunk_A_with_changes_dump),
               no_author_dump,
               no_author_load,
               move_and_modify_in_the_same_revision_dump,
