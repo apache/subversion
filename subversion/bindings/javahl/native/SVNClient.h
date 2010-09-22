@@ -137,9 +137,6 @@ class SVNClient :public SVNBase
   void remove(Targets &targets, CommitMessage *message, bool force,
               bool keep_local, RevpropTable &revprops,
               CommitCallback *callback);
-  jlong checkout(const char *moduleName, const char *destPath,
-                 Revision &revision, Revision &pegRevsion, svn_depth_t depth,
-                 bool ignoreExternals, bool allowUnverObstructions);
   void logMessages(const char *path, Revision &pegRevision,
                    std::vector<RevisionRange> &ranges, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,

@@ -182,7 +182,7 @@ Revision::makeJRevision(svn_revnum_t rev)
 }
 
 SVN::Revision
-Revision::fromJ(jobject jrevision)
+Revision::fromJ(jobject jrevision, bool headIfUnspecified)
 {
   Revision rev(jrevision);
   const svn_opt_revision_t *revision = rev.revision();
@@ -190,7 +190,10 @@ Revision::fromJ(jobject jrevision)
   switch (revision->kind)
     {
       case svn_opt_revision_unspecified:
-        return SVN::Revision::UNSPECIFIED;
+        if (headIfUnspecified)
+          return SVN::Revision::HEAD;
+        else
+          return SVN::Revision::UNSPECIFIED;
       case svn_opt_revision_number:
         return SVN::Revision::getNumberRev(revision->value.number);
       case svn_opt_revision_date:

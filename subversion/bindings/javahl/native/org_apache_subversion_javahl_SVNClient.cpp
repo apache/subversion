@@ -325,11 +325,11 @@ Java_org_apache_subversion_javahl_SVNClient_checkout
       JNIUtil::throwError(_("bad C++ this"));
       return -1;
     }
-  Revision revision(jrevision, true);
+  SVN::Revision revision = Revision::fromJ(jrevision, true);
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  Revision pegRevision(jpegRevision, true);
+  SVN::Revision pegRevision = Revision::fromJ(jpegRevision, true);
   if (JNIUtil::isExceptionThrown())
     return -1;
 
@@ -341,10 +341,22 @@ Java_org_apache_subversion_javahl_SVNClient_checkout
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  return cl->checkout(moduleName, destPath, revision, pegRevision,
-                      EnumMapper::toDepth(jdepth),
-                      jignoreExternals ? true : false,
-                      jallowUnverObstructions ? true : false);
+  try
+    {
+      return cl->getClient().checkout(moduleName.str(), destPath.str(),
+                                      revision, pegRevision,
+                                      EnumMapper::toDepth(jdepth),
+                                      jignoreExternals ? true : false,
+                                      jallowUnverObstructions ? true : false)
+                       .revision()->value.number;
+    }
+  catch (SVN::Exception ex)
+    {
+      JNIUtil::throwNativeException(JAVA_PACKAGE"/ClientException",
+                                    ex.what(), ex.getSource().c_str(),
+                                    ex.getAPRErr());
+      return SVN_INVALID_REVNUM;
+    }
 }
 
 JNIEXPORT void JNICALL

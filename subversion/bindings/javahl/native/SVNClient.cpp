@@ -231,40 +231,6 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                                 requestPool.pool()), );
 }
 
-jlong SVNClient::checkout(const char *moduleName, const char *destPath,
-                          Revision &revision, Revision &pegRevision,
-                          svn_depth_t depth, bool ignoreExternals,
-                          bool allowUnverObstructions)
-{
-    SVN::Pool requestPool;
-
-    SVN_JNI_NULL_PTR_EX(moduleName, "moduleName", -1);
-    SVN_JNI_NULL_PTR_EX(destPath, "destPath", -1);
-
-    Path url(moduleName);
-    Path path(destPath);
-    SVN_JNI_ERR(url.error_occured(), -1);
-    SVN_JNI_ERR(path.error_occured(), -1);
-    svn_revnum_t rev;
-
-    svn_client_ctx_t *ctx = context.getContext(NULL);
-    if (ctx == NULL)
-        return -1;
-
-    SVN_JNI_ERR(svn_client_checkout3(&rev, url.c_str(),
-                                     path.c_str(),
-                                     pegRevision.revision(),
-                                     revision.revision(),
-                                     depth,
-                                     ignoreExternals,
-                                     allowUnverObstructions,
-                                     ctx,
-                                     requestPool.pool()),
-                -1);
-
-    return rev;
-}
-
 void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
                        bool keep_local, RevpropTable &revprops,
                        CommitCallback *callback)
