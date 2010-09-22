@@ -6644,12 +6644,34 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       svn_sqlite__stmt_t *stmt;
       svn_boolean_t have_row;
       svn_wc__db_status_t presence;
+#ifdef SVN_WC__NODES
+      svn_sqlite__stmt_t *stmt_nodes;
+      svn_boolean_t have_nodes_row;
+#endif
 
       /* ### is it faster to fetch fewer columns? */
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_WORKING_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, wcroot->sdb,
+                                        STMT_SELECT_WORKING_NODE_1));
+      SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is",
+                                wcroot->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+      SVN_ERR(assert_working_rows_match(have_row, have_nodes_row,
+                                        stmt, stmt_nodes,
+                                        current_relpath, scratch_pool));
+      SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+      stmt = stmt_nodes;
+      have_row = have_nodes_row;
+#endif
+#endif
 
       if (!have_row)
         {
