@@ -3095,17 +3095,39 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
   {
     const svn_checksum_t *md5_checksum;
     svn_sqlite__stmt_t *stmt;
+#ifdef SVN_WC__NODES
+    svn_sqlite__stmt_t *stmt_nodes;
+    svn_boolean_t is_referenced_nodes;
+#endif
 
     /* ### Transitional: look for references to its MD-5 as well. */
     SVN_ERR(svn_wc__db_pristine_get_md5(&md5_checksum, db, wri_abspath,
                                         sha1_checksum, scratch_pool,
                                         scratch_pool));
 
+#ifndef SVN_WC__NODES_ONLY
     SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                       STMT_SELECT_ANY_PRISTINE_REFERENCE));
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
     SVN_ERR(svn_sqlite__step(&is_referenced, stmt));
+#endif
+#ifdef SVN_WC__NODES
+    SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, pdh->wcroot->sdb,
+                                      STMT_SELECT_ANY_PRISTINE_REFERENCE_1));
+    SVN_ERR(svn_sqlite__bind_checksum(stmt_nodes, 1, sha1_checksum,
+                                      scratch_pool));
+    SVN_ERR(svn_sqlite__bind_checksum(stmt_nodes, 2, md5_checksum,
+                                      scratch_pool));
+    SVN_ERR(svn_sqlite__step(&is_referenced_nodes, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+    SVN_ERR_ASSERT(is_referenced == is_referenced_nodes);
+    SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+    is_referenced = is_referenced_nodes;
+    stmt = stmt_nodes;
+#endif
+#endif
 
     SVN_ERR(svn_sqlite__reset(stmt));
   }
