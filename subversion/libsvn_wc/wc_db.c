@@ -5929,24 +5929,55 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_wc__db_kind_t new_kind;
   const char *new_depth_str = NULL;
   svn_sqlite__stmt_t *stmt;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_nodes_base, *stmt_nodes_work;
+  svn_boolean_t have_nodes_base, have_nodes_work;
+#endif
 
   /* ### is it better to select only the data needed?  */
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt_base, cb->pdh->wcroot->sdb,
                                     STMT_SELECT_BASE_NODE));
   SVN_ERR(svn_sqlite__get_statement(&stmt_work, cb->pdh->wcroot->sdb,
                                     STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__get_statement(&stmt_act, cb->pdh->wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_NODE));
-
   SVN_ERR(svn_sqlite__bindf(stmt_base, "is",
                             cb->pdh->wcroot->wc_id, cb->local_relpath));
   SVN_ERR(svn_sqlite__bindf(stmt_work, "is",
                             cb->pdh->wcroot->wc_id, cb->local_relpath));
-  SVN_ERR(svn_sqlite__bindf(stmt_act, "is",
-                            cb->pdh->wcroot->wc_id, cb->local_relpath));
-
   SVN_ERR(svn_sqlite__step(&have_base, stmt_base));
   SVN_ERR(svn_sqlite__step(&have_work, stmt_work));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt_nodes_base, cb->pdh->wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE_1));
+  SVN_ERR(svn_sqlite__get_statement(&stmt_nodes_work, cb->pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE_1));
+  SVN_ERR(svn_sqlite__bindf(stmt_nodes_base, "is",
+                            cb->pdh->wcroot->wc_id, cb->local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt_nodes_work, "is",
+                            cb->pdh->wcroot->wc_id, cb->local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_nodes_base, stmt_nodes_base));
+  SVN_ERR(svn_sqlite__step(&have_nodes_work, stmt_nodes_work));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR(assert_base_rows_match(have_base, have_nodes_base,
+                                 stmt_base, stmt_nodes_base,
+                                 cb->local_relpath, scratch_pool));
+  SVN_ERR(assert_working_rows_match(have_work, have_nodes_work,
+                                    stmt_work, stmt_nodes_work,
+                                    cb->local_relpath, scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt_nodes_base));
+  SVN_ERR(svn_sqlite__reset(stmt_nodes_work));
+#else
+  stmt_base = stmt_nodes_base;
+  stmt_work = stmt_nodes_work;
+  have_base = have_nodes_base;
+  have_work = have_nodes_work;
+#endif
+#endif
+  SVN_ERR(svn_sqlite__get_statement(&stmt_act, cb->pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt_act, "is",
+                            cb->pdh->wcroot->wc_id, cb->local_relpath));
   SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
 
   /* There should be something to commit!  */
