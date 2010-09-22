@@ -27,7 +27,10 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include "Pool.h"
 #include "Revision.h"
+
+#include "svn_types.h"
 
 #include <map>
 #include <string>
@@ -43,14 +46,12 @@ typedef std::map<std::string, std::string> PropTable;
 class CommitInfo
 {
   private:
-    Revision m_revision;
-    apr_time_t m_date;
-    std::string m_author;
-    std::string m_post_commit_err;
-    std::string m_repos_root;
+    Pool m_pool;
+    svn_commit_info_t *m_info;
 
   public:
     CommitInfo(const svn_commit_info_t *info);
+    CommitInfo(const CommitInfo &);
 };
 
 }

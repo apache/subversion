@@ -31,15 +31,15 @@ namespace SVN
 {
 
 CommitInfo::CommitInfo(const svn_commit_info_t *info)
-  : m_author(info->author),
-    m_post_commit_err(info->post_commit_err == NULL ? ""
-                                                : info->post_commit_err),
-    m_repos_root(info->repos_root == NULL ? "" : info->repos_root),
-    m_revision(info->revision)
+  : m_pool()
 {
-  Pool pool;
+  m_info = svn_commit_info_dup(info, m_pool.pool());
+}
 
-  SVN_CPP_ERR(svn_time_from_cstring(&m_date, info->date, pool.pool()));
+CommitInfo::CommitInfo(const CommitInfo &that)
+  : m_pool()
+{
+  m_info = svn_commit_info_dup(that.m_info, m_pool.pool());
 }
 
 }
