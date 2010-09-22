@@ -76,5 +76,8 @@ Potential work
 * repos layer hooks interface
   - pass the old value to pre-revprop-change
 
-* svn propedit --revprop --old-value
+* client interface
+  - extend svn_client_revprop_set2() with "bail unless has_capability()" boolean
+
+* svn propedit/propset --revprop --old-value
   (Not planned currently.)
