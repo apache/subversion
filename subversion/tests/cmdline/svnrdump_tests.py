@@ -167,6 +167,10 @@ def revision_0_load(sbox):
 #     docs/         (Added r6)
 #       README      (Added r6)
 
+def skeleton_dump(sbox):
+  "dump: skeleton repository"
+  run_dump_test(sbox, "skeleton.dump")
+
 def skeleton_load(sbox):
   "load: skeleton repository"
   run_load_test(sbox, "skeleton.dump")
@@ -267,6 +271,14 @@ def url_encoding_load(sbox):
   "load: url encoding issues"
   run_load_test(sbox, "url-encoding-bug.dump")
 
+def commit_a_copy_of_root_dump(sbox):
+  "dump: commit a copy of root"
+  run_dump_test(sbox, "repo-with-copy-of-root-dir.dump")
+
+def commit_a_copy_of_root_load(sbox):
+  "load: commit a copy of root"
+  run_load_test(sbox, "repo-with-copy-of-root-dir.dump")
+
 ########################################################################
 # Run the tests
 
@@ -276,6 +288,7 @@ test_list = [ None,
               basic_dump,
               revision_0_dump,
               revision_0_load,
+              skeleton_dump,
               skeleton_load,
               copy_and_modify_dump,
               copy_and_modify_load,
@@ -301,6 +314,8 @@ test_list = [ None,
               no_author_load,
               move_and_modify_in_the_same_revision_dump,
               move_and_modify_in_the_same_revision_load,
+              commit_a_copy_of_root_dump,
+              commit_a_copy_of_root_load,
              ]
 
 if __name__ == '__main__':
