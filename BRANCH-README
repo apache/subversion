@@ -31,8 +31,8 @@ Planned work
 
 * svnsync and svnrdump:
   - [DONE] use the new RA API to resolve the race condition in locking.
-  - TODO: deal with pre-1.7 servers
-  - TODO: upgrade svn_ra_change_rev_prop() callers
+  - [DONE] deal with pre-1.7 servers
+  - [DONE] upgrade svn_ra_change_rev_prop() callers
 
 
 Failing tests
