@@ -1140,7 +1140,7 @@ dav_svn_split_uri(request_rec *r,
                   const char *root_path,
                   const char **cleaned_uri,
                   int *trailing_slash,
-                  const char **repos_name,
+                  const char **repos_basename,
                   const char **relative_path,
                   const char **repos_path)
 {
@@ -1216,14 +1216,14 @@ dav_svn_split_uri(request_rec *r,
      ### slash. something about SVN-private-path */
 
   /* Depending on whether SVNPath or SVNParentPath was used, we need
-     to compute 'relative' and 'repos_name' differently.  */
+     to compute 'relative' and 'repos_basename' differently.  */
 
   /* Normal case:  the SVNPath command was used to specify a
      particular repository.  */
   if (fs_path != NULL)
     {
-      /* the repos_name is the last component of root_path. */
-      *repos_name = svn_dirent_basename(root_path, r->pool);
+      /* the repos_basename is the last component of root_path. */
+      *repos_basename = svn_dirent_basename(root_path, r->pool);
 
       /* 'relative' is already correct for SVNPath; the root_path
          already contains the name of the repository, so relative is
@@ -1264,7 +1264,7 @@ dav_svn_split_uri(request_rec *r,
         }
 
       /* return answer */
-      *repos_name = magic_component;
+      *repos_basename = magic_component;
     }
 
   /* We can return 'relative' at this point too. */
@@ -1882,7 +1882,7 @@ get_resource(request_rec *r,
   dav_resource_combined *comb;
   dav_svn_repos *repos;
   const char *cleaned_uri;
-  const char *repos_name;
+  const char *repo_basename;
   const char *relative;
   const char *repos_path;
   const char *repos_key;
@@ -1925,7 +1925,7 @@ get_resource(request_rec *r,
   /* This does all the work of interpreting/splitting the request uri. */
   err = dav_svn_split_uri(r, r->uri, root_path,
                           &cleaned_uri, &had_slash,
-                          &repos_name, &relative, &repos_path);
+                          &repo_basename, &relative, &repos_path);
   if (err)
     return err;
 
@@ -1938,9 +1938,9 @@ get_resource(request_rec *r,
     {
       /* ...then the URL to the repository is actually one implicit
          component longer... */
-      root_path = svn_uri_join(root_path, repos_name, r->pool);
+      root_path = svn_uri_join(root_path, repo_basename, r->pool);
       /* ...and we need to specify exactly what repository to open. */
-      fs_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
+      fs_path = svn_dirent_join(fs_parent_path, repo_basename, r->pool);
     }
 
   /* Start building and filling a 'combination' object. */
@@ -2011,7 +2011,7 @@ get_resource(request_rec *r,
   repos->repo_name = repo_name;
 
   /* The repository filesystem basename */
-  repos->repo_basename = repos_name;
+  repos->repo_basename = repo_basename;
 
   /* An XSL transformation */
   repos->xslt_uri = xslt_uri;
