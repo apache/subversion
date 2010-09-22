@@ -552,8 +552,8 @@ remove_props_not_in_source(svn_ra_session_t *session,
 
       /* Delete property if the name can't be found in SOURCE_PROPS. */
       if (! apr_hash_get(source_props, propname, APR_HASH_KEY_STRING))
-        SVN_ERR(svn_ra_change_rev_prop(session, rev, propname, NULL,
-                                       subpool));
+        SVN_ERR(svn_ra_change_rev_prop2(session, rev, propname, NULL,
+                                        NULL, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -636,8 +636,8 @@ write_revprops(int *filtered_count,
       if (strncmp(propname, SVNSYNC_PROP_PREFIX,
                   sizeof(SVNSYNC_PROP_PREFIX) - 1) != 0)
         {
-          SVN_ERR(svn_ra_change_rev_prop(session, rev, propname, propval,
-                                         subpool));
+          SVN_ERR(svn_ra_change_rev_prop2(session, rev, propname, NULL,
+                                          propval, subpool));
         }
       else
         {
@@ -849,17 +849,17 @@ do_initialize(svn_ra_session_t *to_session,
              "repository"));
     }
 
-  SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
-                                 svn_string_create(baton->from_url, pool),
-                                 pool));
+  SVN_ERR(svn_ra_change_rev_prop2(to_session, 0, SVNSYNC_PROP_FROM_URL, NULL,
+                                  svn_string_create(baton->from_url, pool),
+                                  pool));
 
   SVN_ERR(svn_ra_get_uuid2(from_session, &uuid, pool));
-  SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
-                                 svn_string_create(uuid, pool), pool));
+  SVN_ERR(svn_ra_change_rev_prop2(to_session, 0, SVNSYNC_PROP_FROM_UUID, NULL,
+                                  svn_string_create(uuid, pool), pool));
 
-  SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
-                                 svn_string_createf(pool, "%ld", latest),
-                                 pool));
+  SVN_ERR(svn_ra_change_rev_prop2(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
+                                  NULL, svn_string_createf(pool, "%ld", latest),
+                                  pool));
 
   /* Copy all non-svnsync revprops from the LATEST rev in the source
      repository into the destination, notifying about normalized
@@ -1118,11 +1118,11 @@ replay_rev_started(svn_revnum_t revision,
      NOTE: We have to set this before we start the commit editor,
      because ra_svn doesn't let you change rev props during a
      commit. */
-  SVN_ERR(svn_ra_change_rev_prop(rb->to_session, 0,
-                                 SVNSYNC_PROP_CURRENTLY_COPYING,
-                                 svn_string_createf(pool, "%ld",
-                                                    revision),
-                                 pool));
+  SVN_ERR(svn_ra_change_rev_prop2(rb->to_session, 0,
+                                  SVNSYNC_PROP_CURRENTLY_COPYING,
+                                  NULL,
+                                  svn_string_createf(pool, "%ld", revision),
+                                  pool));
 
   /* The actual copy is just a replay hooked up to a commit.  Include
      all the revision properties from the source repositories, except
@@ -1231,19 +1231,20 @@ replay_rev_finished(svn_revnum_t revision,
   svn_pool_clear(subpool);
 
   /* Ok, we're done, bring the last-merged-rev property up to date. */
-  SVN_ERR(svn_ra_change_rev_prop
-          (rb->to_session,
+  SVN_ERR(svn_ra_change_rev_prop2(
+           rb->to_session,
            0,
            SVNSYNC_PROP_LAST_MERGED_REV,
+           NULL,
            svn_string_create(apr_psprintf(pool, "%ld", revision),
                              subpool),
            subpool));
 
   /* And finally drop the currently copying prop, since we're done
      with this revision. */
-  SVN_ERR(svn_ra_change_rev_prop(rb->to_session, 0,
-                                 SVNSYNC_PROP_CURRENTLY_COPYING,
-                                 NULL, subpool));
+  SVN_ERR(svn_ra_change_rev_prop2(rb->to_session, 0,
+                                  SVNSYNC_PROP_CURRENTLY_COPYING,
+                                  NULL, NULL, subpool));
 
   /* Notify the user that we copied revision properties. */
   if (! rb->sb->quiet)
@@ -1336,12 +1337,12 @@ do_synchronize(svn_ra_session_t *to_session,
              end up not being able to tell if there have been bogus
              (i.e. non-svnsync) commits to the dest repository. */
 
-          SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                         SVNSYNC_PROP_LAST_MERGED_REV,
-                                         last_merged_rev, pool));
-          SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                         SVNSYNC_PROP_CURRENTLY_COPYING,
-                                         NULL, pool));
+          SVN_ERR(svn_ra_change_rev_prop2(to_session, 0,
+                                          SVNSYNC_PROP_LAST_MERGED_REV,
+                                          NULL, last_merged_rev, pool));
+          SVN_ERR(svn_ra_change_rev_prop2(to_session, 0,
+                                          SVNSYNC_PROP_CURRENTLY_COPYING,
+                                          NULL, NULL, pool));
         }
       /* If copying > to_latest, then we just fall through to
          attempting to copy the revision again. */
