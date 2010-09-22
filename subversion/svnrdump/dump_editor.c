@@ -66,7 +66,6 @@ struct dump_edit_baton {
   const char *base_checksum;
 
   /* Flags to trigger dumping props and text */
-  svn_boolean_t dump_props;
   svn_boolean_t dump_text;
   svn_boolean_t dump_props_pending;
   svn_boolean_t dump_newlines_pending;
@@ -239,6 +238,9 @@ dump_node(struct dump_edit_baton *eb,
   switch (action)
     {
     case svn_node_action_change:
+      /* We are here after a change_file_prop or change_dir_prop. They
+         set up whatever dump_props_pending they needed to- nothing to
+         do here but print node action information */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_ACTION
                                 ": change\n"));
@@ -252,6 +254,8 @@ dump_node(struct dump_edit_baton *eb,
                                     SVN_REPOS_DUMPFILE_NODE_ACTION
                                     ": replace\n"));
 
+          /* Wait for a change_*_prop to be called before dumping
+             anything */          
           eb->dump_props_pending = TRUE;
           break;
         }
@@ -269,7 +273,6 @@ dump_node(struct dump_edit_baton *eb,
 
       /* We can leave this routine quietly now, don't need to dump any
          content; that was already done in the second record. */
-      eb->dump_props = FALSE;
       break;
 
     case svn_node_action_delete:
@@ -277,10 +280,10 @@ dump_node(struct dump_edit_baton *eb,
                                 SVN_REPOS_DUMPFILE_NODE_ACTION
                                 ": delete\n"));
 
-      /* We can leave this routine quietly now, don't need to dump
-         any content. */
+      /* We can leave this routine quietly now. Nothing more to do-
+         print a couple of newlines because we're not dumping props or
+         text. */      
       SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
-      eb->dump_props = FALSE;
       break;
 
     case svn_node_action_add:
@@ -297,6 +300,8 @@ dump_node(struct dump_edit_baton *eb,
              add_directory, open_directory, delete_entry, close_directory,
              add_file, open_file. change_dir_prop is a special case. */
 
+          /* Wait for a change_*_prop to be called before dumping
+             anything */          
           eb->dump_props_pending = TRUE;
           break;
         }
@@ -320,10 +325,6 @@ dump_node(struct dump_edit_baton *eb,
 
       break;
     }
-
-  /* Dump property headers */
-  SVN_ERR(dump_props(eb, &(eb->dump_props), FALSE, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -718,11 +719,11 @@ close_file(void *file_baton,
 
   LDR_DBG(("close_file %p\n", file_baton));
 
-  /* Some pending properties to dump? */
+  /* Some pending properties to dump? Dump just the headers- dump the
+     props only after dumping the text headers too (if present) */
   SVN_ERR(dump_props(eb, &(eb->dump_props_pending), FALSE, pool));
 
-  /* The prop headers have already been dumped in dump_node; now dump
-     the text headers. */
+  /* Dump the text headers */
   if (eb->dump_text)
     {
       /* Text-delta: true */
@@ -754,7 +755,7 @@ close_file(void *file_baton,
 
   /* Content-length: 1549 */
   /* If both text and props are absent, skip this header */
-  if (eb->dump_props || eb->dump_props_pending)
+  if (eb->dump_props_pending)
     SVN_ERR(svn_stream_printf(eb->stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH
                               ": %ld\n\n",
@@ -765,15 +766,14 @@ close_file(void *file_baton,
                               ": %ld\n\n",
                               (unsigned long)info->size));
 
-  /* Dump the props; the propstring should have already been
-     written in dump_node or above */
-  if (eb->dump_props || eb->dump_props_pending)
+  /* Dump the props now */
+  if (eb->dump_props_pending)
     {
       SVN_ERR(svn_stream_write(eb->stream, eb->propstring->data,
                                &(eb->propstring->len)));
 
       /* Cleanup */
-      eb->dump_props = eb->dump_props_pending = FALSE;
+      eb->dump_props_pending = FALSE;
       svn_hash__clear(eb->props, pool);
       svn_hash__clear(eb->deleted_props, pool);
     }
