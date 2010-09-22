@@ -132,17 +132,42 @@ VALUES (?1, ?2, ?3, 'incomplete', 'unknown');
 SELECT COUNT(*) FROM BASE_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
 
+-- STMT_COUNT_BASE_NODE_CHILDREN_1
+SELECT COUNT(*) FROM NODES
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0;
+
 -- STMT_COUNT_WORKING_NODE_CHILDREN
 SELECT COUNT(*) FROM WORKING_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_COUNT_WORKING_NODE_CHILDREN_1
+SELECT COUNT(*) FROM NODES
+WHERE wc_id = ?1 AND parent_relpath = ?2
+  AND op_depth IN (SELECT op_depth FROM NODES
+                   WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0
+                   ORDER BY op_depth DESC
+                   LIMIT 1);
+
 
 -- STMT_SELECT_BASE_NODE_CHILDREN
 select local_relpath from base_node
 where wc_id = ?1 and parent_relpath = ?2;
 
+-- STMT_SELECT_BASE_NODE_CHILDREN_1
+select local_relpath from nodes
+where wc_id = ?1 and parent_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_WORKING_NODE_CHILDREN
 SELECT local_relpath FROM WORKING_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_SELECT_WORKING_NODE_CHILDREN_1
+SELECT local_relpath FROM NODES
+WHERE wc_id = ?1 AND parent_relpath = ?2
+  AND op_depth IN (SELECT op_depth FROM NODES
+                   WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0
+                   ORDER BY op_depth DESC
+                   LIMIT 1);
 
 -- STMT_SELECT_WORKING_IS_FILE
 select kind == 'file' from working_node
@@ -190,7 +215,7 @@ update nodes set properties = ?3
 where wc_id = ?1 and local_relpath = ?2
   and op_depth in
    (select op_depth from nodes
-    where wc_id = ?1 and local_relpath = ?2
+    where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
     order by op_depth desc
     limit 1);
 
@@ -287,7 +312,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 update nodes set translated_size = ?3, last_mod_time = ?4
 where wc_id = ?1 and local_relpath = ?2
   and op_depth = (select op_depth from nodes
-                  where wc_id = ?1 and local_relpath = ?2
+                  where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
                   order by op_depth desc
                   limit 1);
 
@@ -376,7 +401,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 update NODES set depth = ?3
 where wc_id = ?1 and local_relpath = ?2 and
       op_depth in (select op_depth from NODES
-                   where wc_id = ?1 and local_relpath = ?2
+                   where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
                    order by op_depth desc
                    limit 1);
 
@@ -424,7 +449,7 @@ where wc_id = ?1 and local_relpath =?2;
 update nodes set presence = ?3
 where wc_id = ?1 and local_relpath = ?2
   and op_depth in (select op_depth from nodes
-                   where wc_id = ?1 and local_relpath = ?2
+                   where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
                    order by op_depth desc
                    limit 1);
 
@@ -641,7 +666,7 @@ UPDATE NODES SET
   revision = null
 WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth IN (SELECT op_depth FROM nodes
-                   WHERE wc_id = ?1 AND local_relpath = ?2
+                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
                    ORDER BY op_depth DESC
                    LIMIT 1);
 
@@ -655,7 +680,7 @@ SELECT 0 FROM NODES WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 UNION
 SELECT 1 FROM NODES WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth IN (SELECT op_depth FROM nodes
-                   WHERE wc_id = ?1 AND local_relpath = ?2
+                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
                    ORDER BY op_depth DESC
                    LIMIT 1);
 
@@ -710,7 +735,7 @@ select wc_id, ?3 as local_relpath, ?4 as op_depth, ?5 as parent_relpath,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 from NODES
-where wc_id = ?1 and local_relpath = ?2
+where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
 order by op_depth desc
 limit 1;
 

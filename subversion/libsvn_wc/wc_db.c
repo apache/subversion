@@ -1231,6 +1231,9 @@ union_children(const apr_array_header_t **children,
 {
   /* ### it would be nice to pre-size this hash table.  */
   apr_hash_t *names = apr_hash_make(scratch_pool);
+#ifdef SVN_WC__NODES
+  apr_hash_t *names_nodes = apr_hash_make(scratch_pool);
+#endif
   apr_array_header_t *names_array;
 
   /* All of the names get allocated in RESULT_POOL.  */
@@ -1238,6 +1241,17 @@ union_children(const apr_array_header_t **children,
                                sdb, wc_id, parent_relpath, result_pool));
   SVN_ERR(add_children_to_hash(names, STMT_SELECT_WORKING_NODE_CHILDREN,
                                sdb, wc_id, parent_relpath, result_pool));
+#ifdef SVN_WC__NODES
+  SVN_ERR(add_children_to_hash(names_nodes, STMT_SELECT_BASE_NODE_CHILDREN_1,
+                               sdb, wc_id, parent_relpath, result_pool));
+  SVN_ERR(add_children_to_hash(names_nodes, STMT_SELECT_WORKING_NODE_CHILDREN_1,
+                               sdb, wc_id, parent_relpath, result_pool));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR_ASSERT(apr_hash_count(names) == apr_hash_count(names_nodes));
+#else
+  names = names_nodes;
+#endif
+#endif
 
   SVN_ERR(svn_hash_keys(&names_array, names, result_pool));
   *children = names_array;
@@ -1306,6 +1320,10 @@ gather_children(const apr_array_header_t **children,
   const char *local_relpath;
   int base_count;
   int working_count;
+#ifdef SVN_WC__NODES
+  int base_count_nodes, working_count_nodes;
+  const apr_array_header_t *children_nodes;
+#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1321,17 +1339,47 @@ gather_children(const apr_array_header_t **children,
          directory in its repository.
 
          ### note "files". should redo count with subdirs included */
-      return svn_error_return(single_table_children(
-                                children, STMT_SELECT_BASE_NODE_CHILDREN,
-                                10 /* start_size */,
-                                pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                local_relpath, result_pool));
+#ifndef SVN_WC__NODES_ONLY
+      SVN_ERR(single_table_children(children, STMT_SELECT_BASE_NODE_CHILDREN,
+                                    10 /* start_size */,
+                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                    local_relpath, result_pool));
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(single_table_children(&children_nodes,
+                                    STMT_SELECT_BASE_NODE_CHILDREN_1,
+                                    10 /* start_size */,
+                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                    local_relpath, result_pool));
+#ifndef SVN_WC__NODES_ONLY
+      SVN_ERR_ASSERT((*children)->nelts == children_nodes->nelts);
+#else
+      *children = children_nodes;
+#endif
+#endif
+      return SVN_NO_ERROR;
     }
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(count_children(&base_count, STMT_COUNT_BASE_NODE_CHILDREN,
                          pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(count_children(&working_count, STMT_COUNT_WORKING_NODE_CHILDREN,
                          pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(count_children(&base_count_nodes, STMT_COUNT_BASE_NODE_CHILDREN_1,
+                         pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(count_children(&working_count_nodes,
+                         STMT_COUNT_WORKING_NODE_CHILDREN_1,
+                         pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR_ASSERT(base_count == base_count_nodes);
+  SVN_ERR_ASSERT(working_count == working_count_nodes);
+#else
+  base_count = base_count_nodes;
+  working_count = working_count_nodes;
+#endif
+#endif
 
   if (base_count == 0)
     {
@@ -1341,18 +1389,48 @@ gather_children(const apr_array_header_t **children,
           return SVN_NO_ERROR;
         }
 
-      return svn_error_return(single_table_children(
-                                children, STMT_SELECT_WORKING_NODE_CHILDREN,
-                                working_count,
-                                pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                local_relpath, result_pool));
+#ifndef SVN_WC__NODES_ONLY
+      SVN_ERR(single_table_children(children, STMT_SELECT_WORKING_NODE_CHILDREN,
+                                    working_count,
+                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                    local_relpath, result_pool));
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(single_table_children(&children_nodes,
+                                    STMT_SELECT_WORKING_NODE_CHILDREN,
+                                    working_count,
+                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                    local_relpath, result_pool));
+#ifndef SVN_WC__NODES_ONLY
+      SVN_ERR_ASSERT((*children)->nelts == children_nodes->nelts);
+#else
+      *children = children_nodes;
+#endif
+#endif
+      return SVN_NO_ERROR;
     }
   if (working_count == 0)
-    return svn_error_return(single_table_children(
-                              children, STMT_SELECT_BASE_NODE_CHILDREN,
-                              base_count,
-                              pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                              local_relpath, result_pool));
+    {
+#ifndef SVN_WC__NODES_ONLY
+      SVN_ERR(single_table_children(children, STMT_SELECT_BASE_NODE_CHILDREN,
+                                    base_count,
+                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                    local_relpath, result_pool));
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(single_table_children(&children_nodes,
+                                    STMT_SELECT_BASE_NODE_CHILDREN_1,
+                                    base_count,
+                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                    local_relpath, result_pool));
+#ifndef SVN_WC__NODES_ONLY
+      SVN_ERR_ASSERT((*children)->nelts == children_nodes->nelts);
+#else
+      *children = children_nodes;
+#endif
+#endif
+      return SVN_NO_ERROR;
+    }
 
   /* ### it would be nice to pass BASE_COUNT and WORKING_COUNT, but there is
      ### nothing union_children() can do with those.  */
@@ -6566,12 +6644,34 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       svn_sqlite__stmt_t *stmt;
       svn_boolean_t have_row;
       svn_wc__db_status_t presence;
+#ifdef SVN_WC__NODES
+      svn_sqlite__stmt_t *stmt_nodes;
+      svn_boolean_t have_nodes_row;
+#endif
 
       /* ### is it faster to fetch fewer columns? */
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_WORKING_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, wcroot->sdb,
+                                        STMT_SELECT_WORKING_NODE_1));
+      SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is",
+                                wcroot->wc_id, current_relpath));
+      SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+      SVN_ERR(assert_working_rows_match(have_row, have_nodes_row,
+                                        stmt, stmt_nodes,
+                                        current_relpath, scratch_pool));
+      SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+      stmt = stmt_nodes;
+      have_row = have_nodes_row;
+#endif
+#endif
 
       if (!have_row)
         {
@@ -7801,6 +7901,10 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
   svn_wc__db_status_t work_status, base_status;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_nodes;
+  svn_boolean_t have_nodes_row;
+#endif
 
   /* This uses an optimisation that first reads the working node and
      then may read the base node.  It could call svn_wc__db_read_info
@@ -7814,10 +7918,27 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
   VERIFY_USABLE_PDH(pdh);
 
   /* First check the working node. */
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE_1));
+  SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is",
+                            pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR(assert_working_rows_match(have_row, have_nodes_row, stmt, stmt_nodes,
+                                    local_relpath, scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+  stmt = stmt_nodes;
+  have_row = have_nodes_row;
+#endif
+#endif
 
   if (have_row)
     {

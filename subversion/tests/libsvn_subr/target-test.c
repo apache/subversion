@@ -64,7 +64,8 @@ condense_targets_tests_helper(const char* title,
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   const char *common_path, *common_path2, *curdir;
-  char *token, *iter, *exp_common_abs = (char*)exp_common;
+  char *token, *iter;
+  const char *exp_common_abs = exp_common;
   int i;
   char buf[8192];
 

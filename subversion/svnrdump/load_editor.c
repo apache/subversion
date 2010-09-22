@@ -233,6 +233,7 @@ new_node_record(void **node_baton,
   void *commit_edit_baton;
   char *ancestor_path;
   apr_array_header_t *residual_open_path;
+  char *relpath_compose;
   const char *nb_dirname;
   apr_size_t residual_close_count;
   int i;
@@ -355,8 +356,11 @@ new_node_record(void **node_baton,
         
       for (i = 0; i < residual_open_path->nelts; i ++)
         {
-          SVN_ERR(commit_editor->open_directory(APR_ARRAY_IDX(residual_open_path,
-                                                              i, const char *),
+          relpath_compose =
+            svn_relpath_join(rb->db->relpath,
+                             APR_ARRAY_IDX(residual_open_path, i, const char *),
+                             rb->pool);
+          SVN_ERR(commit_editor->open_directory(relpath_compose,
                                                 rb->db->baton,
                                                 rb->rev - 1,
                                                 rb->pool, &child_baton));
@@ -364,10 +368,7 @@ new_node_record(void **node_baton,
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
-          child_db->relpath = svn_relpath_join(rb->db->relpath,
-                                               APR_ARRAY_IDX(residual_open_path,
-                                                             i, const char *),
-                                               rb->pool);
+          child_db->relpath = relpath_compose;
           child_db->parent = rb->db;
           rb->db = child_db;
         }
@@ -470,14 +471,21 @@ set_node_property(void *baton,
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pool;
 
-  LDR_DBG(("Applying properties on %p\n", nb->file_baton));
-  if (nb->kind == svn_node_file)
-    SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
-                                            value, pool));
-  else
-    SVN_ERR(commit_editor->change_dir_prop(nb->rb->db->baton, name,
-                                           value, pool));
-
+  switch (nb->kind)
+    {
+    case svn_node_file:
+      LDR_DBG(("Applying properties on %p\n", nb->file_baton));
+      SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
+                                              value, pool));
+      break;
+    case svn_node_dir:
+      LDR_DBG(("Applying properties on %p\n", nb->rb->db->baton));
+      SVN_ERR(commit_editor->change_dir_prop(nb->rb->db->baton, name,
+                                             value, pool));
+      break;
+    default:
+      break;
+    }
   return SVN_NO_ERROR;
 }
 

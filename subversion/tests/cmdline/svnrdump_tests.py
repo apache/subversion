@@ -167,6 +167,10 @@ def revision_0_load(sbox):
 #     docs/         (Added r6)
 #       README      (Added r6)
 
+def skeleton_dump(sbox):
+  "dump: skeleton repository"
+  run_dump_test(sbox, "skeleton.dump")
+
 def skeleton_load(sbox):
   "load: skeleton repository"
   run_load_test(sbox, "skeleton.dump")
@@ -219,6 +223,22 @@ def tag_empty_trunk_load(sbox):
   "load: tag empty trunk"
   run_load_test(sbox, "tag-empty-trunk.dump")
 
+def tag_trunk_with_file_dump(sbox):
+  "dump: tag trunk containing a file"
+  run_dump_test(sbox, "tag-trunk-with-file.dump")
+
+def tag_trunk_with_file_load(sbox):
+  "load: tag trunk containing a file"
+  run_load_test(sbox, "tag-trunk-with-file.dump")
+
+def tag_trunk_with_file2_dump(sbox):
+  "dump: tag trunk containing a file (#2)"
+  run_dump_test(sbox, "tag-trunk-with-file2.dump")
+
+def tag_trunk_with_file2_load(sbox):
+  "load: tag trunk containing a file (#2)"
+  run_load_test(sbox, "tag-trunk-with-file2.dump")
+
 def dir_prop_change_dump(sbox):
   "dump: directory property changes"
   run_dump_test(sbox, "dir-prop-change.dump")
@@ -251,6 +271,14 @@ def url_encoding_load(sbox):
   "load: url encoding issues"
   run_load_test(sbox, "url-encoding-bug.dump")
 
+def commit_a_copy_of_root_dump(sbox):
+  "dump: commit a copy of root"
+  run_dump_test(sbox, "repo-with-copy-of-root-dir.dump")
+
+def commit_a_copy_of_root_load(sbox):
+  "load: commit a copy of root"
+  run_load_test(sbox, "repo-with-copy-of-root-dir.dump")
+
 ########################################################################
 # Run the tests
 
@@ -260,6 +288,7 @@ test_list = [ None,
               basic_dump,
               revision_0_dump,
               revision_0_load,
+              skeleton_dump,
               skeleton_load,
               copy_and_modify_dump,
               copy_and_modify_load,
@@ -269,18 +298,24 @@ test_list = [ None,
               modified_in_place_load,
               tag_empty_trunk_dump,
               tag_empty_trunk_load,
+              tag_trunk_with_file_dump,
+              tag_trunk_with_file_load,
+              tag_trunk_with_file2_dump,
+              tag_trunk_with_file2_load,
               dir_prop_change_dump,
-              dir_prop_change_load,
+              Wimp("TODO", dir_prop_change_load, svntest.main.is_ra_type_dav),
               copy_parent_modify_prop_dump,
               copy_parent_modify_prop_load,
               url_encoding_dump,
               url_encoding_load,
               copy_revprops_dump,
-              Wimp("TODO", copy_revprops_load),
+              copy_revprops_load,
               no_author_dump,
               no_author_load,
-              Wimp("TODO", move_and_modify_in_the_same_revision_dump),
-              Wimp("TODO", move_and_modify_in_the_same_revision_load),
+              move_and_modify_in_the_same_revision_dump,
+              move_and_modify_in_the_same_revision_load,
+              commit_a_copy_of_root_dump,
+              commit_a_copy_of_root_load,
              ]
 
 if __name__ == '__main__':
