@@ -1397,7 +1397,7 @@ gather_children(const apr_array_header_t **children,
 #endif
 #ifdef SVN_WC__NODES
       SVN_ERR(single_table_children(&children_nodes,
-                                    STMT_SELECT_WORKING_NODE_CHILDREN,
+                                    STMT_SELECT_WORKING_NODE_CHILDREN_1,
                                     working_count,
                                     pdh->wcroot->sdb, pdh->wcroot->wc_id,
                                     local_relpath, result_pool));
