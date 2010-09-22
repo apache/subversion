@@ -219,6 +219,22 @@ def tag_empty_trunk_load(sbox):
   "load: tag empty trunk"
   run_load_test(sbox, "tag-empty-trunk.dump")
 
+def tag_trunk_with_file_dump(sbox):
+  "dump: tag trunk containing a file"
+  run_dump_test(sbox, "tag-trunk-with-file.dump")
+
+def tag_trunk_with_file_load(sbox):
+  "load: tag trunk containing a file"
+  run_load_test(sbox, "tag-trunk-with-file.dump")
+
+def tag_trunk_with_file2_dump(sbox):
+  "dump: tag trunk containing a file (#2)"
+  run_dump_test(sbox, "tag-trunk-with-file2.dump")
+
+def tag_trunk_with_file2_load(sbox):
+  "load: tag trunk containing a file (#2)"
+  run_load_test(sbox, "tag-trunk-with-file2.dump")
+
 def dir_prop_change_dump(sbox):
   "dump: directory property changes"
   run_dump_test(sbox, "dir-prop-change.dump")
@@ -269,6 +285,10 @@ test_list = [ None,
               modified_in_place_load,
               tag_empty_trunk_dump,
               tag_empty_trunk_load,
+              tag_trunk_with_file_dump,
+              tag_trunk_with_file_load,
+              tag_trunk_with_file2_dump,
+              tag_trunk_with_file2_load,
               dir_prop_change_dump,
               Wimp("TODO", dir_prop_change_load, svntest.main.is_ra_type_dav),
               copy_parent_modify_prop_dump,
