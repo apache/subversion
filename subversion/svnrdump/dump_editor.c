@@ -27,6 +27,7 @@
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_subst.h"
 #include "svn_dirent_uri.h"
 
 #include "dump_editor.h"
@@ -70,6 +71,36 @@ struct dump_edit_baton {
   svn_boolean_t dump_props;
   svn_boolean_t dump_newlines;
 };
+
+/* Normalize the line ending style of the values of properties in PROPS
+ * that "need translation" (according to svn_prop_needs_translation(),
+ * currently all svn:* props) so that they contain only LF (\n) line endings.
+ */
+svn_error_t *
+normalize_props(apr_hash_t *props,
+                apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  const char *key, *cstring;
+  const svn_string_t *value;
+
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+    {
+      key = svn__apr_hash_index_key(hi);
+      value = svn__apr_hash_index_val(hi);
+
+      if (svn_prop_needs_translation(key))
+        {
+          SVN_ERR(svn_subst_translate_cstring2(value->data, &cstring,
+                                               "\n", TRUE,
+                                               NULL, FALSE,
+                                               pool));
+          value = svn_string_create(cstring, pool);
+          apr_hash_set(props, key, APR_HASH_KEY_STRING, value);
+        }
+    }
+  return SVN_NO_ERROR;
+}
 
 /* Make a directory baton to represent the directory at path (relative
  * to the edit_baton).
@@ -137,6 +168,7 @@ dump_props(struct dump_edit_baton *eb,
   if (trigger_var && !*trigger_var)
     return SVN_NO_ERROR;
 
+  SVN_ERR(normalize_props(eb->props, pool));
   svn_stringbuf_setempty(eb->propstring);
   propstream = svn_stream_from_stringbuf(eb->propstring, eb->pool);
   SVN_ERR(svn_hash_write_incremental(eb->props, eb->deleted_props,

@@ -87,4 +87,12 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_stream_t *stream,
                 apr_pool_t *pool);
 
+/**
+ * Normalize the line ending style of the values of properties in @a
+ * rev_props using @a pool for memory allocation.
+ */
+svn_error_t *
+normalize_props(apr_hash_t *props,
+                apr_pool_t *pool);
+
 #endif
