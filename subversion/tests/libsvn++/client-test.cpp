@@ -42,6 +42,11 @@ cleanup_client(void *baton)
 {
   Client *client = reinterpret_cast<Client *>(baton);
 
+  // Explicitly call the destructor.  We can only do this since we used
+  // the "placement new" syntax to create the object, and the pool will
+  // reclaim the memory for us.
+  client->~Client();
+
   return APR_SUCCESS;
 }
 
