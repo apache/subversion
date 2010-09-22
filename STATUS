@@ -184,6 +184,15 @@ Candidate changes for 1.5.8:
    Votes:
      +1: stsp
 
+ * r1000060
+   Fix for issue #3695, in which the use of "SVNPathAuthz short_circuit" 
+   causes Subversion to ignore authz access rule sections which
+   contain a repository prefix.
+   Justification:
+     Rules are made to be broken.  Except when they're access rules.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
 
