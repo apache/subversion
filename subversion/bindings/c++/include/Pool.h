@@ -36,6 +36,9 @@ namespace SVN
    * This class manages one APR pool.  Objects of this class may be allocated
    * on the stack, ensuring the pool is destroyed when the function 
    * completes.
+   *
+   * Several methods here are one-liners, and so are defined here as well to
+   * allow better inlining by the compiler.
    */
   class Pool
   {
@@ -57,29 +60,43 @@ namespace SVN
       Pool();
 
       // Explicit to avoid being called as an assignment operator.
-      explicit Pool(Pool &parent);
-      ~Pool();
+      inline explicit
+      Pool(Pool &parent)
+      {
+         m_pool = svn_pool_create(parent.pool());
+      }
 
-      void *alloc(apr_size_t sz);
-      void registerCleanup(apr_status_t (*cleanup_func)(void *), void *baton);
-      apr_pool_t *pool() const;
-      void clear() const;
+      inline
+      ~Pool()
+      {
+        svn_pool_destroy(m_pool);
+      }
+
+      inline void *
+      alloc(apr_size_t sz)
+      {
+        return apr_palloc(m_pool, sz);
+      }
+
+      inline void
+      registerCleanup(apr_status_t (*cleanup_func)(void *), void *baton)
+      {
+        apr_pool_cleanup_register(m_pool, baton, cleanup_func,
+                                  apr_pool_cleanup_null);
+      }
+
+      inline apr_pool_t *
+      pool() const
+      {
+        return m_pool;
+      }
+
+      inline void
+      clear() const
+      {
+        svn_pool_clear(m_pool);
+      }
   };
-
-// The following one-line functions are best inlined by the compiler, and
-// need to be implemented in the header file for that to happen.
-
-inline apr_pool_t *
-Pool::pool() const
-{
-  return m_pool;
-}
-
-inline void
-Pool::clear() const
-{
-  svn_pool_clear(m_pool);
-}
 
 }
 

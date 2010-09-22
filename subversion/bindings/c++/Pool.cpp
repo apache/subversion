@@ -33,30 +33,9 @@ namespace SVN {
 
 Pool::Pool()
 {
+  // TODO: We may need to protect access to the global pool with a mutex.
   m_pool = svn_pool_create(Private::Core::getCore()->getGlobalPool());
 }
 
-Pool::Pool(Pool &parent)
-{
-  m_pool = svn_pool_create(parent.pool());
-}
-
-void *
-Pool::alloc(apr_size_t sz)
-{
-  return apr_palloc(m_pool, sz);
-}
-
-Pool::~Pool()
-{
-  if (m_pool)
-    svn_pool_destroy(m_pool);
-}
-
-void
-Pool::registerCleanup(apr_status_t (*cleanup_func)(void *), void *baton)
-{
-  apr_pool_cleanup_register(m_pool, baton, cleanup_func, apr_pool_cleanup_null);
-}
 
 }
