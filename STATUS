@@ -209,6 +209,15 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1000060
+   Fix for issue #3695, in which the use of "SVNPathAuthz short_circuit" 
+   causes Subversion to ignore authz access rule sections which
+   contain a repository prefix.
+   Justification:
+     Rules are made to be broken.  Except when they're access rules.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
@@ -305,6 +314,9 @@ Veto-blocked changes:
    This fixes issue 3695.
    Justification:
      Having broken authz is bad.
+   Notes:
+     A new fix for this bug was implemented in r1000060, and this
+     original one reverted.
    Votes:
      +1: kameshj, rhuijben
      -1: cmpilato ("Fix is incorrect -- 'repo_name' is not the basename of
