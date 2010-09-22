@@ -61,6 +61,7 @@ namespace SVN
       ~Pool();
 
       void *alloc(apr_size_t sz);
+      void registerCleanup(apr_status_t (*cleanup_func)(void *), void *baton);
       apr_pool_t *pool() const;
       void clear() const;
   };

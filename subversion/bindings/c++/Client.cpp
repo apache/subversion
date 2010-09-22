@@ -38,6 +38,12 @@ Client::Client()
 
 Client::~Client()
 {
+  dispose();
+}
+
+void
+Client::dispose()
+{
 }
 
 Version

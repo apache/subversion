@@ -56,6 +56,9 @@ namespace SVN
       /** The destructor needs to be public. */
       virtual ~Client();
 
+      /** The real work of the destructor.  Useful for "placement delete". */
+      void dispose();
+
       Version getVersion();
 
       void cat(std::ostream &stream, const std::string &path_or_url);

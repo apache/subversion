@@ -27,11 +27,13 @@
 #include "Types.h"
 
 #include "svn_error.h"
+#include "svn_wc.h"
 
 namespace SVN
 {
 
 class CommitInfo;
+class ClientNotifyInfo;
 
 namespace Callback
 {
@@ -43,6 +45,15 @@ class Commit
 
     static svn_error_t *callback(const svn_commit_info_t *commit_info,
                                  void *baton, apr_pool_t *pool);
+};
+
+class ClientNotifier
+{
+  public:
+    virtual void notify(const ClientNotifyInfo &notify) = 0;
+
+    static void callback(void *baton, const svn_wc_notify_t *notify,
+                         apr_pool_t *pool);
 };
 
 }

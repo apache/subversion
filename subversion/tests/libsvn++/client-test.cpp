@@ -37,6 +37,27 @@
 
 using namespace SVN;
 
+static apr_status_t
+cleanup_client(void *baton)
+{
+  Client *client = reinterpret_cast<Client *>(baton);
+
+  return APR_SUCCESS;
+}
+
+static Client *
+get_client(Pool &pool)
+{
+  // We use placement new here to allocate the Client in the given pool.
+  // We also register a function to destory the object on pool cleanup
+  void *buf = pool.alloc(sizeof(Client));
+  Client *client = new (buf) Client();
+
+  pool.registerCleanup(cleanup_client, client);
+
+  return client;
+}
+
 static svn_error_t *
 create_greek_repo(svn_repos_t **repos,
                   const char *repos_path,
@@ -64,9 +85,10 @@ create_greek_repo(svn_repos_t **repos,
 static svn_error_t *
 test_get_version(apr_pool_t *p)
 {
-  Client client;
+  Pool pool;
+  Client *client = get_client(pool);
 
-  Version v = client.getVersion();
+  Version v = client->getVersion();
   SVN_TEST_ASSERT(v.getTag() == SVN_VER_NUMTAG);
 
   return SVN_NO_ERROR;
@@ -90,20 +112,20 @@ test_cat(const svn_test_opts_t *opts,
   iota_url = svn_path_url_add_component2(repos_url, "iota", pool.pool());
 
   std::ostringstream stream;
-  Client client;
+  Client *client = get_client(pool);
 
-  client.cat(stream, iota_url);
+  client->cat(stream, iota_url);
   SVN_TEST_ASSERT(stream.str() == "This is the file 'iota'.\n");
 
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool.pool()));
   wc_path = svn_dirent_join(cwd, "test-cpp-client-wc", pool.pool());
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool.pool()));
-  client.checkout(repos_url, wc_path);
+  client->checkout(repos_url, wc_path);
 
   iota_path = svn_dirent_join(wc_path, "iota", pool.pool());
   stream.clear();
   stream.str("");
-  client.cat(stream, iota_path);
+  client->cat(stream, iota_path);
   SVN_TEST_ASSERT(stream.str() == "This is the file 'iota'.\n");
 
   return SVN_NO_ERROR;
@@ -123,7 +145,7 @@ test_checkout(const svn_test_opts_t *opts,
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, REPOS_NAME,
                                            pool.pool()));
 
-  Client client;
+  Client *client = get_client(pool);
 
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool.pool()));
   wc_path = svn_dirent_join(cwd, WCS_ROOT, pool.pool());
@@ -132,7 +154,7 @@ test_checkout(const svn_test_opts_t *opts,
 
   wc_path = svn_dirent_join(wc_path, WC_PATH, pool.pool());
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool.pool()));
-  Revision result_rev = client.checkout(repos_url, wc_path);
+  Revision result_rev = client->checkout(repos_url, wc_path);
 
   SVN_TEST_ASSERT(result_rev.revision()->value.number == 1);
 
@@ -181,7 +203,7 @@ test_commit(const svn_test_opts_t *opts,
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, REPOS_NAME,
                                            pool.pool()));
 
-  Client client;
+  Client *client = get_client(pool);
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool.pool()));
   wc_path = svn_dirent_join(cwd, WCS_ROOT, pool.pool());
   SVN_ERR(svn_io_make_dir_recursively(wc_path, pool.pool()));
@@ -189,7 +211,7 @@ test_commit(const svn_test_opts_t *opts,
 
   wc_path = svn_dirent_join(wc_path, WC_PATH, pool.pool());
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool.pool()));
-  client.checkout(repos_url, wc_path);
+  client->checkout(repos_url, wc_path);
 
   const char *iota_path = svn_dirent_join(wc_path, "iota", pool.pool());
   apr_size_t written;
@@ -201,7 +223,7 @@ test_commit(const svn_test_opts_t *opts,
   std::vector<std::string> targets;
   targets.push_back(wc_path);
   CommitHandler handler;
-  client.commit(targets, handler);
+  client->commit(targets, handler);
 
   SVN_TEST_ASSERT(handler.commit_count == 1);
 
@@ -209,7 +231,7 @@ test_commit(const svn_test_opts_t *opts,
   try
     {
       CommitHandlerEx handler_ex;
-      client.commit(targets, handler_ex);
+      client->commit(targets, handler_ex);
 
       // Shouldn't get here, 'cause an exception should be thrown
       return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);

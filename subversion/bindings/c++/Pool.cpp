@@ -53,4 +53,10 @@ Pool::~Pool()
     svn_pool_destroy(m_pool);
 }
 
+void
+Pool::registerCleanup(apr_status_t (*cleanup_func)(void *), void *baton)
+{
+  apr_pool_cleanup_register(m_pool, baton, cleanup_func, apr_pool_cleanup_null);
+}
+
 }
