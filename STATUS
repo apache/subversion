@@ -155,6 +155,8 @@ Candidate changes:
      Having broken authz is bad.
    Votes:
      +1: kameshj, rhuijben
+     +0: cmpilato ("Why is repo_name NULL?  Why not populate it in some more
+                    central place instead of down in the REPORT handler?")
 
  * r997457, r997466
    Fix some error transmission problems in svnserve.
