@@ -968,7 +968,7 @@ copy_working_from_base(void *baton,
 }
 
 
-
+/* */
 static svn_error_t *
 insert_incomplete_working_children(svn_sqlite__db_t *sdb,
                                    apr_int64_t wc_id,
@@ -3665,7 +3665,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__bindf(stmt, "issisnnnt",
                     src_pdh->wcroot->wc_id, src_relpath,
                     dst_relpath,
-                    (children == NULL) ? (apr_int64_t)2 :
+                    (children == NULL) ? (apr_int64_t)2 :  /* ### op_depth */
                                 (apr_int64_t)1, /* no directory or stub */
                     dst_parent_relpath,
                     presence_map, dst_status));
@@ -8935,7 +8935,7 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath,
-                                (*mcb->local_relpath == '\0'
+                                (*mcb->local_relpath == '\0' /* ### op_depth */
                                  ? (apr_int64_t)1 : (apr_int64_t)2)));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
@@ -8966,7 +8966,7 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath,
-                                (*mcb->local_relpath == '\0'
+                                (*mcb->local_relpath == '\0' /* ### op_depth */
                                  ? (apr_int64_t)1 : (apr_int64_t)2)));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
