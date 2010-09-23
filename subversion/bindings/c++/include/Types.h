@@ -30,6 +30,7 @@
 #include "Pool.h"
 #include "Revision.h"
 
+#include "svn_wc.h"
 #include "svn_types.h"
 
 #include <map>
@@ -99,6 +100,35 @@ class CommitInfo
         return std::string(m_info->repos_root);
       else
         return std::string();
+    }
+};
+
+class ClientNotifyInfo
+{
+  private:
+    Pool m_pool;
+    svn_wc_notify_t *m_notify;
+
+  public:
+    inline
+    ClientNotifyInfo(const svn_wc_notify_t *info)
+      : m_pool()
+    {
+      m_notify = svn_wc_dup_notify(info, m_pool.pool());
+    }
+
+    inline
+    ClientNotifyInfo(const ClientNotifyInfo &that)
+      : m_pool()
+    {
+      m_notify = svn_wc_dup_notify(that.m_notify, m_pool.pool());
+    }
+
+    inline ClientNotifyInfo &
+    operator=(const ClientNotifyInfo &that)
+    {
+      m_pool.clear();
+      m_notify = svn_wc_dup_notify(that.m_notify, m_pool.pool());
     }
 };
 

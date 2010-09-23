@@ -34,6 +34,9 @@ Client::Client()
   : m_pool()
 {
   svn_error_clear(svn_client_create_context(&m_ctx, m_pool.pool()));
+
+  m_ctx->notify_func2 = notify_func2;
+  m_ctx->notify_baton2 = this;
 }
 
 Client::~Client()
@@ -97,6 +100,25 @@ Client::commit(const std::vector<std::string> &targets,
                 Private::Utility::make_prop_table(revprop_table, pool),
                 Callback::Commit::callback, &callback,
                 m_ctx, pool.pool()));
+}
+
+void
+Client::notify_func2(void *baton,
+                     const svn_wc_notify_t *notify,
+                     apr_pool_t *pool)
+{
+  reinterpret_cast<Client *>(baton)->notify(ClientNotifyInfo(notify));
+}
+
+void
+Client::notify(const ClientNotifyInfo &info)
+{
+  for (std::set<Callback::ClientNotifier *>::const_iterator it
+                                                    = m_notifiers.begin();
+        it != m_notifiers.end(); ++it)
+    {
+      (*it)->notify(info);
+    }
 }
 
 }

@@ -37,15 +37,32 @@
 
 using namespace SVN;
 
+class Notifier : public Callback::ClientNotifier
+{
+  public:
+    void notify(const SVN::ClientNotifyInfo&)
+    {
+    }
+};
+
+struct cleanup_baton
+{
+  Client *client;
+  Notifier *notifier;
+};
+
 static apr_status_t
 cleanup_client(void *baton)
 {
-  Client *client = reinterpret_cast<Client *>(baton);
+  struct cleanup_baton *cb = reinterpret_cast<struct cleanup_baton *>(baton);
 
   // Explicitly call the destructor.  We can only do this since we used
   // the "placement new" syntax to create the object, and the pool will
   // reclaim the memory for us.
-  client->~Client();
+  cb->client->~Client();
+  cb->notifier->~Notifier();
+
+  delete cb;
 
   return APR_SUCCESS;
 }
@@ -58,7 +75,15 @@ get_client(Pool &pool)
   void *buf = pool.alloc(sizeof(Client));
   Client *client = new (buf) Client();
 
-  pool.registerCleanup(cleanup_client, client);
+  buf = pool.alloc(sizeof(Notifier));
+  Notifier *notifier = new (buf) Notifier();
+  client->subscribeNotifier(notifier);
+
+  struct cleanup_baton *cb = new cleanup_baton;
+  cb->client = client;
+  cb->notifier = notifier;
+
+  pool.registerCleanup(cleanup_client, cb);
 
   return client;
 }

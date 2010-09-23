@@ -39,6 +39,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <set>
 
 namespace SVN
 {
@@ -48,6 +49,13 @@ namespace SVN
     private:
       Pool m_pool;
       svn_client_ctx_t *m_ctx;
+      
+      std::set<Callback::ClientNotifier *> m_notifiers;
+
+      static void notify_func2(void *baton,
+                               const svn_wc_notify_t *notify,
+                               apr_pool_t *pool);
+      void notify(const ClientNotifyInfo &info);
 
     public:
       /** The constructor. */
@@ -58,6 +66,15 @@ namespace SVN
 
       /** The real work of the destructor.  Useful for "placement delete". */
       void dispose();
+
+      inline void subscribeNotifier(Callback::ClientNotifier *notifier)
+      {
+        m_notifiers.insert(notifier);
+      }
+      inline void unsubscribeNotifier(Callback::ClientNotifier *notifier)
+      {
+        m_notifiers.erase(m_notifiers.find(notifier));
+      }
 
       Version getVersion();
 
