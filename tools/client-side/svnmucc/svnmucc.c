@@ -141,6 +141,7 @@ typedef enum {
   ACTION_MKDIR,
   ACTION_CP,
   ACTION_PROPSET,
+  ACTION_PROPSETF,
   ACTION_PROPDEL,
   ACTION_PUT,
   ACTION_RM
@@ -161,41 +162,60 @@ struct operation {
   const char *url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
-  apr_table_t *props;    /* const char *prop_name -> const char *prop_value */
+  apr_hash_t *prop_mods; /* const char *prop_name -> 
+                            const svn_string_t *prop_value */
+  apr_array_header_t *prop_dels; /* const char *prop_name deletions */
   void *baton;           /* as returned by the commit editor */
-};
-
-
-/* State to be passed to set_props iterator */
-struct driver_state {
-  const svn_delta_editor_t *editor;
-  svn_node_kind_t kind;
-  apr_pool_t *pool;
-  void *baton;
-  svn_error_t* err;
 };
 
 
 /* An iterator (for use via apr_table_do) which sets node properties.
    REC is a pointer to a struct driver_state. */
-static int
-set_props(void *rec, const char *key, const char *value)
+static svn_error_t *
+change_props(const svn_delta_editor_t *editor,
+             void *baton,
+             struct operation *child,
+             apr_pool_t *pool)
 {
-  struct driver_state *d_state = (struct driver_state*)rec;
-  svn_string_t *value_svnstring
-    = value ? svn_string_create(value, d_state->pool) : NULL;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
-  if (d_state->kind == svn_node_dir)
-    d_state->err = d_state->editor->change_dir_prop(d_state->baton, key,
-                                                    value_svnstring,
-                                                    d_state->pool);
-  else
-    d_state->err = d_state->editor->change_file_prop(d_state->baton, key,
-                                                     value_svnstring,
-                                                     d_state->pool);
-  if (d_state->err)
-    return 0;
-  return 1;
+  if (child->prop_dels)
+    {
+      int i;
+      for (i = 0; i < child->prop_dels->nelts; i++)
+        {
+          const char *prop_name;
+
+          svn_pool_clear(iterpool);
+          prop_name = APR_ARRAY_IDX(child->prop_dels, i, const char *);
+          if (child->kind == svn_node_dir)
+            SVN_ERR(editor->change_dir_prop(baton, prop_name,
+                                            NULL, iterpool));
+          else
+            SVN_ERR(editor->change_file_prop(baton, prop_name,
+                                             NULL, iterpool));
+        }
+    }
+  if (apr_hash_count(child->prop_mods))
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(pool, child->prop_mods);
+           hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, &key, NULL, &val);
+          if (child->kind == svn_node_dir)
+            SVN_ERR(editor->change_dir_prop(baton, key, val, iterpool));
+          else
+            SVN_ERR(editor->change_file_prop(baton, key, val, iterpool));
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -209,7 +229,7 @@ drive(struct operation *operation,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
-  struct driver_state state;
+
   for (hi = apr_hash_first(pool, operation->children);
        hi; hi = apr_hash_next(hi))
     {
@@ -287,15 +307,9 @@ drive(struct operation *operation,
          then close it. */
       if (file_baton)
         {
-          if ((child->kind == svn_node_file)
-              && (! apr_is_empty_table(child->props)))
+          if (child->kind == svn_node_file)
             {
-              state.baton = file_baton;
-              state.pool = subpool;
-              state.editor = editor;
-              state.kind = child->kind;
-              if (! apr_table_do(set_props, &state, child->props, NULL))
-                SVN_ERR(state.err);
+              SVN_ERR(change_props(editor, file_baton, child, subpool));
             }
           SVN_ERR(editor->close_file(file_baton, NULL, subpool));
         }
@@ -307,15 +321,9 @@ drive(struct operation *operation,
               || child->operation == OP_REPLACE))
         {
           SVN_ERR(drive(child, head, editor, subpool));
-          if ((child->kind == svn_node_dir)
-              && (! apr_is_empty_table(child->props)))
+          if (child->kind == svn_node_dir)
             {
-              state.baton = child->baton;
-              state.pool = subpool;
-              state.editor = editor;
-              state.kind = child->kind;
-              if (! apr_table_do(set_props, &state, child->props, NULL))
-                SVN_ERR(state.err);
+              SVN_ERR(change_props(editor, child->baton, child, subpool));
             }
           SVN_ERR(editor->close_directory(child->baton, subpool));
         }
@@ -343,7 +351,8 @@ get_operation(const char *path,
       child->operation = OP_OPEN;
       child->rev = SVN_INVALID_REVNUM;
       child->kind = svn_node_dir;
-      child->props = apr_table_make(pool, 0);
+      child->prop_mods = apr_hash_make(pool);
+      child->prop_dels = apr_array_make(pool, 1, sizeof(const char *));
       apr_hash_set(operation->children, path, APR_HASH_KEY_STRING, child);
     }
   return child;
@@ -382,7 +391,7 @@ build(action_code_t action,
       const char *url,
       svn_revnum_t rev,
       const char *prop_name,
-      const char *prop_value,
+      const svn_string_t *prop_value,
       const char *src_file,
       svn_revnum_t head,
       const char *anchor,
@@ -448,7 +457,11 @@ build(action_code_t action,
                    && (operation->operation == OP_OPEN))
             operation->operation = OP_PROPSET;
         }
-      apr_table_set(operation->props, prop_name, prop_value);
+      if (! prop_value)
+        APR_ARRAY_PUSH(operation->prop_dels, const char *) = prop_name;
+      else
+        apr_hash_set(operation->prop_mods, prop_name,
+                     APR_HASH_KEY_STRING, prop_value);
       if (!operation->rev)
         operation->rev = rev;
       return SVN_NO_ERROR;
@@ -591,7 +604,7 @@ struct action {
 
   /* property name/value */
   const char *prop_name;
-  const char *prop_value;
+  const svn_string_t *prop_value;
 };
 
 static svn_error_t *
@@ -684,6 +697,9 @@ execute(const apr_array_header_t *actions,
                         action->prop_name, action->prop_value,
                         NULL, head, anchor, session, &root, pool));
           break;
+        case ACTION_PROPSETF:
+        default:
+          SVN_ERR_MALFUNCTION_NO_RETURN();
         }
     }
 
@@ -698,6 +714,23 @@ execute(const apr_array_header_t *actions,
     svn_error_clear(editor->abort_edit(editor_baton, pool));
 
   return err;
+}
+
+static svn_error_t *
+read_propvalue_file(const svn_string_t **value_p,
+                    const char *filename,
+                    apr_pool_t *pool)
+{
+  svn_stringbuf_t *value;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  apr_file_t *f;
+
+  SVN_ERR(svn_io_file_open(&f, filename, APR_READ | APR_BINARY | APR_BUFFERED,
+                           APR_OS_DEFAULT, scratch_pool));
+  SVN_ERR(svn_stringbuf_from_aprfile(&value, f, scratch_pool));
+  *value_p = svn_string_create_from_buf(value, pool);
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 static void
@@ -715,6 +748,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  put SRC-FILE URL      add or modify file URL with contents copied from\n"
     "                        SRC-FILE (use \"-\" to read from standard input)\n"
     "  propset NAME VAL URL  set property NAME on URL to value VAL\n"
+    "  propsetf NAME VAL URL set property NAME on URL to value from file VAL\n"
     "  propdel NAME URL      delete property NAME from URL\n"
     "\nOptions:\n"
     "  -h, --help            display this text\n"
@@ -911,6 +945,8 @@ main(int argc, const char **argv)
         action->action = ACTION_PUT;
       else if (! strcmp(action_string, "propset"))
         action->action = ACTION_PROPSET;
+      else if (! strcmp(action_string, "propsetf"))
+        action->action = ACTION_PROPSETF;
       else if (! strcmp(action_string, "propdel"))
         action->action = ACTION_PROPDEL;
       else
@@ -956,9 +992,10 @@ main(int argc, const char **argv)
             insufficient(pool);
         }
 
-      /* For propset and propdel, a property name (and maybe value)
-         comes next. */
+      /* For propset, propsetf, and propdel, a property name (and
+         maybe a property value or file which contains one) comes next. */
       if ((action->action == ACTION_PROPSET)
+          || (action->action == ACTION_PROPSETF)
           || (action->action == ACTION_PROPDEL))
         {
           action->prop_name = APR_ARRAY_IDX(action_args, i, const char *);
@@ -969,11 +1006,26 @@ main(int argc, const char **argv)
             {
               action->prop_value = NULL;
             }
-          else
+          else if (action->action == ACTION_PROPSET)
             {
-              action->prop_value = APR_ARRAY_IDX(action_args, i, const char *);
+              action->prop_value =
+                svn_string_create(APR_ARRAY_IDX(action_args, i, 
+                                                const char *), pool);
               if (++i == action_args->nelts)
                 insufficient(pool);
+            }
+          else
+            {
+              const char *propval_file = 
+                svn_path_canonicalize(APR_ARRAY_IDX(action_args, i, 
+                                                    const char *), pool);
+
+              if (++i == action_args->nelts)
+                insufficient(pool);
+
+              handle_error(read_propvalue_file(&(action->prop_value),
+                                               propval_file, pool), pool);
+              action->action = ACTION_PROPSET;
             }
         }
 
@@ -982,6 +1034,7 @@ main(int argc, const char **argv)
           || action->action == ACTION_MKDIR
           || action->action == ACTION_PUT
           || action->action == ACTION_PROPSET
+          || action->action == ACTION_PROPSETF /* shouldn't see this one */
           || action->action == ACTION_PROPDEL)
         num_url_args = 1;
       else
