@@ -27,12 +27,44 @@ some of the following paradigms:
    implemented as constructors, copy constructors and other "logical" ways.
 
 
+Memory Management
+-----------------
+In theory, C++ objects should manage their own memory.  That is, the
+constructor allocates memory, and the destructor frees it when through.
+Copy and assignment operators should also function as expected, ensuring
+that memory doesn't leak, and that objects aren't prematurely released.
+
+This design, unfortunately, doesn't mesh very well with the pool-based
+allocation used throughout the rest of Subversion.  Creation and duplication
+functions all require pools, with the assumption that many objects will
+share the same pool.
+
+Translating this to C++ means that each object requires it's own pool, which
+comes with significant overhead (8k per APR pool, plus comutational complexity).
+These data objects simply hold handles to the relevent C structures,
+allocateded in the private pool.  When consumers want information, they
+call the associated getter, which returns C++ types.
+
+Currently, this allows us to export the API we want, at the runtime expense
+of using pools.  In the future (1.8), we could use pocore pools, or some other
+allocation scheme, but this would require a significant rework of core
+Subversion APIs.  Only time will tell, but pretty much anything would be
+better than the current one-pool-per-object scheme.
+
+For some discussion about the memory management issues, see this IRC log,
+starting around 19:43:
+http://colabti.org/irclogger/irclogger_log/svn-dev?date=2010-09-22
+
+Also see this email thread:
+http://svn.haxx.se/dev/archive-2010-09/0497.shtml
+
+
 Tests
 -----
 These bindings have their own test suite.  The purpose of the test suite is
 *not* to test the functionality of Subversion, but rather to test the fidelity
 of the bindings themselves.  Please focus on that when writing tests for these
-bindings.  The tests are located in the test/ directory.
+bindings.  The tests are located in the subversion/tests/libsvn++ directory.
 
 
 A Word About Style
