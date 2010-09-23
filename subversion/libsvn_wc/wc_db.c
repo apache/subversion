@@ -8760,12 +8760,33 @@ make_copy_txn(void *baton,
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_nodes;
+  svn_boolean_t have_nodes_row;
+#endif
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", mcb->pdh->wcroot->wc_id,
                             mcb->local_relpath));
-
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, sdb,
+                                    STMT_SELECT_WORKING_NODE_1));
+  SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is", mcb->pdh->wcroot->wc_id,
+                            mcb->local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR(assert_working_rows_match(have_row, have_nodes_row,
+                                    stmt, stmt_nodes,
+                                    mcb->local_relpath, scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+  stmt = stmt_nodes;
+  have_row = have_nodes_row;
+#endif
+#endif
 
   if (have_row)
     {
@@ -8795,11 +8816,28 @@ make_copy_txn(void *baton,
     {
       svn_wc__db_status_t base_status;
 
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_BASE_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", mcb->pdh->wcroot->wc_id, 
                                 mcb->local_relpath));
-
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+#ifdef SVN_WC__NODES
+      SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, sdb,
+                                        STMT_SELECT_BASE_NODE_1));
+      SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is", mcb->pdh->wcroot->wc_id, 
+                                mcb->local_relpath));
+      SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+      SVN_ERR(assert_base_rows_match(have_row, have_nodes_row,
+                                     stmt, stmt_nodes,
+                                     mcb->local_relpath, scratch_pool));
+      SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+      stmt = stmt_nodes;
+      have_row = have_nodes_row;
+#endif
+#endif
 
       /* If there is no BASE_NODE, we don't have to copy anything */
       if (!have_row)
