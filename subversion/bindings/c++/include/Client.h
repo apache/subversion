@@ -61,18 +61,29 @@ namespace SVN
 
       Version getVersion();
 
-      void cat(std::ostream &stream, const std::string &path_or_url);
+      inline void cat(std::ostream &stream, const std::string &path_or_url)
+      {
+        cat(stream, path_or_url, Revision::HEAD, Revision::HEAD);
+      }
       void cat(std::ostream &stream, const std::string &path_or_url,
                const Revision &peg_revision, const Revision &revision);
 
-      Revision checkout(const std::string &url, const std::string path);
+      inline Revision checkout(const std::string &url, const std::string path)
+      {
+        return checkout(url, path, Revision::HEAD, Revision::HEAD,
+                        svn_depth_infinity, false, false);
+      }
       Revision checkout(const std::string &url, const std::string path,
                         const Revision &peg_revisio, const Revision &revision,
                         svn_depth_t depth, bool ignore_externals,
                         bool allow_unver_obstructions);
 
-      void commit(const std::vector<std::string> &targets,
-                  Callback::Commit &callback);
+      inline void commit(const std::vector<std::string> &targets,
+                         Callback::Commit &callback)
+      {
+        commit(targets, svn_depth_infinity, false, false,
+               std::vector<std::string>(), PropTable(), callback);
+      }
       void commit(const std::vector<std::string> &targets,
                   svn_depth_t depth, bool keep_locks, bool keep_changelists,
                   const std::vector<std::string> &changelists,

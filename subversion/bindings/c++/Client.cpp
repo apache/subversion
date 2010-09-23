@@ -53,12 +53,6 @@ Client::getVersion()
 }
 
 void
-Client::cat(std::ostream &stream, const std::string &path_or_url)
-{
-  cat(stream, path_or_url, Revision::HEAD, Revision::HEAD);
-}
-
-void
 Client::cat(std::ostream &stream, const std::string &path_or_url,
     const Revision &peg_revision, const Revision &revision)
 {
@@ -68,13 +62,6 @@ Client::cat(std::ostream &stream, const std::string &path_or_url,
   SVN_CPP_ERR(svn_client_cat2(out, path_or_url.c_str(),
                               peg_revision.revision(),
                               revision.revision(), m_ctx, pool.pool()));
-}
-
-Revision
-Client::checkout(const std::string &url, const std::string path)
-{
-  return checkout(url, path, Revision::HEAD, Revision::HEAD,
-                  svn_depth_infinity, false, false);
 }
 
 Revision
@@ -92,14 +79,6 @@ Client::checkout(const std::string &url, const std::string path,
                                    ignore_externals, allow_unver_obstructions,
                                    m_ctx, pool.pool()));
   return Revision::getNumberRev(result_rev);
-}
-
-void
-Client::commit(const std::vector<std::string> &targets,
-               Callback::Commit &callback)
-{
-  commit(targets, svn_depth_infinity, false, false, std::vector<std::string>(),
-         PropTable(), callback);
 }
 
 void
