@@ -848,9 +848,17 @@ where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';
 select file_external from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_FILE_EXTERNAL_1
+select file_external from nodes
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_FILE_EXTERNAL
 update base_node set file_external = ?3
 where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_FILE_EXTERNAL_1
+update nodes set file_external = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 /* ------------------------------------------------------------------------- */
 
