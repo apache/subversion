@@ -9279,6 +9279,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__reset(stmt_nodes));
 #else
   stmt = stmt_nodes;
+  got_row = got_nodes_row;
 #endif
 #endif
   SVN_ERR(svn_sqlite__reset(stmt));
