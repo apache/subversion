@@ -829,6 +829,11 @@ values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
 select 1 from base_node
 where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';
 
+-- STMT_SELECT_NOT_PRESENT_1
+select 1 from nodes
+where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present'
+  and op_depth = 0;
+
 -- STMT_SELECT_FILE_EXTERNAL
 select file_external from base_node
 where wc_id = ?1 and local_relpath = ?2;
@@ -878,6 +883,15 @@ where kind = 'file' and parent_relpath = ?1;
 select 0, presence, wc_id from base_node where local_relpath = ?1
 union all
 select 1, presence, wc_id from working_node where local_relpath = ?1;
+
+-- STMT_PLAN_PROP_UPGRADE_1
+select 0, nodes_base.presence, nodes_base.wc_id from nodes nodes_base
+where nodes_base.local_relpath = ?1 and nodes_base.op_depth = 0
+union all
+select 1, nodes_work.presence, nodes_work.wc_id from nodes nodes_work
+where nodes_work.local_relpath = ?1
+  and nodes_work.op_depth = (select max(op_depth) from nodes
+                             where local_relpath = ?1 and op_depth > 0);
 
 
 /* ------------------------------------------------------------------------- */

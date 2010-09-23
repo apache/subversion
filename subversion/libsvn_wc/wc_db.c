@@ -1601,15 +1601,32 @@ prop_upgrade_trees(svn_boolean_t *base_exists,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_nodes;
+  svn_boolean_t have_nodes_row;
+#endif
 
   *base_exists = FALSE;
   *working_exists = FALSE;
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_PLAN_PROP_UPGRADE));
   SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
-
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, sdb,
+                                    STMT_PLAN_PROP_UPGRADE_1));
+  SVN_ERR(svn_sqlite__bindf(stmt_nodes, "s", local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR_ASSERT(have_row == have_nodes_row);
+  SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+  stmt = stmt_nodes;
+  have_row = have_nodes_row;
+#endif
+#endif
   /* During a property upgrade, there better be a row corresponding to
      the provided LOCAL_RELPATH. We shouldn't even be here without a
      query for available rows.  */
