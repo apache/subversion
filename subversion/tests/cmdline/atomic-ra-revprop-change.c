@@ -91,7 +91,7 @@ construct_auth_baton(svn_auth_baton_t **auth_baton_p,
   svn_auth_baton_t *auth_baton;
 
   /* A bit of dancing just to pass jrandom:rayjandom. */
-  providers = apr_array_make(pool, 1, sizeof(svn_auth_provider_object_t *)),
+  providers = apr_array_make(pool, 2, sizeof(svn_auth_provider_object_t *)),
   svn_auth_get_simple_prompt_provider(&simple_provider,
                                       aborting_simple_prompt_func, NULL,
                                       0, pool);
