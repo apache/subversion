@@ -970,12 +970,15 @@ copy_working_from_base(void *baton,
 }
 
 
-/* */
+/* Insert WORKING rows for each (const char *) child name in CHILDREN,
+   whose parent directory is LOCAL_RELPATH.  For each child, set
+   presence='incomplete', kind='unknown', op_depth=OP_DEPTH. */
 static svn_error_t *
 insert_incomplete_working_children(svn_sqlite__db_t *sdb,
                                    apr_int64_t wc_id,
                                    const char *local_relpath,
                                    const apr_array_header_t *children,
+                                   apr_int64_t op_depth,
                                    apr_pool_t *scratch_pool)
 {
 #ifndef SVN_WC__NODES_ONLY
@@ -1013,8 +1016,7 @@ insert_incomplete_working_children(svn_sqlite__db_t *sdb,
                                 wc_id,
                                 svn_relpath_join(local_relpath, name,
                                                  scratch_pool),
-                                (apr_int64_t) 2, /* ### op_depth
-                                                    non-THIS_DIR working */
+                                op_depth,
                                 local_relpath,
                                 "incomplete", /* 8, presence */
                                 "unknown"));  /* 10, kind */
@@ -1039,7 +1041,6 @@ insert_working_node(void *baton,
 #endif
 #ifdef SVN_WC__NODES
   svn_sqlite__stmt_t *stmt_node;
-  apr_int64_t op_depth;
 #endif
 
   /* We cannot insert a WORKING_NODE row at the wcroot.  */
@@ -1109,14 +1110,12 @@ insert_working_node(void *baton,
 #endif
 
 #ifdef SVN_WC__NODES
-  op_depth = (parent_relpath == NULL) ? 1   /* THIS_DIR */
-                                      : 2;  /* immediate children */
   SVN_ERR(svn_sqlite__get_statement(&stmt_node, sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt_node, "isisnnntstrisn"
                 "nnnn" /* properties translated_size last_mod_time dav_cache */
                 "s",
                 piwb->wc_id, piwb->local_relpath,
-                op_depth,
+                piwb->op_depth,
                 parent_relpath,
                 presence_map, piwb->presence,
                 (piwb->kind == svn_wc__db_kind_dir)
@@ -1157,10 +1156,15 @@ insert_working_node(void *baton,
 #endif
 
 
+  /* Insert incomplete children, if specified.
+     The children are part of the same op and so have the same op_depth.
+     (The only time we'd want a different depth is during a recursive
+     simple add, but we never insert children here during a simple add.) */
   if (piwb->kind == svn_wc__db_kind_dir && piwb->children)
     SVN_ERR(insert_incomplete_working_children(sdb, piwb->wc_id,
                                                piwb->local_relpath,
                                                piwb->children,
+                                               piwb->op_depth,
                                                scratch_pool));
 
   SVN_ERR(add_work_items(sdb, piwb->work_items, scratch_pool));
@@ -3273,6 +3277,8 @@ temp_cross_db_copy(svn_wc__db_t *db,
   iwb.original_revnum = copyfrom_rev;
   iwb.moved_here = FALSE;
 
+  iwb.op_depth = (*dst_relpath == '\0') ? 1 : 2;  /* ### temporary op_depth */
+
   iwb.checksum = checksum;
   iwb.children = children;
   iwb.depth = depth;
@@ -3494,6 +3500,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   apr_int64_t copyfrom_id;
   svn_wc__db_kind_t kind;
   const apr_array_header_t *children;
+  apr_int64_t op_depth;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
@@ -3555,6 +3562,10 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   else
     children = NULL;
 
+  /* ### temporary op_depth */
+  op_depth = (children == NULL) ? (apr_int64_t)2 :
+                                  (apr_int64_t)1; /* no directory or stub */
+
   if (!strcmp(src_pdh->local_abspath, dst_pdh->local_abspath))
     {
       svn_sqlite__stmt_t *stmt;
@@ -3595,8 +3606,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__bindf(stmt, "issisnnnt",
                     src_pdh->wcroot->wc_id, src_relpath,
                     dst_relpath,
-                    (children == NULL) ? (apr_int64_t)2 :  /* ### op_depth */
-                                (apr_int64_t)1, /* no directory or stub */
+                    op_depth,
                     dst_parent_relpath,
                     presence_map, dst_status));
 
@@ -3623,6 +3633,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                                    dst_pdh->wcroot->wc_id,
                                                    dst_relpath,
                                                    children,
+                                                   op_depth,
                                                    scratch_pool));
     }
   else
@@ -3700,6 +3711,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
+  iwb.op_depth = (*local_relpath == '\0') ? 1 : 2;  /* ### temporary op_depth */
+
   iwb.children = children;
   iwb.depth = depth;
 
@@ -3772,6 +3785,8 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
+  iwb.op_depth = (*local_relpath == '\0') ? 1 : 2;  /* ### temporary op_depth */
+
   iwb.checksum = checksum;
 
   iwb.work_items = work_items;
@@ -3839,6 +3854,8 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
+  iwb.op_depth = (*local_relpath == '\0') ? 1 : 2;  /* ### temporary op_depth */
+
   iwb.target = target;
 
   iwb.work_items = work_items;
@@ -3875,6 +3892,7 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
   iwb.kind = svn_wc__db_kind_dir;
   iwb.wc_id = pdh->wcroot->wc_id;
   iwb.local_relpath = local_relpath;
+  iwb.op_depth = relpath_depth(local_relpath);
 
   iwb.work_items = work_items;
 
@@ -3910,6 +3928,7 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
   iwb.kind = svn_wc__db_kind_file;
   iwb.wc_id = pdh->wcroot->wc_id;
   iwb.local_relpath = local_relpath;
+  iwb.op_depth = relpath_depth(local_relpath);
 
   iwb.work_items = work_items;
 
@@ -3947,6 +3966,7 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   iwb.kind = svn_wc__db_kind_symlink;
   iwb.wc_id = pdh->wcroot->wc_id;
   iwb.local_relpath = local_relpath;
+  iwb.op_depth = relpath_depth(local_relpath);
 
   iwb.target = target;
 
