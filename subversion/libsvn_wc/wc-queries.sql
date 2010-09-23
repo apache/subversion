@@ -752,13 +752,6 @@ select wc_id, ?3 as local_relpath, ?4 as parent_relpath, properties,
      prop_reject, changelist, text_mod, tree_conflict_data from actual_node
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_SELECT_SUBDIR
-select 1 from base_node
-where wc_id = ?1 and local_relpath = ?2 and kind = 'subdir'
-union
-select 0 from working_node
-where wc_id = ?1 and local_relpath = ?2 and kind = 'subdir';
-
 -- STMT_UPDATE_BASE_REVISION
 update base_node set revnum=?3
 where wc_id = ?1 and local_relpath = ?2;
@@ -831,14 +824,6 @@ insert or replace into actual_node (
   conflict_working, prop_reject, changelist, text_mod,
   tree_conflict_data)
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
-
--- STMT_SELECT_KEEP_LOCAL_FLAG
-select keep_local from working_node
-where wc_id = ?1 and local_relpath = ?2;
-
--- STMT_UPDATE_KEEP_LOCAL_FLAG
-update working_node set keep_local= ?3
-where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_SELECT_NOT_PRESENT
 select 1 from base_node
