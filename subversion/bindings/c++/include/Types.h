@@ -73,19 +73,19 @@ class CommitInfo
     }
 
     inline Revision
-    getRevision()
+    getRevision() const
     {
       return Revision::getNumberRev(m_info->revision);
     }
 
     inline std::string
-    getAuthor()
+    getAuthor() const
     {
       return std::string(m_info->author);
     }
 
     inline std::string
-    getPostCommitErr()
+    getPostCommitErr() const
     {
       if (m_info->post_commit_err)
         return std::string(m_info->post_commit_err);
@@ -94,7 +94,7 @@ class CommitInfo
     }
 
     inline std::string
-    getReposRoot()
+    getReposRoot() const
     {
       if (m_info->repos_root)
         return std::string(m_info->repos_root);
