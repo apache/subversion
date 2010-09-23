@@ -209,14 +209,17 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1000060
-   Fix for issue #3695, in which the use of "SVNPathAuthz short_circuit" 
-   causes Subversion to ignore authz access rule sections which
-   contain a repository prefix.
+ * r1000038, r1000060
+   Fix for issue #3695(r1000060), in which the use of
+   "SVNPathAuthz short_circuit" causes Subversion to ignore authz access rule
+   sections which contain a repository prefix.
+   r1000038 - whiteline formatting only fix, without this merge of r1000060
+   would give a conflict.
    Justification:
      Rules are made to be broken.  Except when they're access rules.
    Votes:
-     +1: cmpilato
+     +1: cmpilato(r1000060)
+     +1: kameshj
 
 Veto-blocked changes:
 =====================
@@ -308,19 +311,6 @@ Veto-blocked changes:
            svn_io_dir_walk() which we should not do in a back-port.
            Discussing on list.)
      -1: cmpilato (Changes semantics of svn_io_dir_walk()).
-
- * r989658
-   SVNPathAuthz short_circuit ignores the authz path rules with repo prefix.
-   This fixes issue 3695.
-   Justification:
-     Having broken authz is bad.
-   Notes:
-     A new fix for this bug was implemented in r1000060, and this
-     original one reverted.
-   Votes:
-     +1: kameshj
-     -1: cmpilato ("Fix is incorrect -- 'repo_name' is not the basename of
-                    the repository, but the value from SVNReposName.")
 
 Approved changes:
 =================
