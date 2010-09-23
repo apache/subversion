@@ -111,7 +111,7 @@
 #define LIKE_ESCAPE_CHAR     "#"
 
 /* Calculates the depth of the relpath below "" */
-APR_INLINE static int relpath_op_depth(const char *relpath)
+APR_INLINE static int relpath_depth(const char *relpath)
 {
   int n = 1;
   if (*relpath == '\0')
@@ -8188,7 +8188,7 @@ wclock_obtain_cb(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, filter));
 
-  lock_depth = relpath_op_depth(bt->local_relpath);
+  lock_depth = relpath_depth(bt->local_relpath);
   max_depth = lock_depth + bt->levels_to_lock;
 
   SVN_ERR(svn_sqlite__step(&got_row, stmt));
@@ -8203,7 +8203,7 @@ wclock_obtain_cb(void *baton,
       /* If we are not locking with depth infinity, check if this lock
          voids our lock request */
       if (bt->levels_to_lock >= 0
-          && relpath_op_depth(lock_relpath) > max_depth)
+          && relpath_depth(lock_relpath) > max_depth)
         {
           SVN_ERR(svn_sqlite__step(&got_row, stmt));
           continue;
@@ -8261,7 +8261,7 @@ wclock_obtain_cb(void *baton,
         {
           int levels = svn_sqlite__column_int(stmt, 0);
           if (levels >= 0)
-            levels += relpath_op_depth(lock_relpath);
+            levels += relpath_depth(lock_relpath);
 
           SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -8337,7 +8337,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
     {
       int i;
       svn_wc__db_wcroot_t *wcroot = baton.pdh->wcroot;
-      int depth = relpath_op_depth(baton.local_relpath);
+      int depth = relpath_depth(baton.local_relpath);
 
       for (i = 0; i < wcroot->owned_locks->nelts; i++)
         {
@@ -8346,7 +8346,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
 
           if (svn_relpath_is_ancestor(lock->local_relpath, baton.local_relpath)
               && (lock->levels == -1
-                  || (lock->levels + relpath_op_depth(lock->local_relpath)) 
+                  || (lock->levels + relpath_depth(lock->local_relpath))
                             >= depth))
             {
               const char *lock_abspath
@@ -8519,7 +8519,7 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
   VERIFY_USABLE_PDH(pdh);
   *own_lock = FALSE;
   owned_locks = pdh->wcroot->owned_locks;
-  lock_level = relpath_op_depth(local_relpath);
+  lock_level = relpath_depth(local_relpath);
 
   if (exact)
     for (i = 0; i < owned_locks->nelts; i++)
@@ -8541,7 +8541,7 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
 
         if (svn_relpath_is_ancestor(lock->local_relpath, local_relpath)
             && (lock->levels == -1
-                || ((relpath_op_depth(lock->local_relpath) + lock->levels)
+                || ((relpath_depth(lock->local_relpath) + lock->levels)
                             >= lock_level)))
           {
             *own_lock = TRUE;
