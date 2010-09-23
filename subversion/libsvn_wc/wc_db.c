@@ -932,7 +932,9 @@ blank_iwb(insert_working_baton_t *piwb)
      value, but... meh. We'll avoid them if ORIGINAL_REPOS_RELPATH==NULL.  */
 }
 
-/* */
+
+/* Copy the row specified by BATON->(wc_id,local_relpath) from BASE to
+ * WORKING, changing its 'presence' and 'op_depth' to the values in BATON. */
 static svn_error_t *
 copy_working_from_base(void *baton,
                        svn_sqlite__db_t *sdb,
