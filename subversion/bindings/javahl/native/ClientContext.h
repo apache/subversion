@@ -36,6 +36,8 @@
 #include "JNIPool.h"
 #include "JNIStringHolder.h"
 
+#include "Callback.h"
+
 class Prompter;
 class CommitMessage;
 
@@ -88,6 +90,9 @@ class ClientContext
    * specified location.
    */
   void setConfigDirectory(const char *configDir);
+
+  SVN::Callback::ClientNotifier *getNotifier();
+  void notify(const SVN::ClientNotifyInfo &info);
 };
 
 #endif // CLIENTCONTEXT_H

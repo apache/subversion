@@ -130,6 +130,12 @@ class ClientNotifyInfo
       m_pool.clear();
       m_notify = svn_wc_dup_notify(that.m_notify, m_pool.pool());
     }
+
+    // ### This is only temporary
+    inline const svn_wc_notify_t * to_c() const
+    {
+      return m_notify;
+    }
 };
 
 }

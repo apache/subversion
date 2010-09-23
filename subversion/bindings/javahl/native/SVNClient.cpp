@@ -73,6 +73,7 @@ SVNClient::SVNClient(jobject jthis_in)
     : context(jthis_in),
       m_client()
 {
+  m_client.subscribeNotifier(context.getNotifier());
 }
 
 SVNClient::~SVNClient()

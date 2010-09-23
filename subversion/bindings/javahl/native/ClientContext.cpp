@@ -36,6 +36,25 @@
 #include "EnumMapper.h"
 #include "CommitMessage.h"
 
+#include "Types.h"
+
+class Notifier : public SVN::Callback::ClientNotifier
+{
+  private:
+    ClientContext &m_ctx;
+
+  public:
+    Notifier(ClientContext &ctx)
+      : m_ctx(ctx)
+    {
+    }
+    
+    void notify(const SVN::ClientNotifyInfo &info)
+    {
+      m_ctx.notify(info);
+    }
+};
+
 
 ClientContext::ClientContext(jobject jsvnclient)
     : m_prompter(NULL)
@@ -263,6 +282,13 @@ ClientContext::checkCancel(void *cancelBaton)
 }
 
 void
+ClientContext::notify(const SVN::ClientNotifyInfo &info)
+{
+  SVN::Pool pool;
+  notify(m_jctx, info.to_c(), pool.pool());
+}
+
+void
 ClientContext::notify(void *baton,
                       const svn_wc_notify_t *notify,
                       apr_pool_t *pool)
@@ -457,4 +483,12 @@ ClientContext::javaResultToC(jobject jresult, apr_pool_t *pool)
 
   env->PopLocalFrame(NULL);
   return result;
+}
+
+SVN::Callback::ClientNotifier *
+ClientContext::getNotifier()
+{
+  SVN::Callback::ClientNotifier *notifier = new Notifier(*this);
+
+  return notifier;
 }
