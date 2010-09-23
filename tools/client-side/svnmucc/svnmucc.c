@@ -228,7 +228,7 @@ drive(struct operation *operation,
           SVN_ERR(editor->delete_entry(key, head, operation->baton, subpool));
         }
       /* Opens could be for directories or files. */
-      if (child->operation == OP_OPEN)
+      if (child->operation == OP_OPEN || child->operation == OP_PROPSET)
         {
           if (child->kind == svn_node_dir)
             {
@@ -242,8 +242,7 @@ drive(struct operation *operation,
             }
         }
       /* Adds and replacements could also be for directories or files. */
-      if (child->operation == OP_ADD || child->operation == OP_REPLACE
-          || child->operation == OP_PROPSET)
+      if (child->operation == OP_ADD || child->operation == OP_REPLACE)
         {
           if (child->kind == svn_node_dir)
             {
@@ -434,16 +433,21 @@ build(action_code_t action,
         return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                                  "cannot set properties on a location being"
                                  " deleted ('%s')", path);
-      SVN_ERR(svn_ra_check_path(session,
-                                copy_src ? copy_src : path,
-                                copy_src ? copy_rev : head,
-                                &operation->kind, pool));
-      if (operation->kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                                 "propset: '%s' not found", path);
-      else if ((operation->kind == svn_node_file)
-               && (operation->operation == OP_OPEN))
-        operation->operation = OP_PROPSET;
+      /* If we're not adding this thing ourselves, check for existence.  */
+      if (! ((operation->operation == OP_ADD) ||
+             (operation->operation == OP_REPLACE)))
+        {
+          SVN_ERR(svn_ra_check_path(session,
+                                    copy_src ? copy_src : path,
+                                    copy_src ? copy_rev : head,
+                                    &operation->kind, pool));
+          if (operation->kind == svn_node_none)
+            return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                                     "propset: '%s' not found", path);
+          else if ((operation->kind == svn_node_file)
+                   && (operation->operation == OP_OPEN))
+            operation->operation = OP_PROPSET;
+        }
       apr_table_set(operation->props, prop_name, prop_value);
       if (!operation->rev)
         operation->rev = rev;
