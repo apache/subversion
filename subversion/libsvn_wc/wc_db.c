@@ -9275,10 +9275,28 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_nodes;
+  svn_boolean_t have_nodes_row;
+#endif
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_SELECT_FILE_EXTERNAL, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(get_statement_for_path(&stmt_nodes, db, local_abspath,
+                                 STMT_SELECT_FILE_EXTERNAL_1, scratch_pool));
+  SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR(assert_text_columns_equal(stmt, stmt_nodes, 0, scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+  stmt = stmt_nodes;
+  have_row = have_nodes_row;
+#endif
+#endif
 
   /* ### file externals are pretty bogus right now. they have just a
      ### WORKING_NODE for a while, eventually settling into just a BASE_NODE.
@@ -9315,6 +9333,10 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
+#ifdef SVN_WC__NODES
+  svn_sqlite__stmt_t *stmt_nodes;
+  svn_boolean_t got_nodes_row;
+#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(!repos_relpath 
@@ -9326,12 +9348,26 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_BASE_NODE));
-
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
-
   SVN_ERR(svn_sqlite__step(&got_row, stmt));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, pdh->wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE_1));
+  SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is",
+                            pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&got_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+  SVN_ERR(assert_base_rows_match(got_row, got_nodes_row, stmt, stmt_nodes,
+                                 local_relpath, scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+  stmt = stmt_nodes;
+#endif
+#endif
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (!got_row)
@@ -9389,12 +9425,11 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
 #endif
     }
 
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_UPDATE_FILE_EXTERNAL));
-
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
-                          local_relpath));
-
+                            local_relpath));
   if (repos_relpath)
     {
       const char *str;
@@ -9407,10 +9442,31 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
 
       SVN_ERR(svn_sqlite__bind_text(stmt, 3, str));
     }
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+#ifdef SVN_WC__NODES
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_FILE_EXTERNAL_1));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                            local_relpath));
+  if (repos_relpath)
+    {
+      const char *str;
+
+      SVN_ERR(svn_wc__serialize_file_external(&str,
+                                              repos_relpath,
+                                              peg_rev,
+                                              rev,
+                                              scratch_pool));
+
+      SVN_ERR(svn_sqlite__bind_text(stmt, 3, str));
+    }
+  SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
 
   SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));
 
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
