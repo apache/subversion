@@ -143,10 +143,8 @@ WHERE wc_id = ?1 AND parent_relpath = ?2;
 -- STMT_COUNT_WORKING_NODE_CHILDREN_1
 SELECT COUNT(*) FROM NODES
 WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND op_depth IN (SELECT op_depth FROM NODES
-                   WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0
-                   ORDER BY op_depth DESC
-                   LIMIT 1);
+  AND op_depth = (SELECT MAX(op_depth) FROM NODES
+                   WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0);
 
 
 -- STMT_SELECT_BASE_NODE_CHILDREN
@@ -164,10 +162,8 @@ WHERE wc_id = ?1 AND parent_relpath = ?2;
 -- STMT_SELECT_WORKING_NODE_CHILDREN_1
 SELECT local_relpath FROM NODES
 WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND op_depth IN (SELECT op_depth FROM NODES
-                   WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0
-                   ORDER BY op_depth DESC
-                   LIMIT 1);
+  AND op_depth = (SELECT MAX(op_depth) FROM NODES
+                  WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0);
 
 -- STMT_SELECT_WORKING_IS_FILE
 select kind == 'file' from working_node
@@ -213,11 +209,9 @@ where wc_id = ?1 and local_relpath = ?2;
 -- STMT_UPDATE_NODE_WORKING_PROPS
 update nodes set properties = ?3
 where wc_id = ?1 and local_relpath = ?2
-  and op_depth in
-   (select op_depth from nodes
-    where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
-    order by op_depth desc
-    limit 1);
+  and op_depth =
+   (select max(op_depth) from nodes
+    where wc_id = ?1 and local_relpath = ?2 and op_depth > 0);
 
 -- STMT_UPDATE_ACTUAL_PROPS
 update actual_node set properties = ?3
@@ -263,11 +257,9 @@ left outer join nodes nodes_base on nodes_base.wc_id = nodes_work.wc_id
   and nodes_base.local_relpath = nodes_work.local_relpath
   and nodes_base.op_depth = 0
 where nodes_work.wc_id = ?1 and nodes_work.local_relpath = ?2
-  and nodes_work.op_depth = (select op_depth from nodes
+  and nodes_work.op_depth = (select max(op_depth) from nodes
                              where wc_id = ?1 and local_relpath = ?2
-                                              and op_depth > 0
-                             order by op_depth desc
-                             limit 1);
+                                              and op_depth > 0);
 
 -- STMT_DELETE_LOCK
 delete from lock
@@ -324,10 +316,8 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 -- STMT_UPDATE_WORKING_NODE_FILEINFO
 update nodes set translated_size = ?3, last_mod_time = ?4
 where wc_id = ?1 and local_relpath = ?2
-  and op_depth = (select op_depth from nodes
-                  where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
-                  order by op_depth desc
-                  limit 1);
+  and op_depth = (select max(op_depth) from nodes
+                  where wc_id = ?1 and local_relpath = ?2 and op_depth > 0);
 
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 update actual_node set tree_conflict_data = ?3
@@ -413,10 +403,8 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 -- STMT_UPDATE_NODE_WORKING_DEPTH
 update NODES set depth = ?3
 where wc_id = ?1 and local_relpath = ?2 and
-      op_depth in (select op_depth from NODES
-                   where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
-                   order by op_depth desc
-                   limit 1);
+      op_depth = (select max(op_depth) from NODES
+                  where wc_id = ?1 and local_relpath = ?2 and op_depth > 0);
 
 -- STMT_UPDATE_BASE_EXCLUDED
 UPDATE BASE_NODE SET presence = 'excluded', depth = NULL
@@ -433,10 +421,8 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 -- STMT_UPDATE_NODE_WORKING_EXCLUDED
 update nodes SET presence = 'excluded', depth = NULL
 where wc_id = ?1 and local_relpath = ?2 and
-      op_depth IN (select op_depth from NODES
-                   where wc_id = ?1 and local_relpath = ?2
-                   order by op_depth DECSC
-                   limit 1);
+      op_depth = (select max(op_depth) from NODES
+                  where wc_id = ?1 and local_relpath = ?2);
 
 -- STMT_UPDATE_BASE_PRESENCE
 update base_node set presence= ?3
@@ -461,10 +447,8 @@ where wc_id = ?1 and local_relpath =?2;
 -- STMT_UPDATE_NODE_WORKING_PRESENCE
 update nodes set presence = ?3
 where wc_id = ?1 and local_relpath = ?2
-  and op_depth in (select op_depth from nodes
-                   where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
-                   order by op_depth desc
-                   limit 1);
+  and op_depth = (select max(op_depth) from nodes
+                  where wc_id = ?1 and local_relpath = ?2 and op_depth > 0);
 
 -- STMT_UPDATE_BASE_PRESENCE_AND_REVNUM
 update base_node set presence = ?3, revnum = ?4
@@ -688,10 +672,8 @@ UPDATE NODES SET
   repos_path = null,
   revision = null
 WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth IN (SELECT op_depth FROM nodes
-                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
-                   ORDER BY op_depth DESC
-                   LIMIT 1);
+  AND op_depth = (SELECT MAX(op_depth) FROM nodes
+                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
 -- STMT_DETERMINE_TREE_FOR_RECORDING
 SELECT 0 FROM BASE_NODE WHERE wc_id = ?1 AND local_relpath = ?2
@@ -702,10 +684,8 @@ SELECT 1 FROM WORKING_NODE WHERE wc_id = ?1 AND local_relpath = ?2;
 SELECT 0 FROM NODES WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 UNION
 SELECT 1 FROM NODES WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth IN (SELECT op_depth FROM nodes
-                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
-                   ORDER BY op_depth DESC
-                   LIMIT 1);
+  AND op_depth = (SELECT MAX(op_depth) FROM nodes
+                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
 
 /* ### Why can't this query not just use the BASE repository
