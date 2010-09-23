@@ -636,8 +636,6 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
                 svn_dirent_local_style(local_abspath, scratch_pool));
             }
 
-#ifdef SVN_WC__NODES
-#endif
           return svn_error_compose_create(err, svn_sqlite__reset(stmt));
         }
 
@@ -659,9 +657,9 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
                                               result_pool);
           return svn_sqlite__reset(stmt);
         }
-#ifndef SVN_WC__NODES_ONLY
+
       SVN_ERR(svn_sqlite__reset(stmt));
-#endif
+
       if (*current_relpath == '\0')
         {
           /* We scanned all the way up, and did not find the information.
@@ -5150,6 +5148,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   if (!have_work)
     have_work = &local_have_work;
     
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt_base, pdh->wcroot->sdb,
                                     lock ? STMT_SELECT_BASE_NODE_WITH_LOCK
                                          : STMT_SELECT_BASE_NODE));
@@ -5162,6 +5161,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   SVN_ERR(svn_sqlite__bindf(stmt_work, "is",
                             pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(have_work, stmt_work));
+#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt_act, pdh->wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
@@ -5192,6 +5192,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   SVN_ERR(assert_working_rows_match(*have_work, local_have_nodes_work,
                                     stmt_work, stmt_nodes_work,
                                     local_relpath, scratch_pool));
+  SVN_ERR(svn_sqlite__reset(stmt_nodes_base));
+  SVN_ERR(svn_sqlite__reset(stmt_nodes_work));
 #else
   /* Lets assume the queries return compatible data */
   *have_base = local_have_nodes_base;
@@ -5501,13 +5503,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               svn_dirent_local_style(local_abspath,
                                                      scratch_pool));
     }
-
-#ifdef SVN_WC__NODES
-#ifndef SVN_WC__NODES_ONLY
-  err = svn_error_compose_create(err, svn_sqlite__reset(stmt_nodes_base));
-  err = svn_error_compose_create(err, svn_sqlite__reset(stmt_nodes_work));
-#endif
-#endif
 
   err = svn_error_compose_create(err, svn_sqlite__reset(stmt_base));
   err = svn_error_compose_create(err, svn_sqlite__reset(stmt_work));
