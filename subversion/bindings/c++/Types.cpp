@@ -30,16 +30,6 @@
 namespace SVN
 {
 
-CommitInfo::CommitInfo(const svn_commit_info_t *info)
-  : m_pool()
-{
-  m_info = svn_commit_info_dup(info, m_pool.pool());
-}
 
-CommitInfo::CommitInfo(const CommitInfo &that)
-  : m_pool()
-{
-  m_info = svn_commit_info_dup(that.m_info, m_pool.pool());
-}
 
 }

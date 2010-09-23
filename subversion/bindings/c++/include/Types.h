@@ -50,8 +50,56 @@ class CommitInfo
     svn_commit_info_t *m_info;
 
   public:
-    CommitInfo(const svn_commit_info_t *info);
-    CommitInfo(const CommitInfo &);
+    inline
+    CommitInfo(const svn_commit_info_t *info)
+      : m_pool()
+    {
+      m_info = svn_commit_info_dup(info, m_pool.pool());
+    }
+
+    inline
+    CommitInfo(const CommitInfo &that)
+      : m_pool()
+    {
+      m_info = svn_commit_info_dup(that.m_info, m_pool.pool());
+    }
+
+    inline CommitInfo&
+    operator=(const CommitInfo &that)
+    {
+      m_pool.clear();
+      m_info = svn_commit_info_dup(that.m_info, m_pool.pool());
+    }
+
+    inline Revision
+    getRevision()
+    {
+      return Revision::getNumberRev(m_info->revision);
+    }
+
+    inline std::string
+    getAuthor()
+    {
+      return std::string(m_info->author);
+    }
+
+    inline std::string
+    getPostCommitErr()
+    {
+      if (m_info->post_commit_err)
+        return std::string(m_info->post_commit_err);
+      else
+        return std::string();
+    }
+
+    inline std::string
+    getReposRoot()
+    {
+      if (m_info->repos_root)
+        return std::string(m_info->repos_root);
+      else
+        return std::string();
+    }
 };
 
 }
