@@ -34,6 +34,10 @@ this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 sys.path.insert(0, '%s/../../../subversion/tests/cmdline' % (this_dir))
 import svntest
 
+# setup the global 'svntest.main.options' object so functions in the
+# module don't freak out.
+svntest.main._parse_options(arglist=[])
+
 # calculate the top of the build tree
 if len(sys.argv) > 1:
   build_top = os.path.abspath(sys.argv[1])
