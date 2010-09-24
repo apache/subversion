@@ -89,15 +89,16 @@ copy_to_tmpdir(const char **dst_abspath,
      ### handle the directory case and b) we need to be able to remove
      ### the cleanup before queueing the move work item. */
 
+  /* Set DST_ABSPATH to a temporary unique path.  If *KIND is file, leave a
+     file there and then overwrite it; otherwise leave no node on disk at
+     that path.  In the latter case, something else might use that path
+     before we get around to using it a moment later, but never mind. */
   SVN_ERR(svn_io_open_unique_file3(NULL, dst_abspath, tmpdir_abspath,
                                    delete_when, scratch_pool, scratch_pool));
 
   if (*kind == svn_node_dir)
     {
       if (recursive)
-        /* ### Huh? This looks like it's expected to overwrite the temp file
-               *DST_ABSPATH, but it would return an error if the destination
-               exists. And same for svn_io_dir_make() below. What gives? */
         SVN_ERR(svn_io_copy_dir_recursively(src_abspath,
                                             tmpdir_abspath,
                                             svn_dirent_basename(*dst_abspath,
@@ -448,6 +449,8 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
   
   dstdir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
 
+  /* Ensure DSTDIR_ABSPATH belongs to the same repository as SRC_ABSPATH;
+     throw an error if not. */
   {
     svn_wc__db_status_t src_status, dstdir_status;
     const char *src_repos_root_url, *dst_repos_root_url;
