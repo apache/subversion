@@ -121,12 +121,8 @@ copy_to_tmpdir(const char **dst_abspath,
 
 /* If SRC_ABSPATH and DST_ABSPATH use different pristine stores, copy the
    pristine text of SRC_ABSPATH (if there is one) into the pristine text
-   store connected to DST_ABSPATH.
-
-   ### This impl's check for 'different WC' is much too conservative.
-
-   ### This impl doesn't avoid copying if the destination WC already has a
-       copy of this pristine text.
+   store connected to DST_ABSPATH.  This will only happen when copying into
+   a separate WC such as an external directory.
  */
 static svn_error_t *
 copy_pristine_text_if_necessary(svn_wc__db_t *db,
@@ -138,12 +134,6 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
 {
   const svn_checksum_t *checksum;
 
-  /* If it's the same pristine store (### currently: same dir), there's
-     nothing to do. */
-  if (strcmp(svn_dirent_dirname(src_abspath, scratch_pool),
-             svn_dirent_dirname(dst_abspath, scratch_pool)) == 0)
-    return SVN_NO_ERROR;
-
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
                                &checksum,
@@ -153,10 +143,17 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
                                scratch_pool, scratch_pool));
   if (checksum)
     {
+      svn_boolean_t present;
       svn_stream_t *src_pristine, *tmp_pristine;
       const char *tmp_pristine_abspath;
       const svn_checksum_t *sha1_checksum, *md5_checksum;
       const char *tmpdir_abspath;
+
+      /* If it's already in DST_ABSPATH's pristine store, we're done. */
+      SVN_ERR(svn_wc__db_pristine_check(&present, db, dst_abspath, checksum,
+                                        scratch_pool));
+      if (present)
+        return SVN_NO_ERROR;
 
       if (checksum->kind == svn_checksum_md5)
         {
