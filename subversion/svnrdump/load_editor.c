@@ -56,6 +56,12 @@ commit_callback(const svn_commit_info_t *commit_info,
   return SVN_NO_ERROR;
 }
 
+/* See subversion/svnsync/main.c for docstring */
+static svn_boolean_t is_atomicity_error(svn_error_t *err)
+{
+  return svn_error_has_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH);
+}
+
 /* Acquire a lock (of sorts) on the repository associated with the
  * given RA SESSION. This lock is just a revprop change attempt in a
  * time-delay loop. This function is duplicated by svnsync in main.c.
@@ -65,13 +71,35 @@ commit_callback(const svn_commit_info_t *commit_info,
  * applications to avoid duplication.
  */
 static svn_error_t *
-get_lock(svn_ra_session_t *session, apr_pool_t *pool)
+get_lock(const svn_string_t **lock_string_p,
+         svn_ra_session_t *session,
+         apr_pool_t *pool)
 {
   char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
   svn_string_t *mylocktoken, *reposlocktoken;
   apr_status_t apr_err;
+  svn_boolean_t be_atomic;
   apr_pool_t *subpool;
   int i;
+
+  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                pool));
+  if (! be_atomic)
+    {
+      /* Pre-1.7 server.  Can't lock without a race condition.
+         See issue #3546.
+       */
+      svn_error_t *err;
+
+      err = svn_error_create(
+              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+              _("Target server does not support atomic revision property "
+                "edits; consider upgrading it to 1.7 or using an external "
+                "locking program"));
+      svn_handle_warning2(stderr, err, "svnrdump: ");
+      svn_error_clear(err);
+    }
 
   apr_err = apr_gethostname(hostname_str, sizeof(hostname_str), pool);
   if (apr_err)
@@ -80,10 +108,15 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
   mylocktoken = svn_string_createf(pool, "%s:%s", hostname_str,
                                    svn_uuid_generate(pool));
 
+  /* If we succeed, this is what the property will be set to. */
+  *lock_string_p = mylocktoken;
+
   subpool = svn_pool_create(pool);
 
   for (i = 0; i < LOCK_RETRIES; ++i)
     {
+      svn_error_t *err;
+
       svn_pool_clear(subpool);
 
       SVN_ERR(svn_ra_rev_prop(session, 0, SVNRDUMP_PROP_LOCK, &reposlocktoken,
@@ -106,9 +139,27 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
         }
       else if (i < LOCK_RETRIES - 1)
         {
+          const svn_string_t *unset = NULL;
+
           /* Except in the very last iteration, try to set the lock. */
-          SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNRDUMP_PROP_LOCK,
-                                         mylocktoken, subpool));
+          err = svn_ra_change_rev_prop2(session, 0, SVNRDUMP_PROP_LOCK,
+                                        be_atomic ? &unset : NULL,
+                                        mylocktoken, subpool);
+
+          if (be_atomic && err && is_atomicity_error(err))
+            /* Someone else has the lock.  Let's loop. */
+            svn_error_clear(err);
+          else if (be_atomic && err == SVN_NO_ERROR)
+            /* We have the lock. 
+
+               However, for compatibility with concurrent svnsync's that don't
+               support atomicity, loop anyway to double-check that they haven't
+               overwritten our lock.
+             */
+            continue;
+          else
+            /* Genuine error, or we aren't atomic and need to loop. */
+            SVN_ERR(err);
         }
     }
 
@@ -395,8 +446,8 @@ set_revision_property(void *baton,
   else
     /* Special handling for revision 0; this is safe because the
        commit_editor hasn't been created yet. */
-    SVN_ERR(svn_ra_change_rev_prop(rb->pb->session, rb->rev, name, value,
-                                   rb->pool));
+    SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, rb->rev,
+                                    name, NULL, value, rb->pool));
 
   /* Remember any datestamp/ author that passes through (see comment
      in close_revision). */
@@ -560,12 +611,12 @@ close_revision(void *baton)
 
   /* svn_fs_commit_txn rewrites the datestamp/ author property-
      rewrite it by hand after closing the commit_editor. */
-  SVN_ERR(svn_ra_change_rev_prop(rb->pb->session, rb->rev,
-                                 SVN_PROP_REVISION_DATE,
-                                 rb->datestamp, rb->pool));
-  SVN_ERR(svn_ra_change_rev_prop(rb->pb->session, rb->rev,
-                                 SVN_PROP_REVISION_AUTHOR,
-                                 rb->author, rb->pool));
+  SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, rb->rev,
+                                  SVN_PROP_REVISION_DATE,
+                                  NULL, rb->datestamp, rb->pool));
+  SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, rb->rev,
+                                  SVN_PROP_REVISION_AUTHOR,
+                                  NULL, rb->author, rb->pool));
 
   svn_pool_destroy(rb->pool);
 
@@ -610,14 +661,25 @@ drive_dumpstream_loader(svn_stream_t *stream,
                         svn_ra_session_t *session,
                         apr_pool_t *pool)
 {
-  struct parse_baton *pb;
-  pb = parse_baton;
+  struct parse_baton *pb = parse_baton;
+  const svn_string_t *lock_string;
+  svn_boolean_t be_atomic;
+  svn_error_t *err;
 
-  SVN_ERR(get_lock(session, pool));
+  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                pool));
+
+  SVN_ERR(get_lock(&lock_string, session, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
   SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,
                                       NULL, NULL, pool));
-  SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNRDUMP_PROP_LOCK, NULL, pool));
+  err = svn_ra_change_rev_prop2(session, 0, SVNRDUMP_PROP_LOCK,
+                                 be_atomic ? &lock_string : NULL, NULL, pool);
+  if (is_atomicity_error(err))
+    return svn_error_quick_wrap(err,
+                                _("\"svnrdump load\"'s lock was stolen; "
+                                  "can't remove it"));
 
   return SVN_NO_ERROR;
 }

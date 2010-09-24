@@ -4116,6 +4116,12 @@ svn_client_propset(const char *propname,
  * new value.  (To check that an old value is still non-existent, set
  * @a original_propval->data to NULL, and @a original_propval->len is
  * ignored.)
+ * If the server advertises #SVN_RA_CAPABILITY_ATOMIC_REVPROPS, the
+ * check of @a original_propval is done atomically.
+ *
+ * Note: the representation of "property is not set" in @a
+ * original_propval differs from the representation in other APIs
+ * (such as svn_fs_change_rev_prop2() and svn_ra_change_rev_prop2()).
  *
  * If @a force is TRUE, allow newlines in the author property.
  *

@@ -563,14 +563,16 @@ static svn_error_t *
 svn_ra_local__change_rev_prop(svn_ra_session_t *session,
                               svn_revnum_t rev,
                               const char *name,
+                              const svn_string_t *const *old_value_p,
                               const svn_string_t *value,
                               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
+
   SVN_ERR(get_username(session, pool));
-  return svn_repos_fs_change_rev_prop3(sess->repos, rev, sess->username,
-                                       name, value, TRUE, TRUE, NULL, NULL,
-                                       pool);
+  return svn_repos_fs_change_rev_prop4(sess->repos, rev, sess->username,
+                                       name, old_value_p, value, TRUE, TRUE,
+                                       NULL, NULL, pool);
 }
 
 static svn_error_t *
@@ -1389,7 +1391,8 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
+      || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0)
     {
       *has = TRUE;
     }
