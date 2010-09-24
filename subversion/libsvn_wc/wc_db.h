@@ -757,27 +757,6 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-/* Just like svn_wc__db_base_get_info, but always reads information
-   from inside the parent of LOCAL_ABSPATH, to allow reading the
-   information of a node that is obstructed by a separate working
-   copy.
-   
-   ### BH: This information is necessary for svn_wc_add3()'s
-   ###     checkout integration support. Even after we switch to
-   ###     a single db.
-   */
-svn_error_t *
-svn_wc__db_base_get_info_from_parent(svn_wc__db_status_t *status,
-                                     svn_wc__db_kind_t *kind,
-                                     svn_revnum_t *revision,
-                                     const char **repos_relpath,
-                                     const char **repos_root_url,
-                                     const char **repos_uuid,
-                                     svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
-
 
 /* Set *PROPVAL to the value of the property named PROPNAME of the node
    LOCAL_ABSPATH in the BASE tree.

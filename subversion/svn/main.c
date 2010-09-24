@@ -2087,12 +2087,24 @@ main(int argc, const char *argv[])
         }
     }
 
-  if (opt_state.relocate && (opt_state.depth != svn_depth_unknown))
+  /* Relocation is infinite-depth only. */
+  if (opt_state.relocate)
     {
-      err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                             _("--relocate and --depth are mutually "
-                               "exclusive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+      if (opt_state.depth != svn_depth_unknown)
+        {
+          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                 _("--relocate and --depth are mutually "
+                                   "exclusive"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        }
+      if (! descend)
+        {
+          err = svn_error_create(
+                    SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                    _("--relocate and --non-recursive (-N) are mutually "
+                      "exclusive"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        }
     }
 
   /* Only a few commands can accept a revision range; the rest can take at

@@ -752,8 +752,8 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 static int
 compare_hunks(const void *a, const void *b)
 {
-  const svn_diff_hunk_t *ha = *((const svn_diff_hunk_t **)a);
-  const svn_diff_hunk_t *hb = *((const svn_diff_hunk_t **)b);
+  const svn_diff_hunk_t *ha = *((const svn_diff_hunk_t *const *)a);
+  const svn_diff_hunk_t *hb = *((const svn_diff_hunk_t *const *)b);
 
   if (ha->original_start < hb->original_start)
     return -1;

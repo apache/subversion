@@ -6791,13 +6791,13 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
                                                       const char *uuid,
                                                       const char *url);
 
-/** Change repository references at @a local_abspath and all it's children.
- * The pre-change URL should be @a from, and the post-change URL will be
- * @a to.  @a validator (and its baton, @a validator_baton), will be called
- * for the newly generated base URL and calculated repo root.
+/** Recursively change repository references at @a wcroot_abspath
+ * (which is the root directory of a working copy).  The pre-change
+ * URL should be @a from, and the post-change URL will be @a to.  @a
+ * validator (and its baton, @a validator_baton), will be called for
+ * the newly generated base URL and calculated repo root.
  *
- * If @a recurse is @c FALSE, none of the children of @a local_abspath will
- * be changed.  @a wc_ctx is an working copy context.
+ * @a wc_ctx is an working copy context.
  *
  * @a scratch_pool will be used for temporary allocations.
  *
@@ -6805,10 +6805,9 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
  */
 svn_error_t *
 svn_wc_relocate4(svn_wc_context_t *wc_ctx,
-                 const char *local_abspath,
+                 const char *wcroot_abspath,
                  const char *from,
                  const char *to,
-                 svn_boolean_t recurse,
                  svn_wc_relocation_validator3_t validator,
                  void *validator_baton,
                  apr_pool_t *scratch_pool);
@@ -6816,8 +6815,12 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
 /** Similar to svn_wc_relocate4(), but with a #svn_wc_adm_access_t /
  * relative path parameter pair.
  *
+ * @note As of the 1.7 API, @a path is required to be a working copy
+ * root directory, and @a recurse is required to be TRUE.
+ *
  * @since New in 1.5.
- * @deprecated Provided for backwards compatibility with the 1.6 API.
+ * @deprecated Provided for limited backwards compatibility with the
+ * 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *

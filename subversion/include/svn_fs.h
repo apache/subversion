@@ -1894,10 +1894,11 @@ svn_fs_revision_proplist(apr_hash_t **table_p,
  * - @a fs is a filesystem, and @a rev is the revision in that filesystem
  *   whose property should change.
  * - @a name is the name of the property to change.
- * - if @a old_value_p is not @c NULL, then @a *old_value_p is the expected old
- *   value of the property, and changing the value will fail with error
- *   #SVN_ERR_FS_PROP_BASEVALUE_MISMATCH if the present value of the property
- *   is not @a *old_value_p.  (This is an atomic test-and-set).
+ * - if @a old_value_p is not @c NULL, then changing the property will fail with
+ *   error #SVN_ERR_FS_PROP_BASEVALUE_MISMATCH if the present value of the
+ *   property is not @a *old_value_p.  (This is an atomic test-and-set).
+ *   @a *old_value_p may be @c NULL, representing that the property must be not
+ *   already set.
  * - @a value is the new value of the property, or zero if the property should
  *   be removed altogether.
  *
