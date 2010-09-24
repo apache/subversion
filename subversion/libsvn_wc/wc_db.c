@@ -274,6 +274,18 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
   return result;
 }
 
+static const char *construct_like_arg(const char *local_relpath,
+                                      apr_pool_t *scratch_pool)
+{
+  if (local_relpath[0] == '0')
+    return "%";
+
+  return apr_pstrcat(scratch_pool,
+                     escape_sqlite_like(local_relpath, scratch_pool),
+                     "/%", NULL);
+}
+
+
 
 /* Returns in PRISTINE_ABSPATH a new string allocated from RESULT_POOL,
    holding the local absolute path to the file location that is dedicated
@@ -933,6 +945,11 @@ blank_iwb(insert_working_baton_t *piwb)
 }
 
 
+struct relpath_op_depth_t {
+  const char *local_relpath;
+  apr_int64_t op_depth;
+};
+
 /* Copy the row specified by BATON->(wc_id,local_relpath) from BASE to
  * WORKING, changing its 'presence' and 'op_depth' to the values in BATON. */
 static svn_error_t *
@@ -944,6 +961,10 @@ copy_working_from_base(void *baton,
   svn_sqlite__stmt_t *stmt;
 
 #ifdef SVN_WC__NODES
+  const char *like_arg;
+  svn_boolean_t have_row;
+  apr_array_header_t *nodes;
+  int i;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                          STMT_INSERT_WORKING_NODE_FROM_BASE));
@@ -953,6 +974,35 @@ copy_working_from_base(void *baton,
                             presence_map, piwb->presence));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
+  /* Need to update the op_depth of all deleted children. A single
+     query can locate all the rows, but not update them, so we fall
+     back on one update per row. */
+  like_arg = construct_like_arg(piwb->local_relpath, scratch_pool);
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_SELECT_CHILDREN_OP_DEPTH_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", piwb->wc_id, like_arg));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  nodes = apr_array_make(scratch_pool, 10, sizeof(struct relpath_op_depth_t *));
+  while (have_row)
+    {
+      struct relpath_op_depth_t *rod = apr_palloc(scratch_pool, sizeof(*rod));
+      rod->local_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+      rod->op_depth = svn_sqlite__column_int64(stmt, 1);
+      APR_ARRAY_PUSH(nodes, struct relpath_op_depth_t *) = rod;
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+  for (i = 0; i < nodes->nelts; ++i)
+    {
+      struct relpath_op_depth_t *rod
+        = APR_ARRAY_IDX(nodes, i, struct relpath_op_depth_t *);
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_OP_DEPTH));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isii",
+                                piwb->wc_id, rod->local_relpath, rod->op_depth,
+                                piwb->op_depth));
+      SVN_ERR(svn_sqlite__update(NULL, stmt));
+    }
 #endif
 
 #ifndef SVN_WC__NODES_ONLY
@@ -2659,12 +2709,7 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  if (local_relpath[0] == 0)
-    like_arg = "%";
-  else
-    like_arg = apr_pstrcat(scratch_pool,
-                           escape_sqlite_like(local_relpath, scratch_pool),
-                           "/%", NULL);
+  like_arg = construct_like_arg(local_relpath, scratch_pool);
 
 #ifndef SVN_WC__NODES_ONLY
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -4810,8 +4855,7 @@ db_working_insert(svn_wc__db_status_t status,
   iwb.wc_id = pdh->wcroot->wc_id;
   iwb.local_relpath = local_relpath;
   iwb.presence = status;
-  /* ### NODE_DATA we temporary store 1 or 2 */
-  iwb.op_depth = (*local_relpath == '\0') ? 1 : 2;
+  iwb.op_depth = relpath_depth(local_relpath);
 
   SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
                                        copy_working_from_base, &iwb,
@@ -5670,12 +5714,7 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(create_repos_id(&new_repos_id, rb->repos_root_url, rb->repos_uuid,
                           sdb, scratch_pool));
 
-  if (rb->local_relpath[0] == 0)
-    like_arg = "%";
-  else
-    like_arg = apr_pstrcat(scratch_pool,
-                           escape_sqlite_like(rb->local_relpath, scratch_pool),
-                           "/%", NULL);
+  like_arg = construct_like_arg(rb->local_relpath, scratch_pool);
 
 #ifndef SVN_WC__NODES_ONLY
   /* Update non-NULL WORKING_NODE.copyfrom_repos_id. */
@@ -5718,12 +5757,7 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 #endif
 
       /* Update any locks for the root or its children. */
-      if (rb->repos_relpath[0] == 0)
-        like_arg = "%";
-      else
-        like_arg = apr_pstrcat(scratch_pool,
-                           escape_sqlite_like(rb->repos_relpath, scratch_pool),
-                           "/%", NULL);
+      like_arg = construct_like_arg(rb->repos_relpath, scratch_pool);
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_UPDATE_LOCK_REPOS_ID));
