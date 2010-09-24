@@ -172,6 +172,67 @@ class CommitInfo
     }
 };
 
+class Lock
+{
+  private:
+    Private::CStructWrapper<Lock, const svn_lock_t> m_lock;
+
+  public:
+    inline static svn_lock_t *
+    dup(const svn_lock_t *lock, Pool &pool)
+    {
+      return svn_lock_dup(lock, pool.pool());
+    }
+
+    explicit inline
+    Lock(const svn_lock_t *lock)
+      : m_lock(lock)
+    {
+    }
+
+    inline const std::string
+    getPath() const
+    {
+      return std::string(m_lock->path);
+    }
+
+    inline const std::string
+    getToken() const
+    {
+      return std::string(m_lock->token);
+    }
+
+    inline const std::string
+    getOwner() const
+    {
+      return std::string(m_lock->owner);
+    }
+
+    inline const std::string
+    getComment() const
+    {
+      return std::string(m_lock->comment);
+    }
+
+    inline bool
+    isDavComment() const
+    {
+      return m_lock->is_dav_comment;
+    }
+
+    inline apr_time_t
+    getCreationDate() const
+    {
+      return m_lock->creation_date;
+    }
+
+    inline apr_time_t
+    getExpirationDate() const
+    {
+      return m_lock->expiration_date;
+    }
+};
+
 class ClientNotifyInfo
 {
   private:
