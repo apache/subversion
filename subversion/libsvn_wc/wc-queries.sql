@@ -142,10 +142,9 @@ SELECT COUNT(*) FROM working_node
 WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_COUNT_WORKING_NODE_CHILDREN_1
-SELECT COUNT(*) FROM nodes
-WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0);
+SELECT COUNT(*) FROM (SELECT DISTINCT local_relpath FROM nodes
+                      WHERE wc_id = ?1 AND parent_relpath = ?2
+                      AND op_depth > 0);
 
 -- STMT_SELECT_BASE_NODE_CHILDREN
 SELECT local_relpath FROM base_node
@@ -160,10 +159,8 @@ SELECT local_relpath FROM working_node
 WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_SELECT_WORKING_NODE_CHILDREN_1
-SELECT local_relpath FROM nodes
-WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0);
+SELECT DISTINCT local_relpath FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0;
 
 -- STMT_SELECT_WORKING_IS_FILE
 SELECT kind == 'file' FROM working_node
