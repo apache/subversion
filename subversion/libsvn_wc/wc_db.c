@@ -277,7 +277,7 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
 static const char *construct_like_arg(const char *local_relpath,
                                       apr_pool_t *scratch_pool)
 {
-  if (local_relpath[0] == '0')
+  if (local_relpath[0] == '\0')
     return "%";
 
   return apr_pstrcat(scratch_pool,
