@@ -248,7 +248,10 @@ svn_io_open_uniquely_named(apr_file_t **file,
  * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
- * The file will be deleted according to @a delete_when.
+ * The file will be deleted according to @a delete_when.  If @a delete_when
+ * is @c svn_io_file_del_on_close and @a file is @c NULL, the file will be
+ * deleted before this function returns.
+ *
  * When passing @c svn_io_file_del_none please don't forget to eventually
  * remove the temporary file to avoid filling up the system temp directory.
  * It is often appropriate to bind the lifetime of the temporary file to
