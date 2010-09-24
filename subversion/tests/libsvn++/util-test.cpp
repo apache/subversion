@@ -164,6 +164,37 @@ test_map_wrapping(apr_pool_t *p)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_struct_wrapping(apr_pool_t *p)
+{
+  apr_pool_t *subpool = svn_pool_create(p);
+  svn_commit_info_t *commit_info = svn_create_commit_info(subpool);
+
+  commit_info->author = "hwright";
+
+  CommitInfo info(commit_info);
+  svn_pool_destroy(subpool);
+
+  SVN_TEST_ASSERT(info.getAuthor() == "hwright");
+
+  CommitInfo info2(info);
+  SVN_TEST_ASSERT(info2.getAuthor() == "hwright");
+
+  CommitInfo *info3 = new CommitInfo(info2);
+  SVN_TEST_ASSERT(info3->getAuthor() == "hwright");
+
+  CommitInfo *info4 = new CommitInfo(*info3);
+  SVN_TEST_ASSERT(info4->getAuthor() == "hwright");
+
+  delete info3;
+  SVN_TEST_ASSERT(info.getAuthor() == "hwright");
+  SVN_TEST_ASSERT(info4->getAuthor() == "hwright");
+
+  delete info4;
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -181,5 +212,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test various vector to array transforms"),
     SVN_TEST_PASS2(test_map_wrapping,
                    "test various map to hash transforms"),
+    SVN_TEST_PASS2(test_struct_wrapping,
+                   "test our ref-counted struct wrappers"),
     SVN_TEST_NULL
   };
