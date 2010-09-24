@@ -660,6 +660,18 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 UPDATE working_node SET copyfrom_repos_id = ?3, copyfrom_repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_SELECT_CHILDREN_OP_DEPTH_RECURSIVE
+SELECT local_relpath, op_depth FROM nodes as node
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#'
+  AND op_depth = (SELECT MAX(op_depth) FROM nodes
+                  WHERE wc_id = node.wc_id
+                    AND local_relpath = node.local_relpath);
+
+-- STMT_UPDATE_OP_DEPTH
+UPDATE nodes SET op_depth = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3;
+
+
 -- STMT_UPDATE_COPYFROM_TO_INHERIT
 UPDATE working_node SET
   copyfrom_repos_id = NULL,
