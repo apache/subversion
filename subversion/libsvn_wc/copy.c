@@ -98,8 +98,6 @@ copy_to_tmpdir(const char **dst_abspath,
 
   if (*kind == svn_node_dir)
     {
-      SVN_ERR(svn_io_check_path(*dst_abspath, kind, scratch_pool));
-      printf("DBG: Overwrite '%s' (kind %d) with dir...\n", *dst_abspath, *kind);
       if (recursive)
         SVN_ERR(svn_io_copy_dir_recursively(src_abspath,
                                             tmpdir_abspath,
@@ -451,6 +449,8 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
   
   dstdir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
 
+  /* Ensure DSTDIR_ABSPATH belongs to the same repository as SRC_ABSPATH;
+     throw an error if not. */
   {
     svn_wc__db_status_t src_status, dstdir_status;
     const char *src_repos_root_url, *dst_repos_root_url;
