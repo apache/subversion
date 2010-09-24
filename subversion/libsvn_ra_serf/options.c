@@ -313,6 +313,13 @@ capabilities_headers_iterator_callback(void *baton,
                        SVN_RA_CAPABILITY_LOG_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
         }
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS,
+                                      vals))
+        {
+          apr_hash_set(orc->session->capabilities,
+                       SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         {
           apr_hash_set(orc->session->capabilities,
@@ -403,6 +410,8 @@ options_response_handler(serf_request_t *request,
   apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                APR_HASH_KEY_STRING, capability_no);
 
   /* Then see which ones we can discover. */

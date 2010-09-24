@@ -450,41 +450,14 @@ svn_client_propset4(const char *propname,
     }
 }
 
-svn_error_t *
-svn_client_revprop_set2(const char *propname,
-                        const svn_string_t *propval,
-                        const svn_string_t *original_propval,
-                        const char *URL,
-                        const svn_opt_revision_t *revision,
-                        svn_revnum_t *set_rev,
-                        svn_boolean_t force,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *pool)
+static svn_error_t *
+check_and_set_revprop(svn_revnum_t *set_rev,
+                      svn_ra_session_t *ra_session,
+                      const char *propname,
+                      const svn_string_t *original_propval,
+                      const svn_string_t *propval,
+                      apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session;
-
-  if ((strcmp(propname, SVN_PROP_REVISION_AUTHOR) == 0)
-      && propval
-      && strchr(propval->data, '\n') != NULL
-      && (! force))
-    return svn_error_create(SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
-                            NULL, _("Author name should not contain a newline;"
-                                    " value will not be set unless forced"));
-
-  if (propval && ! svn_prop_name_is_valid(propname))
-    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                             _("Bad property name: '%s'"), propname);
-
-  /* Open an RA session for the URL. Note that we don't have a local
-     directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
-                                               NULL, FALSE, TRUE, ctx, pool));
-
-  /* Resolve the revision into something real, and return that to the
-     caller as well. */
-  SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
-                                          ra_session, revision, pool));
-
   if (original_propval)
     {
       /* Ensure old value hasn't changed behind our back. */
@@ -518,9 +491,73 @@ svn_client_revprop_set2(const char *propname,
         }
     }
 
-  /* The actual RA call. */
-  SVN_ERR(svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
-                                 pool));
+  SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname, 
+                                  NULL, propval, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_revprop_set2(const char *propname,
+                        const svn_string_t *propval,
+                        const svn_string_t *original_propval,
+                        const char *URL,
+                        const svn_opt_revision_t *revision,
+                        svn_revnum_t *set_rev,
+                        svn_boolean_t force,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  svn_boolean_t be_atomic;
+
+  if ((strcmp(propname, SVN_PROP_REVISION_AUTHOR) == 0)
+      && propval
+      && strchr(propval->data, '\n') != NULL
+      && (! force))
+    return svn_error_create(SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
+                            NULL, _("Author name should not contain a newline;"
+                                    " value will not be set unless forced"));
+
+  if (propval && ! svn_prop_name_is_valid(propname))
+    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                             _("Bad property name: '%s'"), propname);
+
+  /* Open an RA session for the URL. Note that we don't have a local
+     directory, nor a place to put temp files. */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL, NULL,
+                                               NULL, FALSE, TRUE, ctx, pool));
+
+  /* Resolve the revision into something real, and return that to the
+     caller as well. */
+  SVN_ERR(svn_client__get_revision_number(set_rev, NULL, ctx->wc_ctx, NULL,
+                                          ra_session, revision, pool));
+
+  SVN_ERR(svn_ra_has_capability(ra_session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS, pool));
+  if (be_atomic)
+    {
+      /* Convert ORIGINAL_PROPVAL to an OLD_VALUE_P. */
+      const svn_string_t *const *old_value_p;
+      const svn_string_t *unset = NULL;
+
+      if (original_propval == NULL)
+      	old_value_p = NULL;
+      else if (original_propval->data == NULL)
+      	old_value_p = &unset;
+      else
+      	old_value_p = &original_propval;
+
+      /* The actual RA call. */
+      SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname, 
+                                      old_value_p, propval, pool));
+    }
+  else
+    {
+      /* The actual RA call. */
+      SVN_ERR(check_and_set_revprop(set_rev, ra_session, propname,
+                                    original_propval, propval, pool));
+    }
 
   if (ctx->notify_func2)
     {
