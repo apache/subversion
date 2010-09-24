@@ -81,7 +81,7 @@ ReposNotifyCallback::onNotify(const svn_repos_notify_t *wcNotify,
       env->DeleteLocalRef(clazz);
     }
 
-  jobject jInfo = CreateJ::ReposNotifyInformation(wcNotify, pool);
+  jobject jInfo = CreateJ::ReposNotifyInformation(wcNotify);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
