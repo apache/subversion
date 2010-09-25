@@ -110,7 +110,7 @@ struct replay_baton {
   svn_boolean_t quiet;
 };
 
-typedef struct {
+typedef struct opt_baton_t {
   svn_ra_session_t *session;
   const char *url;
   svn_revnum_t start_revision;
