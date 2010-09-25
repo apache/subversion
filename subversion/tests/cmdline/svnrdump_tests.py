@@ -356,7 +356,7 @@ test_list = [ None,
               copy_bad_line_endings_dump,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
-              Wimp("Reorder dumpfile", descend_into_replace_dump),
+              descend_into_replace_dump,
              ]
 
 if __name__ == '__main__':
