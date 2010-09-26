@@ -126,24 +126,23 @@ validator_func(void *baton,
 }
 
 svn_error_t *
-svn_client_relocate(const char *path,
-                    const char *from,
-                    const char *to,
-                    svn_boolean_t recurse,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+svn_client_relocate2(const char *wcroot_dir,
+                     const char *from,
+                     const char *to,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
 {
   struct validator_baton_t vb;
   const char *local_abspath;
 
-  /* Now, populate our validator callback baton, and call the relocate code. */
+  /* Populate our validator callback baton, and call the relocate code. */
   vb.ctx = ctx;
-  vb.path = path;
+  vb.path = wcroot_dir;
   vb.url_uuids = apr_array_make(pool, 1, sizeof(struct url_uuid_t));
   vb.pool = pool;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from, to, recurse,
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcroot_dir, pool));
+  SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from, to,
                            validator_func, &vb, pool));
 
   return SVN_NO_ERROR;

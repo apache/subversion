@@ -65,9 +65,12 @@ def build_repos(sbox):
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
 
-def run_dump_test(sbox, dumpfile_name):
+def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
+                  subdir = None):
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
-  dump' and check that the same dumpfile is produced"""
+  dump' and check that the same dumpfile is produced or that
+  expected_dumpfile_name is produced if provided. Additionally, the
+  subdir argument appends itself to the URL"""
 
   # Create an empty sanbox repository
   build_repos(sbox)
@@ -83,19 +86,28 @@ def run_dump_test(sbox, dumpfile_name):
                            'rb').readlines()
 
   svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile)
+  
+  repo_url = sbox.repo_url
+  if subdir:
+    repo_url = repo_url + subdir
 
   # Create a dump file using svnrdump
   svnrdump_dumpfile = \
       svntest.actions.run_and_verify_svnrdump(None, svntest.verify.AnyOutput,
                                               [], 0, '-q', 'dump',
-                                              sbox.repo_url)
+                                              repo_url)
+
+  if expected_dumpfile_name:
+    svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
+                                          expected_dumpfile_name),
+                             'rb').readlines()
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
     "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
     None, mismatched_headers_re)
 
-def run_load_test(sbox, dumpfile_name):
+def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None):
   """Load a dumpfile using 'svnrdump load', dump it with 'svnadmin
   dump' and check that the same dumpfile is produced"""
 
@@ -129,6 +141,11 @@ def run_load_test(sbox, dumpfile_name):
 
   # Create a dump file using svnadmin dump
   svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, True)
+
+  if expected_dumpfile_name:
+    svnrdump_dumpfile = open(os.path.join(svnrdump_tests_dir,
+                                          expected_dumpfile_name),
+                             'rb').readlines()
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
@@ -166,6 +183,10 @@ def revision_0_load(sbox):
 #     Project-Z     (Added r5)
 #     docs/         (Added r6)
 #       README      (Added r6)
+
+def skeleton_dump(sbox):
+  "dump: skeleton repository"
+  run_dump_test(sbox, "skeleton.dump")
 
 def skeleton_load(sbox):
   "load: skeleton repository"
@@ -219,6 +240,22 @@ def tag_empty_trunk_load(sbox):
   "load: tag empty trunk"
   run_load_test(sbox, "tag-empty-trunk.dump")
 
+def tag_trunk_with_file_dump(sbox):
+  "dump: tag trunk containing a file"
+  run_dump_test(sbox, "tag-trunk-with-file.dump")
+
+def tag_trunk_with_file_load(sbox):
+  "load: tag trunk containing a file"
+  run_load_test(sbox, "tag-trunk-with-file.dump")
+
+def tag_trunk_with_file2_dump(sbox):
+  "dump: tag trunk containing a file (#2)"
+  run_dump_test(sbox, "tag-trunk-with-file2.dump")
+
+def tag_trunk_with_file2_load(sbox):
+  "load: tag trunk containing a file (#2)"
+  run_load_test(sbox, "tag-trunk-with-file2.dump")
+
 def dir_prop_change_dump(sbox):
   "dump: directory property changes"
   run_dump_test(sbox, "dir-prop-change.dump")
@@ -243,6 +280,16 @@ def copy_revprops_load(sbox):
   "load: copy revprops other than svn:*"
   run_load_test(sbox, "revprops.dump")
 
+def only_trunk_dump(sbox):
+  "dump: subdirectory"
+  run_dump_test(sbox, "trunk-only.dump", subdir="/trunk",
+                expected_dumpfile_name="trunk-only.expected.dump")
+
+def only_trunk_A_with_changes_dump(sbox):
+  "dump: subdirectory with changes on root"
+  run_dump_test(sbox, "trunk-A-changes.dump", subdir="/trunk/A",
+           expected_dumpfile_name="trunk-A-changes.expected.dump")
+
 def url_encoding_dump(sbox):
   "dump: url encoding issues"
   run_dump_test(sbox, "url-encoding-bug.dump")
@@ -250,6 +297,24 @@ def url_encoding_dump(sbox):
 def url_encoding_load(sbox):
   "load: url encoding issues"
   run_load_test(sbox, "url-encoding-bug.dump")
+
+def copy_bad_line_endings_dump(sbox):
+  "dump: inconsistent line endings in svn:props"
+  run_dump_test(sbox, "copy-bad-line-endings.dump",
+           expected_dumpfile_name="copy-bad-line-endings.expected.dump")
+
+def commit_a_copy_of_root_dump(sbox):
+  "dump: commit a copy of root"
+  run_dump_test(sbox, "repo-with-copy-of-root-dir.dump")
+
+def commit_a_copy_of_root_load(sbox):
+  "load: commit a copy of root"
+  run_load_test(sbox, "repo-with-copy-of-root-dir.dump")
+
+def descend_into_replace_dump(sbox):
+  "dump: descending into replaced dir looks in src"
+  run_dump_test(sbox, "descend-into-replace.dump", subdir='/trunk/H',
+                expected_dumpfile_name = "descend-into-replace.expected.dump")
 
 ########################################################################
 # Run the tests
@@ -260,6 +325,7 @@ test_list = [ None,
               basic_dump,
               revision_0_dump,
               revision_0_load,
+              skeleton_dump,
               skeleton_load,
               copy_and_modify_dump,
               copy_and_modify_load,
@@ -269,18 +335,28 @@ test_list = [ None,
               modified_in_place_load,
               tag_empty_trunk_dump,
               tag_empty_trunk_load,
+              tag_trunk_with_file_dump,
+              tag_trunk_with_file_load,
+              tag_trunk_with_file2_dump,
+              tag_trunk_with_file2_load,
               dir_prop_change_dump,
-              dir_prop_change_load,
+              Wimp("TODO", dir_prop_change_load, svntest.main.is_ra_type_dav),
               copy_parent_modify_prop_dump,
               copy_parent_modify_prop_load,
               url_encoding_dump,
               url_encoding_load,
               copy_revprops_dump,
-              Wimp("TODO", copy_revprops_load),
+              copy_revprops_load,
+              only_trunk_dump,
+              only_trunk_A_with_changes_dump,
               no_author_dump,
               no_author_load,
-              Wimp("TODO", move_and_modify_in_the_same_revision_dump),
-              Wimp("TODO", move_and_modify_in_the_same_revision_load),
+              move_and_modify_in_the_same_revision_dump,
+              move_and_modify_in_the_same_revision_load,
+              copy_bad_line_endings_dump,
+              commit_a_copy_of_root_dump,
+              commit_a_copy_of_root_load,
+              descend_into_replace_dump,
              ]
 
 if __name__ == '__main__':

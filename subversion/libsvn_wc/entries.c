@@ -606,16 +606,35 @@ read_one_entry(const svn_wc_entry_t **new_entry,
         {
           svn_sqlite__db_t *sdb;
           svn_sqlite__stmt_t *stmt;
+#ifdef SVN_WC__NODES
+          svn_sqlite__stmt_t *stmt_nodes;
+          svn_boolean_t have_nodes_row;
+#endif
 
           SVN_ERR(svn_wc__db_temp_borrow_sdb(
                     &sdb, db, dir_abspath,
                     svn_wc__db_openmode_readonly,
                     scratch_pool));
 
+#ifndef SVN_WC__NODES_ONLY
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                             STMT_SELECT_NOT_PRESENT));
           SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, entry->name));
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
+#endif
+#ifdef SVN_WC__NODES
+          SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, sdb,
+                                            STMT_SELECT_NOT_PRESENT));
+          SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is", wc_id, entry->name));
+          SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
+#ifndef SVN_WC__NODES_ONLY
+          SVN_ERR_ASSERT(have_row == have_nodes_row);
+          SVN_ERR(svn_sqlite__reset(stmt_nodes));
+#else
+          stmt = stmt_nodes;
+          have_row = have_nodes_row;
+#endif
+#endif
           SVN_ERR(svn_sqlite__reset(stmt));
         }
 
@@ -1727,7 +1746,8 @@ insert_working_node(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisnnnnsnrisnnni",
                             working_node->wc_id, working_node->local_relpath,
-                            (working_node->parent_relpath == NULL ? 1 : 2),
+                            (working_node->parent_relpath == NULL
+                             ? (apr_int64_t)1 : (apr_int64_t)2),
                             working_node->parent_relpath,
                             /* Setting depth for files? */
                             svn_depth_to_word(working_node->depth),
@@ -2137,6 +2157,7 @@ write_entry(svn_wc__db_t *db,
                                                   &entry->file_external_rev,
                                                   scratch_pool));
 
+#ifndef SVN_WC__NODES_ONLY
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                             STMT_UPDATE_FILE_EXTERNAL));
           SVN_ERR(svn_sqlite__bindf(stmt, "iss",
@@ -2144,6 +2165,16 @@ write_entry(svn_wc__db_t *db,
                                     entry->name,
                                     str));
           SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+#ifdef SVN_WC__NODES
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                            STMT_UPDATE_FILE_EXTERNAL_1));
+          SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                                    (apr_uint64_t)1 /* wc_id */,
+                                    entry->name,
+                                    str));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
         }
     }
 

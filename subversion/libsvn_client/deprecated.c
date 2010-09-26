@@ -2039,3 +2039,18 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   svn_depth_empty, revprops, ctx,
                                   pool);
 }
+
+/*** From relocate.c ***/
+svn_error_t *
+svn_client_relocate(const char *path,
+                    const char *from,
+                    const char *to,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  if (! recurse)
+    svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                     _("Non-recursive relocation not supported"));
+  return svn_client_relocate2(path, from, to, ctx, pool);
+}

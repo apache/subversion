@@ -76,7 +76,6 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  const char *from,
                  const char *to,
-                 svn_boolean_t recurse,
                  svn_wc_relocation_validator3_t validator,
                  void *validator_baton,
                  apr_pool_t *scratch_pool)
@@ -87,6 +86,35 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
   const char *old_url;
   const char *new_repos_root;
   const char *uuid;
+  svn_boolean_t is_wc_root;
+
+  SVN_ERR(svn_wc__strictly_is_wc_root(&is_wc_root, wc_ctx, local_abspath,
+                                      scratch_pool));
+  if (! is_wc_root)
+    {
+      const char *wcroot_abspath;
+      svn_error_t *err;
+
+      err = svn_wc__db_get_wcroot(&wcroot_abspath, wc_ctx->db,
+                                  local_abspath, scratch_pool, scratch_pool);
+      if (err)
+        {
+          svn_error_clear(err);
+          return svn_error_createf(
+            SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+            _("Cannot relocate '%s' as it is not the root of a working copy"),
+            svn_dirent_local_style(local_abspath, scratch_pool));
+        }
+      else
+        {
+          return svn_error_createf(
+            SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+            _("Cannot relocate '%s' as it is not the root of a working copy; "
+              "try relocating '%s' instead"),
+            svn_dirent_local_style(local_abspath, scratch_pool),
+            svn_dirent_local_style(wcroot_abspath, scratch_pool));
+        }
+    }
 
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, &repos_relpath,
                                &old_repos_root, &uuid,
@@ -112,48 +140,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(validator(validator_baton, uuid, to, new_repos_root, scratch_pool));
 
-  /* ### FIXME: This will ultimately cause the DAV cache to be
-     recursively cleared, which is great in the recursive case, but
-     overreaching otherwise.  Granted, this only affects performance,
-     and that only for DAV RA implementations that rely on the DAV
-     cache. */
-  SVN_ERR(svn_wc__db_global_relocate(wc_ctx->db, local_abspath, new_repos_root,
-                                     scratch_pool));
-
-  if (!recurse)
-    {
-      /* This gets sticky.  We need to do the above relocation, and then
-         relocate each of the children *back* to the original location.  Ugh.
-       */
-      const apr_array_header_t *children;
-      apr_pool_t *iterpool;
-      int i;
-
-      SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
-                                       scratch_pool, scratch_pool));
-      iterpool = svn_pool_create(scratch_pool);
-      for (i = 0; i < children->nelts; i++)
-        {
-          const char *child = APR_ARRAY_IDX(children, i, const char *);
-          const char *child_abspath;
-          const char *child_from;
-          const char *child_to;
-
-          svn_pool_clear(iterpool);
-          child_abspath = svn_dirent_join(local_abspath, child, iterpool);
-
-          /* We invert the "from" and "to" because we're switching the
-             children back to the original location. */
-          child_from = svn_uri_join(to, child, iterpool);
-          child_to = svn_uri_join(from, child, iterpool);
-
-          SVN_ERR(svn_wc_relocate4(wc_ctx, child_abspath, child_from,
-                                   child_to, TRUE, validator, validator_baton,
-                                   iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__db_global_relocate(wc_ctx->db, local_abspath,
+                                                     new_repos_root,
+                                                     scratch_pool));
 }

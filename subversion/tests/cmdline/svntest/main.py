@@ -158,6 +158,8 @@ svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
+atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
+                                                  _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -639,6 +641,20 @@ def run_entriesdump_subdirs(path):
                                                         0, 0, None, '--subdirs', path)
   return [line.strip() for line in stdout_lines if not line.startswith("DBG:")]
 
+def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
+  """Run the atomic-ra-revprop-change helper, returning its exit code, stdout, 
+  and stderr.  For HTTP, default HTTP library is used."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  #exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+  #                                                      0, 0, None, path)
+
+  # This passes HTTP_LIBRARY in addition to our params.
+  return run_command(atomic_ra_revprop_change_binary, True, False, 
+                     url, revision, propname, skel,
+                     options.http_library, want_error and 1 or 0)
+
+
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
   for dirpath, dirs, files in os.walk(path):
@@ -1071,6 +1087,9 @@ def server_has_partial_replay():
 
 def server_enforces_date_syntax():
   return options.server_minor_version >= 5
+
+def server_has_atomic_revprop():
+  return options.server_minor_version >= 7
 
 ######################################################################
 

@@ -1049,18 +1049,25 @@ def commit_mods_below_switch(sbox):
 
 def relocate_beyond_repos_root(sbox):
   "relocate with prefixes longer than repo root"
-  sbox.build(read_only = True)
+  sbox.build(read_only=True, create_wc=False)
+
+  wc_backup = sbox.add_wc_path('backup')
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
-
   A_url = repo_url + "/A"
+  A_wc_dir = wc_dir
   other_A_url = other_repo_url + "/A"
   other_B_url = other_repo_url + "/B"
-  A_wc_dir = os.path.join(wc_dir, "A")
+
+  svntest.main.safe_rmtree(wc_dir, 1)
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     repo_url + '/A', wc_dir)
+  
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
+  
 
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
@@ -2959,7 +2966,7 @@ def single_file_relocate(sbox):
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Cannot relocate a single file\n",
+                                     ".*Cannot relocate.*",
                                      'switch', '--relocate',
                                      iota_url, other_iota_url, iota_path)
 

@@ -106,14 +106,14 @@ BlameCallback::singleLine(svn_revnum_t start_revnum, svn_revnum_t end_revnum,
     }
 
   // convert the parameters to their Java relatives
-  jobject jrevProps = CreateJ::PropertyMap(revProps, pool);
+  jobject jrevProps = CreateJ::PropertyMap(revProps);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
   jobject jmergedRevProps = NULL;
   if (mergedRevProps != NULL)
     {
-      jmergedRevProps = CreateJ::PropertyMap(mergedRevProps, pool);
+      jmergedRevProps = CreateJ::PropertyMap(mergedRevProps);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
     }

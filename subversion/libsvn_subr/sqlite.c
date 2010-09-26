@@ -941,6 +941,11 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   SVN_ERR(exec_sql(*db, "PRAGMA foreign_keys=ON;"));
 #endif
 
+  /* Store temporary tables in RAM instead of in temporary files, but don't
+     fail on this if this option is disabled in the sqlite compilation by
+     setting SQLITE_TEMP_STORE to 0 (always to disk) */
+  svn_error_clear(exec_sql(*db, "PRAGMA temp_store = MEMORY;"));
+
   /* Validate the schema, upgrading if necessary. */
   if (upgrade_sql != NULL)
     SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
