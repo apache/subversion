@@ -631,13 +631,16 @@ init_patch_target(patch_target_t **patch_target,
                                                    scratch_pool));
         }
 
-      /* ### Is it ok to set target->added here? Isn't the target supposed to
-       * ### be marked as added after it's been proven that it can be added?
-       * ### One alternative is to include a git_added flag. Or maybe we
-       * ### should have kept the patch field in patch_target_t? Then we
-       * ### could have checked for target->patch->operation == added */
+      /* ### Is it ok to set the operation of the target already here? Isn't
+       * ### the target supposed to be marked with an operation after we have
+       * ### determined that the changes will apply cleanly to the WC? Maybe
+       * ### we should have kept the patch field in patch_target_t to be
+       * ### able to distinguish between 'what the patch says we should do' 
+       * ### and 'what we can do with the given state of our WC'. */
       if (patch->operation == svn_diff_op_added)
         target->added = TRUE;
+      else if (patch->operation == svn_diff_op_deleted)
+        target->deleted = TRUE;
 
       SVN_ERR(svn_stream_open_unique(&patched_raw,
                                      &target->patched_path, NULL,
@@ -2639,7 +2642,9 @@ apply_patches(void *baton,
 
               if (! target->skipped)
                 {
-                  if (target->has_text_changes || target->added)
+                  if (target->has_text_changes 
+                      || target->added 
+                      || target->deleted)
                     SVN_ERR(install_patched_target(target, btn->abs_wc_path,
                                                    btn->ctx, btn->dry_run,
                                                    iterpool));
