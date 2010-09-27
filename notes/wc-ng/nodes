@@ -1,0 +1,159 @@
+
+Description of the NODES table
+==============================
+
+
+ * Introduction
+ * Inclusion of BASE nodes
+ * Rows to store state
+ * Ordering rows into layers
+ * Visibility of multiple op_depth rows
+ * Restructuring the tree means adding rows
+ * 
+
+
+Introduction
+------------
+
+The entire original design of wc-ng evolves around the notion that
+there are a number of states in a working copy, each of which needs
+to be managed.  All operations - excluding merge - operate on three
+trees: BASE, WORKING and ACTUAL.
+
+For an in-depth description of what each means, the reader is referred
+to other documentation, also in the notes/ directory.  In short, BASE
+is what was checked out from the repository; WORKING includes
+modifications mode with Subversion commands while ACTUAL also includes
+changes which have been made with non-Subversion aware tools (rm, cp, etc.).
+
+The idea that there are three trees works - mostly. There is no need
+for more trees outside the area of the metadata administration and even
+then three trees got us pretty far.  The problem starts when one realizes
+tree modifications can be overlapping or layered. Imagine a tree with
+a replaced subtree.  It's possible to replace a subtree within the
+replacement.  Imagine that happened and that the user wants to revert
+one of the replacements.  Given a 'flat' system, with just enough columns
+in the database to record the 'old' and 'new' information per node, a single
+revert can be supported.  However, in the example with the double
+replacement above, that would mean it's impossible to revert one of the
+two replacements: either there's not enough information in the deepest
+replacement to execute the highest level replacement or vice versa
+- depending on which information was selected to be stored in the "new"
+columns.
+
+The NODES table is the answer to this problem: instead of having a single
+row it a table with WORKING nodes with just enough columns to record
+(as per the example) a replacement, the solution is to record different
+states by having multiple rows.
+
+
+
+Inclusion of BASE nodes
+-----------------------
+
+The original technical design of wc-ng included a WORKING_NODE and a
+BASE_NODE table.  As described in the introduction, the WORKING_NODE
+table was replaced with NODES.  However, the BASE_NODE table stores
+roughly the same state information that WORKING_NODE did.  Additionally,
+in a number of situations, the system isn't interested in the type of
+state it gets returned (BASE or WORKING) - it just wants the latest.
+
+As a result the BASE_NODE table has been integrated into the NODES
+table.
+
+The main difference between the WORKING_NODE and BASE_NODE tables was
+that the BASE_NODE table contained a few caching fields which are
+not relevant to WORKING_NODE.  Moving those to a separate table was
+determined to be wasteful because the primary key of that table
+whould be much larger than any information stored in it in the first
+place.
+
+
+
+Rows to store state
+-------------------
+
+Rows of the NODES table store state of nodes in the BASE tree
+and the layers in the WORKING tree.  Note that these nodes do not
+need to exist in the working copy presented to the user: they may
+be 'absent', 'not-present' or just removed (rm) without using
+Subversion commands.
+
+A row contains information linking to the repository, if the node
+was received from a repository.  This reference may be a link to
+the original nodes for copied or moved nodes, but for rows designating
+BASE state, they refer to the repository location which was checked
+out from.
+
+Additionally, the rows contain information about local modifications
+such copy, move or delete operations.
+
+
+
+Ordering rows into layers
+-------------------------
+
+Since the table might contain more than one row per (wc_id, local_relpath)
+combination, an ordering mechanism needs to be added.  To that effect
+the 'op_depth' value has been devised.  The op_depth is an integer
+indicating the depth of the operation which modified the tree in order
+for the node to enter the state indicated in the row.
+
+Every row for the (wc_id, local_relpath) combination must have a unique
+op_depth associated with it.  The value of op_depth is related to the
+top-most node being modified in the given tree-restructuring
+operation (operation root or oproot).  E.g. upon deletion of a subtree,
+all nodes in the subtree will have rows in the table with the same
+op_depth.
+
+The op_depth is calculated by taking the number of path components in
+the local_relpath of the oproot. The unmodified tree (BASE) is identified
+by rows with an op_depth value 0.
+
+By having multiple restructuring operations on the same path in a modified
+subtree (most notably replacements), the table may end up with multiple rows
+with an op_depth bigger than 0.
+
+
+
+Visibility of multiple op_depth rows
+------------------------------------
+
+As stated in the introduction, there's no need to leak the concept of
+multiple op_depth rows out of the meta data store - apart of the BASE
+and WORKING trees.
+
+As described before, the BASE tree is defined by op_depth == 0. WORKING as
+visible outside the metadata store maps back to those rows where
+op_depth == MAX(op_depth) for each (wc_id, local_relpath) combination.
+
+
+
+Restructuring the tree means adding rows
+----------------------------------------
+
+The base idea behind the NODES table is that every tree restructuring
+operation causes nodes to be added to the table in order to best support
+the reversal process: in that case a revert simply means deletion of rows
+and bringing the subtree back into sync with the metadata.
+
+There's one exception: When a delete is followed by a copy or move to
+the deleted location - causing a replacement - a pre-existing (due to the
+delete) row with the right op_depth exists and needs to be modified. On
+revert, the modified nodes need to be restored to 'deleted' state, which
+itself can be reverted during the next revert.
+
+### EHU: The statement above probably means that *all* nodes in the subtree
+  need to be rewritten: they all have a deleted state with the affected
+  op_depth, meaning they probably need a 'replaced/copied-to' state with
+  the same op_depth...
+
+
+
+
+
+
+TODO:
+ * Explain the role of the 'deleted-below' columns
+ * Document states of the table and their meaning (including values
+    of the relevant columns)
