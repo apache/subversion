@@ -274,14 +274,23 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
   return result;
 }
 
+/* Return a string that can be used as the argument to a SQLite 'LIKE'
+ * operator, in order to match any path that is a child of LOCAL_RELPATH
+ * (at any depth below LOCAL_RELPATH), *excluding* LOCAL_RELPATH itself.
+ * LOCAL_RELPATH may be the empty string, in which case the result will
+ * match any path *including* the empty path.
+ *
+ * ### Inconsistent on whether the match includes LOCAL_RELPATH itself.
+ *
+ * Allocate the result either statically or in RESULT_POOL.  */
 static const char *construct_like_arg(const char *local_relpath,
-                                      apr_pool_t *scratch_pool)
+                                      apr_pool_t *result_pool)
 {
   if (local_relpath[0] == '\0')
     return "%";
 
-  return apr_pstrcat(scratch_pool,
-                     escape_sqlite_like(local_relpath, scratch_pool),
+  return apr_pstrcat(result_pool,
+                     escape_sqlite_like(local_relpath, result_pool),
                      "/%", NULL);
 }
 
@@ -3943,7 +3952,11 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
   iwb.kind = svn_wc__db_kind_dir;
   iwb.wc_id = pdh->wcroot->wc_id;
   iwb.local_relpath = local_relpath;
+#ifdef SVN_WC__OP_DEPTH
   iwb.op_depth = relpath_depth(local_relpath);
+#else
+  iwb.op_depth = 2;  /* ### temporary op_depth */
+#endif
 
   iwb.work_items = work_items;
 
@@ -3979,7 +3992,11 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
   iwb.kind = svn_wc__db_kind_file;
   iwb.wc_id = pdh->wcroot->wc_id;
   iwb.local_relpath = local_relpath;
+#ifdef SVN_WC__OP_DEPTH
   iwb.op_depth = relpath_depth(local_relpath);
+#else
+  iwb.op_depth = 2;  /* ### temporary op_depth */
+#endif
 
   iwb.work_items = work_items;
 
@@ -4017,7 +4034,11 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   iwb.kind = svn_wc__db_kind_symlink;
   iwb.wc_id = pdh->wcroot->wc_id;
   iwb.local_relpath = local_relpath;
+#ifdef SVN_WC__OP_DEPTH
   iwb.op_depth = relpath_depth(local_relpath);
+#else
+  iwb.op_depth = 2;  /* ### temporary op_depth */
+#endif
 
   iwb.target = target;
 
