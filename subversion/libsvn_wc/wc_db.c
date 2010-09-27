@@ -4882,7 +4882,11 @@ db_working_insert(svn_wc__db_status_t status,
   iwb.wc_id = pdh->wcroot->wc_id;
   iwb.local_relpath = local_relpath;
   iwb.presence = status;
+#ifdef SVN_WC__OP_DEPTH
   iwb.op_depth = relpath_depth(local_relpath);
+#else
+  iwb.op_depth = 2; /* ### temporary op_depth */
+#endif
 
   SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
                                        copy_working_from_base, &iwb,
