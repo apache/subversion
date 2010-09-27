@@ -108,13 +108,20 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
     c.execute('select dav_cache from base_node ' +
               'where wc_id=? and local_relpath=?',
-        (wc_id, local_relpath))
-    dav_cache = str(c.fetchone()[0])
-
+              (wc_id, local_relpath))
+    row = c.fetchone()
+    if row is None:
+      c.execute('select dav_cache from nodes ' +
+                'where wc_id=? and local_relpath=? and op_depth = 0',
+                (wc_id, local_relpath))
+      row = c.fetchone()
+    if row is None:
+      raise svntest.Failure("no dav cache for '%s'" % (local_relpath))
+    dav_cache = str(row[0])
     if dav_cache != expected_dav_cache:
       raise svntest.Failure(
               "wrong dav cache for '%s'\n  Found:    '%s'\n  Expected: '%s'" %
-                (dir_path, dav_cache, expected_dav_cache))
+                (local_relpath, dav_cache, expected_dav_cache))
 
   db.close()
 
