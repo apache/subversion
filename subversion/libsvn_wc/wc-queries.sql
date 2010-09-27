@@ -895,6 +895,11 @@ UNION
 SELECT local_relpath FROM working_node
 WHERE kind = 'file' AND parent_relpath = ?1;
 
+-- STMT_SELECT_ALL_FILES_1
+/* Should this select on wc_id as well? */
+SELECT DISTINCT local_relpath FROM nodes
+WHERE kind = 'file' AND parent_relpath = ?1;
+
 -- STMT_PLAN_PROP_UPGRADE
 SELECT 0, presence, wc_id FROM base_node WHERE local_relpath = ?1
 UNION ALL
