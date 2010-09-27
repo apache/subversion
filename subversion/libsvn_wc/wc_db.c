@@ -433,7 +433,7 @@ assert_blob_columns_equal(svn_sqlite__stmt_t *stmt1,
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              "Blob of length %ld in statement 1 differs "
                              "from blob of length %ld in statement 2",
-                             len1, len2);
+                             (long int)len1, (long int)len2);
   return SVN_NO_ERROR;
 }
 
