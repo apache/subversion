@@ -1782,7 +1782,7 @@ insert_working_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_text(stmt, 10,
                                   svn_node_kind_to_word(working_node->kind)));
 
-  if (working_node->kind == svn_wc__db_kind_file)
+  if (working_node->kind == svn_node_file)
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, working_node->checksum,
                                       scratch_pool));
 
