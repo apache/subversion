@@ -298,18 +298,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r958024, r961055, r964167
-   Fix issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo for
-   merge target'.
-   Justification:
-     Prevents 2-URL merges from removing valid mergeinfo which can lead
-     to spurious conflicts on subsequent merges.
-   Branch:
-     Drift between trunk and 1.6.x, necessitated a backport branch.
-     ^/subversion/branches/1.6.x-issue3648
-   Notes:
-     r958024 is a new test for the issue, r961055 is the fix, and r964167
-     is a comment tweak to the new test.
-   Votes:
-     +1: pburba, cmpilato, stsp
