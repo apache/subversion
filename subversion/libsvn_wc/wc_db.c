@@ -976,7 +976,13 @@ copy_working_from_base(void *baton,
 
   /* Need to update the op_depth of all deleted children. A single
      query can locate all the rows, but not update them, so we fall
-     back on one update per row. */
+     back on one update per row.
+
+     ### Rewriting the op_depth means that the number of queries is
+     ### O(depth^2).  Fix it by implementing svn_wc__db_op_delete so
+     ### that the recursion gets moved from adm_ops.c to wc_db.c and
+     ### one transaction does the whole tree and thus each op_depth
+     ### only gets written once. */
   like_arg = construct_like_arg(piwb->local_relpath, scratch_pool);
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_SELECT_CHILDREN_OP_DEPTH_RECURSIVE));
