@@ -7328,7 +7328,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 #endif
 #ifdef SVN_WC__NODES
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_UPDATE_WORKING_PROPS));
+                                            STMT_UPDATE_NODE_WORKING_PROPS));
           SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
           SVN_ERR(svn_sqlite__bind_properties(stmt, 3, base_props,
                                               scratch_pool));
