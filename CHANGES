@@ -11,9 +11,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.13
    * escape unsafe characters in a URL during export (issue #3683)
    * don't leak stale locks in FSFS (r959760)
    * better detect broken working copies during update over neon (r979045)
-   * make rev files read-only (r981921)
+   * fsfs: make rev files read-only (r981921)
    * properly canonicalize a URL (r984928, -31)
-   * fix wc corruption with 'commit --depth=empty" (issue #3700)
+   * fix wc corruption with 'commit --depth=empty' (issue #3700)
    * permissions fixes when doing reintegrate merges (related to issue #3242)
    * fix 2-url reverse-merge mergeinfo (issue #3648)
 
