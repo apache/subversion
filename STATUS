@@ -260,9 +260,9 @@ Veto-blocked changes:
      -0: peters
      -1: rhuijben ("/proc/%ld/stat" is ugly and Linux-specific -
                    would just getenv("WINDOWID") work instead?)
-     -1: stsp (I've removed the Linux-specific code from trunk in r1002144,
-               so trunk code only relies on getenv("WINDOWID"") now.
-               I would +1 a backport that also merges r1002144).
+     -1: stsp (I've removed the Linux-specific code from trunk in r1002144
+               and r1002151, so trunk code only relies on getenv("WINDOWID").
+               I would +1 a backport that also merges these revisions).
 
  * r921453, r927184, r927243
    Fix reopened issue #3020 'Reflect dropped/renumbered revisions in
