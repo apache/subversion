@@ -3892,11 +3892,10 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
  * move_as_child set to @c FALSE, @a revprop_table passed as NULL, and
  * @a make_parents set to @c FALSE.
  *
- * If @a src_path is a working copy path:
- *
- *   - If one of @a src_paths contains locally modified and/or unversioned
- *     items and @a force is not set, the move will fail. If @a force is set
- *     such items will be removed.
+ * Note: The behaviour of @a force changed in r860885 and r861421, when the
+ * 'move' semantics were improved to just move the source including any
+ * modified and/or unversioned items in it.  Before that, @a force
+ * controlled what happened to such items, but now @a force is ignored.
  *
  * @since New in 1.4.
  *
