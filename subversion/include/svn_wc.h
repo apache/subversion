@@ -5095,7 +5095,6 @@ svn_wc_process_committed(const char *path,
  *
  * No locks or logs are created, nor are any animals harmed in the
  * process unless @a restore_files is TRUE.  No cleanup is necessary.
- * The working copy is accessed using @a wc_ctx.
  *
  * After all revisions are reported, @a reporter->finish_report() is
  * called, which immediately causes the RA layer to update the working
