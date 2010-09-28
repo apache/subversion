@@ -3811,10 +3811,6 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *     is a directory it will remain in the working copy but all the files,
  *     and unversioned items, it contains will be removed.
  *
- *   - If one of @a src_paths contains locally modified and/or unversioned
- *     items and @a force is not set, the move will fail. If @a force is set
- *     such items will be removed.
- *
  * The parent of @a dst_path must already exist.
  *
  * If @a src_paths has only one item, attempt to move it to @a dst_path.  If
@@ -3861,7 +3857,6 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
 svn_error_t *
 svn_client_move6(const apr_array_header_t *src_paths,
                  const char *dst_path,
-                 svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
                  const apr_hash_t *revprop_table,
@@ -3873,6 +3868,9 @@ svn_client_move6(const apr_array_header_t *src_paths,
 /**
  * Similar to svn_client_move6(), but returns the @a commit_info_p directly,
  * rather than through @a commit_callback.
+ *
+ * A WC-to-WC move will include any modified and/or unversioned children.
+ * @a force is ignored.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -3893,6 +3891,12 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
  * Similar to svn_client_move5(), with only one @a src_path, @a
  * move_as_child set to @c FALSE, @a revprop_table passed as NULL, and
  * @a make_parents set to @c FALSE.
+ *
+ * If @a src_path is a working copy path:
+ *
+ *   - If one of @a src_paths contains locally modified and/or unversioned
+ *     items and @a force is not set, the move will fail. If @a force is set
+ *     such items will be removed.
  *
  * @since New in 1.4.
  *

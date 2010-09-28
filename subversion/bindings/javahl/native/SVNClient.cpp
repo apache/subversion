@@ -428,7 +428,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
         return;
 
     SVN_JNI_ERR(svn_client_move6((apr_array_header_t *) srcs,
-                                 destinationPath.c_str(), force, moveAsChild,
+                                 destinationPath.c_str(), moveAsChild,
                                  makeParents, revprops.hash(requestPool),
                                  CommitCallback::callback, callback, ctx,
                                  requestPool.pool()), );
