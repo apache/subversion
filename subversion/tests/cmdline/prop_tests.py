@@ -2383,7 +2383,7 @@ test_list = [ None,
               prop_reject_grind,
               obstructed_subdirs,
               atomic_over_ra,
-              XFail(propget_redirection),
+              XFail(propget_redirection, svntest.main.is_os_windows),
              ]
 
 if __name__ == '__main__':
