@@ -193,6 +193,15 @@ svn_error_compose(svn_error_t *chain,
 svn_error_t *
 svn_error_root_cause(svn_error_t *err);
 
+/** Return TRUE if @a err's chain contains the error code @a apr_err.
+ *
+ * If @a err is #SVN_NO_ERROR, return FALSE.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_error_has_cause(svn_error_t *err, apr_status_t apr_err);
+
 /** Create a new error that is a deep copy of @a err and return it.
  *
  * @since New in 1.2.

@@ -177,6 +177,42 @@ Response:
   
   ...svn-svndiff stream that can be passed to svn_txdelta_parse_svndiff...
 
+PROPPATCH
+=========
+
+We extend PROPPATCH as follows.  To pass OLD_VALUE_P (as in
+svn_ra_change_rev_prop2()), any propchange which is accompanied by a non-NULL
+OLD_VALUE_P goes within the <D:set><D:prop> tag (and never within the
+<D:remove><D:prop> tag --- even if it is a propdel).  Consequently, in
+mod_dav_svn it would land in db_store() and not db_remove().
+
+The property tag (in the C: or S: namespace) always contains the propval in its
+cdata (potentially base64-encoded).  The extension is as follows:
+
+* The property tag grows a V:absent attribute, to represent that the property
+  is being removed (i.e., a propdel routed to <D:set><D:prop>).
+
+* A <V:old-value> tag may be nested within the property tag.  The nested tag
+  supports the same V:absent and V:encoding attributed as the parent (property)
+  tag.
+
+* To preserve SVN_ERR_FS_PROP_BASEVALUE_MISMATCH (which is part of
+  the API promise), the <D:status>HTTP/1.1 500 (status)</D:status>
+  part of the "207 Multi-Status" response is used.  We transmit in
+  it a "412 Precondition Failed" response, which ra_neon and ra_serf
+  then special-case to interpret SVN_ERR_FS_PROP_BASEVALUE_MISMATCH.
+
+  Someday we will marshal complete svn_error_t chains over the wire
+  in ra_dav, just like ra_svn does (see svn_ra_svn__handle_failure_status()),
+  or at least will preserve the outer apr_err code in more cases.  In the 
+  meantime, using 412 allows us to preserve the SVN_ERR_FS_PROP_BASEVALUE_MISMATCH
+  error code, which is required for implementing svn_ra_change_rev_prop2().
+
+Historical note: we route propdels via <D:set>/db_store() because the mod_dav
+API for db_remove() was insufficient.  See this thread:
+http://mid.gmane.org/4C531CFB.2010202@collab.net
+
+
 Custom REPORTs
 ==============
 

@@ -748,52 +748,21 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                  db, local_abspath, scratch_pool,
                                  scratch_pool);
 
-  {
-    svn_boolean_t has_base = TRUE;
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
 
-    if (err)
-      {
-        if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-          return svn_error_return(err);
+      svn_error_clear(err);
+      SVN_ERR(svn_wc__db_read_kind(&target_kind, db, local_abspath, TRUE,
+                                   scratch_pool));
 
-        svn_error_clear(err);
-        has_base = FALSE;
-        SVN_ERR(svn_wc__db_read_kind(&target_kind, db, local_abspath, TRUE,
-                                     scratch_pool));
-
-        if (target_kind == svn_wc__db_kind_file
-            || target_kind == svn_wc__db_kind_symlink)
-          status = svn_wc__db_status_absent; /* Crawl via parent dir */
-        else
-          status = svn_wc__db_status_not_present; /* As checkout */
-      }
-
-    /* ### Check the parentstub if we don't find a BASE. But don't
-           do this if we already have the info we want or we break
-           some copy scenarios. */
-    if (!has_base && target_kind == svn_wc__db_kind_dir)
-      {
-        svn_boolean_t not_present;
-        svn_revnum_t rev = SVN_INVALID_REVNUM;
-        err = svn_wc__db_temp_is_dir_deleted(&not_present, &rev,
-                                             db, local_abspath, scratch_pool);
-
-        if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-                    || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
-          {
-            svn_error_clear(err);
-            not_present = FALSE;
-          }
-        else
-          SVN_ERR(err);
-
-        if (not_present)
-          status = svn_wc__db_status_not_present;
-
-        if (!SVN_IS_VALID_REVNUM(target_rev))
-          target_rev = rev;
-      }
-  }
+      if (target_kind == svn_wc__db_kind_file
+          || target_kind == svn_wc__db_kind_symlink)
+        status = svn_wc__db_status_absent; /* Crawl via parent dir */
+      else
+        status = svn_wc__db_status_not_present; /* As checkout */
+    }
 
   if ((status == svn_wc__db_status_not_present)
       || (target_kind == svn_wc__db_kind_dir

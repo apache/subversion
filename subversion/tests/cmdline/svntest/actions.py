@@ -147,6 +147,41 @@ def guarantee_greek_repository(path):
   main.chmod_tree(path, 0666, 0666)
 
 
+def run_and_verify_atomic_ra_revprop_change(message,
+                                            expected_stdout,
+                                            expected_stderr,
+                                            expected_exit, 
+                                            url, revision, propname,
+                                            old_propval, propval,
+                                            want_error):
+  """Run atomic-ra-revprop-change helper and check its output and exit code.
+  Transforms OLD_PROPVAL and PROPVAL into a skel.
+  For HTTP, the default HTTP library is used."""
+
+  KEY_OLD_PROPVAL = "old_value_p"
+  KEY_NEW_PROPVAL = "value"
+
+  def skel_make_atom(word):
+    return "%d %s" % (len(word), word)
+
+  def make_proplist_skel_part(nick, val):
+    if val is None:
+      return ""
+    else:
+      return "%s %s" % (skel_make_atom(nick), skel_make_atom(val))
+
+  skel = "( %s %s )" % (make_proplist_skel_part(KEY_OLD_PROPVAL, old_propval),
+                        make_proplist_skel_part(KEY_NEW_PROPVAL, propval))
+
+  exit_code, out, err = main.run_atomic_ra_revprop_change(url, revision,
+                                                          propname, skel,
+                                                          want_error)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code(message, exit_code, expected_exit)
+  return exit_code, out, err
+
+
 def run_and_verify_svnlook(message, expected_stdout,
                            expected_stderr, *varargs):
   """Like run_and_verify_svnlook2, but the expected exit code is
@@ -1628,21 +1663,7 @@ def get_virginal_state(wc_dir, rev):
 # Cheap administrative directory locking
 def lock_admin_dir(wc_dir):
   "Lock a SVN administrative directory"
-  dot_svn = svntest.main.get_admin_name()
-  root_path = wc_dir
-  relpath = ''
-
-  while True:
-    db_path = os.path.join(root_path, dot_svn, 'wc.db')
-    try:
-      db = svntest.sqlite3.connect(db_path)
-      break
-    except: pass
-    head, tail = os.path.split(root_path)
-    if head == root_path:
-      raise svntest.Failure("No DB for " + wc_dir)
-    root_path = head
-    relpath = os.path.join(tail, relpath).replace(os.path.sep, '/').rstrip('/')
+  db, root_path, relpath = wc.open_wc_db(wc_dir)
 
   db.execute('insert into wc_lock (wc_id, local_dir_relpath, locked_levels) '
              + 'values (?, ?, ?)',
@@ -1735,15 +1756,22 @@ def set_prop(name, value, path, expected_err=None):
   else:
     main.run_svn(expected_err, 'propset', name, value, path)
 
-def check_prop(name, path, exp_out):
-  """Verify that property NAME on PATH has a value of EXP_OUT"""
+def check_prop(name, path, exp_out, revprop=None):
+  """Verify that property NAME on PATH has a value of EXP_OUT.
+  If REVPROP is not None, then it is a revision number and
+  a revision property is sought."""
+  if revprop is not None:
+    revprop_options = ['--revprop', '-r', revprop]
+  else:
+    revprop_options = []
   # Not using run_svn because binary_mode must be set
   exit_code, out, err = main.run_command(main.svn_binary, None, 1, 'pg',
                                          '--strict', name, path,
                                          '--config-dir',
                                          main.default_config_dir,
                                          '--username', main.wc_author,
-                                         '--password', main.wc_passwd)
+                                         '--password', main.wc_passwd,
+                                         *revprop_options)
   if out != exp_out:
     print("svn pg --strict %s output does not match expected." % name)
     print("Expected standard output:  %s\n" % exp_out)

@@ -161,7 +161,9 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
 
 
 static dav_error *
-save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
+save_value(dav_db *db, const dav_prop_name *name,
+           const svn_string_t *const *old_value_p,
+           const svn_string_t *value)
 {
   const char *propname;
   svn_error_t *serr;
@@ -210,10 +212,11 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
         }
       else
         {
-          serr = svn_repos_fs_change_rev_prop3(resource->info->repos->repos,
+          serr = svn_repos_fs_change_rev_prop4(resource->info->repos->repos,
                                                resource->info->root.rev,
                                                resource->info->repos->username,
-                                               propname, value, TRUE, TRUE,
+                                               propname, old_value_p, value,
+                                               TRUE, TRUE,
                                                db->authz_read_func,
                                                db->authz_read_baton,
                                                resource->pool);
@@ -425,6 +428,7 @@ db_map_namespaces(dav_db *db,
 
 static dav_error *
 decode_property_value(const svn_string_t **out_propval_p,
+                      svn_boolean_t *absent,
                       const svn_string_t *maybe_encoded_propval,
                       const apr_xml_elem *elem,
                       apr_pool_t *pool)
@@ -432,6 +436,7 @@ decode_property_value(const svn_string_t **out_propval_p,
   apr_xml_attr *attr = elem->attr;
 
   /* Default: no "encoding" attribute. */
+  *absent = FALSE;
   *out_propval_p = maybe_encoded_propval;
 
   /* Check for special encodings of the property value. */
@@ -443,12 +448,21 @@ decode_property_value(const svn_string_t **out_propval_p,
 
           /* Handle known encodings here. */
           if (enc_type && (strcmp(enc_type, "base64") == 0))
-            *out_propval_p = svn_base64_decode_string(maybe_encoded_propval, pool);
+            *out_propval_p = svn_base64_decode_string(maybe_encoded_propval,
+                                                      pool);
           else
             return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                                  "Unknown property encoding");
           break;
         }
+
+      if (strcmp(attr->name, SVN_DAV__OLD_VALUE__ABSENT) == 0)
+        {
+          /* ### parse attr->value */
+          *absent = TRUE;
+          *out_propval_p = NULL;
+        }
+
       /* Next attribute, please. */
       attr = attr->next;
     }
@@ -462,7 +476,10 @@ db_store(dav_db *db,
          const apr_xml_elem *elem,
          dav_namespace_map *mapping)
 {
+  const svn_string_t *const *old_propval_p;
+  const svn_string_t *old_propval;
   const svn_string_t *propval;
+  svn_boolean_t absent;
   apr_pool_t *pool = db->p;
   dav_error *derr;
 
@@ -475,11 +492,41 @@ db_store(dav_db *db,
   propval = svn_string_create
     (dav_xml_get_cdata(elem, pool, 0 /* strip_white */), pool);
 
-  derr = decode_property_value(&propval, propval, elem, pool);
+  derr = decode_property_value(&propval, &absent, propval, elem, pool);
   if (derr)
     return derr;
 
-  return save_value(db, name, propval);
+  if (absent && ! elem->first_child)
+    /* ### better error check */
+    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(pool, 
+                                      "'%s' cannot be specified on the value "
+                                      "without specifying an expectation",
+                                      SVN_DAV__OLD_VALUE__ABSENT));
+
+  /* ### namespace check? */
+  if (elem->first_child && !strcmp(elem->first_child->name, SVN_DAV__OLD_VALUE))
+    {
+      const char *propname;
+
+      get_repos_propname(db, name, &propname);
+
+      /* Parse OLD_PROPVAL. */
+      old_propval = svn_string_create(dav_xml_get_cdata(elem->first_child, pool,
+                                                        0 /* strip_white */),
+                                      pool);
+      derr = decode_property_value(&old_propval, &absent,
+                                   old_propval, elem->first_child, pool);
+      if (derr)
+        return derr;
+
+      old_propval_p = (const svn_string_t *const *) &old_propval;
+    }
+  else
+    old_propval_p = NULL;
+
+
+  return save_value(db, name, old_propval_p, propval);
 }
 
 
@@ -506,10 +553,10 @@ db_remove(dav_db *db, const dav_prop_name *name)
          not a working resource!  But this is how we currently
          (hackily) allow the svn client to change unversioned rev
          props.  See issue #916. */
-      serr = svn_repos_fs_change_rev_prop3(db->resource->info->repos->repos,
+      serr = svn_repos_fs_change_rev_prop4(db->resource->info->repos->repos,
                                            db->resource->info->root.rev,
                                            db->resource->info->repos->username,
-                                           propname, NULL, TRUE, TRUE,
+                                           propname, NULL, NULL, TRUE, TRUE,
                                            db->authz_read_func,
                                            db->authz_read_baton,
                                            db->resource->pool);

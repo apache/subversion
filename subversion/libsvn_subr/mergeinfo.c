@@ -1367,7 +1367,7 @@ svn_mergeinfo_catalog_merge(svn_mergeinfo_catalog_t mergeinfo_cat,
       change_elt = APR_ARRAY_IDX(sorted_changes, j, svn_sort__item_t);
       res = svn_sort_compare_items_as_paths(&cat_elt, &change_elt);
 
-      if (res == 0) /* Both catalogs have mergeinfo for a give path. */
+      if (res == 0) /* Both catalogs have mergeinfo for a given path. */
         {
           svn_mergeinfo_t mergeinfo = cat_elt.value;
           svn_mergeinfo_t changes_mergeinfo = change_elt.value;

@@ -311,18 +311,24 @@ SVNPathAuthz_cmd(cmd_parms *cmd, void *config, const char *arg1)
   dir_conf_t *conf = config;
 
   if (apr_strnatcasecmp("off", arg1) == 0)
-    conf->path_authz_method = CONF_PATHAUTHZ_OFF;
-  else if (apr_strnatcasecmp(PATHAUTHZ_BYPASS_ARG,arg1) == 0)
+    {
+      conf->path_authz_method = CONF_PATHAUTHZ_OFF;
+    }
+  else if (apr_strnatcasecmp(PATHAUTHZ_BYPASS_ARG, arg1) == 0)
     {
       conf->path_authz_method = CONF_PATHAUTHZ_BYPASS;
       if (pathauthz_bypass_func == NULL)
-        pathauthz_bypass_func=ap_lookup_provider(
-                                          AUTHZ_SVN__SUBREQ_BYPASS_PROV_GRP,
-                                          AUTHZ_SVN__SUBREQ_BYPASS_PROV_NAME,
-                                          AUTHZ_SVN__SUBREQ_BYPASS_PROV_VER);
+        {
+          pathauthz_bypass_func =
+            ap_lookup_provider(AUTHZ_SVN__SUBREQ_BYPASS_PROV_GRP,
+                               AUTHZ_SVN__SUBREQ_BYPASS_PROV_NAME,
+                               AUTHZ_SVN__SUBREQ_BYPASS_PROV_VER);
+        }
     }
   else
-    conf->path_authz_method = CONF_PATHAUTHZ_ON;
+    {
+      conf->path_authz_method = CONF_PATHAUTHZ_ON;
+    }
 
   return NULL;
 }
@@ -608,7 +614,7 @@ dav_svn__get_pathauthz_bypass(request_rec *r)
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
-  if (conf->path_authz_method==CONF_PATHAUTHZ_BYPASS)
+  if (conf->path_authz_method == CONF_PATHAUTHZ_BYPASS)
     return pathauthz_bypass_func;
   return NULL;
 }

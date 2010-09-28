@@ -532,6 +532,8 @@ init_prop_target(prop_patch_target_t **prop_target,
  * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
+ * OLD_PATCH_TARGET_NAMES indicates whether the old target's name parsed
+ * from the patch file should be preferred over the new target's name.
  * The patch target structure is allocated in RESULT_POOL, but if the target
  * should be skipped, PATCH_TARGET->SKIPPED is set and the target should be
  * treated as not fully initialized, e.g. the caller should not not do any
@@ -543,7 +545,9 @@ static svn_error_t *
 init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
                   const char *base_dir,
-                  svn_wc_context_t *wc_ctx, int strip_count,
+                  svn_wc_context_t *wc_ctx,
+                  int strip_count,
+                  svn_boolean_t old_patch_target_names,
                   svn_boolean_t remove_tempfiles,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
@@ -589,7 +593,8 @@ init_patch_target(patch_target_t **patch_target,
   target->prop_targets = apr_hash_make(result_pool);
   target->pool = result_pool;
 
-  SVN_ERR(resolve_target_path(target, patch->new_filename,
+  SVN_ERR(resolve_target_path(target, old_patch_target_names ?
+                                patch->old_filename : patch->new_filename,
                               base_dir, strip_count, prop_changes_only,
                               wc_ctx, result_pool, scratch_pool));
   if (! target->skipped)
@@ -626,13 +631,16 @@ init_patch_target(patch_target_t **patch_target,
                                                    scratch_pool));
         }
 
-      /* ### Is it ok to set target->added here? Isn't the target supposed to
-       * ### be marked as added after it's been proven that it can be added?
-       * ### One alternative is to include a git_added flag. Or maybe we
-       * ### should have kept the patch field in patch_target_t? Then we
-       * ### could have checked for target->patch->operation == added */
+      /* ### Is it ok to set the operation of the target already here? Isn't
+       * ### the target supposed to be marked with an operation after we have
+       * ### determined that the changes will apply cleanly to the WC? Maybe
+       * ### we should have kept the patch field in patch_target_t to be
+       * ### able to distinguish between 'what the patch says we should do' 
+       * ### and 'what we can do with the given state of our WC'. */
       if (patch->operation == svn_diff_op_added)
         target->added = TRUE;
+      else if (patch->operation == svn_diff_op_deleted)
+        target->deleted = TRUE;
 
       SVN_ERR(svn_stream_open_unique(&patched_raw,
                                      &target->patched_path, NULL,
@@ -857,59 +865,41 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
                                            NULL, FALSE,
                                            content_info->keywords, FALSE,
                                            iterpool));
-      lines_read++;
       SVN_ERR(read_line(content_info, &target_line, iterpool, iterpool));
-      if (! hunk_eof)
-        {
-          if (lines_read <= fuzz && leading_context > fuzz)
-            lines_matched = TRUE;
-          else if (lines_read > hunk_length - fuzz &&
-                   trailing_context > fuzz)
-            lines_matched = TRUE;
-          else
-            {
-              if (ignore_whitespace)
-                {
-                  char *stripped_hunk_line = apr_pstrdup(pool,
-                                                         hunk_line_translated);
-                  char *stripped_target_line = apr_pstrdup(pool, target_line);
 
-                  apr_collapse_spaces(stripped_hunk_line,
-                                      hunk_line_translated);
-                  apr_collapse_spaces(stripped_target_line, target_line);
-                  lines_matched = ! strcmp(stripped_hunk_line,
-                                           stripped_target_line);
-                }
-              else 
-                lines_matched = ! strcmp(hunk_line_translated, target_line);
+      lines_read++;
+
+      /* If the last line doesn't have a newline, we get EOF but still
+       * have a non-empty line to compare. */
+      if ((hunk_eof && hunk_line->len == 0) ||
+          (content_info->eof && strlen(target_line) == 0))
+        break;
+
+      /* Leading/trailing fuzzy lines always match. */
+      if ((lines_read <= fuzz && leading_context > fuzz) ||
+          (lines_read > hunk_length - fuzz && trailing_context > fuzz))
+        lines_matched = TRUE;
+      else
+        {
+          if (ignore_whitespace)
+            {
+              char *hunk_line_trimmed;
+              char *target_line_trimmed;
+
+              hunk_line_trimmed = apr_pstrdup(iterpool, hunk_line_translated);
+              target_line_trimmed = apr_pstrdup(iterpool, target_line);
+              apr_collapse_spaces(hunk_line_trimmed, hunk_line_trimmed);
+              apr_collapse_spaces(target_line_trimmed, target_line_trimmed);
+              lines_matched = ! strcmp(hunk_line_trimmed, target_line_trimmed);
             }
+          else
+            lines_matched = ! strcmp(hunk_line_translated, target_line);
         }
     }
-  while (lines_matched && ! (hunk_eof || content_info->eof));
+  while (lines_matched);
 
-  if (hunk_eof)
-    *matched = lines_matched;
-  else if (content_info->eof)
-    {
-      /* If the target has no newline at end-of-file, we get an EOF
-       * indication for the target earlier than we do get it for the hunk. */
-      if (match_modified)
-        SVN_ERR(svn_diff_hunk_readline_modified_text(hunk, &hunk_line,
-                                                     NULL, &hunk_eof,
-                                                     iterpool, iterpool));
-      else
-        SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_line,
-                                                     NULL, &hunk_eof,
-                                                     iterpool, iterpool));
+  *matched = lines_matched && hunk_eof && hunk_line->len == 0;
 
-      /* When comparing modified text we require that all lines match, else
-       * a hunk that adds a newline at the end will be treated as already
-       * applied even if it isn't. */
-      if (! match_modified && hunk_line->len == 0 && hunk_eof)
-        *matched = lines_matched;
-      else
-        *matched = FALSE;
-    }
   SVN_ERR(seek_to_line(content_info, saved_line, iterpool));
 
   svn_pool_destroy(iterpool);
@@ -1155,54 +1145,55 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   else if (original_start > 0 && content_info->stream)
     {
       svn_linenum_t saved_line = content_info->current_line;
-      svn_linenum_t modified_start;
 
-      /* Check if the hunk is already applied.
-       * We only check for an exact match here, and don't bother checking
-       * for already applied patches with offset/fuzz, because such a
-       * check would be ambiguous. */
-      if (fuzz == 0)
+      /* Scan for a match at the line where the hunk thinks it
+       * should be going. */
+      SVN_ERR(seek_to_line(content_info, original_start, scratch_pool));
+      if (content_info->current_line != original_start)
         {
-          modified_start = svn_diff_hunk_get_modified_start(hunk);
-          if (modified_start == 0)
-            {
-              /* Patch wants to delete the file. */
-              already_applied = target->locally_deleted;
-            }
-          else
-            {
-              SVN_ERR(seek_to_line(content_info, modified_start,
-                                   scratch_pool));
-              SVN_ERR(scan_for_match(&matched_line, content_info,
-                                     hunk, TRUE,
-                                     modified_start + 1,
-                                     fuzz, ignore_whitespace, TRUE,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool));
-              already_applied = (matched_line == modified_start);
-            }
+          /* Seek failed. */
+          matched_line = 0;
         }
       else
-        already_applied = FALSE;
+        SVN_ERR(scan_for_match(&matched_line, content_info, hunk, TRUE,
+                               original_start + 1, fuzz,
+                               ignore_whitespace, FALSE,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 
-      if (! already_applied)
+      if (matched_line != original_start)
         {
-          /* Scan for a match at the line where the hunk thinks it
-           * should be going. */
-          SVN_ERR(seek_to_line(content_info, original_start, scratch_pool));
-          if (content_info->current_line != original_start)
+          /* Check if the hunk is already applied.
+           * We only check for an exact match here, and don't bother checking
+           * for already applied patches with offset/fuzz, because such a
+           * check would be ambiguous. */
+          if (fuzz == 0)
             {
-              /* Seek failed. */
-              matched_line = 0;
+              svn_linenum_t modified_start;
+
+              modified_start = svn_diff_hunk_get_modified_start(hunk);
+              if (modified_start == 0)
+                {
+                  /* Patch wants to delete the file. */
+                  already_applied = target->locally_deleted;
+                }
+              else
+                {
+                  SVN_ERR(seek_to_line(content_info, modified_start,
+                                       scratch_pool));
+                  SVN_ERR(scan_for_match(&matched_line, content_info,
+                                         hunk, TRUE,
+                                         modified_start + 1,
+                                         fuzz, ignore_whitespace, TRUE,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool));
+                  already_applied = (matched_line == modified_start);
+                }
             }
           else
-            SVN_ERR(scan_for_match(&matched_line, content_info, hunk, TRUE,
-                                   original_start + 1, fuzz,
-                                   ignore_whitespace, FALSE,
-                                   cancel_func, cancel_baton,
-                                   scratch_pool));
+            already_applied = FALSE;
 
-          if (matched_line != original_start)
+          if (! already_applied)
             {
               /* Scan the whole file again from the start. */
               SVN_ERR(seek_to_line(content_info, 1, scratch_pool));
@@ -1649,6 +1640,8 @@ close_target_streams(const patch_target_t *target,
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
+ * OLD_PATCH_TARGET_NAMES indicates whether the old filename parsed
+ * from the patch file should be preferred over the new filename.
  * REMOVE_TEMPFILES, PATCH_FUNC, and PATCH_BATON as in svn_client_patch().
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * doing the matching.
@@ -1658,6 +1651,7 @@ static svn_error_t *
 apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const char *abs_wc_path, svn_wc_context_t *wc_ctx,
                 int strip_count,
+                svn_boolean_t old_patch_target_names,
                 svn_boolean_t ignore_whitespace,
                 svn_boolean_t remove_tempfiles,
                 svn_client_patch_func_t patch_func,
@@ -1672,7 +1666,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   static const int MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
 
-  SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
+  SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx,
+                            strip_count, old_patch_target_names,
                             remove_tempfiles, result_pool, scratch_pool));
   if (target->skipped)
     {
@@ -2559,6 +2554,9 @@ typedef struct {
   /* Number of leading components to strip from patch target paths. */
   int strip_count;
 
+  /* Whether to use the old path from the patch file instead of the new one. */
+  svn_boolean_t old_patch_target_names;
+
   /* Whether to apply the patch in reverse. */
   svn_boolean_t reverse;
 
@@ -2624,6 +2622,7 @@ apply_patches(void *baton,
 
           SVN_ERR(apply_one_patch(&target, patch, btn->abs_wc_path,
                                   btn->ctx->wc_ctx, btn->strip_count,
+                                  btn->old_patch_target_names,
                                   btn->ignore_whitespace,
                                   btn->remove_tempfiles,
                                   btn->patch_func, btn->patch_baton,
@@ -2643,7 +2642,9 @@ apply_patches(void *baton,
 
               if (! target->skipped)
                 {
-                  if (target->has_text_changes || target->added)
+                  if (target->has_text_changes 
+                      || target->added 
+                      || target->deleted)
                     SVN_ERR(install_patched_target(target, btn->abs_wc_path,
                                                    btn->ctx, btn->dry_run,
                                                    iterpool));
@@ -2679,6 +2680,7 @@ svn_client_patch(const char *patch_abspath,
                  const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
+                 svn_boolean_t old_patch_target_names,
                  svn_boolean_t reverse,
                  svn_boolean_t ignore_whitespace,
                  svn_boolean_t remove_tempfiles,
@@ -2699,6 +2701,7 @@ svn_client_patch(const char *patch_abspath,
   baton.dry_run = dry_run;
   baton.ctx = ctx;
   baton.strip_count = strip_count;
+  baton.old_patch_target_names = old_patch_target_names;
   baton.reverse = reverse;
   baton.ignore_whitespace = ignore_whitespace;
   baton.remove_tempfiles = remove_tempfiles;

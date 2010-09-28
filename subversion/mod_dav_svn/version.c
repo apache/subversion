@@ -41,7 +41,6 @@
 #include "private/svn_log.h"
 
 #include "dav_svn.h"
-#include "mod_dav_svn.h"
 
 
 svn_error_t *
@@ -143,6 +142,7 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   /* Send SVN_RA_CAPABILITY_* capabilities. */
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_DEPTH);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY);
   /* Mergeinfo is a special case: here we merely say that the server
    * knows how to handle mergeinfo -- whether the repository does too
@@ -1015,22 +1015,6 @@ deliver_report(request_rec *r,
 
   if (doc->root->ns == ns)
     {
-      const char *cleaned_uri, *relative_path, *repos_path;
-      int trailing_slash;
-      /* During SVNPathAuthz short_circuit
-       * resource->info->repos->repo_name becomes NULL.*/
-      if (resource->info->repos->repo_name == NULL)
-        {
-          dav_error *err;
-          err = dav_svn_split_uri(r, r->uri, dav_svn__get_root_dir(r),
-                                  &cleaned_uri, &trailing_slash,
-                                  &(resource->info->repos->repo_name), 
-                                  &relative_path, &repos_path);
-          if (err)
-            {
-              return err;
-            }
-        }
       /* ### note that these report names should have symbols... */
 
       if (strcmp(doc->root->name, "update-report") == 0)

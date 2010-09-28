@@ -612,14 +612,37 @@ svn_error_t *svn_ra_get_dated_revision(svn_ra_session_t *session,
   return session->vtable->get_dated_revision(session, revision, tm, pool);
 }
 
-svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
-                                    svn_revnum_t rev,
-                                    const char *name,
-                                    const svn_string_t *value,
-                                    apr_pool_t *pool)
+svn_error_t *svn_ra_change_rev_prop2(svn_ra_session_t *session,
+                                     svn_revnum_t rev,
+                                     const char *name,
+                                     const svn_string_t *const *old_value_p,
+                                     const svn_string_t *value,
+                                     apr_pool_t *pool)
 {
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev));
-  return session->vtable->change_rev_prop(session, rev, name, value, pool);
+
+  /* If an old value was specified, make sure the server supports
+   * specifying it. */
+  if (old_value_p)
+    {
+      svn_boolean_t has_atomic_revprops;
+
+      SVN_ERR(svn_ra_has_capability(session, &has_atomic_revprops,
+                                    SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                    pool));
+
+      if (!has_atomic_revprops)
+        /* API violation.  (Should be an ASSERT, but gstein talked me
+         * out of it.) */
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Specifying 'old_value_p' is not allowed when "
+                                   "the '%s' capability is not advertised, and "
+                                   "could indicate a bug in your client"),
+                                   SVN_RA_CAPABILITY_ATOMIC_REVPROPS);
+    }
+
+  return session->vtable->change_rev_prop(session, rev, name,
+                                          old_value_p, value, pool);
 }
 
 svn_error_t *svn_ra_rev_proplist(svn_ra_session_t *session,

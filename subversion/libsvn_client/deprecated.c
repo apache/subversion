@@ -620,7 +620,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
   cb.info = commit_info_p;
   cb.pool = pool;
 
-  return svn_client_move6(src_paths, dst_path, force, move_as_child,
+  return svn_client_move6(src_paths, dst_path, move_as_child,
                           make_parents, revprop_table,
                           capture_commit_info, &cb, ctx, pool);
 }
@@ -636,6 +636,7 @@ svn_client_move4(svn_commit_info_t **commit_info_p,
   apr_array_header_t *src_paths =
     apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(src_paths, const char *) = src_path;
+
 
   return svn_client_move5(commit_info_p, src_paths, dst_path, force, FALSE,
                           FALSE, NULL, ctx, pool);
@@ -2038,4 +2039,19 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   discover_changed_paths,
                                   svn_depth_empty, revprops, ctx,
                                   pool);
+}
+
+/*** From relocate.c ***/
+svn_error_t *
+svn_client_relocate(const char *path,
+                    const char *from,
+                    const char *to,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  if (! recurse)
+    svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                     _("Non-recursive relocation not supported"));
+  return svn_client_relocate2(path, from, to, ctx, pool);
 }
