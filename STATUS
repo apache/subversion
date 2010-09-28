@@ -194,7 +194,7 @@ Candidate changes for 1.5.8:
      r1000038 is a whitespace-only fix required to make r1000060
      cleanly merge.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, kameshj
 
 Approved changes:
 =================
