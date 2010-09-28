@@ -2197,28 +2197,28 @@ def propget_redirection(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'ps some large svn:mergeinfos', wc_dir)
 
-  # Run propget -vR svn:mergeinfo and collect the stdout.
-  exit_code, pg_stdout, pg_stderr = svntest.actions.run_and_verify_svn(
-    None, None, [], 'propget', SVN_PROP_MERGEINFO, '-vR', wc_dir)
-
   # Run propget -vR svn:mergeinfo, redirecting the stdout to a file.
-  arglist = ['svn.exe', 'propget', SVN_PROP_MERGEINFO, '-vR', wc_dir]
+  arglist = [svntest.main.svn_binary, 'propget', SVN_PROP_MERGEINFO, '-vR',
+             wc_dir]
   redir_file = open(redirect_file, 'wb')
   pg_proc = subprocess.Popen(arglist, stdout=redir_file)
   pg_proc.wait()
   redir_file.close()
   pg_stdout_redir = open(redirect_file, 'r').readlines()
 
-  # Check if the redirected output of svn pg -vR is what we expect.
+  # Check if the redirected output of svn pg -vR on the root of the WC
+  # is what we expect.
   #
   # Currently this fails because the mergeinfo for the three paths is
   # interleaved and the lines endings are (at least on Windows) a mix
   # of <CR><LF> and <LF>. See
   # http://subversion.tigris.org/issues/show_bug.cgi?id=3721#desc1
-  unordered_expected_output = svntest.verify.UnorderedOutput([
-    "Properties on '" + B_path +  "':\n",
-    "Properties on '" + C_path +  "':\n",
-    "Properties on '" + D_path +  "':\n",
+  expected_output = [
+    "Properties on '" + B_path +  "':\n", # Should ocur only once!
+    "Properties on '" + C_path +  "':\n", # Should ocur only once! 
+    "Properties on '" + D_path +  "':\n", # Should ocur only once!
+    # Everything below should appear three times since this same
+    # mergeinfo value is set on three paths in the WC.
     "  svn:mergeinfo\n",
     "    /subversion/branches/1.5.x:872364-874936\n",
     "    /subversion/branches/1.5.x-34184:874657-874741\n",
@@ -2323,11 +2323,21 @@ def propget_redirection(sbox):
     "874659,874673,874681,874727,874730,874743,874765-874767,874806,874816,"
     "874848,874868,874888,874896,874909,874912,874996,875051,875069,875129,"
     "875132,875134,875137,875151-875153,875186-875188,875190,875235-875237,"
-    "875242-875243,875249,875388,875393,875406,875411\n"])
+    "875242-875243,875249,875388,875393,875406,875411\n"]
   svntest.verify.verify_outputs(
-   "Redirected pg -vR doesn't match pg -vR stdout",
-   pg_stdout_redir, None,
-   unordered_expected_output, None)
+    "Redirected pg -vR doesn't match pg -vR stdout",
+    pg_stdout_redir, None,
+    svntest.verify.UnorderedOutput(expected_output), None)
+  # Because we are using UnorderedOutput above, this test would spuriously
+  # pass if the redirected pg output contained duplicates.  This hasn't been
+  # observed as part of issue #3721, but we might as well be thorough...
+  #
+  # ...Since we've set the same mergeinfo prop on A/B, A/C, and A/D, this
+  # means the number of lines in the redirected output of svn pg -vR should
+  # be three times the number of lines in EXPECTED_OUTPUT, adjusted for the
+  # fact the "Properties on '[A/B | A/C | A/D]'" headers  appear only once. 
+  if ((len(expected_output) * 3) - 6) != len(pg_stdout_redir):
+    raise svntest.Failure("Redirected pg -vR has unexpected duplicates")
 
 ########################################################################
 # Run the tests
