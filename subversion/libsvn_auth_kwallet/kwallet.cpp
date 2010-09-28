@@ -427,6 +427,7 @@ static const svn_auth_provider_t kwallet_ssl_client_cert_pw_provider = {
 };
 
 /* Public API */
+extern "C" {
 void
 svn_auth_get_kwallet_ssl_client_cert_pw_provider
     (svn_auth_provider_object_t **provider,
@@ -437,4 +438,5 @@ svn_auth_get_kwallet_ssl_client_cert_pw_provider
 
   po->vtable = &kwallet_ssl_client_cert_pw_provider;
   *provider = po;
+}
 }
