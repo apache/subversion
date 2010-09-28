@@ -139,99 +139,22 @@ get_wallet_name(apr_hash_t *parameters)
     }
 }
 
-static pid_t
-get_parent_pid(pid_t pid,
-               apr_pool_t *pool)
-{
-  pid_t parent_pid = 0;
-
-#ifdef __linux__
-  svn_stream_t *stat_file_stream;
-  svn_string_t *stat_file_string;
-  const char *preceeding_space, *following_space, *parent_pid_string;
-
-  const char *path = apr_psprintf(pool, "/proc/%ld/stat", long(pid));
-  svn_error_t *err = svn_stream_open_readonly(&stat_file_stream, path, pool, pool);
-  if (err == SVN_NO_ERROR)
-    {
-      err = svn_string_from_stream(&stat_file_string, stat_file_stream, pool, pool);
-      if (err == SVN_NO_ERROR)
-        {
-          if ((preceeding_space = strchr(stat_file_string->data, ' ')))
-            {
-              if ((preceeding_space = strchr(preceeding_space + 1, ' ')))
-                {
-                  if ((preceeding_space = strchr(preceeding_space + 1, ' ')))
-                    {
-                      if ((following_space = strchr(preceeding_space + 1, ' ')))
-                        {
-                          parent_pid_string = apr_pstrndup(pool,
-                                                           preceeding_space + 1,
-                                                           following_space - preceeding_space);
-                          parent_pid = atol(parent_pid_string);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-  if (err)
-    {
-      svn_error_clear(err);
-    }
-#endif
-
-  return parent_pid;
-}
-
 static WId
-get_wid(apr_hash_t *parameters,
-        apr_pool_t *pool)
+get_wid(void)
 {
   WId wid = 1;
+  const char *wid_env_string = getenv("WINDOWID");
 
-  if (apr_hash_get(parameters,
-                   "svn:auth:qapplication-safe",
-                   APR_HASH_KEY_STRING))
+  if (wid_env_string)
     {
-      QMap<pid_t, WId> process_info_list;
-      QList<WId> windows(KWindowSystem::windows());
-      QList<WId>::const_iterator i;
-      for (i = windows.begin(); i != windows.end(); i++)
-        {
-          process_info_list[NETWinInfo(QX11Info::display(),
-                                       *i,
-                                       QX11Info::appRootWindow(),
-                                       NET::WMPid).pid()] = *i;
-        }
-
-      apr_pool_t *iterpool = svn_pool_create(pool);
-      pid_t pid = getpid();
-      while (pid != 0)
-        {
-          svn_pool_clear(iterpool);
-          if (process_info_list.contains(pid))
-            {
-              wid = process_info_list[pid];
-              break;
-            }
-          pid = get_parent_pid(pid, iterpool);
-        }
-      svn_pool_destroy(iterpool);
-    }
-
-  if (wid == 1)
-    {
-      const char *wid_env_string = getenv("WINDOWID");
-      if (wid_env_string)
-        {
-          long wid_env = atol(wid_env_string);
-          if (wid_env != 0)
-            {
-              wid = wid_env;
-            }
-        }
+      apr_int64_t wid_env;
+      svn_error_t *err;
+      
+      err = svn_cstring_atoi64(&wid_env, wid_env_string);
+      if (err)
+        svn_error_clear(err);
+      else
+        wid = (WId)wid_env;
     }
 
   return wid;
@@ -250,8 +173,7 @@ get_wallet(QString wallet_name,
                                  "kwallet-opening-failed",
                                  APR_HASH_KEY_STRING))
     {
-      wallet = KWallet::Wallet::openWallet(wallet_name,
-                                           pool ? get_wid(parameters, pool) : 1,
+      wallet = KWallet::Wallet::openWallet(wallet_name, get_wid(),
                                            KWallet::Wallet::Synchronous);
     }
   if (wallet)
