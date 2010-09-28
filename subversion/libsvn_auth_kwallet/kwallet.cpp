@@ -47,48 +47,19 @@
 
 #include <dbus/dbus.h>
 #include <QtCore/QCoreApplication>
-#include <QtCore/QList>
-#include <QtCore/QMap>
 #include <QtCore/QString>
-#include <QtGui/QApplication>
-#include <QtGui/QX11Info>
 
 #include <kaboutdata.h>
 #include <kcmdlineargs.h>
 #include <kcomponentdata.h>
 #include <klocalizedstring.h>
 #include <kwallet.h>
-#include <kwindowsystem.h>
-#include <netwm.h>
-#include <netwm_def.h>
 
 
 /*-----------------------------------------------------------------------*/
 /* KWallet simple provider, puts passwords in KWallet                    */
 /*-----------------------------------------------------------------------*/
 
-
-#define INITIALIZE_APPLICATION                                            \
-  if (apr_hash_get(parameters,                                            \
-                   "svn:auth:qapplication-safe",                          \
-                   APR_HASH_KEY_STRING))                                  \
-    {                                                                     \
-      QApplication *app;                                                  \
-      if (! qApp)                                                         \
-        {                                                                 \
-          int argc = 1;                                                   \
-          app = new QApplication(argc, (char *[1]) {(char *) "svn"});     \
-        }                                                                 \
-    }                                                                     \
-  else                                                                    \
-    {                                                                     \
-      QCoreApplication *app;                                              \
-      if (! qApp)                                                         \
-        {                                                                 \
-          int argc = 1;                                                   \
-          app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"}); \
-        }                                                                 \
-    }
 
 static const char *
 get_application_name(apr_hash_t *parameters,
@@ -162,8 +133,7 @@ get_wid(void)
 
 static KWallet::Wallet *
 get_wallet(QString wallet_name,
-           apr_hash_t *parameters,
-           apr_pool_t *pool)
+           apr_hash_t *parameters)
 {
   KWallet::Wallet *wallet =
     static_cast<KWallet::Wallet *> (apr_hash_get(parameters,
@@ -199,7 +169,7 @@ kwallet_terminate(void *data)
   apr_hash_t *parameters = static_cast<apr_hash_t *> (data);
   if (apr_hash_get(parameters, "kwallet-initialized", APR_HASH_KEY_STRING))
     {
-      KWallet::Wallet *wallet = get_wallet(NULL, parameters, NULL);
+      KWallet::Wallet *wallet = get_wallet(NULL, parameters);
       delete wallet;
       apr_hash_set(parameters,
                    "kwallet-initialized",
@@ -230,7 +200,12 @@ kwallet_password_get(const char **password,
       return FALSE;
     }
 
-  INITIALIZE_APPLICATION
+  QCoreApplication *app;
+  if (! qApp)
+    {
+      int argc = 1;
+      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
+    }
 
   KCmdLineArgs::init(1,
                      (char *[1]) {(char *) "svn"},
@@ -248,7 +223,7 @@ kwallet_password_get(const char **password,
     QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
   if (! KWallet::Wallet::keyDoesNotExist(wallet_name, folder, key))
     {
-      KWallet::Wallet *wallet = get_wallet(wallet_name, parameters, pool);
+      KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
       if (wallet)
         {
           apr_hash_set(parameters,
@@ -295,7 +270,12 @@ kwallet_password_set(apr_hash_t *creds,
       return FALSE;
     }
 
-  INITIALIZE_APPLICATION
+  QCoreApplication *app;
+  if (! qApp)
+    {
+      int argc = 1;
+      app = new QCoreApplication(argc, (char *[1]) {(char *) "svn"});
+    }
 
   KCmdLineArgs::init(1,
                      (char *[1]) {(char *) "svn"},
@@ -310,7 +290,7 @@ kwallet_password_set(apr_hash_t *creds,
   QString q_password = QString::fromUtf8(password);
   QString wallet_name = get_wallet_name(parameters);
   QString folder = QString::fromUtf8("Subversion");
-  KWallet::Wallet *wallet = get_wallet(wallet_name, parameters, pool);
+  KWallet::Wallet *wallet = get_wallet(wallet_name, parameters);
   if (wallet)
     {
       apr_hash_set(parameters,
