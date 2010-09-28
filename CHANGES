@@ -13,11 +13,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.13
    * better detect broken working copies during update over neon (r979045)
    * make rev files read-only (r981921)
    * properly canonicalize a URL (r984928, -31)
+   * fix wc corruption with 'commit --depth=empty" (issue #3700)
+   * permissions fixes when doing reintegrate merges (related to issue #3242)
+   * fix 2-url reverse-merge mergeinfo (issue #3648)
 
   Developer-visible changes:
    * make ruby bindings compatible with Ruby 1.9 (r957507)
    * use the repos verify API in JavaHL (r948916)
    * teach ra_serf to parse md5 checksums with update editors (r979429)
+   * let ra_serf work with current serf releases (r879757, r880320, r943796)
 
 
 Version 1.6.12
