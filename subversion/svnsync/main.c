@@ -2149,15 +2149,7 @@ main(int argc, const char *argv[])
                                         check_cancel, NULL,
                                         pool);
   if (! err)
-    {
-      /* svnsync can safely create instance of QApplication class. */
-      svn_auth_set_parameter(opt_baton.source_auth_baton,
-                             "svn:auth:qapplication-safe", "1");
-      svn_auth_set_parameter(opt_baton.sync_auth_baton,
-                             "svn:auth:qapplication-safe", "1");
-
-      err = (*subcommand->cmd_func)(os, &opt_baton, pool);
-    }
+    err = (*subcommand->cmd_func)(os, &opt_baton, pool);
   if (err)
     {
       /* For argument-related problems, suggest using the 'help'

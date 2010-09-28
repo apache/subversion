@@ -2308,9 +2308,6 @@ main(int argc, const char *argv[])
                                            pool)))
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
-  /* svn can safely create instance of QApplication class. */
-  svn_auth_set_parameter(ab, "svn:auth:qapplication-safe", "1");
-
   ctx->auth_baton = ab;
 
   /* Set up conflict resolution callback. */
