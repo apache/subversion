@@ -616,7 +616,8 @@ static svn_error_t * do_proppatch(svn_ra_neon__session_t *ras,
     }
 
   return svn_ra_neon__do_proppatch(ras, url, rb->prop_changes,
-                                   rb->prop_deletes, extra_headers, pool);
+                                   rb->prop_deletes, NULL, extra_headers,
+                                   pool);
 }
 
 
@@ -1416,7 +1417,7 @@ static svn_error_t * apply_revprops(commit_ctx_t *cc,
     return err;
 
   return svn_ra_neon__do_proppatch(cc->ras, vcc_rsrc.wr_url, revprop_table,
-                                   NULL, NULL, pool);
+                                   NULL, NULL, NULL, pool);
 }
 
 svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,

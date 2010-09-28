@@ -645,12 +645,13 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
 /*** posts/ ***/
 
 /* The list of Subversion's custom POSTs. */
-/* ### should move these report names to a public header to share with
-   ### the client (and third parties). */
+/* ### TODO:  Populate this list and transmit its contents in the
+   ### OPTIONS response.
 static const char * dav_svn__posts_list[] = {
   "create-txn",
   NULL
 };
+*/
 
 /* The various POST handlers, defined in posts/, and used by repos.c.  */
 dav_error *

@@ -196,6 +196,15 @@ svn_error_t *svn_ra_open(svn_ra_session_t **session_p,
                       config, pool);
 }
 
+svn_error_t *svn_ra_change_rev_prop(svn_ra_session_t *session,
+                                    svn_revnum_t rev,
+                                    const char *name,
+                                    const svn_string_t *value,
+                                    apr_pool_t *pool)
+{
+  return svn_ra_change_rev_prop2(session, rev, name, NULL, value, pool);
+}
+
 svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,

@@ -285,7 +285,7 @@ ClientContext::notify(void *baton,
       env->DeleteLocalRef(clazz);
     }
 
-  jobject jInfo = CreateJ::ClientNotifyInformation(notify, pool);
+  jobject jInfo = CreateJ::ClientNotifyInformation(notify);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

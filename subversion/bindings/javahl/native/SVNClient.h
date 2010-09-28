@@ -47,6 +47,7 @@ class InfoCallback;
 class CommitCallback;
 class ListCallback;
 class StatusCallback;
+class OutputStream;
 class PatchCallback;
 class ChangelistCallback;
 class CommitMessage;
@@ -75,11 +76,8 @@ class SVNClient :public SVNBase
              BlameCallback *callback);
   void relocate(const char *from, const char *to, const char *path,
                 bool recurse);
-  jbyteArray fileContent(const char *path, Revision &revision,
-                         Revision &pegRevision);
   void streamFileContent(const char *path, Revision &revision,
-                         Revision &pegRevision, jobject outputStream,
-                         size_t bufSize);
+                         Revision &pegRevision, OutputStream &outputStream);
   void propertySet(const char *path, const char *name, const char *value,
                    svn_depth_t depth, StringArray &changelists, bool force,
                    RevpropTable &revprops, CommitCallback *callback);
@@ -199,9 +197,6 @@ class SVNClient :public SVNBase
   SVNClient(jobject jthis_in);
   virtual ~SVNClient();
  private:
-  svn_stream_t *createReadStream(apr_pool_t *pool, const char *path,
-                                 Revision &revision, Revision &pegRevision,
-                                 size_t &size);
   /**
    * Shared implementation for diff() APIs. When pegRevision is
    * provided, revision1 and revision2 equate to startRevision and

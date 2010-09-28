@@ -618,7 +618,6 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
      svn_wc__db_status_absent
      svn_wc__db_status_excluded
-     svn_wc__db_status_not_present
 
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
@@ -640,6 +639,36 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 const svn_skel_t *conflict,
                                 const svn_skel_t *work_items,
                                 apr_pool_t *scratch_pool);
+
+
+/* Create a node in the BASE tree that is present in name only.
+
+   The new node will be located at LOCAL_ABSPATH, and correspond to the
+   repository node described by <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID>
+   at revision REVISION.
+
+   The node's kind is described by KIND, and the reason for its absence
+   is 'svn_wc__db_status_not_present'.
+
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
+
+   All temporary allocations will be made in SCRATCH_POOL.
+*/
+svn_error_t *
+svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const char *repos_relpath,
+                                     const char *repos_root_url,
+                                     const char *repos_uuid,
+                                     svn_revnum_t revision,
+                                     svn_wc__db_kind_t kind,
+                                     const svn_skel_t *conflict,
+                                     const svn_skel_t *work_items,
+                                     apr_pool_t *scratch_pool);
 
 
 /* Remove a node from the BASE tree.
@@ -727,27 +756,6 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
-
-/* Just like svn_wc__db_base_get_info, but always reads information
-   from inside the parent of LOCAL_ABSPATH, to allow reading the
-   information of a node that is obstructed by a separate working
-   copy.
-   
-   ### BH: This information is necessary for svn_wc_add3()'s
-   ###     checkout integration support. Even after we switch to
-   ###     a single db.
-   */
-svn_error_t *
-svn_wc__db_base_get_info_from_parent(svn_wc__db_status_t *status,
-                                     svn_wc__db_kind_t *kind,
-                                     svn_revnum_t *revision,
-                                     const char **repos_relpath,
-                                     const char **repos_root_url,
-                                     const char **repos_uuid,
-                                     svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
 
 
 /* Set *PROPVAL to the value of the property named PROPNAME of the node
@@ -2197,14 +2205,6 @@ svn_error_t *
 svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
                                  const char *local_dir_abspath,
                                  apr_pool_t *scratch_pool);
-
-
-svn_error_t *
-svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
-                               svn_revnum_t *base_revision,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
 
 /* Removes all references of LOCAL_ABSPATH from its working copy
    using DB. */

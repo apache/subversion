@@ -127,7 +127,7 @@ static svn_error_t *compat_change_rev_prop(void *session_baton,
                                            const svn_string_t *value,
                                            apr_pool_t *pool)
 {
-  return VTBL.change_rev_prop(session_baton, rev, propname, value, pool);
+  return VTBL.change_rev_prop(session_baton, rev, propname, NULL, value, pool);
 }
 
 static svn_error_t *compat_rev_proplist(void *session_baton,

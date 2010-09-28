@@ -1091,9 +1091,8 @@ test_list = [ None,
               Skip(wc_wc_copy, svntest.main.is_ra_type_file),
               Skip(wc_wc_copy_revert,
                    svntest.main.is_ra_type_file),
-              XFail(Skip(authz_recursive_ls,
-                         svntest.main.is_ra_type_file),
-                    svntest.main.is_ra_type_svn),
+              Skip(authz_recursive_ls,
+                   svntest.main.is_ra_type_file),
              ]
 
 if __name__ == '__main__':

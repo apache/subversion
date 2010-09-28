@@ -48,9 +48,9 @@
 #include "../svn_test.h"
 
 
-#define ROOT_ONE "http://example.com/one/"
-#define ROOT_TWO "http://example.com/two/"
-#define ROOT_THREE "http://example.com/three/"
+#define ROOT_ONE "http://example.com/one"
+#define ROOT_TWO "http://example.com/two"
+#define ROOT_THREE "http://example.com/three"
 
 #define UUID_ONE "uuid1"
 #define UUID_TWO "uuid2"
@@ -75,7 +75,7 @@
 #define MD5_2 "5d41402abc4b2a76b9719d911017c592"
 #define SHA1_1 "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
 
-#define I_TC_DATA "((conflict F file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
+#define I_TC_DATA "((conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
 
 static const char * const TESTING_DATA = (
    /* Load our test data.
@@ -387,7 +387,7 @@ static const char * const TESTING_DATA = (
       the value 1 is just 'good enough' to make the nodes WORKING nodes. */
   "insert into nodes values ("
   "  1, 'I', 1, '', 2, 'some/dir', 2, 'normal', 'immediates',"
-  "  0, null, 'dir', 2, " TIME_2s ", ' " AUTHOR_2 " ', null, '()',"
+  "  0, null, 'dir', 2, " TIME_2s ", '" AUTHOR_2 "', null, '()',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J', 1, '', null, null, null, 'normal', 'immediates',"
@@ -399,11 +399,11 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b', 1, 'J', 2, 'some/dir', 2, 'normal', 'infinity',"
-  "  0, null, 'dir', 2, " TIME_2s ", ' " AUTHOR_2 " ', null, '()',"
+  "  0, null, 'dir', 2, " TIME_2s ", '" AUTHOR_2 "', null, '()',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b/J-b-a', 1, 'J/J-b', 2, 'another/dir', 2, 'normal', 'infinity',"
-  "  0, null, 'dir', 2, " TIME_2s ", ' " AUTHOR_2 " ', null, '()',"
+  "  0, null, 'dir', 2, " TIME_2s ", '" AUTHOR_2 "', null, '()',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b/J-b-b', 1, 'J/J-b', null, null, null, 'normal', null,"
@@ -419,7 +419,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-d', 1, 'J', 2, 'moved/file', 2, 'normal', null,"
-  "  1, null, 'file', 2, " TIME_2s ", ' " AUTHOR_2 " ', '$md5 $ " MD5_1 " ',"
+  "  1, null, 'file', 2, " TIME_2s ", '" AUTHOR_2 "', '$md5 $" MD5_1 "',"
   " '()', 10, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'not-present', null,"
@@ -486,17 +486,15 @@ static const char * const TESTING_DATA = (
    "  null, null, null, null, null, "
    "  null, null, null, 0, null, null, '()', 0); "
 #endif
-#ifdef SVN_WC__NODES_not_enabled_yet
+#ifdef SVN_WC__NODES
    "insert into nodes values ("
-   "  1, 'M', null, null, '', 'normal', 'dir', "
-   "  1, null, null, "
-   "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
-   "  null); "
+   "  1, 'M', 0, '', null, null, null, 'normal', null, "
+   "  1, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null, '()', "
+   "  null, null, null, null, null);"
    "insert into nodes values ("
-   "  1, 'M/M-a', 'M', 'not-present', 'file', "
-   "  null, null, "
-   "  null, null, null, null, null, "
-   "  null, null, null, 0, null, null, '()', 0); "
+   "  1, 'M/M-a', 1, 'M', null, null, null, 'not-present', null, "
+   "  null, null, 'file', null, null, null, null, '()', "
+   "  null, 0, null, null, null);"
 #endif
    );
 
@@ -915,10 +913,10 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Create a new not-present symlink node. */
-  SVN_ERR(svn_wc__db_base_add_absent_node(
+  SVN_ERR(svn_wc__db_base_add_not_present_node(
             db, svn_dirent_join(local_abspath, "Q", pool),
             "Q", ROOT_ONE, UUID_ONE, 3,
-            svn_wc__db_kind_symlink, svn_wc__db_status_not_present,
+            svn_wc__db_kind_symlink,
             NULL, NULL,
             pool));
 

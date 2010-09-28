@@ -1258,10 +1258,12 @@ typedef struct svn_wc_notify_t {
    * hunk the notification is for. They are line-based
    * offsets and lengths parsed from the unidiff hunk header.
    * @since New in 1.7. */
+  /* @{ */
   svn_linenum_t hunk_original_start;
   svn_linenum_t hunk_original_length;
   svn_linenum_t hunk_modified_start;
   svn_linenum_t hunk_modified_length;
+  /* @} */
 
   /** The line at which a hunk was matched (and applied).
    * @since New in 1.7. */
@@ -5093,7 +5095,6 @@ svn_wc_process_committed(const char *path,
  *
  * No locks or logs are created, nor are any animals harmed in the
  * process unless @a restore_files is TRUE.  No cleanup is necessary.
- * The working copy is accessed using @a wc_ctx.
  *
  * After all revisions are reported, @a reporter->finish_report() is
  * called, which immediately causes the RA layer to update the working
@@ -5365,10 +5366,6 @@ svn_wc_get_actual_target(const char *path,
  * whenever external changes are encountered, giving the callback a chance
  * to store the external information for processing.
  *
- * If @a fetch_func is non-NULL, then use it (with @a fetch_baton) as
- * a fallback for retrieving repository files whenever 'copyfrom' args
- * are sent into editor->add_file().
- *
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
@@ -5419,8 +5416,6 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t allow_unver_obstructions,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
-                          svn_wc_get_file_t fetch_func,
-                          void *fetch_baton,
                           svn_wc_conflict_resolver_func_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
@@ -5434,7 +5429,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
 
 /** Similar to svn_wc_get_update_editor4, but uses access batons and relative
  * path instead of a working copy context-abspath pair and
- * svn_wc_traversal_info_t instead of an externals callback.
+ * svn_wc_traversal_info_t instead of an externals callback.  Also, 
+ * @a fetch_func and @a fetch_baton are ignored.
  *
  * If @a ti is non-NULL, record traversal info in @a ti, for use by
  * post-traversal accessors such as svn_wc_edited_externals().
@@ -5546,8 +5542,6 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t allow_unver_obstructions,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
-                          svn_wc_get_file_t fetch_func,
-                          void *fetch_baton,
                           svn_wc_conflict_resolver_func_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
@@ -5561,8 +5555,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
 
 /** Similar to svn_wc_get_switch_editor4, but uses access batons and relative
  * path instead of a working copy context and svn_wc_traversal_info_t instead
- * of an externals callback. This function doesn't support an external file
- * fetcher.
+ * of an externals callback.
  *
  * If @a ti is non-NULL, record traversal info in @a ti, for use by
  * post-traversal accessors such as svn_wc_edited_externals().
@@ -6797,13 +6790,13 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
                                                       const char *uuid,
                                                       const char *url);
 
-/** Change repository references at @a local_abspath and all it's children.
- * The pre-change URL should be @a from, and the post-change URL will be
- * @a to.  @a validator (and its baton, @a validator_baton), will be called
- * for the newly generated base URL and calculated repo root.
+/** Recursively change repository references at @a wcroot_abspath
+ * (which is the root directory of a working copy).  The pre-change
+ * URL should be @a from, and the post-change URL will be @a to.  @a
+ * validator (and its baton, @a validator_baton), will be called for
+ * the newly generated base URL and calculated repo root.
  *
- * If @a recurse is @c FALSE, none of the children of @a local_abspath will
- * be changed.  @a wc_ctx is an working copy context.
+ * @a wc_ctx is an working copy context.
  *
  * @a scratch_pool will be used for temporary allocations.
  *
@@ -6811,10 +6804,9 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
  */
 svn_error_t *
 svn_wc_relocate4(svn_wc_context_t *wc_ctx,
-                 const char *local_abspath,
+                 const char *wcroot_abspath,
                  const char *from,
                  const char *to,
-                 svn_boolean_t recurse,
                  svn_wc_relocation_validator3_t validator,
                  void *validator_baton,
                  apr_pool_t *scratch_pool);
@@ -6822,8 +6814,12 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
 /** Similar to svn_wc_relocate4(), but with a #svn_wc_adm_access_t /
  * relative path parameter pair.
  *
+ * @note As of the 1.7 API, @a path is required to be a working copy
+ * root directory, and @a recurse is required to be TRUE.
+ *
  * @since New in 1.5.
- * @deprecated Provided for backwards compatibility with the 1.6 API.
+ * @deprecated Provided for limited backwards compatibility with the
+ * 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *

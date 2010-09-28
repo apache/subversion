@@ -110,7 +110,7 @@ struct replay_baton {
   svn_boolean_t quiet;
 };
 
-typedef struct {
+typedef struct opt_baton_t {
   svn_ra_session_t *session;
   const char *url;
   svn_revnum_t start_revision;
@@ -137,6 +137,7 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
                             SVN_REPOS_DUMPFILE_REVISION_NUMBER
                             ": %ld\n", revision));
+  SVN_ERR(normalize_props(rev_props, pool));
   propstring = svn_stringbuf_create_ensure(0, pool);
   revprop_stream = svn_stream_from_stringbuf(propstring, pool);
   SVN_ERR(svn_hash_write2(rev_props, revprop_stream, "PROPS-END", pool));

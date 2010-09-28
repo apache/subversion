@@ -107,6 +107,9 @@ dav_svn__convert_err(svn_error_t *serr,
       case SVN_ERR_FS_PATH_ALREADY_LOCKED:
         status = HTTP_LOCKED;
         break;
+      case SVN_ERR_FS_PROP_BASEVALUE_MISMATCH:
+        status = HTTP_PRECONDITION_FAILED;
+        break;
         /* add other mappings here */
       }
 

@@ -33,6 +33,7 @@
 #include "Pool.h"
 #include "Targets.h"
 #include "Revision.h"
+#include "OutputStream.h"
 #include "RevisionRange.h"
 #include "BlameCallback.h"
 #include "ProplistCallback.h"
@@ -427,7 +428,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
         return;
 
     SVN_JNI_ERR(svn_client_move6((apr_array_header_t *) srcs,
-                                 destinationPath.c_str(), force, moveAsChild,
+                                 destinationPath.c_str(), moveAsChild,
                                  makeParents, revprops.hash(requestPool),
                                  CommitCallback::callback, callback, ctx,
                                  requestPool.pool()), );
@@ -1093,43 +1094,9 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                requestPool.pool()), );
 }
 
-jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
-                                  Revision &pegRevision)
-{
-    SVN::Pool requestPool;
-    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
-    Path intPath(path);
-    SVN_JNI_ERR(intPath.error_occured(), NULL);
-
-    size_t size = 0;
-    svn_stream_t *read_stream = createReadStream(requestPool.pool(),
-                                                 intPath.c_str(), revision,
-                                                 pegRevision, size);
-    if (read_stream == NULL)
-        return NULL;
-
-    JNIEnv *env = JNIUtil::getEnv();
-    // size will be set to the number of bytes available.
-    jbyteArray jcontent = env->NewByteArray(size);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jbyte *jbytes = env->GetByteArrayElements(jcontent, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    svn_error_t *err = svn_stream_read(read_stream, (char *) jbytes, &size);
-    env->ReleaseByteArrayElements(jcontent, jbytes, 0);
-    SVN_JNI_ERR(err, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    return jcontent;
-}
-
 void SVNClient::streamFileContent(const char *path, Revision &revision,
-                                  Revision &pegRevision, jobject outputStream,
-                                  size_t bufSize)
+                                  Revision &pegRevision,
+                                  OutputStream &outputStream)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1137,101 +1104,14 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
     SVN_JNI_ERR(intPath.error_occured(), );
 
     JNIEnv *env = JNIUtil::getEnv();
-    jclass outputStreamClass = env->FindClass("java/io/OutputStream");
-    if (outputStreamClass == NULL)
+    svn_client_ctx_t *ctx = context.getContext(NULL);
+    if (ctx == NULL)
         return;
 
-    jmethodID writeMethod = env->GetMethodID(outputStreamClass, "write",
-                                             "([BII)V");
-    if (writeMethod == NULL)
-        return;
-
-    // Create the buffer.
-    jbyteArray buffer = env->NewByteArray(bufSize);
-    if (JNIUtil::isJavaExceptionThrown())
-        return;
-
-    jbyte *bufData = env->GetByteArrayElements(buffer, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-        return;
-
-    size_t contentSize = 0;
-    svn_stream_t *read_stream = createReadStream(requestPool.pool(), path,
-                                                 revision, pegRevision,
-                                                 contentSize);
-    if (read_stream == NULL)
-        return;
-
-    while (contentSize > 0)
-    {
-        size_t readSize = bufSize > contentSize ? contentSize : bufSize;
-        svn_error_t *err;
-
-        err = svn_stream_read(read_stream, (char *)bufData, &readSize);
-        if (err != NULL)
-        {
-            env->ReleaseByteArrayElements(buffer, bufData, 0);
-            svn_stream_close(read_stream);
-            SVN_JNI_ERR(err, );
-        }
-
-        env->ReleaseByteArrayElements(buffer, bufData, JNI_COMMIT);
-        env->CallVoidMethod(outputStream, writeMethod, buffer, 0, readSize);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            env->ReleaseByteArrayElements(buffer, bufData, 0);
-            svn_stream_close(read_stream);
-            return;
-        }
-        contentSize -= readSize;
-    }
-
-    env->ReleaseByteArrayElements(buffer, bufData, 0);
-    return;
-}
-
-svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
-                                          Revision &revision,
-                                          Revision &pegRevision, size_t &size)
-{
-    svn_stream_t *read_stream = NULL;
-
-    if (revision.revision()->kind == svn_opt_revision_working)
-    {
-        // We want the working copy. Going back to the server returns
-        // base instead (which is not what we want).
-        apr_file_t *file = NULL;
-        apr_finfo_t finfo;
-        apr_status_t apr_err = apr_stat(&finfo, path, APR_FINFO_MIN, pool);
-        if (apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        apr_err = apr_file_open(&file, path, APR_READ, 0, pool);
-        if (apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        read_stream = svn_stream_from_aprfile2(file, TRUE, pool);
-        size = finfo.size;
-    }
-    else
-    {
-        svn_client_ctx_t *ctx = context.getContext(NULL);
-        if (ctx == NULL)
-            return NULL;
-
-        svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
-        read_stream = svn_stream_from_stringbuf(buf, pool);
-        SVN_JNI_ERR(svn_client_cat2(read_stream, path, pegRevision.revision(),
-                                    revision.revision(), ctx, pool),
-                    NULL);
-        size = buf->len;
-    }
-
-    return read_stream;
+    SVN_JNI_ERR(svn_client_cat2(outputStream.getStream(requestPool),
+                                path, pegRevision.revision(),
+                                revision.revision(), ctx, requestPool.pool()),
+                );
 }
 
 jbyteArray SVNClient::revProperty(const char *path,
@@ -1528,7 +1408,7 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
                                         &set_rev, ctx, requestPool.pool()),
                 NULL);
 
-    return CreateJ::PropertyMap(props, requestPool.pool());
+    return CreateJ::PropertyMap(props);
 }
 
 struct info_baton
@@ -1580,10 +1460,11 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
     Path checkedTargetPath(targetPath);
     SVN_JNI_ERR(checkedTargetPath.error_occured(), );
 
+    // Should parameterize the following, instead of defaulting to FALSE
     SVN_JNI_ERR(svn_client_patch(checkedPatchPath.c_str(),
                                  checkedTargetPath.c_str(),
-                                 dryRun, stripCount, reverse, ignoreWhitespace,
-                                 removeTempfiles,
+                                 dryRun, stripCount, FALSE, reverse,
+                                 ignoreWhitespace, removeTempfiles,
                                  PatchCallback::callback, callback,
                                  ctx, requestPool.pool(),
                                  requestPool.pool()), );

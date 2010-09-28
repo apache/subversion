@@ -673,6 +673,9 @@ typedef struct svn_ra_serf__server_error_t {
   /* Have we seen an error tag? */
   svn_boolean_t in_error;
 
+  /* Have we seen a HTTP "412 Precondition Failed" error? */
+  svn_boolean_t contains_precondition_error;
+
   /* Should we be collecting the XML cdata? */
   svn_boolean_t collect_cdata;
 
@@ -1322,6 +1325,7 @@ svn_error_t *
 svn_ra_serf__change_rev_prop(svn_ra_session_t *session,
                              svn_revnum_t rev,
                              const char *name,
+                             const svn_string_t *const *old_value_p,
                              const svn_string_t *value,
                              apr_pool_t *pool);
 

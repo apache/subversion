@@ -687,16 +687,15 @@ run_base_remove(svn_wc__db_t *db,
 
   if (keep_not_present)
     {
-      SVN_ERR(svn_wc__db_base_add_absent_node(db, local_abspath,
-                                              repos_relpath,
-                                              repos_root_url,
-                                              repos_uuid,
-                                              revision,
-                                              kind,
-                                              svn_wc__db_status_not_present,
-                                              NULL,
-                                              NULL,
-                                              scratch_pool));
+      SVN_ERR(svn_wc__db_base_add_not_present_node(db, local_abspath,
+                                                   repos_relpath,
+                                                   repos_root_url,
+                                                   repos_uuid,
+                                                   revision,
+                                                   kind,
+                                                   NULL,
+                                                   NULL,
+                                                   scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -793,11 +792,10 @@ run_deletion_postcommit(svn_wc__db_t *db,
              lie;  therefore, it must remember the file as being
              'deleted' for a while.  Create a new, uninteresting
              ghost entry:  */
-          SVN_ERR(svn_wc__db_base_add_absent_node(
+          SVN_ERR(svn_wc__db_base_add_not_present_node(
                     db, local_abspath,
                     repos_relpath, repos_root_url, repos_uuid,
                     new_revision, kind,
-                    svn_wc__db_status_not_present,
                     NULL, NULL,
                     scratch_pool));
         }
