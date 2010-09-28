@@ -205,6 +205,17 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r1002094
+   Print a warning about copied directories during commits with limited depth.
+   Justification:
+     Users may not be aware that while limiting the scope of a commit via
+     depth works for most kinds of local changes, copies are always done
+     server-side with depth infinity. Without this warning, users may not
+     realise that the commit may not have the desired effect in the repository.
+     See issue #3699 for details.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
