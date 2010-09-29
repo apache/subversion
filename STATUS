@@ -248,16 +248,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1000607, r1001009
-   Fix 'svnmucc propset'.
-   Justification:
-     Without this fix, 'svnmucc propset' used with existing URLs complains
-     that they exist already, and used in conjunction with a creating
-     command (such as 'put') complains that they don't exist.  It's
-     all rather restrictive.
-   Votes:
-     +1: cmpilato, gstein, philip
-
  * r1000612
    Add new 'propsetf' subcommand to 'svnmucc'.
    Justification:
