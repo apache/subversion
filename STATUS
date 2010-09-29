@@ -232,12 +232,12 @@ Veto-blocked changes:
            Discussing on list.)
      -1: cmpilato (Changes semantics of svn_io_dir_walk()).
 
+Approved changes:
+=================
+
  * r876645
    Fix ra_neon authz test failures introduced with backport of r876615.
    Justification:
      We don't want to ship releases with failing tests.
    Votes:
-     +1: stsp, pburba
-
-Approved changes:
-=================
+     +1: stsp, pburba, hwright
