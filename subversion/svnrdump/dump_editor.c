@@ -132,7 +132,7 @@ make_dir_baton(const char *path,
   if (pb)
     abspath = svn_uri_join("/", path, pool);
   else
-    abspath = apr_pstrdup(pool, "/");
+    abspath = "/";
 
   /* Strip leading slash from copyfrom_path so that the path is
      canonical and svn_relpath_join can be used */
@@ -143,8 +143,7 @@ make_dir_baton(const char *path,
   new_db->eb = eb;
   new_db->parent_dir_baton = pb;
   new_db->abspath = abspath;
-  new_db->copyfrom_path = copyfrom_path ?
-    apr_pstrdup(pool, copyfrom_path) : NULL;
+  new_db->copyfrom_path = copyfrom_path;
   new_db->copyfrom_rev = copyfrom_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
@@ -479,7 +478,7 @@ open_directory(const char *path,
     {
       copyfrom_path = svn_uri_join(pb->copyfrom_path,
                                    svn_relpath_basename(path, NULL),
-                                   pool);
+                                   pb->eb->pool);
       copyfrom_rev = pb->copyfrom_rev;
     }
 
@@ -593,7 +592,7 @@ open_file(const char *path,
     {
       copyfrom_path = svn_relpath_join(pb->copyfrom_path,
                                        svn_relpath_basename(path, NULL),
-                                       pool);
+                                       pb->eb->pool);
       copyfrom_rev = pb->copyfrom_rev;
     }
 
