@@ -61,7 +61,7 @@ struct dump_edit_baton {
   svn_stringbuf_t *propstring;
    
   /* Temporary file to write delta to along with its checksum. */
-  char *delta_abspath;
+  const char *delta_abspath;
 
   /* The checksum of the file the delta is being applied to */
   const char *base_checksum;
@@ -680,7 +680,6 @@ static svn_error_t *
 window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
-  struct dump_edit_baton *eb = hb->eb;
   static svn_error_t *err;
 
   err = hb->apply_handler(window, hb->apply_baton);
@@ -690,11 +689,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (err)
     SVN_ERR(err);
 
-  /* Write information about the filepath to hb->eb */
-  eb->delta_abspath = apr_pstrdup(eb->pool, hb->delta_abspath);
-
-  /* Cleanup */
-  svn_pool_destroy(hb->pool);
   return SVN_NO_ERROR;
 }
 
@@ -707,21 +701,21 @@ apply_textdelta(void *file_baton, const char *base_checksum,
   struct dump_edit_baton *eb = file_baton;
 
   /* Custom handler_baton allocated in a separate pool */
-  apr_pool_t *handler_pool = svn_pool_create(pool);
-  struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
-  hb->pool = handler_pool;
-  hb->eb = eb;
+  struct handler_baton *hb;
+  svn_stream_t *delta_filestream;
+
+  hb = apr_pcalloc(eb->pool, sizeof(*hb));
 
   LDR_DBG(("apply_textdelta %p\n", file_baton));
 
   /* Use a temporary file to measure the text-content-length */
-  SVN_ERR(svn_stream_open_unique(&(hb->delta_filestream), &hb->delta_abspath,
-                                 NULL, svn_io_file_del_none, hb->pool,
-                                 hb->pool));
+  SVN_ERR(svn_stream_open_unique(&delta_filestream, &(eb->delta_abspath),
+                                 NULL, svn_io_file_del_none, eb->pool,
+                                 pool));
 
   /* Prepare to write the delta to the temporary file. */
   svn_txdelta_to_svndiff2(&(hb->apply_handler), &(hb->apply_baton),
-                          hb->delta_filestream, 0, hb->pool);
+                          delta_filestream, 0, pool);
   eb->dump_text = TRUE;
   eb->base_checksum = apr_pstrdup(eb->pool, base_checksum);
 
