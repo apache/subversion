@@ -33,6 +33,8 @@
 #include "svn_config.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 /* We shouldn't be including a private header here, but it is
  * necessary for fixing issue #3416 */
 #include "private/svn_opt_private.h"
