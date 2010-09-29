@@ -66,8 +66,8 @@ def mergeinfo(sbox):
   wc_dir = sbox.wc_dir
 
   # Dummy up some mergeinfo.
-  svntest.actions.run_and_verify_svn(None, None, [], "merge", "-c", "1",
-                                     "--record-only", sbox.repo_url, wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps', SVN_PROP_MERGEINFO,
+                                     '/:1', wc_dir)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            [1], sbox.repo_url, wc_dir)
 
