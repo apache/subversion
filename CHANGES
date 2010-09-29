@@ -21,7 +21,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.13
    * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
    * make 'svnmucc propset' handle existing and non-existing URLs (r1000607)
    * add new 'propsetf' subcommand to svnmucc (r1000612)
-   * emit a warning about copied dirs during ci with limited depth (r1002094)
+   * warn about copied dirs during 'svn ci' with limited depth (r1002094)
 
   Developer-visible changes:
    * make ruby bindings compatible with Ruby 1.9 (r957507)
