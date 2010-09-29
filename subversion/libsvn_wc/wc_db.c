@@ -1306,10 +1306,12 @@ union_children(const apr_array_header_t **children,
   apr_array_header_t *names_array;
 
   /* All of the names get allocated in RESULT_POOL.  */
+#ifndef SVN_WC__NODES_ONLY
   SVN_ERR(add_children_to_hash(names, STMT_SELECT_BASE_NODE_CHILDREN,
                                sdb, wc_id, parent_relpath, result_pool));
   SVN_ERR(add_children_to_hash(names, STMT_SELECT_WORKING_NODE_CHILDREN,
                                sdb, wc_id, parent_relpath, result_pool));
+#endif
 #ifdef SVN_WC__NODES
   SVN_ERR(add_children_to_hash(names_nodes, STMT_SELECT_BASE_NODE_CHILDREN_1,
                                sdb, wc_id, parent_relpath, result_pool));
