@@ -368,11 +368,8 @@ open_root(void *edit_baton,
 {
   struct dump_edit_baton *eb = edit_baton;
 
-  /* Special toplevel per-revision pool */
-  if (eb->pool)
-    svn_pool_clear(eb->pool);
-  else
-    eb->pool = svn_pool_create(NULL);
+  /* Clear the per-revision pool after each revision */
+  svn_pool_clear(eb->pool);
 
   eb->props = apr_hash_make(eb->pool);
   eb->deleted_props = apr_hash_make(eb->pool);
@@ -852,6 +849,9 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb = apr_pcalloc(pool, sizeof(struct dump_edit_baton));
   eb->stream = stream;
 
+  /* Create a special per-revision pool */
+  eb->pool = svn_pool_create(pool);
+  
   de = svn_delta_default_editor(pool);
   de->open_root = open_root;
   de->delete_entry = delete_entry;
