@@ -495,7 +495,6 @@ close_directory(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct dump_edit_baton *eb = db->eb;
-  apr_pool_t *iterpool;
   apr_hash_index_t *hi;
 
   LDR_DBG(("close_directory %p\n", dir_baton));
@@ -506,11 +505,8 @@ close_directory(void *dir_baton,
   /* Some pending newlines to dump? */
   SVN_ERR(dump_newlines(eb, &(eb->dump_newlines), pool));
 
-  /* Create a pool just for iterations to allocate a loop variable */
-  iterpool = svn_pool_create(pool);
-
   /* Dump the deleted directory entries */
-  for (hi = apr_hash_first(iterpool, db->deleted_entries); hi;
+  for (hi = apr_hash_first(pool, db->deleted_entries); hi;
        hi = apr_hash_next(hi))
     {
       const void *key;
@@ -523,7 +519,6 @@ close_directory(void *dir_baton,
     }
 
   svn_hash__clear(db->deleted_entries, pool);
-  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
