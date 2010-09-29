@@ -1486,13 +1486,11 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 18;
         /* FALLTHROUGH  */
 
-#if (SVN_WC__VERSION > 18)
       case 18:
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("The working copy '%s' is at format 18; "
                                    "use 'tools/dev/wc-ng/bump-to-19.py' to "
                                    "upgrade it"), wcroot_abspath);
-#endif
 
       /* ### future bumps go here.  */
 #if 0
