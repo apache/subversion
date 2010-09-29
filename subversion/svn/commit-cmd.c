@@ -33,6 +33,8 @@
 #include "svn_config.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 /* We shouldn't be including a private header here, but it is
  * necessary for fixing issue #3416 */
 #include "private/svn_opt_private.h"
@@ -97,6 +99,21 @@ svn_cl__commit(apr_getopt_t *os,
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
+
+  /* Copies are done server-side, and cheaply, which means they're
+   * effectively always done with infinite depth.
+   * This is a potential cause of confusion for users trying to commit
+   * copied subtrees in part by restricting the commit's depth.
+   * See issue #3699. */
+  if (opt_state->depth < svn_depth_infinity)
+    SVN_ERR(svn_cmdline_printf(pool,
+                               _("svn: warning: The depth of this commit "
+                                 "is '%s', but copied directories will "
+                                 "regardless be committed with depth '%s'. "
+                                 "You must remove unwanted children of those "
+                                 "directories in a separate commit.\n"),
+                               svn_depth_to_word(opt_state->depth),
+                               svn_depth_to_word(svn_depth_infinity)));
 
   cfg = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                      APR_HASH_KEY_STRING);
