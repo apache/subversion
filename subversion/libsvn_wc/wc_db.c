@@ -3339,7 +3339,7 @@ temp_cross_db_copy(svn_wc__db_t *db,
   iwb.original_revnum = copyfrom_rev;
   iwb.moved_here = FALSE;
 
-  iwb.op_depth = (*dst_relpath == '\0') ? 1 : 2;  /* ### temporary op_depth */
+  iwb.op_depth = 2;  /* ### temporary op_depth */
 
   iwb.checksum = checksum;
   iwb.children = children;
@@ -3624,9 +3624,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   else
     children = NULL;
 
-  /* ### temporary op_depth */
-  op_depth = (children == NULL) ? (apr_int64_t)2 :
-                                  (apr_int64_t)1; /* no directory or stub */
+  op_depth = 2; /* ### temporary op_depth */
 
   if (!strcmp(src_pdh->local_abspath, dst_pdh->local_abspath))
     {
@@ -3773,7 +3771,7 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
-  iwb.op_depth = (*local_relpath == '\0') ? 1 : 2;  /* ### temporary op_depth */
+  iwb.op_depth = 2;  /* ### temporary op_depth */
 
   iwb.children = children;
   iwb.depth = depth;
@@ -3847,7 +3845,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
-  iwb.op_depth = (*local_relpath == '\0') ? 1 : 2;  /* ### temporary op_depth */
+  iwb.op_depth = 2;  /* ### temporary op_depth */
 
   iwb.checksum = checksum;
 
@@ -3916,7 +3914,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
-  iwb.op_depth = (*local_relpath == '\0') ? 1 : 2;  /* ### temporary op_depth */
+  iwb.op_depth = 2;  /* ### temporary op_depth */
 
   iwb.target = target;
 
@@ -8952,8 +8950,7 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath,
-                                (*mcb->local_relpath == '\0' /* ### op_depth */
-                                 ? (apr_int64_t)1 : (apr_int64_t)2)));
+                                (apr_int64_t)2)); /* ### temporary op_depth */
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
@@ -8983,8 +8980,7 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath,
-                                (*mcb->local_relpath == '\0' /* ### op_depth */
-                                 ? (apr_int64_t)1 : (apr_int64_t)2)));
+                                (apr_int64_t)2)); /* ### temporary op_depth */
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
