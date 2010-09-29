@@ -234,10 +234,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r876645
-   Fix ra_neon authz test failures introduced with backport of r876615.
-   Justification:
-     We don't want to ship releases with failing tests.
-   Votes:
-     +1: stsp, pburba, hwright
