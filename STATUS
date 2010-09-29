@@ -140,17 +140,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1000038, r1000060
-   Fix for issue #3695(r1000060), in which the use of
-   "SVNPathAuthz short_circuit" causes Subversion to ignore authz access rule
-   sections which contain a repository prefix.
-   r1000038 - whiteline formatting only fix, without this merge of r1000060
-   would give a conflict.
-   Justification:
-     Rules are made to be broken.  Except when they're access rules.
-   Votes:
-     +1: cmpilato, kameshj
-
  * r1000607, r1001009
    Fix 'svnmucc propset'.
    Justification:
@@ -159,7 +148,7 @@ Candidate changes:
      command (such as 'put') complains that they don't exist.  It's
      all rather restrictive.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, gstein
 
  * r1000612
    Add new 'propsetf' subcommand to 'svnmucc'.
@@ -170,7 +159,7 @@ Candidate changes:
      svnmucc isn't a core deliverable, so I'm not quite where it fits
      into our version compatibility promise landscape.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, gstein
 
  * r1002094
    Print a warning about copied directories during commits with limited depth.
@@ -181,7 +170,7 @@ Candidate changes:
      realise that the commit may not have the desired effect in the repository.
      See issue #3699 for details.
    Votes:
-     +1: stsp
+     +1: stsp, gstein
 
 Veto-blocked changes:
 =====================
@@ -279,3 +268,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1000038, r1000060
+   Fix for issue #3695(r1000060), in which the use of
+   "SVNPathAuthz short_circuit" causes Subversion to ignore authz access rule
+   sections which contain a repository prefix.
+   r1000038 - whiteline formatting only fix, without this merge of r1000060
+   would give a conflict.
+   Justification:
+     Rules are made to be broken.  Except when they're access rules.
+   Votes:
+     +1: cmpilato, kameshj, gstein
