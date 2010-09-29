@@ -1,3 +1,34 @@
+Version 1.6.13
+(01 Oct 2010, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.13
+
+  User-visible changes:
+   * don't drop properties during foreign-repo merges (issue #3623)
+   * improve auto-props failure error message (r961970)
+   * improve error message for 403 status with ra_neon (r876615)
+   * don't allow 'merge --reintegrate' for 2-url merges (r959004)
+   * improve handling of missing fsfs.conf during hotcopy (r980811, -1449)
+   * escape unsafe characters in a URL during export (issue #3683)
+   * don't leak stale locks in FSFS (r959760)
+   * better detect broken working copies during update over ra_neon (r979045)
+   * fsfs: make rev files read-only (r981921)
+   * properly canonicalize a URL (r984928, -31)
+   * fix wc corruption with 'commit --depth=empty' (issue #3700)
+   * permissions fixes when doing reintegrate merges (related to issue #3242)
+   * fix mergeinfo miscalculation during 2-url merges (issue #3648)
+   * fix error transmission problems in svnserve (r997457, -66)
+   * fixed: record-only merges create self-referential mergeinfo (issue #3646)
+   * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
+   * make 'svnmucc propset' handle existing and non-existing URLs (r1000607)
+   * add new 'propsetf' subcommand to svnmucc (r1000612)
+
+  Developer-visible changes:
+   * make ruby bindings compatible with Ruby 1.9 (r957507)
+   * use the repos verify API in JavaHL (r948916)
+   * teach ra_serf to parse md5 checksums with update editors (r979429)
+   * let ra_serf work with current serf releases (r879757, r880320, r943796)
+
+
 Version 1.6.12
 (21 Jun 2010, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.12
@@ -36,7 +67,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.11
   * make 'svnadmin hotcopy' copy the fsfs config file (r905303)
   * mergeinfo improvements with non-inheritable mergeinfo (issue #3573)
   * make mergeinfo queries not require access to the repo root (issue #3242)
-  * update URLs to refer the the new apache.org repository (r904301, -94)
+  * update URLs to refer the new apache.org repository (r904301, -94)
   * update relative externals during a switch (issue #3390)
   * fix 'merge --reintegrate' with self-referential mergeinfo (r892050, -85)
   * improve wc-ng working copy detection (r929382)
