@@ -773,6 +773,8 @@ struct window_handler_baton
   svn_boolean_t seen_first_window;  /* False until first window seen. */
   update_ctx_t *uc;
 
+  const char *base_checksum; /* For transfer as part of the S:txdelta element */
+
   /* The _real_ window handler and baton. */
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
@@ -788,7 +790,12 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (! wb->seen_first_window)
     {
       wb->seen_first_window = TRUE;
-      SVN_ERR(dav_svn__send_xml(wb->uc->bb, wb->uc->output, "<S:txdelta>"));
+      if (!wb->base_checksum)
+        SVN_ERR(dav_svn__send_xml(wb->uc->bb, wb->uc->output, "<S:txdelta>"));
+      else
+        SVN_ERR(dav_svn__send_xml(wb->uc->bb, wb->uc->output,
+                                  "<S:txdelta base-checksum=\"%s\">",
+                                  wb->base_checksum));
     }
 
   SVN_ERR(wb->handler(window, wb->handler_baton));
@@ -838,6 +845,7 @@ upd_apply_textdelta(void *file_baton,
   wb = apr_palloc(file->pool, sizeof(*wb));
   wb->seen_first_window = FALSE;
   wb->uc = file->uc;
+  wb->base_checksum = file->base_checksum;
   base64_stream = dav_svn__make_base64_output_stream(wb->uc->bb,
                                                      wb->uc->output,
                                                      file->pool);

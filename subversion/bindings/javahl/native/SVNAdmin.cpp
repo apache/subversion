@@ -485,12 +485,10 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
       (SVN_ERR_INCORRECT_PARAMS, NULL,
        _("Start revision cannot be higher than end revision")), );
 
-  SVN_JNI_ERR(svn_repos_dump_fs2(repos, NULL,
-                                 messageOut.getStream(requestPool),
-                                 lower, upper, FALSE /* incremental */,
-                                 TRUE /* use deltas */,
-                                 NULL, NULL /* cancel callback/baton */,
-                                 requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_verify_fs(repos, messageOut.getStream(requestPool),
+                                  lower, upper,
+                                  NULL, NULL /* cancel callback/baton */,
+                                  requestPool.pool()), );
 }
 
 jobjectArray SVNAdmin::lslocks(const char *path)

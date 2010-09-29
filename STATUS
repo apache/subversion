@@ -57,80 +57,147 @@ Candidate changes:
            the r878607 log msg.)
 
  * r916286, r917512
-   Issue description:
-    With the below apache configuration(See the trailing slash at the 
-    end of '/svn/').
+   Fixes failing commmits (with vague error messages) seen on client
+   side for WebDAV proxy configurations such as the following (note
+   the trailing slash at the end of '/svn/'):
 
-    <Location /svn/>
-     DAV svn
-     SVNParentPath /repositories
-     #See the trailing slash on the master URI also can cause the confusion.
-     SVNMasterURI http://master/svn/
-     SVNAdvertiseV2Protocol Off
-    </Location>
+      <Location /svn/>
+         DAV svn
+         SVNParentPath /repositories
+         # Trailing slash on the master URI also can cause the confusion.
+         SVNMasterURI http://master/svn/
+         SVNAdvertiseV2Protocol Off
+      </Location>
 
-   Vague and useless error message *without* this fix on client side is
-   snipped below.
-   <snip>
-   svn: Commit failed (details follow):
-   svn: MKACTIVITY of '/svn/demujin/!svn/act/4b6d547c-018d-4e02-9d3f-2b283076cc06': Could not read status line: connection was closed by server (http://localhost)
-   </snip>
+   Error message shows up like so:
 
+      svn: Commit failed (details follow):
+      svn: MKACTIVITY of '/svn/demujin/!svn/act/4b6d547c-018d-4e02-9d3f-2b28\
+      3076cc06': Could not read status line: connection was closed by server\
+       (http://localhost)
 
    Notes:
-     This backport depends on the r878590 group only for the conflict free port.
+     Depends on the r878590 group for a conflict-free backport.
    Justification:
-    With this fix commit successfully gets proxied and succeeds.
+     Fixes failed commits.
    Votes:
      +1: kameshj
 
  * r917523
-     If the configured slave url has the *uri encodable* characters(<space>,
-     '?', '%') *write through* is not happening rather commit happens in
-     slave itself.
+   If the configured slave url employes URI-unsafe characters
+   (<space>, '?', '%'), proxying of commits fails and commit affects
+   the slave repository directly.
    Notes:
      This backport depends on the r878590 and r916286 groups only for the
      conflict free port.
    Justification:
-    With this commit we avoid accidental commit to the slave and hence 
-    making it unusable as a proxy anymore.
+     With this commit we avoid accidental commit to the slave and hence 
+     making it unusable as a proxy anymore.
    Votes:
      +1: kameshj
 
- * r950445, 950468
-   Fix for issue #2591 "'svnadmin hotcopy' does not replicate symlinks".
+ * r948512, r949307
+   Fix issue #3646 'record-only merges create self-referential mergeinfo'.
    Justification:
-     This fix helps server administrators who has common files symlinked
-     across their repositories and take frequent backups of their repos
-     using svnadmin hotcopy.
-   Notes:
-     r950445 fixes the issue and r950468 is a test for this issue.
-   Votes:
-     +1: stylesen,
-     -0: julianfoad, cmpilato (Tested and works fine, but changes
-           semantics of svn_io_dir_walk() which we should not do in a
-           back-port.  Discussing on list.)
-
- * r945350, r946767, r955369
-   Fix issue #3242 'Subversion demands unnecessary access to parent
-   directories of operations' as relates to reintegrate merges.
-   Justification:
-     Without this backport, reintegrate merges fail if the user isn't
-     authorized to the root of the repository.
+     Prevents creation of self-referential mergeinfo (i.e. mergeinfo that
+     is redundant with a path's natural history).  Self-referential mergeinfo
+     is a source of confusion at best and a source of bugs at worst (e.g.
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3294#desc1 and
+     http://svn.apache.org/viewvc?view=revision&revision=873767).
    Branch:
-     Drift between trunk and 1.6.x, particularly in libsvn_client/merge.c
-     necessitated a backport branch.
-     ^/subversion/branches/1.6.x-issue3242-reintegrate
+     WCNG work on trunk necessitated a backport branch.
+     ^/subversion/branches/1.6.x-issue3646
    Notes:
-    r945350 adds a new merge_authz test for the issue.
-    r946767 is the fix for the issue.
-    r955369 is a fix for issue #3564 'added subtrees with mergeinfo break
-    reintegrate', which was a regression introduced by r946767.  So despite
-    having it's own issue number, it is a logical part of the issue #3242
-    group.
-    The rest of the issue #3242 fixes have already been backported in r934494.
+     r948512 is a new test for the issue and r949307 is the fix.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
+
+ * r996884
+   Hide unreadable directory children in mod_dav_svn's GET response.
+   Justification:
+     We might as well be as tight security-wise as we can, even if
+     we've publicly stated for years that this was an expected leak of
+     information.  Not showing unreadable subdirs, for example, prevents
+     folks from clicking that sucker in the browser only to get an authz
+     failure.
+   Votes:
+     +1: cmpilato
+
+ * r997026, r997070, r997474
+   For issue #3709 ("Inconsistency between "svn list" and "svn
+   checkout"), omit unreadable paths from the get-dir RA response.
+   Justification:
+     Fixes 'svn ls -R' failing when recursing into a read-blocked
+     subdirectory by teaching servers not to mention such
+     subdirectories so the client doesn't try to recurse into them.
+   Notes:
+     Depends on the r996884 group for a function rename and
+     introduction of another.
+   Votes:
+     +1: cmpilato
+
+ * r997471
+   Client-side workaround for issue #3709 ("Inconsistency between "svn
+   list" and "svn checkout").
+   Justification:
+     Fixes issue #3709 for clients talking to servers that don't strip
+     out unreadable paths from their get-dir responses.
+   Notes:
+     Depends on the r997457 group.
+   Votes:
+     +1: cmpilato
+
+ * r962377, r962378
+   Fix svnsync handling of directory copyfrom.
+   Justification:
+     Could lead to sync'd repositories being different from the master.
+   Concerns:
+     http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
+   Votes:
+     +1: danielsh
+
+ * r1000038, r1000060
+   Fix for issue #3695(r1000060), in which the use of
+   "SVNPathAuthz short_circuit" causes Subversion to ignore authz access rule
+   sections which contain a repository prefix.
+   r1000038 - whiteline formatting only fix, without this merge of r1000060
+   would give a conflict.
+   Justification:
+     Rules are made to be broken.  Except when they're access rules.
+   Votes:
+     +1: cmpilato, kameshj
+
+ * r1000607, r1001009
+   Fix 'svnmucc propset'.
+   Justification:
+     Without this fix, 'svnmucc propset' used with existing URLs complains
+     that they exist already, and used in conjunction with a creating
+     command (such as 'put') complains that they don't exist.  It's
+     all rather restrictive.
+   Votes:
+     +1: cmpilato
+
+ * r1000612
+   Add new 'propsetf' subcommand to 'svnmucc'.
+   Justification:
+     This allows folks to more easily set binary and multi-line
+     property values.
+   Notes:
+     svnmucc isn't a core deliverable, so I'm not quite where it fits
+     into our version compatibility promise landscape.
+   Votes:
+     +1: cmpilato
+
+ * r1002094
+   Print a warning about copied directories during commits with limited depth.
+   Justification:
+     Users may not be aware that while limiting the scope of a commit via
+     depth works for most kinds of local changes, copies are always done
+     server-side with depth infinity. Without this warning, users may not
+     realise that the commit may not have the desired effect in the repository.
+     See issue #3699 for details.
+   Votes:
+     +1: stsp
 
 Veto-blocked changes:
 =====================
@@ -174,8 +241,11 @@ Veto-blocked changes:
    Votes:
      +1: arfrever
      -0: peters
-     -1: stsp, rhuijben ("/proc/%ld/stat" is ugly and Linux-specific -
-                         would just getenv("WINDOWID") work instead?)
+     -1: rhuijben ("/proc/%ld/stat" is ugly and Linux-specific -
+                   would just getenv("WINDOWID") work instead?)
+     -1: stsp (I've removed the Linux-specific code from trunk in r1002144
+               and r1002151, so trunk code only relies on getenv("WINDOWID").
+               I would +1 a backport that also merges these revisions).
 
  * r921453, r927184, r927243
    Fix reopened issue #3020 'Reflect dropped/renumbered revisions in
@@ -204,6 +274,24 @@ Veto-blocked changes:
      See discussion at http://svn.haxx.se/dev/archive-2010-04/0275.shtml
    Votes:
      -1: cmpilato (pending results of aforemented discussion)
+
+ * r950445, 950468
+   Fix for issue #2591 "'svnadmin hotcopy' does not replicate symlinks".
+   Justification:
+     This fix helps server administrators who has common files symlinked
+     across their repositories and take frequent backups of their repos
+     using svnadmin hotcopy.
+   Notes:
+     r950445 fixes the issue and r950468 is a test for this issue.
+     In r967173 on trunk, svn_io_dir_walk()'s original functionality
+     was restored, and svn_io_dir_walk2() introduced to also cover
+     symlinks.
+   Votes:
+     +1: stylesen,
+     -0: julianfoad (Tested and works fine, but changes semantics of
+           svn_io_dir_walk() which we should not do in a back-port.
+           Discussing on list.)
+     -1: cmpilato (Changes semantics of svn_io_dir_walk()).
 
 Approved changes:
 =================

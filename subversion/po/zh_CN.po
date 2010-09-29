@@ -37,15 +37,17 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
-"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2010-04-13 21:35+0800\n"
-"PO-Revision-Date: 2010-04-13 21:55+0800\n"
-"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
-"Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
+"Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
+"POT-Creation-Date: 2010-09-05 21:45+0800\n"
+"PO-Revision-Date: 2010-09-05 21:33+0800\n"
+"Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
+"Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Poedit-Language: Chinese\n"
 
 #. Constructing nice error messages for roots.
 #. Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
@@ -1210,8 +1212,8 @@ msgstr "不能从 “%s” 插入外部引用的文件到工作副本，它来�
 
 #, c-format
 msgid ""
-"The file external from '%s' cannot overwrite the existing versioned item at '%"
-"s'"
+"The file external from '%s' cannot overwrite the existing versioned item at "
+"'%s'"
 msgstr "来源于 “%s” 的外部引用的文件不能覆写位于 “%s” 的已存版本控制条目"
 
 #, c-format
@@ -1938,8 +1940,8 @@ msgstr "打开文件系统“%s”的BDB环境句柄时出错: \n"
 
 #, c-format
 msgid ""
-"The '%s' feature requires version %d of the filesystem schema; filesystem '%"
-"s' uses only version %d"
+"The '%s' feature requires version %d of the filesystem schema; filesystem "
+"'%s' uses only version %d"
 msgstr "“%s”特性需要文件系统方案版本 %d；文件系统“%s”版本仅为 %d"
 
 #, c-format
@@ -2001,8 +2003,8 @@ msgstr "在修订版“%s”中diff的版本不一致"
 
 #, c-format
 msgid ""
-"Corruption detected whilst reading delta chain from representation '%s' to '%"
-"s'"
+"Corruption detected whilst reading delta chain from representation '%s' to "
+"'%s'"
 msgstr "从修订版“%s”到“%s”读差异链时检测到数据损坏"
 
 #, c-format
@@ -2209,12 +2211,12 @@ msgid "Can't create FSFS write-lock mutex"
 msgstr "不能创建文件系统写互斥体"
 
 #, c-format
-msgid "Can't create FSFS txn list mutex"
-msgstr "不能创建文件系统事务列表互斥体"
-
-#, c-format
 msgid "Can't create FSFS txn-current mutex"
 msgstr "不能创建 FSFS txn-current 互斥体"
+
+#, c-format
+msgid "Can't create FSFS txn list mutex"
+msgstr "不能创建文件系统事务列表互斥体"
 
 #, c-format
 msgid "Can't store FSFS shared data"
@@ -2294,6 +2296,19 @@ msgstr "“%s”包含非法文件系统格式选项“%s”"
 #, c-format
 msgid "Expected FS format between '1' and '%d'; found format '%d'"
 msgstr "期望文件系统格式在“1”到“%d”之间；发现格式“%d”"
+
+#, c-format
+msgid "'%s' is a directory. Please move it out of the way and try again"
+msgstr "“%s”是目录。请将它移走，然后重试。"
+
+#, c-format
+msgid ""
+"Failed to create hotcopy at '%s'. The file '%s' is missing from the source "
+"repository. Please create this file, for instance by running 'svnadmin "
+"upgrade %s'"
+msgstr ""
+"在“%s”创建热备份失败。源版本库丢失了文件“%s”。请创建此文件，例如通过执"
+"行“svnadmin upgrade %s”来创建它。"
 
 msgid "Found malformed header in revision file"
 msgstr "在版本文件中找到非法文件头"
@@ -2472,8 +2487,8 @@ msgstr "在表 rep_cache 中，只有 SHA1 校验和才能用作键。\n"
 #, c-format
 msgid ""
 "Representation key for checksum '%%s' exists in filesystem '%%s' with a "
-"different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store (%%ld,%"
-"%%s,%%%s,%%%s)"
+"different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store (%%ld,"
+"%%%s,%%%s,%%%s)"
 msgstr ""
 "校验和 “%%s” 的展现键已经存在于文件系统 “%%s” 中，取值(%%ld,%%%s,%%%s,%%%s)与"
 "我们要存储的值(%%ld,%%%s,%%%s,%%%s)不同"
@@ -2938,6 +2953,10 @@ msgstr "方法 %s 失败于 “%s”"
 #, c-format
 msgid "'%s' path not found"
 msgstr "找不到路径 “%s”"
+
+#, c-format
+msgid "access to '%s' forbidden"
+msgstr "禁止访问“%s”"
 
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
@@ -3434,8 +3453,8 @@ msgstr "[没有可用的错误输出。]"
 
 #, c-format
 msgid ""
-"'%s' hook failed (did not exit cleanly: apr_exit_why_e was %d, exitcode was %"
-"d).  "
+"'%s' hook failed (did not exit cleanly: apr_exit_why_e was %d, exitcode was "
+"%d).  "
 msgstr "钩子“%s”失败(没有干净的退出: apr_exit_why_e 是 %d，exitcode 是 %d)。"
 
 msgid "Commit"
@@ -4285,10 +4304,6 @@ msgid "'%s' is just a peg revision. Maybe try '%s@' instead?"
 msgstr "“%s” 是 peg 版本。或许你应该使用 “%s@” ?"
 
 #, c-format
-msgid "URL '%s' is not properly URI-encoded"
-msgstr "URL“%s”不是正确的URI编码"
-
-#, c-format
 msgid "URL '%s' contains a '..' element"
 msgstr "URL“%s”包含“..”元素"
 
@@ -5133,8 +5148,8 @@ msgid "File '%s' has binary mime type property"
 msgstr "文件“%s”有二进制的 mime 类型属性"
 
 #, c-format
-msgid "Unrecognized line ending style for '%s'"
-msgstr "“%s” 含有无法识别的行结束样式"
+msgid "Unrecognized line ending style '%s' for '%s'"
+msgstr "无法识别的行结束样式“%s”，对于“%s”"
 
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
@@ -7423,6 +7438,9 @@ msgstr "--depth 不能与 --reintegrate 共存"
 
 msgid "--force cannot be used with --reintegrate"
 msgstr "--force 不能与 --reintegrate 共存"
+
+msgid "--reintegrate can only be used with a single merge source"
+msgstr "--reintegrate 只能用于单一合并源"
 
 msgid "Not enough arguments given"
 msgstr "没有提供足够的参数"

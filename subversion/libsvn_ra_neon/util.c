@@ -546,6 +546,10 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
           return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
                                   apr_psprintf(pool, _("'%s' path not found"),
                                                req->url));
+        case 403:
+          return svn_error_create(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
+                                  apr_psprintf(pool, _("access to '%s' forbidden"),
+                                               req->url));
 
         case 301:
         case 302:

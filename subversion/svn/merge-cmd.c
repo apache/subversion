@@ -265,6 +265,25 @@ svn_cl__merge(apr_getopt_t *os,
   else
     options = NULL;
 
+  /* More input validation. */
+  if (opt_state->reintegrate)
+    {
+      if (opt_state->depth != svn_depth_unknown)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--depth cannot be used with "
+                                  "--reintegrate"));
+
+      if (opt_state->force)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--force cannot be used with "
+                                  "--reintegrate"));
+
+      if (two_sources_specified)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--reintegrate can only be used with "
+                                  "a single merge source"));
+    }
+
   if (! two_sources_specified) /* TODO: Switch order of if */
     {
       /* If we don't have a source, use the target as the source. */
@@ -286,23 +305,11 @@ svn_cl__merge(apr_getopt_t *os,
         }
 
       if (opt_state->reintegrate)
-        {
-          if (opt_state->depth != svn_depth_unknown)
-            return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                    _("--depth cannot be used with "
-                                      "--reintegrate"));
-
-          if (opt_state->force)
-            return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                    _("--force cannot be used with "
-                                      "--reintegrate"));
-
-          err = svn_client_merge_reintegrate(sourcepath1,
-                                             &peg_revision1,
-                                             targetpath,
-                                             opt_state->dry_run,
-                                             options, ctx, pool);
-        }
+        err = svn_client_merge_reintegrate(sourcepath1,
+                                           &peg_revision1,
+                                           targetpath,
+                                           opt_state->dry_run,
+                                           options, ctx, pool);
       else
         err = svn_client_merge_peg3(sourcepath1,
                                     ranges_to_merge,

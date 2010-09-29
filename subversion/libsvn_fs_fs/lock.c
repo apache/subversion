@@ -320,7 +320,7 @@ set_lock(svn_fs_t *fs,
          apr_pool_t *pool)
 {
   svn_stringbuf_t *this_path = svn_stringbuf_create(lock->path, pool);
-  svn_stringbuf_t *last_child = svn_stringbuf_create("", pool);
+  const char *lock_digest_path = NULL;
   apr_pool_t *subpool;
 
   SVN_ERR_ASSERT(lock);
@@ -351,15 +351,16 @@ set_lock(svn_fs_t *fs,
         {
           this_lock = lock;
           lock = NULL;
-          svn_stringbuf_set(last_child, digest_file);
+          lock_digest_path = apr_pstrdup(pool, digest_file);
         }
       else
         {
           /* If we already have an entry for this path, we're done. */
-          if (apr_hash_get(this_children, last_child->data, last_child->len))
+          if (apr_hash_get(this_children, lock_digest_path,
+                           APR_HASH_KEY_STRING))
             break;
-          apr_hash_set(this_children, last_child->data,
-                       last_child->len, (void *)1);
+          apr_hash_set(this_children, lock_digest_path,
+                       APR_HASH_KEY_STRING, (void *)1);
         }
       SVN_ERR(write_digest_file(this_children, this_lock, fs,
                                 digest_path, subpool));
@@ -382,13 +383,13 @@ delete_lock(svn_fs_t *fs,
             apr_pool_t *pool)
 {
   svn_stringbuf_t *this_path = svn_stringbuf_create(lock->path, pool);
-  svn_stringbuf_t *child_to_kill = svn_stringbuf_create("", pool);
+  const char *child_to_kill = NULL;
   apr_pool_t *subpool;
 
   SVN_ERR_ASSERT(lock);
 
   /* Iterate in reverse, deleting the lock for LOCK->path, and then
-     pruning entries from its parents. */
+     deleting its entry as it appears in each of its parents. */
   subpool = svn_pool_create(pool);
   while (1729)
     {
@@ -406,32 +407,27 @@ delete_lock(svn_fs_t *fs,
       SVN_ERR(read_digest_file(&this_children, &this_lock, fs,
                                digest_path, subpool));
 
-      /* If we are supposed to drop the last entry from this path's
-         children list, do so. */
-      if (child_to_kill->len)
-        apr_hash_set(this_children, child_to_kill->data,
-                     child_to_kill->len, NULL);
-
       /* Delete the lock (first time through only). */
       if (lock)
         {
           this_lock = NULL;
           lock = NULL;
+          child_to_kill = apr_pstrdup(pool, digest_file);
         }
+
+      if (child_to_kill)
+        apr_hash_set(this_children, child_to_kill, APR_HASH_KEY_STRING, NULL);
 
       if (! (this_lock || apr_hash_count(this_children) != 0))
         {
           /* Special case:  no goodz, no file.  And remember to nix
              the entry for it in its parent. */
-          svn_stringbuf_set(child_to_kill,
-                            svn_path_basename(digest_path, subpool));
           SVN_ERR(svn_io_remove_file(digest_path, subpool));
         }
       else
         {
           SVN_ERR(write_digest_file(this_children, this_lock, fs,
                                     digest_path, subpool));
-          svn_stringbuf_setempty(child_to_kill);
         }
 
       /* Prep for next iteration, or bail if we're done. */
