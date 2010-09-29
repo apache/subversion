@@ -481,7 +481,7 @@ open_directory(const char *path,
   if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev))
     {
       copyfrom_path = svn_uri_join(pb->copyfrom_path,
-                                   svn_relpath_basename(path, pool),
+                                   svn_relpath_basename(path, NULL),
                                    pool);
       copyfrom_rev = pb->copyfrom_rev;
     }
@@ -595,7 +595,8 @@ open_file(const char *path,
   if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev))
     {
       copyfrom_path = svn_relpath_join(pb->copyfrom_path,
-                                       svn_relpath_basename(path, pool), pool);
+                                       svn_relpath_basename(path, NULL),
+                                       pool);
       copyfrom_rev = pb->copyfrom_rev;
     }
 
