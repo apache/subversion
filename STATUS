@@ -268,14 +268,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1000038, r1000060
-   Fix for issue #3695(r1000060), in which the use of
-   "SVNPathAuthz short_circuit" causes Subversion to ignore authz access rule
-   sections which contain a repository prefix.
-   r1000038 - whiteline formatting only fix, without this merge of r1000060
-   would give a conflict.
-   Justification:
-     Rules are made to be broken.  Except when they're access rules.
-   Votes:
-     +1: cmpilato, kameshj, gstein
