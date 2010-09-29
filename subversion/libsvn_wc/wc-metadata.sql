@@ -861,8 +861,7 @@ CREATE TABLE NODES (
 
   );
 
-CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath);
-CREATE INDEX I_NODES_PATH ON NODES (wc_id, local_relpath);
+CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
 
 
 
