@@ -367,10 +367,13 @@ open_root(void *edit_baton,
           void **root_baton)
 {
   struct dump_edit_baton *eb = edit_baton;
-  /* Allocate a special pool for the edit_baton to avoid pool
-     lifetime issues */
 
-  eb->pool = svn_pool_create(pool);
+  /* Special toplevel per-revision pool */
+  if (eb->pool)
+    svn_pool_clear(eb->pool);
+  else
+    eb->pool = svn_pool_create(NULL);
+
   eb->props = apr_hash_make(eb->pool);
   eb->deleted_props = apr_hash_make(eb->pool);
   eb->propstring = svn_stringbuf_create("", eb->pool);
@@ -833,10 +836,6 @@ close_file(void *file_baton,
 static svn_error_t *
 close_edit(void *edit_baton, apr_pool_t *pool)
 {
-  struct dump_edit_baton *eb = edit_baton;
-  LDR_DBG(("close_edit\n"));
-  svn_pool_destroy(eb->pool);
-
   return SVN_NO_ERROR;
 }
 
