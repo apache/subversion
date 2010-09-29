@@ -105,7 +105,7 @@ Candidate changes:
      folks from clicking that sucker in the browser only to get an authz
      failure.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
  * r997026, r997070, r997474
    For issue #3709 ("Inconsistency between "svn list" and "svn
