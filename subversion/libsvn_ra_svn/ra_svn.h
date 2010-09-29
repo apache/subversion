@@ -117,6 +117,11 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const char *user, const char *password,
                                      const char **message);
 
+/* Return a pointer to the error chain child of ERR which contains the
+ * first "real" error message, not merely one of the
+ * SVN_ERR_RA_SVN_CMD_ERR wrapper errors. */
+svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err);
+
 /* Return an error chain based on @a params (which contains a
  * command response indicating failure).  The error chain will be
  * in the same order as the errors indicated in @a params.  Use
