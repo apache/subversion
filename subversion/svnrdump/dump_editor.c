@@ -623,7 +623,7 @@ change_dir_prop(void *parent_baton,
     apr_hash_set(db->eb->props, apr_pstrdup(db->eb->pool, name),
                  APR_HASH_KEY_STRING, svn_string_dup(value, db->eb->pool));
   else
-    apr_hash_set(db->eb->deleted_props, apr_pstrdup(pool, name),
+    apr_hash_set(db->eb->deleted_props, apr_pstrdup(db->eb->pool, name),
                  APR_HASH_KEY_STRING, "");
 
   if (! db->written_out)
@@ -723,7 +723,7 @@ apply_textdelta(void *file_baton, const char *base_checksum,
   svn_txdelta_to_svndiff2(&(hb->apply_handler), &(hb->apply_baton),
                           hb->delta_filestream, 0, hb->pool);
   eb->dump_text = TRUE;
-  eb->base_checksum = apr_pstrdup(pool, base_checksum);
+  eb->base_checksum = apr_pstrdup(eb->pool, base_checksum);
 
   /* The actual writing takes place when this function has
      finished. Set handler and handler_baton now so for
