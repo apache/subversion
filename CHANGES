@@ -15,7 +15,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.13
    * properly canonicalize a URL (r984928, -31)
    * fix wc corruption with 'commit --depth=empty' (issue #3700)
    * permissions fixes when doing reintegrate merges (related to issue #3242)
-   * fix 2-url reverse-merge mergeinfo (issue #3648)
+   * fix mergeinfo miscalculation during 2-url merges (issue #3648)
+   * fix error transmission problems in svnserve (r997457, -66)
+   * fixed: record-only merges create self-referential mergeinfo (issue #3646)
+   * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
 
   Developer-visible changes:
    * make ruby bindings compatible with Ruby 1.9 (r957507)
