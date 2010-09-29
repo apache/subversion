@@ -606,6 +606,10 @@ with_some_lock(svn_fs_t *fs,
         SVN_ERR(update_min_unpacked_rev(fs, pool));
       if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
         SVN_ERR(update_min_unpacked_revprop(fs, pool));
+#if 0 /* Might be a good idea? */
+      SVN_ERR(get_youngest(&ffd->youngest_rev_cache, fs->path,
+                           pool));
+#endif
       err = body(baton, subpool);
     }
 
