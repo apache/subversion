@@ -247,14 +247,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1000612
-   Add new 'propsetf' subcommand to 'svnmucc'.
-   Justification:
-     This allows folks to more easily set binary and multi-line
-     property values.
-   Notes:
-     svnmucc isn't a core deliverable, so I'm not quite where it fits
-     into our version compatibility promise landscape.
-   Votes:
-     +1: cmpilato, gstein, philip
