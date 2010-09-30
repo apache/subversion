@@ -160,6 +160,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r964349
+   Create fails.log files for test runs.
+   Justification:
+     Developer convenience.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
