@@ -956,9 +956,11 @@ svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compi
 	cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
 	       $(PARALLEL)
+	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_neon-fsfs
 	cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
 	       $(PARALLEL)
+	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_neon-bdb
 	$(HTTPD_STOP_CMD)
 
 svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
@@ -966,21 +968,27 @@ svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compi
 	cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
 	       $(PARALLEL)
+	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_serf-fsfs
 	cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
 	       $(PARALLEL)
+	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_serf-bdb
 	$(HTTPD_STOP_CMD)
 
 svn-check-local:
 	cd $(svn_builddir) && make check FS_TYPE=fsfs $(PARALLEL)
+	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_local-fsfs
 	cd $(svn_builddir) && make check FS_TYPE=bdb $(PARALLEL)
+	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_local-bdb
 
 svn-check-svn:
 	$(SVNSERVE_START_CMD)
 	cd $(svn_builddir) && make check FS_TYPE=fsfs BASE_URL=svn://127.0.0.1 \
 		 $(PARALLEL)
+	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_svn-fsfs
 	cd $(svn_builddir) && make check FS_TYPE=bdb BASE_URL=svn://127.0.0.1 \
 		 $(PARALLEL)
+	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_svn-bdb
 	$(SVNSERVE_STOP_CMD)
 
 .PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb svn-check-javahl
