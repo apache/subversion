@@ -1032,7 +1032,7 @@ endif
 	@echo ""
 	@echo "Test results: All passed."
 	@echo ""
-	@echo "Platform: `uname -r -s`"
+	@echo "Platform: `uname -r -s -m`"
 	@echo ""
 	@echo "Dependencies:"
 	@echo "bdb:        $(BDB_VER)"
