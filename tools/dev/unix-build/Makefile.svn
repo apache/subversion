@@ -913,6 +913,8 @@ httpd-conf:
 	echo "    SVNParentPath /tmp" >> $(HTTPD_CHECK_CONF)
 	echo "    Allow from all" >> $(HTTPD_CHECK_CONF)
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
+	echo 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1' >> $(HTTPD_CHECK_CONF)
+	echo 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1' >> $(HTTPD_CHECK_CONF)
 
 # We need this to make sure some targets below pick up the right libraries
 LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/svn-$(WC)/lib
