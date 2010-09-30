@@ -948,30 +948,39 @@ start-svnserve: $(SVN_OBJDIR)/.compiled
 stop-svnserve:
 	$(SVNSERVE_STOP_CMD)
 
+# run tests in parallel
+PARALLEL=PARALLEL=1 CLEANUP=1
+
 svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
 	$(HTTPD_START_CMD)
 	cd $(svn_builddir) && make check FS_TYPE=fsfs \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon
+	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
+	       $(PARALLEL)
 	cd $(svn_builddir) && make check FS_TYPE=bdb \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon
+	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
+	       $(PARALLEL)
 	$(HTTPD_STOP_CMD)
 
 svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
 	$(HTTPD_START_CMD)
 	cd $(svn_builddir) && make check FS_TYPE=fsfs \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf
+	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
+	       $(PARALLEL)
 	cd $(svn_builddir) && make check FS_TYPE=bdb \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf
+	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
+	       $(PARALLEL)
 	$(HTTPD_STOP_CMD)
 
 svn-check-local:
-	cd $(svn_builddir) && make check FS_TYPE=fsfs
-	cd $(svn_builddir) && make check FS_TYPE=bdb
+	cd $(svn_builddir) && make check FS_TYPE=fsfs $(PARALLEL)
+	cd $(svn_builddir) && make check FS_TYPE=bdb $(PARALLEL)
 
 svn-check-svn:
 	$(SVNSERVE_START_CMD)
-	cd $(svn_builddir) && make check FS_TYPE=fsfs BASE_URL=svn://127.0.0.1
-	cd $(svn_builddir) && make check FS_TYPE=bdb BASE_URL=svn://127.0.0.1
+	cd $(svn_builddir) && make check FS_TYPE=fsfs BASE_URL=svn://127.0.0.1 \
+		 $(PARALLEL)
+	cd $(svn_builddir) && make check FS_TYPE=bdb BASE_URL=svn://127.0.0.1 \
+		 $(PARALLEL)
 	$(SVNSERVE_STOP_CMD)
 
 .PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb svn-check-javahl
