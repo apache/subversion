@@ -150,6 +150,16 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r991534
+   Fix random test failures when tests are run in parallel over DAV.
+   Justification:
+     Random test failures irritate developers trying to do release
+     testing. See also the r877814 backport.
+   Backport branch:
+     ^/subversion/branches/1.6.x-r991534
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
