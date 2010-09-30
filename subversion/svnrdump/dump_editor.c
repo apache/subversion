@@ -147,7 +147,7 @@ make_dir_baton(const char *path,
   new_db->copyfrom_rev = copyfrom_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
-  new_db->deleted_entries = apr_hash_make(eb->pool);
+  new_db->deleted_entries = apr_hash_make(pool);
 
   return new_db;
 }
@@ -375,7 +375,7 @@ open_root(void *edit_baton,
   eb->propstring = svn_stringbuf_create("", eb->pool);
 
   *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
-                               edit_baton, NULL, FALSE, pool);
+                               edit_baton, NULL, FALSE, eb->pool);
   LDR_DBG(("open_root %p\n", *root_baton));
 
   return SVN_NO_ERROR;
@@ -415,11 +415,13 @@ add_directory(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   void *val;
-  struct dir_baton *new_db
-    = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb, pb, TRUE, pool);
+  struct dir_baton *new_db;
   svn_boolean_t is_copy;
 
   LDR_DBG(("add_directory %s\n", path));
+
+  new_db = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb,
+                          pb, TRUE, pb->eb->pool);
 
   /* Some pending properties to dump? */
   SVN_ERR(dump_props(pb->eb, &(pb->eb->dump_props), TRUE, pool));
@@ -483,7 +485,7 @@ open_directory(const char *path,
     }
 
   new_db = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb, pb,
-                          FALSE, pool);
+                          FALSE, pb->eb->pool);
   *child_baton = new_db;
   return SVN_NO_ERROR;
 }
