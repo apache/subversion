@@ -140,6 +140,12 @@ print_properties(svn_stream_t *out,
                                 ? _("Properties on '%s':\n")
                                 : "%s - ", filename);
           SVN_ERR(svn_cmdline_cstring_from_utf8(&header, header, iterpool));
+          SVN_ERR(svn_subst_translate_cstring2(header, &header,
+                                               APR_EOL_STR,  /* 'native' eol */
+                                               FALSE, /* no repair */
+                                               NULL,  /* no keywords */
+                                               FALSE, /* no expansion */
+                                               iterpool));
           SVN_ERR(stream_write(out, header, strlen(header)));
         }
 
@@ -149,7 +155,7 @@ print_properties(svn_stream_t *out,
           apr_hash_t *hash = apr_hash_make(iterpool);
 
           apr_hash_set(hash, pname_utf8, APR_HASH_KEY_STRING, propval);
-          svn_cl__print_prop_hash(hash, FALSE, iterpool);
+          svn_cl__print_prop_hash(out, hash, FALSE, iterpool);
         }
       else
         {

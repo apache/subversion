@@ -2208,11 +2208,6 @@ def propget_redirection(sbox):
 
   # Check if the redirected output of svn pg -vR on the root of the WC
   # is what we expect.
-  #
-  # Currently this fails because the mergeinfo for the three paths is
-  # interleaved and the lines endings are (at least on Windows) a mix
-  # of <CR><LF> and <LF>. See
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=3721#desc1
   expected_output = [
     "Properties on '" + B_path +  "':\n", # Should ocur only once!
     "Properties on '" + C_path +  "':\n", # Should ocur only once! 
@@ -2383,7 +2378,7 @@ test_list = [ None,
               prop_reject_grind,
               obstructed_subdirs,
               atomic_over_ra,
-              XFail(propget_redirection, svntest.main.is_os_windows),
+              propget_redirection,
              ]
 
 if __name__ == '__main__':
