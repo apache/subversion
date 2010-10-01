@@ -2027,28 +2027,27 @@ try_copy(const apr_array_header_t *sources,
 
   if (is_move)
     {
-      if (srcs_are_urls == dst_is_url)
+      /* Disallow moves between the working copy and the repository. */
+      if (srcs_are_urls != dst_is_url)
         {
-          for (i = 0; i < copy_pairs->nelts; i++)
-            {
-              svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                svn_client__copy_pair_t *);
-
-              if (strcmp(pair->src_abspath_or_url,
-                         pair->dst_abspath_or_url) == 0)
-                return svn_error_createf
-                  (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                   _("Cannot move path '%s' into itself"),
-                   svn_dirent_local_style(pair->src_abspath_or_url, pool));
-            }
-        }
-      else
-        {
-          /* Disallow moves between the working copy and the repository. */
           return svn_error_create
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("Moves between the working copy and the repository are not "
                "supported"));
+        }
+
+      /* Disallow moving any path onto or into itself. */
+      for (i = 0; i < copy_pairs->nelts; i++)
+        {
+          svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
+                                            svn_client__copy_pair_t *);
+
+          if (strcmp(pair->src_abspath_or_url,
+                     pair->dst_abspath_or_url) == 0)
+            return svn_error_createf
+              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+               _("Cannot move path '%s' into itself"),
+               svn_dirent_local_style(pair->src_abspath_or_url, pool));
         }
     }
   else
