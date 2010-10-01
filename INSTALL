@@ -1421,7 +1421,7 @@ III.  BUILDING A SUBVERSION SERVER
       To run the regression test suite for networked Subversion, see
       the instructions in subversion/tests/cmdline/README.
       For advice about tracing problems, see "Debugging the server" in
-      www/hacking.html.
+      http://subversion.apache.org/docs/community-guide/.
 
 
   E.  Alternative:  'svnserve' and ra_svn
