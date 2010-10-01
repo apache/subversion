@@ -114,6 +114,10 @@ find_char_backward(const char *str, apr_size_t len, char ch)
 
 /* svn_string functions */
 
+/* Return a new svn_string_t object, allocated in POOL, initialized with
+ * DATA and SIZE.  Do not copy the contents of DATA, just store the pointer.
+ * SIZE is the length in bytes of DATA, excluding the required NUL
+ * terminator. */
 static svn_string_t *
 create_string(const char *data, apr_size_t size,
               apr_pool_t *pool)
