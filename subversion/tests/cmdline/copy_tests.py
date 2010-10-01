@@ -4671,7 +4671,6 @@ def move_added_nodes(sbox):
   expected_status.add({'X/Z' : Item(status='A ', wc_rev='0')})
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
-# This test currently fails, but should work ok once we move to single DB
 def copy_over_deleted_dir(sbox):
   "copy a directory over a deleted directory"
   sbox.build(read_only = True)
