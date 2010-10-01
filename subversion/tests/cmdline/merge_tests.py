@@ -13951,7 +13951,7 @@ def merge_range_prior_to_rename_source_existence(sbox):
     })
   expected_status = wc.State(A_COPY_path, {
     ''             : Item(status=' M', wc_rev=10),
-    'B'            : Item(status=' M', wc_rev=10),
+    'B'            : Item(status='  ', wc_rev=10),
     'mu'           : Item(status='  ', wc_rev=10),
     'B/E'          : Item(status='  ', wc_rev=10),
     'B/E/alpha'    : Item(status='  ', wc_rev=10),
