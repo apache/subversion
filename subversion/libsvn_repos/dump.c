@@ -432,7 +432,7 @@ dump_node(struct edit_baton *eb,
       /* If this is a partial dump, then issue a warning if we dump mergeinfo
          properties that refer to revisions older than the first revision
          dumped. */
-      if (eb->notify_func && eb->oldest_dumped_rev > 1)
+      if (!eb->verify && eb->notify_func && eb->oldest_dumped_rev > 1)
         {
           svn_string_t *mergeinfo_str = apr_hash_get(prophash,
                                                      SVN_PROP_MERGEINFO,
