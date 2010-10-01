@@ -887,10 +887,11 @@ svn_file_handle_cache__create_cache(svn_file_handle_cache_t **cache,
   init_list(&new_cache->unused_entries);
 
   new_cache->first_by_name = apr_hash_make(new_cache->pool);
+
+#if APR_HAS_THREADS
   new_cache->mutex = NULL;
 
   /* synchronization support may or may not be needed or available */
-#if APR_HAS_THREADS
   if (thread_safe)
     {
       apr_status_t status = apr_thread_mutex_create(&(new_cache->mutex),
