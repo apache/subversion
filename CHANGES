@@ -19,6 +19,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.13
    * fix error transmission problems in svnserve (r997457, -66)
    * fixed: record-only merges create self-referential mergeinfo (issue #3646)
    * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
+            See CVE-2010-3315, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2010-3315-advisory.txt
    * make 'svnmucc propset' handle existing and non-existing URLs (r1000607)
    * add new 'propsetf' subcommand to svnmucc (r1000612)
    * warn about copied dirs during 'svn ci' with limited depth (r1002094)
