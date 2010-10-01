@@ -3266,22 +3266,22 @@ svn_wc__db_repos_ensure(apr_int64_t *repos_id,
                                           scratch_pool));
 }
 
-/* Temporary helper for svn_wc__db_op_copy to handle copying from one
-   db to another, it becomes redundant when we centralise. */
+/* Helper for svn_wc__db_op_copy to handle copying from one db to
+   another */
 static svn_error_t *
-temp_cross_db_copy(svn_wc__db_t *db,
-                   const char *src_abspath,
-                   svn_wc__db_pdh_t *src_pdh,
-                   const char *src_relpath,
-                   svn_wc__db_pdh_t *dst_pdh,
-                   const char *dst_relpath,
-                   svn_wc__db_status_t dst_status,
-                   svn_wc__db_kind_t kind,
-                   const apr_array_header_t *children,
-                   apr_int64_t copyfrom_id,
-                   const char *copyfrom_relpath,
-                   svn_revnum_t copyfrom_rev,
-                   apr_pool_t *scratch_pool)
+cross_db_copy(svn_wc__db_t *db,
+              const char *src_abspath,
+              svn_wc__db_pdh_t *src_pdh,
+              const char *src_relpath,
+              svn_wc__db_pdh_t *dst_pdh,
+              const char *dst_relpath,
+              svn_wc__db_status_t dst_status,
+              svn_wc__db_kind_t kind,
+              const apr_array_header_t *children,
+              apr_int64_t copyfrom_id,
+              const char *copyfrom_relpath,
+              svn_revnum_t copyfrom_rev,
+              apr_pool_t *scratch_pool)
 {
   insert_working_baton_t iwb;
   svn_revnum_t changed_rev;
@@ -3626,7 +3626,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
 
   op_depth = 2; /* ### temporary op_depth */
 
-  if (!strcmp(src_pdh->local_abspath, dst_pdh->local_abspath))
+  if (src_pdh->wcroot == dst_pdh->wcroot)
     {
       svn_sqlite__stmt_t *stmt;
       const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
@@ -3698,11 +3698,11 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
     }
   else
     {
-      SVN_ERR(temp_cross_db_copy(db, src_abspath, src_pdh, src_relpath,
-                                 dst_pdh, dst_relpath, dst_status,
-                                 kind, children,
-                                 copyfrom_id, copyfrom_relpath, copyfrom_rev,
-                                 scratch_pool));
+      SVN_ERR(cross_db_copy(db, src_abspath, src_pdh, src_relpath,
+                            dst_pdh, dst_relpath, dst_status,
+                            kind, children,
+                            copyfrom_id, copyfrom_relpath, copyfrom_rev,
+                            scratch_pool));
     }
 
   /* ### Should do this earlier and insert the node with the right values. */
