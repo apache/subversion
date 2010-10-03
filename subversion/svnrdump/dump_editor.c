@@ -857,9 +857,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
   /* Open a unique temporary file for all textdelta applications in
      this edit session. The file is automatically closed and cleaned
      up when the edit session is done. */
-  SVN_ERR(svn_io_open_uniquely_named(&(eb->delta_file), &(eb->delta_abspath),
-                                     NULL, "svnrdump", NULL,
-                                     svn_io_file_del_on_close, pool, pool));
+  SVN_ERR(svn_io_open_unique_file3(&(eb->delta_file), &(eb->delta_abspath),
+                                   NULL, svn_io_file_del_on_close, pool, pool));
 
   de = svn_delta_default_editor(pool);
   de->open_root = open_root;
