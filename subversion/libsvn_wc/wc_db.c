@@ -291,7 +291,7 @@ static const char *construct_like_arg(const char *local_relpath,
 
   return apr_pstrcat(result_pool,
                      escape_sqlite_like(local_relpath, result_pool),
-                     "/%", NULL);
+                     "/%", (char *)NULL);
 }
 
 
@@ -8197,7 +8197,7 @@ wclock_obtain_cb(void *baton,
     filter = apr_pstrcat(scratch_pool,
                          escape_sqlite_like(bt->local_relpath, scratch_pool),
                          "/%",
-                         NULL);
+                         (char *)NULL);
 
   /* Check if there are nodes locked below the new lock root */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));

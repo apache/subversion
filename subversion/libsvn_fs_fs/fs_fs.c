@@ -332,7 +332,8 @@ path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   SVN_ERR_ASSERT_NO_RETURN(txn_id != NULL);
   return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
-                              apr_pstrcat(pool, txn_id, PATH_EXT_TXN, NULL),
+                              apr_pstrcat(pool, txn_id, PATH_EXT_TXN,
+                                          (char *)NULL),
                               NULL);
 }
 
@@ -373,7 +374,8 @@ path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                apr_pstrcat(pool, txn_id, PATH_EXT_REV, NULL),
+                                apr_pstrcat(pool, txn_id, PATH_EXT_REV,
+                                            (char *)NULL),
                                 NULL);
   else
     return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_REV, pool);
@@ -386,7 +388,7 @@ path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
                                 apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK,
-                                            NULL),
+                                            (char *)NULL),
                                 NULL);
   else
     return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK,
@@ -409,14 +411,14 @@ static APR_INLINE const char *
 path_txn_node_props(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool), PATH_EXT_PROPS,
-                     NULL);
+                     (char *)NULL);
 }
 
 static APR_INLINE const char *
 path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool),
-                     PATH_EXT_CHILDREN, NULL);
+                     PATH_EXT_CHILDREN, (char *)NULL);
 }
 
 static APR_INLINE const char *
@@ -4565,7 +4567,8 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
   txn_dir = svn_dirent_join_many(pool,
                                  fs->path,
                                  PATH_TXNS_DIR,
-                                 apr_pstrcat(pool, *id_p, PATH_EXT_TXN, NULL),
+                                 apr_pstrcat(pool, *id_p, PATH_EXT_TXN,
+                                             (char *)NULL),
                                  NULL);
 
   return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool);
@@ -4933,7 +4936,7 @@ get_new_txn_node_id(const char **node_id_p,
 
   SVN_ERR(write_next_ids(fs, txn_id, node_id, cur_copy_id, pool));
 
-  *node_id_p = apr_pstrcat(pool, "_", cur_node_id, NULL);
+  *node_id_p = apr_pstrcat(pool, "_", cur_node_id, (char *)NULL);
 
   return SVN_NO_ERROR;
 }
@@ -6421,7 +6424,7 @@ svn_fs_fs__reserve_copy_id(const char **copy_id_p,
 
   SVN_ERR(write_next_ids(fs, txn_id, cur_node_id, copy_id, pool));
 
-  *copy_id_p = apr_pstrcat(pool, "_", cur_copy_id, NULL);
+  *copy_id_p = apr_pstrcat(pool, "_", cur_copy_id, (char *)NULL);
 
   return SVN_NO_ERROR;
 }
@@ -6980,7 +6983,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
     uuid = svn_uuid_generate(pool);
 
   /* Make sure we have a copy in FS->POOL, and append a newline. */
-  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", NULL);
+  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", (char *)NULL);
   my_uuid_len = strlen(my_uuid);
 
   SVN_ERR(svn_io_write_unique(&tmp_path,

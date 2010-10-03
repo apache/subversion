@@ -336,7 +336,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
 
   lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
   lock_ctx->pool = pool;
-  lock_ctx->path = apr_pstrcat(pool, "/", rel_path, NULL);
+  lock_ctx->path = apr_pstrcat(pool, "/", rel_path, (char *)NULL);
   lock_ctx->requested_depth = depth;
   lock_ctx->hash = apr_hash_make(pool);
   lock_ctx->done = FALSE;

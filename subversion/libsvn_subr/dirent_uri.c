@@ -2423,7 +2423,7 @@ svn_uri_get_file_url_from_dirent(const char **url,
   dirent = svn_path_uri_encode(dirent, pool);
 
 #ifndef SVN_USE_DOS_PATHS
-  *url = apr_pstrcat(pool, "file://", dirent, NULL);
+  *url = apr_pstrcat(pool, "file://", dirent, (char *)NULL);
 #else
   if (dirent[0] == '/')
     {

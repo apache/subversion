@@ -991,21 +991,21 @@ migrate_node_props(const char *dir_abspath,
                                      apr_pstrcat(scratch_pool,
                                                  name,
                                                  SVN_WC__BASE_EXT,
-                                                 NULL),
+                                                 (char *)NULL),
                                      scratch_pool);
 
       revert_abspath = svn_dirent_join(basedir_abspath,
                                        apr_pstrcat(scratch_pool,
                                                    name,
                                                    SVN_WC__REVERT_EXT,
-                                                   NULL),
+                                                   (char *)NULL),
                                        scratch_pool);
 
       working_abspath = svn_dirent_join(propsdir_abspath,
                                         apr_pstrcat(scratch_pool,
                                                     name,
                                                     SVN_WC__WORK_EXT,
-                                                    NULL),
+                                                    (char *)NULL),
                                         scratch_pool);
     }
 

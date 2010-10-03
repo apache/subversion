@@ -672,7 +672,7 @@ svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
         continue;
 
       /* Prepend a leading slash to our path. */
-      source_path = apr_pstrcat(pool, "/", segment->path, NULL);
+      source_path = apr_pstrcat(pool, "/", segment->path, (char *)NULL);
 
       /* See if we already stored ranges for this path.  If not, make
          a new list.  */

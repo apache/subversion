@@ -333,7 +333,7 @@ authz_get_path_access(svn_config_t *cfg, const char *repos_name,
   baton.user = user;
 
   /* Try to locate a repository-specific block first. */
-  qualified_path = apr_pstrcat(pool, repos_name, ":", path, NULL);
+  qualified_path = apr_pstrcat(pool, repos_name, ":", path, (char *)NULL);
   svn_config_enumerate2(cfg, qualified_path,
                         authz_parse_line, &baton, pool);
 
@@ -376,7 +376,7 @@ authz_get_tree_access(svn_config_t *cfg, const char *repos_name,
   baton.required_access = required_access;
   baton.repos_path = path;
   baton.qualified_repos_path = apr_pstrcat(pool, repos_name,
-                                           ":", path, NULL);
+                                           ":", path, (char *)NULL);
   /* Default to access granted if no rules say otherwise. */
   baton.access = TRUE;
 
@@ -433,7 +433,7 @@ authz_get_global_access(svn_config_t *cfg, const char *repos_name,
   baton.user = user;
   baton.required_access = required_access;
   baton.access = FALSE; /* Deny access by default. */
-  baton.repos_path = apr_pstrcat(pool, repos_name, ":/", NULL);
+  baton.repos_path = apr_pstrcat(pool, repos_name, ":/", (char *)NULL);
 
   svn_config_enumerate_sections2(cfg, authz_global_parse_section,
                                  &baton, pool);
