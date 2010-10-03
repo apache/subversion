@@ -1238,24 +1238,6 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Attempt to write LEN bytes of DATA to STREAM, the underlying file
- * of which is at ABSPATH. Fail if not all bytes could be written to
- * the stream. Do temporary allocations in POOL. */
-static svn_error_t *
-try_stream_write(svn_stream_t *stream, const char *abspath,
-                 const char *data, apr_size_t len, apr_pool_t *pool)
-{
-  apr_size_t written;
-
-  written = len;
-  SVN_ERR(svn_stream_write(stream, data, &written));
-  if (written != len)
-    return svn_error_createf(SVN_ERR_IO_WRITE_ERROR, NULL,
-                             _("Error writing to '%s'"),
-                             svn_dirent_local_style(abspath, pool));
-  return SVN_NO_ERROR;
-}
-
 /* Copy lines to the patched stream until the specified LINE has been
  * reached. Indicate in *EOF whether end-of-file was encountered while
  * reading from the target.
@@ -1272,6 +1254,7 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
          && ! content_info->eof)
     {
       const char *target_line;
+      apr_size_t len;
 
       svn_pool_clear(iterpool);
 
@@ -1279,9 +1262,8 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
       if (! content_info->eof)
         target_line = apr_pstrcat(iterpool, target_line, content_info->eol_str,
                                   NULL);
-
-      SVN_ERR(try_stream_write(content_info->patched, patched_path,
-                               target_line, strlen(target_line), iterpool));
+      len = strlen(target_line);
+      SVN_ERR(svn_stream_write(content_info->patched, target_line, &len));
     }
   svn_pool_destroy(iterpool);
 
@@ -1343,12 +1325,17 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
       if (! eof)
         {
           if (hunk_line->len >= 1)
-            SVN_ERR(try_stream_write(content_info->reject, target->reject_path,
-                                     hunk_line->data, hunk_line->len,
-                                     iterpool));
+            {
+              len = hunk_line->len;
+              SVN_ERR(svn_stream_write(content_info->reject, hunk_line->data,
+                                       &len));
+            }
+
           if (eol_str)
-            SVN_ERR(try_stream_write(content_info->reject, target->reject_path,
-                                     eol_str, strlen(eol_str), iterpool));
+            {
+              len = strlen(eol_str);
+              SVN_ERR(svn_stream_write(content_info->reject, eol_str, &len));
+            }
         }
     }
   while (! eof);
@@ -1421,11 +1408,15 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
       if (! eof && lines_read > hi->fuzz &&
           lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - hi->fuzz)
         {
+          apr_size_t len;
+
           if (hunk_line->len >= 1)
-            SVN_ERR(try_stream_write(content_info->patched, 
-                                     target->patched_path,
-                                     hunk_line->data, hunk_line->len,
-                                     iterpool));
+            {
+              len = hunk_line->len;
+              SVN_ERR(svn_stream_write(content_info->patched, hunk_line->data,
+                                       &len));
+            }
+
           if (eol_str)
             {
               /* Use the EOL as it was read from the patch file,
@@ -1433,9 +1424,8 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
               if (content_info->eol_style != svn_subst_eol_style_none)
                 eol_str = content_info->eol_str;
 
-              SVN_ERR(try_stream_write(content_info->patched,
-                                       target->patched_path, eol_str,
-                                       strlen(eol_str), iterpool));
+              len = strlen(eol_str);
+              SVN_ERR(svn_stream_write(content_info->patched, eol_str, &len));
             }
         }
     }
