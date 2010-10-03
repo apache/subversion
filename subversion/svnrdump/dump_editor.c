@@ -45,7 +45,7 @@ struct dump_edit_baton {
   /* The output stream we write the dumpfile to */
   svn_stream_t *stream;
 
-  /* Pool for per-edit-session allocations */
+  /* Pool for per-revision allocations */
   apr_pool_t *pool;
 
   /* Properties which were modified during change_file_prop
@@ -59,9 +59,12 @@ struct dump_edit_baton {
   /* Temporary buffer to write property hashes to in human-readable
    * form. ### Is this really needed? */
   svn_stringbuf_t *propstring;
-   
-  /* Temporary file to write delta to along with its checksum. */
+
+  /* Temporary file used for textdelta application along with its
+     absolute path; these two variables should be allocated in the
+     per-edit-session pool */
   const char *delta_abspath;
+  apr_file_t *delta_file;
 
   /* The checksum of the file the delta is being applied to */
   const char *base_checksum;
@@ -711,15 +714,15 @@ apply_textdelta(void *file_baton, const char *base_checksum,
   LDR_DBG(("apply_textdelta %p\n", file_baton));
 
   /* Use a temporary file to measure the text-content-length */
-  SVN_ERR(svn_stream_open_unique(&delta_filestream, &(eb->delta_abspath),
-                                 NULL, svn_io_file_del_none, eb->pool,
-                                 pool));
+  delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
 
-  /* Prepare to write the delta to the temporary file. */
+  /* Prepare to write the delta to the delta_filestream */
   svn_txdelta_to_svndiff2(&(hb->apply_handler), &(hb->apply_baton),
                           delta_filestream, 0, pool);
+
   eb->dump_text = TRUE;
   eb->base_checksum = apr_pstrdup(eb->pool, base_checksum);
+  svn_stream_close(delta_filestream);
 
   /* The actual writing takes place when this function has
      finished. Set handler and handler_baton now so for
@@ -736,9 +739,10 @@ close_file(void *file_baton,
            apr_pool_t *pool)
 {
   struct dump_edit_baton *eb = file_baton;
-  apr_file_t *delta_file;
   svn_stream_t *delta_filestream;
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
+  apr_off_t offset;
+  apr_status_t err;
 
   LDR_DBG(("close_file %p\n", file_baton));
 
@@ -754,7 +758,9 @@ close_file(void *file_baton,
                                 SVN_REPOS_DUMPFILE_TEXT_DELTA
                                 ": true\n"));
 
-      SVN_ERR(svn_io_stat(info, eb->delta_abspath, APR_FINFO_SIZE, pool));
+      err = apr_file_info_get(info, APR_FINFO_SIZE, eb->delta_file);
+      if (err)
+        SVN_ERR(svn_error_wrap_apr(err, NULL));
 
       if (eb->base_checksum)
         /* Text-delta-base-md5: */
@@ -804,18 +810,19 @@ close_file(void *file_baton,
   /* Dump the text */
   if (eb->dump_text)
     {
-      /* Open the temporary file, map it to a stream, copy
-         the stream to eb->stream, close and delete the
-         file */
-      SVN_ERR(svn_io_file_open(&delta_file, eb->delta_abspath, APR_READ,
-                               APR_OS_DEFAULT, pool));
-      delta_filestream = svn_stream_from_aprfile2(delta_file, TRUE, pool);
+      /* Seek to the beginning of the delta file, map it to a stream,
+         and copy the stream to eb->stream. Then close the stream and
+         truncate the file so we can reuse it for the next textdelta
+         application. Note that the file isn't created, opened or
+         closed here */
+      offset = 0;
+      SVN_ERR(svn_io_file_seek(eb->delta_file, APR_SET, &offset, pool));
+      delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
       SVN_ERR(svn_stream_copy3(delta_filestream, eb->stream, NULL, NULL, pool));
 
       /* Cleanup */
-      SVN_ERR(svn_io_file_close(delta_file, pool));
       SVN_ERR(svn_stream_close(delta_filestream));
-      SVN_ERR(svn_io_remove_file2(eb->delta_abspath, TRUE, pool));
+      SVN_ERR(svn_io_file_trunc(eb->delta_file, 0, pool));
       eb->dump_text = FALSE;
     }
 
@@ -846,7 +853,14 @@ get_dump_editor(const svn_delta_editor_t **editor,
 
   /* Create a special per-revision pool */
   eb->pool = svn_pool_create(pool);
-  
+
+  /* Open a unique temporary file for all textdelta applications in
+     this edit session. The file is automatically closed and cleaned
+     up when the edit session is done. */
+  SVN_ERR(svn_io_open_uniquely_named(&(eb->delta_file), &(eb->delta_abspath),
+                                     NULL, "svnrdump", NULL,
+                                     svn_io_file_del_on_close, pool, pool));
+
   de = svn_delta_default_editor(pool);
   de->open_root = open_root;
   de->delete_entry = delete_entry;
