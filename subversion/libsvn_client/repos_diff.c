@@ -521,7 +521,7 @@ diff_deleted_dir(const char *dir,
                                 mimetype1, mimetype2,
                                 b->pristine_props,
                                 b->edit_baton->diff_cmd_baton,
-                                pool));
+                                iterpool));
         }
  
       if (dirent->kind == svn_node_dir)
