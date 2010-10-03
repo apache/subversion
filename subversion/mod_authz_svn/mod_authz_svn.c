@@ -125,7 +125,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf)
   char errbuf[256];
 
   cache_key = apr_pstrcat(r->pool, "mod_authz_svn:",
-                          conf->access_file, NULL);
+                          conf->access_file, (char *)NULL);
   apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
   access_conf = user_data;
   if (access_conf == NULL)
@@ -298,7 +298,8 @@ req_check_access(request_rec *r,
   if (repos_path)
     repos_path = svn_path_join("/", repos_path, r->pool);
 
-  *repos_path_ref = apr_pstrcat(r->pool, repos_name, ":", repos_path, NULL);
+  *repos_path_ref = apr_pstrcat(r->pool, repos_name, ":", repos_path,
+                                (char *)NULL);
 
   if (r->method_number == M_MOVE || r->method_number == M_COPY)
     {
@@ -346,7 +347,7 @@ req_check_access(request_rec *r,
         dest_repos_path = svn_path_join("/", dest_repos_path, r->pool);
 
       *dest_repos_path_ref = apr_pstrcat(r->pool, dest_repos_name, ":",
-                                         dest_repos_path, NULL);
+                                         dest_repos_path, (char *)NULL);
     }
 
   /* Retrieve/cache authorization file */

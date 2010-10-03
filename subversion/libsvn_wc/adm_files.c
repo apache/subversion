@@ -119,7 +119,7 @@ simple_extend(const char *adm_path,  /* ### adm_abspath?  */
   if (subdir)
     child = svn_dirent_join(subdir, child, result_pool);
   if (extension)
-    child = apr_pstrcat(result_pool, child, extension, NULL);
+    child = apr_pstrcat(result_pool, child, extension, (char *)NULL);
 
   if (use_tmp)
     return svn_dirent_join_many(result_pool,

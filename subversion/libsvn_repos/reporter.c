@@ -680,7 +680,7 @@ add_file_smartly(report_baton_t *b,
          starting with '/', so make sure o_path always starts with a '/'
          too. */
       if (*o_path != '/')
-        o_path = apr_pstrcat(pool, "/", o_path, NULL);
+        o_path = apr_pstrcat(pool, "/", o_path, (char *)NULL);
 
       SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
                                   b->t_root, o_path, pool));

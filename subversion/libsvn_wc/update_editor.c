@@ -1550,7 +1550,8 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
            * calling this function. Do that on the caller's side. */
           right_repos_relpath = eb->switch_relpath;
           right_repos_relpath = apr_pstrcat(result_pool, right_repos_relpath,
-                                            "_THIS_IS_INCOMPLETE", NULL);
+                                            "_THIS_IS_INCOMPLETE",
+                                            (char *)NULL);
         }
     }
   else

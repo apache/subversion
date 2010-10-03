@@ -442,7 +442,7 @@ svn_wc__serialize_file_external(const char **str,
       SVN_ERR(opt_revision_to_string(&s1, path, peg_rev, pool));
       SVN_ERR(opt_revision_to_string(&s2, path, rev, pool));
 
-      s = apr_pstrcat(pool, s1, ":", s2, ":", path, NULL);
+      s = apr_pstrcat(pool, s1, ":", s2, ":", path, (char *)NULL);
     }
   else
     s = NULL;

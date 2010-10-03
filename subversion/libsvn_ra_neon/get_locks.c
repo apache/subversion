@@ -379,7 +379,7 @@ svn_ra_neon__get_locks(svn_ra_session_t *session,
                                                  url, pool));
 
   baton.lock_hash = apr_hash_make(pool);
-  baton.path = apr_pstrcat(pool, "/", rel_path, NULL);
+  baton.path = apr_pstrcat(pool, "/", rel_path, (char *)NULL);
   baton.requested_depth = depth;
   baton.pool = pool;
   baton.scratchpool = svn_pool_create(pool);

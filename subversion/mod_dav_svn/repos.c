@@ -1106,7 +1106,7 @@ create_private_resource(const dav_resource *base,
   /* versioned = baselined = working = FALSE */
 
   comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                              path->data, NULL);
+                              path->data, (char *)NULL);
   comb->res.info = &comb->priv;
   comb->res.hooks = &dav_svn__hooks_repository;
   comb->res.pool = base->pool;
@@ -1459,7 +1459,7 @@ get_parentpath_resource(request_rec *r,
   if (r->uri[len-1] != '/')
     {
       new_uri = apr_pstrcat(r->pool, ap_escape_uri(r->pool, r->uri),
-                            "/", NULL);
+                            "/", (char *)NULL);
       apr_table_setn(r->headers_out, "Location",
                      ap_construct_url(r->pool, new_uri, r));
       return dav_new_error(r->pool, HTTP_MOVED_PERMANENTLY, 0,
@@ -2090,7 +2090,7 @@ get_resource(request_rec *r,
   }
 
   /* Retrieve/cache open repository */
-  repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, NULL);
+  repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, (char *)NULL);
   apr_pool_userdata_get(&userdata, repos_key, r->connection->pool);
   repos->repos = userdata;
   if (repos->repos == NULL)
@@ -2253,7 +2253,7 @@ get_resource(request_rec *r,
                                          "/",
                                          r->args ? "?" : "",
                                          r->args ? r->args : "",
-                                         NULL);
+                                         (char *)NULL);
       apr_table_setn(r->headers_out, "Location",
                      ap_construct_url(r->pool, new_path, r));
       return dav_new_error(r->pool, HTTP_MOVED_PERMANENTLY, 0,
@@ -3338,7 +3338,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           /* ### The xml output doesn't like to see a trailing slash on
              ### the visible portion, so avoid that. */
           if (is_dir)
-            href = apr_pstrcat(entry_pool, href, "/", NULL);
+            href = apr_pstrcat(entry_pool, href, "/", (char *)NULL);
 
           if (gen_html)
             name = href;
@@ -4055,7 +4055,7 @@ do_walk(walker_ctx_t *ctx, int depth)
                         apr_pstrmemdup(iterpool,
                                        ctx->repos_path->data,
                                        ctx->repos_path->len),
-                        key, NULL);
+                        key, (char *)NULL);
           if (! dav_svn__allow_read(ctx->info.r, ctx->info.repos,
                                     repos_relpath, ctx->info.root.rev,
                                     iterpool))
@@ -4212,7 +4212,7 @@ dav_svn__create_working_resource(dav_resource *base,
   /* collection = FALSE.   ### not necessarily correct */
 
   res->uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                         path, NULL);
+                         path, (char *)NULL);
   res->hooks = &dav_svn__hooks_repository;
   res->pool = base->pool;
 

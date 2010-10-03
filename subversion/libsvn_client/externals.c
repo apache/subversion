@@ -576,7 +576,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                         pool,
                         url[2] == '/' ? "///" : "//",
                         svn_relpath_canonicalize(url+2, pool),
-                        NULL);
+                        (char *)NULL);
     }
   else if (svn_path_is_url(url) || *url == '/')
     {
@@ -697,7 +697,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                                                    scheme,
                                                    ":",
                                                    url,
-                                                   NULL),
+                                                   (char *)NULL),
                                        pool);
       return SVN_NO_ERROR;
     }

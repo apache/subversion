@@ -1261,7 +1261,7 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
       SVN_ERR(read_line(content_info, &target_line, iterpool, iterpool));
       if (! content_info->eof)
         target_line = apr_pstrcat(iterpool, target_line, content_info->eol_str,
-                                  NULL);
+                                  (char *)NULL);
       len = strlen(target_line);
       SVN_ERR(svn_stream_write(content_info->patched, target_line, &len));
     }

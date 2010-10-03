@@ -402,7 +402,7 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
                                             "The request's '", tagname,
                                             "' element is malformed; there "
                                             "is a problem with the client.",
-                                            NULL),
+                                            (char *)NULL),
                                 SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 }
 

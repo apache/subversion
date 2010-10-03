@@ -2291,7 +2291,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
   /* Figure out the repository abspath from PATH. */
   abs_path = svn_path_url_add_component2(sess->url, path, pool);
   SVN_ERR(path_relative_to_root(session, &abs_path, abs_path, pool));
-  abs_path = apr_pstrcat(pool, "/", abs_path, NULL);
+  abs_path = apr_pstrcat(pool, "/", abs_path, (char *)NULL);
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-locks", "c(w)", path,
                                svn_depth_to_word(depth)));

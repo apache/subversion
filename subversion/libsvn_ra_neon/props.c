@@ -441,7 +441,7 @@ static svn_error_t * end_element(void *baton, int state,
 
       if (state == ELEM_unknown)
         {
-          name = apr_pstrcat(pc->pool, nspace, name, NULL);
+          name = apr_pstrcat(pc->pool, nspace, name, (char *)NULL);
         }
       else
         {
@@ -529,7 +529,8 @@ svn_error_t * svn_ra_neon__get_props(apr_hash_t **results,
           svn_pool_clear(iterpool);
           svn_stringbuf_appendcstr
             (body, apr_pstrcat(iterpool, "<", which_props[n].name, " xmlns=\"",
-                               which_props[n].nspace, "\"/>" DEBUG_CR, NULL));
+                               which_props[n].nspace, "\"/>" DEBUG_CR,
+                               (char *)NULL));
         }
       svn_stringbuf_appendcstr(body, "</prop></propfind>" DEBUG_CR);
       svn_pool_destroy(iterpool);
@@ -626,7 +627,7 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
   SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, sess, url, label, props,
                                           pool));
 
-  name = apr_pstrcat(pool, propname->nspace, propname->name, NULL);
+  name = apr_pstrcat(pool, propname->nspace, propname->name, (char *)NULL);
   value = apr_hash_get(rsrc->propset, name, APR_HASH_KEY_STRING);
   if (value == NULL)
     {
@@ -1088,12 +1089,12 @@ append_setprop(svn_stringbuf_t *body,
 #define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
   if (strncmp(name, SVN_PROP_PREFIX, NSLEN) == 0)
     {
-      xml_tag_name = apr_pstrcat(pool, "S:", name + NSLEN, NULL);
+      xml_tag_name = apr_pstrcat(pool, "S:", name + NSLEN, (char *)NULL);
     }
 #undef NSLEN
   else
     {
-      xml_tag_name = apr_pstrcat(pool, "C:", name, NULL);
+      xml_tag_name = apr_pstrcat(pool, "C:", name, (char *)NULL);
     }
 
   if (old_value_p)

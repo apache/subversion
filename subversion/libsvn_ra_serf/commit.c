@@ -749,9 +749,9 @@ proppatch_walker(void *baton,
   /* Use the namespace prefix instead of adding the xmlns attribute to support
      property names containing ':' */
   if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(pool, "S:", name, NULL);
+    prop_name = apr_pstrcat(pool, "S:", name, (char *)NULL);
   else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = apr_pstrcat(pool, "C:", name, NULL);
+    prop_name = apr_pstrcat(pool, "C:", name, (char *)NULL);
   name_len = strlen(prop_name);
 
   SVN_ERR(derive_old_val(&old_val_p, wb, ns, name, pool));
@@ -860,7 +860,7 @@ setup_proppatch_headers(serf_bucket_t *headers,
         {
           const char *token_header;
 
-          token_header = apr_pstrcat(pool, "(<", token, ">)", NULL);
+          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
 
           serf_bucket_headers_set(headers, "If", token_header);
         }
@@ -1063,7 +1063,7 @@ setup_put_headers(serf_bucket_t *headers,
         {
           const char *token_header;
 
-          token_header = apr_pstrcat(pool, "(<", token, ">)", NULL);
+          token_header = apr_pstrcat(pool, "(<", token, ">)", (char *)NULL);
 
           serf_bucket_headers_set(headers, "If", token_header);
         }
@@ -1158,7 +1158,7 @@ setup_delete_headers(serf_bucket_t *headers,
           const char *token_header;
 
           token_header = apr_pstrcat(pool, "<", ctx->path, "> (<",
-                                     ctx->lock_token, ">)", NULL);
+                                     ctx->lock_token, ">)", (char *)NULL);
 
           serf_bucket_headers_set(headers, "If", token_header);
 

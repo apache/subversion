@@ -159,7 +159,7 @@ svn_checksum_serialize(const svn_checksum_t *checksum,
   return apr_pstrcat(result_pool,
                      ckind_str,
                      svn_checksum_to_cstring(checksum, scratch_pool),
-                     NULL);
+                     (char *)NULL);
 }
 
 
