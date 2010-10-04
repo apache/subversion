@@ -236,36 +236,27 @@ class Lock
 class ClientNotifyInfo
 {
   public:
-    inline
-    ClientNotifyInfo(const svn_wc_notify_t *info)
-      : m_pool()
+    inline static svn_wc_notify_t *
+    dup(const svn_wc_notify_t *notify, Pool &pool)
     {
-      m_notify = svn_wc_dup_notify(info, m_pool.pool());
+      return svn_wc_dup_notify(notify, pool.pool());
     }
 
     inline
-    ClientNotifyInfo(const ClientNotifyInfo &that)
-      : m_pool()
+    ClientNotifyInfo(const svn_wc_notify_t *notify)
+      : m_notify(notify)
     {
-      m_notify = svn_wc_dup_notify(that.m_notify, m_pool.pool());
-    }
-
-    inline ClientNotifyInfo &
-    operator=(const ClientNotifyInfo &that)
-    {
-      m_pool.clear();
-      m_notify = svn_wc_dup_notify(that.m_notify, m_pool.pool());
     }
 
     // ### This is only temporary
-    inline const svn_wc_notify_t * to_c() const
+    inline const svn_wc_notify_t *
+    to_c() const
     {
-      return m_notify;
+      return &(*m_notify);
     }
 
   private:
-    Pool m_pool;
-    svn_wc_notify_t *m_notify;
+    Private::CStructWrapper<ClientNotifyInfo, const svn_wc_notify_t> m_notify;
 };
 
 }
