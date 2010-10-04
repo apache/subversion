@@ -1283,8 +1283,6 @@ gather_children(const apr_array_header_t **children,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   apr_hash_t *names_hash = apr_hash_make(scratch_pool);
-#ifndef SVN_WC__NODES_ONLY
-#endif
 #ifdef SVN_WC__NODES
   apr_hash_t *names_hash_1 = apr_hash_make(scratch_pool);
 #endif
