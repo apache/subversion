@@ -617,7 +617,6 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
-  svn_fs_t *fs;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
 
@@ -629,7 +628,6 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
 
   SVN_JNI_ERR(svn_repos_open(&repos, path.getInternalStyle(requestPool),
                              requestPool.pool()), NULL);
-  fs = svn_repos_fs (repos);
   /* Fetch all locks on or below the root directory. */
   SVN_JNI_ERR(svn_repos_fs_get_locks2(&locks, repos, "/", depth, NULL, NULL,
                                       requestPool.pool()),

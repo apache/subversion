@@ -1014,7 +1014,6 @@ CreateJ::RevisionRangeList(apr_array_header_t *ranges)
 jobject
 CreateJ::StringSet(apr_array_header_t *strings)
 {
-  JNIEnv *env = JNIUtil::getEnv();
   std::vector<jobject> jstrs;
 
   for (int i = 0; i < strings->nelts; ++i)

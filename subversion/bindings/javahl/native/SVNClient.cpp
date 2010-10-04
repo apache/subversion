@@ -1103,7 +1103,6 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    JNIEnv *env = JNIUtil::getEnv();
     svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
@@ -1414,7 +1413,6 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
 struct info_baton
 {
     std::vector<info_entry> infoVect;
-    int info_ver;
     apr_pool_t *pool;
 };
 
