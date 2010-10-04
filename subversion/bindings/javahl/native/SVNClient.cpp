@@ -158,7 +158,6 @@ SVNClient::status(const char *path, svn_depth_t depth,
     svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
-    callback->setWcCtx(ctx->wc_ctx);
 
     Path checkedPath(path);
     SVN_JNI_ERR(checkedPath.error_occured(), );

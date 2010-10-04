@@ -34,9 +34,10 @@
  * Create a StatusCallback object
  * @param jcallback the Java callback object.
  */
-StatusCallback::StatusCallback(jobject jcallback)
+StatusCallback::StatusCallback(jobject jcallback, svn_wc_context_t *wc_ctx)
 {
   m_callback = jcallback;
+  m_wc_ctx = wc_ctx;
 }
 
 /**
@@ -90,7 +91,7 @@ StatusCallback::doStatus(const char *local_abspath,
         POP_AND_RETURN(SVN_NO_ERROR);
     }
 
-  jobject jStatus = CreateJ::Status(wc_ctx, local_abspath, status, pool);
+  jobject jStatus = CreateJ::Status(m_wc_ctx, local_abspath, status, pool);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
@@ -100,10 +101,4 @@ StatusCallback::doStatus(const char *local_abspath,
 
   env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;
-}
-
-void
-StatusCallback::setWcCtx(svn_wc_context_t *wc_ctx_in)
-{
-  this->wc_ctx = wc_ctx_in;
 }
