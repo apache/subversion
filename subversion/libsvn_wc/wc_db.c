@@ -1238,25 +1238,6 @@ insert_working_node(void *baton,
 }
 
 
-/* Return the number of children under PARENT_RELPATH in the given WC_ID.
-   The table is implicitly defined by the STMT_IDX query.  */
-static svn_error_t *
-count_children(int *count,
-               int stmt_idx,
-               svn_sqlite__db_t *sdb,
-               apr_int64_t wc_id,
-               const char *parent_relpath)
-{
-  svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, stmt_idx));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
-  SVN_ERR(svn_sqlite__step_row(stmt));
-  *count = svn_sqlite__column_int(stmt, 0);
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
-
 /* Each name is allocated in RESULT_POOL and stored into CHILDREN as a key
    pointed to the same name.  */
 static svn_error_t *
@@ -1287,94 +1268,6 @@ add_children_to_hash(apr_hash_t *children,
 }
 
 
-/* When children of PARENT_RELPATH are in both BASE_NODE and WORKING_NODE,
-   this function can be used to union those two sets, returning the set
-   in *CHILDREN (allocated in RESULT_POOL).  */
-static svn_error_t *
-union_children(const apr_array_header_t **children,
-               svn_sqlite__db_t *sdb,
-               apr_int64_t wc_id,
-               const char *parent_relpath,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
-{
-  /* ### it would be nice to pre-size this hash table.  */
-  apr_hash_t *names = apr_hash_make(scratch_pool);
-#ifdef SVN_WC__NODES
-  apr_hash_t *names_nodes = apr_hash_make(scratch_pool);
-#endif
-  apr_array_header_t *names_array;
-
-  /* All of the names get allocated in RESULT_POOL.  */
-#ifndef SVN_WC__NODES_ONLY
-  SVN_ERR(add_children_to_hash(names, STMT_SELECT_BASE_NODE_CHILDREN,
-                               sdb, wc_id, parent_relpath, result_pool));
-  SVN_ERR(add_children_to_hash(names, STMT_SELECT_WORKING_NODE_CHILDREN,
-                               sdb, wc_id, parent_relpath, result_pool));
-#endif
-#ifdef SVN_WC__NODES
-  SVN_ERR(add_children_to_hash(names_nodes, STMT_SELECT_BASE_NODE_CHILDREN_1,
-                               sdb, wc_id, parent_relpath, result_pool));
-  SVN_ERR(add_children_to_hash(names_nodes, STMT_SELECT_WORKING_NODE_CHILDREN_1,
-                               sdb, wc_id, parent_relpath, result_pool));
-#ifndef SVN_WC__NODES_ONLY
-  SVN_ERR_ASSERT(apr_hash_count(names) == apr_hash_count(names_nodes));
-#else
-  names = names_nodes;
-#endif
-#endif
-
-  SVN_ERR(svn_hash_keys(&names_array, names, result_pool));
-  *children = names_array;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Return all the children of PARENT_RELPATH from a single table, implicitly
-   defined by STMT_IDX. If the caller happens to know the count of children,
-   it should be passed as START_SIZE to pre-allocate space in the *CHILDREN
-   return value.
-
-   If the caller doesn't know the count, then it should pass a reasonable
-   idea of how many children may be present.  */
-static svn_error_t *
-single_table_children(const apr_array_header_t **children,
-                      int stmt_idx,
-                      int start_size,
-                      svn_sqlite__db_t *sdb,
-                      apr_int64_t wc_id,
-                      const char *parent_relpath,
-                      apr_pool_t *result_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  apr_array_header_t *child_names;
-  svn_boolean_t have_row;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, stmt_idx));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
-
-  /* ### should test the node to ensure it is a directory */
-
-  child_names = apr_array_make(result_pool, start_size, sizeof(const char *));
-
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
-    {
-      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-
-      APR_ARRAY_PUSH(child_names, const char *) =
-        svn_relpath_basename(child_relpath, result_pool);
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  *children = child_names;
-
-  return svn_sqlite__reset(stmt);
-}
-
-
 /* Return in *CHILDREN all of the children of the directory LOCAL_ABSPATH.
    If BASE_ONLY is true, then *only* the children from BASE_NODE are
    returned (those in WORKING_NODE are ignored). The result children are
@@ -1389,12 +1282,13 @@ gather_children(const apr_array_header_t **children,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  int base_count;
-  int working_count;
-#ifdef SVN_WC__NODES
-  int base_count_nodes, working_count_nodes;
-  const apr_array_header_t *children_nodes;
+  apr_hash_t *names_hash = apr_hash_make(scratch_pool);
+#ifndef SVN_WC__NODES_ONLY
 #endif
+#ifdef SVN_WC__NODES
+  apr_hash_t *names_hash_1 = apr_hash_make(scratch_pool);
+#endif
+  apr_array_header_t *names_array;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1404,111 +1298,35 @@ gather_children(const apr_array_header_t **children,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  if (base_only)
-    {
-      /* 10 is based on Subversion's average of 8.7 files per versioned
-         directory in its repository.
-
-         ### note "files". should redo count with subdirs included */
+  /* All of the names get allocated in RESULT_POOL.  */
 #ifndef SVN_WC__NODES_ONLY
-      SVN_ERR(single_table_children(children, STMT_SELECT_BASE_NODE_CHILDREN,
-                                    10 /* start_size */,
-                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                    local_relpath, result_pool));
+  SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_BASE_NODE_CHILDREN,
+                               pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                               local_relpath, result_pool));
+  if (! base_only)
+    SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_WORKING_NODE_CHILDREN,
+                                 pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                 local_relpath, result_pool));
+
 #endif
 #ifdef SVN_WC__NODES
-      SVN_ERR(single_table_children(&children_nodes,
-                                    STMT_SELECT_BASE_NODE_CHILDREN_1,
-                                    10 /* start_size */,
-                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                    local_relpath, result_pool));
+  SVN_ERR(add_children_to_hash(names_hash_1, STMT_SELECT_BASE_NODE_CHILDREN_1,
+                               pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                               local_relpath, result_pool));
+  if (! base_only)
+    SVN_ERR(add_children_to_hash(names_hash_1, STMT_SELECT_WORKING_NODE_CHILDREN_1,
+                                 pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                 local_relpath, result_pool));
 #ifndef SVN_WC__NODES_ONLY
-      SVN_ERR_ASSERT((*children)->nelts == children_nodes->nelts);
+  SVN_ERR_ASSERT(apr_hash_count(names_hash) == apr_hash_count(names_hash_1));
 #else
-      *children = children_nodes;
-#endif
-#endif
-      return SVN_NO_ERROR;
-    }
-
-#ifndef SVN_WC__NODES_ONLY
-  SVN_ERR(count_children(&base_count, STMT_COUNT_BASE_NODE_CHILDREN,
-                         pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
-  SVN_ERR(count_children(&working_count, STMT_COUNT_WORKING_NODE_CHILDREN,
-                         pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
-#endif
-#ifdef SVN_WC__NODES
-  SVN_ERR(count_children(&base_count_nodes, STMT_COUNT_BASE_NODE_CHILDREN_1,
-                         pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
-  SVN_ERR(count_children(&working_count_nodes,
-                         STMT_COUNT_WORKING_NODE_CHILDREN_1,
-                         pdh->wcroot->sdb, pdh->wcroot->wc_id, local_relpath));
-#ifndef SVN_WC__NODES_ONLY
-  SVN_ERR_ASSERT(base_count == base_count_nodes);
-  SVN_ERR_ASSERT(working_count == working_count_nodes);
-#else
-  base_count = base_count_nodes;
-  working_count = working_count_nodes;
+  names_hash = names_hash_1;
 #endif
 #endif
 
-  if (base_count == 0)
-    {
-      if (working_count == 0)
-        {
-          *children = apr_array_make(result_pool, 0, sizeof(const char *));
-          return SVN_NO_ERROR;
-        }
-
-#ifndef SVN_WC__NODES_ONLY
-      SVN_ERR(single_table_children(children, STMT_SELECT_WORKING_NODE_CHILDREN,
-                                    working_count,
-                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                    local_relpath, result_pool));
-#endif
-#ifdef SVN_WC__NODES
-      SVN_ERR(single_table_children(&children_nodes,
-                                    STMT_SELECT_WORKING_NODE_CHILDREN_1,
-                                    working_count,
-                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                    local_relpath, result_pool));
-#ifndef SVN_WC__NODES_ONLY
-      SVN_ERR_ASSERT((*children)->nelts == children_nodes->nelts);
-#else
-      *children = children_nodes;
-#endif
-#endif
-      return SVN_NO_ERROR;
-    }
-  if (working_count == 0)
-    {
-#ifndef SVN_WC__NODES_ONLY
-      SVN_ERR(single_table_children(children, STMT_SELECT_BASE_NODE_CHILDREN,
-                                    base_count,
-                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                    local_relpath, result_pool));
-#endif
-#ifdef SVN_WC__NODES
-      SVN_ERR(single_table_children(&children_nodes,
-                                    STMT_SELECT_BASE_NODE_CHILDREN_1,
-                                    base_count,
-                                    pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                    local_relpath, result_pool));
-#ifndef SVN_WC__NODES_ONLY
-      SVN_ERR_ASSERT((*children)->nelts == children_nodes->nelts);
-#else
-      *children = children_nodes;
-#endif
-#endif
-      return SVN_NO_ERROR;
-    }
-
-  /* ### it would be nice to pass BASE_COUNT and WORKING_COUNT, but there is
-     ### nothing union_children() can do with those.  */
-  return svn_error_return(union_children(children, 
-                                         pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                         local_relpath,
-                                         result_pool, scratch_pool));
+  SVN_ERR(svn_hash_keys(&names_array, names_hash, result_pool));
+  *children = names_array;
+  return SVN_NO_ERROR;
 }
 
 
