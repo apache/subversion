@@ -76,7 +76,6 @@ svn_cl__propedit(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
-  int i;
 
   /* Validate the input and get the property's name (and a UTF-8
      version of that name). */
@@ -177,6 +176,7 @@ svn_cl__propedit(apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
       struct commit_info_baton cib;
+      int i;
 
       /* The customary implicit dot rule has been prone to user error
        * here.  For example, Jon Trowbridge <trow@gnu.og> did

@@ -1130,11 +1130,11 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                               apr_pool_t *pool)
 {
   svn_diff__file_output_baton_t baton;
-  int i;
 
   if (svn_diff_contains_diffs(diff))
     {
       const char **c;
+      int i;
 
       memset(&baton, 0, sizeof(baton));
       baton.output_stream = output_stream;

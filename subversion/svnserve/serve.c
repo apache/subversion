@@ -1429,7 +1429,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_uint64_t dirent_fields;
   apr_array_header_t *dirent_fields_list = NULL;
   svn_ra_svn_item_t *elt;
-  int i;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb?l", &path, &rev,
                                  &want_props, &want_contents,
@@ -1441,6 +1440,8 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else
     {
+      int i;
+
       dirent_fields = 0;
 
       for (i = 0; i < dirent_fields_list->nelts; ++i)

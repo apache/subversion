@@ -300,7 +300,6 @@ copy_versioned_files(const char *from,
   const char *to_abspath;
   svn_node_kind_t from_kind;
   svn_depth_t node_depth;
-  int j;
   
   SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
   SVN_ERR(svn_dirent_get_absolute(&to_abspath, to, pool));
@@ -350,6 +349,7 @@ copy_versioned_files(const char *from,
   if (from_kind == svn_node_dir)
     {
       apr_fileperms_t perm = APR_OS_DEFAULT;
+      int j;
 
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we

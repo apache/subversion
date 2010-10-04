@@ -163,9 +163,6 @@ log_entry_receiver(void *baton,
   const char *date;
   const char *message;
 
-  /* Number of lines in the msg. */
-  int lines;
-
   if (lb->ctx->cancel_func)
     SVN_ERR(lb->ctx->cancel_func(lb->ctx->cancel_baton));
 
@@ -201,7 +198,9 @@ log_entry_receiver(void *baton,
 
   if (message != NULL)
     {
-      lines = svn_cstring_count_newlines(message) + 1;
+      /* Number of lines in the msg. */
+      int lines = svn_cstring_count_newlines(message) + 1;
+
       SVN_ERR(svn_cmdline_printf(pool,
                                  Q_(" | %d line", " | %d lines", lines),
                                  lines));

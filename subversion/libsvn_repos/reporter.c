@@ -760,7 +760,6 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   void *new_baton;
   svn_checksum_t *checksum;
   const char *hex_digest;
-  int distance;
 
   /* For non-switch operations, follow link_path in the target. */
   if (info && info->link_path && !b->is_switch)
@@ -798,7 +797,7 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   related = FALSE;
   if (s_entry && t_entry && s_entry->kind == t_entry->kind)
     {
-      distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
+      int distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
       if (distance == 0 && !any_path_info(b, e_path)
           && (!info || (!info->start_empty && !info->lock_token))
           && (requested_depth <= wc_depth || t_entry->kind == svn_node_file))

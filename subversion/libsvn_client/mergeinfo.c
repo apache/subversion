@@ -1258,11 +1258,12 @@ static svn_mergeinfo_t
 find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
                       const char *abs_repos_path)
 {
-  int i;
   int ancestor_index = -1;
 
   if (depth_first_catalog_index)
     {
+      int i;
+
       for (i = 0; i < depth_first_catalog_index->nelts; i++)
         {
           svn_sort__item_t item = APR_ARRAY_IDX(depth_first_catalog_index, i,
