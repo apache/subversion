@@ -72,10 +72,10 @@ get_client(Pool &pool)
 {
   // We use placement new here to allocate the Client in the given pool.
   // We also register a function to destory the object on pool cleanup
-  void *buf = pool.alloc(sizeof(Client));
+  void *buf = pool.alloc<void>(sizeof(Client));
   Client *client = new (buf) Client();
 
-  buf = pool.alloc(sizeof(Notifier));
+  buf = pool.alloc<void>(sizeof(Notifier));
   Notifier *notifier = new (buf) Notifier();
   client->subscribeNotifier(notifier);
 

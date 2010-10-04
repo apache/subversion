@@ -42,7 +42,8 @@ test_pools(apr_pool_t *p)
   // We ignore the passed in pool, in favor of creating our own.
   Pool pool;
 
-  void *mem = pool.alloc(1000);
+  void *mem = pool.alloc<void>(1000);
+  const char *foo = pool.alloc<const char>(100);
 
   pool.clear();
 

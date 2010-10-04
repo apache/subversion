@@ -53,10 +53,11 @@ namespace SVN
         svn_pool_destroy(m_pool);
       }
 
-      inline void *
+      template <typename T>
+      inline T *
       alloc(apr_size_t sz)
       {
-        return apr_palloc(m_pool, sz);
+        return reinterpret_cast<T *>(apr_palloc(m_pool, sz));
       }
 
       inline char *
