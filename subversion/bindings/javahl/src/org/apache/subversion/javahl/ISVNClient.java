@@ -798,11 +798,10 @@ public interface ISVNClient
      * @param from      old url
      * @param to        new url
      * @param path      working copy path
-     * @param recurse   recurse into subdirectories
      * @throws ClientException
      * @since 1.0
      */
-    void relocate(String from, String to, String path, boolean recurse)
+    void relocate(String from, String to, String path)
             throws ClientException;
 
     /**
