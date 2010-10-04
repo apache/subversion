@@ -1422,8 +1422,7 @@ Java_org_apache_subversion_javahl_SVNClient_versionMicro
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_relocate
-(JNIEnv *env, jobject jthis, jstring jfrom, jstring jto, jstring jpath,
- jboolean jrecurse)
+(JNIEnv *env, jobject jthis, jstring jfrom, jstring jto, jstring jpath)
 {
   JNIEntry(SVNClient, relocate);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1444,7 +1443,7 @@ Java_org_apache_subversion_javahl_SVNClient_relocate
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->relocate(from, to, path, jrecurse ? true: false);
+  cl->relocate(from, to, path);
   return;
 }
 

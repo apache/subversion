@@ -1151,8 +1151,7 @@ jbyteArray SVNClient::revProperty(const char *path,
     return JNIUtil::makeJByteArray((const signed char *)propval->data,
                                    propval->len);
 }
-void SVNClient::relocate(const char *from, const char *to, const char *path,
-                         bool recurse)
+void SVNClient::relocate(const char *from, const char *to, const char *path)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1171,9 +1170,9 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_relocate(intPath.c_str(), intFrom.c_str(),
-                                    intTo.c_str(), recurse, ctx,
-                                    requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_relocate2(intPath.c_str(), intFrom.c_str(),
+                                     intTo.c_str(), ctx,
+                                     requestPool.pool()), );
 }
 
 void SVNClient::blame(const char *path, Revision &pegRevision,

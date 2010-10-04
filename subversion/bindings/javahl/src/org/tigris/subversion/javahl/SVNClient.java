@@ -2119,9 +2119,13 @@ public class SVNClient implements SVNClientInterface
     public void relocate(String from, String to, String path, boolean recurse)
             throws ClientException
     {
+        if (recurse == false)
+          throw new ClientException("relocate only support full recursion",
+                                    null, -1);
+
         try
         {
-            aSVNClient.relocate(from, to, path, recurse);
+            aSVNClient.relocate(from, to, path);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
