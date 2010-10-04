@@ -268,7 +268,7 @@ add_open_helper(const char *path,
   nb->parent_baton = pb;
 
   /* Create and populate the node. */
-  nb->node = create_child_node(pb->node, svn_relpath_basename(path, pool),
+  nb->node = create_child_node(pb->node, svn_relpath_basename(path, NULL),
                                eb->node_pool);
   nb->node->kind = kind;
   nb->node->action = action;

@@ -2117,7 +2117,7 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  const char *base = svn_relpath_basename(path, pool);
+  const char *base = svn_relpath_basename(path, NULL);
   const char *local_abspath;
   const char *their_relpath;
 

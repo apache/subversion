@@ -380,7 +380,7 @@ checkout_dir(dir_context_t *dir)
           dir->checkout->activity_url_len = dir->commit->activity_url_len;
           dir->checkout->resource_url =
             svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
-                                        svn_relpath_basename(dir->name, dir->pool),
+                                        svn_relpath_basename(dir->name, NULL),
                                         dir->pool);
 
           apr_hash_set(dir->commit->copied_entries,

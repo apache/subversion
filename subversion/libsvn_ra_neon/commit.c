@@ -701,7 +701,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                                          apr_pool_t *pool)
 {
   resource_baton_t *parent = parent_baton;
-  const char *name = svn_relpath_basename(path, pool);
+  const char *name = svn_relpath_basename(path, NULL);
   apr_hash_t *extra_headers = NULL;
   const char *child;
   int code;
