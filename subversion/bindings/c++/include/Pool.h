@@ -29,7 +29,7 @@
 
 #include "svn_pools.h"
 
-#include "apr_strings.h"
+#include <apr_strings.h>
 
 namespace SVN
 {
