@@ -470,9 +470,9 @@ void SVNRepos::setRevProp(File &path, Revision &revision,
                                                requestPool.pool());
   if (usePreRevPropChangeHook || usePostRevPropChangeHook)
     {
-      err = svn_repos_fs_change_rev_prop3(repos,
+      err = svn_repos_fs_change_rev_prop4(repos,
                                           revision.revision()->value.number,
-                                          NULL, propName, propValStr,
+                                          NULL, propName, NULL, propValStr,
                                           usePreRevPropChangeHook,
                                           usePostRevPropChangeHook, NULL,
                                           NULL, requestPool.pool());
