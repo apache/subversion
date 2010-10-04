@@ -3778,8 +3778,8 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
             child->remaining_ranges = svn_rangelist_dup(explicit_rangelist,
                                                         pool);
         }
-    }
 #endif
+    }
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
