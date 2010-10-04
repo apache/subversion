@@ -1161,42 +1161,44 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
       SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.insert_str, "+",
                                             header_encoding, pool));
 
-  if (relative_to_dir)
-    {
-      /* Possibly adjust the "original" and "modified" paths shown in
-         the output (see issue #2723). */
-      const char *child_path;
-
-      if (! original_header)
+      if (relative_to_dir)
         {
-          child_path = svn_dirent_is_child(relative_to_dir,
-                                           original_path, pool);
-          if (child_path)
-            original_path = child_path;
-          else
-            return svn_error_createf(
-                               SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                               _("Path '%s' must be an immediate child of "
-                                 "the directory '%s'"),
-                               svn_dirent_local_style(original_path, pool),
-                               svn_dirent_local_style(relative_to_dir, pool));
-        }
+          /* Possibly adjust the "original" and "modified" paths shown in
+             the output (see issue #2723). */
+          const char *child_path;
 
-      if (! modified_header)
-        {
-          child_path = svn_dirent_is_child(relative_to_dir,
-                                           modified_path, pool);
-          if (child_path)
-            modified_path = child_path;
-          else
-            return svn_error_createf(
-                               SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                               _("Path '%s' must be an immediate child of "
-                                 "the directory '%s'"),
-                               svn_dirent_local_style(modified_path, pool),
-                               svn_dirent_local_style(relative_to_dir, pool));
+          if (! original_header)
+            {
+              child_path = svn_dirent_is_child(relative_to_dir,
+                                               original_path, pool);
+              if (child_path)
+                original_path = child_path;
+              else
+                return svn_error_createf(
+                                   SVN_ERR_BAD_RELATIVE_PATH, NULL,
+                                   _("Path '%s' must be an immediate child of "
+                                     "the directory '%s'"),
+                                   svn_dirent_local_style(original_path, pool),
+                                   svn_dirent_local_style(relative_to_dir,
+                                                          pool));
+            }
+
+          if (! modified_header)
+            {
+              child_path = svn_dirent_is_child(relative_to_dir,
+                                               modified_path, pool);
+              if (child_path)
+                modified_path = child_path;
+              else
+                return svn_error_createf(
+                                   SVN_ERR_BAD_RELATIVE_PATH, NULL,
+                                   _("Path '%s' must be an immediate child of "
+                                     "the directory '%s'"),
+                                   svn_dirent_local_style(modified_path, pool),
+                                   svn_dirent_local_style(relative_to_dir,
+                                                          pool));
+            }
         }
-    }
 
       for (i = 0; i < 2; i++)
         {
