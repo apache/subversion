@@ -187,25 +187,25 @@ class Lock
     {
     }
 
-    inline const std::string
+    inline std::string
     getPath() const
     {
       return std::string(m_lock->path);
     }
 
-    inline const std::string
+    inline std::string
     getToken() const
     {
       return std::string(m_lock->token);
     }
 
-    inline const std::string
+    inline std::string
     getOwner() const
     {
       return std::string(m_lock->owner);
     }
 
-    inline const std::string
+    inline std::string
     getComment() const
     {
       return std::string(m_lock->comment);
