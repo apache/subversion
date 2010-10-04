@@ -939,7 +939,6 @@ scan_for_match(svn_linenum_t *matched_line,
          ! content_info->eof)
     {
       svn_boolean_t matched;
-      int i;
 
       svn_pool_clear(iterpool);
 
@@ -951,6 +950,7 @@ scan_for_match(svn_linenum_t *matched_line,
       if (matched)
         {
           svn_boolean_t taken = FALSE;
+          int i;
 
           /* Don't allow hunks to match at overlapping locations. */
           for (i = 0; i < content_info->hunks->nelts; i++)

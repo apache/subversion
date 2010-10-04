@@ -485,11 +485,12 @@ svn_handle_error2(svn_error_t *err,
   tmp_err = err;
   while (tmp_err)
     {
-      int i;
       svn_boolean_t printed_already = FALSE;
 
       if (! tmp_err->message)
         {
+          int i;
+
           for (i = 0; i < empties->nelts; i++)
             {
               if (tmp_err->apr_err == APR_ARRAY_IDX(empties, i, apr_status_t) )

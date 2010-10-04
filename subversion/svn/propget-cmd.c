@@ -190,7 +190,6 @@ svn_cl__propget(apr_getopt_t *os,
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
   svn_stream_t *out;
-  int i;
 
   if (opt_state->verbose && (opt_state->revprop || opt_state->strict
                              || opt_state->xml))
@@ -273,6 +272,7 @@ svn_cl__propget(apr_getopt_t *os,
   else  /* operate on a normal, versioned property (not a revprop) */
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+      int i;
 
       if (opt_state->xml)
         SVN_ERR(svn_cl__xml_print_header("properties", subpool));

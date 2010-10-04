@@ -2064,7 +2064,6 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
 {
   apr_array_header_t *list;
   apr_pool_t *subpool = svn_pool_create(pool);
-  int i;
 
   SVN_ERR(svn_wc_parse_externals_description3(externals_p ? &list : NULL,
                                               parent_directory, desc,
@@ -2072,6 +2071,8 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
 
   if (externals_p)
     {
+      int i;
+
       *externals_p = apr_array_make(pool, list->nelts,
                                     sizeof(svn_wc_external_item_t *));
       for (i = 0; i < list->nelts; i++)
@@ -2103,7 +2104,6 @@ svn_wc_parse_externals_description(apr_hash_t **externals_p,
                                    apr_pool_t *pool)
 {
   apr_array_header_t *list;
-  int i;
 
   SVN_ERR(svn_wc_parse_externals_description2(externals_p ? &list : NULL,
                                               parent_directory, desc, pool));
@@ -2111,6 +2111,8 @@ svn_wc_parse_externals_description(apr_hash_t **externals_p,
   /* Store all of the items into the hash if that was requested. */
   if (externals_p)
     {
+      int i;
+
       *externals_p = apr_hash_make(pool);
       for (i = 0; i < list->nelts; i++)
         {

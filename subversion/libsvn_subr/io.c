@@ -2561,7 +2561,6 @@ svn_io_parse_mimetypes_file(apr_hash_t **type_map,
     {
       apr_array_header_t *tokens;
       const char *type;
-      int i;
 
       svn_pool_clear(subpool);
 
@@ -2573,6 +2572,8 @@ svn_io_parse_mimetypes_file(apr_hash_t **type_map,
       /* Only pay attention to non-empty, non-comment lines. */
       if (buf->len)
         {
+          int i;
+
           if (buf->data[0] == '#')
             continue;
 

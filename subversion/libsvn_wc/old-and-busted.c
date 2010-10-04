@@ -1194,7 +1194,6 @@ svn_wc__read_entries_old(apr_hash_t **entries,
   char *curp;
   const char *endp;
   svn_wc_entry_t *entry;
-  int entryno, entries_format;
   svn_stream_t *stream;
   svn_string_t *buf;
 
@@ -1216,6 +1215,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                               result_pool, scratch_pool));
   else
     {
+      int entryno, entries_format;
       const char *val;
 
       /* Read the format line from the entries file. In case we're in the

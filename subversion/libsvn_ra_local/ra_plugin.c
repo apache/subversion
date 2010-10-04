@@ -250,7 +250,6 @@ make_reporter(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   void *rbaton;
-  size_t repos_url_len;
   const char *other_fs_path = NULL;
   const char *repos_url_decoded;
 
@@ -262,6 +261,8 @@ make_reporter(svn_ra_session_t *session,
      regular filesystem path. */
   if (other_url)
     {
+      size_t repos_url_len;
+
       other_url = svn_path_uri_decode(other_url, pool);
       repos_url_decoded = svn_path_uri_decode(sess->repos_url, pool);
       repos_url_len = strlen(repos_url_decoded);
@@ -872,13 +873,14 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                       apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  int i;
   struct log_baton lb;
   apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
 
   if (paths)
     {
+      int i;
+
       for (i = 0; i < paths->nelts; i++)
         {
           const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);

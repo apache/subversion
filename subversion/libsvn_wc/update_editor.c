@@ -4304,7 +4304,6 @@ close_file(void *file_baton,
    * a text conflict. So flag a tree conflict here. */
   if (fb->adding_file && fb->add_existed)
     {
-      int i;
       svn_boolean_t local_is_link = FALSE;
       svn_boolean_t incoming_is_link = FALSE;
 
@@ -4323,6 +4322,8 @@ close_file(void *file_baton,
         }
       else
         {
+          int i;
+
           for (i = 0; i < regular_props->nelts; ++i)
             {
               const svn_prop_t *prop = &APR_ARRAY_IDX(regular_props, i,

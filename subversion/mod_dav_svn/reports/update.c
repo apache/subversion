@@ -409,8 +409,6 @@ open_helper(svn_boolean_t is_dir,
 static svn_error_t *
 close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 {
-  int i;
-
   if (baton->uc->resource_walk)
     return SVN_NO_ERROR;
 
@@ -419,6 +417,7 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
   if (baton->removed_props && (! baton->added || baton->copyfrom))
     {
       const char *qname;
+      int i;
 
       for (i = 0; i < baton->removed_props->nelts; i++)
         {

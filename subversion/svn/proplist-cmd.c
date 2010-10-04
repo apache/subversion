@@ -112,7 +112,6 @@ svn_cl__proplist(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -165,6 +164,7 @@ svn_cl__proplist(apr_getopt_t *os,
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
+      int i;
       apr_pool_t *iterpool;
       svn_proplist_receiver_t pl_receiver;
 

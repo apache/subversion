@@ -702,7 +702,6 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
       const char *merge_source = svn__apr_hash_index_key(hi);
       apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
       struct parse_baton_t *pb = rb->pb;
-      int i;
 
       /* Determine whether the merge_source is a part of the prefix. */
       if (skip_path(merge_source, pb->prefixes, pb->do_exclude, pb->glob))
@@ -719,6 +718,8 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
       /* Possibly renumber revisions in merge source's rangelist. */
       if (pb->do_renumber_revs)
         {
+          int i;
+
           for (i = 0; i < rangelist->nelts; i++)
             {
               struct revmap_t *revmap_start;

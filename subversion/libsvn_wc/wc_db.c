@@ -7822,7 +7822,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  svn_wc__db_status_t work_status, base_status;
+  svn_wc__db_status_t base_status;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 #ifdef SVN_WC__NODES
@@ -7868,7 +7868,8 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
     {
       /* Note: this can ONLY be an add/copy-here/move-here. It is not
          possible to delete a "hidden" node.  */
-      work_status = svn_sqlite__column_token(stmt, 0, presence_map);
+      svn_wc__db_status_t work_status =
+                            svn_sqlite__column_token(stmt, 0, presence_map);
       *hidden = (work_status == svn_wc__db_status_excluded);
       SVN_ERR(svn_sqlite__reset(stmt));
       return SVN_NO_ERROR;

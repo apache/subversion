@@ -632,10 +632,11 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
                                                 apr_pool_t *pool)
 {
   const sasl_ssf_t *ssfp;
-  int result;
 
   if (! conn->encrypted)
     {
+      int result;
+
       /* Get the strength of the security layer. */
       result = sasl_getprop(sasl_ctx, SASL_SSF, (void*) &ssfp);
       if (result != SASL_OK)

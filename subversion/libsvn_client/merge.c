@@ -1121,8 +1121,6 @@ merge_props_changed(const char *local_dir_abspath,
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (props->nelts)
     {
-      int i;
-
       /* If this is a forward merge then don't add new mergeinfo to
          PATH that is already part of PATH's own history, see
          http://svn.haxx.se/dev/archive-2008-09/0006.shtml.  If the
@@ -1150,6 +1148,8 @@ merge_props_changed(const char *local_dir_abspath,
          is having its existing mergeinfo deleted. */
       if (!merge_b->dry_run)
         {
+          int i;
+
           for (i = 0; i < props->nelts; ++i)
             {
               svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
@@ -6596,7 +6596,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_merge_range_t range;
   svn_mergeinfo_t target_mergeinfo;
   svn_merge_range_t *conflicted_range = NULL;
-  int i;
   svn_boolean_t indirect = FALSE;
   apr_pool_t *subpool;
   svn_boolean_t is_rollback = (revision1 > revision2);
@@ -6676,6 +6675,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   if (!merge_b->record_only)
     {
       apr_array_header_t *ranges_to_merge = remaining_ranges;
+      int i;
 
       /* If we have ancestrally related sources and more than one
          range to merge, eliminate no-op ranges before going through

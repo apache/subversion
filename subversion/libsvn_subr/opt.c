@@ -88,18 +88,21 @@ svn_opt_get_option_from_code2(int code,
   for (i = 0; option_table[i].optch; i++)
     if (option_table[i].optch == code)
       {
-        int j;
         if (command)
-          for (j = 0; ((j < SVN_OPT_MAX_OPTIONS) &&
-                       command->desc_overrides[j].optch); j++)
-            if (command->desc_overrides[j].optch == code)
-              {
-                apr_getopt_option_t *tmpopt =
-                    apr_palloc(pool, sizeof(*tmpopt));
-                *tmpopt = option_table[i];
-                tmpopt->description = command->desc_overrides[j].desc;
-                return tmpopt;
-              }
+          {
+            int j;
+
+            for (j = 0; ((j < SVN_OPT_MAX_OPTIONS) &&
+                         command->desc_overrides[j].optch); j++)
+              if (command->desc_overrides[j].optch == code)
+                {
+                  apr_getopt_option_t *tmpopt =
+                      apr_palloc(pool, sizeof(*tmpopt));
+                  *tmpopt = option_table[i];
+                  tmpopt->description = command->desc_overrides[j].desc;
+                  return tmpopt;
+                }
+          }
         return &(option_table[i]);
       }
 
@@ -1031,18 +1034,21 @@ svn_opt_print_help3(apr_getopt_t *os,
                     apr_pool_t *pool)
 {
   apr_array_header_t *targets = NULL;
-  int i;
 
   if (os)
     SVN_ERR(svn_opt_parse_all_args(&targets, os, pool));
 
   if (os && targets->nelts)  /* help on subcommand(s) requested */
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_opt_subcommand_help3(APR_ARRAY_IDX(targets, i, const char *),
-                                 cmd_table, option_table,
-                                 global_options, pool);
-      }
+    {
+      int i;
+
+      for (i = 0; i < targets->nelts; i++)
+        {
+          svn_opt_subcommand_help3(APR_ARRAY_IDX(targets, i, const char *),
+                                   cmd_table, option_table,
+                                   global_options, pool);
+        }
+    }
   else if (print_version)   /* just --version */
     SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer, quiet,
                                         pool));
