@@ -984,6 +984,36 @@ PRAGMA user_version = 17;
 -- STMT_UPGRADE_TO_18
 PRAGMA user_version = 18;
 
+
+/* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
+
+/* ### Enable this bit and take out the BASE_NODE stuff in format 99 below.
+
+-- DISABLED_STMT_UPGRADE_TO_20
+
+INSERT INTO NODES
+SELECT wc_id, local_relpath, 0 AS op_depth, parent_relpath,
+       repos_id, repos_relpath, revnum,
+       presence, depth, NULL AS moved_here, NULL AS moved_to, kind,
+       changed_rev, changed_date, changed_author,
+       checksum, properties, translated_size, last_mod_time,
+       dav_cache, symlink_target, file_external
+FROM BASE_NODE;
+INSERT INTO NODES
+SELECT wc_id, local_relpath, 2 AS op_depth, parent_relpath,
+       copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum,
+       presence, depth, NULL AS moved_here, NULL AS moved_to, kind,
+       changed_rev, changed_date, changed_author,
+       checksum, properties, translated_size, last_mod_time,
+       NULL AS dav_cache, symlink_target, NULL AS file_external
+FROM WORKING_NODE;
+
+DROP TABLE BASE_NODE;
+DROP TABLE WORKING_NODE;
+
+PRAGMA user_version = 20;
+*/
+
 /* ------------------------------------------------------------------------- */
 
 /* Format YYY introduces new handling for conflict information.  */
