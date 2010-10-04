@@ -29,6 +29,8 @@
 
 #include "svn_pools.h"
 
+#include "apr_strings.h"
+
 namespace SVN
 {
 
@@ -55,6 +57,12 @@ namespace SVN
       alloc(apr_size_t sz)
       {
         return apr_palloc(m_pool, sz);
+      }
+
+      inline char *
+      strdup(const char *str)
+      {
+        return apr_pstrdup(m_pool, str);
       }
 
       inline void

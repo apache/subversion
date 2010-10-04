@@ -259,6 +259,39 @@ class ClientNotifyInfo
     Private::CStructWrapper<ClientNotifyInfo, const svn_wc_notify_t> m_notify;
 };
 
+class Version
+{
+  public:
+    inline static svn_version_t *
+    dup(const svn_version_t *version, Pool &pool)
+    {
+      svn_version_t *v =
+                    reinterpret_cast<svn_version_t *>(pool.alloc(sizeof(*v)));
+
+      v->major = version->major;
+      v->minor = version->minor;
+      v->patch = version->patch;
+      v->tag = pool.strdup(version->tag);
+
+      return v;
+    }
+
+    inline
+    Version(const svn_version_t *version)
+      : m_version(version)
+    {
+    }
+
+    inline std::string
+    getTag()
+    {
+      return std::string(m_version->tag);
+    }
+
+  private:
+    Private::CStructWrapper<Version, const svn_version_t> m_version;
+};
+
 }
 
 
