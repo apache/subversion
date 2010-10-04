@@ -37,10 +37,8 @@
 class StatusCallback
 {
  public:
-  StatusCallback(jobject jcallback);
+  StatusCallback(jobject jcallback, svn_wc_context_t *wc_ctx);
   ~StatusCallback();
-
-  void setWcCtx(svn_wc_context_t *);
 
   static svn_error_t* callback(void *baton,
                                const char *local_abspath,
@@ -58,7 +56,7 @@ class StatusCallback
    */
   jobject m_callback;
 
-  svn_wc_context_t *wc_ctx;
+  svn_wc_context_t *m_wc_ctx;
 };
 
 #endif // STATUSCALLBACK_H
