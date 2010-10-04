@@ -1268,30 +1268,46 @@ reown_file(const char *path,
 static svn_error_t *
 get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
 {
-  apr_finfo_t finfo;
-  apr_file_t *fd;
+  /* the default permissions as read from the temp folder */
+  static apr_fileperms_t default_perms = 0;
 
-  /* Get the perms for a newly created file to find out what bits
-     should be set.
+  /* Technically, this "racy": Multiple threads may use enter here and
+     try to figure out the default permisission concurrently. That's fine
+     since they will end up with the same results. Even more technical,
+     apr_fileperms_t is an atomic type on 32+ bit machines.
+   */
+  if (default_perms == 0)
+    {
+      apr_finfo_t finfo;
+      apr_file_t *fd;
 
-     NOTE: normally del_on_close can be problematic because APR might
-       delete the file if we spawned any child processes. In this case,
-       the lifetime of this file handle is about 3 lines of code, so
-       we can safely use del_on_close here.
+      /* Get the perms for a newly created file to find out what bits
+        should be set.
 
-     NOTE: not so fast, shorty. if some other thread forks off a child,
-       then the APR cleanups run, and the file will disappear. sigh.
+        Normally del_on_close can be problematic because APR might
+        delete the file if we spawned any child processes. In this
+        case, the lifetime of this file handle is about 3 lines of
+        code, so we can safely use del_on_close here.
 
-     Using svn_io_open_uniquely_named() here because other tempfile
-     creation functions tweak the permission bits of files they create.
-  */
-  SVN_ERR(svn_io_open_uniquely_named(&fd, NULL, NULL, "svn-tempfile", ".tmp",
-                                     svn_io_file_del_on_pool_cleanup,
-                                     scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
-  SVN_ERR(svn_io_file_close(fd, scratch_pool));
+        Not so fast! If some other thread forks off a child, then the
+        APR cleanups run, and the file will disappear. So use
+        del_on_pool_cleanup instead.
 
-  *perms = finfo.protection;
+        Using svn_io_open_uniquely_named() here because other tempfile
+        creation functions tweak the permission bits of files they create.
+      */
+      SVN_ERR(svn_io_open_uniquely_named(&fd, NULL, NULL, "svn-tempfile", ".tmp",
+                                        svn_io_file_del_on_pool_cleanup,
+                                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
+      SVN_ERR(svn_io_file_close(fd, scratch_pool));
+
+      *perms = finfo.protection;
+      default_perms = finfo.protection;
+    }
+  else
+    *perms = default_perms;
+
   return SVN_NO_ERROR;
 }
 
