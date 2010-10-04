@@ -1244,7 +1244,7 @@ absent_directory(const char *path,
       svn_wc_notify_t *notify
         = svn_wc_create_notify(svn_dirent_join(pb->wcpath,
                                                svn_relpath_basename(path,
-                                                                    pool),
+                                                                    NULL),
                                                pool),
                                svn_wc_notify_skip, pool);
       notify->kind = svn_node_dir;

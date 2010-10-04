@@ -250,7 +250,7 @@ absent_helper(svn_boolean_t is_dir,
                "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
                DIR_OR_FILE(is_dir),
                apr_xml_quote_string(pool,
-                                    svn_relpath_basename(path, pool),
+                                    svn_relpath_basename(path, NULL),
                                     1)));
     }
 
@@ -589,7 +589,7 @@ upd_delete_entry(const char *path,
 {
   item_baton_t *parent = parent_baton;
   const char *qname = apr_xml_quote_string(pool,
-                                           svn_relpath_basename(path, pool),
+                                           svn_relpath_basename(path, NULL),
                                            1);
   return dav_svn__brigade_printf(parent->uc->bb, parent->uc->output,
                                  "<S:delete-entry name=\"%s\"/>" DEBUG_CR,

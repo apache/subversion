@@ -1204,7 +1204,7 @@ print_tree(svn_fs_root_t *root,
   else if (*path == '/')
     name = svn_uri_basename(path, pool);
   else
-    name = svn_relpath_basename(path, pool);
+    name = svn_relpath_basename(path, NULL);
 
   if (svn_path_is_empty(name))
     name = "/"; /* basename of '/' is "" */
