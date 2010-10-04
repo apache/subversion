@@ -167,7 +167,7 @@ auto_props_enumerator(const char *name,
   apr_array_header_t *props;
 
   /* nothing to do here without a value */
-  if (strlen(value) == 0)
+  if (*value == 0)
     return TRUE;
 
   /* check if filename matches and return if it doesn't */
