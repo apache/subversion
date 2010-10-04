@@ -183,8 +183,7 @@ Java_org_apache_subversion_javahl_SVNClient_status
   if (JNIUtil::isExceptionThrown())
     return;
 
-  StatusCallback callback(jstatusCallback,
-                          cl->getClientContext().getContext(NULL)->wc_ctx);
+  StatusCallback callback(jstatusCallback);
   cl->status(path, EnumMapper::toDepth(jdepth),
              jonServer ? true:false,
              jgetAll ? true:false, jnoIgnore ? true:false,
