@@ -36,13 +36,6 @@ namespace SVN
 
   class Revision
   {
-    private:
-      /** The constructors. */
-      Revision(svn_opt_revision_kind kind);
-      Revision(apr_time_t date, bool foo);
-
-      svn_opt_revision_t m_revision;
-
     public:
       Revision(svn_revnum_t revnum);
 
@@ -63,6 +56,13 @@ namespace SVN
       const static Revision BASE;
       const static Revision WORKING;
       const static Revision UNSPECIFIED;
+
+    private:
+      /** The constructors. */
+      Revision(svn_opt_revision_kind kind);
+      Revision(apr_time_t date, bool foo);
+
+      svn_opt_revision_t m_revision;
   };
 }
 

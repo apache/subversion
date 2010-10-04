@@ -42,22 +42,6 @@ namespace SVN
    */
   class Pool
   {
-
-    private:
-      /** The pool request pool.  */
-      apr_pool_t *m_pool;
-
-      /**
-       * We declare the copy constructor and assignment operator private
-       * here, so that the compiler won't inadvertently use them for us.
-       * The default copy constructor just copies all the data members,
-       * which would create two pointers to the same pool, one of which
-       * would get destroyed while the other thought it was still
-       * valid...and BOOM!  Hence the private declaration.
-       */
-      Pool &operator=(const Pool &that);
-      Pool(const Pool &that);
-
     public:
       Pool();
 
@@ -91,6 +75,21 @@ namespace SVN
       {
         svn_pool_clear(m_pool);
       }
+
+    private:
+      /** The pool request pool.  */
+      apr_pool_t *m_pool;
+
+      /**
+       * We declare the copy constructor and assignment operator private
+       * here, so that the compiler won't inadvertently use them for us.
+       * The default copy constructor just copies all the data members,
+       * which would create two pointers to the same pool, one of which
+       * would get destroyed while the other thought it was still
+       * valid...and BOOM!  Hence the private declaration.
+       */
+      Pool &operator=(const Pool &that);
+      Pool(const Pool &that);
   };
 
 }

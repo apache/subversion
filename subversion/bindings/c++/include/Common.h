@@ -35,15 +35,6 @@ namespace SVN
 
 class Exception : public std::exception
 {
-  private:
-    void assembleErrorMessage(svn_error_t *err, int depth,
-                              apr_status_t parent_apr_err,
-                              std::string &buffer);
-
-    std::string m_description;
-    std::string m_source;
-    int m_apr_err;
-
   public:
     /** A constructor to build an exception from a Subversion error.  The
         Exception object will ensure the error is cleared. */
@@ -60,6 +51,15 @@ class Exception : public std::exception
     int getAPRErr();
 
     svn_error_t *c_err();
+
+  private:
+    void assembleErrorMessage(svn_error_t *err, int depth,
+                              apr_status_t parent_apr_err,
+                              std::string &buffer);
+
+    std::string m_description;
+    std::string m_source;
+    int m_apr_err;
 };
 
 }

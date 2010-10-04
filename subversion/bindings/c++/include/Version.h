@@ -36,13 +36,6 @@ namespace SVN
 
   class Version
   {
-    private:
-      int m_major;
-      int m_minor;
-      int m_patch;
-
-      std::string m_tag;
-
     public:
       /** The constructor. */
       Version(const svn_version_t *);
@@ -52,6 +45,13 @@ namespace SVN
 
       /** The destructor needs to be public. */
       virtual ~Version();
+
+    private:
+      int m_major;
+      int m_minor;
+      int m_patch;
+
+      std::string m_tag;
   };
 }
 

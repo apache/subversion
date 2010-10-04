@@ -46,17 +46,6 @@ namespace SVN
 
   class Client
   {
-    private:
-      Pool m_pool;
-      svn_client_ctx_t *m_ctx;
-      
-      std::set<Callback::ClientNotifier *> m_notifiers;
-
-      static void notify_func2(void *baton,
-                               const svn_wc_notify_t *notify,
-                               apr_pool_t *pool);
-      void notify(const ClientNotifyInfo &info);
-
     public:
       /** The constructor. */
       Client();
@@ -106,6 +95,17 @@ namespace SVN
                   const std::vector<std::string> &changelists,
                   const PropTable &revprop_table,
                   Callback::Commit &callback);
+
+    private:
+      Pool m_pool;
+      svn_client_ctx_t *m_ctx;
+      
+      std::set<Callback::ClientNotifier *> m_notifiers;
+
+      static void notify_func2(void *baton,
+                               const svn_wc_notify_t *notify,
+                               apr_pool_t *pool);
+      void notify(const ClientNotifyInfo &info);
   };
 }
 

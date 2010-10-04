@@ -51,11 +51,6 @@ namespace Private
 template<typename C, typename T>
 class RefCounter
 {
-  private:
-    Pool m_pool;
-    size_t count;
-    T *p;
-
   public:
     inline
     RefCounter<C, T>(T *in)
@@ -71,14 +66,16 @@ class RefCounter
     inline size_t refs() { return count; }
 
     // The default destructor will destroy the Pool, and deallocate our object
+
+  private:
+    Pool m_pool;
+    size_t count;
+    T *p;
 };
 
 template<typename C, typename T>
 class CStructWrapper
 {
-  private:
-    RefCounter<C, T> *m_data;
-
   public:
     inline
     CStructWrapper(T *data)
@@ -118,6 +115,9 @@ class CStructWrapper
 
     inline const T& operator* () const { return *m_data->ptr(); }
     inline const T* operator-> () const { return m_data->ptr(); }
+
+  private:
+    RefCounter<C, T> *m_data;
 };
 
 } // namespace Private
@@ -125,9 +125,6 @@ class CStructWrapper
 // C-struct wrapper classes
 class CommitInfo
 {
-  private:
-    Private::CStructWrapper<CommitInfo, const svn_commit_info_t> m_info;
-
   public:
     inline static svn_commit_info_t *
     dup(const svn_commit_info_t *info, Pool &pool)
@@ -170,13 +167,13 @@ class CommitInfo
       else
         return std::string();
     }
+
+  private:
+    Private::CStructWrapper<CommitInfo, const svn_commit_info_t> m_info;
 };
 
 class Lock
 {
-  private:
-    Private::CStructWrapper<Lock, const svn_lock_t> m_lock;
-
   public:
     inline static svn_lock_t *
     dup(const svn_lock_t *lock, Pool &pool)
@@ -231,14 +228,13 @@ class Lock
     {
       return m_lock->expiration_date;
     }
+
+  private:
+    Private::CStructWrapper<Lock, const svn_lock_t> m_lock;
 };
 
 class ClientNotifyInfo
 {
-  private:
-    Pool m_pool;
-    svn_wc_notify_t *m_notify;
-
   public:
     inline
     ClientNotifyInfo(const svn_wc_notify_t *info)
@@ -266,6 +262,10 @@ class ClientNotifyInfo
     {
       return m_notify;
     }
+
+  private:
+    Pool m_pool;
+    svn_wc_notify_t *m_notify;
 };
 
 }
