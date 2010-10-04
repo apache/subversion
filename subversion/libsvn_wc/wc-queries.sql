@@ -129,23 +129,6 @@ INSERT OR IGNORE INTO working_node (
   wc_id, local_relpath, parent_relpath, presence, kind)
 VALUES (?1, ?2, ?3, 'incomplete', 'unknown');
 
--- STMT_COUNT_BASE_NODE_CHILDREN
-SELECT COUNT(*) FROM base_node
-WHERE wc_id = ?1 AND parent_relpath = ?2;
-
--- STMT_COUNT_BASE_NODE_CHILDREN_1
-SELECT COUNT(*) FROM nodes
-WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0;
-
--- STMT_COUNT_WORKING_NODE_CHILDREN
-SELECT COUNT(*) FROM working_node
-WHERE wc_id = ?1 AND parent_relpath = ?2;
-
--- STMT_COUNT_WORKING_NODE_CHILDREN_1
-SELECT COUNT(*) FROM (SELECT DISTINCT local_relpath FROM nodes
-                      WHERE wc_id = ?1 AND parent_relpath = ?2
-                      AND op_depth > 0);
-
 -- STMT_SELECT_BASE_NODE_CHILDREN
 SELECT local_relpath FROM base_node
 WHERE wc_id = ?1 AND parent_relpath = ?2;
