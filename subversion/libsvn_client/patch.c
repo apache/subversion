@@ -872,7 +872,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
       /* If the last line doesn't have a newline, we get EOF but still
        * have a non-empty line to compare. */
       if ((hunk_eof && hunk_line->len == 0) ||
-          (content_info->eof && strlen(target_line) == 0))
+          (content_info->eof && *target_line == 0))
         break;
 
       /* Leading/trailing fuzzy lines always match. */
