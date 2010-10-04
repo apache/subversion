@@ -80,7 +80,7 @@ class ClientContext
   void password(const char *pi_password);
   void setPrompt(Prompter *prompter);
   void cancelOperation();
-  const char *getConfigDirectory();
+  const char *getConfigDirectory() const;
 
   /**
    * Set the configuration directory, taking the usual steps to

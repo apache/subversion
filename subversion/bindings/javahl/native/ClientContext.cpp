@@ -240,7 +240,7 @@ ClientContext::setConfigDirectory(const char *configDir)
 }
 
 const char *
-ClientContext::getConfigDirectory()
+ClientContext::getConfigDirectory() const
 {
     return m_configDir.c_str();
 }
