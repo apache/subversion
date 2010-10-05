@@ -5567,8 +5567,8 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* Update non-NULL WORKING_NODE.copyfrom_repos_id. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->wc_id, rb->local_relpath,
-                            like_arg, new_repos_id));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issii", rb->wc_id, rb->local_relpath,
+                            like_arg, rb->old_repos_id, new_repos_id));
   SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 
@@ -5598,8 +5598,8 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
       /* Update any BASE which have non-NULL repos_id's */
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_UPDATE_BASE_RECURSIVE_REPO));
-      SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->wc_id, rb->local_relpath,
-                                like_arg, new_repos_id));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issii", rb->wc_id, rb->local_relpath,
+                                like_arg, rb->old_repos_id, new_repos_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
 #endif
 
