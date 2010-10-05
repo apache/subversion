@@ -4819,6 +4819,77 @@ def nodes_table_wc_wc_copies(sbox):
                            (4, '/E-copied/alpha'):False,
                            (4, '/E-copied/beta'): False, })
 
+def mixed_rev_copy_del(sbox):
+  """copy mixed-rev and delete children"""
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete and commit A/B/E/alpha
+  svntest.main.run_svn(None, 'rm', sbox.ospath('A/B/E/alpha'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha': Item(verb='Deleting'),
+    })
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Update to r2, then update A/B/E/alpha and A/B/E/beta to r1
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.main.run_svn(None, 'up', '-r1',
+                       sbox.ospath('A/B/E/alpha'),
+                       sbox.ospath('A/B/E/beta'))
+  expected_status.add({
+    'A/B/E/alpha' : Item(status='  ', wc_rev=1),
+    })
+  expected_status.tweak('A/B/E/beta', wc_rev=1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Copy A/B/E to A/B/E_copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E_copy'))
+  expected_status.add({
+    'A/B/E_copy'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E_copy/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E_copy/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Delete A/B/E_copy/alpha and A/B/E_copy/beta
+  svntest.main.run_svn(None, 'rm',
+                       sbox.ospath('A/B/E_copy/alpha'),
+                       sbox.ospath('A/B/E_copy/beta'))
+  expected_status.tweak('A/B/E_copy/alpha', 'A/B/E_copy/beta', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # This test currently fails above, as both alpha and beta disappear
+  # from status, what should happen is unclear.  In 1.6 both names
+  # remained in status 'D'.
+
+  # The commit doesn't work either, it should not delete alpha but
+  # must delete beta.  In 1.6 both alpha and beta were deleted and the
+  # commit failed.  It's not clear how the client can determine that
+  # alpha and beta should be treated differently.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E_copy'      : Item(verb='Adding'),
+    'A/B/E_copy/beta' : Item(verb='Deleting'),
+    })
+  expected_status.tweak('A/B/E_copy', wc_rev=3, copied=None)
+  expected_status.remove('A/B/E_copy/alpha', 'A/B/E_copy/beta')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
 
 ########################################################################
 # Run the tests
@@ -4915,6 +4986,7 @@ test_list = [ None,
               move_added_nodes,
               copy_over_deleted_dir,
               Wimp("Needs NODES table & op-depth", nodes_table_wc_wc_copies),
+              XFail(mixed_rev_copy_del),
              ]
 
 if __name__ == '__main__':
