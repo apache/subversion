@@ -630,9 +630,9 @@ svn_cl__log(apr_getopt_t *os,
           range = APR_ARRAY_IDX(opt_state->revision_ranges, i,
                                 svn_opt_revision_range_t *);
           if (range->start.value.number < range->end.value.number)
-            range->start = range->end;
+            range->start.value.number++;
           else
-            range->end = range->start;
+            range->end.value.number++;
         }
     }
 

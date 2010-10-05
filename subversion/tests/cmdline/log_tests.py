@@ -1297,7 +1297,7 @@ def log_changes_range(sbox):
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'log', '-c',
-                                                              '2:5', repo_url)
+                                                              '2-5', repo_url)
 
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2, 3, 4, 5])
@@ -1315,6 +1315,19 @@ def log_changes_list(sbox):
 
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2, 5, 7])
+
+def log_changes_complex(sbox):
+  "test log -c on complex set of ranges"
+
+  guarantee_repos_and_wc(sbox)
+  repo_url = sbox.repo_url
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-c',
+                                                              '2,5-3,-8,6-7', repo_url)
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2, 5, 4, 3, 8, 6, 7])
 
 #----------------------------------------------------------------------
 def only_one_wc_path(sbox):
@@ -1760,8 +1773,9 @@ test_list = [ None,
               SkipUnless(merge_sensitive_log_added_path,
                          server_has_mergeinfo),
               log_single_change,
-              XFail(log_changes_range),
+              log_changes_range,
               log_changes_list,
+              log_changes_complex,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,
