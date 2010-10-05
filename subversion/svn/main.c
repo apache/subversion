@@ -1410,7 +1410,7 @@ main(int argc, const char *argv[])
           for (i = 0; i < change_revs->nelts; i++)
             {
               char *end;
-              svn_revnum_t changeno;
+              svn_revnum_t changeno, changeno_end;
               svn_opt_revision_range_t *range;
               const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
@@ -1421,7 +1421,22 @@ main(int argc, const char *argv[])
                  ### "{DATE}" and the special words. */
               while (*change_str == 'r')
                 change_str++;
-              changeno = strtol(change_str, &end, 10);
+              changeno = changeno_end = strtol(change_str, &end, 10);
+              if (end != change_str && *end == '-')
+                {
+                  if (changeno < 0)
+                    {
+                      err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                              _("Negative number in range (%s)"
+                                                " not supported with -c"),
+                                              change_str);
+                      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+                    }
+                  change_str = end+1;
+                  while (*change_str == 'r')
+                    change_str++;
+                  changeno_end = strtol(change_str, &end, 10);
+                }
               if (end == change_str || *end != '\0')
                 {
                   err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -1439,19 +1454,28 @@ main(int argc, const char *argv[])
 
               /* Figure out the range:
                     -c N  -> -r N-1:N
-                    -c -N -> -r N:N-1 */
-              range = apr_palloc(pool, sizeof(*range));
+                    -c -N -> -r N:N-1
+                    -c M-N -> -r M-1:N for M < N
+                    -c M-N -> -r M:N-1 for M > N
+                    -c -M-N -> error (too confusing/no valid use case)
+              */
               if (changeno > 0)
                 {
-                  range->start.value.number = changeno - 1;
-                  range->end.value.number = changeno;
+                  if (changeno < changeno_end)
+                    changeno--;
+                  else
+                    changeno_end--;
                 }
               else
                 {
                   changeno = -changeno;
-                  range->start.value.number = changeno;
-                  range->end.value.number = changeno - 1;
+                  changeno_end = changeno - 1;
                 }
+
+              range = apr_palloc(pool, sizeof(*range));
+              range->start.value.number = changeno;
+              range->end.value.number = changeno_end;
+
               opt_state.used_change_arg = TRUE;
               range->start.kind = svn_opt_revision_number;
               range->end.kind = svn_opt_revision_number;
