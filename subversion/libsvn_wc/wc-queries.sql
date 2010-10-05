@@ -259,14 +259,14 @@ WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0 AND
    local_relpath LIKE ?3 ESCAPE '#');
 
 -- STMT_UPDATE_BASE_RECURSIVE_REPO
-UPDATE base_node SET repos_id = ?4
-WHERE repos_id IS NOT NULL AND wc_id = ?1 AND
+UPDATE base_node SET repos_id = ?5
+WHERE repos_id = ?4 AND wc_id = ?1 AND
   (local_relpath = ?2 OR
    local_relpath LIKE ?3 ESCAPE '#');
 
 -- STMT_UPDATE_WORKING_RECURSIVE_COPYFROM_REPO
-UPDATE working_node SET copyfrom_repos_id = ?4
-WHERE copyfrom_repos_id IS NOT NULL AND wc_id = ?1 AND
+UPDATE working_node SET copyfrom_repos_id = ?5
+WHERE copyfrom_repos_id = ?4 AND wc_id = ?1 AND
   (local_relpath = ?2 OR
    local_relpath LIKE ?3 ESCAPE '#');
 

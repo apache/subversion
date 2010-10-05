@@ -1491,7 +1491,26 @@ test_global_relocate(apr_pool_t *pool)
   /* The UUID should still be the same. */
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
-  /* While we're at it, let's see if the children have been relocated, too. */
+  /* While we're at it, let's see if the children have been relocated, too.
+
+     ### Relocate doesn't change anything in the child since the
+         repos_id is inherited (null).  Should we have some children
+         where the repos_id is not null but equal to the parent or
+         root? */
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                               &repos_relpath, &repos_root_url, &repos_uuid,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               db, svn_dirent_join(local_abspath, "F",
+                                                   pool),
+                               pool, pool));
+  SVN_TEST_STRING_ASSERT(repos_relpath, NULL);
+  SVN_TEST_STRING_ASSERT(repos_root_url, NULL);
+  SVN_TEST_STRING_ASSERT(repos_uuid, NULL);
+
+  /* Alternate repository is not relocated. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                &repos_relpath, &repos_root_url, &repos_uuid,
                                NULL, NULL, NULL, NULL,
@@ -1502,9 +1521,8 @@ test_global_relocate(apr_pool_t *pool)
                                                    pool),
                                pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "G-alt");
-  SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_THREE);
-  /* The UUID should still be the same. */
-  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
+  SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_TWO);
+  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_TWO);
 
   return SVN_NO_ERROR;
 }
