@@ -27,8 +27,8 @@ trees: BASE, WORKING and ACTUAL.
 For an in-depth description of what each means, the reader is referred
 to other documentation, also in the notes/ directory.  In short, BASE
 is what was checked out from the repository; WORKING includes
-modifications mode with Subversion commands while ACTUAL also includes
-changes which have been made with non-Subversion aware tools (rm, cp, etc.).
+tree restructuring; while ACTUAL also includes changes to properties
+and file contents.
 
 The idea that there are three trees works - mostly. There is no need
 for more trees outside the area of the metadata administration and even
@@ -46,9 +46,9 @@ replacement to execute the highest level replacement or vice versa
 columns.
 
 The NODES table is the answer to this problem: instead of having a single
-row it a table with WORKING nodes with just enough columns to record
+row in a table with WORKING nodes with just enough columns to record
 (as per the example) a replacement, the solution is to record different
-states by having multiple rows.
+layers of tree restructuring by having multiple rows.
 
 
 
@@ -69,7 +69,7 @@ The main difference between the WORKING_NODE and BASE_NODE tables was
 that the BASE_NODE table contained a few caching fields which are
 not relevant to WORKING_NODE.  Moving those to a separate table was
 determined to be wasteful because the primary key of that table
-whould be much larger than any information stored in it in the first
+would be much larger than any information stored in it in the first
 place.
 
 
@@ -90,7 +90,7 @@ BASE state, they refer to the repository location which was checked
 out from.
 
 Additionally, the rows contain information about local modifications
-such copy, move or delete operations.
+such as copy, move or delete operations.
 
 
 
@@ -107,8 +107,8 @@ Every row for the (wc_id, local_relpath) combination must have a unique
 op_depth associated with it.  The value of op_depth is related to the
 top-most node being modified in the given tree-restructuring
 operation (operation root or oproot).  E.g. upon deletion of a subtree,
-all nodes in the subtree will have rows in the table with the same
-op_depth.
+every node in the subtree will have a row in the table with the same
+op_depth, that being the depth of the top directory of the subtree.
 
 The op_depth is calculated by taking the number of path components in
 the local_relpath of the oproot. The unmodified tree (BASE) is identified
@@ -124,7 +124,7 @@ Visibility of multiple op_depth rows
 ------------------------------------
 
 As stated in the introduction, there's no need to leak the concept of
-multiple op_depth rows out of the meta data store - apart of the BASE
+multiple op_depth rows out of the meta data store - apart from the BASE
 and WORKING trees.
 
 As described before, the BASE tree is defined by op_depth == 0. WORKING as
@@ -142,10 +142,18 @@ the reversal process: in that case a revert simply means deletion of rows
 and bringing the subtree back into sync with the metadata.
 
 There's one exception: When a delete is followed by a copy or move to
-the deleted location - causing a replacement - a pre-existing (due to the
-delete) row with the right op_depth exists and needs to be modified. On
-revert, the modified nodes need to be restored to 'deleted' state, which
-itself can be reverted during the next revert.
+the deleted location - causing a replacement - a row with the right
+op_depth may already exist, due to the delete.  If so, it needs to be
+modified.  On revert, the modified nodes need to be restored to 'deleted'
+state, which itself can be reverted during the next revert.  (If the row did
+not exist with the right op_depth, then this copy or move is being performed
+at some greater depth than the delete, and then this copy or move will
+simply create rows at a new op_depth.)
+
+### JAF: I don't think a replacement should be reverted in two stages, even
+  though it was created in two stages.  I think 'revert' should restore the
+  previous existing node, just like it does in WC-1.  A partial revert of
+  this state is not a particularly helpful or frequent use case.
 
 ### EHU: The statement above probably means that *all* nodes in the subtree
   need to be rewritten: they all have a deleted state with the affected
@@ -176,6 +184,13 @@ By strict application of the design rule, all nodes and subtrees at
 different revision levels than their parents within the copied subtree,
 become an op_depth layer of their own.
 
+### JAF: We don't have the info in the WC to be able to fill in the lower
+  layers of this tree for the copy, if we are copying from BASE, because
+  BASE is stored flat.  Therefore we won't be able to revert/delete/replace
+  the different-revision sub-trees of this copied tree.  Therefore I think
+  we have to store the mixed-rev copy flat (single op_depth) and modify the
+  commit rules to act on revision-number changes within this flat tree.
+
 
 In a deleted subtree, all nodes get marked deleted explicitly
 -------------------------------------------------------------
@@ -199,6 +214,8 @@ and all overlapping children! - to switch their presence value to
 addition: their tree depths don't correspond to the op_depth, meaning
 the nodes themselves should not be considered restructured.
 
+### JAF: I don't understand what that last sentence refers to at all.
+
 
 Status needs to consult the *two* topmost layers - sometimes
 ------------------------------------------------------------
@@ -217,6 +234,9 @@ otherwise, it must be an addition.
 
 
 TODO:
+
  * Explain the role of the 'deleted-below' columns
+   ### JAF: No, that idea has already been rejected.
+
  * Document states of the table and their meaning (including values
     of the relevant columns)
