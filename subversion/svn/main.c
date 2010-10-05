@@ -1461,7 +1461,7 @@ main(int argc, const char *argv[])
               */
               if (changeno > 0)
                 {
-                  if (changeno < changeno_end)
+                  if (changeno <= changeno_end)
                     changeno--;
                   else
                     changeno_end--;
