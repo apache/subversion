@@ -4698,7 +4698,8 @@ def check_op_depth(path, expected_result):
 
   c.execute("""SELECT op_depth, presence, local_relpath, repos_id, revision,
                  repos_path FROM nodes
-               WHERE local_relpath LIKE '""" + base_relpath + """%'""")
+               WHERE local_relpath = '""" + base_relpath + """'
+                 OR  local_relpath LIKE '""" + base_relpath + """/%'""")
   for row in c:
     op_depth = row[0]
     wc_relpath = row[2]
@@ -4712,6 +4713,7 @@ def check_op_depth(path, expected_result):
     except KeyError:
       errors.append("Row not expected: op_depth=%s, relpath=%s"
                     % (op_depth, relpath))
+      continue
 
     try:
       if has_repo:
@@ -4723,6 +4725,7 @@ def check_op_depth(path, expected_result):
       print "  ACTUAL:  ", op_depth, relpath, repo_relpath
       errors.append("Row op_depth=%s, relpath=%s has repo_relpath=%s"
                     % (op_depth, relpath, repo_relpath))
+      continue
 
   for (op_depth, relpath) in expected_result:
     errors.append("Row not found: op_depth=%s, relpath=%s"
