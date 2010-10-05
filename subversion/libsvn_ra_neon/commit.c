@@ -49,33 +49,27 @@
 
 
 #define APPLY_TO_VERSION "<D:apply-to-version/>"
+
 /*
-** version_rsrc_t: identify the relevant pieces of a resource on the server
-**
-** REVISION is the resource's revision, or SVN_INVALID_REVNUM if it is
-** new or is the HEAD.
-**
-** URL refers to the public/viewable/original resource.
-** VSN_URL refers to the version resource that we stored locally
-** WR_URL refers to a working resource for this resource
-**
-** Note that VSN_URL is NULL if this resource has just been added, and
-** WR_URL can be NULL if the resource has not (yet) been checked out.
-**
-** LOCAL_PATH is relative to the root of the commit. It will be used
-** for the get_func, push_func, and close_func callbacks.
-**
-** NAME is the name of the resource.
-*/
+ * version_rsrc_t: identify the relevant pieces of a resource on the server
+ *
+ * NOTE:  If you tweak this structure, please update dup_resource() to
+ * ensure that it continues to create complete deep copies!
+ */
 typedef struct
 {
-  svn_revnum_t revision;
-  const char *url;
-  const char *vsn_url;
-  const char *wr_url;
-  const char *local_path;
-  const char *name;
-  apr_pool_t *pool; /* pool in which this resource is allocated. */
+  svn_revnum_t revision;  /* resource's revision, or SVN_INVALID_REVNUM
+                             if it's new or is the HEAD */
+  const char *url;        /* public/viewable/original resource URL */
+  const char *vsn_url;    /* version resource URL that we stored
+                             locally; NULL if this is a just-added resource */
+  const char *wr_url;     /* working resource URL for this resource;
+                             NULL for resources not (yet) checked out */
+  const char *local_path; /* path relative to the root of the commit
+                             (used for get_func, push_func, and
+                             close_func callbacks). */
+  const char *name;       /* basename of the resource */
+  apr_pool_t *pool;       /* pool in which this resource is allocated */
 
 } version_rsrc_t;
 
@@ -141,11 +135,10 @@ static const ne_propname fetch_props[] =
 
 static const ne_propname log_message_prop = { SVN_DAV_PROP_NS_SVN, "log" };
 
-/* perform a deep copy of BASE into POOL, and return the result. */
+/* Return a deep copy of BASE allocated from POOL. */
 static version_rsrc_t * dup_resource(version_rsrc_t *base, apr_pool_t *pool)
 {
   version_rsrc_t *rsrc = apr_pcalloc(pool, sizeof(*rsrc));
-  rsrc->pool = pool;
   rsrc->revision = base->revision;
   rsrc->url = base->url ?
     apr_pstrdup(pool, base->url) : NULL;
@@ -155,6 +148,9 @@ static version_rsrc_t * dup_resource(version_rsrc_t *base, apr_pool_t *pool)
     apr_pstrdup(pool, base->wr_url) : NULL;
   rsrc->local_path = base->local_path ?
     apr_pstrdup(pool, base->local_path) : NULL;
+  rsrc->name = base->name ?
+    apr_pstrdup(pool, base->name) : NULL;
+  rsrc->pool = pool;
   return rsrc;
 }
 
