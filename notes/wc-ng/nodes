@@ -9,7 +9,11 @@ Description of the NODES table
  * Ordering rows into layers
  * Visibility of multiple op_depth rows
  * Restructuring the tree means adding rows
- * 
+ * Copies of mixed-revision subtrees become multiple layers
+ * In a deleted subtree, all nodes get marked deleted explicitly
+ * Nodes in a replaced subtree can have different presence values
+ * Presence values of nodes in partially overlapping replacements
+ * Status needs to consult the *two* topmost layers - sometimes
 
 
 Introduction
@@ -149,6 +153,65 @@ itself can be reverted during the next revert.
   the same op_depth...
 
 
+Copies of mixed-revision subtrees become multiple layers
+--------------------------------------------------------
+
+In the design, every node which is not a child of its parent implies a
+tree restructuring operation having taken place.  When committing a
+mixed-revision subtree, the commit should mirror the actual mixed state
+of the tree.
+
+A mixed-revision tree which came about in the usual process of committing
+content changes - ie one without tree modifications - differs exactly in
+that respect:  the tree in the repository doesn't need to mirror the mixed
+revision state in the working copy.
+
+The idea is that every tree restructuring operation takes place on the
+oproot.  When a node or subtree within the copied tree isn't a direct
+child of its parent, most notably because it's at a different revision,
+that's a tree restructuring: a node of the same revision has been
+replaced by a node (of the same name) from another rev.
+
+By strict application of the design rule, all nodes and subtrees at
+different revision levels than their parents within the copied subtree,
+become an op_depth layer of their own.
+
+
+In a deleted subtree, all nodes get marked deleted explicitly
+-------------------------------------------------------------
+
+All nodes in a deleted subtree get marked 'deleted' explicitly in order
+to be able to query on a single node and find in its topmost layer
+that the node that might have ever existed at the given path does not
+exist there anymore.
+
+
+Presence values of nodes in partially overlapping replacements
+--------------------------------------------------------------
+
+Replacement - being a two-step operation consisting of a delete and an
+add/copy - causes all rows of the deleted subtree to be added with a
+new op_depth and presence value 'deleted'.  So far so good.
+
+Adding a tree on top of the same oproot will cause the oproot -
+and all overlapping children! - to switch their presence value to
+'normal'.  The children should not be considered a replacement or
+addition: their tree depths don't correspond to the op_depth, meaning
+the nodes themselves should not be considered restructured.
+
+
+Status needs to consult the *two* topmost layers - sometimes
+------------------------------------------------------------
+
+As discussed before, every tree restructuring operation becomes an
+oproot, causing rows to be added with a new op_depth value.
+
+Status wants to report the oproots, making a clear distinction between
+adds and replacements.  However, both added and replaced nodes have
+the presence value 'normal'.  In order to make the distinction, status
+needs to determine if there was a node in the layer below the
+restructured layer.  In case there is, it must be a replacement,
+otherwise, it must be an addition.
 
 
 
