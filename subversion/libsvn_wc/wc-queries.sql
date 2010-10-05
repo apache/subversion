@@ -571,10 +571,10 @@ VALUES (?1, ?2, 0,
 INSERT INTO working_node (
     wc_id, local_relpath, parent_relpath, presence, kind, checksum,
     translated_size, changed_rev, changed_date, changed_author, depth,
-    symlink_target, last_mod_time )
+    symlink_target, last_mod_time, properties )
 SELECT wc_id, local_relpath, parent_relpath, ?3 AS presence, kind, checksum,
     translated_size, changed_rev, changed_date, changed_author, depth,
-    symlink_target, last_mod_time
+    symlink_target, last_mod_time, properties
 FROM base_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 

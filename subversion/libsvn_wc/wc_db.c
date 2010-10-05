@@ -554,10 +554,7 @@ assert_working_rows_match(svn_boolean_t have_row1,
   SVN_ERR_ASSERT(svn_sqlite__column_int64(stmt1, 14)
                  == svn_sqlite__column_int64(stmt2, 14));
   /* properties */
-#if 0
-  /* Disabled for now as base-deleted don't match */
   SVN_ERR(assert_blob_columns_equal(stmt1, stmt2, 15, scratch_pool));
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -5464,10 +5461,7 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 
 #ifndef SVN_WC__NODES_ONLY
   SVN_ERR_ASSERT(have_row == have_node_row);
-#if 0
-  /* Disabled for now as base-deleted don't match */
   SVN_ERR(assert_blob_columns_equal(stmt, stmt_node, 0, scratch_pool));
-#endif
   SVN_ERR(svn_sqlite__reset(stmt_node));
 #else
   stmt = stmt_node;
