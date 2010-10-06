@@ -217,8 +217,6 @@ the deleted children, but these overlapping children should not be
 considered restructuring replacements.  Only the parent, with op_depth
 equal to the tree depth, is a restructuring replacement.
 
-### JAF: I don't understand what that last sentence refers to at all.
-
 
 Status needs to consult the *two* topmost layers - sometimes
 ------------------------------------------------------------
