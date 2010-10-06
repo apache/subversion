@@ -60,6 +60,13 @@ namespace SVN
         return reinterpret_cast<T *>(apr_palloc(m_pool, sz));
       }
 
+      template <typename T>
+      inline T *
+      alloc()
+      {
+        return alloc<T>(sizeof(T));
+      }
+
       inline char *
       strdup(const char *str)
       {

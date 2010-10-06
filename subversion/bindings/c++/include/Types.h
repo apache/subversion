@@ -265,7 +265,7 @@ class Version
     inline static svn_version_t *
     dup(const svn_version_t *version, Pool &pool)
     {
-      svn_version_t *v = pool.alloc<svn_version_t>(sizeof(*v));
+      svn_version_t *v = pool.alloc<svn_version_t>();
 
       v->major = version->major;
       v->minor = version->minor;
