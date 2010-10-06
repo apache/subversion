@@ -802,6 +802,10 @@ CREATE TABLE NODES (
      have no information about the properties (a non-present node). */
   properties  BLOB,
 
+  /* The SHA-1 checksum of the pristine text, if this node is a file and was
+     moved here or copied here, else NULL. */
+  checksum  TEXT,
+
 
   /* Last-Change fields */
 
@@ -813,10 +817,6 @@ CREATE TABLE NODES (
   changed_revision  INTEGER,
   changed_date      INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author    TEXT,
-
-  /* The SHA-1 checksum of the pristine text, if this node is a file and was
-     moved here or copied here, else NULL. */
-  checksum  TEXT,
 
 
   /* Various cache fields */
