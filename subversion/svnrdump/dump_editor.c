@@ -34,7 +34,7 @@
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
-#ifdef SVN_DEBUG
+#if 0
 #define LDR_DBG(x) SVN_DBG(x)
 #else
 #define LDR_DBG(x) while(0)
