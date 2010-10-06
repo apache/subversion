@@ -766,13 +766,6 @@ CREATE TABLE NODES (
   */
   presence  TEXT NOT NULL,
 
-  /* NULL depth means "default" (typically svn_depth_infinity) */
-  /* ### depth on WORKING? seems this is a BASE-only concept. how do
-     ### you do "files" on an added-directory? can't really ignore
-     ### the subdirs! */
-  /* ### maybe a WC-to-WC copy can retain a depth?  */
-  depth  TEXT,
-
   /* ### JF: For an old-style move, "copyfrom" info stores its source, but a
      new WC-NG "move" is intended to be a "true rename" so its copyfrom
      revision is implicit, being in effect (new head - 1) at commit time.
@@ -801,6 +794,13 @@ CREATE TABLE NODES (
   /* serialized skel of this node's properties. NULL if we
      have no information about the properties (a non-present node). */
   properties  BLOB,
+
+  /* NULL depth means "default" (typically svn_depth_infinity) */
+  /* ### depth on WORKING? seems this is a BASE-only concept. how do
+     ### you do "files" on an added-directory? can't really ignore
+     ### the subdirs! */
+  /* ### maybe a WC-to-WC copy can retain a depth?  */
+  depth  TEXT,
 
   /* The SHA-1 checksum of the pristine text, if this node is a file and was
      moved here or copied here, else NULL. */
