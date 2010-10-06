@@ -39,7 +39,7 @@
 #define SVNRDUMP_PROP_LOCK SVN_PROP_PREFIX "rdump-lock"
 #define LOCK_RETRIES 10
 
-#ifdef SVN_DEBUG
+#if 0
 #define LDR_DBG(x) SVN_DBG(x)
 #else
 #define LDR_DBG(x) while(0)
