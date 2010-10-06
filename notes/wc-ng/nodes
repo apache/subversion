@@ -210,9 +210,12 @@ new op_depth and presence value 'deleted'.  So far so good.
 
 Adding a tree on top of the same oproot will cause the oproot -
 and all overlapping children! - to switch their presence value to
-'normal'.  The children should not be considered a replacement or
-addition: their tree depths don't correspond to the op_depth, meaning
-the nodes themselves should not be considered restructured.
+'normal'.  When a node replaces a deleted node it hides any deleted
+children of the previously deleted node, and may come with children of
+its own.  Some of the new children may have the same names as some of
+the deleted children, but these overlapping children should not be
+considered restructuring replacements.  Only the parent, with op_depth
+equal to the tree depth, is a restructuring replacement.
 
 ### JAF: I don't understand what that last sentence refers to at all.
 
