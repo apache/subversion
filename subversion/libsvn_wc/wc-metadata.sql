@@ -792,10 +792,18 @@ CREATE TABLE NODES (
      implied from a parent's move/copy.  */
   moved_to  TEXT,
 
-  /* Repository state fields */
+
+  /* Content fields */
 
   /* the kind of the new node. may be "unknown" if the node is not present. */
   kind  TEXT NOT NULL,
+
+  /* serialized skel of this node's properties. NULL if we
+     have no information about the properties (a non-present node). */
+  properties  BLOB,
+
+
+  /* Last-Change fields */
 
   /* If this node was moved here or copied here, then the following fields may
      have information about their source node. See BASE_NODE.changed_* for
@@ -809,10 +817,6 @@ CREATE TABLE NODES (
   /* The SHA-1 checksum of the pristine text, if this node is a file and was
      moved here or copied here, else NULL. */
   checksum  TEXT,
-
-  /* serialized skel of this node's properties. NULL if we
-     have no information about the properties (a non-present node). */
-  properties  BLOB,
 
 
   /* Various cache fields */
