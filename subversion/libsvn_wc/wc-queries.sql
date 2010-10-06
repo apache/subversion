@@ -638,10 +638,16 @@ FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 
--- ### the statement below should be setting copyfrom_revision!
+-- ### these statements below should be setting copyfrom_revision!
 -- STMT_UPDATE_COPYFROM
 UPDATE working_node SET copyfrom_repos_id = ?3, copyfrom_repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_COPYFROM_1
+UPDATE nodes SET repos_id = ?3, repos_path = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+  AND op_depth = (SELECT MAX(op_depth) FROM nodes
+                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
 -- STMT_SELECT_CHILDREN_OP_DEPTH_RECURSIVE
 SELECT local_relpath, op_depth FROM nodes as node
