@@ -5954,13 +5954,14 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   if (have_work)
     {
+#ifndef SVN_WC__NODES_ONLY
       /* Get rid of the WORKING_NODE row.  */
       SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
                                         STMT_DELETE_WORKING_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                 cb->pdh->wcroot->wc_id, cb->local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
-
+#endif
 #ifdef SVN_WC__NODES
       SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
                                         STMT_DELETE_WORKING_NODES));
@@ -8815,14 +8816,27 @@ make_copy_txn(void *baton,
 
       /* ### this is not setting the COPYFROM_REVISION column!!  */
 
+#ifndef SVN_WC__NODES_ONLY
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_COPYFROM));
       SVN_ERR(svn_sqlite__bindf(stmt, "isis",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath,
                                 repos_id,
                                 repos_relpath));
-
       SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
+#ifdef SVN_WC__NODES
+      /* ### The regression tests passed without this, is it necessary? */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_COPYFROM_1));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isis",
+                                mcb->pdh->wcroot->wc_id,
+                                mcb->local_relpath,
+                                repos_id,
+                                repos_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+#endif
+
     }
 
   /* Remove the BASE_NODE if the caller asked us to do that */

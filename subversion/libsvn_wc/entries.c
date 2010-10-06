@@ -601,7 +601,10 @@ read_one_entry(const svn_wc_entry_t **new_entry,
          a subdirectory "over" a not-present directory. The read_info()
          will return information out of the wc.db in the subdir. We
          need to detect this situation and create a DELETED entry
-         instead.  */
+         instead.
+
+         ### Does this still happen?  The regression tests passed when
+             the NODES query was erroneously accessing BASE_NODE. */
       if (kind == svn_wc__db_kind_dir)
         {
           svn_sqlite__db_t *sdb;
@@ -624,7 +627,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 #endif
 #ifdef SVN_WC__NODES
           SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, sdb,
-                                            STMT_SELECT_NOT_PRESENT));
+                                            STMT_SELECT_NOT_PRESENT_1));
           SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is", wc_id, entry->name));
           SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
 #ifndef SVN_WC__NODES_ONLY
