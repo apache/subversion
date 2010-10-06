@@ -563,7 +563,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
           if (report_everything)
             {
-              /* Report the dir unconditionally, one way or another. */
+              /* Report the dir unconditionally, one way or another... */
               if (this_switched)
                 SVN_ERR(reporter->link_path(report_baton,
                                             this_path,
@@ -585,24 +585,20 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                            this_lock ? this_lock->token : NULL,
                                            iterpool));
             }
-
-          /* Possibly report a disjoint URL ... */
           else if (this_switched)
-            SVN_ERR(reporter->link_path(report_baton,
-                                        this_path,
-                                        svn_path_url_add_component2(
-                                                dir_repos_root,
-                                                this_repos_relpath, iterpool),
-                                        this_rev,
-                                        this_depth,
-                                        start_empty,
-                                        this_lock ? this_lock->token : NULL,
-                                        iterpool));
-          /* ... or perhaps just a differing revision, lock token, incomplete
-             subdir, the mere presence of the directory in a depth-empty or
-             depth-files dir, or if the parent dir is at depth-immediates but
-             the child is not at depth-empty.  Also describe shallow subdirs
-             if we are trying to set depth to infinity. */
+            {
+              /* ...or possibly report a disjoint URL ... */
+              SVN_ERR(reporter->link_path(report_baton,
+                                          this_path,
+                                          svn_path_url_add_component2(
+                                              dir_repos_root,
+                                              this_repos_relpath, iterpool),
+                                          this_rev,
+                                          this_depth,
+                                          start_empty,
+                                          this_lock ? this_lock->token : NULL,
+                                          iterpool));
+            }
           else if (this_rev != dir_rev
                    || this_lock
                    || is_incomplete
@@ -612,16 +608,25 @@ report_revisions_and_depths(svn_wc__db_t *db,
                        && this_depth != svn_depth_empty)
                    || (this_depth < svn_depth_infinity
                        && depth == svn_depth_infinity))
-            SVN_ERR(reporter->set_path(report_baton,
-                                       this_path,
-                                       this_rev,
-                                       this_depth,
-                                       start_empty,
-                                       this_lock ? this_lock->token : NULL,
-                                       iterpool));
+            {
+              /* ... or perhaps just a differing revision, lock token,
+                 incomplete subdir, the mere presence of the directory
+                 in a depth-empty or depth-files dir, or if the parent
+                 dir is at depth-immediates but the child is not at
+                 depth-empty.  Also describe shallow subdirs if we are
+                 trying to set depth to infinity. */
+              SVN_ERR(reporter->set_path(report_baton,
+                                         this_path,
+                                         this_rev,
+                                         this_depth,
+                                         start_empty,
+                                         this_lock ? this_lock->token : NULL,
+                                         iterpool));
+            }
 
+          /* Finally, recurse if necessary and appropriate. */
           if (SVN_DEPTH_IS_RECURSIVE(depth))
-             SVN_ERR(report_revisions_and_depths(db,
+            SVN_ERR(report_revisions_and_depths(db,
                                                 anchor_abspath,
                                                 this_path,
                                                 this_rev,
