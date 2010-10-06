@@ -806,6 +806,9 @@ CREATE TABLE NODES (
      moved here or copied here, else NULL. */
   checksum  TEXT,
 
+  /* for kind==symlink, this specifies the target. */
+  symlink_target  TEXT,
+
 
   /* Last-Change fields */
 
@@ -844,9 +847,6 @@ CREATE TABLE NODES (
   /* serialized skel of this node's dav-cache.  could be NULL if the
      node does not have any dav-cache. */
   dav_cache  BLOB,
-
-  /* for kind==symlink, this specifies the target. */
-  symlink_target  TEXT,
 
   /* The serialized file external information. */
   /* ### hack.  hack.  hack.
