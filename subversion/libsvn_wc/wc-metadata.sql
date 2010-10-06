@@ -991,7 +991,13 @@ PRAGMA user_version = 18;
 
 -- DISABLED_STMT_UPGRADE_TO_20
 
-INSERT INTO NODES
+INSERT INTO NODES (
+       wc_id, local_relpath, op_depth, parent_relpath,
+       repos_id, repos_path, revision,
+       presence, depth, moved_here, moved_to, kind,
+       changed_revision, changed_date, changed_author,
+       checksum, properties, translated_size, last_mod_time,
+       dav_cache, symlink_target, file_external )
 SELECT wc_id, local_relpath, 0 AS op_depth, parent_relpath,
        repos_id, repos_relpath, revnum,
        presence, depth, NULL AS moved_here, NULL AS moved_to, kind,
@@ -999,7 +1005,13 @@ SELECT wc_id, local_relpath, 0 AS op_depth, parent_relpath,
        checksum, properties, translated_size, last_mod_time,
        dav_cache, symlink_target, file_external
 FROM BASE_NODE;
-INSERT INTO NODES
+INSERT INTO NODES (
+       wc_id, local_relpath, op_depth, parent_relpath,
+       repos_id, repos_path, revision,
+       presence, depth, moved_here, moved_to, kind,
+       changed_revision, changed_date, changed_author,
+       checksum, properties, translated_size, last_mod_time,
+       dav_cache, symlink_target, file_external )
 SELECT wc_id, local_relpath, 2 AS op_depth, parent_relpath,
        copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum,
        presence, depth, NULL AS moved_here, NULL AS moved_to, kind,
