@@ -106,13 +106,16 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   c = db.cursor()
 
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
-    c.execute('select dav_cache from base_node ' +
-              'where wc_id=? and local_relpath=?',
-              (wc_id, local_relpath))
-    row = c.fetchone()
-    if row is None:
+    # NODES conversion is complete enough that we can use it if it exists
+    c.execute("""pragma table_info(nodes)""")
+    if c.fetchone():
       c.execute('select dav_cache from nodes ' +
                 'where wc_id=? and local_relpath=? and op_depth = 0',
+                (wc_id, local_relpath))
+      row = c.fetchone()
+    else:
+      c.execute('select dav_cache from base_node ' +
+                'where wc_id=? and local_relpath=?',
                 (wc_id, local_relpath))
       row = c.fetchone()
     if row is None:
