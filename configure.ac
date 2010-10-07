@@ -551,33 +551,18 @@ fi
 dnl GPG Agent -------------------
 
 AC_ARG_WITH(gpg_agent,
-  AS_HELP_STRING([--with-gpg-agent], 
-                 [Enable use of GPG AGENT for auth credentials]),
-                 [with_gpg_agent="$withval"],
-                 [with_gpg_agent=no])
-
-AC_MSG_CHECKING([whether to look for GPG AGENT])
-if test "$with_gpg_agent" != "no"; then
+AS_HELP_STRING([--with-gpg-agent], 
+               [Enable use of GPG AGENT for auth credentials]))
+AC_MSG_CHECKING([whether to support GPG-Agent])
+if test "$with_gpg_agent" = "yes"; then
   AC_MSG_RESULT([yes])
-  if test "$svn_enable_shared" = "yes"; then
-    if test "$APR_HAS_DSO" = "yes"; then
-            if test "$with_gpg_agent" = "yes"; then
-              AC_MSG_RESULT([yes])
-              AC_DEFINE([SVN_HAVE_GPG_AGENT], [1], 
-                        [Is GPG Agent support enabled?])
-              SVN_GPG_AGENT_LIBS="-lgcrypt11"
-            fi
-    else
-      AC_MSG_ERROR([APR does not have support for DSOs])
-    fi
-  else
-    AC_MSG_ERROR([--with-gpg-agent conflicts with --disable-shared])
-  fi
+  AC_DEFINE([SVN_HAVE_GPG_AGENT], [1], 
+            [Is GPG Agent support enabled?])
 else
   AC_MSG_RESULT([no])
 fi
 
-AC_SUBST(SVN_GPG_AGENT_LIBS)
+AC_SUBST(SVN_HAVE_GPG_AGENT)
 
 dnl GNOME Keyring -------------------
 
