@@ -155,10 +155,22 @@ simply create rows at a new op_depth.)
   previous existing node, just like it does in WC-1.  A partial revert of
   this state is not a particularly helpful or frequent use case.
 
+  GJS: I believe that wc_db should enable the individual reverts. The
+  first revert will undo the add/copy, and the second revert will undo
+  the delete. The UI (or the next level up in libsvn_wc) can collapse
+  those into a single user action. This leaves us the future
+  possibility of finer-grained reverts.
+
 ### EHU: The statement above probably means that *all* nodes in the subtree
   need to be rewritten: they all have a deleted state with the affected
   op_depth, meaning they probably need a 'replaced/copied-to' state with
   the same op_depth...
+
+  GJS: not all nodes. The newly-arriving copy/move may have
+  new/disjoint nodes that were not part of the deleted set. We will
+  simply add new rows for these arriving nodes. Similarly, the
+  arriving subtree may NOT have a similar node, so the deleted node
+  remains untouched.
 
 
 Copies of mixed-revision subtrees become multiple layers
@@ -190,6 +202,20 @@ become an op_depth layer of their own.
   the different-revision sub-trees of this copied tree.  Therefore I think
   we have to store the mixed-rev copy flat (single op_depth) and modify the
   commit rules to act on revision-number changes within this flat tree.
+
+  GJS: correct. Consider a root of the subtree at r10, and a
+  descendent is at r12. We cannot create one layer at r10, and another
+  at r12 because we do not have the descendent@r10 to place into the
+  first layer. Thus, we need to use a single op_depth layer for this
+  operation. At commit time, one copy will be me for the subtree from
+  r10, a deletion will be made for the descendent, and then another
+  copy performed for the r12 descendent.
+
+### GJS: in the above scenario, we do not know if the descendent
+  existed in r10, so the deletion may not be necessary (and could even
+  throw an error!). I do not recall if our copy's destination is
+  allowed to exist (ie. we have implied overwrite semantics in the
+  repository).
 
 
 In a deleted subtree, all nodes get marked deleted explicitly
@@ -238,6 +264,19 @@ TODO:
 
  * Explain the role of the 'deleted-below' columns
    ### JAF: No, that idea has already been rejected.
+
+       GJS: yup. tho it will complicate a revert of a copy/move-here
+       since we will need to perform a query to see whether we should
+       convert the copy/move into a deleted node, or whether to simply
+       remove the node entirely.
+
+       GJS: and yes, if wc_db performed a double-operation revert,
+       then we wouldn't have to do this. arguably, we could push the
+       2-op revert to a future release when we also choose to alter
+       the higher layers to bring in the finer-grained control. (or
+       maybe we have to look at prior nodes regardless, so checking
+       for "replace with a deleted node" comes for no additional
+       cost).
 
  * Document states of the table and their meaning (including values
     of the relevant columns)
