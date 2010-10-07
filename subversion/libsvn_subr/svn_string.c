@@ -406,7 +406,7 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
    * to just write the new byte at the end of the used section
    * and terminate the string properly.
    */
-  if (str->blocksize < old_len + 1)
+  if (str->blocksize > old_len + 1)
     {
       /* The following read does not depend this write, so we
        * can issue the write first to minimize register pressure:
