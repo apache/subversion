@@ -629,7 +629,10 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
 svn_error_t *
 svn_cl__may_need_force(svn_error_t *err);
 
-/* Write the STRING to the stdio STREAM, returning an error if it fails. */
+/* Write the STRING to the stdio STREAM, returning an error if it fails.
+
+   This function is equal to svn_cmdline_fputs() minus the utf8->local
+   encoding translation.  */
 svn_error_t *
 svn_cl__error_checked_fputs(const char *string, FILE* stream);
 
