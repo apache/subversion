@@ -609,20 +609,16 @@ read_one_entry(const svn_wc_entry_t **new_entry,
         {
           svn_sqlite__db_t *sdb;
           svn_sqlite__stmt_t *stmt;
-          svn_sqlite__stmt_t *stmt_nodes;
-          svn_boolean_t have_nodes_row;
 
           SVN_ERR(svn_wc__db_temp_borrow_sdb(
                     &sdb, db, dir_abspath,
                     svn_wc__db_openmode_readonly,
                     scratch_pool));
 
-          SVN_ERR(svn_sqlite__get_statement(&stmt_nodes, sdb,
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                             STMT_SELECT_NOT_PRESENT_1));
-          SVN_ERR(svn_sqlite__bindf(stmt_nodes, "is", wc_id, entry->name));
-          SVN_ERR(svn_sqlite__step(&have_nodes_row, stmt_nodes));
-          stmt = stmt_nodes;
-          have_row = have_nodes_row;
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, entry->name));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
           SVN_ERR(svn_sqlite__reset(stmt));
         }
 
