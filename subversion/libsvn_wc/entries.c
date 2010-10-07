@@ -616,7 +616,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                     scratch_pool));
 
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_SELECT_NOT_PRESENT_1));
+                                            STMT_SELECT_NOT_PRESENT));
           SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, entry->name));
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
           SVN_ERR(svn_sqlite__reset(stmt));
@@ -1517,7 +1517,7 @@ insert_base_node(svn_sqlite__db_t *sdb,
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_INSERT_BASE_NODE_FOR_ENTRY_1));
+                                    STMT_INSERT_BASE_NODE_FOR_ENTRY));
 
   SVN_ERR(svn_sqlite__bindf(stmt, "issisr",
                             base_node->wc_id,
@@ -1996,7 +1996,7 @@ write_entry(svn_wc__db_t *db,
                                                   scratch_pool));
 
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_UPDATE_FILE_EXTERNAL_1));
+                                            STMT_UPDATE_FILE_EXTERNAL));
           SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                                     (apr_uint64_t)1 /* wc_id */,
                                     entry->name,
