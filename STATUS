@@ -167,6 +167,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1005446
+   Make the new 'svnmucc propsetf' subcommand actually work.
+   Justification:
+     My embarrassment is justification enough.  -- C-Mike
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
