@@ -221,8 +221,8 @@ UPDATE nodes SET dav_cache = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_SELECT_BASE_DAV_CACHE
-SELECT dav_cache FROM base_node
-WHERE wc_id = ?1 AND local_relpath = ?2;
+SELECT dav_cache FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_SELECT_DELETION_INFO
 SELECT base_node.presence, working_node.presence, moved_to
