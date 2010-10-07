@@ -26,14 +26,14 @@
 
 /* these are used in wc_db.c  */
 
--- STMT_SELECT_BASE_NODE_1
+-- STMT_SELECT_BASE_NODE
 SELECT repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
   symlink_target, last_mod_time, properties
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_SELECT_BASE_NODE_WITH_LOCK_1
+-- STMT_SELECT_BASE_NODE_WITH_LOCK
 SELECT nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
@@ -43,7 +43,7 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_SELECT_WORKING_NODE_1
+-- STMT_SELECT_WORKING_NODE
 SELECT presence, kind, checksum, translated_size,
   changed_revision, changed_date, changed_author, depth, symlink_target,
   repos_id, repos_path, revision,
@@ -80,19 +80,19 @@ INSERT OR REPLACE INTO nodes (
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
         ?15, ?16, ?17, ?18, ?19);
 
--- STMT_SELECT_BASE_NODE_CHILDREN_1
+-- STMT_SELECT_BASE_NODE_CHILDREN
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0;
 
--- STMT_SELECT_WORKING_NODE_CHILDREN_1
+-- STMT_SELECT_WORKING_NODE_CHILDREN
 SELECT DISTINCT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0;
 
--- STMT_SELECT_BASE_PROPS_1
+-- STMT_SELECT_BASE_PROPS
 SELECT properties FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_SELECT_WORKING_PROPS_1
+-- STMT_SELECT_WORKING_PROPS
 SELECT properties, presence FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
 ORDER BY op_depth DESC
@@ -139,7 +139,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 SELECT dav_cache FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_SELECT_DELETION_INFO_1
+-- STMT_SELECT_DELETION_INFO
 SELECT nodes_base.presence, nodes_work.presence, nodes_work.moved_to
 FROM nodes nodes_work
 LEFT OUTER JOIN nodes nodes_base ON nodes_base.wc_id = nodes_work.wc_id
@@ -227,7 +227,7 @@ REPLACE INTO actual_node (
   wc_id, local_relpath, parent_relpath, changelist)
 VALUES (?1, ?2, ?3, ?4);
 
--- STMT_DELETE_BASE_NODE_1
+-- STMT_DELETE_BASE_NODE
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
@@ -315,7 +315,7 @@ WHERE md5_checksum = ?1
 SELECT checksum
 FROM pristine
 
--- STMT_SELECT_ANY_PRISTINE_REFERENCE_1
+-- STMT_SELECT_ANY_PRISTINE_REFERENCE
 SELECT 1 FROM nodes
   WHERE checksum = ?1 OR checksum = ?2
 UNION ALL
@@ -422,7 +422,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 
 -- ### these statements below should be setting copyfrom_revision!
--- STMT_UPDATE_COPYFROM_1
+-- STMT_UPDATE_COPYFROM
 UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
@@ -440,7 +440,7 @@ UPDATE nodes SET op_depth = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3;
 
 
--- STMT_UPDATE_COPYFROM_TO_INHERIT_1
+-- STMT_UPDATE_COPYFROM_TO_INHERIT
 UPDATE nodes SET
   repos_id = NULL,
   repos_path = NULL,
@@ -449,7 +449,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
--- STMT_DETERMINE_TREE_FOR_RECORDING_1
+-- STMT_DETERMINE_TREE_FOR_RECORDING
 SELECT 0 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 UNION
 SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
@@ -459,7 +459,7 @@ SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
 
 /* ### Why can't this query not just use the BASE repository
    location values, instead of taking 3 additional parameters?! */
--- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE_1
+-- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id,
     repos_path, revision, presence, depth, kind, changed_revision,
@@ -472,7 +472,7 @@ SELECT wc_id, ?3 AS local_relpath, ?4 AS op_depth, ?5 AS parent_relpath,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING_1
+-- STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
     revision, presence, depth, kind, changed_revision, changed_date,
@@ -498,11 +498,11 @@ SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, properties,
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
--- STMT_UPDATE_BASE_REVISION_1
+-- STMT_UPDATE_BASE_REVISION
 UPDATE nodes SET revision = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_UPDATE_BASE_REPOS_1
+-- STMT_UPDATE_BASE_REPOS
 UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
@@ -510,7 +510,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 /* these are used in entries.c  */
 
--- STMT_INSERT_BASE_NODE_FOR_ENTRY_1
+-- STMT_INSERT_BASE_NODE_FOR_ENTRY
 /* The BASE tree has a fixed op_depth '0' */
 INSERT OR REPLACE INTO nodes (
   wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
@@ -528,16 +528,16 @@ INSERT OR REPLACE INTO actual_node (
   tree_conflict_data)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
 
--- STMT_SELECT_NOT_PRESENT_1
+-- STMT_SELECT_NOT_PRESENT
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND presence = 'not-present'
   AND op_depth = 0;
 
--- STMT_SELECT_FILE_EXTERNAL_1
+-- STMT_SELECT_FILE_EXTERNAL
 SELECT file_external FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_UPDATE_FILE_EXTERNAL_1
+-- STMT_UPDATE_FILE_EXTERNAL
 UPDATE nodes SET file_external = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
@@ -562,12 +562,12 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
 -- STMT_ERASE_OLD_CONFLICTS
 UPDATE actual_node SET tree_conflict_data = NULL;
 
--- STMT_SELECT_ALL_FILES_1
+-- STMT_SELECT_ALL_FILES
 /* Should this select on wc_id as well? */
 SELECT DISTINCT local_relpath FROM nodes
 WHERE kind = 'file' AND parent_relpath = ?1;
 
--- STMT_PLAN_PROP_UPGRADE_1
+-- STMT_PLAN_PROP_UPGRADE
 SELECT 0, nodes_base.presence, nodes_base.wc_id FROM nodes nodes_base
 WHERE nodes_base.local_relpath = ?1 AND nodes_base.op_depth = 0
 UNION ALL
