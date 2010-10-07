@@ -1084,9 +1084,11 @@ main(int argc, const char **argv)
                      svn_string_create("committed using svnmucc", pool));
     }
   else
-    /* -F or -m specified; use that even if --with-revprop=svn:log. */
-    apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
-                 svn_string_create(message, pool));
+    {
+      /* -F or -m specified; use that even if --with-revprop=svn:log. */
+      apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                   svn_string_create(message, pool));
+    }
 
   if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, non_interactive, base_revision, pool)))
