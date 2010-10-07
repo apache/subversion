@@ -1023,8 +1023,10 @@ main(int argc, const char **argv)
               if (++i == action_args->nelts)
                 insufficient(pool);
 
-              handle_error(read_propvalue_file(&(action->prop_value),
-                                               propval_file, pool), pool);
+              err = read_propvalue_file(&(action->prop_value), propval_file, pool);
+              if (err)
+                handle_error(err, pool);
+
               action->action = ACTION_PROPSET;
             }
         }
