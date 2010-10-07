@@ -346,11 +346,7 @@ get_versioned_files(const apr_array_header_t **children,
   svn_boolean_t have_row;
 
   /* ### just select 'file' children. do we need 'symlink' in the future?  */
-#ifndef SVN_WC__NODES_ONLY
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ALL_FILES));
-#else
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ALL_FILES_1));
-#endif
   SVN_ERR(svn_sqlite__bindf(stmt, "s", parent_relpath));
 
   /* ### 10 is based on Subversion's average of 8.5 files per versioned

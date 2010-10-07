@@ -164,11 +164,6 @@ extern "C" {
 /* A version < this does not store properties in wc.db.  */
 #define SVN_WC__PROPS_IN_DB 18
 
-#if (SVN_WC__VERSION > 19)
-#define SVN_WC__NODES
-#define SVN_WC__NODES_ONLY
-#endif
-
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
    because it's a working copy from a previous version (in need of
