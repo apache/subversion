@@ -1249,19 +1249,9 @@ revert_entry(svn_depth_t *depth,
          ### shoved back into the database. this is why we need to record
          ### the repository information, and the BASE revision.  */
 
-      if (kind == svn_wc__db_kind_file)
+      if (kind == svn_wc__db_kind_file
+          || kind == svn_wc__db_kind_dir)
         {
-          SVN_ERR(svn_wc__internal_remove_from_revision_control(db,
-                                                                local_abspath,
-                                                                FALSE, FALSE,
-                                                                cancel_func,
-                                                                cancel_baton,
-                                                                pool));
-        }
-      else if (kind == svn_wc__db_kind_dir)
-        {
-          /* Before single-db we didn't have to perform a recursive delete
-             here. With single-db we really must delete missing nodes */
           SVN_ERR(svn_wc__internal_remove_from_revision_control(db,
                                                                 local_abspath,
                                                                 FALSE, FALSE,
