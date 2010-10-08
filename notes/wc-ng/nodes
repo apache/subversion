@@ -217,6 +217,18 @@ become an op_depth layer of their own.
   allowed to exist (ie. we have implied overwrite semantics in the
   repository).
 
+  PM: Yes, we have overwrite sematics.  The FS layer on the server has
+  magic that converts the copy of the r12 descendant into a replace if
+  the descendant exists in r10.  The client does not send a delete.
+
+  This magic applies to copies, not deletes, so there is a problem
+  when the descendant is deleted in the mixed-revision copy in the
+  working copy.  When faced with a copy of the subtree at r10 and a
+  delete of a descendant at r12 the commit doesn't work at present.
+  Deleting the descendant is wrong if it does not exist in r10, but
+  not deleting it is wrong if it does exist.  I suppose the client
+  could ask the server, or perhaps use multiple layers of BASE to
+  track mixed-revisions (argh!).
 
 In a deleted subtree, all nodes get marked deleted explicitly
 -------------------------------------------------------------
