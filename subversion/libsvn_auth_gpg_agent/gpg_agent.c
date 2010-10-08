@@ -45,7 +45,7 @@
 
 #include "svn_private_config.h"
 
-static const int buffer_size = 1024;
+#define BUFFER_SIZE 1024
 
 /* Implementation of password_get_t that retrieves the password
    from gpg-agent */
@@ -101,7 +101,9 @@ password_get_gpg_agent(const char **password,
   if (socket_name != NULL)
     {
       addr.sun_family = AF_UNIX;
-      strncpy(addr.sun_path, socket_name, 108);
+      strncpy(addr.sun_path, socket_name, sizeof(addr.sun_path) - 1);
+      addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+
       sd = socket(AF_UNIX, SOCK_STREAM, 0);
       if (sd == -1)
         return FALSE;
@@ -116,8 +118,8 @@ password_get_gpg_agent(const char **password,
     return FALSE;
 
   /* Receive the connection status from the gpg-agent daemon. */
-  buffer = apr_palloc(pool, buffer_size);
-  recvd = recv(sd, buffer, buffer_size-1, 0);
+  buffer = apr_palloc(pool, BUFFER_SIZE);
+  recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
   buffer[recvd] = '\0';
 
   if (strncmp(buffer, "OK", 2) != 0)
@@ -126,7 +128,7 @@ password_get_gpg_agent(const char **password,
   /* Send TTY_NAME to the gpg-agent daemon. */
   request = apr_psprintf(pool, "OPTION ttyname=%s\n", tty_name);
   send(sd, request, strlen(request), 0);
-  recvd = recv(sd, buffer, buffer_size - 1, 0);
+  recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
   buffer[recvd] = '\0';
 
   if (strncmp(buffer, "OK", 2) != 0)
@@ -135,7 +137,7 @@ password_get_gpg_agent(const char **password,
   /* Send TTY_TYPE to the gpg-agent daemon. */
   request = apr_psprintf(pool, "OPTION ttytype=%s\n", tty_type);
   send(sd, request, strlen(request), 0);
-  recvd = recv(sd, buffer, buffer_size - 1, 0);
+  recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
   buffer[recvd] = '\0';
 
   if (strncmp(buffer, "OK", 2) != 0)
@@ -157,8 +159,8 @@ password_get_gpg_agent(const char **password,
                            "GET_PASSPHRASE --data %s X Password: \n",
                            cache_id);
 
-  send(sd, request, strlen(request)+1, 0);
-  recvd = recv(sd, buffer, buffer_size - 1, 0);
+  send(sd, request, strlen(request) + 1, 0);
+  recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
   buffer[recvd] = '\0';
 
   if (strncmp(buffer, "ERR", 3) == 0)
