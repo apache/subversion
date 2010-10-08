@@ -274,9 +274,6 @@ otherwise, it must be an addition.
 
 TODO:
 
- * Explain the role of the 'deleted-below' columns
-   ### JAF: No, that idea has already been rejected.
-
        GJS: yup. tho it will complicate a revert of a copy/move-here
        since we will need to perform a query to see whether we should
        convert the copy/move into a deleted node, or whether to simply
