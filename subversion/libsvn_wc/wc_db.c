@@ -4303,8 +4303,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   svn_sqlite__stmt_t *stmt_info;
   svn_sqlite__stmt_t *stmt_act;
   svn_boolean_t have_info;
-  svn_boolean_t local_have_base;
-  svn_boolean_t local_have_work;
   svn_boolean_t have_act;
   svn_error_t *err = NULL;
 
@@ -4324,11 +4322,16 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                             pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_info, stmt_info));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt_act, pdh->wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt_act, "is",
-                            pdh->wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
+  if (changelist || conflicted || props_mod)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt_act, pdh->wcroot->sdb,
+                                        STMT_SELECT_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt_act, "is",
+                                pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
+    }
+  else
+    have_act = FALSE;
 
   if (have_info)
     {
@@ -4615,8 +4618,10 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                                                      scratch_pool));
     }
 
-  err = svn_error_compose_create(err, svn_sqlite__reset(stmt_info));
-  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt_act)));
+  if (have_act)
+    err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
+
+  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt_info)));
 
   /* ### And finally, check for tree conflicts via parent.
          This reuses stmt_act and throws an error in Sqlite if
