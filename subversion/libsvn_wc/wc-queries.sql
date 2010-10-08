@@ -111,11 +111,10 @@ WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0;
 SELECT properties FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_SELECT_WORKING_PROPS
+-- STMT_SELECT_NODE_PROPS
 SELECT properties, presence FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
-ORDER BY op_depth DESC
-LIMIT 1;
+WHERE wc_id = ?1 AND local_relpath = ?2
+ORDER BY op_depth DESC;
 
 -- STMT_SELECT_ACTUAL_PROPS
 SELECT properties FROM actual_node
