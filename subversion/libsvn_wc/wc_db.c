@@ -907,12 +907,15 @@ gather_children(const apr_array_header_t **children,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  /* All of the names get allocated in RESULT_POOL.  */
-  SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_BASE_NODE_CHILDREN,
-                               pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                               local_relpath, result_pool));
-  if (! base_only)
-    SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_WORKING_NODE_CHILDREN,
+  /* All of the names get allocated in RESULT_POOL.  For !base_only it
+     appears to be faster to use the hash to remove duplicates than to
+     use DISTINCT in the SQL query. */
+  if (base_only)
+    SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_BASE_NODE_CHILDREN,
+                                 pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                                 local_relpath, result_pool));
+  else
+    SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_NODE_CHILDREN,
                                  pdh->wcroot->sdb, pdh->wcroot->wc_id,
                                  local_relpath, result_pool));
 
