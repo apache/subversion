@@ -75,7 +75,7 @@ password_get_gpg_agent(const char **password,
   const char *socket_name = NULL;
   svn_checksum_t *digest = NULL;
 
-  value = getenv( "GPG_AGENT_INFO");
+  value = getenv("GPG_AGENT_INFO");
 
   if (value != NULL)
     {
