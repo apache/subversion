@@ -1259,6 +1259,16 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
+/* Revert all local changes which are being maintained in the database,
+ * including conflict storage, properties and text modification status.
+ */
+svn_error_t *
+svn_wc__db_op_revert_actual(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool);
+
+
+
 svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
                      const char *local_abspath,
