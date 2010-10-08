@@ -4331,7 +4331,10 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
       SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
     }
   else
-    have_act = FALSE;
+    {
+      have_act = FALSE;
+      stmt_act = NULL;
+    }
 
   if (have_info)
     {
@@ -4618,7 +4621,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                                                      scratch_pool));
     }
 
-  if (have_act)
+  if (stmt_act != NULL)
     err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
 
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt_info)));
