@@ -7794,15 +7794,17 @@ get_copyfrom(apr_int64_t *copyfrom_repos_id,
                            db, parent_abspath, scratch_pool, scratch_pool));
       if (parent_copyfrom_relpath)
         *copyfrom_relpath = svn_relpath_join(parent_copyfrom_relpath, name,
-                                             scratch_pool);
+                                             result_pool);
       else
         *copyfrom_relpath = NULL;
       return SVN_NO_ERROR;
     }
 
   *copyfrom_repos_id = svn_sqlite__column_int64(stmt, 9);
-  *copyfrom_relpath = svn_sqlite__column_text(stmt, 10, scratch_pool);
+  *copyfrom_relpath = svn_sqlite__column_text(stmt, 10, result_pool);
   *copyfrom_revnum = svn_sqlite__column_revnum(stmt, 11);
+
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }
