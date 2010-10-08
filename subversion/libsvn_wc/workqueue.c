@@ -206,8 +206,43 @@ run_revert(svn_wc__db_t *db,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, NULL, NULL,
-                                  scratch_pool));
+  if (kind == svn_wc__db_kind_dir)
+    parent_abspath = local_abspath;
+  else
+    parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+
+  if (conflicted)
+    {
+      const apr_array_header_t *conflicts;
+      int i;
+
+      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          const svn_wc_conflict_description2_t *cd;
+
+          cd = APR_ARRAY_IDX(conflicts, i,
+                             const svn_wc_conflict_description2_t *);
+
+          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->base_file,
+                                        local_abspath, scratch_pool));
+          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->their_file,
+                                        local_abspath, scratch_pool));
+          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->my_file,
+                                        local_abspath, scratch_pool));
+          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->merged_file,
+                                        local_abspath, scratch_pool));
+        }
+    }
+
+  /* Reverting the actual node destroys conflict markers and local props.
+     Don't use svn_wc__db_op_set_props() and svn_wc__db_op_mark_resolved()
+     because those leave a record in the ACTUALS table, which is a
+     performance issue.  Besides, this does all that in one blow. */
+  SVN_ERR(svn_wc__db_op_revert_actual(db, local_abspath, scratch_pool));
 
   /* Deal with the working file, as needed.  */
   if (kind == svn_wc__db_kind_file)
@@ -224,18 +259,8 @@ run_revert(svn_wc__db_t *db,
          using the original base.  */
       reinstall_working = magic_changed || replaced;
 
-      /* ### This "if (replaced)" looks very likely to be an artifact of the
-         old WC-1 "revert-base and normal-base" system, and if so then it
-         should go away. */
-      if (replaced)
-        {
-          /* With the Pristine Store, there is no longer a "revert-base"
-             text that needs to be moved to a "normal text-base" location.
-
-             ### JAF: I wonder why the "revert-base" properties weren't being
-             handled the same way in this same code path.  An oversight? */
-        }
-      else if (!reinstall_working)
+      if (!replaced && !reinstall_working)
+        /* check for additional scenarios which need the actual re-installed */
         {
           svn_node_kind_t check_kind;
 
@@ -305,41 +330,6 @@ run_revert(svn_wc__db_t *db,
         SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
     }
 
-  if (kind == svn_wc__db_kind_dir)
-    parent_abspath = local_abspath;
-  else
-    parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-  /* ### in wc-ng: the following block clears ACTUAL_NODE.  */
-  if (conflicted)
-    {
-      const apr_array_header_t *conflicts;
-      int i;
-
-      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                        scratch_pool, scratch_pool));
-
-      for (i = 0; i < conflicts->nelts; i++)
-        {
-          const svn_wc_conflict_description2_t *cd;
-
-          cd = APR_ARRAY_IDX(conflicts, i,
-                             const svn_wc_conflict_description2_t *);
-
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->base_file,
-                                        local_abspath, scratch_pool));
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->their_file,
-                                        local_abspath, scratch_pool));
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->my_file,
-                                        local_abspath, scratch_pool));
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->merged_file,
-                                        local_abspath, scratch_pool));
-        }
-
-      SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
-                                          TRUE, TRUE, FALSE,
-                                          scratch_pool));
-    }
 
   {
     svn_boolean_t is_wc_root;

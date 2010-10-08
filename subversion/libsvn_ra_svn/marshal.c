@@ -582,7 +582,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                               int level)
 {
   char c = first_char;
-  apr_uint64_t val, prev_val=0;
+  apr_uint64_t val;
   svn_stringbuf_t *str;
   svn_ra_svn_item_t *listitem;
 
@@ -600,7 +600,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       val = c - '0';
       while (1)
         {
-          prev_val = val;
+          apr_uint64_t prev_val = val;
           SVN_ERR(readbuf_getchar(conn, pool, &c));
           if (!svn_ctype_isdigit(c))
             break;

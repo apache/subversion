@@ -2987,7 +2987,7 @@ def patch_prop_with_fuzz(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-def patch_git_add_file(sbox):
+def patch_git_empty_files(sbox):
   "patch that contains empty files"
 
   sbox.build()
@@ -3001,18 +3001,25 @@ def patch_git_add_file(sbox):
     "===================================================================\n",
     "diff --git a/new b/new\n",
     "new file mode 10644\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "diff --git a/iota b/iota\n",
+    "deleted file mode 10644\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
     'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'D         %s\n' % os.path.join(wc_dir, 'iota'),
   ]
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({'new' : Item(contents="")})
+  expected_disk.remove('iota')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'new' : Item(status='A ', wc_rev=0)})
+  expected_status.tweak('iota', status='D ')
 
   expected_skip = wc.State('', { })
 
@@ -3380,7 +3387,7 @@ test_list = [ None,
               patch_add_path_with_props,
               patch_prop_offset,
               patch_prop_with_fuzz,
-              patch_git_add_file,
+              patch_git_empty_files,
               patch_old_target_names,
               patch_reverse_revert,
             ]

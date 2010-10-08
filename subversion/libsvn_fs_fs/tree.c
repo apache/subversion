@@ -2173,7 +2173,7 @@ fs_copied_from(svn_revnum_t *rev_p,
 
   if (copyfrom_str)
     {
-      if (strlen(copyfrom_str) == 0)
+      if (*copyfrom_str == 0)
         {
           /* We have a cached entry that says there is no copyfrom
              here. */

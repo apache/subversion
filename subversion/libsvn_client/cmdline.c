@@ -82,7 +82,8 @@ resolve_repos_relative_url(const char **absolute_url,
    * arguments, it is presumed that the output will be canonicalized after
    * this function, which will remove any duplicate path separator.
    */
-  *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1, NULL);
+  *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1,
+                              (char *)NULL);
 
   return SVN_NO_ERROR;
 }
@@ -270,7 +271,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
                 }
             }
 
-          target = apr_pstrcat(pool, true_target, peg_rev, NULL);
+          target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
 
           if (rel_url_found)
             {
@@ -317,7 +318,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
               SVN_ERR(svn_opt__arg_canonicalize_url(&true_target, abs_target,
                                                     pool));
 
-              target = apr_pstrcat(pool, true_target, peg_rev, NULL);
+              target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
             }
 
           APR_ARRAY_PUSH(*targets_p, const char *) = target;

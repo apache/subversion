@@ -2298,7 +2298,7 @@ test_dirent_get_absolute(apr_pool_t *pool)
 
       expect_abs = expect;
       if (*expect == '%')
-        expect_abs = apr_pstrcat(pool, curdir, expect + 1, NULL);
+        expect_abs = apr_pstrcat(pool, curdir, expect + 1, (char *)NULL);
 #ifdef SVN_USE_DOS_PATHS
       if (*expect == '@')
         expect_abs = apr_pstrcat(pool, curdironc, expect + 1, NULL);

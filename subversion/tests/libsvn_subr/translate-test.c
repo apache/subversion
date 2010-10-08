@@ -325,8 +325,8 @@ substitute_and_verify(const char *test_name,
   apr_size_t idx = 0;
   apr_size_t i;
   const char *expect[(sizeof(lines) / sizeof(*lines))];
-  const char *src_fname = apr_pstrcat(pool, test_name, ".src", NULL);
-  const char *dst_fname = apr_pstrcat(pool, test_name, ".dst", NULL);
+  const char *src_fname = apr_pstrcat(pool, test_name, ".src", (char *)NULL);
+  const char *dst_fname = apr_pstrcat(pool, test_name, ".dst", (char *)NULL);
   svn_string_t *val;
   apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -419,27 +419,27 @@ substitute_and_verify(const char *test_name,
                         "Valid $LastChangedRevision: ",
                         rev,
                         " $, started unexpanded.",
-                        NULL);
+                        (char *)NULL);
           expect[5 - 1] =
             apr_pstrcat(pool, "Line 5: ",
                         "Valid $Rev: ", rev, " $, started unexpanded.",
-                        NULL);
+                        (char *)NULL);
           expect[26 - 1] =
             apr_pstrcat(pool, "Line 26: ",
                         "Emptily expanded keyword $Rev: ", rev," $.",
-                        NULL);
+                        (char *)NULL);
           expect[29 - 1] =
             apr_pstrcat(pool, "Line 29: ",
                         "Valid $LastChangedRevision: ",
                         rev,
                         " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[30 - 1] =
             apr_pstrcat(pool, "Line 30: ",
                         "Valid $Rev: ",
                         rev,
                         " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
         }
       else  /* unexpand */
         {
@@ -462,31 +462,31 @@ substitute_and_verify(const char *test_name,
                         "Valid $LastChangedDate: ",
                         date,
                         " $, started unexpanded.",
-                        NULL);
+                        (char *)NULL);
           expect[13 - 1] =
             apr_pstrcat(pool, "Line 13: ",
                         "Valid $Date: ", date, " $, started unexpanded.",
-                        NULL);
+                        (char *)NULL);
           expect[33 - 1] =
             apr_pstrcat(pool, "Line 33: ",
                         "Valid $LastChangedDate: ",
                         date,
                         " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[34 - 1] =
             apr_pstrcat(pool, "Line 34: ",
                         "Valid $Date: ", date, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[51 - 1] =
             apr_pstrcat(pool, "Line 51: ",
                         "same, but with embedded keyword ",
                         "$$$$$$$$Date: ", date, " $$$$$$$$$$.",
-                        NULL);
+                        (char *)NULL);
           expect[52 - 1] =
             apr_pstrcat(pool, "Line 52: ",
                         "same, with expanded, empty keyword ",
                         "$$$$$$Date: ", date, " $$$$$$.",
-                        NULL);
+                        (char *)NULL);
         }
       else  /* unexpand */
         {
@@ -511,46 +511,46 @@ substitute_and_verify(const char *test_name,
                         "Valid $LastChangedBy: ",
                         author,
                         " $, started unexpanded.",
-                        NULL);
+                        (char *)NULL);
           expect[9 - 1] =
             apr_pstrcat(pool, "Line 9: ",
                         "Valid $Author: ", author, " $, started unexpanded.",
-                        NULL);
+                        (char *)NULL);
           expect[37 - 1] =
             apr_pstrcat(pool, "Line 37: ",
                         "Valid $LastChangedBy: ", author,
-                        " $, started expanded.", NULL);
+                        " $, started expanded.", (char *)NULL);
           expect[38 - 1] =
             apr_pstrcat(pool, "Line 38: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[46 - 1] =
             apr_pstrcat(pool, "Line 46: ",
                         "Empty $Author: ", author, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[71 - 1] =
-            apr_pstrcat(pool, ".$veR$Author: ", author, " $", NULL);
+            apr_pstrcat(pool, ".$veR$Author: ", author, " $", (char *)NULL);
 
           expect[74 - 1] =
             apr_pstrcat(pool, "Line 74: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[79 - 1] =
             apr_pstrcat(pool, "Line 79: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[80 - 1] =
             apr_pstrcat(pool, "Line 80: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[81 - 1] =
             apr_pstrcat(pool, "Line 81: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[82 - 1] =
             apr_pstrcat(pool, "Line 82: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
         }
       else  /* unexpand */
         {
@@ -581,23 +581,23 @@ substitute_and_verify(const char *test_name,
           expect[16 - 1] =
             apr_pstrcat(pool, "Line 16: ",
                         "Valid $HeadURL: ", url, " $, started unexpanded.",
-                        NULL);
+                        (char *)NULL);
           expect[17 - 1] =
             apr_pstrcat(pool, "Line 17: ",
                         "Valid $URL: ", url, " $, started unexpanded.",
-                        NULL);
+                        (char *)NULL);
           expect[41 - 1] =
             apr_pstrcat(pool, "Line 41: ",
                         "Valid $HeadURL: ", url, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[42 - 1] =
             apr_pstrcat(pool, "Line 42: ",
                         "Valid $URL: ", url, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
           expect[75 - 1] =
             apr_pstrcat(pool, "Line 75: ",
                         "Valid $URL: ", url, " $, started expanded.",
-                        NULL);
+                        (char *)NULL);
         }
       else  /* unexpand */
         {
@@ -622,14 +622,14 @@ substitute_and_verify(const char *test_name,
                         "Two keywords back to back: "
                         "$Author: ", author, " $"
                         "$Rev: ", rev, " $.",
-                        NULL);
+                        (char *)NULL);
           expect[49 - 1] =
             apr_pstrcat(pool, "Line 49: ",
                         "One keyword, one not, back to back: "
                         "$Author: ", author, " $Rev$.",
-                        NULL);
+                        (char *)NULL);
           expect[70 - 1] =
-            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", NULL);
+            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", (char *)NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
     }
@@ -641,14 +641,14 @@ substitute_and_verify(const char *test_name,
             apr_pstrcat(pool, "Line 48: ",
                         "Two keywords back to back: "
                         "$Author$$Rev: ", rev, " $.",
-                        NULL);
+                        (char *)NULL);
           expect[49 - 1] =
             apr_pstrcat(pool, "Line 49: ",
                         "One keyword, one not, back to back: "
                         "$Author$Rev: ", rev, " $.",
-                        NULL);
+                        (char *)NULL);
           expect[70 - 1] =
-            apr_pstrcat(pool, "$Author$Rev: ", rev, " $.", NULL);
+            apr_pstrcat(pool, "$Author$Rev: ", rev, " $.", (char *)NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
     }
@@ -660,14 +660,14 @@ substitute_and_verify(const char *test_name,
             apr_pstrcat(pool, "Line 48: ",
                         "Two keywords back to back: "
                         "$Author: ", author, " $$Rev$.",
-                        NULL);
+                        (char *)NULL);
           expect[49 - 1] =
             apr_pstrcat(pool, "Line 49: ",
                         "One keyword, one not, back to back: "
                         "$Author: ", author, " $Rev$.",
-                        NULL);
+                        (char *)NULL);
           expect[70 - 1] =
-            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", NULL);
+            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", (char *)NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
     }
@@ -684,14 +684,14 @@ substitute_and_verify(const char *test_name,
                         "keyword in a keyword: $Author: ",
                         author,
                         " $Date$ $",
-                        NULL);
+                        (char *)NULL);
         }
       else  /* unexpand */
         {
           expect[24 - 1] =
             apr_pstrcat(pool, "Line 24: ",
                         "keyword in a keyword: $Author$Date$ $",
-                        NULL);
+                        (char *)NULL);
         }
     }
   else if (date && (! author))
@@ -703,7 +703,7 @@ substitute_and_verify(const char *test_name,
                         "keyword in a keyword: $Author: $Date: ",
                         date,
                         " $ $",
-                        NULL);
+                        (char *)NULL);
         }
       /* Else Line 24 remains unchanged. */
     }
@@ -716,14 +716,14 @@ substitute_and_verify(const char *test_name,
                         "keyword in a keyword: $Author: ",
                         author,
                         " $Date$ $",
-                        NULL);
+                        (char *)NULL);
         }
       else  /* unexpand */
         {
           expect[24 - 1] =
             apr_pstrcat(pool, "Line 24: ",
                         "keyword in a keyword: $Author$Date$ $",
-                        NULL);
+                        (char *)NULL);
         }
     }
   /* Else neither author nor date, so Line 24 remains unchanged. */

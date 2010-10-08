@@ -860,7 +860,7 @@ svn_fs_fs__generate_lock_token(const char **token,
      generate a URI that matches the DAV RFC.  We could change this to
      some other URI scheme someday, if we wish. */
   *token = apr_pstrcat(pool, "opaquelocktoken:",
-                       svn_uuid_generate(pool), NULL);
+                       svn_uuid_generate(pool), (char *)NULL);
   return SVN_NO_ERROR;
 }
 

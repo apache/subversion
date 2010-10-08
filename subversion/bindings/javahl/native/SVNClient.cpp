@@ -396,7 +396,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
         return;
 
     SVN_JNI_ERR(svn_client_move6((apr_array_header_t *) srcs,
-                                 destinationPath.c_str(), force, moveAsChild,
+                                 destinationPath.c_str(), moveAsChild,
                                  makeParents, revprops.hash(requestPool),
                                  CommitCallback::callback, callback, ctx,
                                  requestPool.pool()), );
@@ -1062,6 +1062,25 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                requestPool.pool()), );
 }
 
+void SVNClient::streamFileContent(const char *path, Revision &revision,
+                                  Revision &pegRevision,
+                                  OutputStream &outputStream)
+{
+    SVN::Pool requestPool;
+    SVN_JNI_NULL_PTR_EX(path, "path", );
+    Path intPath(path);
+    SVN_JNI_ERR(intPath.error_occured(), );
+
+    svn_client_ctx_t *ctx = context.getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    SVN_JNI_ERR(svn_client_cat2(outputStream.getStream(requestPool),
+                                path, pegRevision.revision(),
+                                revision.revision(), ctx, requestPool.pool()),
+                );
+}
+
 jbyteArray SVNClient::revProperty(const char *path,
                                   const char *name, Revision &rev)
 {
@@ -1100,8 +1119,7 @@ jbyteArray SVNClient::revProperty(const char *path,
     return JNIUtil::makeJByteArray((const signed char *)propval->data,
                                    propval->len);
 }
-void SVNClient::relocate(const char *from, const char *to, const char *path,
-                         bool recurse)
+void SVNClient::relocate(const char *from, const char *to, const char *path)
 {
     JNI::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1120,9 +1138,9 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_relocate(intPath.c_str(), intFrom.c_str(),
-                                    intTo.c_str(), recurse, ctx,
-                                    requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_relocate2(intPath.c_str(), intFrom.c_str(),
+                                     intTo.c_str(), ctx,
+                                     requestPool.pool()), );
 }
 
 void SVNClient::blame(const char *path, Revision &pegRevision,
@@ -1362,7 +1380,6 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
 struct info_baton
 {
     std::vector<info_entry> infoVect;
-    int info_ver;
     apr_pool_t *pool;
 };
 

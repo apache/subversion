@@ -57,7 +57,8 @@ class Notifier : public SVN::Callback::ClientNotifier
 
 
 ClientContext::ClientContext(jobject jsvnclient)
-    : m_prompter(NULL)
+    : m_prompter(NULL),
+      m_cancelOperation(false)
 {
     JNIEnv *env = JNIUtil::getEnv();
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
@@ -259,7 +260,7 @@ ClientContext::setConfigDirectory(const char *configDir)
 }
 
 const char *
-ClientContext::getConfigDirectory()
+ClientContext::getConfigDirectory() const
 {
     return m_configDir.c_str();
 }

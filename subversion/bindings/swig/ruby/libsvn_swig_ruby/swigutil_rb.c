@@ -1231,10 +1231,10 @@ svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
 static void
 r2c_swig_type2(VALUE value, const char *type_name, void **result)
 {
+#ifdef SWIG_IsOK
   int res;
   res = SWIG_ConvertPtr(value, result, SWIG_TypeQuery(type_name),
                         SWIG_POINTER_EXCEPTION);
-#ifdef SWIG_IsOK
   if (!SWIG_IsOK(res)) {
     VALUE message = rb_funcall(value, rb_intern("inspect"), 0);
     rb_str_cat2(message, "must be ");

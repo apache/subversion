@@ -1121,8 +1121,6 @@ merge_props_changed(const char *local_dir_abspath,
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (props->nelts)
     {
-      int i;
-
       /* If this is a forward merge then don't add new mergeinfo to
          PATH that is already part of PATH's own history, see
          http://svn.haxx.se/dev/archive-2008-09/0006.shtml.  If the
@@ -1150,6 +1148,8 @@ merge_props_changed(const char *local_dir_abspath,
          is having its existing mergeinfo deleted. */
       if (!merge_b->dry_run)
         {
+          int i;
+
           for (i = 0; i < props->nelts; ++i)
             {
               svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
@@ -3778,8 +3778,8 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
             child->remaining_ranges = svn_rangelist_dup(explicit_rangelist,
                                                         pool);
         }
-    }
 #endif
+    }
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
@@ -6596,7 +6596,6 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   svn_merge_range_t range;
   svn_mergeinfo_t target_mergeinfo;
   svn_merge_range_t *conflicted_range = NULL;
-  int i;
   svn_boolean_t indirect = FALSE;
   apr_pool_t *subpool;
   svn_boolean_t is_rollback = (revision1 > revision2);
@@ -6676,6 +6675,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
   if (!merge_b->record_only)
     {
       apr_array_header_t *ranges_to_merge = remaining_ranges;
+      int i;
 
       /* If we have ancestrally related sources and more than one
          range to merge, eliminate no-op ranges before going through
@@ -8028,7 +8028,18 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                    apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
+
+  /* The range defining the mergeinfo we will record to describe the merge
+     (assuming we are recording mergeinfo
+
+     Note: This may be a subset of REVISION1:REVISION2 if
+     populate_remaining_ranges() determines that some part of
+     REVISION1:REVISION2 has already been wholly merged to TARGET_ABSPATH.
+     Also, the actual editor drive(s) may be a subset of RANGE, if
+     remove_noop_subtree_ranges() and/or fix_deleted_subtree_ranges()
+     further tweak things. */
   svn_merge_range_t range;
+
   svn_ra_session_t *ra_session;
   svn_client__merge_path_t *target_merge_path;
   svn_boolean_t is_rollback = (revision1 > revision2);
@@ -8101,17 +8112,22 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
 
   if (honor_mergeinfo && !merge_b->reintegrate_merge)
     {
-      svn_revnum_t start_rev, end_rev;
+      svn_revnum_t new_range_start, start_rev, end_rev;
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      /* The merge target target_wcpath and/or its subtrees may not need all
+      /* The merge target TARGET_ABSPATH and/or its subtrees may not need all
          of REVISION1:REVISION2 applied.  So examine
          NOTIFY_B->CHILDREN_WITH_MERGEINFO to find the oldest starting
          revision that actually needs to be merged (for reverse merges this is
-         the youngest starting revision). */
-      start_rev =
-        get_most_inclusive_start_rev(notify_b->children_with_mergeinfo,
-                                     is_rollback);
+         the youngest starting revision).
+         
+         We'll do this twice, right now for the start of the mergeinfo we will
+         ultimately record to describe this merge and then later for the 
+         start of the actual editor drive. */
+      new_range_start = get_most_inclusive_start_rev(
+        notify_b->children_with_mergeinfo, is_rollback);
+      if (SVN_IS_VALID_REVNUM(new_range_start))
+        range.start = new_range_start;
 
       /* Remove inoperative ranges from any subtrees' remaining_ranges
          to spare the expense of noop editor drives. */
@@ -8121,16 +8137,20 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                                            notify_b, merge_b,
                                            pool, iterpool));
 
+      /* Adjust subtrees' remaining_ranges to deal with issue #3067 */
       SVN_ERR(fix_deleted_subtree_ranges(url1, revision1, url2, revision2,
                                          ra_session, notify_b, merge_b, pool));
+
+      /* remove_noop_subtree_ranges() and/or fix_deleted_subtree_range()
+         may have further refined the starting revision for our editor
+         drive. */
+      start_rev =
+        get_most_inclusive_start_rev(notify_b->children_with_mergeinfo,
+                                     is_rollback);
 
       /* Is there anything to merge? */
       if (SVN_IS_VALID_REVNUM(start_rev))
         {
-          /* Adjust range to describe the start of our most
-             inclusive merge. */
-          range.start = start_rev;
-
           /* Now examine NOTIFY_B->CHILDREN_WITH_MERGEINFO to find the youngest
              ending revision that actually needs to be merged (for reverse
              merges this is the oldest starting revision). */

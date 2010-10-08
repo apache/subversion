@@ -106,7 +106,7 @@ class ExpectedOutput:
     return str(self.output)
 
   def __cmp__(self, other):
-    raise 'badness'
+    raise Exception('badness')
 
   def matches(self, other, except_re=None):
     """Return whether SELF.output matches OTHER (which may be a list
@@ -236,7 +236,7 @@ class UnorderedOutput(ExpectedOutput):
   is_unordered = True
 
   def __cmp__(self, other):
-    raise 'badness'
+    raise Exception('badness')
 
   def is_equivalent_list(self, expected, actual):
     "Disregard the order of ACTUAL lines during comparison."

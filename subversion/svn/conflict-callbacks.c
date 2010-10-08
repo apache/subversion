@@ -470,34 +470,34 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             {
               prompt = apr_pstrcat(subpool, prompt,
                                    _(", (df) diff-full, (e) edit"),
-                                   NULL);
+                                   (char *)NULL);
 
               if (knows_something)
                 prompt = apr_pstrcat(subpool, prompt, _(", (r) resolved"),
-                                     NULL);
+                                     (char *)NULL);
 
               if (! desc->is_binary &&
                   desc->kind != svn_wc_conflict_kind_property)
                 prompt = apr_pstrcat(subpool, prompt,
                                      _(",\n        (mc) mine-conflict, "
                                        "(tc) theirs-conflict"),
-                                     NULL);
+                                     (char *)NULL);
             }
           else
             {
               if (knows_something)
                 prompt = apr_pstrcat(subpool, prompt, _(", (r) resolved"),
-                                     NULL);
+                                     (char *)NULL);
               prompt = apr_pstrcat(subpool, prompt,
                                    _(",\n        "
                                      "(mf) mine-full, (tf) theirs-full"),
-                                   NULL);
+                                   (char *)NULL);
             }
 
-          prompt = apr_pstrcat(subpool, prompt, ",\n        ", NULL);
+          prompt = apr_pstrcat(subpool, prompt, ",\n        ", (char *)NULL);
           prompt = apr_pstrcat(subpool, prompt,
                                _("(s) show all options: "),
-                               NULL);
+                               (char *)NULL);
 
           SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
 

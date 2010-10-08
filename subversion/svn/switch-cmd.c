@@ -47,7 +47,6 @@ rewrite_urls(const apr_array_header_t *targets,
   apr_pool_t *subpool;
   const char *from;
   const char *to;
-  int i;
 
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -70,6 +69,8 @@ rewrite_urls(const apr_array_header_t *targets,
     }
   else
     {
+      int i;
+
       for (i = 2; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);

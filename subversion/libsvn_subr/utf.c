@@ -155,7 +155,7 @@ get_xlate_key(const char *topage,
     topage = "APR_DEFAULT_CHARSET";
 
   return apr_pstrcat(pool, "svn-utf-", frompage, "to", topage,
-                     "-xlate-handle", NULL);
+                     "-xlate-handle", (char *)NULL);
 }
 
 /* Set *RET to a handle node for converting from FROMPAGE to TOPAGE,
@@ -588,7 +588,8 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
   for (i = 0; i < valid; ++i)
     valid_txt = apr_pstrcat(pool, valid_txt,
                             apr_psprintf(pool, " %02x",
-                                         (unsigned char)last[i-valid]), NULL);
+                                         (unsigned char)last[i-valid]),
+                                         (char *)NULL);
 
   /* 4 invalid octets will guarantee that the faulty octet is displayed */
   invalid = data + len - last;
@@ -597,7 +598,8 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
   for (i = 0; i < invalid; ++i)
     invalid_txt = apr_pstrcat(pool, invalid_txt,
                               apr_psprintf(pool, " %02x",
-                                           (unsigned char)last[i]), NULL);
+                                           (unsigned char)last[i]),
+                                           (char *)NULL);
 
   return svn_error_createf(APR_EINVAL, NULL,
                            _("Valid UTF-8 data\n(hex:%s)\n"

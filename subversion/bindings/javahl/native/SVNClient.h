@@ -76,8 +76,7 @@ class SVNClient :public SVNBase
              Revision &revisionStart, Revision &revisionEnd,
              bool ignoreMimeType, bool includeMergedRevisions,
              BlameCallback *callback);
-  void relocate(const char *from, const char *to, const char *path,
-                bool recurse);
+  void relocate(const char *from, const char *to, const char *path);
   void propertySet(const char *path, const char *name, const char *value,
                    svn_depth_t depth, StringArray &changelists, bool force,
                    RevpropTable &revprops, CommitCallback *callback);

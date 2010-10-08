@@ -1866,7 +1866,6 @@ static svn_error_t *
 try_copy(const apr_array_header_t *sources,
          const char *dst_path_in,
          svn_boolean_t is_move,
-         svn_boolean_t force,
          svn_boolean_t make_parents,
          svn_boolean_t ignore_externals,
          const apr_hash_t *revprop_table,
@@ -2028,28 +2027,27 @@ try_copy(const apr_array_header_t *sources,
 
   if (is_move)
     {
-      if (srcs_are_urls == dst_is_url)
+      /* Disallow moves between the working copy and the repository. */
+      if (srcs_are_urls != dst_is_url)
         {
-          for (i = 0; i < copy_pairs->nelts; i++)
-            {
-              svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                svn_client__copy_pair_t *);
-
-              if (strcmp(pair->src_abspath_or_url,
-                         pair->dst_abspath_or_url) == 0)
-                return svn_error_createf
-                  (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                   _("Cannot move path '%s' into itself"),
-                   svn_dirent_local_style(pair->src_abspath_or_url, pool));
-            }
-        }
-      else
-        {
-          /* Disallow moves between the working copy and the repository. */
           return svn_error_create
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("Moves between the working copy and the repository are not "
                "supported"));
+        }
+
+      /* Disallow moving any path onto or into itself. */
+      for (i = 0; i < copy_pairs->nelts; i++)
+        {
+          svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
+                                            svn_client__copy_pair_t *);
+
+          if (strcmp(pair->src_abspath_or_url,
+                     pair->dst_abspath_or_url) == 0)
+            return svn_error_createf
+              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+               _("Cannot move path '%s' into itself"),
+               svn_dirent_local_style(pair->src_abspath_or_url, pool));
         }
     }
   else
@@ -2203,7 +2201,6 @@ svn_client_copy6(const apr_array_header_t *sources,
 
   err = try_copy(sources, dst_path,
                  FALSE /* is_move */,
-                 TRUE /* force, set to avoid deletion check */,
                  make_parents,
                  ignore_externals,
                  revprop_table,
@@ -2236,7 +2233,6 @@ svn_client_copy6(const apr_array_header_t *sources,
                          ? svn_uri_join(dst_path, src_basename, subpool)
                          : svn_dirent_join(dst_path, src_basename, subpool),
                      FALSE /* is_move */,
-                     TRUE /* force, set to avoid deletion check */,
                      make_parents,
                      ignore_externals,
                      revprop_table,
@@ -2253,7 +2249,6 @@ svn_client_copy6(const apr_array_header_t *sources,
 svn_error_t *
 svn_client_move6(const apr_array_header_t *src_paths,
                  const char *dst_path,
-                 svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
                  const apr_hash_t *revprop_table,
@@ -2289,7 +2284,6 @@ svn_client_move6(const apr_array_header_t *src_paths,
 
   err = try_copy(sources, dst_path,
                  TRUE /* is_move */,
-                 force,
                  make_parents,
                  FALSE,
                  revprop_table,
@@ -2319,7 +2313,6 @@ svn_client_move6(const apr_array_header_t *src_paths,
                          ? svn_uri_join(dst_path, src_basename, pool)
                          : svn_dirent_join(dst_path, src_basename, pool),
                      TRUE /* is_move */,
-                     force,
                      make_parents,
                      FALSE,
                      revprop_table,

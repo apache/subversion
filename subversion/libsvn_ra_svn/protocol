@@ -199,7 +199,7 @@ capability and C indicates a client capability):
 [S]  depth             If the server presents this capability, it understands
                        requested operational depth (see section 3.1.1) and
                        per-path ambient depth (see section 3.1.3).
-[S]  atomic-revprops   If the server presents support this capability, it
+[S]  atomic-revprops   If the server presents this capability, it
                        supports the change-rev-prop2 command.
                        See section 3.1.1.
 

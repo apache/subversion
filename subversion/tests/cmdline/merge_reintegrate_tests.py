@@ -2075,8 +2075,8 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo
 # for merge target'.
-def two_URL_merge_removes_valid_mergefino_from_target(sbox):
-  "2-URL merge removes valid mergefino from target"
+def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
+  "2-URL merge removes valid mergeinfo from target"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -2254,7 +2254,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               reintegrate_with_self_referential_mergeinfo,
               added_subtrees_with_mergeinfo_break_reintegrate,
-              two_URL_merge_removes_valid_mergefino_from_target,
+              two_URL_merge_removes_valid_mergeinfo_from_target,
              ]
 
 if __name__ == '__main__':

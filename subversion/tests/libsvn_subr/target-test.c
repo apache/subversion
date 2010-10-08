@@ -89,7 +89,7 @@ condense_targets_tests_helper(const char* title,
 
   /* Verify the common part with the expected (prefix with cwd). */
   if (*exp_common == '%')
-    exp_common_abs = apr_pstrcat(pool, curdir, exp_common + 1, NULL);
+    exp_common_abs = apr_pstrcat(pool, curdir, exp_common + 1, (char *)NULL);
 
   if (strcmp(common_path, exp_common_abs) != 0)
     {
@@ -106,7 +106,7 @@ condense_targets_tests_helper(const char* title,
     {
       const char * target = APR_ARRAY_IDX(condensed_targets, i, const char*);
       if (token && (*token == '%'))
-        token = apr_pstrcat(pool, curdir, token + 1, NULL);
+        token = apr_pstrcat(pool, curdir, token + 1, (char *)NULL);
       if (! token ||
           (target && (strcmp(target, token) != 0)))
         {

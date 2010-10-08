@@ -1186,7 +1186,6 @@ print_tree(svn_fs_root_t *root,
            apr_pool_t *pool)
 {
   apr_pool_t *subpool;
-  int i;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   const char* name;
@@ -1195,8 +1194,11 @@ print_tree(svn_fs_root_t *root,
 
   /* Print the indentation. */
   if (!full_paths)
-    for (i = 0; i < indentation; i++)
-      SVN_ERR(svn_cmdline_fputs(" ", stdout, pool));
+    {
+      int i;
+      for (i = 0; i < indentation; i++)
+        SVN_ERR(svn_cmdline_fputs(" ", stdout, pool));
+    }
 
   /* ### The path format is inconsistent.. needs fix */
   if (full_paths)
@@ -1204,7 +1206,7 @@ print_tree(svn_fs_root_t *root,
   else if (*path == '/')
     name = svn_uri_basename(path, pool);
   else
-    name = svn_relpath_basename(path, pool);
+    name = svn_relpath_basename(path, NULL);
 
   if (svn_path_is_empty(name))
     name = "/"; /* basename of '/' is "" */

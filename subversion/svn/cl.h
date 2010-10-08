@@ -417,15 +417,18 @@ svn_cl__print_status_xml(const char *path,
                          apr_pool_t *pool);
 
 
-/* Print a hash that maps property names (char *) to property values
-   (svn_string_t *).  The names are assumed to be in UTF-8 format;
+/* Print to stdout a hash that maps property names (char *) to property
+   values (svn_string_t *).  The names are assumed to be in UTF-8 format;
    the values are either in UTF-8 (the special Subversion props) or
    plain binary values.
+
+   If OUT is not NULL, then write to it rather than stdout.
 
    If NAMES_ONLY is true, print just names, else print names and
    values. */
 svn_error_t *
-svn_cl__print_prop_hash(apr_hash_t *prop_hash,
+svn_cl__print_prop_hash(svn_stream_t *out,
+                        apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
 
@@ -626,7 +629,10 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
 svn_error_t *
 svn_cl__may_need_force(svn_error_t *err);
 
-/* Write the STRING to the stdio STREAM, returning an error if it fails. */
+/* Write the STRING to the stdio STREAM, returning an error if it fails.
+
+   This function is equal to svn_cmdline_fputs() minus the utf8->local
+   encoding translation.  */
 svn_error_t *
 svn_cl__error_checked_fputs(const char *string, FILE* stream);
 

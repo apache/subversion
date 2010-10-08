@@ -462,19 +462,19 @@ print_chrevs(const apr_array_header_t *revs_got,
           outstr = apr_pstrcat(pool,
                                outstr,
                                apr_psprintf(pool, "%ld ", rev),
-                               NULL);
+                               (char *)NULL);
         }
     }
-  outstr = apr_pstrcat(pool, outstr, "}  Expected: { ", NULL);
+  outstr = apr_pstrcat(pool, outstr, "}  Expected: { ", (char *)NULL);
   for (i = 0; i < num_revs_expected; i++)
     {
       outstr = apr_pstrcat(pool,
                            outstr,
                            apr_psprintf(pool, "%ld ",
                                         revs_expected[i]),
-                           NULL);
+                           (char *)NULL);
     }
-  return apr_pstrcat(pool, outstr, "}", NULL);
+  return apr_pstrcat(pool, outstr, "}", (char *)NULL);
 }
 
 

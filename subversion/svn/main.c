@@ -1278,8 +1278,6 @@ main(int argc, const char *argv[])
   int i;
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
   const char *dash_m_arg = NULL, *dash_F_arg = NULL;
-  const char *path_utf8;
-  apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
   svn_config_t *cfg_config;
@@ -1357,7 +1355,7 @@ main(int argc, const char *argv[])
       const char *utf8_opt_arg;
 
       /* Parse the next option. */
-      apr_err = apr_getopt_long(os, svn_cl__options, &opt_id, &opt_arg);
+      apr_status_t apr_err = apr_getopt_long(os, svn_cl__options, &opt_id, &opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
       else if (apr_err)
@@ -1398,9 +1396,6 @@ main(int argc, const char *argv[])
         break;
       case 'c':
         {
-          char *end;
-          svn_revnum_t changeno;
-          svn_opt_revision_range_t *range;
           apr_array_header_t *change_revs =
             svn_cstring_split(opt_arg, ", \n\r\t\v", TRUE, pool);
 
@@ -1414,6 +1409,9 @@ main(int argc, const char *argv[])
 
           for (i = 0; i < change_revs->nelts; i++)
             {
+              char *end;
+              svn_revnum_t changeno, changeno_end;
+              svn_opt_revision_range_t *range;
               const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
 
@@ -1423,7 +1421,22 @@ main(int argc, const char *argv[])
                  ### "{DATE}" and the special words. */
               while (*change_str == 'r')
                 change_str++;
-              changeno = strtol(change_str, &end, 10);
+              changeno = changeno_end = strtol(change_str, &end, 10);
+              if (end != change_str && *end == '-')
+                {
+                  if (changeno < 0)
+                    {
+                      err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                              _("Negative number in range (%s)"
+                                                " not supported with -c"),
+                                              change_str);
+                      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+                    }
+                  change_str = end+1;
+                  while (*change_str == 'r')
+                    change_str++;
+                  changeno_end = strtol(change_str, &end, 10);
+                }
               if (end == change_str || *end != '\0')
                 {
                   err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -1441,19 +1454,28 @@ main(int argc, const char *argv[])
 
               /* Figure out the range:
                     -c N  -> -r N-1:N
-                    -c -N -> -r N:N-1 */
-              range = apr_palloc(pool, sizeof(*range));
+                    -c -N -> -r N:N-1
+                    -c M-N -> -r M-1:N for M < N
+                    -c M-N -> -r M:N-1 for M > N
+                    -c -M-N -> error (too confusing/no valid use case)
+              */
               if (changeno > 0)
                 {
-                  range->start.value.number = changeno - 1;
-                  range->end.value.number = changeno;
+                  if (changeno <= changeno_end)
+                    changeno--;
+                  else
+                    changeno_end--;
                 }
               else
                 {
                   changeno = -changeno;
-                  range->start.value.number = changeno;
-                  range->end.value.number = changeno - 1;
+                  changeno_end = changeno - 1;
                 }
+
+              range = apr_palloc(pool, sizeof(*range));
+              range->start.value.number = changeno;
+              range->end.value.number = changeno_end;
+
               opt_state.used_change_arg = TRUE;
               range->start.kind = svn_opt_revision_number;
               range->end.kind = svn_opt_revision_number;
@@ -1665,10 +1687,13 @@ main(int argc, const char *argv[])
         opt_state.new_target = apr_pstrdup(pool, opt_arg);
         break;
       case opt_config_dir:
-        err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
-        if (err)
-          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-        opt_state.config_dir = svn_dirent_internal_style(path_utf8, pool);
+        {
+          const char *path_utf8;
+          err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
+          if (err)
+            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+          opt_state.config_dir = svn_dirent_internal_style(path_utf8, pool);
+        }
         break;
       case opt_config_options:
         if (!opt_state.config_options)
@@ -2307,9 +2332,6 @@ main(int argc, const char *argv[])
                                            ctx->cancel_baton,
                                            pool)))
     svn_handle_error2(err, stderr, TRUE, "svn: ");
-
-  /* svn can safely create instance of QApplication class. */
-  svn_auth_set_parameter(ab, "svn:auth:qapplication-safe", "1");
 
   ctx->auth_baton = ab;
 

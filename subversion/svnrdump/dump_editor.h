@@ -64,17 +64,6 @@ struct handler_baton
 {
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
-
-  /* Pool used for temporary allocations during delta application in
-     window_handler() */
-  apr_pool_t *pool;
-
-  /* Information about the path of the temporary file used */
-  const char *delta_abspath;
-  svn_stream_t *delta_filestream;
-
-  /* Global edit baton */
-  struct dump_edit_baton *eb;
 };
 
 /**

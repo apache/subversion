@@ -862,9 +862,9 @@ set_bare_props(svn_ra_serf__prop_set_t setprop, void *baton,
   if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     prop_name = name;
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
+    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, (char *)NULL);
   else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
+    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, (char *)NULL);
   else if (strcmp(ns, "") == 0)
     prop_name = name;
   else
@@ -888,9 +888,9 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
   if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     prop_name = name;
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
+    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, (char *)NULL);
   else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
+    prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, (char *)NULL);
   else if (strcmp(ns, "") == 0)
     prop_name = name;
   else if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
@@ -915,7 +915,7 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
   else
     {
       /* An unknown namespace, must be a custom property. */
-      prop_name = apr_pstrcat(pool, ns, name, NULL);
+      prop_name = apr_pstrcat(pool, ns, name, (char *)NULL);
     }
 
   return setprop(baton, prop_name, val, pool);

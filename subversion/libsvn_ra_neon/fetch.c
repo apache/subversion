@@ -56,17 +56,6 @@
 
 
 typedef struct {
-  /* the information for this subdir. if rsrc==NULL, then this is a sentinel
-     record in fetch_ctx_t.subdirs to close the directory implied by the
-     parent_baton member. */
-  svn_ra_neon__resource_t *rsrc;
-
-  /* the directory containing this subdirectory. */
-  void *parent_baton;
-
-} subdir_t;
-
-typedef struct {
   apr_pool_t *pool;
 
   /* these two are the handler that the editor gave us */
@@ -91,9 +80,6 @@ typedef struct {
 
   void *subctx;
 } custom_get_ctx_t;
-
-#define POP_SUBDIR(sds) (APR_ARRAY_IDX((sds), --(sds)->nelts, subdir_t *))
-#define PUSH_SUBDIR(sds,s) (APR_ARRAY_PUSH((sds), subdir_t *) = (s))
 
 typedef svn_error_t * (*prop_setter_t)(void *baton,
                                        const char *name,
@@ -346,7 +332,7 @@ static svn_error_t *add_props(apr_hash_t *props,
              server, or both.  Convert the URI namespace into normal
              'svn:' prefix again before pushing it at the wc. */
           SVN_ERR((*setter)(baton, apr_pstrcat(pool, SVN_PROP_PREFIX,
-                                               key + NSLEN, NULL),
+                                               key + NSLEN, (char *)NULL),
                             val, pool));
         }
 #undef NSLEN
@@ -640,7 +626,8 @@ filter_props(apr_hash_t *props,
       if (strncmp(name, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
         {
           apr_hash_set(props,
-                       apr_pstrcat(pool, SVN_PROP_PREFIX, name + NSLEN, NULL),
+                       apr_pstrcat(pool, SVN_PROP_PREFIX, name + NSLEN,
+                                   (char *)NULL),
                        APR_HASH_KEY_STRING,
                        value);
           continue;
@@ -2258,7 +2245,8 @@ end_element(void *userdata, int state,
           rb->file_baton ? rb->file_pool : TOP_DIR(rb).pool;
         prop_setter_t setter =
           rb->file_baton ? editor->change_file_prop : editor->change_dir_prop;
-        const char *name = apr_pstrcat(pool, elm->nspace, elm->name, NULL);
+        const char *name = apr_pstrcat(pool, elm->nspace, elm->name,
+                                       (char *)NULL);
         void *baton = rb->file_baton ? rb->file_baton : TOP_DIR(rb).baton;
         svn_string_t valstr;
 

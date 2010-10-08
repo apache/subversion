@@ -311,6 +311,11 @@ def commit_a_copy_of_root_load(sbox):
   "load: commit a copy of root"
   run_load_test(sbox, "repo-with-copy-of-root-dir.dump")
 
+def descend_into_replace_dump(sbox):
+  "dump: descending into replaced dir looks in src"
+  run_dump_test(sbox, "descend-into-replace.dump", subdir='/trunk/H',
+                expected_dumpfile_name = "descend-into-replace.expected.dump")
+
 ########################################################################
 # Run the tests
 
@@ -343,7 +348,7 @@ test_list = [ None,
               copy_revprops_dump,
               copy_revprops_load,
               only_trunk_dump,
-              Wimp("TODO", only_trunk_A_with_changes_dump),
+              only_trunk_A_with_changes_dump,
               no_author_dump,
               no_author_load,
               move_and_modify_in_the_same_revision_dump,
@@ -351,6 +356,7 @@ test_list = [ None,
               copy_bad_line_endings_dump,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
+              descend_into_replace_dump,
              ]
 
 if __name__ == '__main__':
