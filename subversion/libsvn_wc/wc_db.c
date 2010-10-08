@@ -4564,10 +4564,28 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
             *conflicted = FALSE;
         }
 
+      if (lock)
+        {
+            if (op_depth != 0 || svn_sqlite__column_is_null(stmt_info, 15))
+              *lock = NULL;
+            else
+            {
+                *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
+                (*lock)->token = svn_sqlite__column_text(stmt_info, 15,
+                                                        result_pool);
+                (*lock)->owner = svn_sqlite__column_text(stmt_info, 16,
+                                                        result_pool);
+                (*lock)->comment = svn_sqlite__column_text(stmt_info, 17,
+                                                            result_pool);
+                if (!svn_sqlite__column_is_null(stmt_info, 18))
+                  (*lock)->date = svn_sqlite__column_int64(stmt_info, 18);
+            }
+        }
+
       if (have_work)
         *have_work = (op_depth != 0);
 
-      if (have_base || lock)
+      if (have_base)
         {
           while (!err && op_depth != 0)
             {
@@ -4581,27 +4599,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 
           if (have_base)
             *have_base = (op_depth == 0);
-
-          /* Lock should only be checked when the top op_depth is 0, but that
-             is a behavior change which has to be handled as a separate commit
-           */
-          if (lock)
-            {
-              if (op_depth != 0 || svn_sqlite__column_is_null(stmt_info, 15))
-                *lock = NULL;
-              else
-                {
-                  *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
-                  (*lock)->token = svn_sqlite__column_text(stmt_info, 15,
-                                                           result_pool);
-                  (*lock)->owner = svn_sqlite__column_text(stmt_info, 16,
-                                                           result_pool);
-                  (*lock)->comment = svn_sqlite__column_text(stmt_info, 17,
-                                                             result_pool);
-                  if (!svn_sqlite__column_is_null(stmt_info, 18))
-                    (*lock)->date = svn_sqlite__column_int64(stmt_info, 18);
-                }
-            }
         }
     }
   else if (have_act)
