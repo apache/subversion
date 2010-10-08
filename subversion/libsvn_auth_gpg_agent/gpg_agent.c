@@ -60,7 +60,6 @@ password_get_gpg_agent(const char **password,
 {
   int sd;
   char *gpg_agent_info = NULL;
-  char *value;
   char *p = NULL;
   char *ep = NULL;
   char *buffer;
@@ -75,26 +74,13 @@ password_get_gpg_agent(const char **password,
   const char *socket_name = NULL;
   svn_checksum_t *digest = NULL;
 
-  value = getenv("GPG_AGENT_INFO");
-
-  if (value != NULL)
+  gpg_agent_info = getenv("GPG_AGENT_INFO");
+  if (gpg_agent_info != NULL)
     {
-      gpg_agent_info = apr_pstrmemdup(pool, value, strlen(value));
-      socket_details = svn_cstring_split(gpg_agent_info, ":", TRUE, pool);
+      socket_details = svn_cstring_split(gpg_agent_info, ":", TRUE,
+                                         pool);
       socket_name = APR_ARRAY_IDX(socket_details, 0, const char *);
     }
-  else
-    return FALSE;
-
-  value = getenv("GPG_TTY");
-  if (value != NULL)
-    tty_name = apr_pstrmemdup(pool, value, strlen(value));
-  else
-    return FALSE;
-
-  value = getenv("TERM");
-  if (value != NULL)
-    tty_type = apr_pstrmemdup(pool, value, strlen(value));
   else
     return FALSE;
 
@@ -126,21 +112,33 @@ password_get_gpg_agent(const char **password,
     return FALSE;
 
   /* Send TTY_NAME to the gpg-agent daemon. */
-  request = apr_psprintf(pool, "OPTION ttyname=%s\n", tty_name);
-  send(sd, request, strlen(request), 0);
-  recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
-  buffer[recvd] = '\0';
+  tty_name = getenv("GPG_TTY");
+  if (tty_name != NULL)
+    {
+      request = apr_psprintf(pool, "OPTION ttyname=%s\n", tty_name);
+      send(sd, request, strlen(request), 0);
+      recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
+      buffer[recvd] = '\0';
 
-  if (strncmp(buffer, "OK", 2) != 0)
+      if (strncmp(buffer, "OK", 2) != 0)
+        return FALSE;
+    }
+  else
     return FALSE;
 
   /* Send TTY_TYPE to the gpg-agent daemon. */
-  request = apr_psprintf(pool, "OPTION ttytype=%s\n", tty_type);
-  send(sd, request, strlen(request), 0);
-  recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
-  buffer[recvd] = '\0';
+  tty_type = getenv("TERM");
+  if (tty_type != NULL)
+    {
+      request = apr_psprintf(pool, "OPTION ttytype=%s\n", tty_type);
+      send(sd, request, strlen(request), 0);
+      recvd = recv(sd, buffer, BUFFER_SIZE - 1, 0);
+      buffer[recvd] = '\0';
 
-  if (strncmp(buffer, "OK", 2) != 0)
+      if (strncmp(buffer, "OK", 2) != 0)
+        return FALSE;
+    }
+  else
     return FALSE;
 
   /* Create the CACHE_ID which will be generated based on REALMSTRING similar
@@ -173,11 +171,12 @@ password_get_gpg_agent(const char **password,
   if (ep != NULL)
     *ep = '\0';
 
-  *password = apr_pstrmemdup(pool, p, recvd);
+  *password = p;
 
   close(sd);
   return TRUE;
 }
+
 
 /* Implementation of password_set_t that stores the password in
    GPG Agent. */
@@ -230,12 +229,14 @@ simple_gpg_agent_save_creds(svn_boolean_t *saved,
             pool);
 }
 
+
 static const svn_auth_provider_t gpg_agent_simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
   simple_gpg_agent_first_creds,
   NULL,
   simple_gpg_agent_save_creds
 };
+
 
 /* Public API */
 void
