@@ -2586,8 +2586,8 @@ cross_db_copy(svn_wc__db_t *db,
                                NULL /* lock */,
                                db, src_abspath, scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__get_pristine_props(&props, db, src_abspath,
-                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, src_abspath,
+                                         scratch_pool, scratch_pool));
 
   blank_iwb(&iwb);
   iwb.presence = dst_status;
