@@ -261,6 +261,26 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_DELETE_ACTUAL_NODE_WITHOUT_CHANGELIST
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2
+      AND changelist IS NULL;
+
+-- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST
+UPDATE actual_node
+SET properties = NULL,
+    text_mod = NULL,
+    conflict_data = NULL,
+    tree_conflict_data = NULL,
+    conflict_old = NULL,
+    conflict_new = NULL,
+    conflict_working = NULL,
+    prop_reject = NULL,
+    older_checksum = NULL,
+    left_checksum = NULL,
+    right_checksum = NULL
+WHERE wc_id = ?1 and local_relpath = ?2;
+
 -- STMT_UPDATE_NODE_BASE_DEPTH
 UPDATE nodes SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
