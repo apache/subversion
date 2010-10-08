@@ -105,7 +105,7 @@ OutputStream::~OutputStream()
  * @param pool  the pool, from which the structure is allocated
  * @return the output stream
  */
-svn_stream_t *OutputStream::getStream(const SVN::Pool &pool)
+svn_stream_t *OutputStream::getStream(const JNI::Pool &pool)
 {
   // Create a stream with this as the baton and set the write and
   // close functions.

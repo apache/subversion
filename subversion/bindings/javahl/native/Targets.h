@@ -48,7 +48,7 @@ class Targets
   Targets(const char *path);
   void add(const char *path);
   ~Targets();
-  const apr_array_header_t *array(const SVN::Pool &pool);
+  const apr_array_header_t *array(const JNI::Pool &pool);
   svn_error_t *error_occured();
 };
 

@@ -64,7 +64,7 @@ class JNIThreadData
   /**
    * The pool for the current request (call).
    */
-  SVN::Pool *m_requestPool;
+  JNI::Pool *m_requestPool;
  private:
   /**
    * Pointer to previous thread information to enable reentrent

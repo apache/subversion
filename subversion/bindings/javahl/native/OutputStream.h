@@ -74,7 +74,7 @@ class OutputStream
  public:
   OutputStream(jobject jthis);
   ~OutputStream();
-  svn_stream_t *getStream(const SVN::Pool &pool);
+  svn_stream_t *getStream(const JNI::Pool &pool);
 
   std::ostream &to_ostream();
 };

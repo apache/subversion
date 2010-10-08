@@ -36,7 +36,7 @@ StringArray::~StringArray()
 {
 }
 
-const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
+const apr_array_header_t *StringArray::array(const JNI::Pool &pool)
 {
   apr_array_header_t *strings
     = apr_array_make(pool.pool(), m_strings.size(), sizeof(char *));

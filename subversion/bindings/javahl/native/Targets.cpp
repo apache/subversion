@@ -48,7 +48,7 @@ void Targets::add(const char *path)
   m_targets.push_back (path);
 }
 
-const apr_array_header_t *Targets::array(const SVN::Pool &pool)
+const apr_array_header_t *Targets::array(const JNI::Pool &pool)
 {
   if (m_strArray != NULL)
     {

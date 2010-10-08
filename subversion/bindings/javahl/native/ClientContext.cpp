@@ -119,7 +119,7 @@ ClientContext::~ClientContext()
 svn_client_ctx_t *
 ClientContext::getContext(CommitMessage *message)
 {
-    SVN::Pool *requestPool = JNIUtil::getRequestPool();
+    JNI::Pool *requestPool = JNIUtil::getRequestPool();
     apr_pool_t *pool = requestPool->pool();
     svn_auth_baton_t *ab;
     svn_client_ctx_t *ctx = persistentCtx;

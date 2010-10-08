@@ -63,7 +63,7 @@ void SVNRepos::create(File &path, bool disableFsyncCommits,
                       bool keepLogs, File &configPath,
                       const char *fstype)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_repos_t *repos;
   apr_hash_t *config;
   apr_hash_t *fs_config = apr_hash_make(requestPool.pool());
@@ -94,12 +94,12 @@ void SVNRepos::create(File &path, bool disableFsyncCommits,
 
 void SVNRepos::deltify(File &path, Revision &revStart, Revision &revEnd)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_revnum_t start = SVN_INVALID_REVNUM, end = SVN_INVALID_REVNUM;
   svn_revnum_t youngest, revision;
-  SVN::Pool revisionPool;
+  JNI::Pool revisionPool;
 
   if (path.isNull())
     {
@@ -164,7 +164,7 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
                     bool incremental, bool useDeltas,
                     ReposNotifyCallback *notifyCallback)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
@@ -233,7 +233,7 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
 void SVNRepos::hotcopy(File &path, File &targetPath,
                        bool cleanLogs)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
 
   if (path.isNull())
     {
@@ -255,7 +255,7 @@ void SVNRepos::hotcopy(File &path, File &targetPath,
 static void
 list_dblogs (File &path, MessageReceiver &receiver, bool only_unused)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   apr_array_header_t *logfiles;
 
   if (path.isNull())
@@ -302,7 +302,7 @@ void SVNRepos::load(File &path,
                     const char *relativePath,
                     ReposNotifyCallback *notifyCallback)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_repos_t *repos;
   enum svn_repos_load_uuid uuid_action = svn_repos_load_uuid_default;
   if (ignoreUUID)
@@ -331,7 +331,7 @@ void SVNRepos::load(File &path,
 
 void SVNRepos::lstxns(File &path, MessageReceiver &messageReceiver)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_repos_t *repos;
   svn_fs_t *fs;
   apr_array_header_t *txns;
@@ -358,7 +358,7 @@ void SVNRepos::lstxns(File &path, MessageReceiver &messageReceiver)
 
 jlong SVNRepos::recover(File &path, ReposNotifyCallback *notifyCallback)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_revnum_t youngest_rev;
   svn_repos_t *repos;
 
@@ -389,13 +389,13 @@ jlong SVNRepos::recover(File &path, ReposNotifyCallback *notifyCallback)
 
 void SVNRepos::rmtxns(File &path, StringArray &transactions)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   const apr_array_header_t *args;
   int i;
-  SVN::Pool transactionPool;
+  JNI::Pool transactionPool;
 
   if (path.isNull())
     {
@@ -443,7 +443,7 @@ void SVNRepos::setRevProp(File &path, Revision &revision,
                           bool usePreRevPropChangeHook,
                           bool usePostRevPropChangeHook)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(propName, "propName", );
   SVN_JNI_NULL_PTR_EX(propValue, "propValue", );
   if (revision.revision()->kind != svn_opt_revision_number)
@@ -521,7 +521,7 @@ void
 SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
                  ReposNotifyCallback *notifyCallback)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_repos_t *repos;
   svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   svn_revnum_t youngest;
@@ -572,7 +572,7 @@ SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
 
 void SVNRepos::pack(File &path, ReposNotifyCallback *notifyCallback)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_repos_t *repos;
 
   if (path.isNull())
@@ -596,7 +596,7 @@ void SVNRepos::pack(File &path, ReposNotifyCallback *notifyCallback)
 
 void SVNRepos::upgrade(File &path, ReposNotifyCallback *notifyCallback)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
 
   if (path.isNull())
     {
@@ -615,7 +615,7 @@ void SVNRepos::upgrade(File &path, ReposNotifyCallback *notifyCallback)
 
 jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   svn_repos_t *repos;
   svn_fs_t *fs;
   apr_hash_t *locks;
@@ -661,7 +661,7 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
 
 void SVNRepos::rmlocks(File &path, StringArray &locks)
 {
-  SVN::Pool requestPool;
+  JNI::Pool requestPool;
   apr_pool_t *pool = requestPool.pool();
   svn_repos_t *repos;
   svn_fs_t *fs;
@@ -700,7 +700,7 @@ void SVNRepos::rmlocks(File &path, StringArray &locks)
   /* Attach the access context to the filesystem. */
   SVN_JNI_ERR(svn_fs_set_access(fs, access), );
 
-  SVN::Pool subpool;
+  JNI::Pool subpool;
   const apr_array_header_t *args = locks.array(requestPool);
   for (int i = 0; i < args->nelts; ++i)
     {

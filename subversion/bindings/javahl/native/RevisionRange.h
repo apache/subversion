@@ -53,7 +53,7 @@ class RevisionRange
   /**
    * Return an svn_opt_revision_range_t.
    */
-  const svn_opt_revision_range_t *toRange(SVN::Pool &pool) const;
+  const svn_opt_revision_range_t *toRange(JNI::Pool &pool) const;
 
   /**
    * Make a (single) RevisionRange Java object.

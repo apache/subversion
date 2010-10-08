@@ -47,7 +47,7 @@ class InputStream
  public:
   InputStream(jobject jthis);
   ~InputStream();
-  svn_stream_t *getStream(const SVN::Pool &pool);
+  svn_stream_t *getStream(const JNI::Pool &pool);
 };
 
 #endif // INPUT_STREAM_H

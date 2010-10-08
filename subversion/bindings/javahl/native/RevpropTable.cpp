@@ -41,7 +41,7 @@ RevpropTable::~RevpropTable()
     JNIUtil::getEnv()->DeleteLocalRef(m_revpropTable);
 }
 
-const apr_hash_t *RevpropTable::hash(const SVN::Pool &pool)
+const apr_hash_t *RevpropTable::hash(const JNI::Pool &pool)
 {
   if (m_revprops.size() == 0)
     return NULL;

@@ -58,13 +58,13 @@ class CopySources
    * @param pool The pool from which to perform allocations.
    * @return A pointer to the new array.
    */
-  apr_array_header_t *array(SVN::Pool &pool);
+  apr_array_header_t *array(JNI::Pool &pool);
 
   /**
    * Make a (single) CopySource Java object.
    */
   static jobject makeJCopySource(const char *path, svn_revnum_t rev,
-                                 SVN::Pool &pool);
+                                 JNI::Pool &pool);
 
  private:
   /**

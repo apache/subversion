@@ -24,12 +24,12 @@
  * @brief Interface of the class Pool
  */
 
-#ifndef POOL_H
-#define POOL_H
+#ifndef JNIPOOL_H
+#define JNIPOOL_H
 
 #include "svn_pools.h"
 
-namespace SVN {
+namespace JNI {
   /**
    * This class manages one APR pool.  Objects of this class are
    * allocated on the stack of the SVNClient and SVNAdmin methods as the
@@ -78,4 +78,4 @@ namespace SVN {
 }
 
 
-#endif // POOL_H
+#endif // JNIPOOL_H

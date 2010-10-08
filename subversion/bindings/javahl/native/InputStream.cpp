@@ -49,7 +49,7 @@ InputStream::~InputStream()
  * @param pool  the pool, from which the structure is allocated
  * @return the input stream
  */
-svn_stream_t *InputStream::getStream(const SVN::Pool &pool)
+svn_stream_t *InputStream::getStream(const JNI::Pool &pool)
 {
   // Create a stream with this as the baton and set the read and
   // close functions.

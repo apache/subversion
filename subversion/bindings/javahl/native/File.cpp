@@ -86,7 +86,7 @@ const char *File::getAbsPath()
   return static_cast<const char *>(*stringHolder);
 }
 
-const char *File::getInternalStyle(const SVN::Pool &requestPool)
+const char *File::getInternalStyle(const JNI::Pool &requestPool)
 {
   const char *path = getAbsPath();
   if (path)
