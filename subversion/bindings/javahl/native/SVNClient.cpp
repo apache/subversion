@@ -1062,25 +1062,6 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                requestPool.pool()), );
 }
 
-void SVNClient::streamFileContent(const char *path, Revision &revision,
-                                  Revision &pegRevision,
-                                  OutputStream &outputStream)
-{
-    SVN::Pool requestPool;
-    SVN_JNI_NULL_PTR_EX(path, "path", );
-    Path intPath(path);
-    SVN_JNI_ERR(intPath.error_occured(), );
-
-    svn_client_ctx_t *ctx = context.getContext(NULL);
-    if (ctx == NULL)
-        return;
-
-    SVN_JNI_ERR(svn_client_cat2(outputStream.getStream(requestPool),
-                                path, pegRevision.revision(),
-                                revision.revision(), ctx, requestPool.pool()),
-                );
-}
-
 jbyteArray SVNClient::revProperty(const char *path,
                                   const char *name, Revision &rev)
 {
