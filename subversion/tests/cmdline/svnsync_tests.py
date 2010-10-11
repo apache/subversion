@@ -136,21 +136,14 @@ def run_info(url, expected_error=None):
     raise SVNUnexpectedStdout("Missing stdout")
 
 
-def run_test(sbox, dump_file_name, subdir = None, exp_dump_file_name = None):
-  """Load a dump file, sync repositories, and compare contents with the original
-or another dump file."""
+def setup_and_sync(sbox, dump_file_contents, subdir=None):
+  """Create a repository for SBOX, load it with DUMP_FILE_CONTENTS, then create a mirror repository and sync it with SBOX.  Return the mirror sandbox."""
 
   # Create the empty master repository.
   build_repos(sbox)
 
-  # This directory contains all the dump files
-  svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                                   'svnsync_tests_data')
-  # Load the specified dump file into the master repository.
-  master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
-                                               dump_file_name),
-                                  'rb').readlines()
-  svntest.actions.run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
+  # Load the repository from DUMP_FILE_PATH.
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_file_contents)
 
   # Create the empty destination repository.
   dest_sbox = sbox.clone_dependent()
@@ -173,6 +166,11 @@ or another dump file."""
   run_sync(dest_sbox.repo_url, repo_url)
   run_copy_revprops(dest_sbox.repo_url, repo_url)
 
+  return dest_sbox
+
+def verify_mirror(dest_sbox, exp_dump_file_contents):
+  """Compare the contents of the DEST_SBOX repository with EXP_DUMP_FILE_CONTENTS."""
+
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
   for prop_name in ("svn:sync-from-url", "svn:sync-from-uuid",
@@ -184,6 +182,24 @@ or another dump file."""
   # Create a dump file from the mirror repository.
   dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
 
+  svntest.verify.compare_and_display_lines(
+    "Dump files", "DUMP", exp_dump_file_contents, dest_dump)
+  
+def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None):
+  """Load a dump file, sync repositories, and compare contents with the original
+or another dump file."""
+
+  # This directory contains all the dump files
+  svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnsync_tests_data')
+
+  # Load the specified dump file into the master repository.
+  master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
+                                               dump_file_name),
+                                  'rb').readlines()
+
+  dest_sbox = setup_and_sync(sbox, master_dumpfile_contents, subdir)
+
   # Compare the dump produced by the mirror repository with either the original
   # dump file (used to create the master repository) or another specified dump
   # file.
@@ -193,8 +209,8 @@ or another dump file."""
   else:
     exp_master_dumpfile_contents = master_dumpfile_contents
 
-  svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", exp_master_dumpfile_contents, dest_dump)
+  verify_mirror(dest_sbox, exp_master_dumpfile_contents)
+  
 
 
 ######################################################################
@@ -781,6 +797,37 @@ def descend_into_replace(sbox):
   run_test(sbox, "descend_into_replace.dump", subdir='/trunk/H',
            exp_dump_file_name = "descend_into_replace.expected.dump")
 
+# issue #3728
+def delete_revprops(sbox):
+  "copy-revprops with removals"
+  svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnsync_tests_data')
+  initial_contents  = open(os.path.join(svnsync_tests_dir,
+                                        "delete-revprops.dump"),
+                           'rb').readlines()
+  expected_contents = open(os.path.join(svnsync_tests_dir,
+                                        "delete-revprops.expected.dump"),
+                           'rb').readlines()
+
+  # Create the initial repos and mirror, and sync 'em.
+  dest_sbox = setup_and_sync(sbox, initial_contents)
+
+  # Now remove a revprop from r1 of the source, and run 'svnsync
+  # copy-revprops' to re-sync 'em.
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  exit_code, out, err = svntest.main.run_svn(None,
+                                             'pdel',
+                                             '-r', '1',
+                                             '--revprop',
+                                             'issue-id',
+                                             sbox.repo_url)
+  if err:
+    raise SVNUnexpectedStderr(err)
+  run_copy_revprops(dest_sbox.repo_url, sbox.repo_url)
+
+  # Does the result look as we expected?
+  verify_mirror(dest_sbox, expected_contents)
+
 ########################################################################
 # Run the tests
 
@@ -821,6 +868,7 @@ test_list = [ None,
               delete_svn_props,
               commit_a_copy_of_root,
               descend_into_replace,
+              XFail(delete_revprops),
              ]
 
 if __name__ == '__main__':
