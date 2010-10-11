@@ -783,8 +783,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  /* Get the node information for this path if one exists (perhaps
-     this is actually a replacement of a previously deleted thing). */
+  /* Determine whether a DB row for this node EXISTS, and whether it
+     IS_WC_ROOT.  If it exists, check that it is in an acceptable state for
+     adding the new node; if not, return an error. */
   {
     svn_wc__db_status_t status;
     svn_error_t *err
@@ -881,6 +882,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                svn_dirent_local_style(local_abspath,
                                                    scratch_pool));
 
+    /* If we haven't found the repository info yet, find it now. */
     if (!repos_root_url)
       {
         if (parent_status == svn_wc__db_status_added)
