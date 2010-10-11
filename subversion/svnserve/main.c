@@ -431,6 +431,7 @@ int main(int argc, const char *argv[])
   params.pwdb = NULL;
   params.authzdb = NULL;
   params.log_file = NULL;
+  params.username_case = CASE_ASIS;
 
   while (1)
     {
@@ -592,11 +593,11 @@ int main(int argc, const char *argv[])
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */
   if (config_filename)
-      SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
-                               config_filename, TRUE,
-                               svn_dirent_dirname(config_filename, pool),
-                               NULL, NULL, /* server baton, conn */
-                               pool));
+    SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
+                             &params.username_case, config_filename, TRUE,
+                             svn_dirent_dirname(config_filename, pool),
+                             NULL, NULL, /* server baton, conn */
+                             pool));
 
   if (log_filename)
     SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,
