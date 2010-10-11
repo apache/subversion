@@ -841,6 +841,10 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__write_check(db, parent_abspath, scratch_pool));
 
+  /* Get PARENT_REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID.  Check that the
+     parent is a versioned directory in an acceptable state.  If we're
+     performing a repos-to-WC copy, check that the copyfrom repository is
+     the same as the parent dir's repository. */
   {
     svn_wc__db_status_t parent_status;
     svn_wc__db_kind_t parent_kind;
