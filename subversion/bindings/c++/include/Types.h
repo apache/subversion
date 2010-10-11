@@ -48,16 +48,16 @@ namespace Private
 {
 
 // Magic
-template<typename C, typename T>
+template<typename T, T *DUP(const T *, apr_pool_t *pool)>
 class RefCounter
 {
   public:
     inline
-    RefCounter<C, T>(T *in)
+    RefCounter(const T *in)
       : m_pool(),
         count(1)
     {
-      p = C::dup(in, m_pool);
+      p = DUP(in, m_pool.pool());
     }
 
     inline void inc_ref() { ++count; }
@@ -73,25 +73,25 @@ class RefCounter
     T *p;
 };
 
-template<typename C, typename T>
+template<typename T, T *DUP(const T *, apr_pool_t *pool)>
 class CStructWrapper
 {
   public:
     inline
-    CStructWrapper(T *data)
+    CStructWrapper(const T *data)
     {
-      m_data = new RefCounter<C, T>(data);
+      m_data = new RefCounter<T, DUP>(data);
     }
 
     inline
-    CStructWrapper(const CStructWrapper<C, T> &that)
+    CStructWrapper(const CStructWrapper<T, DUP> &that)
     {
       m_data = that.m_data;
       m_data->inc_ref();
     }
 
-    inline CStructWrapper<C, T>&
-    operator= (const CStructWrapper<C, T> &that)
+    inline CStructWrapper<T, DUP>&
+    operator= (const CStructWrapper<T, DUP> &that)
     {
       // Self assignment
       if (&that == this)
@@ -117,7 +117,7 @@ class CStructWrapper
     inline const T* operator-> () const { return m_data->ptr(); }
 
   private:
-    RefCounter<C, T> *m_data;
+    RefCounter<T, DUP> *m_data;
 };
 
 } // namespace Private
@@ -126,12 +126,6 @@ class CStructWrapper
 class CommitInfo
 {
   public:
-    inline static svn_commit_info_t *
-    dup(const svn_commit_info_t *info, Pool &pool)
-    {
-      return svn_commit_info_dup(info, pool.pool());
-    }
-
     explicit inline
     CommitInfo(const svn_commit_info_t *info)
       : m_info(info)
@@ -169,18 +163,13 @@ class CommitInfo
     }
 
   private:
-    Private::CStructWrapper<CommitInfo, const svn_commit_info_t> m_info;
+    Private::CStructWrapper<svn_commit_info_t,
+                            svn_commit_info_dup> m_info;
 };
 
 class Lock
 {
   public:
-    inline static svn_lock_t *
-    dup(const svn_lock_t *lock, Pool &pool)
-    {
-      return svn_lock_dup(lock, pool.pool());
-    }
-
     explicit inline
     Lock(const svn_lock_t *lock)
       : m_lock(lock)
@@ -230,18 +219,12 @@ class Lock
     }
 
   private:
-    Private::CStructWrapper<Lock, const svn_lock_t> m_lock;
+    Private::CStructWrapper<svn_lock_t, svn_lock_dup> m_lock;
 };
 
 class ClientNotifyInfo
 {
   public:
-    inline static svn_wc_notify_t *
-    dup(const svn_wc_notify_t *notify, Pool &pool)
-    {
-      return svn_wc_dup_notify(notify, pool.pool());
-    }
-
     inline
     ClientNotifyInfo(const svn_wc_notify_t *notify)
       : m_notify(notify)
@@ -256,25 +239,12 @@ class ClientNotifyInfo
     }
 
   private:
-    Private::CStructWrapper<ClientNotifyInfo, const svn_wc_notify_t> m_notify;
+    Private::CStructWrapper<svn_wc_notify_t, svn_wc_dup_notify> m_notify;
 };
 
 class Version
 {
   public:
-    inline static svn_version_t *
-    dup(const svn_version_t *version, Pool &pool)
-    {
-      svn_version_t *v = pool.alloc<svn_version_t>();
-
-      v->major = version->major;
-      v->minor = version->minor;
-      v->patch = version->patch;
-      v->tag = pool.strdup(version->tag);
-
-      return v;
-    }
-
     inline
     Version(const svn_version_t *version)
       : m_version(version)
@@ -288,7 +258,21 @@ class Version
     }
 
   private:
-    Private::CStructWrapper<Version, const svn_version_t> m_version;
+    static svn_version_t *
+    dup(const svn_version_t *version, apr_pool_t *pool)
+    {
+      svn_version_t *v = reinterpret_cast<svn_version_t *>(
+                                            apr_palloc(pool, sizeof(*v)));
+
+      v->major = version->major;
+      v->minor = version->minor;
+      v->patch = version->patch;
+      v->tag = apr_pstrdup(pool, version->tag);
+
+      return v;
+    }
+
+    Private::CStructWrapper<svn_version_t, dup> m_version;
 };
 
 }
