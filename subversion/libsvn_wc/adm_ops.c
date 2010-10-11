@@ -754,9 +754,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   svn_boolean_t is_wc_root = FALSE;
   svn_node_kind_t kind;
   svn_wc__db_t *db = wc_ctx->db;
-  svn_error_t *err;
-  svn_wc__db_status_t status;
-  svn_wc__db_kind_t db_kind;
   svn_boolean_t exists;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -788,62 +785,66 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   /* Get the node information for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing). */
-  err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
+  {
+    svn_wc__db_status_t status;
+    svn_error_t *err
+      = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL,
                              db, local_abspath,
                              scratch_pool, scratch_pool);
 
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
+    if (err)
+      {
+        if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+          return svn_error_return(err);
 
-      svn_error_clear(err);
-      exists = FALSE;
-      is_wc_root = FALSE;
-    }
-  else
-    {
-      is_wc_root = FALSE;
-      exists = TRUE;
-      switch (status)
-        {
-          case svn_wc__db_status_not_present:
-            break;
-          case svn_wc__db_status_deleted:
-            /* A working copy root should never have a WORKING_NODE */
-            SVN_ERR_ASSERT(!is_wc_root);
-            break;
-          case svn_wc__db_status_normal:
-            if (copyfrom_url)
-              {
-                SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
-                                              db, local_abspath,
-                                              scratch_pool));
+        svn_error_clear(err);
+        exists = FALSE;
+        is_wc_root = FALSE;
+      }
+    else
+      {
+        is_wc_root = FALSE;
+        exists = TRUE;
+        switch (status)
+          {
+            case svn_wc__db_status_not_present:
+              break;
+            case svn_wc__db_status_deleted:
+              /* A working copy root should never have a WORKING_NODE */
+              SVN_ERR_ASSERT(!is_wc_root);
+              break;
+            case svn_wc__db_status_normal:
+              if (copyfrom_url)
+                {
+                  SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
+                                                db, local_abspath,
+                                                scratch_pool));
 
-                if (is_wc_root)
-                  break;
-              }
-            /* else: Fall through in default error */
+                  if (is_wc_root)
+                    break;
+                }
+              /* else: Fall through in default error */
 
-          default:
-            return svn_error_createf(
-                             SVN_ERR_ENTRY_EXISTS, NULL,
-                             _("'%s' is already under version control"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-        }
-    } /* err */
+            default:
+              return svn_error_createf(
+                               SVN_ERR_ENTRY_EXISTS, NULL,
+                               _("'%s' is already under version control"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+          }
+      } /* err */
+  }
 
   SVN_ERR(svn_wc__write_check(db, parent_abspath, scratch_pool));
 
   {
     svn_wc__db_status_t parent_status;
     svn_wc__db_kind_t parent_kind;
-
-    err = svn_wc__db_read_info(&parent_status, &parent_kind, NULL,
+    svn_error_t *err
+        = svn_wc__db_read_info(&parent_status, &parent_kind, NULL,
                                &parent_repos_relpath, &repos_root_url,
                                &repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
