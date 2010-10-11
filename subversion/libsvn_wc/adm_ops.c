@@ -749,7 +749,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 {
   const char *parent_abspath;
   const char *base_name;
-  const char *parent_repos_relpath;
   const char *repos_root_url, *repos_uuid;
   svn_boolean_t is_wc_root = FALSE;
   svn_node_kind_t kind;
@@ -850,7 +849,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     svn_wc__db_kind_t parent_kind;
     svn_error_t *err
         = svn_wc__db_read_info(&parent_status, &parent_kind, NULL,
-                               &parent_repos_relpath, &repos_root_url,
+                               NULL, &repos_root_url,
                                &repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
@@ -890,13 +889,13 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     if (!repos_root_url)
       {
         if (parent_status == svn_wc__db_status_added)
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &parent_repos_relpath,
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
                                            &repos_root_url, &repos_uuid, NULL,
                                            NULL, NULL, NULL,
                                            db, parent_abspath,
                                            scratch_pool, scratch_pool));
         else
-          SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
+          SVN_ERR(svn_wc__db_scan_base_repos(NULL,
                                              &repos_root_url, &repos_uuid,
                                              db, parent_abspath,
                                              scratch_pool, scratch_pool));
