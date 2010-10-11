@@ -946,11 +946,33 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                  copyfrom_url, inner_url);
     }
 
-  if (kind == svn_node_file)
+  if (!copyfrom_url)  /* Case 2a: It's a simple add */
     {
-      if (!copyfrom_url)
+      if (kind == svn_node_file)
         SVN_ERR(svn_wc__db_op_add_file(db, local_abspath, NULL, scratch_pool));
       else
+        {
+          SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
+                                              scratch_pool));
+          if (!exists)
+            {
+              /* If using the legacy 1.6 interface the parent lock may not
+                 be recursive and add is expected to lock the new dir.
+
+                 ### Perhaps the lock should be created in the same
+                 transaction that adds the node? */
+              svn_boolean_t owns_lock;
+              SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
+                                                  FALSE, scratch_pool));
+              if (!owns_lock)
+                SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                                 scratch_pool));
+            }
+        }
+    }
+  else if (!is_wc_root)  /* Case 2b: It's a copy from the repository */
+    {
+      if (kind == svn_node_file)
         {
           /* This code should never be used, as it doesn't install proper
              pristine and/or properties. But it was not an error in the old
@@ -967,46 +989,27 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                          NULL, NULL,
                                          scratch_pool));
         }
+      else
+        SVN_ERR(svn_wc__db_op_copy_dir(db,
+                                       local_abspath,
+                                       apr_hash_make(scratch_pool),
+                                       copyfrom_rev,
+                                       0,
+                                       NULL,
+                                       svn_path_uri_decode(
+                                            svn_uri_skip_ancestor(repos_root_url,
+                                                                  copyfrom_url),
+                                            scratch_pool),
+                                       repos_root_url,
+                                       repos_uuid,
+                                       copyfrom_rev,
+                                       NULL,
+                                       depth,
+                                       NULL,
+                                       NULL,
+                                       scratch_pool));
     }
-  else if (!copyfrom_url)
-    {
-      SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
-                                          scratch_pool));
-      if (!exists)
-        {
-          /* If using the legacy 1.6 interface the parent lock may not
-             be recursive and add is expected to lock the new dir.
-
-             ### Perhaps the lock should be created in the same
-             transaction that adds the node? */
-          svn_boolean_t owns_lock;
-          SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
-                                              FALSE, scratch_pool));
-          if (!owns_lock)
-            SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
-                                             scratch_pool));
-        }
-    }
-  else if (!is_wc_root)
-    SVN_ERR(svn_wc__db_op_copy_dir(db,
-                                   local_abspath,
-                                   apr_hash_make(scratch_pool),
-                                   copyfrom_rev,
-                                   0,
-                                   NULL,
-                                   svn_path_uri_decode(
-                                        svn_uri_skip_ancestor(repos_root_url,
-                                                              copyfrom_url),
-                                        scratch_pool),
-                                   repos_root_url,
-                                   repos_uuid,
-                                   copyfrom_rev,
-                                   NULL,
-                                   depth,
-                                   NULL,
-                                   NULL,
-                                   scratch_pool));
-  else
+  else  /* Case 1: Integrating a separate WC into this one, in place */
     {
       svn_boolean_t owns_lock;
       const char *tmpdir_abspath, *moved_abspath, *moved_adm_abspath;
