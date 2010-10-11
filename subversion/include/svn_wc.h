@@ -4213,8 +4213,8 @@ svn_wc_delete(const char *path,
  * or copy in the database containing its parent. The new node is scheduled
  * for addition to the repository below its parent node.
  *
- * 1) If the node already exists, it MUST BE the root of a separate working
- * copy from the same repository as the parent working copy. The new node
+ * 1) If the node is already versioned, it MUST BE the root of a separate
+ * working copy from the same repository as the parent WC. The new node
  * and anything below it will be scheduled for addition inside the parent
  * working copy as a copy of the original location. The separate working
  * copy will be integrated by this step. In this case, which is only used
