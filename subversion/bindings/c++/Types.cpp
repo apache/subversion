@@ -30,6 +30,18 @@
 namespace SVN
 {
 
+svn_version_t *
+Version::dup(const svn_version_t *version, apr_pool_t *pool)
+{
+  svn_version_t *v = reinterpret_cast<svn_version_t *>(
+                                        apr_palloc(pool, sizeof(*v)));
 
+  v->major = version->major;
+  v->minor = version->minor;
+  v->patch = version->patch;
+  v->tag = apr_pstrdup(pool, version->tag);
+
+  return v;
+}
 
 }

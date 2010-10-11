@@ -259,18 +259,7 @@ class Version
 
   private:
     static svn_version_t *
-    dup(const svn_version_t *version, apr_pool_t *pool)
-    {
-      svn_version_t *v = reinterpret_cast<svn_version_t *>(
-                                            apr_palloc(pool, sizeof(*v)));
-
-      v->major = version->major;
-      v->minor = version->minor;
-      v->patch = version->patch;
-      v->tag = apr_pstrdup(pool, version->tag);
-
-      return v;
-    }
+    dup(const svn_version_t *version, apr_pool_t *pool);
 
     Private::CStructWrapper<svn_version_t, dup> m_version;
 };
