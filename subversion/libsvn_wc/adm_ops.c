@@ -735,19 +735,20 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
-/* Set REPOS_ROOT_URL and REPOS_UUID to the repository of PARENT_ABSPATH.
-   Check that PARENT_ABSPATH is a versioned directory in a state in which
-   a new child node can be scheduled for addition; return an error if not.
-   LOCAL_ABSPATH is the child path that error messages should refer to. */
+/* Set *REPOS_ROOT_URL and *REPOS_UUID to the repository of the parent of
+   LOCAL_ABSPATH.  REPOS_ROOT_URL and/or REPOS_UUID may be NULL if not
+   wanted.  Check that the parent of LOCAL_ABSPATH is a versioned directory
+   in a state in which a new child node can be scheduled for addition;
+   return an error if not. */
 static svn_error_t *
 check_can_add_to_parent(svn_wc__db_t *db,
                         const char **repos_root_url,
                         const char **repos_uuid,
-                        const char *parent_abspath,
                         const char *local_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
+  const char *parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
   svn_wc__db_status_t parent_status;
   svn_wc__db_kind_t parent_kind;
   svn_error_t *err;
@@ -792,7 +793,8 @@ check_can_add_to_parent(svn_wc__db_t *db,
                                                  scratch_pool));
 
   /* If we haven't found the repository info yet, find it now. */
-  if (! *repos_root_url)
+  if ((repos_root_url && ! *repos_root_url)
+      || (repos_uuid && ! *repos_uuid))
     {
       if (parent_status == svn_wc__db_status_added)
         SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
@@ -822,10 +824,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
             void *notify_baton,
             apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath;
-  const char *base_name;
+  const char *base_name = svn_dirent_basename(local_abspath, scratch_pool);
   const char *repos_root_url, *repos_uuid;
-  svn_boolean_t is_wc_root = FALSE;
+  svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
   svn_wc__db_t *db = wc_ctx->db;
   svn_boolean_t exists;
@@ -835,7 +836,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                         scratch_pool)
                                    && SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
-  svn_dirent_split(&parent_abspath, &base_name, local_abspath, scratch_pool);
+  /* Check that the proposed node has an acceptable name. */
   if (svn_wc_is_adm_dir(base_name, scratch_pool))
     return svn_error_createf
       (SVN_ERR_ENTRY_FORBIDDEN, NULL,
@@ -844,7 +845,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_path_check_valid(local_abspath, scratch_pool));
 
-  /* Make sure something's there. */
+  /* Make sure something's there; set KIND. */
   SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -916,8 +917,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   /* Get REPOS_ROOT_URL and REPOS_UUID.  Check that the
      parent is a versioned directory in an acceptable state. */
   SVN_ERR(check_can_add_to_parent(db, &repos_root_url, &repos_uuid,
-                                  parent_abspath, local_abspath,
-                                  scratch_pool, scratch_pool));
+                                  local_abspath, scratch_pool, scratch_pool));
 
   /* If we're performing a repos-to-WC copy, check that the copyfrom
      repository is the same as the parent dir's repository. */
@@ -1043,7 +1043,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
       /* Move the admin dir from the wc to a temporary location */
       SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
-                                             parent_abspath,
+                                             svn_dirent_dirname(local_abspath,
+                                                                scratch_pool),
                                              scratch_pool, scratch_pool));
       SVN_ERR(svn_io_open_unique_file3(NULL, &moved_abspath, tmpdir_abspath,
                                        svn_io_file_del_on_close,
