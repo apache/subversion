@@ -735,6 +735,81 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+/* Set REPOS_ROOT_URL and REPOS_UUID to the repository of PARENT_ABSPATH.
+   Check that PARENT_ABSPATH is a versioned directory in a state in which
+   a new child node can be scheduled for addition; return an error if not.
+   LOCAL_ABSPATH is the child path that error messages should refer to. */
+static svn_error_t *
+check_can_add_to_parent(svn_wc__db_t *db,
+                        const char **repos_root_url,
+                        const char **repos_uuid,
+                        const char *parent_abspath,
+                        const char *local_abspath,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t parent_status;
+  svn_wc__db_kind_t parent_kind;
+  svn_error_t *err;
+
+  SVN_ERR(svn_wc__write_check(db, parent_abspath, scratch_pool));
+
+  err = svn_wc__db_read_info(&parent_status, &parent_kind, NULL,
+                             NULL, repos_root_url,
+                             repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
+                             db, parent_abspath, scratch_pool, scratch_pool);
+
+  if (err
+      || parent_status == svn_wc__db_status_not_present
+      || parent_status == svn_wc__db_status_excluded
+      || parent_status == svn_wc__db_status_absent)
+    {
+      return
+        svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, err,
+                          _("Can't find parent directory's node while"
+                            " trying to add '%s'"),
+                          svn_dirent_local_style(local_abspath,
+                                                 scratch_pool));
+    }
+  else if (parent_status == svn_wc__db_status_deleted)
+    {
+      return
+        svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                          _("Can't add '%s' to a parent directory"
+                            " scheduled for deletion"),
+                          svn_dirent_local_style(local_abspath,
+                                                 scratch_pool));
+    }
+  else if (parent_kind != svn_wc__db_kind_dir)
+    /* Can't happen until single db; but then it causes serious
+       trouble if we allow this. */
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Can't schedule an addition of '%s'"
+                               " below a not-directory node"),
+                             svn_dirent_local_style(local_abspath,
+                                                 scratch_pool));
+
+  /* If we haven't found the repository info yet, find it now. */
+  if (! *repos_root_url)
+    {
+      if (parent_status == svn_wc__db_status_added)
+        SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                         repos_root_url, repos_uuid, NULL,
+                                         NULL, NULL, NULL,
+                                         db, parent_abspath,
+                                         scratch_pool, scratch_pool));
+      else
+        SVN_ERR(svn_wc__db_scan_base_repos(NULL,
+                                           repos_root_url, repos_uuid,
+                                           db, parent_abspath,
+                                           scratch_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_add4(svn_wc_context_t *wc_ctx,
             const char *local_abspath,
@@ -838,75 +913,19 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       } /* err */
   }
 
-  SVN_ERR(svn_wc__write_check(db, parent_abspath, scratch_pool));
-
   /* Get REPOS_ROOT_URL and REPOS_UUID.  Check that the
-     parent is a versioned directory in an acceptable state.  If we're
-     performing a repos-to-WC copy, check that the copyfrom repository is
-     the same as the parent dir's repository. */
-  {
-    svn_wc__db_status_t parent_status;
-    svn_wc__db_kind_t parent_kind;
-    svn_error_t *err
-        = svn_wc__db_read_info(&parent_status, &parent_kind, NULL,
-                               NULL, &repos_root_url,
-                               &repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, parent_abspath, scratch_pool, scratch_pool);
+     parent is a versioned directory in an acceptable state. */
+  SVN_ERR(check_can_add_to_parent(db, &repos_root_url, &repos_uuid,
+                                  parent_abspath, local_abspath,
+                                  scratch_pool, scratch_pool));
 
-    if (err
-        || parent_status == svn_wc__db_status_not_present
-        || parent_status == svn_wc__db_status_excluded
-        || parent_status == svn_wc__db_status_absent)
-      {
-        return
-          svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, err,
-                            _("Can't find parent directory's node while"
-                              " trying to add '%s'"),
-                            svn_dirent_local_style(local_abspath,
-                                                   scratch_pool));
-      }
-    else if (parent_status == svn_wc__db_status_deleted)
-      {
-        return
-          svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-                            _("Can't add '%s' to a parent directory"
-                              " scheduled for deletion"),
-                            svn_dirent_local_style(local_abspath,
-                                                   scratch_pool));
-      }
-    else if (parent_kind != svn_wc__db_kind_dir)
-      /* Can't happen until single db; but then it causes serious
-         trouble if we allow this. */
-      return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                               _("Can't schedule an addition of '%s'"
-                                 " below a not-directory node"),
-                               svn_dirent_local_style(local_abspath,
-                                                   scratch_pool));
-
-    /* If we haven't found the repository info yet, find it now. */
-    if (!repos_root_url)
-      {
-        if (parent_status == svn_wc__db_status_added)
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
-                                           &repos_root_url, &repos_uuid, NULL,
-                                           NULL, NULL, NULL,
-                                           db, parent_abspath,
-                                           scratch_pool, scratch_pool));
-        else
-          SVN_ERR(svn_wc__db_scan_base_repos(NULL,
-                                             &repos_root_url, &repos_uuid,
-                                             db, parent_abspath,
-                                             scratch_pool, scratch_pool));
-      }
-
-    if (copyfrom_url
-        && !svn_uri_is_ancestor(repos_root_url, copyfrom_url))
-      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("The URL '%s' has a different repository "
-                                 "root than its parent"), copyfrom_url);
-  }
+  /* If we're performing a repos-to-WC copy, check that the copyfrom
+     repository is the same as the parent dir's repository. */
+  if (copyfrom_url
+      && !svn_uri_is_ancestor(repos_root_url, copyfrom_url))
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("The URL '%s' has a different repository "
+                               "root than its parent"), copyfrom_url);
 
   /* Verify that we can actually integrate the inner working copy */
   if (is_wc_root)
