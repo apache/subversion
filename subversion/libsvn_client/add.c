@@ -273,6 +273,7 @@ svn_client__get_auto_props(apr_hash_t **properties,
   return SVN_NO_ERROR;
 }
 
+/* Only call this if the on-disk node kind is a file. */
 static svn_error_t *
 add_file(const char *local_abspath,
          svn_client_ctx_t *ctx,
@@ -298,9 +299,9 @@ add_file(const char *local_abspath,
                                        ctx, pool));
 
   /* Add the file */
-  SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity, NULL,
-                      SVN_INVALID_REVNUM, ctx->cancel_func, ctx->cancel_baton,
-                      NULL, NULL, pool));
+  SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               NULL, NULL, pool));
 
   if (is_special)
     /* This must be a special file. */
@@ -385,9 +386,10 @@ add_dir_recursive(const char *dir_abspath,
   iterpool = svn_pool_create(scratch_pool);
 
   /* Add this directory to revision control. */
-  err = svn_wc_add4(ctx->wc_ctx, dir_abspath, svn_depth_infinity, NULL,
-                    SVN_INVALID_REVNUM, ctx->cancel_func, ctx->cancel_baton,
-                    ctx->notify_func2, ctx->notify_baton2, iterpool);
+  err = svn_wc_add_from_disk(ctx->wc_ctx, dir_abspath,
+                             ctx->cancel_func, ctx->cancel_baton,
+                             ctx->notify_func2, ctx->notify_baton2,
+                             iterpool);
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear(err);
   else if (err)
@@ -546,11 +548,10 @@ add_parent_dirs(svn_client_ctx_t *ctx,
     SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, parent_abspath, FALSE,
                                        scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc_add4(wc_ctx, local_abspath, svn_depth_infinity,
-                      NULL, SVN_INVALID_REVNUM,
-                      ctx->cancel_func, ctx->cancel_baton,
-                      ctx->notify_func2, ctx->notify_baton2,
-                      scratch_pool));
+  SVN_ERR(svn_wc_add_from_disk(wc_ctx, local_abspath,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               ctx->notify_func2, ctx->notify_baton2,
+                               scratch_pool));
   /* ### New dir gets added with its own per-directory lock which we
      must release.  This code should be redundant when we move to a
      single db. */

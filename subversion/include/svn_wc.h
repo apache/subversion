@@ -4223,6 +4223,8 @@ svn_wc_delete(const char *path,
  *
  * This is equivalent to svn_wc_add4() case 2a.
  *
+ * ### TODO: Cancellation isn't implemented yet.
+ *
  * ### TODO: Recurse as far as a specified depth?
  *
  * ### A better API might allow the caller to walk a tree and add a single
