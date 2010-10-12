@@ -226,7 +226,7 @@ svn_mergeinfo_catalog_merge(svn_mergeinfo_catalog_t mergeinfo_catalog,
 
 /** Like svn_mergeinfo_remove2, but always considers inheritance.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -308,17 +308,6 @@ svn_rangelist_remove(apr_array_header_t **output, const apr_array_header_t *eras
                      svn_boolean_t consider_inheritance,
                      apr_pool_t *pool);
 
-/** Like svn_mergeinfo_intersect2, but always considers inheritance.
- *
- * @deprecated Provided for backward compatibility with the 1.5 API.
- */
-SVN_DEPRECATED
-svn_error_t *
-svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
-                        svn_mergeinfo_t mergeinfo1,
-                        svn_mergeinfo_t mergeinfo2,
-                        apr_pool_t *pool);
-
 /** Find the intersection of two mergeinfos, @a mergeinfo1 and @a
  * mergeinfo2, and place the result in @a *mergeinfo, which is (deeply)
  * allocated in @a result_pool.  Temporary allocations will be performed
@@ -337,6 +326,17 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
                          svn_boolean_t consider_inheritance,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
+
+/** Like svn_mergeinfo_intersect2, but always considers inheritance.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
+                        svn_mergeinfo_t mergeinfo1,
+                        svn_mergeinfo_t mergeinfo2,
+                        apr_pool_t *pool);
 
 /** Find the intersection of two rangelists consisting of @c
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and

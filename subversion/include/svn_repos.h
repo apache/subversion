@@ -2556,7 +2556,7 @@ svn_repos_load_fs2(svn_repos_t *repos,
  * Similar to svn_repos_load_fs2(), but with @a use_pre_commit_hook and
  * @a use_post_commit_hook always @c FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
