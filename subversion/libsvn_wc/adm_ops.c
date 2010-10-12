@@ -735,6 +735,28 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+/* Schedule the single node at LOCAL_ABSPATH, of kind KIND, for addition in
+ * its parent directory in the WC.  It will have no properties. */
+static svn_error_t *
+add_from_disk(svn_wc_context_t *wc_ctx,
+              const char *local_abspath,
+              svn_node_kind_t kind,
+              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db = wc_ctx->db;
+
+  if (kind == svn_node_file)
+    {
+      SVN_ERR(svn_wc__db_op_add_file(db, local_abspath, NULL, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
+                                          scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Set *REPOS_ROOT_URL and *REPOS_UUID to the repository of the parent of
    LOCAL_ABSPATH.  REPOS_ROOT_URL and/or REPOS_UUID may be NULL if not
    wanted.  Check that the parent of LOCAL_ABSPATH is a versioned directory
@@ -812,20 +834,26 @@ check_can_add_to_parent(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc_add4(svn_wc_context_t *wc_ctx,
-            const char *local_abspath,
-            svn_depth_t depth,
-            const char *copyfrom_url,
-            svn_revnum_t copyfrom_rev,
-            svn_cancel_func_t cancel_func,
-            void *cancel_baton,
-            svn_wc_notify_func2_t notify_func,
-            void *notify_baton,
-            apr_pool_t *scratch_pool)
+/* Check that the on-disk item at LOCAL_ABSPATH can be scheduled for
+ * addition to its WC parent directory.
+ *
+ * Set *KIND_P to the kind of node to be added, *DB_ROW_EXISTS_P to whether
+ * it is already a versioned path, and if so, *IS_WC_ROOT_P to whether it's
+ * a WC root.
+ *
+ * ### The checks here, and the outputs, are geared towards svn_wc_add4().
+ */
+static svn_error_t *
+check_can_add_node(svn_node_kind_t *kind_p,
+                   svn_boolean_t *db_row_exists_p,
+                   svn_boolean_t *is_wc_root_p,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *copyfrom_url,
+                   svn_revnum_t copyfrom_rev,
+                   apr_pool_t *scratch_pool)
 {
   const char *base_name = svn_dirent_basename(local_abspath, scratch_pool);
-  const char *repos_root_url, *repos_uuid;
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
   svn_wc__db_t *db = wc_ctx->db;
@@ -845,7 +873,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_path_check_valid(local_abspath, scratch_pool));
 
-  /* Make sure something's there; set KIND. */
+  /* Make sure something's there; set KIND and *KIND_P. */
   SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -857,6 +885,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                              _("Unsupported node kind for path '%s'"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
+  if (kind_p)
+    *kind_p = kind;
 
   /* Determine whether a DB row for this node EXISTS, and whether it
      IS_WC_ROOT.  If it exists, check that it is in an acceptable state for
@@ -912,7 +942,36 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                       scratch_pool));
           }
       } /* err */
+
+    if (db_row_exists_p)
+      *db_row_exists_p = exists;
+    if (is_wc_root_p)
+      *is_wc_root_p = is_wc_root;
   }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_add4(svn_wc_context_t *wc_ctx,
+            const char *local_abspath,
+            svn_depth_t depth,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db = wc_ctx->db;
+  svn_node_kind_t kind;
+  svn_boolean_t db_row_exists, is_wc_root;
+  const char *repos_root_url, *repos_uuid;
+
+  SVN_ERR(check_can_add_node(&kind, &db_row_exists, &is_wc_root,
+                             wc_ctx, local_abspath, copyfrom_url, copyfrom_rev,
+                             scratch_pool));
 
   /* Get REPOS_ROOT_URL and REPOS_UUID.  Check that the
      parent is a versioned directory in an acceptable state. */
@@ -970,26 +1029,20 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   if (!copyfrom_url)  /* Case 2a: It's a simple add */
     {
-      if (kind == svn_node_file)
-        SVN_ERR(svn_wc__db_op_add_file(db, local_abspath, NULL, scratch_pool));
-      else
+      SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, scratch_pool));
+      if (kind == svn_node_dir && !db_row_exists)
         {
-          SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
-                                              scratch_pool));
-          if (!exists)
-            {
-              /* If using the legacy 1.6 interface the parent lock may not
-                 be recursive and add is expected to lock the new dir.
+          /* If using the legacy 1.6 interface the parent lock may not
+             be recursive and add is expected to lock the new dir.
 
-                 ### Perhaps the lock should be created in the same
-                 transaction that adds the node? */
-              svn_boolean_t owns_lock;
-              SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
-                                                  FALSE, scratch_pool));
-              if (!owns_lock)
-                SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
-                                                 scratch_pool));
-            }
+             ### Perhaps the lock should be created in the same
+             transaction that adds the node? */
+          svn_boolean_t owns_lock;
+          SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
+                                              FALSE, scratch_pool));
+          if (!owns_lock)
+            SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                             scratch_pool));
         }
     }
   else if (!is_wc_root)  /* Case 2b: It's a copy from the repository */
@@ -1072,6 +1125,37 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
         SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
                                          scratch_pool));
     }
+
+  /* Report the addition to the caller. */
+  if (notify_func != NULL)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
+                                                     svn_wc_notify_add,
+                                                     scratch_pool);
+      notify->kind = kind;
+      (*notify_func)(notify_baton, notify, scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
+                     apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+
+  SVN_ERR(check_can_add_node(&kind, NULL, NULL, wc_ctx, local_abspath,
+                             NULL, SVN_INVALID_REVNUM, scratch_pool));
+  SVN_ERR(check_can_add_to_parent(wc_ctx->db, NULL, NULL,
+                                  local_abspath,
+                                  scratch_pool, scratch_pool));
+  SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, scratch_pool));
 
   /* Report the addition to the caller. */
   if (notify_func != NULL)

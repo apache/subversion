@@ -4210,6 +4210,34 @@ svn_wc_delete(const char *path,
               apr_pool_t *pool);
 
 /**
+ * Schedule the node or tree that exists on disk at @a local_abspath for
+ * addition to the working copy, recursively.  The added nodes will have
+ * no properties.
+ *
+ * The versioned state of the parent path must be a modifiable directory,
+ * and the versioned state of @a local_abspath must be either nonexistent or
+ * deleted; if deleted, the new node will be a replacement.
+ *
+ * If @a local_abspath does not exist as file, directory or symlink, return
+ * #SVN_ERR_WC_PATH_NOT_FOUND.
+ *
+ * This is equivalent to svn_wc_add4() case 2a.
+ *
+ * ### TODO: Recurse as far as a specified depth?
+ *
+ * ### A better API might allow the caller to walk a tree and add a single
+ *     node at a time, specifying each node's properties.
+ */
+svn_error_t *
+svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
+                     apr_pool_t *scratch_pool);
+
+/**
  * Put @a local_abspath under version control by registering it as addition
  * or copy in the database containing its parent. The new node is scheduled
  * for addition to the repository below its parent node.
