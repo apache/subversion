@@ -289,7 +289,7 @@ svn_io_open_unique_file2(apr_file_t **f,
 
 /** Like svn_io_open_unique_file2, but can't delete on pool cleanup.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API
+ * @deprecated Provided for backward compatibility with the 1.3 API
  *
  * @note In 1.4 the API was extended to require either @a f or
  *       @a unique_name_p (the other can be NULL).  Before that, both were
@@ -1395,6 +1395,7 @@ svn_io_get_dirents3(apr_hash_t **dirents,
  * structures instead of svn_io_dirent2_t and with only a single pool.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *

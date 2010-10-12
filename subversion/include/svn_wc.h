@@ -3106,6 +3106,7 @@ svn_wc_walk_entries3(const char *path,
  * or error handling from @a walk_callbacks, and with @a depth always
  * set to #svn_depth_infinity.
  *
+ * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
@@ -3122,7 +3123,7 @@ svn_wc_walk_entries2(const char *path,
 /**
  * Similar to svn_wc_walk_entries2(), but without cancellation support.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3933,7 +3934,7 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
  * instead of #svn_wc_status_func3_t.
  *
  * @since New in 1.5.
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -4587,6 +4588,7 @@ svn_wc_resolved_conflict4(const char *path,
  * Similar to svn_wc_resolved_conflict4(), but without tree-conflict
  * resolution support.
  *
+ * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
@@ -4610,6 +4612,7 @@ svn_wc_resolved_conflict3(const char *path,
  * if @a recurse is TRUE, @a depth is #svn_depth_infinity, else it is
  * #svn_depth_files.
  *
+ * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
@@ -4629,7 +4632,7 @@ svn_wc_resolved_conflict2(const char *path,
  * Similar to svn_wc_resolved_conflict2(), but takes an
  * svn_wc_notify_func_t and doesn't have cancellation support.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -4801,8 +4804,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 /** @see svn_wc_process_committed_queue2()
  *
  * @since New in 1.5.
- *
- * @deprecated Provided for backwards compatibility with the 1.5 API.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5631,6 +5633,7 @@ svn_wc_prop_set3(const char *name,
  * Like svn_wc_prop_set3(), but without the notification callbacks.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5986,7 +5989,6 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
  * It also doesn't allow specifying a cancel function.
  *
  * @since New in 1.6.
- *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -6004,6 +6006,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
  * Similar to svn_wc_diff5(), but with a #svn_wc_diff_callbacks2_t argument
  * instead of #svn_wc_diff_callbacks3_t.
  *
+ * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
@@ -6022,7 +6025,8 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
  * and @a depth set to #svn_depth_infinity if @a recurse is TRUE, or
  * #svn_depth_files if @a recurse is FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -6038,6 +6042,7 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
  * Similar to svn_wc_diff3(), but with a #svn_wc_diff_callbacks_t argument
  * instead of #svn_wc_diff_callbacks2_t.
  *
+ * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
@@ -6355,8 +6360,7 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
  * Same as svn_wc_merge_props2(), but with a @a conflict_func (and
  * baton) of NULL.
  *
- * @deprecated Provided for backward compatibility with the 1.3 API.
- *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -6479,7 +6483,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
  * swn_wc_context_t.
  *
  * @since New in 1.2.
- * @deprecated Provided for backward compability with the 1.2 API.
+ * @deprecated Provided for backward compability with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -6747,7 +6751,8 @@ svn_wc_revert3(const char *path,
  * @note Most APIs map @a recurse==FALSE to @a depth==svn_depth_files;
  * revert is deliberately different.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
