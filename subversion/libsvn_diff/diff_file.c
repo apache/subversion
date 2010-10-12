@@ -69,15 +69,17 @@ typedef struct svn_diff__file_baton_t
   const svn_diff_file_options_t *options;
 
   struct file_info {
-    const char *path;
+    const char *path;  /* path to this file, absolute or relative to CWD */
 
-    apr_file_t *file;
-    apr_off_t size;
+    /* All the following fields are active while this datasource is open */
+    apr_file_t *file;  /* handle of this file */
+    apr_off_t size;    /* total raw size in bytes of this file */
 
-    int chunk;
-    char *buffer;
-    char *curp;
-    char *endp;
+    /* The current chunk: CHUNK_SIZE bytes except for the last chunk. */
+    int chunk;     /* the current chunk number, zero-based */
+    char *buffer;  /* a buffer containing the current chunk */
+    char *curp;    /* current position in the current chunk */
+    char *endp;    /* next memory address after the current chunk */
 
     svn_diff__normalize_state_t normalize_state;
   } files[4];
@@ -201,7 +203,13 @@ map_or_read_file(apr_file_t **file,
 }
 
 
-/* Implements svn_diff_fns_t::datasource_open */
+/* Let FILE stand for the file_info struct element of BATON->files that is
+ * indexed by DATASOURCE.  BATON's type is (svn_diff__file_baton_t *).
+ *
+ * Open the file at FILE.path; initialize FILE.file, FILE.size, FILE.buffer,
+ * FILE.curp and FILE.endp; allocate a buffer and read the first chunk.
+ *
+ * Implements svn_diff_fns_t::datasource_open. */
 static svn_error_t *
 datasource_open(void *baton, svn_diff_datasource_e datasource)
 {
