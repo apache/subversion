@@ -2023,14 +2023,10 @@ create_missing_parents(patch_target_t *target,
                * to version control. Allow cancellation since we
                * have not modified the working copy yet for this
                * target. */
-              SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath,
-                                  svn_depth_infinity,
-                                  NULL, SVN_INVALID_REVNUM,
-                                  ctx->cancel_func,
-                                  ctx->cancel_baton,
-                                  ctx->notify_func2,
-                                  ctx->notify_baton2,
-                                  iterpool));
+              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           ctx->notify_func2, ctx->notify_baton2,
+                                           iterpool));
             }
         }
     }
@@ -2110,10 +2106,8 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                * Suppress notification, we'll do that later (and also
                * during dry-run). Also suppress cancellation because
                * we'd rather notify about what we did before aborting. */
-              SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->local_abspath,
-                                  svn_depth_infinity,
-                                  NULL, SVN_INVALID_REVNUM,
-                                  NULL, NULL, NULL, NULL, pool));
+              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
+                                           NULL, NULL, NULL, NULL, pool));
             }
 
           /* Restore the target's executable bit if necessary. */
@@ -2234,13 +2228,10 @@ install_patched_prop_targets(patch_target_t *target,
           && ! target->added)
         {
           SVN_ERR(svn_io_file_create(target->local_abspath, "", scratch_pool));
-          SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->local_abspath,
-                              svn_depth_infinity,
-                              NULL, SVN_INVALID_REVNUM,
-                              ctx->cancel_func,
-                              ctx->cancel_baton,
-                              NULL, NULL, /* suppress notification */
-                              iterpool));
+          SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       NULL, NULL, /* suppress notification */
+                                       iterpool));
           target->added = TRUE;
         }
 
