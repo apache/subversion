@@ -209,22 +209,11 @@ svn_subst_keywords_differ(const svn_subst_keywords_t *a,
  * @c TRUE, convert any line ending in @a src_stream to @a eol_str in
  * @a dst_stream.  Recognized line endings are: "\n", "\r", and "\r\n".
  *
- * Expand and contract keywords using the contents of @a keywords as the
- * new values.  If @a expand is @c TRUE, expand contracted keywords and
- * re-expand expanded keywords.  If @a expand is @c FALSE, contract expanded
- * keywords and ignore contracted ones.  Keywords not found in the hash are
- * ignored (not contracted or expanded).  If the @a keywords hash
- * itself is @c NULL, keyword substitution will be altogether ignored.
- *
- * Detect only keywords that are no longer than @c SVN_KEYWORD_MAX_LEN
- * bytes, including the delimiters and the keyword itself.
+ * See svn_subst_stream_translated() for details of the keyword substitution
+ * which is controlled by the @a expand and @a keywords parameters.
  *
  * Note that a translation request is *required*:  one of @a eol_str or
  * @a keywords must be non-@c NULL.
- *
- * Recommendation: if @a expand is FALSE, then you don't care about the
- * keyword values, so use empty strings as non-NULL signifiers when you
- * build the keywords hash.
  *
  * Notes:
  *
@@ -301,6 +290,20 @@ svn_subst_translate_stream(svn_stream_t *src_stream,
  * if @a repair is @c TRUE, convert any line ending to @a eol_str.
  * Recognized line endings are: "\n", "\r", and "\r\n".
  *
+ * Expand and contract keywords using the contents of @a keywords as the
+ * new values.  If @a expand is @c TRUE, expand contracted keywords and
+ * re-expand expanded keywords.  If @a expand is @c FALSE, contract expanded
+ * keywords and ignore contracted ones.  Keywords not found in the hash are
+ * ignored (not contracted or expanded).  If the @a keywords hash
+ * itself is @c NULL, keyword substitution will be altogether ignored.
+ *
+ * Detect only keywords that are no longer than @c SVN_KEYWORD_MAX_LEN
+ * bytes, including the delimiters and the keyword itself.
+ *
+ * Recommendation: if @a expand is FALSE, then you don't care about the
+ * keyword values, so use empty strings as non-NULL signifiers when you
+ * build the keywords hash.
+ *
  * The stream returned is allocated in @a result_pool.
  *
  * If the inner stream implements resetting via svn_stream_reset(),
@@ -318,8 +321,8 @@ svn_subst_stream_translated(svn_stream_t *stream,
                             apr_pool_t *result_pool);
 
 
-/** Return a stream which performs eol translation and keyword
- * expansion when read from or written to.  The stream @a stream
+/** Set @a *stream to a stream which performs eol translation and keyword
+ * expansion when read from or written to.  The stream @a source
  * is used to read and write all data.  Make sure you call
  * svn_stream_close() on @a stream to make sure all data are flushed
  * and cleaned up.
@@ -345,7 +348,7 @@ svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
                                            apr_pool_t *pool);
 
 
-/** Returns a readable stream in @a *stream containing the "normal form"
+/** Set @a *stream to a readable stream containing the "normal form"
  * of the special file located at @a path. The stream will be allocated
  * in @a result_pool, and any temporary allocations will be made in
  * @a scratch_pool.
@@ -359,7 +362,7 @@ svn_subst_read_specialfile(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/** Returns a writeable stream in @a *stream that accepts content in
+/** Set @a *stream to a writeable stream that accepts content in
  * the "normal form" for a special file, to be located at @a path, and
  * will create that file when the stream is closed. The stream will be
  * allocated in @a result_pool, and any temporary allocations will be
@@ -377,8 +380,8 @@ svn_subst_create_specialfile(svn_stream_t **stream,
                              apr_pool_t *scratch_pool);
 
 
-/** Returns a stream which translates the special file at @a path to
- * the internal representation for special files when read from.  When
+/** Set @a *stream to a stream which translates the special file at @a path
+ * to the internal representation for special files when read from.  When
  * written to, it does the reverse: creating a special file when the
  * stream is closed.
  *
@@ -396,16 +399,15 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
 
 
 /**
- * Translates the file at path @a src into a file at path @a dst.  The
- * parameters @a *eol_str, @a repair, @a *keywords and @a expand are
+ * Copy the contents of file-path @a src to file-path @a dst atomically,
+ * either creating @a dst or overwriting @a dst if it exists, possibly
+ * performing line ending and keyword translations.
+ *
+ * The parameters @a *eol_str, @a repair, @a *keywords and @a expand are
  * defined the same as in svn_subst_translate_stream3().
  *
  * In addition, it will create a special file from normal form or
  * translate one to normal form if @a special is @c TRUE.
- *
- * Copy the contents of file-path @a src to file-path @a dst atomically,
- * either creating @a dst (or overwriting @a dst if it exists), possibly
- * performing line ending and keyword translations.
  *
  * If anything goes wrong during the copy, attempt to delete @a dst (if
  * it exists).
@@ -486,17 +488,19 @@ svn_subst_copy_and_translate(const char *src,
 
 
 /**
- * Convenience routine: a variant of svn_subst_translate_stream3() which
- * operates on cstrings.
+ * Set @a *dst to a copy of the string @a src, possibly performing line
+ * ending and keyword translations.
  *
- * @since New in 1.3.
- *
- * Return a new string in @a *dst, allocated in @a pool, by copying the
- * contents of string @a src, possibly performing line ending and keyword
- * translations.
+ * This is a variant of svn_subst_translate_stream3() that operates on
+ * cstrings.  @see svn_subst_stream_translated() for details of the
+ * translation and of @a eol_str, @a repair, @a keywords and @a expand.
  *
  * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
  * copy.
+ *
+ * Allocate @a *dst in @a pool.
+ *
+ * @since New in 1.3.
  */
 svn_error_t *
 svn_subst_translate_cstring2(const char *src,
@@ -524,7 +528,7 @@ svn_subst_translate_cstring(const char *src,
                             apr_pool_t *pool);
 
 /**
- * Translates a file @a src in working copy form to a file @a dst in
+ * Translate the file @a src in working copy form to a file @a dst in
  * normal form.
  *
  * The values specified for @a eol_style, @a *eol_str, @a keywords and
@@ -588,20 +592,26 @@ svn_subst_stream_detranslated(svn_stream_t **stream_p,
 
 /* EOL conversion and character encodings */
 
-/** Translate the data in @a value (assumed to be in encoded in charset
- * @a encoding) to UTF8 and LF line-endings.  If @a encoding is @c NULL,
- * then assume that @a value is in the system-default language encoding.
- * Return the translated data in @a *new_value, allocated in @a pool.
+/** Translate the string @a value from character encoding @a encoding to
+ * UTF8, and also from its current line-ending style to LF line-endings.  If
+ * @a encoding is @c NULL, translate from the system-default encoding.
+ *
+ * Recognized line endings are LF, CR, CRLF.  If @a value has inconsistent
+ * line endings, return @c SVN_ERR_IO_INCONSISTENT_EOL.
+ *
+ * Set @a *new_value to the translated string, allocated in @a pool.
  */
 svn_error_t *svn_subst_translate_string(svn_string_t **new_value,
                                         const svn_string_t *value,
                                         const char *encoding,
                                         apr_pool_t *pool);
 
-/** Translate the data in @a value from UTF8 and LF line-endings into
- * native locale and native line-endings, or to the output locale if
- * @a for_output is TRUE.  Return the translated data in @a
- * *new_value, allocated in @a pool.
+/** Translate the string @a value from UTF8 and LF line-endings into native
+ * character encoding and native line-endings.  If @a for_output is TRUE,
+ * translate to the character encoding of the output locale, else to that of
+ * the default locale.
+ *
+ * Set @a *new_value to the translated string, allocated in @a pool.
  */
 svn_error_t *svn_subst_detranslate_string(svn_string_t **new_value,
                                           const svn_string_t *value,
