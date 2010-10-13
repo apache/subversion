@@ -3087,7 +3087,16 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
+#ifdef SVN_WC__OP_DEPTH
+  iwb.op_depth = relpath_depth(local_relpath);
+
+  /* ### TODO? If the WC parent dir is already a copy from
+   * dirname(original_repos_relpath)@original_revision, then this is a
+   * redundant copy as far is the repos is concerned, so it should share
+   * the same op_depth.  But that's a degenerate case.  Is it needed? */
+#else
   iwb.op_depth = 2;  /* ### temporary op_depth */
+#endif
 
   iwb.checksum = checksum;
 
