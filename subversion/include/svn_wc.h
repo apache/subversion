@@ -4037,13 +4037,13 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * is used for accessing the working copy and must contain a write lock for
  * the parent directory of @a dst_abspath,
  *
- * If metadata_only is TRUE then this a database only operation and
+ * If @a metadata_only is TRUE then this is a database-only operation and
  * the working directories and files are not copied.
  *
  * @a src_abspath must be a file or directory under version control;
  * the parent of @a dst_abspath must be a directory under version control
  * in the same working copy; @a dst_abspath will be the name of the copied
- * item, and it must not exist already if metadata_only is FALSE.  Note that
+ * item, and it must not exist already if @a metadata_only is FALSE.  Note that
  * when @a src points to a versioned file, the working file doesn't
  * necessarily exist in which case its text-base is used instead.
  *
@@ -4258,7 +4258,7 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
  * of that location. In this last case the function doesn't set the pristine
  * version (of a file) and/or pristine properties, which callers should
  * handle via different APIs. Usually it is easier to call
- * svn_wc_add_repos_file4() (### or a possible svn_wc_add_repos_dir()) then
+ * svn_wc_add_repos_file4() (### or a possible svn_wc_add_repos_dir()) than
  * using this variant.
  *
  * If @a local_abspath does not exist as file, directory or symlink, return
