@@ -3700,6 +3700,11 @@ set_tc_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", stb->wc_id, stb->local_relpath,
                             tree_conflict_data));
 
+  if (!have_row && stb->local_relpath[0])
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4,
+                                  svn_dirent_dirname(stb->local_relpath,
+                                                     scratch_pool)));
+
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
 

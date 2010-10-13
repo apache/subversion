@@ -205,11 +205,9 @@ UPDATE actual_node SET tree_conflict_data = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_TREE_CONFLICTS
-/* tree conflicts are always recorded on the wcroot node, so the
-   parent_relpath will be null.  */
 INSERT INTO actual_node (
-  wc_id, local_relpath, tree_conflict_data)
-VALUES (?1, ?2, ?3);
+  wc_id, local_relpath, tree_conflict_data, parent_relpath)
+VALUES (?1, ?2, ?3, ?4);
 
 -- STMT_UPDATE_ACTUAL_TEXT_CONFLICTS
 UPDATE actual_node SET conflict_old = ?3, conflict_new = ?4,
