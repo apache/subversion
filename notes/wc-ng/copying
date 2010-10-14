@@ -71,12 +71,25 @@ revision source and from a source with a locally added or replaced
 child.  In both cases the commit must either add or replace the child
 and if the copy is from a source that is locally added or replaced the
 client can make the distinction and send a delete before adding the
-replacement.  For a mixed revision the client doesn't distinguish
+replacement.  For a mixed revision, as the client doesn't know whether
+the child existed in its parent's revision and so can't distinguish
 between add and replace, it always sends an add and the FS layer
 converts to a replace as required (for details see 2010-04-19 comments
 in issue 3314).  We will probably have to continue rely on this in
 WC-NG as there is not enough information in the source to determine
 whether or not the child also exists in the parent's revision.
+
+If the mixed-rev source has a "not-present" child (effectively the
+same as "updated to r0"), then the copy schedules this as "delete".
+The client doesn't know whether the child existed in its parent's
+revision, so it can't distinguish between delete and no-op, so it
+always sends a delete.
+
+  ### This current fails, in both 1.6 and trunk.
+
+  ### TODO: The server needs to silently elide a delete, or the client
+  needs to detect the error and recover from it and continue if that
+  is possible.
 
 Child nodes not-present in the source become not-present working nodes
 in the copy, this ensures that they get deleted by the commit.  We
