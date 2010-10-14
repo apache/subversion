@@ -413,23 +413,6 @@ def add_elements_as_path(top_node, element_list):
     prev_node = new_node
 
 
-def compare_atts(a, b):
-  """Compare two dictionaries of attributes, A (actual) and B (expected).
-  If the attribute 'treeconflict' in B is missing or is 'None', ignore it.
-  Return 0 if the same, 1 otherwise."""
-  a = a.copy()
-  b = b.copy()
-  # Remove any attributes to ignore.
-  for att in ['treeconflict']:
-    if (att not in b) or (b[att] is None):
-      if att in a:
-        del a[att]
-      if att in b:
-        del b[att]
-  if a != b:
-    return 1
-  return 0
-
 # Helper for compare_trees
 def compare_file_nodes(a, b):
   """Compare two nodes, A (actual) and B (expected). Compare their names,
@@ -441,7 +424,9 @@ def compare_file_nodes(a, b):
     return 1
   if a.props != b.props:
     return 1
-  return compare_atts(a.atts, b.atts)
+  if a.atts != b.atts:
+    return 1
+  return 0
 
 
 # Internal utility used by most build_tree_from_foo() routines.
@@ -658,7 +643,7 @@ def compare_trees(label,
     # They're both directories.
     else:
       # First, compare the directories' two hashes.
-      if (a.props != b.props) or compare_atts(a.atts, b.atts):
+      if (a.props != b.props) or (a.atts != b.atts):
         display_nodes(a, b)
         raise SVNTreeUnequal
 
