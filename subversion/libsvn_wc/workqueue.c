@@ -181,19 +181,23 @@ run_revert(svn_wc__db_t *db,
 {
   const svn_skel_t *arg1 = work_item->children->next;
   const char *local_abspath;
-  svn_boolean_t replaced;
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
   const char *parent_abspath;
   svn_boolean_t conflicted;
   apr_int64_t val;
   svn_boolean_t is_wc_root;
+  svn_boolean_t reinstall_working;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
+  /* ### OP_DEPTH legacy; to be removed. */
   SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
-  replaced = (val != 0);
-  /* magic_changed is extracted further below.  */
+
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
+  reinstall_working = (val != 0);
+
   /* use_commit_times is extracted further below.  */
 
   /* NOTE: we can read KIND here since uncommitted kind changes are not
@@ -254,57 +258,6 @@ run_revert(svn_wc__db_t *db,
   /* Deal with the working file, as needed.  */
   if (kind == svn_wc__db_kind_file)
     {
-      svn_boolean_t magic_changed;
-      svn_boolean_t reinstall_working;
-
-      SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
-      magic_changed = (val != 0);
-
-      /* If there was a magic property change, then we'll reinstall the
-         working-file to pick up any/all appropriate changes. If there was
-         a replacement, then we definitely want to reinstall the working-file
-         using the original base.  */
-      reinstall_working = magic_changed || replaced;
-
-      if (!replaced && !reinstall_working)
-        /* check for additional scenarios which need the actual re-installed */
-        {
-          svn_node_kind_t check_kind;
-
-          /* If the working file is missing, we need to reinstall it.  */
-          SVN_ERR(svn_io_check_path(local_abspath, &check_kind,
-                                    scratch_pool));
-          reinstall_working = (check_kind == svn_node_none);
-
-          if (!reinstall_working)
-            {
-              /* ### can we optimize this call? we already fetched some
-                 ### info about the node. and *definitely* never want a
-                 ### full file-scan.  */
-
-              /* ### for now, just always reinstall. without some extra work,
-                 ### we could end up in a situation where the file is copied
-                 ### from the base, but then something fails immediately
-                 ### after that. on the second time through here, we would
-                 ### see the file is "the same" and fail to complete those
-                 ### follow-on actions. in some future work, examine the
-                 ### points of failure, and possibly precompue the
-                 ### "reinstall_working" flag, or maybe do some follow-on
-                 ### actions unconditionally.  */
-#if 1
-              reinstall_working = TRUE;
-#endif
-#if 0
-              /* ### try to avoid altering the timestamp if the intended
-                 ### contents are the same as current-contents.  */
-              SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
-                                                       db, local_abspath,
-                                                       FALSE, FALSE,
-                                                       scratch_pool));
-#endif
-            }
-        }
-
       if (reinstall_working)
         {
           svn_boolean_t use_commit_times;
@@ -330,10 +283,13 @@ run_revert(svn_wc__db_t *db,
     }
   else if (kind == svn_wc__db_kind_dir)
     {
-      svn_node_kind_t disk_kind;
-      SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+      svn_node_kind_t on_disk;
 
-      if (disk_kind == svn_node_none)
+      /* Unfortunately we need another stat(), because I don't want
+         to resort to APR error macros to see if we're creating a
+         directory on top of an existing path */
+      SVN_ERR(svn_io_check_path(local_abspath, &on_disk, scratch_pool));
+      if (on_disk == svn_node_none)
         SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
     }
 
@@ -414,7 +370,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_boolean_t replaced;
-  svn_boolean_t magic_changed = FALSE;
+  svn_boolean_t reinstall_working;
 
   SVN_ERR(svn_wc__db_read_info(
             &status, &kind, NULL, NULL, NULL, NULL,
@@ -436,7 +392,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                                        scratch_pool));
 
   /* If a replacement has occurred, then a revert definitely happens.  */
-  *will_revert = replaced;
+  *will_revert = reinstall_working = replaced;
 
   if (!replaced)
     {
@@ -452,48 +408,48 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                                        scratch_pool, scratch_pool));
       SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props,
                              scratch_pool));
-      magic_changed = svn_wc__has_magic_property(prop_diffs);
+      if (svn_wc__has_magic_property(prop_diffs))
+        reinstall_working = TRUE;
 
       if (prop_diffs->nelts > 0)
         {
           /* Property changes cause a revert to occur.  */
           *will_revert = TRUE;
         }
-      else
+
+      /* We may need to restore a missing working file.  */
+      if (! reinstall_working)
         {
-          /* There is nothing to do for NORMAL or ADDED nodes. Typically,
-             we won't even be called for added nodes (since a revert
-             simply removes it from version control), but it is possible
-             that a parent replacement was turned from a replaced copy
-             into a normal node, and the (broken) old ENTRY->COPIED logic
-             then turns the copied children into typical ADDED nodes.
-             Since the recursion has already started, these children are
-             visited (unlike most added nodes).  */
-          if (status != svn_wc__db_status_normal
-              && status != svn_wc__db_status_added)
-            {
-              *will_revert = TRUE;
-            }
+          svn_node_kind_t on_disk;
 
-          /* We may need to restore a missing working file.  */
-          if (! *will_revert)
-            {
-              svn_node_kind_t on_disk;
+          SVN_ERR(svn_io_check_path(local_abspath, &on_disk,
+                                    scratch_pool));
+          reinstall_working = on_disk == svn_node_none;
+          *will_revert = *will_revert || reinstall_working;
+        }
+      if (! reinstall_working)
+        {
+          /* ### there may be ways to simplify this test, rather than
+             ### doing file comparisons and junk... */
+          SVN_ERR(svn_wc__internal_text_modified_p(&reinstall_working,
+                                                   db, local_abspath,
+                                                   FALSE, FALSE,
+                                                   scratch_pool));
+          *will_revert = *will_revert || reinstall_working;
+        }
 
-              SVN_ERR(svn_io_check_path(local_abspath, &on_disk,
-                                        scratch_pool));
-              *will_revert = on_disk == svn_node_none;
-            }
-
-          if (! *will_revert)
-            {
-              /* ### there may be ways to simplify this test, rather than
-                 ### doing file comparisons and junk... */
-              SVN_ERR(svn_wc__internal_text_modified_p(will_revert,
-                                                       db, local_abspath,
-                                                       FALSE, FALSE,
-                                                       scratch_pool));
-            }
+      /* There is nothing to do for NORMAL or ADDED nodes. Typically,
+         we won't even be called for added nodes (since a revert
+         simply removes it from version control), but it is possible
+         that a parent replacement was turned from a replaced copy
+         into a normal node, and the (broken) old ENTRY->COPIED logic
+         then turns the copied children into typical ADDED nodes.
+         Since the recursion has already started, these children are
+         visited (unlike most added nodes).  */
+      if (status != svn_wc__db_status_normal
+          && status != svn_wc__db_status_added)
+        {
+          *will_revert = TRUE;
         }
     }
 
@@ -507,7 +463,10 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
       /* These skel atoms hold references to very transitory state, but
          we only need the work_item to survive for the duration of wq_add.  */
       svn_skel__prepend_int(use_commit_times, work_item, scratch_pool);
-      svn_skel__prepend_int(magic_changed, work_item, scratch_pool);
+      svn_skel__prepend_int(reinstall_working, work_item, scratch_pool);
+
+      /* ### OP_DEPTH The 'replaced' item is here for backward compat;
+         the wq-consumer doesn't use this value anymore. */
       svn_skel__prepend_int(replaced, work_item, scratch_pool);
       svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
       svn_skel__prepend_str(OP_REVERT, work_item, scratch_pool);
