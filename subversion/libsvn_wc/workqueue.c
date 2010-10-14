@@ -394,7 +394,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
   /* If a replacement has occurred, then a revert definitely happens.  */
   *will_revert = reinstall_working = replaced;
 
-  if (!replaced)
+  if (status == svn_wc__db_status_normal)
     {
       apr_hash_t *base_props;
       apr_hash_t *working_props;
@@ -416,41 +416,35 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
           /* Property changes cause a revert to occur.  */
           *will_revert = TRUE;
         }
+    }
+  else
+    {
+      *will_revert = TRUE;
+      if (status != svn_wc__db_status_added)
+        reinstall_working = TRUE;
+    }
 
-      /* We may need to restore a missing working file.  */
-      if (! reinstall_working)
-        {
-          svn_node_kind_t on_disk;
+  /* We may need to restore a missing working file.  */
+  if (! reinstall_working
+      && status != svn_wc__db_status_added)
+    {
+      svn_node_kind_t on_disk;
 
-          SVN_ERR(svn_io_check_path(local_abspath, &on_disk,
-                                    scratch_pool));
-          reinstall_working = on_disk == svn_node_none;
-          *will_revert = *will_revert || reinstall_working;
-        }
-      if (! reinstall_working)
-        {
-          /* ### there may be ways to simplify this test, rather than
-             ### doing file comparisons and junk... */
-          SVN_ERR(svn_wc__internal_text_modified_p(&reinstall_working,
-                                                   db, local_abspath,
-                                                   FALSE, FALSE,
-                                                   scratch_pool));
-          *will_revert = *will_revert || reinstall_working;
-        }
+      SVN_ERR(svn_io_check_path(local_abspath, &on_disk, scratch_pool));
+      reinstall_working = on_disk == svn_node_none;
+      *will_revert = *will_revert || reinstall_working;
+    }
 
-      /* There is nothing to do for NORMAL or ADDED nodes. Typically,
-         we won't even be called for added nodes (since a revert
-         simply removes it from version control), but it is possible
-         that a parent replacement was turned from a replaced copy
-         into a normal node, and the (broken) old ENTRY->COPIED logic
-         then turns the copied children into typical ADDED nodes.
-         Since the recursion has already started, these children are
-         visited (unlike most added nodes).  */
-      if (status != svn_wc__db_status_normal
-          && status != svn_wc__db_status_added)
-        {
-          *will_revert = TRUE;
-        }
+  if (! reinstall_working
+      && status == svn_wc__db_status_normal)
+    {
+      /* ### there may be ways to simplify this test, rather than
+         ### doing file comparisons and junk... */
+      SVN_ERR(svn_wc__internal_text_modified_p(&reinstall_working,
+                                               db, local_abspath,
+                                               FALSE, FALSE,
+                                               scratch_pool));
+      *will_revert = *will_revert || reinstall_working;
     }
 
   /* Don't even bother to queue a work item if there is nothing to do.  */
