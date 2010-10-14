@@ -344,20 +344,22 @@ run_revert(svn_wc__db_t *db,
 
 
   /* Remove the WORKING version of the node */
-  const char *op_root_abspath = NULL;
-
   /* If the node is not the operation root,
      we should not delete the working node */
   if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL,
-                                     db, local_abspath,
-                                     scratch_pool, scratch_pool));
+    {
+      const char *op_root_abspath = NULL;
 
-  if (!op_root_abspath
-      || (strcmp(op_root_abspath, local_abspath) == 0))
-    SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
-                                              scratch_pool));
+      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      if (!op_root_abspath
+          || (strcmp(op_root_abspath, local_abspath) == 0))
+        SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
+                                                  scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
