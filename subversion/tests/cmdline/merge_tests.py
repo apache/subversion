@@ -11830,7 +11830,7 @@ def subtree_merges_dont_intersect_with_targets(sbox):
 
   # Repeat the forward merge
   expected_output = expected_merge_output(
-    [[5],[8,9],[5,9]],
+    [[5],[8],[5,9]],
     ['U    %s\n' % (rho_COPY_2_path),
      'U    %s\n' % (psi_COPY_2_path),
      ' U   %s\n' % (H_COPY_2_path),
@@ -13678,7 +13678,7 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status, expected_skip,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None, 1, 0)
 
 #----------------------------------------------------------------------
 def no_self_referential_filtering_on_added_path(sbox):
@@ -13958,8 +13958,8 @@ def merge_range_prior_to_rename_source_existence(sbox):
   # the reverse merge we performed in r11; the only operative change
   # here is the text mod to alpha made in r9.
   #
-  # This merge currently fails because the delete half of the A_COPY/D/H/nu
-  # to A_COPY/D/H/nu_moved move is reported in the notifications, but doesn't
+  # This merge previously failed because the delete half of the A_COPY/D/H/nu
+  # to A_COPY/D/H/nu_moved move was reported in the notifications, but didn't
   # actually happen.
   expected_output = wc.State(A_COPY_path, {
     'B/E/alpha'    : Item(status='U '),
@@ -14027,7 +14027,7 @@ def merge_range_prior_to_rename_source_existence(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 1)
+                                       None, 1, 0)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Merge -r7:12 from A to A_COPY', wc_dir)
 
@@ -14090,9 +14090,9 @@ def merge_range_prior_to_rename_source_existence(sbox):
   # We can only reverse merge changes from the explicit mergeinfo or
   # natural history of a target, but since all of these changes intersect with
   # the target's explicit mergeinfo (including subtrees), all should be
-  # reverse merged, including the deletion of A_COPY/D/H/nu.  However, like
-  # the forward merge performed earlier, A_COPY/D/H/nu is reported as deleted,
-  # but still remains as a versioned item in the WC.
+  # reverse merged, including the deletion of A_COPY/D/H/nu.  Like the forward
+  # merge performed earlier, this test previously failed when A_COPY/D/H/nu
+  # was reported as deleted, but still remained as a versioned item in the WC.
   expected_output = wc.State(A_COPY_2_path, {
     'B/E/alpha'    : Item(status='U '),
     'D/H/nu'       : Item(status='D '),
@@ -16210,8 +16210,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(no_self_referential_filtering_on_added_path,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_range_prior_to_rename_source_existence,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_range_prior_to_rename_source_existence,
+                         server_has_mergeinfo),
               SkipUnless(dont_merge_gaps_in_history,
                          server_has_mergeinfo),
               SkipUnless(mergeinfo_deleted_by_a_merge_should_disappear,
