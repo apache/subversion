@@ -2,7 +2,7 @@ Please review the following patches in this branch.
 They will be merged into /trunk after passing the review.
 
 
-* r982335
+* r982355
  Limit the amount of unused memory kept in apr_pools
  to the same amount as everywhere else, e.g. SVN.exe main().
  Justification:
@@ -11,6 +11,8 @@ They will be merged into /trunk after passing the review.
        for strings (e.g. fulltexts) and other chunks larger than 80kB.
        This already happens on trunk if memcached usage has been
        enabled.
+ Merged:
+  Merged to trunk in r1022675.
 
 * r984984
  Reduce the number of revprop lookups during export and
