@@ -8190,6 +8190,33 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
               svn_revnum_t next_end_rev;
               const char *real_url1 = url1, *real_url2 = url2;
               const char *old_sess1_url = NULL, *old_sess2_url = NULL;
+              svn_merge_range_t *first_target_range = APR_ARRAY_IDX(
+                target_merge_path->remaining_ranges, 0, svn_merge_range_t *);
+
+              /* Issue #3324: Stop editor abuse!  Don't call
+                 drive_merge_report_editor() in such a way that we request an
+                 editor with svn_client__get_diff_editor() for some rev X,
+                 then call svn_ra_do_diff3() for some revision Y, and then
+                 call reporter->set_path(PATH=="") to set the root revision
+                 for the editor drive to revision Z where
+                 (X != Z && X < Z < Y).  This is bogus because the server will
+                 send us the diff between X:Y but the client is expecting the
+                 diff between Y:Z.  See issue #3324 for full details on the
+                 problems this can cause. */
+              if (first_target_range
+                  && start_rev != first_target_range->start)
+                {
+                  if (is_rollback)
+                    {
+                      if (end_rev < first_target_range->start)
+                        end_rev = first_target_range->start;
+                    }
+                  else
+                    {
+                      if (end_rev > first_target_range->start)
+                        end_rev = first_target_range->start;
+                    }
+                }
 
               svn_pool_clear(iterpool);
 
