@@ -4884,8 +4884,6 @@ relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             new_repos_id));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  /* Do a bunch of stuff which is conditional on us actually having a
-     base_node in the first place. */
   if (rb->have_base_node)
     {
       /* Update any locks for the root or its children. */
