@@ -55,7 +55,6 @@ svn_cl__propset(apr_getopt_t *os,
   svn_string_t *propval = NULL;
   svn_boolean_t propval_came_from_cmdline;
   apr_array_header_t *args, *targets;
-  int i;
 
   /* PNAME and PROPVAL expected as first 2 arguments if filedata was
      NULL, else PNAME alone will precede the targets.  Get a UTF-8
@@ -131,6 +130,7 @@ svn_cl__propset(apr_getopt_t *os,
   else  /* operate on a normal, versioned property (not a revprop) */
     {
       apr_pool_t *iterpool;
+      int i;
 
       if (opt_state->depth == svn_depth_unknown)
         opt_state->depth = svn_depth_empty;

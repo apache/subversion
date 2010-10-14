@@ -458,6 +458,7 @@ int main(int argc, const char *argv[])
   params.authzdb = NULL;
   params.compression_level = SVNDIFF1_COMPRESS_LEVEL;
   params.log_file = NULL;
+  params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
   params.open_file_count = (apr_size_t)-1;
 
@@ -637,11 +638,11 @@ int main(int argc, const char *argv[])
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */
   if (config_filename)
-      SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
-                               config_filename, TRUE,
-                               svn_dirent_dirname(config_filename, pool),
-                               NULL, NULL, /* server baton, conn */
-                               pool));
+    SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
+                             &params.username_case, config_filename, TRUE,
+                             svn_dirent_dirname(config_filename, pool),
+                             NULL, NULL, /* server baton, conn */
+                             pool));
 
   if (log_filename)
     SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,

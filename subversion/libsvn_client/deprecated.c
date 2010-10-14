@@ -620,7 +620,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
   cb.info = commit_info_p;
   cb.pool = pool;
 
-  return svn_client_move6(src_paths, dst_path, force, move_as_child,
+  return svn_client_move6(src_paths, dst_path, move_as_child,
                           make_parents, revprop_table,
                           capture_commit_info, &cb, ctx, pool);
 }
@@ -636,6 +636,7 @@ svn_client_move4(svn_commit_info_t **commit_info_p,
   apr_array_header_t *src_paths =
     apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(src_paths, const char *) = src_path;
+
 
   return svn_client_move5(commit_info_p, src_paths, dst_path, force, FALSE,
                           FALSE, NULL, ctx, pool);

@@ -631,13 +631,16 @@ init_patch_target(patch_target_t **patch_target,
                                                    scratch_pool));
         }
 
-      /* ### Is it ok to set target->added here? Isn't the target supposed to
-       * ### be marked as added after it's been proven that it can be added?
-       * ### One alternative is to include a git_added flag. Or maybe we
-       * ### should have kept the patch field in patch_target_t? Then we
-       * ### could have checked for target->patch->operation == added */
+      /* ### Is it ok to set the operation of the target already here? Isn't
+       * ### the target supposed to be marked with an operation after we have
+       * ### determined that the changes will apply cleanly to the WC? Maybe
+       * ### we should have kept the patch field in patch_target_t to be
+       * ### able to distinguish between 'what the patch says we should do' 
+       * ### and 'what we can do with the given state of our WC'. */
       if (patch->operation == svn_diff_op_added)
         target->added = TRUE;
+      else if (patch->operation == svn_diff_op_deleted)
+        target->deleted = TRUE;
 
       SVN_ERR(svn_stream_open_unique(&patched_raw,
                                      &target->patched_path, NULL,
@@ -869,7 +872,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
       /* If the last line doesn't have a newline, we get EOF but still
        * have a non-empty line to compare. */
       if ((hunk_eof && hunk_line->len == 0) ||
-          (content_info->eof && strlen(target_line) == 0))
+          (content_info->eof && *target_line == 0))
         break;
 
       /* Leading/trailing fuzzy lines always match. */
@@ -936,7 +939,6 @@ scan_for_match(svn_linenum_t *matched_line,
          ! content_info->eof)
     {
       svn_boolean_t matched;
-      int i;
 
       svn_pool_clear(iterpool);
 
@@ -948,6 +950,7 @@ scan_for_match(svn_linenum_t *matched_line,
       if (matched)
         {
           svn_boolean_t taken = FALSE;
+          int i;
 
           /* Don't allow hunks to match at overlapping locations. */
           for (i = 0; i < content_info->hunks->nelts; i++)
@@ -1235,24 +1238,6 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Attempt to write LEN bytes of DATA to STREAM, the underlying file
- * of which is at ABSPATH. Fail if not all bytes could be written to
- * the stream. Do temporary allocations in POOL. */
-static svn_error_t *
-try_stream_write(svn_stream_t *stream, const char *abspath,
-                 const char *data, apr_size_t len, apr_pool_t *pool)
-{
-  apr_size_t written;
-
-  written = len;
-  SVN_ERR(svn_stream_write(stream, data, &written));
-  if (written != len)
-    return svn_error_createf(SVN_ERR_IO_WRITE_ERROR, NULL,
-                             _("Error writing to '%s'"),
-                             svn_dirent_local_style(abspath, pool));
-  return SVN_NO_ERROR;
-}
-
 /* Copy lines to the patched stream until the specified LINE has been
  * reached. Indicate in *EOF whether end-of-file was encountered while
  * reading from the target.
@@ -1269,16 +1254,16 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
          && ! content_info->eof)
     {
       const char *target_line;
+      apr_size_t len;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(read_line(content_info, &target_line, iterpool, iterpool));
       if (! content_info->eof)
         target_line = apr_pstrcat(iterpool, target_line, content_info->eol_str,
-                                  NULL);
-
-      SVN_ERR(try_stream_write(content_info->patched, patched_path,
-                               target_line, strlen(target_line), iterpool));
+                                  (char *)NULL);
+      len = strlen(target_line);
+      SVN_ERR(svn_stream_write(content_info->patched, target_line, &len));
     }
   svn_pool_destroy(iterpool);
 
@@ -1340,12 +1325,17 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
       if (! eof)
         {
           if (hunk_line->len >= 1)
-            SVN_ERR(try_stream_write(content_info->reject, target->reject_path,
-                                     hunk_line->data, hunk_line->len,
-                                     iterpool));
+            {
+              len = hunk_line->len;
+              SVN_ERR(svn_stream_write(content_info->reject, hunk_line->data,
+                                       &len));
+            }
+
           if (eol_str)
-            SVN_ERR(try_stream_write(content_info->reject, target->reject_path,
-                                     eol_str, strlen(eol_str), iterpool));
+            {
+              len = strlen(eol_str);
+              SVN_ERR(svn_stream_write(content_info->reject, eol_str, &len));
+            }
         }
     }
   while (! eof);
@@ -1418,11 +1408,15 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
       if (! eof && lines_read > hi->fuzz &&
           lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - hi->fuzz)
         {
+          apr_size_t len;
+
           if (hunk_line->len >= 1)
-            SVN_ERR(try_stream_write(content_info->patched, 
-                                     target->patched_path,
-                                     hunk_line->data, hunk_line->len,
-                                     iterpool));
+            {
+              len = hunk_line->len;
+              SVN_ERR(svn_stream_write(content_info->patched, hunk_line->data,
+                                       &len));
+            }
+
           if (eol_str)
             {
               /* Use the EOL as it was read from the patch file,
@@ -1430,9 +1424,8 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
               if (content_info->eol_style != svn_subst_eol_style_none)
                 eol_str = content_info->eol_str;
 
-              SVN_ERR(try_stream_write(content_info->patched,
-                                       target->patched_path, eol_str,
-                                       strlen(eol_str), iterpool));
+              len = strlen(eol_str);
+              SVN_ERR(svn_stream_write(content_info->patched, eol_str, &len));
             }
         }
     }
@@ -2030,14 +2023,10 @@ create_missing_parents(patch_target_t *target,
                * to version control. Allow cancellation since we
                * have not modified the working copy yet for this
                * target. */
-              SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath,
-                                  svn_depth_infinity,
-                                  NULL, SVN_INVALID_REVNUM,
-                                  ctx->cancel_func,
-                                  ctx->cancel_baton,
-                                  ctx->notify_func2,
-                                  ctx->notify_baton2,
-                                  iterpool));
+              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           ctx->notify_func2, ctx->notify_baton2,
+                                           iterpool));
             }
         }
     }
@@ -2117,10 +2106,8 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                * Suppress notification, we'll do that later (and also
                * during dry-run). Also suppress cancellation because
                * we'd rather notify about what we did before aborting. */
-              SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->local_abspath,
-                                  svn_depth_infinity,
-                                  NULL, SVN_INVALID_REVNUM,
-                                  NULL, NULL, NULL, NULL, pool));
+              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
+                                           NULL, NULL, NULL, NULL, pool));
             }
 
           /* Restore the target's executable bit if necessary. */
@@ -2241,13 +2228,10 @@ install_patched_prop_targets(patch_target_t *target,
           && ! target->added)
         {
           SVN_ERR(svn_io_file_create(target->local_abspath, "", scratch_pool));
-          SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->local_abspath,
-                              svn_depth_infinity,
-                              NULL, SVN_INVALID_REVNUM,
-                              ctx->cancel_func,
-                              ctx->cancel_baton,
-                              NULL, NULL, /* suppress notification */
-                              iterpool));
+          SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       NULL, NULL, /* suppress notification */
+                                       iterpool));
           target->added = TRUE;
         }
 
@@ -2639,7 +2623,9 @@ apply_patches(void *baton,
 
               if (! target->skipped)
                 {
-                  if (target->has_text_changes || target->added)
+                  if (target->has_text_changes 
+                      || target->added 
+                      || target->deleted)
                     SVN_ERR(install_patched_target(target, btn->abs_wc_path,
                                                    btn->ctx, btn->dry_run,
                                                    iterpool));

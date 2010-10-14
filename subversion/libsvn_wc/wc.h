@@ -121,12 +121,15 @@ extern "C" {
  * All metadata is held in a single '.svn/wc.db' in the root directory of
  * the working copy.
  *
+ * The change from 19 to 20 introduces NODES and drops BASE_NODE and
+ * WORKING_NODE, op_depth is always 0 or 2. 
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 19
+#define SVN_WC__VERSION 20
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4

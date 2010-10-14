@@ -97,7 +97,7 @@ build_key(memcache_t *cache,
     }
 
   long_key = apr_pstrcat(pool, "SVN:", cache->prefix, ":", encoded_suffix,
-                         NULL);
+                         (char *)NULL);
   long_key_len = strlen(long_key);
 
   /* We don't want to have a key that's too big.  If it was going to
@@ -117,7 +117,7 @@ build_key(memcache_t *cache,
                              apr_pstrmemdup(pool, long_key,
                                             MEMCACHED_KEY_UNHASHED_LEN),
                              svn_checksum_to_cstring_display(checksum, pool),
-                             NULL);
+                             (char *)NULL);
     }
 
   return long_key;

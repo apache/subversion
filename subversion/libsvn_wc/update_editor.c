@@ -1550,7 +1550,8 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
            * calling this function. Do that on the caller's side. */
           right_repos_relpath = eb->switch_relpath;
           right_repos_relpath = apr_pstrcat(result_pool, right_repos_relpath,
-                                            "_THIS_IS_INCOMPLETE", NULL);
+                                            "_THIS_IS_INCOMPLETE",
+                                            (char *)NULL);
         }
     }
   else
@@ -2116,7 +2117,7 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  const char *base = svn_relpath_basename(path, pool);
+  const char *base = svn_relpath_basename(path, NULL);
   const char *local_abspath;
   const char *their_relpath;
 
@@ -4303,7 +4304,6 @@ close_file(void *file_baton,
    * a text conflict. So flag a tree conflict here. */
   if (fb->adding_file && fb->add_existed)
     {
-      int i;
       svn_boolean_t local_is_link = FALSE;
       svn_boolean_t incoming_is_link = FALSE;
 
@@ -4322,6 +4322,8 @@ close_file(void *file_baton,
         }
       else
         {
+          int i;
+
           for (i = 0; i < regular_props->nelts; ++i)
             {
               const svn_prop_t *prop = &APR_ARRAY_IDX(regular_props, i,

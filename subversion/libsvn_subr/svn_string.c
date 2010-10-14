@@ -113,6 +113,10 @@ find_char_backward(const char *str, apr_size_t len, char ch)
 
 /* svn_string functions */
 
+/* Return a new svn_string_t object, allocated in POOL, initialized with
+ * DATA and SIZE.  Do not copy the contents of DATA, just store the pointer.
+ * SIZE is the length in bytes of DATA, excluding the required NUL
+ * terminator. */
 static svn_string_t *
 create_string(const char *data, apr_size_t size,
               apr_pool_t *pool)
@@ -407,7 +411,7 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
    * to just write the new byte at the end of the used section
    * and terminate the string properly.
    */
-  if (str->blocksize < old_len + 1)
+  if (str->blocksize > old_len + 1)
     {
       /* The following read does not depend this write, so we
        * can issue the write first to minimize register pressure:

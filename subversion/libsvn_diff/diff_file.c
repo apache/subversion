@@ -67,20 +67,25 @@ typedef struct svn_diff__file_token_t
 typedef struct svn_diff__file_baton_t
 {
   const svn_diff_file_options_t *options;
-  const char *path[4];
 
-  apr_file_t *file[4];
-  apr_off_t size[4];
+  struct file_info {
+    const char *path;  /* path to this file, absolute or relative to CWD */
 
-  int chunk[4];
-  char *buffer[4];
-  char *curp[4];
-  char *endp[4];
+    /* All the following fields are active while this datasource is open */
+    apr_file_t *file;  /* handle of this file */
+    apr_off_t size;    /* total raw size in bytes of this file */
+
+    /* The current chunk: CHUNK_SIZE bytes except for the last chunk. */
+    int chunk;     /* the current chunk number, zero-based */
+    char *buffer;  /* a buffer containing the current chunk */
+    char *curp;    /* current position in the current chunk */
+    char *endp;    /* next memory address after the current chunk */
+
+    svn_diff__normalize_state_t normalize_state;
+  } files[4];
 
   /* List of free tokens that may be reused. */
   svn_diff__file_token_t *tokens;
-
-  svn_diff__normalize_state_t normalize_state[4];
 
   apr_pool_t *pool;
 } svn_diff__file_baton_t;
@@ -199,26 +204,30 @@ map_or_read_file(apr_file_t **file,
 }
 
 
-/* Implements svn_diff_fns_t::datasource_open */
+/* Let FILE stand for the file_info struct element of BATON->files that is
+ * indexed by DATASOURCE.  BATON's type is (svn_diff__file_baton_t *).
+ *
+ * Open the file at FILE.path; initialize FILE.file, FILE.size, FILE.buffer,
+ * FILE.curp and FILE.endp; allocate a buffer and read the first chunk.
+ *
+ * Implements svn_diff_fns_t::datasource_open. */
 static svn_error_t *
 datasource_open(void *baton, svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
-  int idx;
+  struct file_info *file = &file_baton->files[datasource_to_index(datasource)];
   apr_finfo_t finfo;
   apr_off_t length;
   char *curp;
   char *endp;
 
-  idx = datasource_to_index(datasource);
-
-  SVN_ERR(svn_io_file_open(&file_baton->file[idx], file_baton->path[idx],
+  SVN_ERR(svn_io_file_open(&file->file, file->path,
                            APR_READ, APR_OS_DEFAULT, file_baton->pool));
 
   SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE,
-                               file_baton->file[idx], file_baton->pool));
+                               file->file, file_baton->pool));
 
-  file_baton->size[idx] = finfo.size;
+  file->size = finfo.size;
   length = finfo.size > CHUNK_SIZE ? CHUNK_SIZE : finfo.size;
 
   if (length == 0)
@@ -227,10 +236,10 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
   endp = curp = apr_palloc(file_baton->pool, (apr_size_t) length);
   endp += length;
 
-  file_baton->buffer[idx] = file_baton->curp[idx] = curp;
-  file_baton->endp[idx] = endp;
+  file->buffer = file->curp = curp;
+  file->endp = endp;
 
-  return read_chunk(file_baton->file[idx], file_baton->path[idx],
+  return read_chunk(file->file, file->path,
                     curp, length, 0, file_baton->pool);
 }
 
@@ -253,7 +262,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 {
   svn_diff__file_baton_t *file_baton = baton;
   svn_diff__file_token_t *file_token;
-  int idx;
+  struct file_info *file = &file_baton->files[datasource_to_index(datasource)];
   char *endp;
   char *curp;
   char *eol;
@@ -265,15 +274,13 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
   *token = NULL;
 
-  idx = datasource_to_index(datasource);
+  curp = file->curp;
+  endp = file->endp;
 
-  curp = file_baton->curp[idx];
-  endp = file_baton->endp[idx];
-
-  last_chunk = offset_to_chunk(file_baton->size[idx]);
+  last_chunk = offset_to_chunk(file->size);
 
   if (curp == endp
-      && last_chunk == file_baton->chunk[idx])
+      && last_chunk == file->chunk)
     {
       return SVN_NO_ERROR;
     }
@@ -290,8 +297,8 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
     }
 
   file_token->datasource = datasource;
-  file_token->offset = chunk_to_offset(file_baton->chunk[idx])
-                       + (curp - file_baton->buffer[idx]);
+  file_token->offset = chunk_to_offset(file->chunk)
+                       + (curp - file->buffer);
   file_token->raw_length = 0;
   file_token->length = 0;
 
@@ -312,7 +319,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
             }
         }
 
-      if (file_baton->chunk[idx] == last_chunk)
+      if (file->chunk == last_chunk)
         {
           eol = endp;
           break;
@@ -321,21 +328,21 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
       length = endp - curp;
       file_token->raw_length += length;
       svn_diff__normalize_buffer(&curp, &length,
-                                 &file_baton->normalize_state[idx],
+                                 &file->normalize_state,
                                  curp, file_baton->options);
       file_token->length += length;
       h = svn_diff__adler32(h, curp, length);
 
-      curp = endp = file_baton->buffer[idx];
-      file_baton->chunk[idx]++;
-      length = file_baton->chunk[idx] == last_chunk ?
-        offset_in_chunk(file_baton->size[idx]) : CHUNK_SIZE;
+      curp = endp = file->buffer;
+      file->chunk++;
+      length = file->chunk == last_chunk ?
+        offset_in_chunk(file->size) : CHUNK_SIZE;
       endp += length;
-      file_baton->endp[idx] = endp;
+      file->endp = endp;
 
-      SVN_ERR(read_chunk(file_baton->file[idx], file_baton->path[idx],
+      SVN_ERR(read_chunk(file->file, file->path,
                          curp, length,
-                         chunk_to_offset(file_baton->chunk[idx]),
+                         chunk_to_offset(file->chunk),
                          file_baton->pool));
 
       /* If the last chunk ended in a CR, we're done. */
@@ -350,7 +357,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
   length = eol - curp;
   file_token->raw_length += length;
-  file_baton->curp[idx] = eol;
+  file->curp = eol;
 
   /* If the file length is exactly a multiple of CHUNK_SIZE, we will end up
    * with a spurious empty token.  Avoid returning it.
@@ -361,7 +368,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
     {
       char *c = curp;
       svn_diff__normalize_buffer(&c, &length,
-                                 &file_baton->normalize_state[idx],
+                                 &file->normalize_state,
                                  curp, file_baton->options);
 
       file_token->norm_offset = file_token->offset;
@@ -389,13 +396,12 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
   char buffer[2][COMPARE_CHUNK_SIZE];
   char *bufp[2];
   apr_off_t offset[2];
-  int idx[2];
+  struct file_info *file[2];
   apr_off_t length[2];
   apr_off_t total_length;
   /* How much is left to read of each token from the file. */
   apr_off_t raw_length[2];
   int i;
-  int chunk[2];
   svn_diff__normalize_state_t state[2];
 
   file_token[0] = token1;
@@ -421,17 +427,18 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
 
   for (i = 0; i < 2; ++i)
     {
-      idx[i] = datasource_to_index(file_token[i]->datasource);
+      int idx = datasource_to_index(file_token[i]->datasource);
+
+      file[i] = &file_baton->files[idx];
       offset[i] = file_token[i]->norm_offset;
-      chunk[i] = file_baton->chunk[idx[i]];
       state[i] = svn_diff__normalize_state_normal;
 
-      if (offset_to_chunk(offset[i]) == chunk[i])
+      if (offset_to_chunk(offset[i]) == file[i]->chunk)
         {
           /* If the start of the token is in memory, the entire token is
            * in memory.
            */
-          bufp[i] = file_baton->buffer[idx[i]];
+          bufp[i] = file[i]->buffer;
           bufp[i] += offset_in_chunk(offset[i]);
 
           length[i] = total_length;
@@ -459,15 +466,15 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
                                          NULL,
                                          _("The file '%s' changed unexpectedly"
                                            " during diff"),
-                                         file_baton->path[idx[i]]);
+                                         file[i]->path);
 
               /* Read a chunk from disk into a buffer */
               bufp[i] = buffer[i];
               length[i] = raw_length[i] > COMPARE_CHUNK_SIZE ?
                 COMPARE_CHUNK_SIZE : raw_length[i];
 
-              SVN_ERR(read_chunk(file_baton->file[idx[i]],
-                                 file_baton->path[idx[i]],
+              SVN_ERR(read_chunk(file[i]->file,
+                                 file[i]->path,
                                  bufp[i], length[i], offset[i],
                                  file_baton->pool));
               offset[i] += length[i];
@@ -624,8 +631,8 @@ svn_diff_file_diff_2(svn_diff_t **diff,
 
   memset(&baton, 0, sizeof(baton));
   baton.options = options;
-  baton.path[0] = original;
-  baton.path[1] = modified;
+  baton.files[0].path = original;
+  baton.files[1].path = modified;
   baton.pool = svn_pool_create(pool);
 
   SVN_ERR(svn_diff_diff(diff, &baton, &svn_diff__file_vtable, pool));
@@ -646,9 +653,9 @@ svn_diff_file_diff3_2(svn_diff_t **diff,
 
   memset(&baton, 0, sizeof(baton));
   baton.options = options;
-  baton.path[0] = original;
-  baton.path[1] = modified;
-  baton.path[2] = latest;
+  baton.files[0].path = original;
+  baton.files[1].path = modified;
+  baton.files[2].path = latest;
   baton.pool = svn_pool_create(pool);
 
   SVN_ERR(svn_diff_diff3(diff, &baton, &svn_diff__file_vtable, pool));
@@ -670,10 +677,10 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
 
   memset(&baton, 0, sizeof(baton));
   baton.options = options;
-  baton.path[0] = original;
-  baton.path[1] = modified;
-  baton.path[2] = latest;
-  baton.path[3] = ancestor;
+  baton.files[0].path = original;
+  baton.files[1].path = modified;
+  baton.files[2].path = latest;
+  baton.files[3].path = ancestor;
   baton.pool = svn_pool_create(pool);
 
   SVN_ERR(svn_diff_diff4(diff, &baton, &svn_diff__file_vtable, pool));
@@ -1131,11 +1138,11 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                               apr_pool_t *pool)
 {
   svn_diff__file_output_baton_t baton;
-  int i;
 
   if (svn_diff_contains_diffs(diff))
     {
       const char **c;
+      int i;
 
       memset(&baton, 0, sizeof(baton));
       baton.output_stream = output_stream;
@@ -1162,42 +1169,44 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
       SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.insert_str, "+",
                                             header_encoding, pool));
 
-  if (relative_to_dir)
-    {
-      /* Possibly adjust the "original" and "modified" paths shown in
-         the output (see issue #2723). */
-      const char *child_path;
-
-      if (! original_header)
+      if (relative_to_dir)
         {
-          child_path = svn_dirent_is_child(relative_to_dir,
-                                           original_path, pool);
-          if (child_path)
-            original_path = child_path;
-          else
-            return svn_error_createf(
-                               SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                               _("Path '%s' must be an immediate child of "
-                                 "the directory '%s'"),
-                               svn_dirent_local_style(original_path, pool),
-                               svn_dirent_local_style(relative_to_dir, pool));
-        }
+          /* Possibly adjust the "original" and "modified" paths shown in
+             the output (see issue #2723). */
+          const char *child_path;
 
-      if (! modified_header)
-        {
-          child_path = svn_dirent_is_child(relative_to_dir,
-                                           modified_path, pool);
-          if (child_path)
-            modified_path = child_path;
-          else
-            return svn_error_createf(
-                               SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                               _("Path '%s' must be an immediate child of "
-                                 "the directory '%s'"),
-                               svn_dirent_local_style(modified_path, pool),
-                               svn_dirent_local_style(relative_to_dir, pool));
+          if (! original_header)
+            {
+              child_path = svn_dirent_is_child(relative_to_dir,
+                                               original_path, pool);
+              if (child_path)
+                original_path = child_path;
+              else
+                return svn_error_createf(
+                                   SVN_ERR_BAD_RELATIVE_PATH, NULL,
+                                   _("Path '%s' must be an immediate child of "
+                                     "the directory '%s'"),
+                                   svn_dirent_local_style(original_path, pool),
+                                   svn_dirent_local_style(relative_to_dir,
+                                                          pool));
+            }
+
+          if (! modified_header)
+            {
+              child_path = svn_dirent_is_child(relative_to_dir,
+                                               modified_path, pool);
+              if (child_path)
+                modified_path = child_path;
+              else
+                return svn_error_createf(
+                                   SVN_ERR_BAD_RELATIVE_PATH, NULL,
+                                   _("Path '%s' must be an immediate child of "
+                                     "the directory '%s'"),
+                                   svn_dirent_local_style(modified_path, pool),
+                                   svn_dirent_local_style(relative_to_dir,
+                                                          pool));
+            }
         }
-    }
 
       for (i = 0; i < 2; i++)
         {

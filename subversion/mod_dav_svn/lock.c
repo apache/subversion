@@ -91,7 +91,7 @@ svn_lock_to_dav_lock(dav_lock **dlock,
                                     "<D:owner xmlns:D=\"DAV:\">",
                                     apr_xml_quote_string(pool,
                                                          slock->comment, 1),
-                                    "</D:owner>", NULL);
+                                    "</D:owner>", (char *)NULL);
         }
       else
         {
@@ -133,7 +133,7 @@ unescape_xml(const char **output,
   apr_xml_doc *xml_doc;
   apr_status_t apr_err;
   const char *xml_input = apr_pstrcat
-    (pool, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", input, NULL);
+    (pool, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", input, (char *)NULL);
 
   apr_err = apr_xml_parser_feed(xml_parser, xml_input, strlen(xml_input));
   if (!apr_err)

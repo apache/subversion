@@ -276,7 +276,6 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
                               apr_pool_t *pool)
 {
   svn_repos_revision_access_level_t readability;
-  char action;
 
   SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
                                           authz_read_func, authz_read_baton,
@@ -285,6 +284,7 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
   if (readability == svn_repos_revision_access_full)
     {
       const svn_string_t *old_value;
+      char action;
 
       SVN_ERR(validate_prop(name, new_value, pool));
 
@@ -612,7 +612,6 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
   apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
   svn_fs_root_t *root;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  int i;
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, pool));
@@ -621,6 +620,8 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
   /* Filter out unreadable paths before divining merge tracking info. */
   if (authz_read_func)
     {
+      int i;
+
       for (i = 0; i < paths->nelts; i++)
         {
           svn_boolean_t readable;

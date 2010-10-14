@@ -108,7 +108,7 @@ test_text_retrieval(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
   SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
 
   /* Test values retrieved from our ConfigParser instance against
@@ -159,7 +159,7 @@ test_boolean_retrieval(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
   SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
 
   for (i = 0; true_keys[i] != NULL; i++)
@@ -219,7 +219,7 @@ test_has_section(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
   SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))

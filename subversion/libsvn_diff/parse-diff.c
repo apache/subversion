@@ -150,7 +150,7 @@ parse_range(svn_linenum_t *start, svn_linenum_t *length, char *range)
 {
   char *comma;
 
-  if (strlen(range) == 0)
+  if (*range == 0)
     return FALSE;
 
   comma = strstr(range, ",");

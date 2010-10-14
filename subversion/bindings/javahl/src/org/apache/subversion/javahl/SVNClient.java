@@ -495,8 +495,7 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.0
      */
-    public native void relocate(String from, String to, String path,
-                                boolean recurse)
+    public native void relocate(String from, String to, String path)
             throws ClientException;
 
     /**

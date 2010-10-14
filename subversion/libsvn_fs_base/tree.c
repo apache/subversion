@@ -1775,7 +1775,7 @@ deltify_mutable(svn_fs_t *fs,
        For 1.6 and beyond, we just deltify the current node against its
        predecessors, using skip deltas similar to the way FSFS does.  */
 
-    int pred_count, nlevels, lev, count;
+    int pred_count;
     const svn_fs_id_t *pred_id;
     struct txn_pred_count_args tpc_args;
     apr_pool_t *subpools[2];
@@ -1861,6 +1861,8 @@ deltify_mutable(svn_fs_t *fs,
       }
     else
       {
+        int nlevels, lev, count;
+
         /**** REVERSE DELTA STORAGE ****/
 
         /* Decide how many predecessors to redeltify.  To save overhead,

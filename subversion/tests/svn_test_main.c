@@ -279,7 +279,6 @@ int
 main(int argc, const char *argv[])
 {
   const char *prog_name;
-  int test_num;
   int i;
   svn_boolean_t got_error = FALSE;
   apr_pool_t *pool, *test_pool;
@@ -427,8 +426,9 @@ main(int argc, const char *argv[])
             {
               if (svn_ctype_isdigit(argv[i][0]))
                 {
+                  int test_num = atoi(argv[i]);
+
                   ran_a_test = TRUE;
-                  test_num = atoi(argv[i]);
                   if (do_test_num(prog_name, test_num, FALSE, &opts, test_pool))
                     got_error = TRUE;
 

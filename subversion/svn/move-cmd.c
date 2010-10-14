@@ -84,7 +84,7 @@ svn_cl__move(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-  err = svn_client_move6(targets, dst_path, opt_state->force,
+  err = svn_client_move6(targets, dst_path,
                          TRUE, opt_state->parents, opt_state->revprop_table,
                          svn_cl__print_commit_info, NULL, ctx, pool);
 

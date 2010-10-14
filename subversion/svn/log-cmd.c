@@ -163,9 +163,6 @@ log_entry_receiver(void *baton,
   const char *date;
   const char *message;
 
-  /* Number of lines in the msg. */
-  int lines;
-
   if (lb->ctx->cancel_func)
     SVN_ERR(lb->ctx->cancel_func(lb->ctx->cancel_baton));
 
@@ -201,7 +198,9 @@ log_entry_receiver(void *baton,
 
   if (message != NULL)
     {
-      lines = svn_cstring_count_newlines(message) + 1;
+      /* Number of lines in the msg. */
+      int lines = svn_cstring_count_newlines(message) + 1;
+
       SVN_ERR(svn_cmdline_printf(pool,
                                  Q_(" | %d line", " | %d lines", lines),
                                  lines));
@@ -631,9 +630,9 @@ svn_cl__log(apr_getopt_t *os,
           range = APR_ARRAY_IDX(opt_state->revision_ranges, i,
                                 svn_opt_revision_range_t *);
           if (range->start.value.number < range->end.value.number)
-            range->start = range->end;
+            range->start.value.number++;
           else
-            range->end = range->start;
+            range->end.value.number++;
         }
     }
 

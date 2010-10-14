@@ -282,7 +282,7 @@ do_lock(svn_lock_t **lock,
                            "<D:owner>",
                            apr_xml_quote_string(pool, comment, 0),
                            "</D:owner>",
-                           NULL)
+                           (char *)NULL)
              : "");
 
   extra_headers = apr_hash_make(req->pool);
