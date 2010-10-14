@@ -27,7 +27,10 @@ changes have to be made in the repository.  Some examples:
                              A /X (from /S@N)   M /X/T
                                                 (with local mods)
 
-  /S@N    /S/T@M             A /X (from /S@N)   A /X/T (from /S/A@M)
+  /S@N    /S/T@M             A /X (from /S@N)
+                             (if server finds T@M is same thing as T@N)
+                             or
+                             A /X (from /S@N)   A /X/T (from /S/A@M)
                              or
                              A /X (from /S@N)   R /X/T (from /S/A@M)
                                                 (the FS layer converts
