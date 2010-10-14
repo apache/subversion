@@ -340,7 +340,7 @@ run_revert(svn_wc__db_t *db,
 
   if (! is_wc_root) {
     /* A working copy root can't have a working node. Don't try removing. */
-    const char *op_root_abspath;
+    const char *op_root_abspath = NULL;
 
 
 
