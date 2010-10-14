@@ -334,6 +334,10 @@ svn_io_open_uniquely_named(apr_file_t **file,
   unsigned int i;
   struct temp_file_cleanup_s *baton = NULL;
 
+  /* At the beginning, we don't know whether unique_path will need 
+     UTF8 conversion */
+  svn_boolean_t needs_utf8_conversion = TRUE;
+
   SVN_ERR_ASSERT(file || unique_path);
 
   if (dirpath == NULL)
@@ -374,6 +378,11 @@ svn_io_open_uniquely_named(apr_file_t **file,
       if (delete_when == svn_io_file_del_on_close)
         flag |= APR_DELONCLOSE;
 
+      /* Increase the chance that rand() will return something truely
+         independent from what others get or do. */
+      if (i == 2)
+        srand(apr_time_now());
+
       /* Special case the first attempt -- if we can avoid having a
          generated numeric portion at all, that's best.  So first we
          try with just the suffix; then future tries add a number
@@ -384,17 +393,35 @@ svn_io_open_uniquely_named(apr_file_t **file,
          This is good, since "1" would misleadingly imply that
          the second attempt was actually the first... and if someone's
          got conflicts on their conflicts, we probably don't want to
-         add to their confusion :-). */
+         add to their confusion :-). 
+
+         Also, the randomization used to minimize the number of re-try 
+         cycles will interfere with certain tests that compare working
+         copies etc.
+       */
       if (i == 1)
         unique_name = apr_psprintf(scratch_pool, "%s%s", path, suffix);
       else
-        unique_name = apr_psprintf(scratch_pool, "%s.%u%s", path, i, suffix);
+        unique_name = apr_psprintf(scratch_pool, "%s.%u_%x%s", path, i, rand(), suffix);
 
       /* Hmmm.  Ideally, we would append to a native-encoding buf
          before starting iteration, then convert back to UTF-8 for
          return. But I suppose that would make the appending code
          sensitive to i18n in a way it shouldn't be... Oh well. */
-      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, scratch_pool));
+      if (needs_utf8_conversion)
+        {
+          SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, scratch_pool));
+          if (i == 1)
+            {
+              /* The variable parts of unique_name will not require UTF8
+                 conversion. Therefore, if UTF8 conversion had no effect
+                 on it in the first iteration, it won't require conversion
+                 in any future interation. */
+              needs_utf8_conversion = strcmp(unique_name_apr, unique_name);
+            }
+        }
+      else
+        unique_name_apr = unique_name;
 
       apr_err = file_open(&try_file, unique_name_apr, flag,
                           APR_OS_DEFAULT, FALSE, result_pool);
