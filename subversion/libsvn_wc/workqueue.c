@@ -187,6 +187,7 @@ run_revert(svn_wc__db_t *db,
   const char *parent_abspath;
   svn_boolean_t conflicted;
   apr_int64_t val;
+  svn_boolean_t is_wc_root;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
@@ -207,10 +208,16 @@ run_revert(svn_wc__db_t *db,
             scratch_pool, scratch_pool));
 
   if (kind == svn_wc__db_kind_dir)
-    parent_abspath = local_abspath;
+    {
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, local_abspath,
+                                   scratch_pool));
+      parent_abspath = local_abspath;
+    }
   else
-    parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
+    {
+      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      is_wc_root = FALSE; /* non-directories can't be roots */
+    }
 
   if (conflicted)
     {
@@ -331,33 +338,26 @@ run_revert(svn_wc__db_t *db,
     }
 
 
-  {
-    svn_boolean_t is_wc_root;
+  if (is_wc_root)
+    /* ### A working copy root can't have a working node. Don't try removing. */
+    return SVN_NO_ERROR;
 
-    SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
-                                  db, local_abspath, scratch_pool));
 
-    /* Remove the WORKING_NODE from the node and (if there) its parent stub */
-    /* ### A working copy root can't have a working node and trying
-       ### to delete it fails because the root doesn't have a stub. */
-    if (!is_wc_root)
-      {
-        const char *op_root_abspath = NULL;
+  /* Remove the WORKING version of the node */
+  const char *op_root_abspath = NULL;
 
-        /* If the node is not the operation root, we should not delete
-           the working node */
-        if (status == svn_wc__db_status_added)
-          SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL,
-                                           db, local_abspath,
-                                           scratch_pool, scratch_pool));
+  /* If the node is not the operation root,
+     we should not delete the working node */
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool));
 
-        if (!op_root_abspath
-            || (strcmp(op_root_abspath, local_abspath) == 0))
-          SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
-                                                    scratch_pool));
-      }
-  }
+  if (!op_root_abspath
+      || (strcmp(op_root_abspath, local_abspath) == 0))
+    SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
+                                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
