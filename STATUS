@@ -32,6 +32,8 @@ They will be merged into /trunk after passing the review.
    longer. This seems to hurt SVN developers more often than
    ordinary users (process gets killed more frequently) but it also
    makes the client less sensitive to cluttered TEMP folders etc.
+ Merge:
+   Merged to trunk in r1022707.
 
 * r985477
  Eliminate OS overhead for determining the default permissions for
