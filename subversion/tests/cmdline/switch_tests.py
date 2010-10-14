@@ -2778,7 +2778,7 @@ def tree_conflicts_on_switch_2_2(sbox):
                         'DF/D1',
                         'DDD/D1',
                         'DDF/D1',
-                        status='! ', wc_rev=None)
+                        status='! ', treeconflict='C', wc_rev=None)
   # Remove from expected status and disk everything below the deleted paths.
   expected_status.remove('DD/D1/D2',
                          'DF/D1/beta',
