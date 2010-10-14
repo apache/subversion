@@ -338,28 +338,26 @@ run_revert(svn_wc__db_t *db,
     }
 
 
-  if (is_wc_root)
-    /* ### A working copy root can't have a working node. Don't try removing. */
-    return SVN_NO_ERROR;
+  if (! is_wc_root) {
+    /* A working copy root can't have a working node. Don't try removing. */
+    const char *op_root_abspath;
 
 
-  /* Remove the WORKING version of the node */
-  /* If the node is not the operation root,
-     we should not delete the working node */
-  if (status == svn_wc__db_status_added)
-    {
-      const char *op_root_abspath = NULL;
 
+    /* Remove the WORKING version of the node */
+    /* If the node is not the operation root,
+       we should not delete the working node */
+    if (status == svn_wc__db_status_added)
       SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
 
-      if (!op_root_abspath
-          || (strcmp(op_root_abspath, local_abspath) == 0))
-        SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
-                                                  scratch_pool));
-    }
+    if (!op_root_abspath
+        || (strcmp(op_root_abspath, local_abspath) == 0))
+      SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
+                                                scratch_pool));
+  }
 
   return SVN_NO_ERROR;
 }
