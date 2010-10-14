@@ -149,10 +149,10 @@ Valid options:
                                 'PREV'       revision just before COMMITTED
   -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
   --depth ARG              : limit operation by depth ARG ('empty', 'files',
-                            'immediates', or 'infinity')
+                             'immediates', or 'infinity')
   --set-depth ARG          : set new working copy depth to ARG ('exclude',
-                            'empty', 'files', 'immediates', or 'infinity')
-                            [alias: --sd]
+                             'empty', 'files', 'immediates', or 'infinity')
+                             [alias: --sd]
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
@@ -160,7 +160,7 @@ Valid options:
                              [alias: --ie]
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
-                            ('postpone', 'base', 'mine-conflict',
+                             ('postpone', 'base', 'mine-conflict',
                              'theirs-conflict', 'mine-full', 'theirs-full',
                              'edit', 'launch')
 
