@@ -367,7 +367,9 @@ get_pristine_fname(const char **pristine_abspath,
 }
 
 
-/* */
+/* Look up REPOS_ID in SDB and set *REPOS_ROOT_URL and/or *REPOS_UUID to
+ * its root URL and UUID respectively.  Either output parameter may be
+ * NULL if not wanted. */
 static svn_error_t *
 fetch_repos_info(const char **repos_root_url,
                  const char **repos_uuid,
