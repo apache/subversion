@@ -78,6 +78,26 @@ conflict_working, tree_conflict_data, properties
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_SELECT_NODE_CHILDREN_INFO
+/* Getting rows in an advantageous order using
+     ORDER BY local_relpath, op_depth DESC
+   turns out to be slower than getting rows in a random order and making the
+   C code handle it. */
+SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
+  checksum, translated_size, changed_revision, changed_date, changed_author,
+  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
+  lock_comment, lock_date, local_relpath
+FROM nodes
+LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
+  AND nodes.repos_path = lock.repos_relpath
+WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_CHILDREN_INFO
+SELECT prop_reject, changelist, conflict_old, conflict_new,
+conflict_working, tree_conflict_data, properties, local_relpath
+FROM actual_node
+WHERE wc_id = ?1 AND parent_relpath = ?2;
+
 -- STMT_SELECT_REPOSITORY_BY_ID
 SELECT root, uuid FROM repository WHERE id = ?1;
 
