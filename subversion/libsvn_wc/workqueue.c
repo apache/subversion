@@ -278,7 +278,7 @@ run_revert(svn_wc__db_t *db,
     {
       SVN__NOT_IMPLEMENTED();
     }
-  else if (kind == svn_wc__db_kind_dir)
+  else if (reinstall_working && kind == svn_wc__db_kind_dir)
     {
       svn_node_kind_t on_disk;
 
