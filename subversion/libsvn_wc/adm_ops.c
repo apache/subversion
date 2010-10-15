@@ -1369,6 +1369,15 @@ revert_internal(svn_wc__db_t *db,
         case svn_wc__db_status_excluded:
           unversioned = TRUE;
           break;
+        case svn_wc__db_status_incomplete:
+          /* Remove NAME from PATH's entries file
+
+             Not being able to revert incomplete entries breaks working
+             copies flat out, but the usual revert process can't be
+             applied.  Most preconditions aren't met. */
+          SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath, pool));
+          return SVN_NO_ERROR;
+          break;
         default:
           unversioned = FALSE;
           break;
