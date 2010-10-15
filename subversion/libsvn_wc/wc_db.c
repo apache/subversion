@@ -7478,42 +7478,22 @@ start_directory_update_txn(void *baton,
                            apr_pool_t *scratch_pool)
 {
   struct start_directory_update_baton *du = baton;
-  const char *repos_relpath;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, NULL, NULL,
-                                     du->db, du->local_abspath,
-                                     scratch_pool, scratch_pool));
+  /* Note: In the majority of calls, the repos_relpath is unchanged. */
+  /* ### TODO: Maybe check if we can make repos_relpath NULL. */
+  SVN_ERR(svn_sqlite__get_statement(
+               &stmt, db,
+               STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH));
 
-  if (strcmp(du->new_repos_relpath, repos_relpath) == 0)
-    {
-      /* Just update revision and status */
-      SVN_ERR(svn_sqlite__get_statement(
-                        &stmt, db,
-                        STMT_UPDATE_BASE_NODE_PRESENCE_AND_REVNUM));
+  SVN_ERR(svn_sqlite__bindf(stmt, "istis",
+                            du->wc_id,
+                            du->local_relpath,
+                            presence_map, svn_wc__db_status_incomplete,
+                            (apr_int64_t)du->new_rev,
+                            du->new_repos_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "isti",
-                                du->wc_id,
-                                du->local_relpath,
-                                presence_map, svn_wc__db_status_incomplete,
-                                (apr_int64_t)du->new_rev));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-  else
-    {
-      /* ### TODO: Maybe check if we can make repos_relpath NULL. */
-      SVN_ERR(svn_sqlite__get_statement(
-                   &stmt, db,
-                   STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH));
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "istis",
-                                du->wc_id,
-                                du->local_relpath,
-                                presence_map, svn_wc__db_status_incomplete,
-                                (apr_int64_t)du->new_rev,
-                                du->new_repos_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
   return SVN_NO_ERROR;
 }
 
