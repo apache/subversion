@@ -1250,11 +1250,13 @@ svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 revert_admin_things(svn_boolean_t *reverted,
                     svn_wc__db_t *db,
+                    const char *revert_root,
                     const char *local_abspath,
                     svn_boolean_t use_commit_times,
                     apr_pool_t *pool)
 {
-  SVN_ERR(svn_wc__wq_add_revert(reverted, db, local_abspath, use_commit_times,
+  SVN_ERR(svn_wc__wq_add_revert(reverted, db,
+                                revert_root, local_abspath, use_commit_times,
                                 pool));
   SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));
 
@@ -1277,6 +1279,7 @@ revert_admin_things(svn_boolean_t *reverted,
 static svn_error_t *
 revert_entry(svn_depth_t *depth,
              svn_wc__db_t *db,
+             const char *revert_root,
              const char *local_abspath,
              svn_node_kind_t disk_kind,
              svn_boolean_t use_commit_times,
@@ -1326,89 +1329,9 @@ revert_entry(svn_depth_t *depth,
   else
     is_add_root = FALSE;
 
-  /* Additions. */
-  if (!replaced
-      && is_add_root)
-    {
-      const char *repos_relpath;
-      const char *repos_root_url;
-      const char *repos_uuid;
-      /* Before removing item from revision control, notice if the
-         BASE_NODE is in a 'not-present' state. */
-      svn_boolean_t was_not_present = FALSE;
-
-      /* NOTE: if WAS_NOT_PRESENT gets set, then we have BASE nodes.
-         The code below will then figure out the repository information, so
-         that we can later insert a node for the same repository. */
-
-      if (have_base
-          && base_status == svn_wc__db_status_not_present)
-        {
-          /* Remember the BASE revision. (already handled)  */
-          /* Remember the repository this node is associated with.  */
-
-          was_not_present = TRUE;
-
-          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                             &repos_root_url,
-                                             &repos_uuid,
-                                             db, local_abspath,
-                                             pool, pool));
-        }
-
-      /* ### much of this is probably bullshit. we should be able to just
-         ### remove the WORKING and ACTUAL rows, and be done. but we're
-         ### not quite there yet, so nodes get fully removed and then
-         ### shoved back into the database. this is why we need to record
-         ### the repository information, and the BASE revision.  */
-
-      if (kind == svn_wc__db_kind_file
-          || kind == svn_wc__db_kind_dir)
-        {
-          SVN_ERR(svn_wc__internal_remove_from_revision_control(db,
-                                                                local_abspath,
-                                                                FALSE, FALSE,
-                                                                cancel_func,
-                                                                cancel_baton,
-                                                                pool));
-        }
-      else  /* Else it's `none', or something exotic like a symlink... */
-        {
-          return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                                   _("Unknown or unexpected kind for path "
-                                     "'%s'"),
-                                   svn_dirent_local_style(local_abspath,
-                                                          pool));
-
-        }
-
-      /* Recursivity is taken care of by svn_wc_remove_from_revision_control,
-         and we've definitely reverted PATH at this point. */
-      *depth = svn_depth_empty;
-      reverted = TRUE;
-
-      /* If the removed item was *also* in a 'not-present' state, make
-         sure we leave a not-present node behind */
-      if (was_not_present)
-        {
-          SVN_ERR(svn_wc__db_base_add_not_present_node(
-                    db, local_abspath,
-                    repos_relpath, repos_root_url, repos_uuid,
-                    base_revision,
-                    base_kind,
-                    NULL, NULL,
-                    pool));
-        }
-    }
-  /* Regular prop and text edit. */
-  /* Deletions and replacements. */
-  else if (status == svn_wc__db_status_normal
-           || status == svn_wc__db_status_deleted
-           || replaced
-           || (status == svn_wc__db_status_added && !is_add_root))
     {
       /* Revert the prop and text mods (if any). */
-      SVN_ERR(revert_admin_things(&reverted, db, local_abspath,
+      SVN_ERR(revert_admin_things(&reverted, db, revert_root, local_abspath,
                                   use_commit_times, pool));
 
       /* Force recursion on replaced directories. */
@@ -1496,6 +1419,7 @@ verify_revert_depth(svn_wc__db_t *db,
    documentation. */
 static svn_error_t *
 revert_internal(svn_wc__db_t *db,
+                const char *revert_root,
                 const char *local_abspath,
                 svn_depth_t depth,
                 svn_boolean_t use_commit_times,
@@ -1510,7 +1434,9 @@ revert_internal(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
   svn_boolean_t unversioned;
+  svn_boolean_t have_base;
   const svn_wc_conflict_description2_t *tree_conflict;
+  const char *op_root_abspath = NULL;
   svn_error_t *err;
 
   /* Check cancellation here, so recursive calls get checked early. */
@@ -1523,7 +1449,7 @@ revert_internal(svn_wc__db_t *db,
   err = svn_wc__db_read_info(&status, &db_kind,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, &have_base, NULL, NULL,
                              NULL,
                              db, local_abspath, pool, pool);
 
@@ -1595,17 +1521,17 @@ revert_internal(svn_wc__db_t *db,
        _("Cannot revert '%s': unsupported node kind in working copy"),
        svn_dirent_local_style(local_abspath, pool));
 
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     db, local_abspath, pool, pool));
+
   /* Safeguard 4:  Make sure we don't revert deeper then asked */
   if (status == svn_wc__db_status_added
       && db_kind == svn_wc__db_kind_dir
       && depth >= svn_depth_empty
       && depth < svn_depth_infinity)
     {
-      const char *op_root_abspath;
-      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, local_abspath, pool, pool));
-
       /* If this node is an operation root for a copy/add, then reverting
          it will change its descendants, if it has any. */
       if (strcmp(local_abspath, op_root_abspath) == 0)
@@ -1634,7 +1560,7 @@ revert_internal(svn_wc__db_t *db,
       /* Actually revert this entry.  If this is a working copy root,
          we provide a base_name from the parent path. */
       if (!unversioned)
-        SVN_ERR(revert_entry(&depth, db, local_abspath, disk_kind,
+        SVN_ERR(revert_entry(&depth, db, revert_root, local_abspath, disk_kind,
                              use_commit_times,
                              cancel_func, cancel_baton,
                              &reverted, pool));
@@ -1645,6 +1571,15 @@ revert_internal(svn_wc__db_t *db,
                        svn_wc_create_notify(local_abspath,
                                             svn_wc_notify_revert, pool),
                        pool);
+    }
+
+
+  if (op_root_abspath && strcmp(local_abspath, op_root_abspath) == 0)
+    /* If this is a copy or add root, disable notifications for the children,
+       because wc-1.0 used to behave like that. */
+    {
+      notify_func = NULL;
+      notify_baton = NULL;
     }
 
   /* Finally, recurse if requested. */
@@ -1690,7 +1625,7 @@ revert_internal(svn_wc__db_t *db,
             continue;
 
           /* Revert the entry. */
-          SVN_ERR(revert_internal(db, node_abspath,
+          SVN_ERR(revert_internal(db, revert_root, node_abspath,
                                   depth_under_here, use_commit_times,
                                   changelist_hash, cancel_func, cancel_baton,
                                   notify_func, notify_baton, iterpool));
@@ -1734,7 +1669,8 @@ revert_internal(svn_wc__db_t *db,
                                 const svn_wc_conflict_description2_t *);
 
                 if (conflict->kind == svn_wc_conflict_kind_tree)
-                  SVN_ERR(revert_internal(db, conflict->local_abspath,
+                  SVN_ERR(revert_internal(db, revert_root,
+                                          conflict->local_abspath,
                                           svn_depth_empty,
                                           use_commit_times, changelist_hash,
                                           cancel_func, cancel_baton,
@@ -1745,6 +1681,14 @@ revert_internal(svn_wc__db_t *db,
       }
 
       svn_pool_destroy(iterpool);
+    }
+
+  if (! have_base && status == svn_wc__db_status_added
+      && db_kind == svn_wc__db_kind_dir)
+    {
+      /* Non-replacements have their admin area deleted. wc-1.0 */
+      SVN_ERR(svn_wc__adm_destroy(db, local_abspath,
+                                  cancel_func, cancel_baton, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1769,7 +1713,7 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
   return svn_error_return(revert_internal(wc_ctx->db,
-                                          local_abspath, depth,
+                                          local_abspath, local_abspath, depth,
                                           use_commit_times, changelist_hash,
                                           cancel_func, cancel_baton,
                                           notify_func, notify_baton,

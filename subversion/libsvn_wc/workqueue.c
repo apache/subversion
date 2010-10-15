@@ -186,14 +186,14 @@ run_revert(svn_wc__db_t *db,
   const char *parent_abspath;
   svn_boolean_t conflicted;
   apr_int64_t val;
-  svn_boolean_t is_wc_root;
   svn_boolean_t reinstall_working;
+  svn_boolean_t remove_working;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
 
-  /* ### OP_DEPTH legacy; to be removed. */
   SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
+  remove_working = (val != 0);
 
   SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
   reinstall_working = (val != 0);
@@ -213,14 +213,11 @@ run_revert(svn_wc__db_t *db,
 
   if (kind == svn_wc__db_kind_dir)
     {
-      SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, local_abspath,
-                                   scratch_pool));
       parent_abspath = local_abspath;
     }
   else
     {
       parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-      is_wc_root = FALSE; /* non-directories can't be roots */
     }
 
   if (conflicted)
@@ -294,26 +291,11 @@ run_revert(svn_wc__db_t *db,
     }
 
 
-  if (! is_wc_root) {
-    /* A working copy root can't have a working node. Don't try removing. */
-    const char *op_root_abspath = NULL;
-
-
-
-    /* Remove the WORKING version of the node */
-    /* If the node is not the operation root,
-       we should not delete the working node */
-    if (status == svn_wc__db_status_added)
-      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-
-    if (!op_root_abspath
-        || (strcmp(op_root_abspath, local_abspath) == 0))
+  if (remove_working)
+    {
       SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
                                                 scratch_pool));
-  }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -363,6 +345,7 @@ verify_pristine_present(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                       svn_wc__db_t *db,
+                      const char *revert_root,
                       const char *local_abspath,
                       svn_boolean_t use_commit_times,
                       apr_pool_t *scratch_pool)
@@ -370,6 +353,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_boolean_t replaced;
+  svn_boolean_t remove_working = FALSE;
   svn_boolean_t reinstall_working;
 
   SVN_ERR(svn_wc__db_read_info(
@@ -380,8 +364,11 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
-  /* Special handling for issue #2101.  */
-  if (kind == svn_wc__db_kind_file)
+  /* Special handling for issue #2101, which is specifically
+     about reverting copies of 'deleted' files and dirs, being inserted
+     in the copy as a schedule-delete files, yet can't be reverted. */
+  if (kind == svn_wc__db_kind_file
+      && status == svn_wc__db_status_deleted)
     SVN_ERR(verify_pristine_present(db, local_abspath, scratch_pool));
 
   /* Gather a few items *before* the revert work-item has a chance to run.
@@ -447,6 +434,26 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
       *will_revert = *will_revert || reinstall_working;
     }
 
+
+  if (status == svn_wc__db_status_added)
+    {
+      /* When looking at an added, non-replacing node, it's entry
+         will have to be removed after revert: if not, it'll look
+         like it's still under version control. */
+      const char *op_root_abspath;
+
+      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      if (svn_dirent_is_ancestor(revert_root, op_root_abspath))
+        remove_working = TRUE;
+    }
+  else
+    remove_working = TRUE;
+
+
   /* Don't even bother to queue a work item if there is nothing to do.  */
   if (*will_revert)
     {
@@ -458,10 +465,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
          we only need the work_item to survive for the duration of wq_add.  */
       svn_skel__prepend_int(use_commit_times, work_item, scratch_pool);
       svn_skel__prepend_int(reinstall_working, work_item, scratch_pool);
-
-      /* ### OP_DEPTH The 'replaced' item is here for backward compat;
-         the wq-consumer doesn't use this value anymore. */
-      svn_skel__prepend_int(replaced, work_item, scratch_pool);
+      svn_skel__prepend_int(remove_working, work_item, scratch_pool);
       svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
       svn_skel__prepend_str(OP_REVERT, work_item, scratch_pool);
 
