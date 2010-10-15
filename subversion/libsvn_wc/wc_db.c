@@ -225,6 +225,15 @@ add_work_items(svn_sqlite__db_t *sdb,
                const svn_skel_t *skel,
                apr_pool_t *scratch_pool);
 
+static svn_error_t *
+insert_incomplete_children(svn_sqlite__db_t *sdb,
+                           apr_int64_t wc_id,
+                           const char *local_relpath,
+                           svn_revnum_t revision,
+                           const apr_array_header_t *children,
+                           apr_int64_t op_depth,
+                           apr_pool_t *scratch_pool);
+
 
 /* */
 static svn_filesize_t
@@ -633,28 +642,12 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   if (pibb->kind == svn_wc__db_kind_dir && pibb->children)
-    {
-      int i;
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
-
-      for (i = pibb->children->nelts; i--; )
-        {
-          const char *name = APR_ARRAY_IDX(pibb->children, i, const char *);
-
-          SVN_ERR(svn_sqlite__bindf(stmt, "isisnnrsns",
-                                    pibb->wc_id,
-                                    svn_relpath_join(pibb->local_relpath,
-                                                     name,
-                                                     scratch_pool),
-                                    (apr_int64_t)0 /* BASE */,
-                                    pibb->local_relpath, /* parent_relpath */
-                                    pibb->revision,
-                                    "incomplete",
-                                    "unknown"));
-          SVN_ERR(svn_sqlite__insert(NULL, stmt));
-        }
-    }
+    SVN_ERR(insert_incomplete_children(sdb, pibb->wc_id,
+                                       pibb->local_relpath,
+                                       pibb->revision,
+                                       pibb->children,
+                                       0 /* BASE */,
+                                       scratch_pool));
 
   SVN_ERR(add_work_items(sdb, pibb->work_items, scratch_pool));
 
@@ -742,16 +735,19 @@ copy_working_from_base(void *baton,
 }
 
 
-/* Insert WORKING rows for each (const char *) child name in CHILDREN,
-   whose parent directory is LOCAL_RELPATH.  For each child, set
-   presence='incomplete', kind='unknown', op_depth=OP_DEPTH. */
+/* Insert a row in NODES for each (const char *) child name in CHILDREN,
+   whose parent directory is LOCAL_RELPATH, at op_depth=OP_DEPTH.  Set each
+   child's presence to 'incomplete', kind to 'unknown', and revision to
+   REVISION (which should match the parent's revision).  The child's
+   repos_id and repos_relpath will be inherited from the parent. */
 static svn_error_t *
-insert_incomplete_working_children(svn_sqlite__db_t *sdb,
-                                   apr_int64_t wc_id,
-                                   const char *local_relpath,
-                                   const apr_array_header_t *children,
-                                   apr_int64_t op_depth,
-                                   apr_pool_t *scratch_pool)
+insert_incomplete_children(svn_sqlite__db_t *sdb,
+                           apr_int64_t wc_id,
+                           const char *local_relpath,
+                           svn_revnum_t revision,
+                           const apr_array_header_t *children,
+                           apr_int64_t op_depth,
+                           apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   int i;
@@ -762,12 +758,13 @@ insert_incomplete_working_children(svn_sqlite__db_t *sdb,
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "isisnnnsns",
+      SVN_ERR(svn_sqlite__bindf(stmt, "isisnnrsns",
                                 wc_id,
                                 svn_relpath_join(local_relpath, name,
                                                  scratch_pool),
                                 op_depth,
                                 local_relpath,
+                                revision,
                                 "incomplete", /* 8, presence */
                                 "unknown"));  /* 10, kind */
 
@@ -842,11 +839,12 @@ insert_working_node(void *baton,
      (The only time we'd want a different depth is during a recursive
      simple add, but we never insert children here during a simple add.) */
   if (piwb->kind == svn_wc__db_kind_dir && piwb->children)
-    SVN_ERR(insert_incomplete_working_children(sdb, piwb->wc_id,
-                                               piwb->local_relpath,
-                                               piwb->children,
-                                               piwb->op_depth,
-                                               scratch_pool));
+    SVN_ERR(insert_incomplete_children(sdb, piwb->wc_id,
+                                       piwb->local_relpath,
+                                       piwb->original_revnum,
+                                       piwb->children,
+                                       piwb->op_depth,
+                                       scratch_pool));
 
   SVN_ERR(add_work_items(sdb, piwb->work_items, scratch_pool));
 
@@ -2912,12 +2910,13 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__step_done(stmt));
 
       if (kind == svn_wc__db_kind_dir)
-        SVN_ERR(insert_incomplete_working_children(dst_pdh->wcroot->sdb,
-                                                   dst_pdh->wcroot->wc_id,
-                                                   dst_relpath,
-                                                   children,
-                                                   op_depth,
-                                                   scratch_pool));
+        SVN_ERR(insert_incomplete_children(dst_pdh->wcroot->sdb,
+                                           dst_pdh->wcroot->wc_id,
+                                           dst_relpath,
+                                           copyfrom_rev,
+                                           children,
+                                           op_depth,
+                                           scratch_pool));
     }
   else
     {
