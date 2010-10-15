@@ -1246,106 +1246,6 @@ svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
 */
 
 
-/* */
-static svn_error_t *
-revert_admin_things(svn_boolean_t *reverted,
-                    svn_wc__db_t *db,
-                    const char *revert_root,
-                    const char *local_abspath,
-                    svn_boolean_t use_commit_times,
-                    apr_pool_t *pool)
-{
-  SVN_ERR(svn_wc__wq_add_revert(reverted, db,
-                                revert_root, local_abspath, use_commit_times,
-                                pool));
-  SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Revert LOCAL_ABSPATH in DB, where the on-disk node kind is DISK_KIND.
-   *DEPTH is the depth of the reversion crawl the caller is
-   using; this function may choose to override that value as needed.
-
-   See svn_wc_revert4() for the interpretations of
-   USE_COMMIT_TIMES, CANCEL_FUNC and CANCEL_BATON.
-
-   Set *DID_REVERT to true if actually reverting anything, else do not
-   touch *DID_REVERT.
-
-   Use POOL for allocations.
- */
-static svn_error_t *
-revert_entry(svn_depth_t *depth,
-             svn_wc__db_t *db,
-             const char *revert_root,
-             const char *local_abspath,
-             svn_node_kind_t disk_kind,
-             svn_boolean_t use_commit_times,
-             svn_cancel_func_t cancel_func,
-             void *cancel_baton,
-             svn_boolean_t *did_revert,
-             apr_pool_t *pool)
-{
-  svn_wc__db_status_t status, base_status;
-  svn_wc__db_kind_t kind, base_kind;
-  svn_boolean_t replaced;
-  svn_boolean_t have_base;
-  svn_revnum_t base_revision;
-  svn_boolean_t is_add_root;
-
-  /* Initialize this even though revert_admin_things() is guaranteed
-     to set it, because we don't know that revert_admin_things() will
-     be called. */
-  svn_boolean_t reverted = FALSE;
-
-  SVN_ERR(svn_wc__db_read_info(&status, &kind,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &have_base, NULL,
-                               NULL, NULL,
-                               db, local_abspath, pool, pool));
-
-  if (have_base)
-    SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, &base_revision,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL,
-                                     db, local_abspath, pool, pool));
-
-  replaced = (status == svn_wc__db_status_added
-              && have_base
-              && base_status != svn_wc__db_status_not_present);
-
-  if (status == svn_wc__db_status_added)
-    {
-      const char *op_root_abspath;
-      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, local_abspath, pool, pool));
-
-      is_add_root = (strcmp(op_root_abspath, local_abspath) == 0);
-    }
-  else
-    is_add_root = FALSE;
-
-    {
-      /* Revert the prop and text mods (if any). */
-      SVN_ERR(revert_admin_things(&reverted, db, revert_root, local_abspath,
-                                  use_commit_times, pool));
-
-      /* Force recursion on replaced directories. */
-      if (kind == svn_wc__db_kind_dir && replaced)
-        *depth = svn_depth_infinity;
-    }
-
-  /* If PATH was reverted, tell our client that. */
-  if (reverted)
-    *did_revert = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
 /* Verifies if an add (or copy) to LOCAL_ABSPATH can be reverted with depth
  * DEPTH, without touching nodes that are filtered by DEPTH.
  *
@@ -1431,10 +1331,11 @@ revert_internal(svn_wc__db_t *db,
                 apr_pool_t *pool)
 {
   svn_node_kind_t disk_kind;
-  svn_wc__db_status_t status;
+  svn_wc__db_status_t status, base_status;
   svn_wc__db_kind_t db_kind;
   svn_boolean_t unversioned;
   svn_boolean_t have_base;
+  svn_boolean_t replaced;
   const svn_wc_conflict_description2_t *tree_conflict;
   const char *op_root_abspath = NULL;
   svn_error_t *err;
@@ -1472,6 +1373,16 @@ revert_internal(svn_wc__db_t *db,
           unversioned = FALSE;
           break;
       }
+
+  if (have_base)
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     db, local_abspath, pool, pool));
+
+  replaced = (status == svn_wc__db_status_added
+              && have_base
+              && base_status != svn_wc__db_status_not_present);
 
   SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, db, local_abspath,
                                            pool, pool));
@@ -1560,10 +1471,19 @@ revert_internal(svn_wc__db_t *db,
       /* Actually revert this entry.  If this is a working copy root,
          we provide a base_name from the parent path. */
       if (!unversioned)
-        SVN_ERR(revert_entry(&depth, db, revert_root, local_abspath, disk_kind,
-                             use_commit_times,
-                             cancel_func, cancel_baton,
-                             &reverted, pool));
+        {
+          /* Revert the prop, text and tree mods (if any). */
+          SVN_ERR(svn_wc__wq_add_revert(&reverted, db, revert_root,
+                                        local_abspath, use_commit_times,
+                                        pool));
+          SVN_ERR(svn_wc__wq_run(db, local_abspath,
+                                 cancel_func, cancel_baton, pool));
+
+          /* Force recursion on replaced directories. */
+          if (db_kind == svn_wc__db_kind_dir && replaced)
+            depth = svn_depth_infinity;
+
+        }
 
       /* Notify */
       if (notify_func && reverted)
@@ -1683,7 +1603,7 @@ revert_internal(svn_wc__db_t *db,
       svn_pool_destroy(iterpool);
     }
 
-  if (! have_base && status == svn_wc__db_status_added
+  if (! replaced && status == svn_wc__db_status_added
       && db_kind == svn_wc__db_kind_dir)
     {
       /* Non-replacements have their admin area deleted. wc-1.0 */
