@@ -2515,27 +2515,6 @@ svn_wc__db_pristine_repair(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__db_repos_ensure(apr_int64_t *repos_id,
-                        svn_wc__db_t *db,
-                        const char *local_abspath,
-                        const char *repos_root_url,
-                        const char *repos_uuid,
-                        apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  return svn_error_return(create_repos_id(repos_id, repos_root_url,
-                                          repos_uuid, pdh->wcroot->sdb,
-                                          scratch_pool));
-}
-
 /* Helper for svn_wc__db_op_copy to handle copying from one db to
    another */
 static svn_error_t *
