@@ -313,10 +313,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
--- STMT_UPDATE_BASE_NODE_PRESENCE_AND_REVNUM
-UPDATE nodes SET presence = ?3, revision = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
-
 -- STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH
 UPDATE nodes SET presence = ?3, revision = ?4, repos_path = ?5
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
