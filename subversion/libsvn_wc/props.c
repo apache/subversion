@@ -139,7 +139,6 @@ svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
 static svn_error_t *
 immediate_install_props(svn_wc__db_t *db,
                         const char *local_abspath,
-                        svn_wc__db_kind_t kind,
                         apr_hash_t *working_props,
                         apr_pool_t *scratch_pool)
 {
@@ -2185,7 +2184,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
   /* Drop it right onto the disk. We don't need loggy since we aren't
      coordinating this change with anything else.  */
-  SVN_ERR(immediate_install_props(db, local_abspath, kind, prophash,
+  SVN_ERR(immediate_install_props(db, local_abspath, prophash,
                                   scratch_pool));
 
   if (notify_func)
