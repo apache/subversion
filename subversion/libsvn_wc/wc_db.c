@@ -4676,6 +4676,266 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_read_children_info(apr_hash_t **nodes,
+                              apr_hash_t **conflicts,
+                              svn_wc__db_t *db,
+                              const char *dir_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *dir_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *repos_root_url = NULL;
+  apr_int64_t last_repos_id;
+  apr_hash_t *tree_conflicts;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &dir_relpath, db,
+                                             dir_abspath,
+                                             svn_sqlite__mode_readonly,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_NODE_CHILDREN_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, dir_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  *nodes = apr_hash_make(result_pool);
+  while (have_row)
+    {
+      struct svn_wc__db_info_t *child;
+      const char *child_relpath = svn_sqlite__column_text(stmt, 19, NULL);
+      const char *name = svn_relpath_basename(child_relpath, NULL);
+      svn_error_t *err;
+      int *op_depth, row_op_depth;
+      svn_boolean_t new_child;
+
+      child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
+      if (child)
+        new_child = FALSE;
+      else
+        {
+          child = apr_palloc(result_pool,
+                             sizeof(struct svn_wc__db_info_t) + sizeof(int));
+          new_child = TRUE;
+        }
+
+      op_depth = (int *)(char*)(child + 1);
+      row_op_depth = svn_sqlite__column_int(stmt, 0);
+
+      if (new_child || *op_depth < row_op_depth)
+        {
+          apr_hash_t *properties;
+
+          *op_depth = row_op_depth;
+
+          child->kind = svn_sqlite__column_token(stmt, 4, kind_map);
+
+          child->status = svn_sqlite__column_token(stmt, 3, presence_map);
+          if (*op_depth != 0)
+            {
+              if (child->status == svn_wc__db_status_not_present
+                  || child->status == svn_wc__db_status_base_deleted)
+                child->status = svn_wc__db_status_deleted;
+              else if (child->status == svn_wc__db_status_normal)
+                child->status = svn_wc__db_status_added;
+            }
+
+          if (*op_depth != 0)
+            child->revnum = SVN_INVALID_REVNUM;
+          else
+            child->revnum = svn_sqlite__column_revnum(stmt, 5);
+
+
+          if (*op_depth != 0)
+            child->repos_relpath = NULL;
+          else
+            child->repos_relpath = svn_sqlite__column_text(stmt, 2,
+                                                           result_pool);
+
+          if (*op_depth != 0 || svn_sqlite__column_is_null(stmt, 1))
+            {
+              child->repos_root_url = NULL;
+            }
+          else
+            {
+              const char *repos_uuid;
+              apr_int64_t repos_id = svn_sqlite__column_int64(stmt, 1);
+              if (!repos_root_url)
+                {
+                  err = fetch_repos_info(&repos_root_url, &repos_uuid,
+                                         pdh->wcroot->sdb, repos_id,
+                                         result_pool);
+                  if (err)
+                    SVN_ERR(svn_error_compose_create(err,
+                                                     svn_sqlite__reset(stmt)));
+                  last_repos_id = repos_id;
+                }
+
+              /* Assume working copy is all one repos_id so that a
+                 single cached value is sufficient. */
+              SVN_ERR_ASSERT(repos_id == last_repos_id);
+              child->repos_root_url = repos_root_url;
+            }
+
+          child->changed_rev = svn_sqlite__column_revnum(stmt, 8);
+
+          child->changed_date = svn_sqlite__column_int64(stmt, 9);
+
+          child->changed_author = svn_sqlite__column_text(stmt, 10,
+                                                          result_pool);
+
+          child->last_mod_time = svn_sqlite__column_int64(stmt, 13);
+
+          if (child->kind != svn_wc__db_kind_dir)
+            child->depth = svn_depth_unknown;
+          else
+            {
+              const char *depth = svn_sqlite__column_text(stmt, 11,
+                                                          scratch_pool);
+              if (depth)
+                child->depth = svn_depth_from_word(depth);
+              else
+                child->depth = svn_depth_unknown;
+            }
+
+          child->translated_size = get_translated_size(stmt, 7);
+
+          if (svn_sqlite__column_is_null(stmt, 15))
+            child->lock = NULL;
+          else
+            {
+              child->lock = apr_palloc(result_pool, sizeof(svn_wc__db_lock_t));
+              child->lock->token = svn_sqlite__column_text(stmt, 15,
+                                                           result_pool);
+              child->lock->owner = svn_sqlite__column_text(stmt, 16,
+                                                           result_pool);
+              child->lock->comment = svn_sqlite__column_text(stmt, 17,
+                                                             result_pool);
+              if (svn_sqlite__column_is_null(stmt, 18))
+                child->lock->date = 0;
+              else
+                child->lock->date = svn_sqlite__column_int64(stmt, 18);
+            }
+
+          err = svn_sqlite__column_properties(&properties, stmt, 14,
+                                              scratch_pool, scratch_pool);
+          if (err)
+            SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+          child->has_props = properties && !!apr_hash_count(properties);
+#ifdef HAVE_SYMLINK
+          child->special = (child->has_props
+                            && apr_hash_get(properties, SVN_PROP_SPECIAL,
+                                            APR_HASH_KEY_STRING));
+#endif
+
+          child->changelist = NULL;
+          child->have_base = (*op_depth == 0);
+          child->props_mod = FALSE;
+          child->conflicted = FALSE;
+
+          apr_hash_set(*nodes, apr_pstrdup(result_pool, name),
+                       APR_HASH_KEY_STRING, child);
+        }
+      else if (row_op_depth == 0)
+        {
+          child->have_base = TRUE;
+        }
+
+      err = svn_sqlite__step(&have_row, stmt);
+      if (err)
+        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_CHILDREN_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, dir_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      struct svn_wc__db_info_t *child;
+      const char *child_relpath = svn_sqlite__column_text(stmt, 7, NULL);
+      const char *name = svn_relpath_basename(child_relpath, NULL);
+      svn_error_t *err;
+
+      child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
+      if (!child)
+        {
+          err = svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                  _("Corrupt data for '%s'"),
+                                  svn_dirent_local_style(child_relpath,
+                                                         scratch_pool));
+          SVN_ERR(svn_error_compose_create(err,
+                                           svn_sqlite__step(&have_row, stmt)));
+        }
+
+      child->changelist = svn_sqlite__column_text(stmt, 1, result_pool);
+
+      child->props_mod = !svn_sqlite__column_is_null(stmt, 6);
+      if (child->props_mod)
+        {
+          apr_hash_t *properties;
+
+          err = svn_sqlite__column_properties(&properties, stmt, 6,
+                                              scratch_pool, scratch_pool);
+          if (err)
+            SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+          child->has_props = properties && !!apr_hash_count(properties);
+#ifdef HAVE_SYMLINK
+          child->special = (child->has_props
+                            && apr_hash_get(properties, SVN_PROP_SPECIAL,
+                                            APR_HASH_KEY_STRING));
+#endif
+        }
+
+
+      child->conflicted = (svn_sqlite__column_text(stmt, 2, NULL)     /* old */
+                           || svn_sqlite__column_text(stmt, 3, NULL)  /* new */
+                           || svn_sqlite__column_text(stmt, 4, NULL)  /* work */
+                           || svn_sqlite__column_text(stmt, 0, NULL));/* prop */
+
+      err = svn_sqlite__step(&have_row, stmt);
+      if (err)
+        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(&tree_conflicts, db,
+                                                dir_abspath,
+                                                scratch_pool, scratch_pool));
+  *conflicts = apr_hash_make(result_pool);
+  if (tree_conflicts)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, tree_conflicts);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *name = svn__apr_hash_index_key(hi);
+          struct svn_wc__db_info_t *child
+            = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
+
+          if (child)
+            child->conflicted = TRUE;
+
+          apr_hash_set(*conflicts, apr_pstrdup(result_pool, name),
+                       APR_HASH_KEY_STRING, "");
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc__db_read_prop(const svn_string_t **propval,
