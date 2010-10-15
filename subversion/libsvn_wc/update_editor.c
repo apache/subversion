@@ -4389,32 +4389,31 @@ close_file(void *file_baton,
       /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
-    /* Merge the text. This will queue some additional work.  */
-    SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
-                       &content_state, fb, new_text_base_sha1_checksum,
-                       pool, scratch_pool));
+      /* Merge the text. This will queue some additional work.  */
+      SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
+                         &content_state, fb, new_text_base_sha1_checksum,
+                         pool, scratch_pool));
 
-    if (install_pristine)
-      {
-        svn_boolean_t record_fileinfo;
+      if (install_pristine)
+        {
+          svn_boolean_t record_fileinfo;
 
-        /* If we are installing from the pristine contents, then go ahead and
-           record the fileinfo. That will be the "proper" values. Installing
-           from some random file means the fileinfo does NOT correspond to
-           the pristine (in which case, the fileinfo will be cleared for
-           safety's sake).  */
-        record_fileinfo = install_from == NULL;
+          /* If we are installing from the pristine contents, then go ahead and
+             record the fileinfo. That will be the "proper" values. Installing
+             from some random file means the fileinfo does NOT correspond to
+             the pristine (in which case, the fileinfo will be cleared for
+             safety's sake).  */
+          record_fileinfo = install_from == NULL;
 
-        SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                              eb->db,
-                                              fb->local_abspath,
-                                              install_from,
-                                              eb->use_commit_times,
-                                              record_fileinfo,
-                                              pool, pool));
-        all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-      }
-
+          SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                                eb->db,
+                                                fb->local_abspath,
+                                                install_from,
+                                                eb->use_commit_times,
+                                                record_fileinfo,
+                                                pool, pool));
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+        }
     }
   else
     {
