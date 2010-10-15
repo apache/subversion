@@ -1383,13 +1383,13 @@ revert_internal(svn_wc__db_t *db,
           break;
       }
 
-  if (have_base)
+  if (! unversioned && have_base)
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath, pool, pool));
 
-  replaced = (status == svn_wc__db_status_added
+  replaced = ! unversioned && (status == svn_wc__db_status_added
               && have_base
               && base_status != svn_wc__db_status_not_present);
 
