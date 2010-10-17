@@ -39,7 +39,7 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Helpers
 
-def check_writability(path, writable)
+def check_writability(path, writable):
   bits = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
   mode = os.stat(path)[0]
   if bool(mode & bits) != writable:
