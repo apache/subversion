@@ -37,6 +37,24 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 ######################################################################
+# Helpers
+
+def check_writability(path, writable)
+  bits = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
+  mode = os.stat(path)[0]
+  if bool(mode & bits) != writable:
+    raise svntest.Failure("path '%s' is unexpectedly %s (mode %o)"
+                          % (path, ["writable", "read-only"][writable], mode))
+
+def is_writable(path):
+  "Raise if PATH is not writable."
+  check_writability(path, True)
+
+def is_readonly(path):
+  "Raise if PATH is not readonly."
+  check_writability(path, False)
+
+######################################################################
 # Tests
 
 #----------------------------------------------------------------------
@@ -1573,6 +1591,39 @@ def replace_and_propset_locked_path(sbox):
                                      'commit', '-m', '', G_path)
 
 
+#----------------------------------------------------------------------
+def cp_isnt_ro(sbox):
+  "uncommitted svn:needs-lock add/cp not read-only"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu2_path = os.path.join(wc_dir, 'A', 'mu2')
+  kappa_path = os.path.join(wc_dir, 'kappa')
+  open(kappa_path, 'w').write("This is the file 'kappa'.\n")
+
+  # added file
+  sbox.simple_add(kappa_path)
+  svntest.actions.set_prop('svn:needs-lock', 'yes', kappa_path)
+  is_writable(kappa_path)
+  sbox.simple_commit(kappa_path)
+  is_readonly(kappa_path)
+
+  # versioned file
+  svntest.actions.set_prop('svn:needs-lock', 'yes', mu_path)
+  is_writable(mu_path)
+  sbox.simple_commit(mu_path)
+  is_readonly(mu_path)
+
+  # added-with-history file (aka uncommitted copied file)
+  svntest.actions.set_prop('svn:needs-lock', 'yes', mu_path)
+  svntest.main.run_svn(None, 'copy', mu_path, mu2_path)
+  is_writable(mu2_path)
+  sbox.simple_commit(mu2_path)
+  is_readonly(mu2_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1619,6 +1670,7 @@ test_list = [ None,
               verify_path_escaping,
               XFail(replace_and_propset_locked_path,
                     svntest.main.is_ra_type_dav),
+              cp_isnt_ro,
             ]
 
 if __name__ == '__main__':

@@ -238,9 +238,21 @@ copy_versioned_file(svn_wc__db_t *db,
                              tmpdir_abspath,
                              TRUE, /* recursive */
                              cancel_func, cancel_baton, scratch_pool));
+
       if (tmp_dst_abspath)
         {
           svn_skel_t *work_item;
+
+          /* Remove 'read-only' from the destination file; it's a local add. */
+            {
+              const svn_string_t *needs_lock;
+              SVN_ERR(svn_wc__internal_propget(&needs_lock, db, src_abspath,
+                                               SVN_PROP_NEEDS_LOCK,
+                                               scratch_pool, scratch_pool));
+              if (needs_lock)
+                SVN_ERR(svn_io_set_file_read_write(tmp_dst_abspath,
+                                                   FALSE, scratch_pool));
+            }
 
           SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
                                              tmp_dst_abspath, dst_abspath,
