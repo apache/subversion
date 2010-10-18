@@ -145,48 +145,65 @@ makeVString(const char *str)
 
 } // namespace Private
 
+#define GET_MEMBER(func_name, type, member)                         \
+    inline type                                                     \
+    func_name() const                                               \
+    {                                                               \
+      return type(m_obj->member);                                   \
+    }
+
+#define GET_MEMBER_STR(func_name, member)                           \
+    inline ValidString                                              \
+    func_name() const                                               \
+    {                                                               \
+      return Private::makeVString(m_obj->member);                   \
+    }
+
+#define GET_MEMBER_PTR(func_name, type, member)                     \
+    inline type *                                                   \
+    func_name() const                                               \
+    {                                                               \
+      if (m_obj->member != NULL)                                    \
+        return new type(m_obj->member);                             \
+      else                                                          \
+        return NULL;                                                \
+    }
+
+#define GET_MEMBER_NATIVE(func_name, type, member)                  \
+    inline type                                                     \
+    func_name() const                                               \
+    {                                                               \
+      return m_obj->member;                                         \
+    }
+
 // C-struct wrapper classes
 class CommitInfo
 {
   public:
     explicit inline
     CommitInfo(const svn_commit_info_t *info)
-      : m_info(info)
+      : m_obj(info)
     {
     }
 
     inline operator bool () const
     {
-      return m_info != NULL;
+      return m_obj != NULL;
     }
 
     inline Revision
     getRevision() const
     {
-      return Revision::getNumberRev(m_info->revision);
+      return Revision::getNumberRev(m_obj->revision);
     }
 
-    inline std::string
-    getAuthor() const
-    {
-      return std::string(m_info->author);
-    }
-
-    inline ValidString
-    getPostCommitErr() const
-    {
-      return Private::makeVString(m_info->post_commit_err);
-    }
-
-    inline ValidString
-    getReposRoot() const
-    {
-      return Private::makeVString(m_info->repos_root);
-    }
+    GET_MEMBER(getAuthor, std::string, author)
+    GET_MEMBER_STR(getPostCommitErr, post_commit_err)
+    GET_MEMBER_STR(getReposRoot, repos_root)
 
   private:
     Private::CStructWrapper<svn_commit_info_t,
-                            svn_commit_info_dup> m_info;
+                            svn_commit_info_dup> m_obj;
 };
 
 class Lock
@@ -194,59 +211,25 @@ class Lock
   public:
     explicit inline
     Lock(const svn_lock_t *lock)
-      : m_lock(lock)
+      : m_obj(lock)
     {
     }
 
     inline operator bool () const
     {
-      return m_lock != NULL;
+      return m_obj != NULL;
     }
 
-    inline std::string
-    getPath() const
-    {
-      return std::string(m_lock->path);
-    }
-
-    inline std::string
-    getToken() const
-    {
-      return std::string(m_lock->token);
-    }
-
-    inline std::string
-    getOwner() const
-    {
-      return std::string(m_lock->owner);
-    }
-
-    inline std::string
-    getComment() const
-    {
-      return std::string(m_lock->comment);
-    }
-
-    inline bool
-    isDavComment() const
-    {
-      return m_lock->is_dav_comment;
-    }
-
-    inline apr_time_t
-    getCreationDate() const
-    {
-      return m_lock->creation_date;
-    }
-
-    inline apr_time_t
-    getExpirationDate() const
-    {
-      return m_lock->expiration_date;
-    }
+    GET_MEMBER(getPath, std::string, path)
+    GET_MEMBER(getToken, std::string, token)
+    GET_MEMBER(getOwner, std::string, owner)
+    GET_MEMBER_STR(getComment, comment)
+    GET_MEMBER_NATIVE(isDavComment, bool, is_dav_comment)
+    GET_MEMBER_NATIVE(getCreationDate, apr_time_t, creation_date)
+    GET_MEMBER_NATIVE(getExpirationDate, apr_time_t, expiration_date)
 
   private:
-    Private::CStructWrapper<svn_lock_t, svn_lock_dup> m_lock;
+    Private::CStructWrapper<svn_lock_t, svn_lock_dup> m_obj;
 };
 
 class ClientNotifyInfo
@@ -254,24 +237,24 @@ class ClientNotifyInfo
   public:
     inline
     ClientNotifyInfo(const svn_wc_notify_t *notify)
-      : m_notify(notify)
+      : m_obj(notify)
     {
     }
 
     inline operator bool () const
     {
-      return m_notify != NULL;
+      return m_obj != NULL;
     }
 
     // ### This is only temporary
     inline const svn_wc_notify_t *
     to_c() const
     {
-      return &(*m_notify);
+      return &(*m_obj);
     }
 
   private:
-    Private::CStructWrapper<svn_wc_notify_t, svn_wc_dup_notify> m_notify;
+    Private::CStructWrapper<svn_wc_notify_t, svn_wc_dup_notify> m_obj;
 };
 
 class Version
@@ -279,27 +262,28 @@ class Version
   public:
     inline
     Version(const svn_version_t *version)
-      : m_version(version)
+      : m_obj(version)
     {
     }
 
     inline operator bool () const
     {
-      return m_version != NULL;
+      return m_obj != NULL;
     }
 
-    inline std::string
-    getTag()
-    {
-      return std::string(m_version->tag);
-    }
+    GET_MEMBER(getTag, std::string, tag)
 
   private:
     static svn_version_t *
     dup(const svn_version_t *version, apr_pool_t *pool);
 
-    Private::CStructWrapper<svn_version_t, dup> m_version;
+    Private::CStructWrapper<svn_version_t, dup> m_obj;
 };
+
+#undef GET_MEMBER
+#undef GET_MEMBER_STR
+#undef GET_MEMBER_PTR
+#undef GET_MEMBER_NATIVE
 
 }
 
