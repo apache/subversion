@@ -193,6 +193,15 @@ Candidate changes:
    Votes:
      +0: cmpilato
 
+ * r877219, r877239
+   In Makefile.in, try svnversion from $PATH if in-tree svnversion fails.
+   Justification:
+     When building 1.6.x within a trunk WC there's always an error signalled
+     at the end of the build. This makes scripting the build harder than
+     necessary. Merging this change makes life easier for developers.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
