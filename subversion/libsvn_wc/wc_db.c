@@ -234,6 +234,13 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
                            apr_int64_t op_depth,
                            apr_pool_t *scratch_pool);
 
+static svn_error_t *
+db_read_pristine_props(apr_hash_t **props,
+                       svn_wc__db_pdh_t *pdh,
+                       const char *local_relpath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
 
 /* Return the absolute path, in local path style, of LOCAL_RELPATH in WCROOT. */
 static const char *
@@ -3301,13 +3308,45 @@ struct set_props_baton
 {
   apr_hash_t *props;
 
-  apr_int64_t wc_id;
+  svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
 
   const svn_skel_t *conflict;
   const svn_skel_t *work_items;
 };
 
+
+/* Set the ACTUAL_NODE properties column for (WC_ID, LOCAL_RELPATH) to
+ * PROPS. */
+static svn_error_t *
+set_actual_props(apr_int64_t wc_id,
+                 const char *local_relpath,
+                 apr_hash_t *props,
+                 svn_sqlite__db_t *db,
+                 apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  int affected_rows;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_UPDATE_ACTUAL_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  if (affected_rows == 1 || !props)
+    return SVN_NO_ERROR; /* We are done */
+
+  /* We have to insert a row in ACTUAL */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_ACTUAL_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  if (*local_relpath != '\0')
+    SVN_ERR(svn_sqlite__bind_text(stmt, 3,
+                                  svn_relpath_dirname(local_relpath,
+                                                      scratch_pool)));
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 4, props, scratch_pool));
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
 
 /* Set the 'properties' column in the 'ACTUAL_NODE' table to BATON->props.
    Create an entry in the ACTUAL table for the node if it does not yet
@@ -3318,8 +3357,7 @@ static svn_error_t *
 set_props_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
 {
   struct set_props_baton *spb = baton;
-  svn_sqlite__stmt_t *stmt;
-  int affected_rows;
+  apr_hash_t *pristine_props;
 
   /* ### we dunno what to do with CONFLICT yet.  */
   SVN_ERR_ASSERT(spb->conflict == NULL);
@@ -3327,31 +3365,31 @@ set_props_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
   /* First order of business: insert all the work items.  */
   SVN_ERR(add_work_items(db, spb->work_items, scratch_pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_UPDATE_ACTUAL_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", spb->wc_id, spb->local_relpath));
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 3, spb->props, scratch_pool));
-  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+  /* Check if the props are modified. If no changes, then wipe out the
+     ACTUAL props.  PRISTINE_PROPS==NULL means that any
+     ACTUAL props are okay as provided, so go ahead and set them.  */
+  SVN_ERR(db_read_pristine_props(&pristine_props, spb->pdh, spb->local_relpath,
+                                 scratch_pool, scratch_pool));
+  if (spb->props && pristine_props)
+    {
+      apr_array_header_t *prop_diffs;
 
-  if (affected_rows == 1 || !spb->props)
-    return SVN_NO_ERROR; /* We are done */
+      SVN_ERR(svn_prop_diffs(&prop_diffs, spb->props, pristine_props,
+                             scratch_pool));
+      if (prop_diffs->nelts == 0)
+        spb->props = NULL;
+    }
 
-  /* We have to insert a row in ACTUAL */
+  SVN_ERR(set_actual_props(spb->pdh->wcroot->wc_id, spb->local_relpath,
+                           spb->props, db, scratch_pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_ACTUAL_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", spb->wc_id, spb->local_relpath));
-  if (*spb->local_relpath != '\0')
-    SVN_ERR(svn_sqlite__bind_text(stmt, 3,
-                                  svn_relpath_dirname(spb->local_relpath,
-                                                      scratch_pool)));
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 4, spb->props, scratch_pool));
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_hash_t *props,
-                        apr_hash_t *pristine_props,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool)
@@ -3366,21 +3404,8 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  /* Check if the props are modified. If no changes, then wipe out the
-     ACTUAL props.  PRISTINE_PROPS==NULL means the caller knows that any
-     ACTUAL props are okay as provided, so go ahead and set them.  */
-  if (props && pristine_props)
-    {
-      apr_array_header_t *prop_diffs;
-
-      SVN_ERR(svn_prop_diffs(&prop_diffs, props, pristine_props,
-                             scratch_pool));
-      if (prop_diffs->nelts == 0)
-        props = NULL;
-    }
-
   spb.props = props;
-  spb.wc_id = pdh->wcroot->wc_id;
+  spb.pdh = pdh;
   spb.conflict = conflict;
   spb.work_items = work_items;
 
@@ -5035,19 +5060,20 @@ svn_wc__db_read_props(apr_hash_t **props,
 }
 
 
-svn_error_t *
-svn_wc__db_read_pristine_props(apr_hash_t **props,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
+static svn_error_t *
+db_read_pristine_props(apr_hash_t **props,
+                       svn_wc__db_pdh_t *pdh,
+                       const char *local_relpath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   svn_wc__db_status_t presence;
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_NODE_PROPS, scratch_pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb, STMT_SELECT_NODE_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (!have_row)
@@ -5055,7 +5081,8 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
                                svn_sqlite__reset(stmt),
                                _("The node '%s' was not found."),
-                               svn_dirent_local_style(local_abspath,
+                               path_for_error_message(pdh->wcroot,
+                                                      local_relpath,
                                                       scratch_pool));
     }
 
@@ -5092,6 +5119,29 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 
   *props = NULL;
   return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
+svn_error_t *
+svn_wc__db_read_pristine_props(apr_hash_t **props,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(db_read_pristine_props(props, pdh, local_relpath,
+                                 result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -6514,13 +6564,8 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 
   if (working_props != NULL)
     {
-      struct set_props_baton spb = { 0 };
-
-      spb.props = working_props;
-      spb.wc_id = wc_id;
-      spb.local_relpath = local_relpath;
-      /* NULL for .conflict and .work_items  */
-      SVN_ERR(set_props_txn(&spb, sdb, scratch_pool));
+      SVN_ERR(set_actual_props(wc_id, local_relpath, working_props,
+                               sdb, scratch_pool));
     }
 
   return SVN_NO_ERROR;

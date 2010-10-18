@@ -142,15 +142,8 @@ immediate_install_props(svn_wc__db_t *db,
                         apr_hash_t *working_props,
                         apr_pool_t *scratch_pool)
 {
-  apr_hash_t *base_props;
-
-  /* ### no pristines should be okay.  */
-  SVN_ERR_W(svn_wc__db_read_pristine_props(&base_props, db, local_abspath,
-                                           scratch_pool, scratch_pool),
-            _("Failed to load pristine properties"));
-
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
-                                  working_props, base_props,
+                                  working_props,
                                   NULL /* conflict */,
                                   NULL, /* work_items */
                                   scratch_pool));
@@ -351,7 +344,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                                                  new_base_props, pool));
 
         SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
-                                        new_base_props,
                                         NULL, NULL, pool));
       }
 #else
@@ -360,7 +352,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                                 U_("base_merge=TRUE is no longer supported"));
 
       SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
-                                      new_base_props,
                                       NULL /* conflict */,
                                       NULL /* work_item */,
                                       pool));
