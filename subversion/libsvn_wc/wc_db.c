@@ -457,13 +457,11 @@ fetch_repos_info(const char **repos_root_url,
 
 /* Scan from LOCAL_RELPATH upwards through parent nodes until we find a parent
    that has values in the 'repos_id' and 'repos_relpath' columns.  Return
-   that information in REPOS_ID and REPOS_RELPATH (either may be NULL).
-   Use LOCAL_ABSPATH for diagnostics */
+   that information in REPOS_ID and REPOS_RELPATH (either may be NULL). */
 static svn_error_t *
 scan_upwards_for_repos(apr_int64_t *repos_id,
                        const char **repos_relpath,
                        const svn_wc__db_wcroot_t *wcroot,
-                       const char *local_abspath,
                        const char *local_relpath,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
@@ -538,7 +536,7 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
           return svn_error_createf(
             SVN_ERR_WC_CORRUPT, NULL,
             _("Parent(s) of '%s' should have repository information."),
-            svn_relpath_local_style(local_abspath, scratch_pool));
+            path_for_error_message(wcroot, local_relpath, scratch_pool));
         }
 
       /* Strip a path segment off the end, and append it to the suffix
@@ -5585,8 +5583,7 @@ determine_repos_info(apr_int64_t *repos_id,
 
   /* The REPOS_ID will be the same (### until we support mixed-repos)  */
   SVN_ERR(scan_upwards_for_repos(repos_id, &repos_parent_relpath,
-                                 pdh->wcroot, pdh->local_abspath,
-                                 local_relpath,
+                                 pdh->wcroot, local_relpath,
                                  scratch_pool, scratch_pool));
 
   *repos_relpath = svn_relpath_join(repos_parent_relpath, name, result_pool);
@@ -5862,7 +5859,7 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
   VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                 pdh->wcroot, local_abspath, local_relpath,
+                                 pdh->wcroot, local_relpath,
                                  scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -5907,7 +5904,7 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
   VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                 pdh->wcroot, local_abspath, local_relpath,
+                                 pdh->wcroot, local_relpath,
                                  scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -5944,7 +5941,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
   VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath,
-                                 pdh->wcroot, local_abspath, local_relpath,
+                                 pdh->wcroot, local_relpath,
                                  result_pool, scratch_pool));
 
   if (repos_root_url || repos_uuid)
