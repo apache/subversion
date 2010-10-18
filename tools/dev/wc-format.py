@@ -4,6 +4,7 @@ import os
 import sqlite3
 import sys
 
+MIN_SINGLE_DB_FORMAT = 19
 
 def get_format(wc_path):
   entries = os.path.join(wc_path, '.svn', 'entries')
@@ -19,7 +20,11 @@ def get_format(wc_path):
   else:
     parent_path = os.path.dirname(os.path.abspath(wc_path))
     if wc_path != parent_path:
-      return get_format(parent_path)
+      formatno = get_format(parent_path)
+      if formatno >= MIN_SINGLE_DB_FORMAT:
+      	return formatno
+      else:
+      	return 'not under version control'
     else:
       return 'not under version control'
 
