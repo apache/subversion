@@ -80,14 +80,15 @@ class CStructWrapper
     inline
     CStructWrapper(const T *data)
     {
-      m_data = new RefCounter<T, DUP>(data);
+      m_data = data ? new RefCounter<T, DUP>(data) : NULL;
     }
 
     inline
     CStructWrapper(const CStructWrapper<T, DUP> &that)
     {
       m_data = that.m_data;
-      m_data->inc_ref();
+      if (m_data)
+        m_data->inc_ref();
     }
 
     inline CStructWrapper<T, DUP>&
@@ -96,26 +97,39 @@ class CStructWrapper
       // Self assignment
       if (&that == this)
         return *this;
-      
-      m_data->dec_ref();
-      if (m_data->refs() == 0)
-        delete m_data;
+     
+      if (m_data)
+        {
+          m_data->dec_ref();
+          if (m_data->refs() == 0)
+            delete m_data;
+        }
+
       m_data = that.m_data;
-      m_data->inc_ref();
+      if (m_data)
+        m_data->inc_ref();
 
       return *this;
     }
 
     inline ~CStructWrapper()
     {
+      if (!m_data)
+        return;
+
       m_data->dec_ref();
       if (m_data->refs() == 0)
         delete m_data;
     }
 
-    inline const T& operator* () const { return *m_data->ptr(); }
-    inline const T* operator-> () const { return m_data->ptr(); }
-    inline operator T const *() const { return m_data->ptr(); }
+    inline const T& operator* () const
+    { return *m_data->ptr(); }
+
+    inline const T* operator-> () const
+    { return m_data ? m_data->ptr() : NULL; }
+
+    inline operator T const *() const
+    { return m_data ? m_data->ptr() : NULL; }
 
   private:
     RefCounter<T, DUP> *m_data;

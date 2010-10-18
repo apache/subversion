@@ -199,11 +199,21 @@ test_struct_wrapping(apr_pool_t *p)
 static svn_error_t *
 test_null_objects(apr_pool_t *p)
 {
+  // This test is in no way comprehensive
+
   Lock lock(NULL);
   std::string path;
 
   if (lock)
     path = lock.getPath();
+
+  Lock l2(lock);
+
+  Lock l3 = l2;
+
+  lock = l2;
+
+  // To bad we can't do something interesting here and check for a segfault...
 
   return SVN_NO_ERROR;
 }
