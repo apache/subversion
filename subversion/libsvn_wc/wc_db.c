@@ -235,6 +235,19 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
                            apr_pool_t *scratch_pool);
 
 
+/* Return the absolute path, in local path style, of LOCAL_RELPATH in PDH. */
+static const char *
+path_for_error_message(const svn_wc__db_wcroot_t *wcroot,
+                       const char *local_relpath,
+                       apr_pool_t *result_pool)
+{
+  const char *local_abspath
+    = svn_dirent_join(wcroot->abspath, local_relpath, result_pool);
+
+  return svn_dirent_local_style(local_abspath, result_pool);
+}
+
+
 /* */
 static svn_filesize_t
 get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
@@ -448,14 +461,14 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
               err = svn_error_createf(
                 SVN_ERR_WC_CORRUPT, NULL,
                 _("Parent(s) of '%s' should have been present."),
-                svn_dirent_local_style(local_abspath, scratch_pool));
+                path_for_error_message(wcroot, local_relpath, scratch_pool));
             }
           else
             {
               err = svn_error_createf(
                 SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                 _("The node '%s' was not found."),
-                svn_dirent_local_style(local_abspath, scratch_pool));
+                path_for_error_message(wcroot, local_relpath, scratch_pool));
             }
 
           return svn_error_compose_create(err, svn_sqlite__reset(stmt));
@@ -5708,14 +5721,11 @@ svn_wc__db_global_update(svn_wc__db_t *db,
 
 
 struct record_baton {
-  apr_int64_t wc_id;
+  svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
 
   svn_filesize_t translated_size;
   apr_time_t last_mod_time;
-
-  /* For error reporting.  */
-  const char *local_abspath;
 };
 
 
@@ -5732,12 +5742,13 @@ record_fileinfo(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   int affected_rows;
 
   SVN_ERR(which_trees_exist(&base_exists, &working_exists,
-                            sdb, rb->wc_id, rb->local_relpath));
+                            sdb, rb->wcroot->wc_id, rb->local_relpath));
   if (!base_exists && !working_exists)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("Could not find node '%s' for recording file "
                                "information."),
-                             svn_dirent_local_style(rb->local_abspath,
+                             path_for_error_message(rb->wcroot,
+                                                    rb->local_relpath,
                                                     scratch_pool));
 
   /* ### Instead of doing it this way, we just ought to update the highest
@@ -5748,7 +5759,7 @@ record_fileinfo(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                       ? STMT_UPDATE_WORKING_NODE_FILEINFO
                                       : STMT_UPDATE_BASE_NODE_FILEINFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "isii",
-                            rb->wc_id, rb->local_relpath,
+                            rb->wcroot->wc_id, rb->local_relpath,
                             rb->translated_size, rb->last_mod_time));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
@@ -5776,13 +5787,11 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  rb.wc_id = pdh->wcroot->wc_id;
+  rb.wcroot = pdh->wcroot;
   rb.local_relpath = local_relpath;
 
   rb.translated_size = translated_size;
   rb.last_mod_time = last_mod_time;
-
-  rb.local_abspath = local_abspath;
 
   SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, record_fileinfo, &rb,
                                        scratch_pool));
@@ -7262,7 +7271,6 @@ struct wclock_obtain_baton
   svn_wc__db_t *db;
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  const char *local_abspath;
   int levels_to_lock;
   svn_boolean_t steal_lock;
 };
@@ -7316,7 +7324,8 @@ wclock_obtain_cb(void *baton,
         return svn_error_createf(
                                  SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("The node '%s' was not found."),
-                                 svn_dirent_local_style(bt->local_abspath,
+                                 path_for_error_message(bt->pdh->wcroot,
+                                                        bt->local_relpath,
                                                         scratch_pool));
     }
 
@@ -7373,7 +7382,8 @@ wclock_obtain_cb(void *baton,
                                                           scratch_pool));
           return svn_error_createf(SVN_ERR_WC_LOCKED, err,
                                    _("Working copy '%s' locked."),
-                                   svn_dirent_local_style(bt->local_abspath,
+                                   path_for_error_message(bt->pdh->wcroot,
+                                                          bt->local_relpath,
                                                           scratch_pool));
         }
       else if (!own_lock)
@@ -7423,7 +7433,8 @@ wclock_obtain_cb(void *baton,
               return svn_error_createf(
                               SVN_ERR_WC_LOCKED, err,
                               _("Working copy '%s' locked."),
-                              svn_dirent_local_style(bt->local_abspath,
+                              path_for_error_message(bt->pdh->wcroot,
+                                                     bt->local_relpath,
                                                      scratch_pool));
             }
 
@@ -7447,7 +7458,8 @@ wclock_obtain_cb(void *baton,
   if (err)
     return svn_error_createf(SVN_ERR_WC_LOCKED, err,
                              _("Working copy '%s' locked"),
-                             svn_dirent_local_style(bt->local_abspath,
+                             path_for_error_message(bt->pdh->wcroot,
+                                                    bt->local_relpath,
                                                     scratch_pool));
 
   /* And finally store that we obtained the lock */
@@ -7509,7 +7521,6 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
     }
 
   baton.db = db;
-  baton.local_abspath = local_abspath;
   baton.steal_lock = steal_lock;
   baton.levels_to_lock = levels_to_lock;
 
