@@ -255,7 +255,8 @@ path_for_error_message(const svn_wc__db_wcroot_t *wcroot,
 }
 
 
-/* */
+/* Return a file size from column SLOT of the SQLITE statement STMT, or
+ * SVN_INVALID_FILESIZE if the column value is NULL. */
 static svn_filesize_t
 get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
 {
