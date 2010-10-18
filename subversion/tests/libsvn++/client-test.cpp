@@ -196,17 +196,20 @@ class CommitHandler : public Callback::Commit
 {
   public:
     CommitHandler()
-      : commit_count(0)
+      : commit_count(0),
+        info(NULL)
     {
     }
 
-    void sendInfo(const CommitInfo &info)
+    void sendInfo(const CommitInfo &i)
     {
       ++commit_count;
+      info = i;
     }
 
-    // Making this public just makes life easier.
+    // Making these public just makes life easier.
     int commit_count;
+    CommitInfo info;
 };
 
 // A class which throws and exception on commit
@@ -256,6 +259,7 @@ test_commit(const svn_test_opts_t *opts,
   client->commit(targets, handler);
 
   SVN_TEST_ASSERT(handler.commit_count == 1);
+  SVN_TEST_ASSERT(handler.info.getPostCommitErr().first == false);
 
   SVN_ERR(svn_io_file_write_full(iota_file, "67890", 5, &written, pool.pool()));
   try

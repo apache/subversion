@@ -43,6 +43,7 @@ namespace SVN
 
 // Typedefs
 typedef std::map<std::string, std::string> PropTable;
+typedef std::pair<bool, std::string> ValidString;
 
 namespace Private
 {
@@ -135,6 +136,13 @@ class CStructWrapper
     RefCounter<T, DUP> *m_data;
 };
 
+inline ValidString
+makeVString(const char *str)
+{
+  return ValidString(str != NULL,
+                     str != NULL ? std::string(str) : std::string());
+}
+
 } // namespace Private
 
 // C-struct wrapper classes
@@ -164,22 +172,16 @@ class CommitInfo
       return std::string(m_info->author);
     }
 
-    inline std::string
+    inline ValidString
     getPostCommitErr() const
     {
-      if (m_info->post_commit_err)
-        return std::string(m_info->post_commit_err);
-      else
-        return std::string();
+      return Private::makeVString(m_info->post_commit_err);
     }
 
-    inline std::string
+    inline ValidString
     getReposRoot() const
     {
-      if (m_info->repos_root)
-        return std::string(m_info->repos_root);
-      else
-        return std::string();
+      return Private::makeVString(m_info->repos_root);
     }
 
   private:
