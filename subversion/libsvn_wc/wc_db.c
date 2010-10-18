@@ -5536,20 +5536,24 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 }
 
 
-/* */
+/* Set *REPOS_ID and *REPOS_RELPATH to the BASE repository location of
+ * (PDH, LOCAL_RELPATH), scanning upwards through parents if no BASE row
+ * exists for this node or if it inherits the info.
+ *
+ * Similar to scan_upwards_for_repos() except that the node need not exist
+ * in BASE. */
 static svn_error_t *
 determine_repos_info(apr_int64_t *repos_id,
                      const char **repos_relpath,
-                     svn_wc__db_t *db,
                      svn_wc__db_pdh_t *pdh,
                      const char *local_relpath,
-                     const char *name,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   const char *repos_parent_relpath;
+  const char *local_parent_relpath, *name;
 
   /* ### is it faster to fetch fewer columns? */
 
@@ -5574,11 +5578,11 @@ determine_repos_info(apr_int64_t *repos_id,
 
   /* This was a child node within this wcroot. We want to look at the
      BASE node of the directory.  */
-  local_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
+  svn_relpath_split(&local_parent_relpath, &name, local_relpath, scratch_pool);
 
   /* The REPOS_ID will be the same (### until we support mixed-repos)  */
   SVN_ERR(scan_upwards_for_repos(repos_id, &repos_parent_relpath,
-                                 pdh->wcroot, local_relpath,
+                                 pdh->wcroot, local_parent_relpath,
                                  scratch_pool, scratch_pool));
 
   *repos_relpath = svn_relpath_join(repos_parent_relpath, name, result_pool);
@@ -5644,9 +5648,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
      ### this always returns values. we should switch to null if/when
      ### possible.  */
   SVN_ERR(determine_repos_info(&cb.repos_id, &cb.repos_relpath,
-                               db, pdh, local_relpath,
-                               svn_dirent_basename(local_abspath,
-                                                   scratch_pool),
+                               pdh, local_relpath,
                                scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, commit_node, &cb,
