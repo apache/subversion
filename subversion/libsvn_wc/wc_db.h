@@ -1122,10 +1122,16 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
    To specify no properties, PROPS must be an empty hash, not NULL.
    If the node is not present, return an error.
 
-   ### All the callers are doing a comparison against the current 'pristine'
-       props before calling this, and are passing NULL if the actual props
-       are to be the same as the pristine props. This behaviour should be
-       encapsulated.
+   If PROPS is NULL, set the properties to be the same as the pristine
+   properties.
+
+   PRISTINE_PROPS must be the pristine props against which the actual props
+   may be elided in the DB, or NULL if the caller knows that the actual
+   props should not be elided.
+
+   ### TODO: The caller should not have to provide PRISTINE_PROPS.
+     Encapsulate this functionality, either at this level or in a higher-
+     level API.
 
    CONFLICT is used to register a conflict on this node at the same time
    the properties are changed.
@@ -1145,6 +1151,7 @@ svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_hash_t *props,
+                        apr_hash_t *pristine_props,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool);

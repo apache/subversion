@@ -3338,6 +3338,7 @@ svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_hash_t *props,
+                        apr_hash_t *pristine_props,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool)
@@ -3351,6 +3352,19 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                               local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
+
+  /* Check if the props are modified. If no changes, then wipe out the
+     ACTUAL props.  PRISTINE_PROPS==NULL means the caller knows that any
+     ACTUAL props are okay as provided, so go ahead and set them.  */
+  if (props && pristine_props)
+    {
+      apr_array_header_t *prop_diffs;
+
+      SVN_ERR(svn_prop_diffs(&prop_diffs, props, pristine_props,
+                             scratch_pool));
+      if (prop_diffs->nelts == 0)
+        props = NULL;
+    }
 
   spb.props = props;
   spb.wc_id = pdh->wcroot->wc_id;

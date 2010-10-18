@@ -149,21 +149,8 @@ immediate_install_props(svn_wc__db_t *db,
                                            scratch_pool, scratch_pool),
             _("Failed to load pristine properties"));
 
-  /* Check if the props are modified. If no changes, then wipe out
-     the ACTUAL props. No pristines defined means that any ACTUAL
-     props are okay, so go ahead and set them.  */
-  if (base_props != NULL)
-    {
-      apr_array_header_t *prop_diffs;
-
-      SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props,
-                             scratch_pool));
-      if (prop_diffs->nelts == 0)
-        working_props = NULL;
-    }
-
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
-                                  working_props,
+                                  working_props, base_props,
                                   NULL /* conflict */,
                                   NULL, /* work_items */
                                   scratch_pool));
@@ -349,7 +336,6 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
       {
         svn_wc__db_status_t status;
         svn_boolean_t have_base;
-        apr_array_header_t *prop_diffs;
 
         SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -364,41 +350,20 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
           SVN_ERR(svn_wc__db_temp_base_set_props(db, local_abspath,
                                                  new_base_props, pool));
 
-        /* Check if the props are modified. */
-        SVN_ERR(svn_prop_diffs(&prop_diffs, actual_props, new_base_props, pool));
-
-        /* Save the actual properties file if it differs from base. */
-        if (prop_diffs->nelts == 0)
-          SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, NULL, NULL,
-                                          pool));
-        else
-          SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
-                                          NULL, NULL, pool));
+        SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
+                                        new_base_props,
+                                        NULL, NULL, pool));
       }
 #else
       if (base_merge)
         return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                 U_("base_merge=TRUE is no longer supported"));
 
-      {
-        apr_array_header_t *prop_diffs;
-
-        SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
-                               pool));
-
-        /* Save the actual properties file if it differs from base. */
-        if (prop_diffs->nelts == 0)
-          new_actual_props = NULL; /* Remove actual properties*/
-
-        /* For the old school: write the properties into the "working"
-           (aka ACTUAL) location. Note that PROPS may be NULL, indicating
-           a removal of the props file.  */
-
-        SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
-                                        NULL /* conflict */,
-                                        NULL /* work_item */,
-                                        pool));
-      }
+      SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
+                                      new_base_props,
+                                      NULL /* conflict */,
+                                      NULL /* work_item */,
+                                      pool));
 #endif
 
       SVN_ERR(svn_wc__wq_run(db, local_abspath,

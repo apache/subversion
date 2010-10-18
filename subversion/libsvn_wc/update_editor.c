@@ -2925,22 +2925,10 @@ close_directory(void *dir_baton,
          item to write out an old-style props file.  */
       if (new_base_props != NULL)
         {
-          apr_array_header_t *prop_diffs;
-
           SVN_ERR_ASSERT(new_actual_props != NULL);
 
-          /* If the ACTUAL props are the same as the BASE props, then we
-             should "write" a NULL. This will remove the props from the
-             ACTUAL_NODE row, and remove the old-style props file, indicating
-             "no change".  */
-          props = new_actual_props;
-          SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
-                                 pool));
-          if (prop_diffs->nelts == 0)
-            props = NULL;
-
           SVN_ERR(svn_wc__db_op_set_props(eb->db, db->local_abspath,
-                                          props,
+                                          new_actual_props, new_base_props,
                                           NULL /* conflict */,
                                           NULL /* work_items */,
                                           pool));
@@ -4586,23 +4574,10 @@ close_file(void *file_baton,
      properties merge. */
   if (! fb->adding_base_under_local_add)
     {
-      apr_hash_t *props;
-      apr_array_header_t *prop_diffs;
-
       SVN_ERR_ASSERT(new_actual_props != NULL);
 
-      /* If the ACTUAL props are the same as the BASE props, then we
-         should "write" a NULL. This will remove the props from the
-         ACTUAL_NODE row, and remove the old-style props file, indicating
-         "no change".  */
-      props = new_actual_props;
-      SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
-                             pool));
-      if (prop_diffs->nelts == 0)
-        props = NULL;
-
       SVN_ERR(svn_wc__db_op_set_props(eb->db, fb->local_abspath,
-                                      props,
+                                      new_actual_props, new_base_props,
                                       NULL /* conflict */,
                                       NULL /* work_item */,
                                       pool));
@@ -5591,7 +5566,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   const char *original_root_url;
   const char *original_repos_relpath;
   const char *original_uuid;
-  apr_hash_t *actual_props;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -5711,25 +5685,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                    &changed_author,
                                    db, local_abspath,
                                    entry_props, pool, pool));
-  }
-
-  /* Add some work items to install the properties.  */
-  {
-    if (new_props == NULL)
-      {
-        actual_props = NULL;
-      }
-    else
-      {
-        apr_array_header_t *prop_diffs;
-
-        SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, new_base_props,
-                               pool));
-        if (prop_diffs->nelts == 0)
-          actual_props = NULL;
-        else
-          actual_props = new_props;
-      }
   }
 
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
@@ -5856,7 +5811,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   /* ### if below fails, then the above db change would remain :-(  */
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
-                                  actual_props,
+                                  new_props, new_base_props,
                                   NULL /* conflict */,
                                   all_work_items,
                                   pool));
