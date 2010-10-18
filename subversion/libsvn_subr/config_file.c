@@ -943,7 +943,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
         "# password-stores = keychain,gpg-agent"                             NL
 #elif defined(WIN32) && !defined(__MINGW32__)
-        "# password-stores = windows-cryptoapi,gpg-agent"                    NL
+        "# password-stores = windows-cryptoapi"                              NL
 #else
         "# password-stores = gpg-agent,gnome-keyring,kwallet"                NL
 #endif
