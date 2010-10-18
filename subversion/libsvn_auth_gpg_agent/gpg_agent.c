@@ -47,7 +47,7 @@
 
 #define BUFFER_SIZE 1024
 
-/* Implementation of password_get_t that retrieves the password
+/* Implementation of svn_auth__password_get_t that retrieves the password
    from gpg-agent */
 static svn_boolean_t
 password_get_gpg_agent(const char **password,
@@ -178,7 +178,7 @@ password_get_gpg_agent(const char **password,
 }
 
 
-/* Implementation of password_set_t that stores the password in
+/* Implementation of svn_auth__password_set_t that stores the password in
    GPG Agent. */
 static svn_boolean_t
 password_set_gpg_agent(apr_hash_t *creds,
