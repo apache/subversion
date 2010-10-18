@@ -1598,30 +1598,39 @@ def cp_isnt_ro(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  mu_URL = sbox.repo_url + '/A/mu'
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   mu2_path = os.path.join(wc_dir, 'A', 'mu2')
+  mu3_path = os.path.join(wc_dir, 'A', 'mu3')
   kappa_path = os.path.join(wc_dir, 'kappa')
   open(kappa_path, 'w').write("This is the file 'kappa'.\n")
 
-  # added file
+  ## added file
   sbox.simple_add(kappa_path)
   svntest.actions.set_prop('svn:needs-lock', 'yes', kappa_path)
   is_writable(kappa_path)
   sbox.simple_commit(kappa_path)
   is_readonly(kappa_path)
 
-  # versioned file
+  ## versioned file
   svntest.actions.set_prop('svn:needs-lock', 'yes', mu_path)
   is_writable(mu_path)
   sbox.simple_commit(mu_path)
   is_readonly(mu_path)
 
-  # added-with-history file (aka uncommitted copied file)
-  svntest.actions.set_prop('svn:needs-lock', 'yes', mu_path)
+  # At this point, mu has 'svn:needs-lock' set
+
+  ## wc->wc copied file
   svntest.main.run_svn(None, 'copy', mu_path, mu2_path)
   is_writable(mu2_path)
   sbox.simple_commit(mu2_path)
   is_readonly(mu2_path)
+
+  ## URL->wc copied file
+  svntest.main.run_svn(None, 'copy', mu_URL, mu3_path)
+  is_writable(mu3_path)
+  sbox.simple_commit(mu3_path)
+  is_readonly(mu3_path)
 
 
 ########################################################################
