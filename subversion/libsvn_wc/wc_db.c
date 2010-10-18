@@ -266,6 +266,34 @@ get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
 }
 
 
+/* Return a lock info structure constructed from the given columns of the
+ * SQLITE statement STMT, or return NULL if the token column value is null. */
+static svn_wc__db_lock_t *
+lock_from_columns(svn_sqlite__stmt_t *stmt,
+                  int col_token,
+                  int col_owner,
+                  int col_comment,
+                  int col_date,
+                  apr_pool_t *result_pool)
+{
+  svn_wc__db_lock_t *lock;
+
+  if (svn_sqlite__column_is_null(stmt, col_token))
+    {
+      lock = NULL;
+    }
+  else
+    {
+      lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
+      lock->token = svn_sqlite__column_text(stmt, col_token, result_pool);
+      lock->owner = svn_sqlite__column_text(stmt, col_owner, result_pool);
+      lock->comment = svn_sqlite__column_text(stmt, col_comment, result_pool);
+      lock->date = svn_sqlite__column_int64(stmt, col_date);
+    }
+  return lock;
+}
+
+
 /* */
 static const char *
 escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
@@ -1793,23 +1821,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
         }
       if (lock)
         {
-          if (svn_sqlite__column_is_null(stmt, 14))
-            {
-              *lock = NULL;
-            }
-          else
-            {
-              *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
-              (*lock)->token = svn_sqlite__column_text(stmt, 14, result_pool);
-              if (!svn_sqlite__column_is_null(stmt, 15))
-                (*lock)->owner = svn_sqlite__column_text(stmt, 15,
-                                                         result_pool);
-              if (!svn_sqlite__column_is_null(stmt, 16))
-                (*lock)->comment = svn_sqlite__column_text(stmt, 16,
-                                                           result_pool);
-              if (!svn_sqlite__column_is_null(stmt, 17))
-                (*lock)->date = svn_sqlite__column_int64(stmt, 17);
-            }
+          *lock = lock_from_columns(stmt, 14, 15, 16, 17, result_pool);
         }
       if (repos_root_url || repos_uuid)
         {
@@ -4656,20 +4668,10 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 
       if (lock)
         {
-            if (op_depth != 0 || svn_sqlite__column_is_null(stmt_info, 15))
-              *lock = NULL;
-            else
-            {
-                *lock = apr_pcalloc(result_pool, sizeof(svn_wc__db_lock_t));
-                (*lock)->token = svn_sqlite__column_text(stmt_info, 15,
-                                                        result_pool);
-                (*lock)->owner = svn_sqlite__column_text(stmt_info, 16,
-                                                        result_pool);
-                (*lock)->comment = svn_sqlite__column_text(stmt_info, 17,
-                                                            result_pool);
-                if (!svn_sqlite__column_is_null(stmt_info, 18))
-                  (*lock)->date = svn_sqlite__column_int64(stmt_info, 18);
-            }
+          if (op_depth != 0)
+            *lock = NULL;
+          else
+            *lock = lock_from_columns(stmt_info, 15, 16, 17, 18, result_pool);
         }
 
       if (have_work)
@@ -4859,22 +4861,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
 
           child->translated_size = get_translated_size(stmt, 7);
 
-          if (svn_sqlite__column_is_null(stmt, 15))
-            child->lock = NULL;
-          else
-            {
-              child->lock = apr_palloc(result_pool, sizeof(svn_wc__db_lock_t));
-              child->lock->token = svn_sqlite__column_text(stmt, 15,
-                                                           result_pool);
-              child->lock->owner = svn_sqlite__column_text(stmt, 16,
-                                                           result_pool);
-              child->lock->comment = svn_sqlite__column_text(stmt, 17,
-                                                             result_pool);
-              if (svn_sqlite__column_is_null(stmt, 18))
-                child->lock->date = 0;
-              else
-                child->lock->date = svn_sqlite__column_int64(stmt, 18);
-            }
+          child->lock = lock_from_columns(stmt, 15, 16, 17, 18, result_pool);
 
           err = svn_sqlite__column_properties(&properties, stmt, 14,
                                               scratch_pool, scratch_pool);
