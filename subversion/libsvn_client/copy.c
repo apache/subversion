@@ -300,7 +300,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   const char *dst_parent, *dst_parent_abspath;
   struct do_wc_to_wc_copies_with_write_lock_baton baton;
 
-  get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool);
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool));
   if (copy_pairs->nelts == 1)
     dst_parent = svn_dirent_dirname(dst_parent, pool);
 
@@ -821,7 +821,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
      *and* destinations might be an optimization when the user is
      authorized to access all that stuff, but could cause the
      operation to fail altogether otherwise.  See issue #3242.  */
-  get_copy_pair_ancestors(copy_pairs, NULL, &top_url_dst, &top_url_all, pool);
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &top_url_dst, &top_url_all, 
+                                  pool));
   top_url = is_move ? top_url_all : top_url_dst;
 
   /* Check each src/dst pair for resurrection, and verify that TOP_URL
@@ -1168,7 +1169,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   int i;
 
   /* Find the common root of all the source paths */
-  get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool);
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool));
 
   /* Do we need to lock the working copy?  1.6 didn't take a write
      lock, but what happens if the working copy changes during the copy
@@ -1731,7 +1732,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       pair->src_abspath_or_url = apr_pstrdup(pool, src);
     }
 
-  get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path, NULL, pool);
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path,
+                                  NULL, pool));
   lock_abspath = top_dst_path;
   if (copy_pairs->nelts == 1)
     {
