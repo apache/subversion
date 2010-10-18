@@ -196,6 +196,18 @@ test_struct_wrapping(apr_pool_t *p)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_null_objects(apr_pool_t *p)
+{
+  Lock lock(NULL);
+  std::string path;
+
+  if (lock)
+    path = lock.getPath();
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -215,5 +227,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test various map to hash transforms"),
     SVN_TEST_PASS2(test_struct_wrapping,
                    "test our ref-counted struct wrappers"),
+    SVN_TEST_PASS2(test_null_objects,
+                   "test wrapping of various NULL objects"),
     SVN_TEST_NULL
   };

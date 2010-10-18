@@ -115,6 +115,7 @@ class CStructWrapper
 
     inline const T& operator* () const { return *m_data->ptr(); }
     inline const T* operator-> () const { return m_data->ptr(); }
+    inline operator T const *() const { return m_data->ptr(); }
 
   private:
     RefCounter<T, DUP> *m_data;
@@ -130,6 +131,11 @@ class CommitInfo
     CommitInfo(const svn_commit_info_t *info)
       : m_info(info)
     {
+    }
+
+    inline operator bool () const
+    {
+      return m_info != NULL;
     }
 
     inline Revision
@@ -174,6 +180,11 @@ class Lock
     Lock(const svn_lock_t *lock)
       : m_lock(lock)
     {
+    }
+
+    inline operator bool () const
+    {
+      return m_lock != NULL;
     }
 
     inline std::string
@@ -231,6 +242,11 @@ class ClientNotifyInfo
     {
     }
 
+    inline operator bool () const
+    {
+      return m_notify != NULL;
+    }
+
     // ### This is only temporary
     inline const svn_wc_notify_t *
     to_c() const
@@ -249,6 +265,11 @@ class Version
     Version(const svn_version_t *version)
       : m_version(version)
     {
+    }
+
+    inline operator bool () const
+    {
+      return m_version != NULL;
     }
 
     inline std::string
