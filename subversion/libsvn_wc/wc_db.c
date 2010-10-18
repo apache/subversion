@@ -235,7 +235,7 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
                            apr_pool_t *scratch_pool);
 
 
-/* Return the absolute path, in local path style, of LOCAL_RELPATH in PDH. */
+/* Return the absolute path, in local path style, of LOCAL_RELPATH in WCROOT. */
 static const char *
 path_for_error_message(const svn_wc__db_wcroot_t *wcroot,
                        const char *local_relpath,
