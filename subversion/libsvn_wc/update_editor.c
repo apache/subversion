@@ -2928,7 +2928,7 @@ close_directory(void *dir_baton,
           SVN_ERR_ASSERT(new_actual_props != NULL);
 
           SVN_ERR(svn_wc__db_op_set_props(eb->db, db->local_abspath,
-                                          new_actual_props, new_base_props,
+                                          new_actual_props,
                                           NULL /* conflict */,
                                           NULL /* work_items */,
                                           pool));
@@ -4577,7 +4577,7 @@ close_file(void *file_baton,
       SVN_ERR_ASSERT(new_actual_props != NULL);
 
       SVN_ERR(svn_wc__db_op_set_props(eb->db, fb->local_abspath,
-                                      new_actual_props, new_base_props,
+                                      new_actual_props,
                                       NULL /* conflict */,
                                       NULL /* work_item */,
                                       pool));
@@ -5811,7 +5811,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   /* ### if below fails, then the above db change would remain :-(  */
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
-                                  new_props, new_base_props,
+                                  new_props,
                                   NULL /* conflict */,
                                   all_work_items,
                                   pool));
