@@ -455,6 +455,56 @@ fetch_repos_info(const char **repos_root_url,
   return svn_error_return(svn_sqlite__reset(stmt));
 }
 
+/* Set *REPOS_ROOT_URL, *REPOS_UUID, *REVISION and *REPOS_RELPATH from the
+ * given columns of the SQLITE statement STMT, or to NULL if the respective
+ * column value is null.  Any of the output parameters may be NULL if not
+ * required. */
+static svn_error_t *
+repos_location_from_columns(const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_revnum_t *revision,
+                            const char **repos_relpath,
+                            svn_wc__db_pdh_t *pdh,
+                            svn_sqlite__stmt_t *stmt,
+                            int col_repos_id,
+                            int col_revision,
+                            int col_repos_relpath,
+                            apr_pool_t *result_pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (repos_root_url || repos_uuid)
+    {
+      /* Fetch repository information via REPOS_ID. */
+      if (svn_sqlite__column_is_null(stmt, col_repos_id))
+        {
+          if (repos_root_url)
+            *repos_root_url = NULL;
+          if (repos_uuid)
+            *repos_uuid = NULL;
+        }
+      else
+        {
+          err = fetch_repos_info(repos_root_url, repos_uuid,
+                                 pdh->wcroot->sdb,
+                                 svn_sqlite__column_int64(stmt, col_repos_id),
+                                 result_pool);
+        }
+    }
+  if (revision)
+    {
+      *revision = svn_sqlite__column_revnum(stmt, col_revision);
+    }
+  if (repos_relpath)
+    {
+      *repos_relpath = svn_sqlite__column_text(stmt, col_repos_relpath,
+                                               result_pool);
+    }
+
+  return err;
+}
+
+
 /* Scan from LOCAL_RELPATH upwards through parent nodes until we find a parent
    that has values in the 'repos_id' and 'repos_relpath' columns.  Return
    that information in REPOS_ID and REPOS_RELPATH (either may be NULL). */
@@ -1809,35 +1859,12 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
         {
           *status = svn_sqlite__column_token(stmt, 2, presence_map);
         }
-      if (revision)
-        {
-          *revision = svn_sqlite__column_revnum(stmt, 4);
-        }
-      if (repos_relpath)
-        {
-          *repos_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
-        }
+      err = repos_location_from_columns(repos_root_url, repos_uuid, revision,
+                                        repos_relpath,
+                                        pdh, stmt, 0, 4, 1, result_pool);
       if (lock)
         {
           *lock = lock_from_columns(stmt, 14, 15, 16, 17, result_pool);
-        }
-      if (repos_root_url || repos_uuid)
-        {
-          /* Fetch repository information via REPOS_ID. */
-          if (svn_sqlite__column_is_null(stmt, 0))
-            {
-              if (repos_root_url)
-                *repos_root_url = NULL;
-              if (repos_uuid)
-                *repos_uuid = NULL;
-            }
-          else
-            {
-              err = fetch_repos_info(repos_root_url, repos_uuid,
-                                     pdh->wcroot->sdb,
-                                     svn_sqlite__column_int64(stmt, 0),
-                                     result_pool);
-            }
         }
       if (changed_rev)
         {
@@ -4491,47 +4518,31 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
         {
           *kind = node_kind;
         }
-      if (revision)
+      if (op_depth != 0)
         {
-          if (op_depth != 0)
+          if (repos_root_url)
+            *repos_root_url = NULL;
+          if (repos_uuid)
+            *repos_uuid = NULL;
+          if (revision)
             *revision = SVN_INVALID_REVNUM;
-          else
-            *revision = svn_sqlite__column_revnum(stmt_info, 5);
+          if (repos_relpath)
+            /* Our path is implied by our parent somewhere up the tree.
+               With the NULL value and status, the caller will know to
+               search up the tree for the base of our path.  */
+            *repos_relpath = NULL;
         }
-      if (repos_relpath)
-        {
-          if (op_depth != 0)
-            {
-              /* Our path is implied by our parent somewhere up the tree.
-                 With the NULL value and status, the caller will know to
-                 search up the tree for the base of our path.  */
-              *repos_relpath = NULL;
-            }
-          else
-            *repos_relpath = svn_sqlite__column_text(stmt_info, 2,
-                                                     result_pool);
-        }
-      if (repos_root_url || repos_uuid)
+      else
         {
           /* Fetch repository information via REPOS_ID. If we have a
              WORKING_NODE (and have been added), then the repository
              we're being added to will be dependent upon a parent. The
              caller can scan upwards to locate the repository.  */
-          if (op_depth != 0 || svn_sqlite__column_is_null(stmt_info, 1))
-            {
-              if (repos_root_url)
-                *repos_root_url = NULL;
-              if (repos_uuid)
-                *repos_uuid = NULL;
-            }
-          else
-            err = svn_error_compose_create(
-                     err,
-                     fetch_repos_info(repos_root_url,
-                                      repos_uuid,
-                                      pdh->wcroot->sdb,
-                                      svn_sqlite__column_int64(stmt_info, 1),
-                                      result_pool));
+          err = svn_error_compose_create(
+            err, repos_location_from_columns(repos_root_url, repos_uuid,
+                                             revision, repos_relpath,
+                                             pdh, stmt_info, 1, 5, 2,
+                                             result_pool));
         }
       if (changed_rev)
         {
@@ -4608,41 +4619,25 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
           else
             *changelist = NULL;
         }
-      if (original_repos_relpath)
+      if (op_depth == 0)
         {
-          if (op_depth != 0)
-            *original_repos_relpath = svn_sqlite__column_text(stmt_info, 2,
-                                                              result_pool);
-          else
+          if (original_root_url)
+            *original_root_url = NULL;
+          if (original_uuid)
+            *original_uuid = NULL;
+          if (original_revision)
+            *original_revision = SVN_INVALID_REVNUM;
+          if (original_repos_relpath)
             *original_repos_relpath = NULL;
         }
-
-      if (original_root_url || original_uuid)
+      else
         {
-          if (op_depth == 0 || svn_sqlite__column_is_null(stmt_info, 1))
-            {
-              if (original_root_url)
-                *original_root_url = NULL;
-              if (original_uuid)
-                *original_uuid = NULL;
-            }
-          else 
-            {
-              /* Fetch repository information via COPYFROM_REPOS_ID. */
-              err = svn_error_compose_create(
-                     err,
-                     fetch_repos_info(original_root_url, original_uuid,
-                                      pdh->wcroot->sdb,
-                                      svn_sqlite__column_int64(stmt_info, 1),
-                                      result_pool));
-            }
-        }
-      if (original_revision)
-        {
-          if (op_depth != 0)
-            *original_revision = svn_sqlite__column_revnum(stmt_info, 5);
-          else
-            *original_revision = SVN_INVALID_REVNUM;
+          err = svn_error_compose_create(
+            err, repos_location_from_columns(original_root_url, original_uuid,
+                                             original_revision,
+                                             original_repos_relpath,
+                                             pdh, stmt_info, 1, 5, 2,
+                                             result_pool));
         }
       if (props_mod)
         {
