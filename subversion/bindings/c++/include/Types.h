@@ -50,8 +50,39 @@ class Nullable : public std::pair<bool, T>
     { }
 };
 
+template<typename T1, typename T2>
+class Nullable<std::map<T1, T2> > : public std::pair<bool, std::map<T1, T2> >
+{
+  public:
+    inline Nullable()
+      : std::pair<bool, std::map<T1, T2> >(true, std::map<T1, T2>())
+    { }
+
+    inline Nullable(bool b, std::map<T1, T2> t)
+      : std::pair<bool, std::map<T1, T2> >(b, t)
+    { }
+
+    typedef typename std::map<T1, T2>::const_iterator const_iterator;
+
+    inline T2&
+    operator [](const T1 &key)
+    { return this->second[key]; }
+
+    inline const_iterator
+    begin() const
+    { return this->second.begin(); }
+
+    inline const_iterator
+    end() const
+    { return this->second.end(); }
+
+    inline typename std::map<T1, T2>::size_type
+    size() const
+    { return this->second.size(); }
+};
+
 // Typedefs
-typedef std::map<std::string, std::string> PropTable;
+typedef Nullable<std::map<std::string, std::string> > PropTable;
 
 
 namespace Private

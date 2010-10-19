@@ -78,6 +78,9 @@ make_string_array(const std::vector<std::string> &vec, Pool &pool)
 apr_hash_t *
 make_prop_table(const PropTable &props, Pool &pool)
 {
+  if (!props.first)
+    return NULL;
+
   apr_hash_t *hash = apr_hash_make(pool.pool());
 
   for (PropTable::const_iterator it = props.begin();
