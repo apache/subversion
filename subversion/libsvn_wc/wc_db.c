@@ -3920,31 +3920,34 @@ svn_wc__db_op_read_tree_conflict(
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath;
-  apr_hash_t *tree_conflicts;
-  svn_error_t *err;
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath, *child_path;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  err = svn_wc__db_op_read_all_tree_conflicts(&tree_conflicts, db,
-                                              parent_abspath,
-                                              result_pool, scratch_pool);
-  if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+
+  child_path = svn_dirent_skip_ancestor(pdh->wcroot->abspath, local_abspath);
+  if (child_path != local_abspath && child_path[0])
     {
-       /* We walked off the top of a working copy.  */
-       svn_error_clear(err);
-       *tree_conflict = NULL;
-       return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_return(err);
+      const char * parent_abspath;
+      apr_hash_t *tree_conflicts;
 
-  if (tree_conflicts)
-    *tree_conflict = apr_hash_get(tree_conflicts,
-                                  svn_dirent_basename(local_abspath,
-                                                      scratch_pool),
-                                  APR_HASH_KEY_STRING);
+      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+      SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(&tree_conflicts, db,
+                                                    parent_abspath,
+                                                    result_pool, scratch_pool));
+      if (tree_conflicts)
+        *tree_conflict = apr_hash_get(tree_conflicts,
+                                      svn_dirent_basename(local_abspath,
+                                                          scratch_pool),
+                                      APR_HASH_KEY_STRING);
+      else
+        *tree_conflict = NULL;
+    }
   else
     *tree_conflict = NULL;
 
