@@ -517,8 +517,7 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
                        apr_pool_t *scratch_pool)
 {
   const char *relpath_suffix = "";
-  const char *current_basename = svn_dirent_basename(local_relpath,
-                                                     scratch_pool);
+  const char *current_basename = svn_dirent_basename(local_relpath, NULL);
   const char *current_relpath = local_relpath;
   svn_sqlite__stmt_t *stmt;
 
@@ -3740,8 +3739,7 @@ set_tc_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
                                       stb->parent_abspath, scratch_pool));
 
-  apr_hash_set(conflicts, svn_dirent_basename(stb->local_abspath,
-                                              scratch_pool),
+  apr_hash_set(conflicts, svn_dirent_basename(stb->local_abspath, NULL),
                APR_HASH_KEY_STRING, stb->tree_conflict);
 
   if (apr_hash_count(conflicts) == 0 && !have_row)
@@ -3941,8 +3939,7 @@ svn_wc__db_op_read_tree_conflict(
                                                     result_pool, scratch_pool));
       if (tree_conflicts)
         *tree_conflict = apr_hash_get(tree_conflicts,
-                                      svn_dirent_basename(local_abspath,
-                                                          scratch_pool),
+                                      svn_dirent_basename(local_abspath, NULL),
                                       APR_HASH_KEY_STRING);
       else
         *tree_conflict = NULL;
@@ -6106,7 +6103,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       if (repos_relpath)
         {
           build_relpath = svn_relpath_join(svn_dirent_basename(current_abspath,
-                                                              scratch_pool),
+                                                               NULL),
                                            build_relpath,
                                            scratch_pool);
         }
