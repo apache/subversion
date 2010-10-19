@@ -660,7 +660,7 @@ def dirs_only_upgrade(sbox):
   sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'dirs-only.tar.bz2')
 
-  expected_output = ["Upgraded '%s'.\n" % (sbox.ospath('').rstrip('/')),
+  expected_output = ["Upgraded '%s'.\n" % (sbox.ospath('').rstrip(os.path.sep)),
                      "Upgraded '%s'.\n" % (sbox.ospath('A'))]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
