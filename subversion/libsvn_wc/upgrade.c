@@ -1707,6 +1707,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                                     scratch_pool);
   pristine_to = svn_wc__adm_child(local_abspath, PRISTINE_STORAGE_RELPATH,
                                   scratch_pool);
+  SVN_ERR(svn_wc__ensure_directory(pristine_from, scratch_pool));
   SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
                                      pristine_from, pristine_to,
                                      scratch_pool, scratch_pool));

@@ -654,6 +654,23 @@ def delete_and_keep_local(sbox):
     raise svntest.Failure('wc/Deleted should not exist')
 
 
+def dirs_only_upgrade(sbox):
+  "upgrade a wc without files" 
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'dirs-only.tar.bz2')
+
+  expected_output = ["Upgraded '%s'.\n" % (sbox.ospath('').rstrip('/')),
+                     "Upgraded '%s'.\n" % (sbox.ospath('A'))]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='  ', wc_rev='1'),
+      })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -675,6 +692,7 @@ test_list = [ None,
               missing_dirs,
               missing_dirs2,
               XFail(delete_and_keep_local),
+              dirs_only_upgrade,
              ]
 
 
