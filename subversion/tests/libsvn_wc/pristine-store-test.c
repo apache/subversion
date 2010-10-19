@@ -48,18 +48,10 @@
 #include "private/svn_wc_private.h"
 
 #include "../svn_test.h"
-#include "../svn_test_fs.h"
+#include "../svn_test_utils.h"
 
 
-#define REPOSITORIES_WORK_DIR "svn-test-work/repositories"
-#define WCS_WORK_DIR "svn-test-work/working-copies"
-
-/* Create an empty repository and WC for the test TEST_NAME, and open a WC
- * DB context.  Set *REPOS_URL to the URL of the new repository, *WC_ABSPATH
- * to the root path of the new WC, and *DB to a new DB context.
- *
- * Create the repository and WC in subdirectories called repos/TEST_NAME and
- * wcs/TEST_NAME respectively, within the current working directory. */
+/* Create repos and WC, and also set *DB to a new DB context. */
 static svn_error_t *
 create_repos_and_wc(const char **repos_url,
                     const char **wc_abspath,
@@ -68,41 +60,8 @@ create_repos_and_wc(const char **repos_url,
                     const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
-  const char *repos_path = svn_relpath_join(REPOSITORIES_WORK_DIR, test_name,
-                                            pool);
-  const char *wc_path = svn_relpath_join(WCS_WORK_DIR, test_name, pool);
-
-  /* Remove the repo and WC dirs if they already exist, to ensure the test
-   * will run even if a previous failed attempt was not cleaned up. */
-  SVN_ERR(svn_io_remove_dir2(repos_path, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
-
-  /* Create the parent dirs of the repo and WC if necessary. */
-  SVN_ERR(svn_io_make_dir_recursively(REPOSITORIES_WORK_DIR, pool));
-  SVN_ERR(svn_io_make_dir_recursively(WCS_WORK_DIR, pool));
-
-  /* Create a repos and set *REPOS_URL to its path. */
-  {
-    svn_repos_t *repos;
-
-    SVN_ERR(svn_test__create_repos(&repos, repos_path, opts, pool));
-    SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, repos_path, pool));
-  }
-
-  /* Create a WC */
-  {
-    svn_client_ctx_t *ctx;
-    svn_opt_revision_t head_rev = { svn_opt_revision_head, {0} };
-
-    SVN_ERR(svn_client_create_context(&ctx, pool));
-    /* SVN_ERR(svn_config_get_config(&ctx->config, config_dir, pool)); */
-    SVN_ERR(svn_dirent_get_absolute(wc_abspath, wc_path, pool));
-    SVN_ERR(svn_client_checkout3(NULL, *repos_url, *wc_abspath,
-                                 &head_rev, &head_rev, svn_depth_infinity,
-                                 FALSE /* ignore_externals */,
-                                 FALSE /* allow_unver_obstructions */,
-                                 ctx, pool));
-  }
+  SVN_ERR(svn_test__create_repos_and_wc(repos_url, wc_abspath, test_name,
+                                        opts, pool));
 
   /* Open a DB context */
   SVN_ERR(svn_wc__db_open(db, svn_wc__db_openmode_readonly, NULL,
