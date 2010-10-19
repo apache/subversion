@@ -41,9 +41,18 @@
 namespace SVN
 {
 
+template<typename T>
+class Nullable : public std::pair<bool, T>
+{
+  public:
+    inline Nullable(bool b, T t)
+      : std::pair<bool, T>(b, t)
+    { }
+};
+
 // Typedefs
 typedef std::map<std::string, std::string> PropTable;
-typedef std::pair<bool, std::string> ValidString;
+
 
 namespace Private
 {
@@ -136,11 +145,12 @@ class CStructWrapper
     RefCounter<T, DUP> *m_data;
 };
 
-inline ValidString
-makeVString(const char *str)
+template<typename T1, typename T2>
+inline Nullable<T1>
+makeNullable(T2 t)
 {
-  return ValidString(str != NULL,
-                     str != NULL ? std::string(str) : std::string());
+  return Nullable<T1>(t != NULL,
+                      t != NULL ? T1(t) : T1());
 }
 
 } // namespace Private
@@ -153,10 +163,10 @@ makeVString(const char *str)
     }
 
 #define GET_MEMBER_STR(func_name, member)                           \
-    inline ValidString                                              \
+    inline Nullable<std::string>                                    \
     func_name() const                                               \
     {                                                               \
-      return Private::makeVString(m_obj->member);                   \
+      return Private::makeNullable<std::string>(m_obj->member);     \
     }
 
 #define GET_MEMBER_PTR(func_name, type, member)                     \
