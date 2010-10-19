@@ -202,6 +202,18 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1024269
+   Fix issue #3733, which tracks an API knowledge violation in the repos
+   dumpstream loading code.
+   Justification:
+     Because our "generic" dumpstream logic is casting a caller-supplied
+     baton into a specific type and accessing that baton's innards, any
+     amount of badness is likely to ensue.
+   Branch:
+     ^/subversion/branches/1.6.x-r1024269
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
