@@ -3921,7 +3921,7 @@ svn_wc__db_op_read_tree_conflict(
                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
-  const char *local_relpath, *child_path;
+  const char *local_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3929,8 +3929,7 @@ svn_wc__db_op_read_tree_conflict(
                               local_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
 
-  child_path = svn_dirent_skip_ancestor(pdh->wcroot->abspath, local_abspath);
-  if (child_path != local_abspath && child_path[0])
+  if (local_relpath[0])
     {
       const char * parent_abspath;
       apr_hash_t *tree_conflicts;
