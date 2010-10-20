@@ -207,7 +207,6 @@ def update_props(sbox):
                                         '-r', '2', wc_backup)
 
   # This adds properties to nodes that have properties
-  ### Currently FAILs because the pre-update properties on directories get lost
   expected_status.tweak(wc_rev=3)
   expected_disk.tweak('A/mu', props={'blue'  : 'azul',
                                      'blue2' : 'azul2'})
@@ -2366,7 +2365,7 @@ def propget_redirection(sbox):
 test_list = [ None,
               make_local_props,
               commit_props,
-              XFail(update_props),
+              update_props,
               downdate_props,
               remove_props,
               update_conflict_props,

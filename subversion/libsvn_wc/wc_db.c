@@ -5082,8 +5082,10 @@ db_read_pristine_props(apr_hash_t **props,
       presence = svn_sqlite__column_token(stmt, 1, presence_map);
     }
 
-  /* normal or copied: Fetch properties */
-  if (presence == svn_wc__db_status_normal)
+  /* normal or copied: Fetch properties (during update we want
+     properties for incomplete as well) */
+  if (presence == svn_wc__db_status_normal
+      || presence == svn_wc__db_status_incomplete)
     {
       svn_error_t *err;
 
