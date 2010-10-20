@@ -1214,6 +1214,28 @@ update_min_unpacked_revprop(svn_fs_t *fs, apr_pool_t *pool)
                                pool);
 }
 
+/* Create a new SQLite database for storing the revprops in filesystem FS.
+ * Leave the DB open and set *SDB to its handle.  Also create the "min
+ * unpacked revprop" file. */
+static svn_error_t *
+create_packed_revprops_db(svn_sqlite__db_t **sdb,
+                          svn_fs_t *fs,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_io_file_create(path_min_unpacked_revprop(fs, scratch_pool),
+                             "0\n", scratch_pool));
+  SVN_ERR(svn_sqlite__open(sdb,
+                           svn_dirent_join_many(scratch_pool, fs->path,
+                                                PATH_REVPROPS_DIR,
+                                                PATH_REVPROPS_DB,
+                                                NULL),
+                           svn_sqlite__mode_rwcreate, statements,
+                           0, NULL, result_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_SCHEMA));
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
 
@@ -1351,19 +1373,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
      and create the database. */
   if (format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_min_unpacked_revprop(fs, pool), "0\n",
-                                 pool));
-
-      SVN_ERR(svn_sqlite__open(&ffd->revprop_db, svn_dirent_join_many(
-                                                          pool, fs->path,
-                                                          PATH_REVPROPS_DIR,
-                                                          PATH_REVPROPS_DB,
-                                                          NULL),
-                               svn_sqlite__mode_rwcreate, statements,
-                               0, NULL,
-                               fs->pool, pool));
-      SVN_ERR(svn_sqlite__exec_statements(ffd->revprop_db,
-                                          STMT_CREATE_SCHEMA));
+      SVN_ERR(create_packed_revprops_db(&ffd->revprop_db, fs, fs->pool, pool));
     }
 
   /* Bump the format file. */
@@ -6496,6 +6506,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                                                         pool),
                                         pool));
 
+  /* Create the revprops directory. */
   if (ffd->max_files_per_dir)
     SVN_ERR(svn_io_make_dir_recursively(path_revprops_shard(fs, 0, pool),
                                         pool));
@@ -6505,21 +6516,10 @@ svn_fs_fs__create(svn_fs_t *fs,
                                                         pool),
                                         pool));
 
-  /* Create the revprops directory. */
+  /* Write the min unpacked revprop file, and create the database. */
   if (format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_min_unpacked_revprop(fs, pool), "0\n",
-                                 pool));
-      SVN_ERR(svn_sqlite__open(&ffd->revprop_db, svn_dirent_join_many(
-                                                    pool, path,
-                                                    PATH_REVPROPS_DIR,
-                                                    PATH_REVPROPS_DB,
-                                                    NULL),
-                               svn_sqlite__mode_rwcreate, statements,
-                               0, NULL,
-                               fs->pool, pool));
-      SVN_ERR(svn_sqlite__exec_statements(ffd->revprop_db,
-                                          STMT_CREATE_SCHEMA));
+      SVN_ERR(create_packed_revprops_db(&ffd->revprop_db, fs, fs->pool, pool));
     }
 
   /* Create the transaction directory. */
