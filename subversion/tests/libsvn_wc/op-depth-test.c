@@ -468,7 +468,7 @@ wc_wc_copies(const svn_test_opts_t *opts,
             { 4, "E-copied/beta",   "normal",   NO_COPY_FROM }
           } },
 
-        { NULL, NULL, {} }
+          { NULL, NULL, {0} }
       };
     struct subtest_t *subtest;
 
