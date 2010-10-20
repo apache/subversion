@@ -378,11 +378,6 @@ svn_io_open_uniquely_named(apr_file_t **file,
       if (delete_when == svn_io_file_del_on_close)
         flag |= APR_DELONCLOSE;
 
-      /* Increase the chance that rand() will return something truely
-         independent from what others get or do. */
-      if (i == 2)
-        srand(apr_time_now());
-
       /* Special case the first attempt -- if we can avoid having a
          generated numeric portion at all, that's best.  So first we
          try with just the suffix; then future tries add a number
@@ -393,16 +388,11 @@ svn_io_open_uniquely_named(apr_file_t **file,
          This is good, since "1" would misleadingly imply that
          the second attempt was actually the first... and if someone's
          got conflicts on their conflicts, we probably don't want to
-         add to their confusion :-). 
-
-         Also, the randomization used to minimize the number of re-try 
-         cycles will interfere with certain tests that compare working
-         copies etc.
-       */
+         add to their confusion :-). */
       if (i == 1)
         unique_name = apr_psprintf(scratch_pool, "%s%s", path, suffix);
       else
-        unique_name = apr_psprintf(scratch_pool, "%s.%u_%x%s", path, i, rand(), suffix);
+        unique_name = apr_psprintf(scratch_pool, "%s.%u_%s", path, i, suffix);
 
       /* Hmmm.  Ideally, we would append to a native-encoding buf
          before starting iteration, then convert back to UTF-8 for
