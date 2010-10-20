@@ -26,7 +26,10 @@
 #include "fs.h"
 
 /* Open the fsfs filesystem pointed to by PATH and associate it with
-   filesystem object FS.  Use POOL for temporary allocations. */
+   filesystem object FS.  Use POOL for temporary allocations.
+
+   ### Some parts of *FS must have been initialized beforehand; some parts
+       (including FS->path) are initialized by this function. */
 svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
                              const char *path,
                              apr_pool_t *pool);
@@ -336,7 +339,10 @@ svn_error_t *svn_fs_fs__reserve_copy_id(const char **copy_id,
                                         apr_pool_t *pool);
 
 /* Create a fs_fs fileysystem referenced by FS at path PATH.  Get any
-   temporary allocations from POOL. */
+   temporary allocations from POOL.
+
+   ### Some parts of *FS must have been initialized beforehand; some parts
+       (including FS->path) are initialized by this function. */
 svn_error_t *svn_fs_fs__create(svn_fs_t *fs,
                                const char *path,
                                apr_pool_t *pool);
