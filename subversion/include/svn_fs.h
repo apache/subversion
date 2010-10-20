@@ -530,12 +530,12 @@ svn_error_t *
 svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
                               const char *path,
                               const char *token);
+
 /**
  * Same as svn_fs_access_add_lock_token2(), but with @a path set to value 1.
  *
- * @deprecated Provided for backward compatibility with the 1.1 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
-
 SVN_DEPRECATED
 svn_error_t *
 svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,

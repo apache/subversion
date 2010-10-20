@@ -372,6 +372,7 @@ int main(int argc, const char *argv[])
   apr_sockaddr_t *sa;
   apr_pool_t *pool;
   apr_pool_t *connection_pool;
+  apr_allocator_t *allocator;
   svn_error_t *err;
   apr_getopt_t *os;
   int opt;
@@ -431,6 +432,7 @@ int main(int argc, const char *argv[])
   params.pwdb = NULL;
   params.authzdb = NULL;
   params.log_file = NULL;
+  params.username_case = CASE_ASIS;
 
   while (1)
     {
@@ -592,11 +594,11 @@ int main(int argc, const char *argv[])
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */
   if (config_filename)
-      SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
-                               config_filename, TRUE,
-                               svn_dirent_dirname(config_filename, pool),
-                               NULL, NULL, /* server baton, conn */
-                               pool));
+    SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
+                             &params.username_case, config_filename, TRUE,
+                             svn_dirent_dirname(config_filename, pool),
+                             NULL, NULL, /* server baton, conn */
+                             pool));
 
   if (log_filename)
     SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,
@@ -793,10 +795,22 @@ int main(int argc, const char *argv[])
         return ERROR_SUCCESS;
 #endif
 
+      /* If we are using fulltext caches etc., we will allocate many large
+         chunks of memory of various sizes outside the cachde for those
+         fulltexts. Make sure, we use the memory wisely: use an allocator
+         that causes memory fragments to be given back to the OS early. */
+
+      if (apr_allocator_create(&allocator))
+        return EXIT_FAILURE;
+
+      apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+
       /* Non-standard pool handling.  The main thread never blocks to join
          the connection threads so it cannot clean up after each one.  So
          separate pools, that can be cleared at thread exit, are used */
-      connection_pool = svn_pool_create(NULL);
+
+      connection_pool = svn_pool_create_ex(NULL, allocator);
+      apr_allocator_owner_set(allocator, connection_pool);
 
       status = apr_socket_accept(&usock, sock, connection_pool);
       if (handling_mode == connection_mode_fork)

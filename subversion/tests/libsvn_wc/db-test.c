@@ -580,38 +580,41 @@ validate_node(svn_wc__db_t *db,
     }
 
   value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  SVN_TEST_STRING_ASSERT(value->data, "v1");
   SVN_ERR(svn_wc__db_base_get_prop(&value, db, path, "p1",
                                    scratch_pool, scratch_pool));
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  SVN_TEST_STRING_ASSERT(value->data, "v1");
 
   value = apr_hash_get(props, "for-file", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
+  SVN_TEST_STRING_ASSERT(value->data, relpath);
   SVN_ERR(svn_wc__db_base_get_prop(&value, db, path, "for-file",
                                    scratch_pool, scratch_pool));
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
+  SVN_TEST_STRING_ASSERT(value->data, relpath);
 
   SVN_ERR(svn_wc__db_read_props(&props, db, path,
                                 scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(props != NULL);
   value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  SVN_TEST_STRING_ASSERT(value->data, "v1");
 
   SVN_ERR(svn_wc__db_read_pristine_props(&props, db, path,
                                          scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(props != NULL);
   value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  SVN_TEST_STRING_ASSERT(value->data, "v1");
 
   /* Now add a property value and read it back (all on actual) */
-  apr_hash_set(props, "p999", APR_HASH_KEY_STRING, value);
-
-  SVN_ERR(svn_wc__db_op_set_props(db, path, props, NULL, NULL, scratch_pool));
-  SVN_ERR(svn_wc__db_read_props(&props, db, path,
-                                scratch_pool, scratch_pool));
-  SVN_TEST_ASSERT(props != NULL);
-  value = apr_hash_get(props, "p999", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  {
+    apr_hash_t *actual_props = apr_hash_copy(scratch_pool, props);
+    apr_hash_set(actual_props, "p999", APR_HASH_KEY_STRING, value);
+    SVN_ERR(svn_wc__db_op_set_props(db, path, actual_props,
+                                    NULL, NULL, scratch_pool));
+    SVN_ERR(svn_wc__db_read_props(&props, db, path,
+                                  scratch_pool, scratch_pool));
+    SVN_TEST_ASSERT(props != NULL);
+    value = apr_hash_get(props, "p999", APR_HASH_KEY_STRING);
+    SVN_TEST_STRING_ASSERT(value->data, "v1");
+  }
 
   return SVN_NO_ERROR;
 }

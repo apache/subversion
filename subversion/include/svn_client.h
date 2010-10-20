@@ -477,7 +477,7 @@ typedef struct svn_client_commit_item3_t
 
 /** The commit candidate structure.
  *
- * @deprecated Provided for backward compatibility with the 1.3 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 typedef struct svn_client_commit_item2_t
 {
@@ -576,7 +576,7 @@ svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
  * Return a duplicate of @a item, allocated in @a pool. No part of the new
  * structure will be shared with @a item.
  *
- * @deprecated Provided for backward compatibility with the 1.3 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_client_commit_item2_t *
@@ -1501,7 +1501,7 @@ svn_client_mkdir4(const apr_array_header_t *paths,
  * rather than through @a commit_callback.
  *
  * @since New in 1.5.
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -2420,7 +2420,7 @@ svn_client_log2(const apr_array_header_t *targets,
  * revision 1.  That works fine, except when there are no commits in
  * the repository, hence this special case.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -2750,7 +2750,7 @@ svn_client_diff2(const apr_array_header_t *diff_options,
  * Similar to svn_client_diff2(), but with @a ignore_content_type
  * always set to FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -2806,6 +2806,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
  * @c FALSE and @a use_git_diff_format set to @c FALSE.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3195,7 +3196,7 @@ svn_client_merge_peg3(const char *source,
  * is TRUE, set @a depth to #svn_depth_infinity, if @a recurse is
  * FALSE, set @a depth to #svn_depth_files.
  *
- * @deprecated Provided for backwards compatibility with the 1.3 API.
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  *
  * @since New in 1.4.
  */
@@ -3380,8 +3381,6 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * immediately.
  *
  * Use @a scratch_pool for any temporary allocations.
- *
- * @since New in 1.0.
  */
 svn_error_t *
 svn_client_cleanup(const char *dir,
@@ -4162,7 +4161,7 @@ svn_client_revprop_set2(const char *propname,
  * Similar to svn_client_revprop_set2(), but with @a original_propval
  * always @c NULL.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -4233,7 +4232,7 @@ svn_client_propget3(apr_hash_t **props,
  * @a recurse: if @a recurse is TRUE, then @a depth is
  * #svn_depth_infinity, else #svn_depth_empty.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -4339,7 +4338,7 @@ svn_client_proplist3(const char *target,
  *
  * @since New in 1.2.
  *
- * @deprecated Provided for backward compatiblility with the 1.2 API.
+ * @deprecated Provided for backward compatiblility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5186,7 +5185,7 @@ svn_client_info2(const char *path_or_url,
  * NULL, and @a depth set according to @a recurse: if @a recurse is
  * TRUE, @a depth is #svn_depth_infinity, else #svn_depth_empty.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *

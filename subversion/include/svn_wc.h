@@ -3106,6 +3106,7 @@ svn_wc_walk_entries3(const char *path,
  * or error handling from @a walk_callbacks, and with @a depth always
  * set to #svn_depth_infinity.
  *
+ * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
@@ -3122,7 +3123,7 @@ svn_wc_walk_entries2(const char *path,
 /**
  * Similar to svn_wc_walk_entries2(), but without cancellation support.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3933,7 +3934,7 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
  * instead of #svn_wc_status_func3_t.
  *
  * @since New in 1.5.
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -4036,13 +4037,13 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * is used for accessing the working copy and must contain a write lock for
  * the parent directory of @a dst_abspath,
  *
- * If metadata_only is TRUE then this a database only operation and
+ * If @a metadata_only is TRUE then this is a database-only operation and
  * the working directories and files are not copied.
  *
  * @a src_abspath must be a file or directory under version control;
  * the parent of @a dst_abspath must be a directory under version control
  * in the same working copy; @a dst_abspath will be the name of the copied
- * item, and it must not exist already if metadata_only is FALSE.  Note that
+ * item, and it must not exist already if @a metadata_only is FALSE.  Note that
  * when @a src points to a versioned file, the working file doesn't
  * necessarily exist in which case its text-base is used instead.
  *
@@ -4209,12 +4210,42 @@ svn_wc_delete(const char *path,
               apr_pool_t *pool);
 
 /**
+ * Schedule the node or tree that exists on disk at @a local_abspath for
+ * addition to the working copy, recursively.  The added nodes will have
+ * no properties.
+ *
+ * The versioned state of the parent path must be a modifiable directory,
+ * and the versioned state of @a local_abspath must be either nonexistent or
+ * deleted; if deleted, the new node will be a replacement.
+ *
+ * If @a local_abspath does not exist as file, directory or symlink, return
+ * #SVN_ERR_WC_PATH_NOT_FOUND.
+ *
+ * This is equivalent to svn_wc_add4() case 2a.
+ *
+ * ### TODO: Cancellation isn't implemented yet.
+ *
+ * ### TODO: Recurse as far as a specified depth?
+ *
+ * ### A better API might allow the caller to walk a tree and add a single
+ *     node at a time, specifying each node's properties.
+ */
+svn_error_t *
+svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
+                     apr_pool_t *scratch_pool);
+
+/**
  * Put @a local_abspath under version control by registering it as addition
  * or copy in the database containing its parent. The new node is scheduled
  * for addition to the repository below its parent node.
  *
- * 1) If the node already exists, it MUST BE the root of a separate working
- * copy from the same repository as the parent working copy. The new node
+ * 1) If the node is already versioned, it MUST BE the root of a separate
+ * working copy from the same repository as the parent WC. The new node
  * and anything below it will be scheduled for addition inside the parent
  * working copy as a copy of the original location. The separate working
  * copy will be integrated by this step. In this case, which is only used
@@ -4227,7 +4258,7 @@ svn_wc_delete(const char *path,
  * of that location. In this last case the function doesn't set the pristine
  * version (of a file) and/or pristine properties, which callers should
  * handle via different APIs. Usually it is easier to call
- * svn_wc_add_repos_file4() (### or a possible svn_wc_add_repos_dir()) then
+ * svn_wc_add_repos_file4() (### or a possible svn_wc_add_repos_dir()) than
  * using this variant.
  *
  * If @a local_abspath does not exist as file, directory or symlink, return
@@ -4587,6 +4618,7 @@ svn_wc_resolved_conflict4(const char *path,
  * Similar to svn_wc_resolved_conflict4(), but without tree-conflict
  * resolution support.
  *
+ * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
@@ -4610,6 +4642,7 @@ svn_wc_resolved_conflict3(const char *path,
  * if @a recurse is TRUE, @a depth is #svn_depth_infinity, else it is
  * #svn_depth_files.
  *
+ * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
@@ -4629,7 +4662,7 @@ svn_wc_resolved_conflict2(const char *path,
  * Similar to svn_wc_resolved_conflict2(), but takes an
  * svn_wc_notify_func_t and doesn't have cancellation support.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -4801,8 +4834,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 /** @see svn_wc_process_committed_queue2()
  *
  * @since New in 1.5.
- *
- * @deprecated Provided for backwards compatibility with the 1.5 API.
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5631,6 +5663,7 @@ svn_wc_prop_set3(const char *name,
  * Like svn_wc_prop_set3(), but without the notification callbacks.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5986,7 +6019,6 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
  * It also doesn't allow specifying a cancel function.
  *
  * @since New in 1.6.
- *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -6004,6 +6036,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
  * Similar to svn_wc_diff5(), but with a #svn_wc_diff_callbacks2_t argument
  * instead of #svn_wc_diff_callbacks3_t.
  *
+ * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
@@ -6022,7 +6055,8 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
  * and @a depth set to #svn_depth_infinity if @a recurse is TRUE, or
  * #svn_depth_files if @a recurse is FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -6038,6 +6072,7 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
  * Similar to svn_wc_diff3(), but with a #svn_wc_diff_callbacks_t argument
  * instead of #svn_wc_diff_callbacks2_t.
  *
+ * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
@@ -6355,8 +6390,7 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
  * Same as svn_wc_merge_props2(), but with a @a conflict_func (and
  * baton) of NULL.
  *
- * @deprecated Provided for backward compatibility with the 1.3 API.
- *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -6479,7 +6513,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
  * swn_wc_context_t.
  *
  * @since New in 1.2.
- * @deprecated Provided for backward compability with the 1.2 API.
+ * @deprecated Provided for backward compability with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -6747,7 +6781,8 @@ svn_wc_revert3(const char *path,
  * @note Most APIs map @a recurse==FALSE to @a depth==svn_depth_files;
  * revert is deliberately different.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *

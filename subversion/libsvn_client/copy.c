@@ -300,7 +300,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   const char *dst_parent, *dst_parent_abspath;
   struct do_wc_to_wc_copies_with_write_lock_baton baton;
 
-  get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool);
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool));
   if (copy_pairs->nelts == 1)
     dst_parent = svn_dirent_dirname(dst_parent, pool);
 
@@ -821,7 +821,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
      *and* destinations might be an optimization when the user is
      authorized to access all that stuff, but could cause the
      operation to fail altogether otherwise.  See issue #3242.  */
-  get_copy_pair_ancestors(copy_pairs, NULL, &top_url_dst, &top_url_all, pool);
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &top_url_dst, &top_url_all, 
+                                  pool));
   top_url = is_move ? top_url_all : top_url_dst;
 
   /* Check each src/dst pair for resurrection, and verify that TOP_URL
@@ -1168,7 +1169,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   int i;
 
   /* Find the common root of all the source paths */
-  get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool);
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool));
 
   /* Do we need to lock the working copy?  1.6 didn't take a write
      lock, but what happens if the working copy changes during the copy
@@ -1409,7 +1410,9 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 }
 
 /* Peform each individual copy operation for a repos -> wc copy.  A
-   helper for repos_to_wc_copy(). */
+   helper for repos_to_wc_copy().
+
+   Resolve PAIR->src_revnum to a real revision number if it isn't already. */
 static svn_error_t *
 repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                         svn_boolean_t same_repositories,
@@ -1418,7 +1421,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
-  svn_revnum_t src_revnum = pair->src_revnum;
   apr_hash_t *src_mergeinfo;
   const char *dst_abspath = pair->dst_abspath_or_url;
 
@@ -1426,7 +1428,11 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   if (pair->src_kind == svn_node_dir)
     {
-      SVN_ERR(svn_client__checkout_internal(NULL, pair->src_original,
+      /* Make a new checkout of the requested source. While doing so,
+       * resolve pair->src_revnum to an actual revision number in case it
+       * was until now 'invalid' meaning 'head'. */
+      SVN_ERR(svn_client__checkout_internal(&pair->src_revnum,
+                                            pair->src_original,
                                             pair->dst_abspath_or_url,
                                             &pair->src_peg_revision,
                                             &pair->src_op_revision, NULL,
@@ -1440,34 +1446,11 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          way to do this; see its doc for more about the controversy.) */
       if (same_repositories)
         {
-          if (pair->src_op_revision.kind == svn_opt_revision_head)
-            {
-              /* If we just checked out from the "head" revision,
-                 that's fine, but we don't want to pass a '-1' as a
-                 copyfrom_rev to svn_wc_add3().  That function will
-                 dump it right into the entry, and when we try to
-                 commit later on, the 'add-dir-with-history' step will
-                 be -very- unhappy; it only accepts specific
-                 revisions.
-
-                 On the other hand, we *could* say that -1 is a
-                 legitimate copyfrom_rev, but I think that's bogus.
-                 Somebody made a copy from a particular revision; if
-                 they wait a long time to commit, it would be terrible
-                 if the copied happened from a newer revision!! */
-
-              /* We just did a checkout; whatever revision we just
-                 got, that should be the copyfrom_revision when we
-                 commit later. */
-              SVN_ERR(svn_wc__node_get_base_rev(&src_revnum, ctx->wc_ctx,
-                                                dst_abspath, pool));
-            }
-
           /* Schedule dst_path for addition in parent, with copy history.
              (This function also recursively puts a 'copied' flag on every
              entry). */
           SVN_ERR(svn_wc_add4(ctx->wc_ctx, dst_abspath, svn_depth_infinity,
-                              pair->src_abspath_or_url, src_revnum,
+                              pair->src_abspath_or_url, pair->src_revnum,
                               ctx->cancel_func, ctx->cancel_baton,
                               ctx->notify_func2, ctx->notify_baton2, pool));
 
@@ -1477,7 +1460,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
              ### source path. */
           SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
                                              pair->src_abspath_or_url,
-                                             src_revnum, ctx, pool));
+                                             pair->src_revnum, ctx, pool));
           SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
         }
       else  /* different repositories */
@@ -1500,7 +1483,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
   else if (pair->src_kind == svn_node_file)
     {
       svn_stream_t *fstream;
-      svn_revnum_t real_rev;
       const char *new_text_path;
       apr_hash_t *new_props;
       const char *src_rel;
@@ -1513,15 +1495,11 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(svn_ra_get_path_relative_to_session(ra_session, &src_rel,
                                                   pair->src_abspath_or_url,
                                                   pool));
-      SVN_ERR(svn_ra_get_file(ra_session, src_rel, src_revnum, fstream,
-                              &real_rev, &new_props, pool));
+      /* Fetch the file content. While doing so, resolve pair->src_revnum
+       * to an actual revision number if it's 'invalid' meaning 'head'. */
+      SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum, fstream,
+                              &pair->src_revnum, &new_props, pool));
       SVN_ERR(svn_stream_close(fstream));
-
-      /* If SRC_REVNUM is invalid (HEAD), then REAL_REV is now the
-         revision that was actually retrieved.  This is the value we
-         want to use as 'copyfrom_rev' below. */
-      if (! SVN_IS_VALID_REVNUM(src_revnum))
-        src_revnum = real_rev;
 
       SVN_ERR(svn_stream_open_readonly(&new_base_contents, new_text_path,
                                        pool, pool));
@@ -1529,14 +1507,14 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          ctx->wc_ctx, dst_abspath,
          new_base_contents, NULL, new_props, NULL,
          same_repositories ? pair->src_abspath_or_url : NULL,
-         same_repositories ? src_revnum : SVN_INVALID_REVNUM,
+         same_repositories ? pair->src_revnum : SVN_INVALID_REVNUM,
          ctx->cancel_func, ctx->cancel_baton,
          ctx->notify_func2, ctx->notify_baton2,
          pool));
 
       SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo,
                                          NULL, pair->src_abspath_or_url,
-                                         src_revnum, ctx, pool));
+                                         pair->src_revnum, ctx, pool));
       SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
 
       /* Ideally, svn_wc_add_repos_file3() would take a notify function
@@ -1754,7 +1732,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       pair->src_abspath_or_url = apr_pstrdup(pool, src);
     }
 
-  get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path, NULL, pool);
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path,
+                                  NULL, pool));
   lock_abspath = top_dst_path;
   if (copy_pairs->nelts == 1)
     {

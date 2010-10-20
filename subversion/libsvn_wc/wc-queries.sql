@@ -78,6 +78,26 @@ conflict_working, tree_conflict_data, properties
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_SELECT_NODE_CHILDREN_INFO
+/* Getting rows in an advantageous order using
+     ORDER BY local_relpath, op_depth DESC
+   turns out to be slower than getting rows in a random order and making the
+   C code handle it. */
+SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
+  checksum, translated_size, changed_revision, changed_date, changed_author,
+  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
+  lock_comment, lock_date, local_relpath
+FROM nodes
+LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
+  AND nodes.repos_path = lock.repos_relpath
+WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_CHILDREN_INFO
+SELECT prop_reject, changelist, conflict_old, conflict_new,
+conflict_working, tree_conflict_data, properties, local_relpath
+FROM actual_node
+WHERE wc_id = ?1 AND parent_relpath = ?2;
+
 -- STMT_SELECT_REPOSITORY_BY_ID
 SELECT root, uuid FROM repository WHERE id = ?1;
 
@@ -205,11 +225,9 @@ UPDATE actual_node SET tree_conflict_data = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_TREE_CONFLICTS
-/* tree conflicts are always recorded on the wcroot node, so the
-   parent_relpath will be null.  */
 INSERT INTO actual_node (
-  wc_id, local_relpath, tree_conflict_data)
-VALUES (?1, ?2, ?3);
+  wc_id, local_relpath, tree_conflict_data, parent_relpath)
+VALUES (?1, ?2, ?3, ?4);
 
 -- STMT_UPDATE_ACTUAL_TEXT_CONFLICTS
 UPDATE actual_node SET conflict_old = ?3, conflict_new = ?4,
@@ -314,10 +332,6 @@ UPDATE nodes SET presence = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
-
--- STMT_UPDATE_BASE_NODE_PRESENCE_AND_REVNUM
-UPDATE nodes SET presence = ?3, revision = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH
 UPDATE nodes SET presence = ?3, revision = ?4, repos_path = ?5

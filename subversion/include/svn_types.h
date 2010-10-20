@@ -132,12 +132,15 @@ void *
 svn__apr_hash_index_val(const apr_hash_index_t *hi);
 
 /** On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
- * invalid-pathname error but not this one, so we include it. */
-/* ### This fix should go into APR. */
+ * invalid-pathname error but not ERROR_INVALID_NAME, so we include it.
+ * We also include ERROR_DIRECTORY as that was not included in apr versions
+ * before 1.4.0 and this fix is not backported */
+/* ### These fixes should go into APR. */
 #ifndef WIN32
 #define SVN__APR_STATUS_IS_ENOTDIR(s)  APR_STATUS_IS_ENOTDIR(s)
 #else
 #define SVN__APR_STATUS_IS_ENOTDIR(s)  (APR_STATUS_IS_ENOTDIR(s) \
+                      || ((s) == APR_OS_START_SYSERR + ERROR_DIRECTORY) \
                       || ((s) == APR_OS_START_SYSERR + ERROR_INVALID_NAME))
 #endif
 
