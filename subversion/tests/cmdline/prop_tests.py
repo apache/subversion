@@ -164,7 +164,15 @@ def update_props(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
-  # Commit the one file.
+  # Commit property mods
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  # Add more properties
+  sbox.simple_propset('blue2', 'azul2', mu_path)
+  sbox.simple_propset('red2', 'rojo2', H_path)
+  expected_status.tweak('A/mu', 'A/D/H', wc_rev=3, status='  ')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
                                         None, wc_dir)
@@ -190,11 +198,28 @@ def update_props(sbox):
   expected_status.tweak('A/mu', 'A/D/H', status='  ')
 
   # Do the update and check the results in three ways... INCLUDING PROPS
+  # This adds properties to nodes that have none
   svntest.actions.run_and_verify_update(wc_backup,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1)
+                                        None, None, None, None, None, 1,
+                                        '-r', '2', wc_backup)
+
+  # This adds properties to nodes that have properties
+  ### Currently FAILs because the pre-update properties on directories get lost
+  expected_status.tweak(wc_rev=3)
+  expected_disk.tweak('A/mu', props={'blue'  : 'azul',
+                                     'blue2' : 'azul2'})
+  expected_disk.tweak('A/D/H', props={'red'  : 'rojo',
+                                      'red2' : 'rojo2'})
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1,
+                                        '-r', '3', wc_backup)
+
 
 #----------------------------------------------------------------------
 
@@ -2341,7 +2366,7 @@ def propget_redirection(sbox):
 test_list = [ None,
               make_local_props,
               commit_props,
-              update_props,
+              XFail(update_props),
               downdate_props,
               remove_props,
               update_conflict_props,
