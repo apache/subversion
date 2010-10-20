@@ -54,6 +54,7 @@ strcmp_null(const char *s1, const char *s2)
 }
 
 
+/* ---------------------------------------------------------------------- */
 /* Reading the WC DB */
 
 static const char *const my_statements[] = {
@@ -224,6 +225,7 @@ add_and_commit_greek_tree(wc_baton_t *b)
 /* ---------------------------------------------------------------------- */
 /* Functions for comparing expected and actual WC DB data. */
 
+/* Some of the fields from a NODES table row. */
 typedef struct nodes_row_t {
     int op_depth;
     const char *local_relpath;
@@ -232,6 +234,7 @@ typedef struct nodes_row_t {
     const char *repo_relpath;
 } nodes_row_t;
 
+/* Return a human-readable string representing ROW. */
 static const char *
 print_row(const nodes_row_t *row,
           apr_pool_t *result_pool)
@@ -247,14 +250,19 @@ print_row(const nodes_row_t *row,
                         row->repo_relpath, (int)row->repo_revnum);
 }
 
+/* A baton to pass through svn_hash_diff() to compare_nodes_rows(). */
 typedef struct {
-    apr_hash_t *expected_hash;
-    apr_hash_t *actual_hash;
+    apr_hash_t *expected_hash;  /* Maps "OP_DEPTH PATH" to nodes_row_t. */
+    apr_hash_t *actual_hash;    /* Maps "OP_DEPTH PATH" to nodes_row_t. */
     apr_pool_t *scratch_pool;
-    svn_error_t *errors;
+    svn_error_t *errors;        /* Chain of errors found in comparison. */
 } comparison_baton_t;
 
-/* */
+/* Compare two hash entries indexed by KEY, in the two hashes in BATON.
+ * Append an error message to BATON->errors if they differ or are not both
+ * present.
+ *
+ * Implements svn_hash_diff_func_t. */
 static svn_error_t *
 compare_nodes_rows(const void *key, apr_ssize_t klen,
                    enum svn_hash_diff_key_status status,
@@ -295,12 +303,10 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
 
 
 /* Examine the WC DB for paths ROOT_PATH and below, and check that their
-   rows in the 'NODES' table match EXPECTED_RESULT.  EXPECTED_RESULT is an
-   array of {op_depth, relpath, has_repo_noderev}, where 'relpath' is
-   relative to ROOT_PATH, and 'has_repo_noderev' is true iff the repository
-   id, revision and relpath columns are expected to be non-null.
-
-   If the result does not match, raise a Failure. */
+ * rows in the 'NODES' table (only those at op_depth > 0) match EXPECTED_ROWS
+ * (which is terminated by a row of null fields).
+ *
+ * Return a chain of errors describing any and all mismatches. */
 static svn_error_t *
 check_db_rows(wc_baton_t *b,
               const char *root_path,
@@ -316,8 +322,8 @@ check_db_rows(wc_baton_t *b,
   comparison_baton_t comparison_baton
     = { expected_hash, actual_hash, b->pool, NULL };
 
+  /* Fill ACTUAL_HASH with data from the WC DB. */
   SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
-
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODES_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "ss", base_relpath,
                             apr_psprintf(b->pool, "%s/%%", base_relpath)));
@@ -340,6 +346,7 @@ check_db_rows(wc_baton_t *b,
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
+  /* Fill EXPECTED_HASH with data from EXPECTED_ROWS. */
   for (i = 0; expected_rows[i].local_relpath != NULL; i++)
     {
       const char *key;
@@ -349,6 +356,7 @@ check_db_rows(wc_baton_t *b,
       apr_hash_set(expected_hash, key, APR_HASH_KEY_STRING, row);
     }
 
+  /* Compare EXPECTED_HASH with ACTUAL_HASH and return any errors. */
   SVN_ERR(svn_hash_diff(expected_hash, actual_hash,
                         compare_nodes_rows, &comparison_baton, b->pool));
   return comparison_baton.errors;
