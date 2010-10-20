@@ -410,7 +410,8 @@ svn_io_open_uniquely_named(apr_file_t **file,
          sensitive to i18n in a way it shouldn't be... Oh well. */
       if (needs_utf8_conversion)
         {
-          SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, scratch_pool));
+          SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name,
+                                    scratch_pool));
           if (i == 1)
             {
               /* The variable parts of unique_name will not require UTF8
