@@ -34,6 +34,13 @@ They will be merged into /trunk after passing the review.
    makes the client less sensitive to cluttered TEMP folders etc.
  Merge:
    Merged to trunk in r1022707.
+ Thoughts:
+   HKW: After some discussion of the merge to trunk, I committed r1025660 to
+        the branch, and merged that trunk, removing the randomization part
+        of this patch.  The tenor of the discussion was that folks needing
+        random names should be using something like svn_io_open_unique_file3().
+        Perhaps we should look at callers and switch them to use this new
+        API?
 
 * r985477
  Eliminate OS overhead for determining the default permissions for
