@@ -1336,6 +1336,7 @@ revert_internal(svn_wc__db_t *db,
   svn_boolean_t unversioned;
   svn_boolean_t have_base;
   svn_boolean_t replaced;
+  svn_boolean_t reverted = FALSE;
   const svn_wc_conflict_description2_t *tree_conflict;
   const char *op_root_abspath = NULL;
   svn_error_t *err;
@@ -1432,8 +1433,13 @@ revert_internal(svn_wc__db_t *db,
        svn_dirent_local_style(local_abspath, pool));
 
   /* Safeguard 3:  can we deal with the node kind of PATH currently in
-     the working copy? */
-  if ((disk_kind != svn_node_none)
+     the working copy?
+
+     Note: we can reach this point for paths which have tree conflict info
+           set on them.  Those are not necessarily nodes we can version,
+           meaning this check doesn't make sense for unversioned nodes. */
+  if (!unversioned
+      && (disk_kind != svn_node_none)
       && (disk_kind != svn_node_file)
       && (disk_kind != svn_node_dir))
     return svn_error_createf
@@ -1441,13 +1447,14 @@ revert_internal(svn_wc__db_t *db,
        _("Cannot revert '%s': unsupported node kind in working copy"),
        svn_dirent_local_style(local_abspath, pool));
 
-  if (status == svn_wc__db_status_added)
+  if (!unversioned && status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath, pool, pool));
 
   /* Safeguard 4:  Make sure we don't revert deeper then asked */
-  if (status == svn_wc__db_status_added
+  if (!unversioned
+      && status == svn_wc__db_status_added
       && db_kind == svn_wc__db_kind_dir
       && depth >= svn_depth_empty
       && depth < svn_depth_infinity)
@@ -1463,7 +1470,6 @@ revert_internal(svn_wc__db_t *db,
   if (svn_wc__internal_changelist_match(db, local_abspath, changelist_hash,
                                         pool))
     {
-      svn_boolean_t reverted = FALSE;
       const svn_wc_conflict_description2_t *conflict;
 
       /* Clear any tree conflict on the path, even if it is not a versioned
@@ -1612,10 +1618,12 @@ revert_internal(svn_wc__db_t *db,
       svn_pool_destroy(iterpool);
     }
 
-  if (! replaced && status == svn_wc__db_status_added
+  if (reverted
+      && ! replaced
+      && status == svn_wc__db_status_added
       && db_kind == svn_wc__db_kind_dir)
     {
-      /* Non-replacements have their admin area deleted. wc-1.0 */
+      /* Non-replaced directories have their admin area deleted. wc-1.0 */
       SVN_ERR(svn_wc__adm_destroy(db, local_abspath,
                                   cancel_func, cancel_baton, pool));
     }
