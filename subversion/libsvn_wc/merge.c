@@ -1039,7 +1039,10 @@ merge_text_file(svn_skel_t **work_items,
         }
 
       if (*merge_outcome == svn_wc_merge_merged)
-        return SVN_NO_ERROR;
+        {
+          SVN_ERR(svn_io_remove_file2(result_target, TRUE, scratch_pool));
+          return SVN_NO_ERROR;
+        }
     }
   else if (contains_conflicts && dry_run)
       *merge_outcome = svn_wc_merge_conflict;
@@ -1078,6 +1081,8 @@ merge_text_file(svn_skel_t **work_items,
                                             result_pool, scratch_pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
+  else
+    SVN_ERR(svn_io_remove_file2(result_target, TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
