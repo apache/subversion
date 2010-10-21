@@ -1311,13 +1311,15 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
  * converting any error to a Subversion error. If @a ignore_enoent is TRUE, and
  * the file is not present (APR_STATUS_IS_ENOENT returns TRUE), then no
  * error will be returned.
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_io_remove_file2(const char *path,
-                   svn_boolean_t ignore_enoent,
-                   apr_pool_t *scratch_pool);
+                    svn_boolean_t ignore_enoent,
+                    apr_pool_t *scratch_pool);
 
-/** Similar to svn_io_remove_file2(), except with @a missing_ok set to FALSE.
+/** Similar to svn_io_remove_file2(), except with @a ignore_enoent set to FALSE.
  *
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
