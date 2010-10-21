@@ -165,6 +165,18 @@ wc_copy(wc_baton_t *b, const char *from_path, const char *to_path)
                       NULL, NULL, NULL, NULL, b->pool);
 }
 
+/* Revert a WC file or directory tree at PATH */
+static svn_error_t *
+wc_revert(wc_baton_t *b, const char *path, svn_depth_t depth)
+{
+  const char *abspath = wc_path(b, path);
+
+  return svn_wc_revert4(b->wc_ctx, abspath, depth, FALSE, NULL,
+                        NULL, NULL, /* cancel baton + func */
+                        NULL, NULL, /* notify baton + func */
+                        b->pool);
+}
+
 /* Create the Greek tree on disk in the WC, and commit it. */
 static svn_error_t *
 add_and_commit_greek_tree(wc_baton_t *b)
@@ -368,17 +380,12 @@ check_db_rows(wc_baton_t *b,
 
 /* Check that all kinds of WC-to-WC copies give correct op_depth results. */
 static svn_error_t *
-wc_wc_copies(const svn_test_opts_t *opts,
-                         apr_pool_t *pool)
+wc_wc_copies(wc_baton_t *b)
 {
-  wc_baton_t b;
 
-  b.pool = pool;
-  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
-                                        "wc_wc_copies", opts, pool));
-  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(svn_wc_context_create(&(*b).wc_ctx, NULL, b->pool, b->pool));
 
-  SVN_ERR(add_and_commit_greek_tree(&b));
+  SVN_ERR(add_and_commit_greek_tree(b));
 
 #define source_everything  "A/B"
 
@@ -394,13 +401,13 @@ wc_wc_copies(const svn_test_opts_t *opts,
 
   /* Create the various kinds of source node which will be copied */
 
-  file_write(&b, source_added_file, "New file");
-  SVN_ERR(wc_add(&b, source_added_file));
-  SVN_ERR(wc_mkdir(&b, source_added_dir));
-  SVN_ERR(wc_mkdir(&b, source_added_dir2));
+  file_write(b, source_added_file, "New file");
+  SVN_ERR(wc_add(b, source_added_file));
+  SVN_ERR(wc_mkdir(b, source_added_dir));
+  SVN_ERR(wc_mkdir(b, source_added_dir2));
 
-  SVN_ERR(wc_copy(&b, source_base_file, source_copied_file));
-  SVN_ERR(wc_copy(&b, source_base_dir, source_copied_dir));
+  SVN_ERR(wc_copy(b, source_base_file, source_copied_file));
+  SVN_ERR(wc_copy(b, source_base_dir, source_copied_dir));
 
   /* Test copying various things */
 
@@ -479,16 +486,51 @@ wc_wc_copies(const svn_test_opts_t *opts,
         nodes_row_t *row;
         for (row = &subtest->expected[0]; row->local_relpath; row++)
           row->local_relpath = svn_dirent_join(subtest->to_path,
-                                               row->local_relpath, b.pool);
+                                               row->local_relpath, b->pool);
       }
 
     /* Perform each subtest in turn. */
     for (subtest = subtests; subtest->from_path; subtest++)
       {
-        SVN_ERR(wc_copy(&b, subtest->from_path, subtest->to_path));
-        SVN_ERR(check_db_rows(&b, subtest->to_path, subtest->expected));
+        SVN_ERR(wc_copy(b, subtest->from_path, subtest->to_path));
+        SVN_ERR(check_db_rows(b, subtest->to_path, subtest->expected));
       }
   }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_wc_wc_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "wc_wc_copies", opts, pool));
+
+  return wc_wc_copies(&b);
+}
+
+static svn_error_t *
+test_reverts(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+  nodes_row_t no_node_rows_expected[] = { { 0 } };
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "reverts", opts, pool));
+
+  SVN_ERR(wc_wc_copies(&b));
+
+
+    /* Implement revert tests below, now that we have a wc with lots of
+     copy-changes */
+
+  SVN_ERR(wc_revert(&b, "A/B/D-added", svn_depth_infinity));
+  SVN_ERR(check_db_rows(&b, "A/B/D-added", no_node_rows_expected));
 
   return SVN_NO_ERROR;
 }
@@ -500,8 +542,11 @@ wc_wc_copies(const svn_test_opts_t *opts,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_OPTS_WIMP(wc_wc_copies,
+    SVN_TEST_OPTS_WIMP(test_wc_wc_copies,
                        "wc_wc_copies",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_reverts,
+                       "test_reverts",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
