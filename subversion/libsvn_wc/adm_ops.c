@@ -1618,7 +1618,7 @@ revert_internal(svn_wc__db_t *db,
       svn_pool_destroy(iterpool);
     }
 
-  if (reverted
+  if (reverted  /* implies !unversioned; only versioned paths get reverted */
       && ! replaced
       && status == svn_wc__db_status_added
       && db_kind == svn_wc__db_kind_dir)
