@@ -10,6 +10,8 @@ def get_format(wc_path):
   entries = os.path.join(wc_path, '.svn', 'entries')
   wc_db = os.path.join(wc_path, '.svn', 'wc.db')
 
+  formatno = 'not under version control'
+
   if os.path.exists(entries):
     formatno = int(open(entries).readline())
   elif os.path.exists(wc_db):
@@ -17,16 +19,12 @@ def get_format(wc_path):
     curs = conn.cursor()
     curs.execute('pragma user_version;')
     formatno = curs.fetchone()[0]
-  else:
+  elif os.path.exists(wc_path):
     parent_path = os.path.dirname(os.path.abspath(wc_path))
     if wc_path != parent_path:
       formatno = get_format(parent_path)
       if formatno >= MIN_SINGLE_DB_FORMAT:
       	return formatno
-      else:
-      	return 'not under version control'
-    else:
-      return 'not under version control'
 
   return formatno
 
