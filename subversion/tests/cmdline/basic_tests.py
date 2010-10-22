@@ -2592,6 +2592,23 @@ def delete_child_parent_update(sbox):
 
 #----------------------------------------------------------------------
 
+def basic_relocate(sbox):
+  "basic relocate of a wc"
+  sbox.build(read_only = True)
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+
+  # Try some no-op relocations using URL prefixes.
+  scheme = repo_url[:repo_url.index('://')+3]
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     scheme, scheme, wc_dir)
+  scheme = repo_url[0 : 14]
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     scheme, scheme, wc_dir)
+
+  ### Someday, try this with argv[1] != argv[2].
+
+
 ########################################################################
 # Run the tests
 
@@ -2651,6 +2668,7 @@ test_list = [ None,
                          svntest.main.is_ra_type_dav),
               delete_and_add_same_file,
               delete_child_parent_update,
+              basic_relocate,
              ]
 
 if __name__ == '__main__':
