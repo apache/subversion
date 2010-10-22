@@ -82,9 +82,9 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_kind_t kind;
   const char *repos_relpath;
-  const char *old_repos_root;
-  const char *old_url;
-  const char *new_repos_root;
+  const char *old_repos_root, *old_url;
+  const char *new_repos_root, *new_url;
+  int from_len, old_url_len;
   const char *uuid;
   svn_boolean_t is_wc_root;
 
@@ -129,16 +129,28 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                             _("Cannot relocate a single file"));
 
   old_url = svn_uri_join(old_repos_root, repos_relpath, scratch_pool);
-  if (strcmp(old_url, from) != 0)
-    return svn_error_create(SVN_ERR_WC_INVALID_RELOCATION, NULL,
-                            _("Given source URL invalid"));
+  old_url_len = strlen(old_url);
+  from_len = strlen(from);
+  if ((from_len > old_url_len) || (strncmp(old_url, from, strlen(from)) != 0))
+    return svn_error_createf(SVN_ERR_WC_INVALID_RELOCATION, NULL,
+                             _("Invalid source URL prefix: '%s' (does not "
+                               "overlap target's URL '%s')"),
+                             from, old_url);
+  
+  if (old_url_len == from_len)
+    new_url = to;
+  else
+    new_url = apr_pstrcat(scratch_pool, to, old_url + from_len, NULL);
+  if (! svn_path_is_url(new_url))
+    return svn_error_createf(SVN_ERR_WC_INVALID_RELOCATION, NULL,
+                             _("Invalid destination URL: '%s'"), new_url);
 
-  new_repos_root = uri_remove_components(to, repos_relpath, scratch_pool);
+  new_repos_root = uri_remove_components(new_url, repos_relpath, scratch_pool);
   if (!new_repos_root)
     return svn_error_createf(SVN_ERR_WC_INVALID_RELOCATION, NULL,
-                             _("Given destination URL invalid: '%s'"), to);
+                             _("Invalid destination URL: '%s'"), new_url);
 
-  SVN_ERR(validator(validator_baton, uuid, to, new_repos_root, scratch_pool));
+  SVN_ERR(validator(validator_baton, uuid, new_url, new_repos_root, scratch_pool));
 
   return svn_error_return(svn_wc__db_global_relocate(wc_ctx->db, local_abspath,
                                                      new_repos_root,
