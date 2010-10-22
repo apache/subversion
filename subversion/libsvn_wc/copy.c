@@ -438,6 +438,86 @@ copy_versioned_dir(svn_wc__db_t *db,
 }
 
 
+#ifdef SVN_WC__OP_DEPTH
+/*
+A plan for copying a versioned node, recursively, with proper op-depths.
+
+Each DB change mentioned in a separate step is intended to change the WC
+from one valid state to another and must be exectuted within a DB txn.
+Several such changes can be batched together in a bigger txn if we don't
+want clients to be able to see intermediate states.
+
+### TODO: This plan treats a simple add at the root of the copy as a special
+    case, but doesn't treat adds elsewhere, or nested copies, the same way.
+    Either include simple-add root nodes in the general all-at-once code, or
+    split out nested adds (and copies) as separate parts.
+
+### TODO: This plan doesn't yet provide well for notification of all copied
+    paths.
+
+copy-versioned_node:
+  # Copy a versioned file/dir SRC_PATH to DST_PATH, recursively.
+
+  # This function takes care to copy both the metadata tree and the disk
+  # tree as they are, even if they are different node kinds and so different
+  # tree shapes.
+
+  src_op_depth = working_op_depth_of(src_path)
+  src_depth = relpath_depth(src_path)
+  dst_depth = relpath_depth(dst_path)
+
+  # The source tree has in the NODES table, by design:
+  #   - zero or more rows below SRC_OP_DEPTH (these are uninteresting);
+  #   - one or more rows at SRC_OP_DEPTH;
+  #   - no rows with SRC_OP_DEPTH < row.op_depth <= SRC_DEPTH;
+  #   - zero or more rows above SRC_DEPTH (modifications);
+  # and SRC_OP_DEPTH <= SRC_DEPTH.
+
+  if schedule == simple-add:
+
+    # Copy the single node completely, then recurse.
+    # (A possible alternative: copy the metadata recursively, then copy the
+    # disk tree recursively, then copy the ACTUAL_NODE props etc. recursively.
+    # Not sure of pros and cons.)
+
+    Copy single NODES row.
+    Copy single disk node (if it exists, and whatever its kind).
+    Copy single ACTUAL_NODE row (props and any other actual metadata).
+
+      For 1, 2, 3 maybe: make a tmp copy on disk, then use
+      svn_wc__db_op_copy() to install it.  # Does this include actual props?
+
+    For each metadata child of src_path:
+      # Every child of a simple add is normal: can't be not-present,
+      # excluded, deleted, etc.
+      copy-versioned-node(child_path, dst_path + basename(child_path),
+                          recursive).
+
+    For each disk child of disk node src_path:
+      if child is unversioned:
+        copy-disk-node(child_path, dst_path + basename(child_path),
+                       recursive).
+
+    # There can be no other op-depth source rows of interest.
+
+  else:  # src_path is a base node or a copied node
+
+    # Copy all the descendants in one go, without recursing.
+
+    Copy single NODES row from src_path@src_op_depth to dst_path@dst_depth.
+    Copy all rows of descendent paths in == src_op_depth to == dst_depth.
+    Copy all rows of descendent paths in > src_depth to > dst_depth,
+      adjusting op_depth by (dst_depth - src_depth).
+
+    Copy disk node recursively (if it exists, and whatever its kind).
+    Copy ACTUAL_NODE rows (props and any other actual metadata).
+
+    # ### Are there no scenarios in which we would want to decrease dst_depth
+    #     and so subsume the destination into an existing op?  I guess not.
+
+*/
+#endif
+
 
 /* Public Interface */
 
