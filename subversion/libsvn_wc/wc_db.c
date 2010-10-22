@@ -6156,13 +6156,16 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
      node's repository information.  */
   if (repos_relpath || repos_root_url || repos_uuid)
     {
+      apr_int64_t repos_id;
       const char *base_relpath;
 
-      /* ### unwrap this. we can optimize away the
-             svn_wc__db_pdh_parse_local_abspath().  */
-      SVN_ERR(svn_wc__db_scan_base_repos(&base_relpath, repos_root_url,
-                                         repos_uuid, db, current_abspath,
-                                         result_pool, scratch_pool));
+      SVN_ERR(scan_upwards_for_repos(&repos_id, &base_relpath,
+                                     pdh->wcroot, current_relpath,
+                                     scratch_pool, scratch_pool));
+
+      if (repos_root_url || repos_uuid)
+        SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
+                                 repos_id, result_pool));
 
       if (repos_relpath)
         *repos_relpath = svn_relpath_join(base_relpath, build_relpath,
