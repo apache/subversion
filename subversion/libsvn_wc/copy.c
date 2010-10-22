@@ -197,11 +197,6 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
    otherwise copy both the versioned metadata and the filesystem node (even
    if it is the wrong kind, and recursively if it is a dir).
 
-   A replacement for both copy_file_administratively and
-   copy_added_file_administratively.
-
-   ### Not yet fully working.  Relies on in-db-props.
-
    This also works for versioned symlinks that are stored in the db as
    svn_wc__db_kind_file with svn:special set. */
 static svn_error_t *
