@@ -1624,6 +1624,10 @@ revert_internal(svn_wc__db_t *db,
       && db_kind == svn_wc__db_kind_dir)
     {
       /* Non-replaced directories have their admin area deleted. wc-1.0 */
+      /* In wc-ng, this call does not really delete the admin area - since
+         there isn't one - but it does destroy the adm_access structure
+         which may be cached inside DB, if the DB is used with old entries
+         functions. */
       SVN_ERR(svn_wc__adm_destroy(db, local_abspath,
                                   cancel_func, cancel_baton, pool));
     }
