@@ -191,9 +191,12 @@ do_test_num(const char *progname,
   svn_boolean_t test_failed;
   const char *msg = NULL;  /* the message this individual test prints out */
   const struct svn_test_descriptor_t *desc;
+  const int array_size = get_array_size();
 
   /* Check our array bounds! */
-  if ((test_num > get_array_size()) || (test_num <= 0))
+  if (test_num < 0)
+    test_num += array_size + 1;
+  if ((test_num > array_size) || (test_num <= 0))
     {
       printf("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
       skip_cleanup = TRUE;
@@ -424,9 +427,12 @@ main(int argc, const char *argv[])
         {
           for (i = 1; i < argc; i++)
             {
-              if (svn_ctype_isdigit(argv[i][0]))
+              if (svn_ctype_isdigit(argv[i][0]) || argv[i][0] == '-')
                 {
                   int test_num = atoi(argv[i]);
+                  if (test_num == 0)
+                    /* A --option argument, most likely. */
+                    continue;
 
                   ran_a_test = TRUE;
                   if (do_test_num(prog_name, test_num, FALSE, &opts, test_pool))
