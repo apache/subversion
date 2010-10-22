@@ -5390,7 +5390,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* Figure out the new node's kind. It will be whatever is in WORKING_NODE,
      or there will be a BASE_NODE that has it.  */
   if (have_work)
-    new_kind = svn_sqlite__column_token(stmt_work, 1, kind_map);
+    new_kind = svn_sqlite__column_token(stmt_work, 2, kind_map);
   else
     new_kind = svn_sqlite__column_token(stmt_base, 3, kind_map);
 
@@ -5398,7 +5398,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   if (new_kind == svn_wc__db_kind_dir)
     {
       if (have_work)
-        new_depth_str = svn_sqlite__column_text(stmt_work, 7, scratch_pool);
+        new_depth_str = svn_sqlite__column_text(stmt_work, 8, scratch_pool);
       else
         new_depth_str = svn_sqlite__column_text(stmt_base, 10, scratch_pool);
     }
@@ -5427,7 +5427,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     prop_blob.data = svn_sqlite__column_blob(stmt_act, 6, &prop_blob.len,
                                              scratch_pool);
   if (have_work && prop_blob.data == NULL)
-    prop_blob.data = svn_sqlite__column_blob(stmt_work, 15, &prop_blob.len,
+    prop_blob.data = svn_sqlite__column_blob(stmt_work, 16, &prop_blob.len,
                                              scratch_pool);
   if (have_base && prop_blob.data == NULL)
     prop_blob.data = svn_sqlite__column_blob(stmt_base, 13, &prop_blob.len,
@@ -6049,7 +6049,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
           break;
         }
 
-      presence = svn_sqlite__column_token(stmt, 0, presence_map);
+      presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
       /* Record information from the starting node.  */
       if (current_abspath == local_abspath)
@@ -6071,11 +6071,11 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
          ignore any operations on its ancestors.  */
       if (!found_info
           && presence == svn_wc__db_status_normal
-          && !svn_sqlite__column_is_null(stmt, 9 /* copyfrom_repos_id */))
+          && !svn_sqlite__column_is_null(stmt, 10 /* copyfrom_repos_id */))
         {
           if (status)
             {
-              if (svn_sqlite__column_boolean(stmt, 12 /* moved_here */))
+              if (svn_sqlite__column_boolean(stmt, 13 /* moved_here */))
                 *status = svn_wc__db_status_moved_here;
               else
                 *status = svn_wc__db_status_copied;
@@ -6083,15 +6083,15 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
           if (op_root_abspath)
             *op_root_abspath = apr_pstrdup(result_pool, current_abspath);
           if (original_repos_relpath)
-            *original_repos_relpath = svn_sqlite__column_text(stmt, 10,
+            *original_repos_relpath = svn_sqlite__column_text(stmt, 11,
                                                               result_pool);
           if (original_root_url || original_uuid)
             SVN_ERR(fetch_repos_info(original_root_url, original_uuid,
                                      wcroot->sdb,
-                                     svn_sqlite__column_int64(stmt, 9),
+                                     svn_sqlite__column_int64(stmt, 10),
                                      result_pool));
           if (original_revision)
-            *original_revision = svn_sqlite__column_revnum(stmt, 11);
+            *original_revision = svn_sqlite__column_revnum(stmt, 12);
 
           /* We may have to keep tracking upwards for REPOS_* values.
              If they're not needed, then just return.  */
@@ -7226,7 +7226,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
       /* Note: this can ONLY be an add/copy-here/move-here. It is not
          possible to delete a "hidden" node.  */
       svn_wc__db_status_t work_status =
-                            svn_sqlite__column_token(stmt, 0, presence_map);
+                            svn_sqlite__column_token(stmt, 1, presence_map);
       *hidden = (work_status == svn_wc__db_status_excluded);
       SVN_ERR(svn_sqlite__reset(stmt));
       return SVN_NO_ERROR;
@@ -7890,7 +7890,7 @@ make_copy_txn(void *baton,
     {
       svn_wc__db_status_t working_status;
 
-      working_status = svn_sqlite__column_token(stmt, 0, presence_map);
+      working_status = svn_sqlite__column_token(stmt, 1, presence_map);
       SVN_ERR(svn_sqlite__reset(stmt));
 
       SVN_ERR_ASSERT(working_status == svn_wc__db_status_normal
@@ -8121,7 +8121,7 @@ get_copyfrom(apr_int64_t *copyfrom_repos_id,
       return SVN_NO_ERROR;
     }
 
-  if (svn_sqlite__column_is_null(stmt, 9 /* copyfrom_repos_id */))
+  if (svn_sqlite__column_is_null(stmt, 10 /* copyfrom_repos_id */))
     {
       /* Resolve inherited copyfrom */
       const char *parent_abspath, *name, *parent_copyfrom_relpath;
@@ -8139,9 +8139,9 @@ get_copyfrom(apr_int64_t *copyfrom_repos_id,
       return SVN_NO_ERROR;
     }
 
-  *copyfrom_repos_id = svn_sqlite__column_int64(stmt, 9);
-  *copyfrom_relpath = svn_sqlite__column_text(stmt, 10, result_pool);
-  *copyfrom_revnum = svn_sqlite__column_revnum(stmt, 11);
+  *copyfrom_repos_id = svn_sqlite__column_int64(stmt, 10);
+  *copyfrom_relpath = svn_sqlite__column_text(stmt, 11, result_pool);
+  *copyfrom_revnum = svn_sqlite__column_revnum(stmt, 12);
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -8186,12 +8186,12 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
     return svn_error_return(svn_sqlite__reset(stmt));
 
   /* Already inheriting copyfrom information?  */
-  if (svn_sqlite__column_is_null(stmt, 9 /* copyfrom_repos_id */))
+  if (svn_sqlite__column_is_null(stmt, 10 /* copyfrom_repos_id */))
     return svn_error_return(svn_sqlite__reset(stmt));
 
-  original_repos_id = svn_sqlite__column_int64(stmt, 9);
-  original_repos_relpath = svn_sqlite__column_text(stmt, 10, scratch_pool);
-  original_revision = svn_sqlite__column_revnum(stmt, 11);
+  original_repos_id = svn_sqlite__column_int64(stmt, 10);
+  original_repos_relpath = svn_sqlite__column_text(stmt, 11, scratch_pool);
+  original_revision = svn_sqlite__column_revnum(stmt, 12);
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
