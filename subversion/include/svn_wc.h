@@ -6633,9 +6633,10 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
 
 /** Recursively change repository references at @a wcroot_abspath
  * (which is the root directory of a working copy).  The pre-change
- * URL should be @a from, and the post-change URL will be @a to.  @a
- * validator (and its baton, @a validator_baton), will be called for
- * the newly generated base URL and calculated repo root.
+ * URL should begin with @a from, and the post-change URL will begin
+ * with @a to.  @a validator (and its baton, @a validator_baton), will
+ * be called for the newly generated base URL and calculated repo
+ * root.
  *
  * @a wc_ctx is an working copy context.
  *
