@@ -634,6 +634,26 @@ get_statement_for_path(svn_sqlite__stmt_t **stmt,
 }
 
 
+/* For a given REPOS_ROOT_URL/REPOS_UUID pair, set *REPOS_ID to the existing
+   REPOS_ID value. If one does not exist, throw an error. */
+static svn_error_t *
+fetch_repos_id(apr_int64_t *repos_id,
+               const char *repos_root_url,
+               const char *repos_uuid,
+               svn_sqlite__db_t *sdb,
+               apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *get_stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&get_stmt, sdb, STMT_SELECT_REPOSITORY));
+  SVN_ERR(svn_sqlite__bindf(get_stmt, "s", repos_root_url));
+  SVN_ERR(svn_sqlite__step_row(get_stmt));
+
+  *repos_id = svn_sqlite__column_int64(get_stmt, 0);
+  return svn_error_return(svn_sqlite__reset(get_stmt));
+}
+
+
 /* For a given REPOS_ROOT_URL/REPOS_UUID pair, return the existing REPOS_ID
    value. If one does not exist, then create a new one. */
 static svn_error_t *
@@ -2783,9 +2803,9 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                                         local_abspath),
                                scratch_pool);
           *copyfrom_rev = original_revision;
-          SVN_ERR(create_repos_id(copyfrom_id,
-                                  original_root_url, original_uuid,
-                                  pdh->wcroot->sdb, scratch_pool));
+          SVN_ERR(fetch_repos_id(copyfrom_id,
+                                 original_root_url, original_uuid,
+                                 pdh->wcroot->sdb, scratch_pool));
         }
       else
         {
@@ -2828,9 +2848,9 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                                         local_abspath),
                                scratch_pool);
           *copyfrom_rev = original_revision;
-          SVN_ERR(create_repos_id(copyfrom_id,
-                                  original_root_url, original_uuid,
-                                  pdh->wcroot->sdb, scratch_pool));
+          SVN_ERR(fetch_repos_id(copyfrom_id,
+                                 original_root_url, original_uuid,
+                                 pdh->wcroot->sdb, scratch_pool));
         }
       else
         {
@@ -2841,18 +2861,18 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                                &repos_root_url, &repos_uuid,
                                                db, local_abspath,
                                                scratch_pool, scratch_pool));
-          SVN_ERR(create_repos_id(copyfrom_id,
-                                  repos_root_url, repos_uuid,
-                                  pdh->wcroot->sdb, scratch_pool));
+          SVN_ERR(fetch_repos_id(copyfrom_id,
+                                 repos_root_url, repos_uuid,
+                                 pdh->wcroot->sdb, scratch_pool));
         }
     }
   else
     {
       *copyfrom_relpath = repos_relpath;
       *copyfrom_rev = revision;
-      SVN_ERR(create_repos_id(copyfrom_id,
-                              repos_root_url, repos_uuid,
-                              pdh->wcroot->sdb, scratch_pool));
+      SVN_ERR(fetch_repos_id(copyfrom_id,
+                             repos_root_url, repos_uuid,
+                             pdh->wcroot->sdb, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -5312,8 +5332,8 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
     }
 
 
-  SVN_ERR(create_repos_id(&rb.old_repos_id, old_repos_root_url, rb.repos_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
+  SVN_ERR(fetch_repos_id(&rb.old_repos_id, old_repos_root_url, rb.repos_uuid,
+                         pdh->wcroot->sdb, scratch_pool));
 
   rb.wc_id = pdh->wcroot->wc_id;
   rb.repos_root_url = repos_root_url;
@@ -8025,8 +8045,8 @@ make_copy_txn(void *baton,
                                          mcb->local_abspath,
                                          iterpool, iterpool));
 
-      SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
-                              iterpool));
+      SVN_ERR(fetch_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
+                             iterpool));
 
       /* ### this is not setting the COPYFROM_REVISION column!!  */
       /* ### The regression tests passed without this, is it necessary? */
@@ -8320,8 +8340,8 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                          &repos_uuid, db, pdh->local_abspath,
                                          scratch_pool, scratch_pool));
 
-      SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                              pdh->wcroot->sdb, scratch_pool));
+      SVN_ERR(fetch_repos_id(&repos_id, repos_root_url, repos_uuid,
+                             pdh->wcroot->sdb, scratch_pool));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                         STMT_INSERT_NODE));
