@@ -2575,13 +2575,14 @@ def delete_child_parent_update(sbox):
   svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E'))
   expected_status.tweak('A/B/E', 'A/B/E/beta', status='D ')
 
-  # This fails because A/B/E/alpha shows up as deleted.
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
 
-  # This fails with an assert that A/B/E/alpha has no base node.
+  # This produces a tree-conflict
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/B/E', treeconflict='C')
   svntest.actions.run_and_verify_update(wc_dir,
                                         [],
                                         expected_disk,
@@ -2649,7 +2650,7 @@ test_list = [ None,
               SkipUnless(meta_correct_library_being_used,
                          svntest.main.is_ra_type_dav),
               delete_and_add_same_file,
-              XFail(delete_child_parent_update),
+              delete_child_parent_update,
              ]
 
 if __name__ == '__main__':

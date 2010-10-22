@@ -802,16 +802,23 @@ copy_working_from_base(void *baton,
      ### only gets written once. */
   like_arg = construct_like_arg(piwb->local_relpath, scratch_pool);
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_SELECT_CHILDREN_OP_DEPTH_RECURSIVE));
+                                    STMT_SELECT_WORKING_OP_DEPTH_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", piwb->wc_id, like_arg));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   nodes = apr_array_make(scratch_pool, 10, sizeof(struct relpath_op_depth_t *));
   while (have_row)
     {
-      struct relpath_op_depth_t *rod = apr_palloc(scratch_pool, sizeof(*rod));
-      rod->local_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
-      rod->op_depth = svn_sqlite__column_int64(stmt, 1);
-      APR_ARRAY_PUSH(nodes, struct relpath_op_depth_t *) = rod;
+      int op_depth = svn_sqlite__column_int64(stmt, 1);
+      svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 2,
+                                                            presence_map);
+      if (status != svn_wc__db_status_excluded)
+        {
+          struct relpath_op_depth_t *rod = apr_palloc(scratch_pool,
+                                                      sizeof(*rod));
+          rod->local_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+          rod->op_depth = op_depth;
+          APR_ARRAY_PUSH(nodes, struct relpath_op_depth_t *) = rod;
+        }
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
