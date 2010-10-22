@@ -38,6 +38,9 @@ XFail = svntest.testcase.XFail
 Wimp = svntest.testcase.Wimp
 Item = wc.StateItem
 
+# Generic UUID-matching regular expression
+uuid_regex = re.compile(r"[a-fA-F0-9]{8}(-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}")
+
 ######################################################################
 # Tests
 #
@@ -2595,18 +2598,43 @@ def delete_child_parent_update(sbox):
 def basic_relocate(sbox):
   "basic relocate of a wc"
   sbox.build(read_only = True)
-  repo_url = sbox.repo_url
-  wc_dir = sbox.wc_dir
 
-  # Try some no-op relocations using URL prefixes.
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  shutil.copytree(repo_dir, other_repo_dir)
+
+  def _verify_url(wc_path, url):
+    name = os.path.basename(wc_path)
+    expected = {'Path' : re.escape(wc_path),
+                'URL' : url,
+                'Repository Root' : '.*',
+                'Revision' : '.*',
+                'Node Kind' : 'directory',
+                'Repository UUID' : uuid_regex,
+              }
+    svntest.actions.run_and_verify_info([expected], wc_path)
+
+  # No-op relocation of just the scheme.
   scheme = repo_url[:repo_url.index('://')+3]
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      scheme, scheme, wc_dir)
-  scheme = repo_url[0 : 14]
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
-                                     scheme, scheme, wc_dir)
+  _verify_url(wc_dir, repo_url)
 
-  ### Someday, try this with argv[1] != argv[2].
+  # No-op relocation of a bit more of the URL.
+  substring = repo_url[:repo_url.index('://')+7]
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     substring, substring, wc_dir)
+  _verify_url(wc_dir, repo_url)
+  
+  # Real relocation to OTHER_REPO_URL.
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+  _verify_url(wc_dir, other_repo_url)
+
+  ### TODO: When testing ra_dav or ra_svn, do relocations between
+  ### those and ra_local URLs.
 
 
 ########################################################################
