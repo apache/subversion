@@ -209,7 +209,7 @@ static const char * const TESTING_DATA = (
   "  0, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-d', 1, 'J', 2, 'moved/file', 2, 'normal',"
+  "  1, 'J/J-d', 2, 'J', 2, 'moved/file', 2, 'normal',"
   "  1, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
