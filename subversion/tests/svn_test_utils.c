@@ -68,6 +68,9 @@ svn_test__create_repos_and_wc(const char **repos_url,
                                  ctx, pool));
   }
 
+  /* Register this WC for cleanup. */
+  svn_test_add_dir_cleanup(*wc_abspath);
+
   return SVN_NO_ERROR;
 }
 

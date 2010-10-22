@@ -46,7 +46,9 @@ extern "C" {
  *
  * Create the repository and WC in subdirectories called
  * REPOSITORIES_WORK_DIR/TEST_NAME and WCS_WORK_DIR/TEST_NAME respectively,
- * within the current working directory. */
+ * within the current working directory.
+ *
+ * Register the new repo and the new WC for cleanup. */
 svn_error_t *
 svn_test__create_repos_and_wc(const char **repos_url,
                               const char **wc_abspath,
