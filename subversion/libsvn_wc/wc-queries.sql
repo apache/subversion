@@ -63,7 +63,7 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_SELECT_WORKING_NODE
-SELECT presence, kind, checksum, translated_size,
+SELECT op_depth, presence, kind, checksum, translated_size,
   changed_revision, changed_date, changed_author, depth, symlink_target,
   repos_id, repos_path, revision,
   moved_here, moved_to, last_mod_time, properties
