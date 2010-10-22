@@ -6022,8 +6022,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 
           if (current_abspath == local_abspath)
             /* ### maybe we should return a usage error instead?  */
-            return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
-                                     svn_sqlite__reset(stmt),
+            return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                      _("The node '%s' was not found."),
                                      svn_dirent_local_style(local_abspath,
                                                             scratch_pool));
