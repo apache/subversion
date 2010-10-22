@@ -3123,22 +3123,6 @@ def relocate_with_relative_externals(sbox):
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/G$' }],
                                       os.path.join(wc_dir, 'A', 'B', 'G-ext'))
 
-# Regression test for a functionality we all like
-def relocate_URL_prefix(sbox):
-  "relocate with URL prefixes"
-  sbox.build(read_only = True)
-  repo_url = sbox.repo_url
-  wc_dir = sbox.wc_dir
-
-  ### Someday, try this with argv[1] != argv[2].
-  scheme = repo_url[0 : repo_url.index('://')+3]
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
-                                     scheme, scheme, wc_dir)
-  scheme = repo_url[0 : 14]
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
-                                     scheme, scheme, wc_dir)
-
-
 
 ########################################################################
 # Run the tests
@@ -3185,7 +3169,6 @@ test_list = [ None,
               relocate_with_switched_children,
               XFail(copy_with_switched_subdir),
               XFail(relocate_with_relative_externals),
-              relocate_URL_prefix,
               ]
 
 if __name__ == '__main__':
