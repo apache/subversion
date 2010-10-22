@@ -123,10 +123,13 @@ usage: 1. switch URL[@PEGREV] [PATH]
      This is used when a repository's root URL changes (such as a scheme
      or hostname change) but your working copy still reflects the same
      directory within the same repository.  FROM-PREFIX and TO-PREFIX are
-     initial substrings of the working copy's current and new root URLs,
-     respectively.  (You may specify the complete old and new root URLs if
-     you wish.)  Use 'svn info' to determine the current repository root
-     URL of the working copy.
+     initial substrings of the working copy's current and new URLs,
+     respectively.  (You may specify the complete old and new URLs if you
+     wish.)  Use 'svn info' to determine the current working copy URL.
+
+     Note: This syntax form -- in fact, the use of the --relocate option
+           in general -- has been deprecated in favor of running
+           'svn relocate FROM-PREFIX TO-PREFIX [PATH]'.
 
   See also 'svn help update' for a list of possible characters
   reporting the action taken.
