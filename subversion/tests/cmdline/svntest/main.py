@@ -1271,9 +1271,13 @@ def run_one_test(n, test_list, finished_tests = None):
   If we're running the tests in parallel spawn the test in a new process.
   """
 
-  if (n < 1) or (n > len(test_list) - 1):
+  # allow N to be negative, so './basic_tests.py -- -1' works
+  num_tests = len(test_list) - 1
+  if (n == 0) or (abs(n) > num_tests):
     print("There is no test %s.\n" % n)
     return 1
+  if n < 0:
+    n += 1+num_tests
 
   # Run the test.
   exit_code = TestRunner(test_list[n], n).run()
