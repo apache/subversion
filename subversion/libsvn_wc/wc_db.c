@@ -6017,6 +6017,9 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 
       if (!have_row)
         {
+          /* Reset statement before (optionally) returning */
+          SVN_ERR(svn_sqlite__reset(stmt));
+
           if (current_abspath == local_abspath)
             /* ### maybe we should return a usage error instead?  */
             return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
@@ -6024,7 +6027,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                      _("The node '%s' was not found."),
                                      svn_dirent_local_style(local_abspath,
                                                             scratch_pool));
-          SVN_ERR(svn_sqlite__reset(stmt));
 
           /* We just fell off the top of the WORKING tree. If we haven't
              found the operation root, then the child node that we just
