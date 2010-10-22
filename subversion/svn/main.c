@@ -999,6 +999,29 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_force, opt_changelist },
     {{'F', N_("read property value from file ARG")}} },
 
+  { "relocate", svn_cl__relocate, {0}, N_
+    ("Relocate the working copy to point to a different URL.\n"
+     "usage: 1. relocate FROM-PREFIX TO-PREFIX [PATH...]\n"
+     "       2. relocate TO-URL [PATH]\n"
+     "\n"
+     "  Rewrite working copy URL metadata to reflect a syntactic change only.\n"
+     "  This is used when repository's root URL changes (such as a scheme\n"
+     "  or hostname change) but your working copy still reflects the same\n"
+     "  directory within the same repository.\n"
+     "\n"
+     "  1. FROM-PREFIX and TO-PREFIX are initial substrings of the working\n"
+     "     copy's current and new URLs, respectively.  (You may specify the\n"
+     "     complete old and new URLs if you wish.)  Use 'svn info' to determine\n"
+     "     the current working copy URL.\n"
+     "\n"
+     "  2. TO-URL is the (complete) new repository URL to use for for PATH.\n"
+     "\n"
+     "  Examples:\n"
+     "    svn relocate http:// svn:// project1 project2\n"
+     "    svn relocate http://www.example.com/repo/project \\\n"
+     "                 svn://svn.example.com/repo/project\n"),
+    {0} },
+
   { "resolve", svn_cl__resolve, {0}, N_
     ("Resolve conflicts on working copy files or directories.\n"
      "usage: resolve --accept=ARG [PATH...]\n"
@@ -1152,10 +1175,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     This is used when a repository's root URL changes (such as a scheme\n"
      "     or hostname change) but your working copy still reflects the same\n"
      "     directory within the same repository.  FROM-PREFIX and TO-PREFIX are\n"
-     "     initial substrings of the working copy's current and new root URLs,\n"
-     "     respectively.  (You may specify the complete old and new root URLs if\n"
-     "     you wish.)  Use 'svn info' to determine the current repository root\n"
-     "     URL of the working copy.\n"
+     "     initial substrings of the working copy's current and new URLs,\n"
+     "     respectively.  (You may specify the complete old and new URLs if you\n"
+     "     wish.)  Use 'svn info' to determine the current working copy URL.\n"
+     "\n"
+     "     Note: This syntax form -- in fact, the use of the --relocate option\n"
+     "           in general -- has been deprecated in favor of running\n"
+     "           'svn relocate FROM-PREFIX TO-PREFIX [PATH]'.\n"
      "\n"
      "  See also 'svn help update' for a list of possible characters\n"
      "  reporting the action taken.\n"

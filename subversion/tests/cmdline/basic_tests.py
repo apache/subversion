@@ -2633,6 +2633,17 @@ def basic_relocate(sbox):
                                      repo_url, other_repo_url, wc_dir)
   _verify_url(wc_dir, other_repo_url)
 
+  # ... and back again, using the newer 'svn relocate' subcommand.
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     other_repo_url, repo_url, wc_dir)
+  _verify_url(wc_dir, repo_url)
+
+  # To OTHER_REPO_URL again, this time with the single-URL form of
+  # 'svn relocate'.
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     other_repo_url, wc_dir)
+  _verify_url(wc_dir, other_repo_url)
+
   ### TODO: When testing ra_dav or ra_svn, do relocations between
   ### those and ra_local URLs.
 
