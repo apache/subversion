@@ -84,6 +84,17 @@ typedef struct path_info_t
   apr_pool_t *pool;            /* Container pool */
 } path_info_t;
 
+/* Describes the standard revision properties that are relevant for
+   reports.  Since a particular revision will often show up more than
+   once in the report, we cache these properties for the time of the
+   report generation. */
+typedef struct revision_info_t
+{
+  svn_revnum_t rev;            /* revision number */
+  svn_string_t* date;          /* revision timestamp */
+  svn_string_t* author;        /* name of the revisions' author */
+} revision_info_t;
+
 /* A structure used by the routines within the `reporter' vtable,
    driven by the client as it describes its working copy revisions. */
 typedef struct report_baton_t
@@ -118,6 +129,11 @@ typedef struct report_baton_t
   path_info_t *lookahead;
   svn_fs_root_t *t_root;
   svn_fs_root_t *s_roots[NUM_CACHED_SOURCE_ROOTS];
+
+  /* Cache for revision properties. This is used to eliminate redundant 
+     revprop fetching. */
+  apr_hash_t* revision_infos;
+
   apr_pool_t *pool;
 } report_baton_t;
 
@@ -428,6 +444,53 @@ change_file_prop(report_baton_t *b, void *file_baton, const char *name,
   return b->editor->change_file_prop(file_baton, name, value, pool);
 }
 
+/* For the report B, return the relevant revprop data of revision REV in
+   REVISION_INFO. The revision info will be allocated in b->pool.
+   Temporaries get allocated on SCRATCH_POOL. */
+static  svn_error_t *
+get_revision_info(report_baton_t *b,
+                  svn_revnum_t rev,
+                  revision_info_t** revision_info,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_t *r_props;
+  svn_string_t *cdate, *author;
+  revision_info_t* info;
+
+  /* Try to find the info in the report's cache */
+  info = apr_hash_get(b->revision_infos, &rev, sizeof(rev));
+  if (!info)
+    {
+      /* Info is not available, yet. 
+         Get all revprops. */
+      SVN_ERR(svn_fs_revision_proplist(&r_props,
+                                       b->repos->fs,
+                                       rev,
+                                       scratch_pool));
+
+      /* Extract the committed-date. */
+      cdate = apr_hash_get(r_props, SVN_PROP_REVISION_DATE,
+                           APR_HASH_KEY_STRING);
+
+      /* Extract the last-author. */
+      author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
+                            APR_HASH_KEY_STRING);
+
+      /* Create a result object */
+      info = apr_palloc(b->pool, sizeof(*info));
+      info->rev = rev;
+      info->date = cdate ? svn_string_dup(cdate, b->pool) : NULL;
+      info->author = author ? svn_string_dup(author, b->pool) : NULL;
+
+      /* Cache it */
+      apr_hash_set(b->revision_infos, &rev, sizeof(rev), info);
+    }
+
+  *revision_info = info;
+  return SVN_NO_ERROR;
+}
+
+
 /* Generate the appropriate property editing calls to turn the
    properties of S_REV/S_PATH into those of B->t_root/T_PATH.  If
    S_PATH is NULL, this is an add, so assume the target starts with no
@@ -440,12 +503,13 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                 void *object, apr_pool_t *pool)
 {
   svn_fs_root_t *s_root;
-  apr_hash_t *s_props, *t_props, *r_props;
+  apr_hash_t *s_props, *t_props;
   apr_array_header_t *prop_diffs;
   int i;
   svn_revnum_t crev;
   const char *uuid;
-  svn_string_t *cr_str, *cdate, *last_author;
+  svn_string_t *cr_str;
+  revision_info_t* revision_info;
   svn_boolean_t changed;
   const svn_prop_t *pc;
   svn_lock_t *lock;
@@ -459,21 +523,17 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(change_fn(b, object,
                         SVN_PROP_ENTRY_COMMITTED_REV, cr_str, pool));
 
-      SVN_ERR(svn_fs_revision_proplist(&r_props, b->repos->fs, crev, pool));
+      SVN_ERR(get_revision_info(b, crev, &revision_info, pool));
 
       /* Transmit the committed-date. */
-      cdate = apr_hash_get(r_props, SVN_PROP_REVISION_DATE,
-                           APR_HASH_KEY_STRING);
-      if (cdate || s_path)
+      if (revision_info->date || s_path)
         SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_COMMITTED_DATE,
-                          cdate, pool));
+                          revision_info->date, pool));
 
       /* Transmit the last-author. */
-      last_author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
-                                 APR_HASH_KEY_STRING);
-      if (last_author || s_path)
+      if (revision_info->author || s_path)
         SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_LAST_AUTHOR,
-                          last_author, pool));
+                          revision_info->author, pool));
 
       /* Transmit the UUID. */
       SVN_ERR(svn_fs_get_uuid(b->repos->fs, &uuid, pool));
@@ -1403,6 +1463,8 @@ svn_repos_begin_report2(void **report_baton,
   b->edit_baton = edit_baton;
   b->authz_read_func = authz_read_func;
   b->authz_read_baton = authz_read_baton;
+  b->revision_infos = apr_hash_make(pool);
+  b->pool = pool;
 
   SVN_ERR(svn_io_open_unique_file3(&b->tempfile, NULL, NULL,
                                    svn_io_file_del_on_pool_cleanup,
