@@ -190,11 +190,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
 
   *did_resolve = FALSE;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath, pool, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
                                     pool, pool));
 
