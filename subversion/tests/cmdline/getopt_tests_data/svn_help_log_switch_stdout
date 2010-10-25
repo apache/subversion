@@ -119,17 +119,8 @@ usage: 1. switch URL[@PEGREV] [PATH]
      Use the --set-depth option to set a new working copy depth on the
      targets of this operation.
 
-  2. Rewrite working copy URL metadata to reflect a syntactic change only.
-     This is used when a repository's root URL changes (such as a scheme
-     or hostname change) but your working copy still reflects the same
-     directory within the same repository.  FROM-PREFIX and TO-PREFIX are
-     initial substrings of the working copy's current and new URLs,
-     respectively.  (You may specify the complete old and new URLs if you
-     wish.)  Use 'svn info' to determine the current working copy URL.
-
-     Note: This syntax form -- in fact, the use of the --relocate option
-           in general -- has been deprecated in favor of running
-           'svn relocate FROM-PREFIX TO-PREFIX [PATH]'.
+  2. The '--relocate' option is deprecated. This syntax is equivalent to
+     'svn relocate FROM-PREFIX TO-PREFIX [PATH]'.
 
   See also 'svn help update' for a list of possible characters
   reporting the action taken.
