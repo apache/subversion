@@ -1518,6 +1518,13 @@ revert_internal(svn_wc__db_t *db,
     }
 
   /* Finally, recurse if requested. */
+
+  /* ### This doesn't work properly for added directories.  Reverting
+     ### the parent before the children is wrong, it means node rows
+     ### exist for the children after the parent row is removed.
+     ### Either the wq revert of the parent above has to remove the
+     ### children or this recursion has to do children before parents.
+   */
   if (!unversioned && db_kind == svn_wc__db_kind_dir && depth > svn_depth_empty)
     {
       const apr_array_header_t *children;
