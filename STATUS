@@ -62,6 +62,10 @@ They will be merged into /trunk after passing the review.
  Justification:
    Further reduction of the client-side overhead in svn export
    (and possibly others).
+ Merge:
+   Merged to trunk in r1027192.  From the log message: "While functionally
+     correct, I think some of the function names could be improved, but
+     that's a bikeshed we can have on trunk."
 
 * r985606
  A somewhat larger change: Reduce the ra_svn de-marshalling
