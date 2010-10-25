@@ -47,6 +47,8 @@ They will be merged into /trunk after passing the review.
  temp files.
  Justification:
    Significant reduction in sys / OS overhead in svn export.
+ Merge:
+   Merged to trunk in r1004286.
 
 * r985482
  Reduce the calling overhead for svn I/O functions by inlining the
