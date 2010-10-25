@@ -119,7 +119,7 @@ typedef enum {
   opt_ignore_keywords,
   opt_reverse_diff,
   opt_ignore_whitespace,
-  opt_show_diff,
+  opt_diff,
   opt_internal_diff,
   opt_use_git_diff_format,
 } svn_cl__longopt_t;
@@ -327,8 +327,7 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("apply the unidiff in reverse")},
   {"ignore-whitespace", opt_ignore_whitespace, 0,
                        N_("ignore whitespace during pattern matching")},
-  {"diff", opt_show_diff, 0,
-                       N_("produce diff output")},
+  {"diff", opt_diff, 0, N_("produce diff output")}, /* maps to show_diff */
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
   {"git", opt_use_git_diff_format, 0,
@@ -662,7 +661,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     opt_show_diff, opt_diff_cmd, opt_internal_diff, 'x'},
+     opt_diff, opt_diff_cmd, opt_internal_diff, 'x'},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -1778,7 +1777,7 @@ main(int argc, const char *argv[])
       case opt_ignore_whitespace:
           opt_state.ignore_whitespace = TRUE;
           break;
-      case opt_show_diff:
+      case opt_diff:
           opt_state.show_diff = TRUE;
           break;
       case opt_internal_diff:

@@ -57,7 +57,7 @@ struct log_receiver_baton
   /* Don't print log message body nor its line count. */
   svn_boolean_t omit_log_message;
 
-  /* Whether to show diffs in the log. */
+  /* Whether to show diffs in the log. (maps to --diff) */
   svn_boolean_t show_diff;
 
   /* Diff arguments received from command line. */
