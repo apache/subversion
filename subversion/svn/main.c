@@ -383,7 +383,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "[alias: --idiff]")},
   {"git", opt_use_git_diff_format, 0,
-                       N_("use git's extended diff format\n")},                
+                       N_("use git's extended diff format")},
   {"old-patch-target-names", opt_old_patch_target_names, 0,
                        N_("use target names from the old side of a patch.\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
