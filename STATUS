@@ -22,6 +22,8 @@ They will be merged into /trunk after passing the review.
    (1) Reduce I/O overhead, especially for pre-1.7 repos
    (2) Ensures consistent reports even if revprops get changed
        by concurrent accesses
+ Merge:
+   Merged to trunk in r1027225.
 
 * r985472
  Minimize the number of retry attempts when looking for an
