@@ -221,7 +221,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
-  int strip_count; /* number of leading path components to strip */
+  int strip; /* number of leading path components to strip */
   svn_boolean_t ignore_keywords;  /* do not expand keywords */
   svn_boolean_t reverse_diff;     /* reverse a diff (e.g. when patching) */
   svn_boolean_t ignore_whitespace; /* don't account for whitespace when

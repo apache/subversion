@@ -114,7 +114,7 @@ typedef enum {
   opt_show_revs,
   opt_reintegrate,
   opt_trust_server_cert,
-  opt_strip_count,
+  opt_strip,
   opt_show_copies_as_adds,
   opt_ignore_keywords,
   opt_reverse_diff,
@@ -303,7 +303,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
-  {"strip",         opt_strip_count, 1,
+  {"strip",         opt_strip, 1,
                     N_("number of leading path components to strip from\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "paths parsed from the patch file. --strip 0\n"
@@ -808,7 +808,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run, opt_strip_count, opt_reverse_diff,
+    {'q', opt_dry_run, opt_strip, opt_reverse_diff,
      opt_ignore_whitespace} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
@@ -1748,22 +1748,22 @@ main(int argc, const char *argv[])
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
         break;
-      case opt_strip_count:
+      case opt_strip:
         {
           char *end;
-          opt_state.strip_count = (int) strtol(opt_arg, &end, 10);
+          opt_state.strip = (int) strtol(opt_arg, &end, 10);
           if (end == opt_arg || *end != '\0')
             {
               err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                       _("Invalid strip count '%s'"), opt_arg);
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          if (opt_state.strip_count < 0)
+          if (opt_state.strip < 0)
             {
               err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                       _("Negative strip count '%i' "
                                         "(strip count must be positive)"),
-                                      opt_state.strip_count);
+                                      opt_state.strip);
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
         }
