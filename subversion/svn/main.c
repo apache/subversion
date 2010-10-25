@@ -1749,20 +1749,17 @@ main(int argc, const char *argv[])
         break;
       case opt_strip:
         {
-          char *end;
-          opt_state.strip = (int) strtol(opt_arg, &end, 10);
-          if (end == opt_arg || *end != '\0')
+          err = svn_cstring_atoi(&opt_state.strip, opt_arg);
+          if (err)
             {
-              err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+              err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
                                       _("Invalid strip count '%s'"), opt_arg);
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
           if (opt_state.strip < 0)
             {
-              err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                      _("Negative strip count '%i' "
-                                        "(strip count must be positive)"),
-                                      opt_state.strip);
+              err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                     _("Argument to --strip must be positive"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
         }
