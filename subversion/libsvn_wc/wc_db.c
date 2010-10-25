@@ -6121,7 +6121,10 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 
 
 /* Like svn_wc__db_scan_addition(), but with PDH+LOCAL_RELPATH instead of
- * DB+LOCAL_ABSPATH. */
+ * DB+LOCAL_ABSPATH.
+ *
+ * ### TODO: Return xxx_repos_id instead of xxx_root_url and xxx_uuid,
+ *     because that would be better for most of the internal callers. */
 static svn_error_t *
 scan_addition(svn_wc__db_status_t *status,
               const char **op_root_abspath,
