@@ -1065,30 +1065,20 @@ add_children_to_hash(apr_hash_t *children,
 }
 
 
-/* Return in *CHILDREN all of the children of the directory LOCAL_ABSPATH.
+/* Return in *CHILDREN all of the children of the directory LOCAL_RELPATH.
    If BASE_ONLY is true, then *only* the children from BASE_NODE are
    returned (those in WORKING_NODE are ignored). The result children are
-   allocated in RESULT_POOl.  */
+   allocated in RESULT_POOL.  */
 static svn_error_t *
 gather_children(const apr_array_header_t **children,
                 svn_boolean_t base_only,
-                svn_wc__db_t *db,
-                const char *local_abspath,
+                svn_wc__db_pdh_t *pdh,
+                const char *local_relpath,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   apr_hash_t *names_hash = apr_hash_make(scratch_pool);
   apr_array_header_t *names_array;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                                             local_abspath,
-                                             svn_sqlite__mode_readonly,
-                                             scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
 
   /* All of the names get allocated in RESULT_POOL.  For !base_only it
      appears to be faster to use the hash to remove duplicates than to
@@ -2096,8 +2086,19 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readonly,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
   return gather_children(children, TRUE,
-                         db, local_abspath, result_pool, scratch_pool);
+                         pdh, local_relpath, result_pool, scratch_pool);
 }
 
 
@@ -2937,8 +2938,8 @@ svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
-                   const svn_skel_t *work_items,
-                   apr_pool_t *scratch_pool)
+           const svn_skel_t *work_items,
+           apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *src_pdh, *dst_pdh;
   const char *src_relpath, *dst_relpath, *copyfrom_relpath;
@@ -3004,7 +3005,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
     }
 
   if (kind == svn_wc__db_kind_dir)
-    SVN_ERR(gather_children(&children, FALSE, db, src_abspath,
+    SVN_ERR(gather_children(&children, FALSE, src_pdh, src_relpath,
                             scratch_pool, scratch_pool));
   else
     children = NULL;
@@ -3069,7 +3070,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   SVN_ERR(elide_copyfrom(dst_pdh, dst_relpath, scratch_pool));
 
   SVN_ERR(add_work_items(dst_pdh->wcroot->sdb, work_items, scratch_pool));
- 
+
   return SVN_NO_ERROR;
 }
 
@@ -5305,8 +5306,19 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readonly,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
   return gather_children(children, FALSE,
-                         db, local_abspath, result_pool, scratch_pool);
+                         pdh, local_relpath, result_pool, scratch_pool);
 }
 
 struct relocate_baton
