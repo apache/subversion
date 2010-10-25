@@ -878,7 +878,7 @@ copy_working_from_base(void *baton,
   nodes = apr_array_make(scratch_pool, 10, sizeof(struct relpath_op_depth_t *));
   while (have_row)
     {
-      int op_depth = svn_sqlite__column_int64(stmt, 1);
+      apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 1);
       svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 2,
                                                             presence_map);
       if (status != svn_wc__db_status_excluded)
