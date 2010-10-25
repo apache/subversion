@@ -291,6 +291,16 @@ scan_addition(svn_wc__db_status_t *status,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool);
 
+static svn_error_t *
+scan_deletion(const char **base_del_relpath,
+              svn_boolean_t *base_replaced,
+              const char **moved_to_relpath,
+              const char **work_del_relpath,
+              svn_wc__db_pdh_t *pdh,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
+
 
 /* Return the absolute path, in local path style, of LOCAL_RELPATH in WCROOT. */
 static const char *
@@ -2869,32 +2879,30 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     }
   else if (*status == svn_wc__db_status_deleted)
     {
-      const char *work_del_abspath;
+      const char *work_del_relpath;
 
-      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL,
-                                       &work_del_abspath,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-      if (work_del_abspath)
+      SVN_ERR(scan_deletion(NULL, NULL, NULL, &work_del_relpath,
+                            pdh, local_relpath, scratch_pool, scratch_pool));
+      if (work_del_relpath)
         {
           const char *op_root_abspath;
           const char *original_repos_relpath, *original_root_url;
           const char *original_uuid;
           svn_revnum_t original_revision;
-          const char *parent_del_abspath = svn_dirent_dirname(work_del_abspath,
+          const char *parent_del_relpath = svn_dirent_dirname(work_del_relpath,
                                                               scratch_pool);
 
           /* Similar to, but not the same as, the _scan_addition and
              _join above.  Can we use get_copyfrom here? */
-          SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath,
-                                           NULL /* repos_relpath */,
-                                           NULL /* repos_root_url */,
-                                           NULL /* repos_uuid */,
-                                           &original_repos_relpath,
-                                           &original_root_url, &original_uuid,
-                                           &original_revision,
-                                           db, parent_del_abspath,
-                                           scratch_pool, scratch_pool));
+          SVN_ERR(scan_addition(NULL, &op_root_abspath,
+                                NULL /* repos_relpath */,
+                                NULL /* repos_root_url */,
+                                NULL /* repos_uuid */,
+                                &original_repos_relpath,
+                                &original_root_url, &original_uuid,
+                                &original_revision,
+                                pdh, parent_del_relpath,
+                                scratch_pool, scratch_pool));
           *copyfrom_relpath
             = svn_relpath_join(original_repos_relpath,
                                svn_dirent_skip_ancestor(op_root_abspath,
@@ -6350,47 +6358,38 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 }
 
 
-svn_error_t *
-svn_wc__db_scan_deletion(const char **base_del_abspath,
-                         svn_boolean_t *base_replaced,
-                         const char **moved_to_abspath,
-                         const char **work_del_abspath,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+/* Like svn_wc__db_scan_deletion(), but with PDH+LOCAL_RELPATH instead of
+ * DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
+static svn_error_t *
+scan_deletion(const char **base_del_relpath,
+              svn_boolean_t *base_replaced,
+              const char **moved_to_relpath,
+              const char **work_del_relpath,
+              svn_wc__db_pdh_t *pdh,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
-  const char *current_abspath = local_abspath;
-  const char *current_relpath;
-  const char *child_abspath = NULL;
+  const char *current_relpath = local_relpath;
+  const char *child_relpath = NULL;
   svn_wc__db_status_t child_presence;
   svn_boolean_t child_has_base = FALSE;
   svn_boolean_t found_moved_to = FALSE;
-  svn_wc__db_pdh_t *pdh;
-  svn_wc__db_wcroot_t *wcroot;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  svn_wc__db_wcroot_t *wcroot = pdh->wcroot;
 
   /* Initialize all the OUT parameters.  */
-  if (base_del_abspath != NULL)
-    *base_del_abspath = NULL;
+  if (base_del_relpath != NULL)
+    *base_del_relpath = NULL;
   if (base_replaced != NULL)
     *base_replaced = FALSE;  /* becomes TRUE when we know for sure.  */
-  if (moved_to_abspath != NULL)
-    *moved_to_abspath = NULL;
-  if (work_del_abspath != NULL)
-    *work_del_abspath = NULL;
+  if (moved_to_relpath != NULL)
+    *moved_to_relpath = NULL;
+  if (work_del_relpath != NULL)
+    *work_del_relpath = NULL;
 
   /* Initialize to something that won't denote an important parent/child
      transition.  */
   child_presence = svn_wc__db_status_base_deleted;
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &current_relpath, db,
-                              local_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  wcroot = pdh->wcroot;
 
   while (TRUE)
     {
@@ -6407,11 +6406,12 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       if (!have_row)
         {
           /* There better be a row for the starting node!  */
-          if (current_abspath == local_abspath)
+          if (current_relpath == local_relpath)
             return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
                                      svn_sqlite__reset(stmt),
                                      _("The node '%s' was not found."),
-                                     svn_dirent_local_style(local_abspath,
+                                     path_for_error_message(wcroot,
+                                                            local_relpath,
                                                             scratch_pool));
 
           /* There are no values, so go ahead and reset the stmt now.  */
@@ -6424,10 +6424,10 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
              (added) WORKING subtree was deleted.  This can occur
              during post-commit processing when the copied parent that
              was in the WORKING tree has been moved to the BASE tree. */
-          if (work_del_abspath != NULL
+          if (work_del_relpath != NULL
               && child_presence == svn_wc__db_status_not_present
-              && *work_del_abspath == NULL)
-            *work_del_abspath = apr_pstrdup(result_pool, child_abspath);
+              && *work_del_relpath == NULL)
+            *work_del_relpath = apr_pstrdup(result_pool, child_relpath);
 
           /* If the child did not have a BASE node associated with it, then
              we're looking at a deletion that occurred within an added tree.
@@ -6441,10 +6441,10 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
              In both cases, set the root of the operation (if we have not
              already set it as part of a moved-away).  */
-          if (base_del_abspath != NULL
+          if (base_del_relpath != NULL
               && child_has_base
-              && *base_del_abspath == NULL)
-            *base_del_abspath = apr_pstrdup(result_pool, child_abspath);
+              && *base_del_relpath == NULL)
+            *base_del_relpath = apr_pstrdup(result_pool, child_relpath);
 
           /* We found whatever roots we needed. This BASE node and its
              ancestors are unchanged, so we're done.  */
@@ -6456,13 +6456,14 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       work_presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
       /* The starting node should be deleted.  */
-      if (current_abspath == local_abspath
+      if (current_relpath == local_relpath
           && work_presence != svn_wc__db_status_not_present
           && work_presence != svn_wc__db_status_base_deleted)
         return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
                                  svn_sqlite__reset(stmt),
                                  _("Expected node '%s' to be deleted."),
-                                 svn_dirent_local_style(local_abspath,
+                                 path_for_error_message(wcroot,
+                                                        local_relpath,
                                                         scratch_pool));
       SVN_ERR_ASSERT(work_presence == svn_wc__db_status_normal
                      || work_presence == svn_wc__db_status_not_present
@@ -6515,7 +6516,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
       /* Only grab the nearest ancestor.  */
       if (!found_moved_to &&
-          (moved_to_abspath != NULL || base_del_abspath != NULL)
+          (moved_to_relpath != NULL || base_del_relpath != NULL)
           && !svn_sqlite__column_is_null(stmt, 2 /* moved_to */))
         {
           /* There better be a BASE_NODE (that was moved-away).  */
@@ -6524,23 +6525,21 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
           found_moved_to = TRUE;
 
           /* This makes things easy. It's the BASE_DEL_ABSPATH!  */
-          if (base_del_abspath != NULL)
-            *base_del_abspath = apr_pstrdup(result_pool, current_abspath);
+          if (base_del_relpath != NULL)
+            *base_del_relpath = apr_pstrdup(result_pool, current_relpath);
 
-          if (moved_to_abspath != NULL)
-            *moved_to_abspath = svn_dirent_join(
-                                    wcroot->abspath,
-                                    svn_sqlite__column_text(stmt, 2, NULL),
-                                    result_pool);
+          if (moved_to_relpath != NULL)
+            *moved_to_relpath = apr_pstrdup(result_pool,
+                                    svn_sqlite__column_text(stmt, 2, NULL));
         }
 
-      if (work_del_abspath != NULL
+      if (work_del_relpath != NULL
           && work_presence == svn_wc__db_status_normal
           && child_presence == svn_wc__db_status_not_present)
         {
           /* Parent is normal, but child was deleted. Therefore, the child
              is the root of a WORKING subtree deletion.  */
-          *work_del_abspath = apr_pstrdup(result_pool, child_abspath);
+          *work_del_relpath = apr_pstrdup(result_pool, child_relpath);
         }
 
       /* We're all done examining the return values.  */
@@ -6548,7 +6547,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
       /* Move to the parent node. Remember the information about this node
          for our parent to use.  */
-      child_abspath = current_abspath;
+      child_relpath = current_relpath;
       child_presence = work_presence;
       child_has_base = have_base;
 
@@ -6557,7 +6556,57 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       SVN_ERR_ASSERT(current_relpath[0] != '\0');
 
       current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
-      current_abspath = svn_dirent_dirname(current_abspath, scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_scan_deletion(const char **base_del_abspath,
+                         svn_boolean_t *base_replaced,
+                         const char **moved_to_abspath,
+                         const char **work_del_abspath,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  const char *base_del_relpath, *moved_to_relpath, *work_del_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(scan_deletion(&base_del_relpath, base_replaced, &moved_to_relpath,
+                        &work_del_relpath,
+                        pdh, local_relpath, result_pool, scratch_pool));
+
+  if (base_del_abspath)
+    {
+      *base_del_abspath = (base_del_relpath
+                           ? svn_dirent_join(pdh->wcroot->abspath,
+                                             base_del_relpath, result_pool)
+                           : NULL);
+    }
+  if (moved_to_abspath)
+    {
+      *moved_to_abspath = (moved_to_relpath
+                           ? svn_dirent_join(pdh->wcroot->abspath,
+                                             moved_to_relpath, result_pool)
+                           : NULL);
+    }
+  if (work_del_abspath)
+    {
+      *work_del_abspath = (work_del_relpath
+                           ? svn_dirent_join(pdh->wcroot->abspath,
+                                             work_del_relpath, result_pool)
+                           : NULL);
     }
 
   return SVN_NO_ERROR;
