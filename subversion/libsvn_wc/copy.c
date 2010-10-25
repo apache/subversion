@@ -442,11 +442,6 @@ from one valid state to another and must be exectuted within a DB txn.
 Several such changes can be batched together in a bigger txn if we don't
 want clients to be able to see intermediate states.
 
-### TODO: This plan treats a simple add at the root of the copy as a special
-    case, but doesn't treat adds elsewhere, or nested copies, the same way.
-    Either include simple-add root nodes in the general all-at-once code, or
-    split out nested adds (and copies) as separate parts.
-
 ### TODO: This plan doesn't yet provide well for notification of all copied
     paths.
 
@@ -468,47 +463,16 @@ copy-versioned_node:
   #   - zero or more rows above SRC_DEPTH (modifications);
   # and SRC_OP_DEPTH <= SRC_DEPTH.
 
-  if schedule == simple-add:
+  Copy single NODES row from src_path@src_op_depth to dst_path@dst_depth.
+  Copy all rows of descendent paths in == src_op_depth to == dst_depth.
+  Copy all rows of descendent paths in > src_depth to > dst_depth,
+    adjusting op_depth by (dst_depth - src_depth).
 
-    # Copy the single node completely, then recurse.
-    # (A possible alternative: copy the metadata recursively, then copy the
-    # disk tree recursively, then copy the ACTUAL_NODE props etc. recursively.
-    # Not sure of pros and cons.)
+  Copy disk node recursively (if it exists, and whatever its kind).
+  Copy ACTUAL_NODE rows (props and any other actual metadata).
 
-    Copy single NODES row.
-    Copy single disk node (if it exists, and whatever its kind).
-    Copy single ACTUAL_NODE row (props and any other actual metadata).
-
-      For 1, 2, 3 maybe: make a tmp copy on disk, then use
-      svn_wc__db_op_copy() to install it.  # Does this include actual props?
-
-    For each metadata child of src_path:
-      # Every child of a simple add is normal: can't be not-present,
-      # excluded, deleted, etc.
-      copy-versioned-node(child_path, dst_path + basename(child_path),
-                          recursive).
-
-    For each disk child of disk node src_path:
-      if child is unversioned:
-        copy-disk-node(child_path, dst_path + basename(child_path),
-                       recursive).
-
-    # There can be no other op-depth source rows of interest.
-
-  else:  # src_path is a base node or a copied node
-
-    # Copy all the descendants in one go, without recursing.
-
-    Copy single NODES row from src_path@src_op_depth to dst_path@dst_depth.
-    Copy all rows of descendent paths in == src_op_depth to == dst_depth.
-    Copy all rows of descendent paths in > src_depth to > dst_depth,
-      adjusting op_depth by (dst_depth - src_depth).
-
-    Copy disk node recursively (if it exists, and whatever its kind).
-    Copy ACTUAL_NODE rows (props and any other actual metadata).
-
-    # ### Are there no scenarios in which we would want to decrease dst_depth
-    #     and so subsume the destination into an existing op?  I guess not.
+  # ### Are there no scenarios in which we would want to decrease dst_depth
+  #     and so subsume the destination into an existing op?  I guess not.
 
 */
 #endif
