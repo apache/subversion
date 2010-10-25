@@ -324,7 +324,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ignore-keywords", opt_ignore_keywords, 0,
                     N_("don't expand keywords")},
   {"reverse-diff", opt_reverse_diff, 0,
-                    N_("apply the unidiff in reverse\n")},
+                    N_("apply the unidiff in reverse")},
   {"ignore-whitespace", opt_ignore_whitespace, 0,
                        N_("ignore whitespace during pattern matching")},
   {"show-diff", opt_show_diff, 0,
