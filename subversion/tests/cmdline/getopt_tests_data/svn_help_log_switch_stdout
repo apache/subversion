@@ -90,7 +90,7 @@ Global options:
                              For example:
                                  servers:global:http-library=serf
 
-switch (sw): Update the working copy to a different URL.
+switch (sw): Update the working copy to a different URL within the same repository.
 usage: 1. switch URL[@PEGREV] [PATH]
        2. switch --relocate FROM-PREFIX TO-PREFIX [PATH...]
 

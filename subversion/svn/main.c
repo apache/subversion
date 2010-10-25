@@ -951,7 +951,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {{'F', N_("read property value from file ARG")}} },
 
   { "relocate", svn_cl__relocate, {0}, N_
-    ("Relocate the working copy to point to a different URL.\n"
+    ("Relocate the working copy to point to a different repository root URL.\n"
      "usage: 1. relocate FROM-PREFIX TO-PREFIX [PATH...]\n"
      "       2. relocate TO-URL [PATH]\n"
      "\n"
@@ -1098,7 +1098,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
       opt_ignore_externals, opt_changelist} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
-    ("Update the working copy to a different URL.\n"
+    ("Update the working copy to a different URL within the same repository.\n"
      "usage: 1. switch URL[@PEGREV] [PATH]\n"
      "       2. switch --relocate FROM-PREFIX TO-PREFIX [PATH...]\n"
      "\n"
