@@ -178,6 +178,8 @@ format_option(const char **string,
      name" (a single-character alias for the long option). */
   if (opt->optch <= 255)
     opts = apr_psprintf(pool, "-%c [--%s]", opt->optch, opt->name);
+  else if (long_alias)
+    opts = apr_psprintf(pool, "--%s [--%s]", opt->name, long_alias);
   else
     opts = apr_psprintf(pool, "--%s", opt->name);
 
@@ -185,13 +187,7 @@ format_option(const char **string,
     opts = apr_pstrcat(pool, opts, _(" ARG"), (char *)NULL);
 
   if (doc)
-    {
-      opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
-      if (long_alias)
-        opts = apr_pstrcat(pool, opts,
-                           "\n                             [alias: --",
-                           long_alias, "]", (char *)NULL);
-    }
+    opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
 
   *string = opts;
 }

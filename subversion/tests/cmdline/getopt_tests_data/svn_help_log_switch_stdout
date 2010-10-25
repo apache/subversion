@@ -50,19 +50,16 @@ Valid options:
                              history
   -c [--change] ARG        : the change made in revision ARG
   --targets ARG            : pass contents of file ARG as additional args
-  --stop-on-copy           : do not cross copies while traversing history
-                             [alias: --soc]
+  --stop-on-copy [--soc]   : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
   --xml                    : output in XML
   -l [--limit] ARG         : maximum number of log entries
   --with-all-revprops      : retrieve all revision properties
   --with-no-revprops       : retrieve no revision properties
   --with-revprop ARG       : retrieve revision property ARG
-  --show-diff              : produce diff output
-                             [alias: --diff]
+  --show-diff [--diff]     : produce diff output
   --diff-cmd ARG           : use ARG as diff command
-  --internal-diff          : override diff-cmd specified in config file
-                             [alias: --idiff]
+  --internal-diff [--idiff] : override diff-cmd specified in config file
   -x [--extensions] ARG    : Default: '-u'. When Subversion is invoking an
                              external diff program, ARG is simply passed along
                              to the program. But when Subversion is using its
@@ -83,13 +80,11 @@ Valid options:
 Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
-  --no-auth-cache          : do not cache authentication tokens
-                             [alias: --nac]
+  --no-auth-cache [--nac]  : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
-  --config-dir ARG         : read user configuration files from directory ARG
-                             [alias: --cd]
+  --config-dir [--cd] ARG  : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
@@ -143,14 +138,12 @@ Valid options:
   -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
   --depth ARG              : limit operation by depth ARG ('empty', 'files',
                              'immediates', or 'infinity')
-  --set-depth ARG          : set new working copy depth to ARG ('exclude',
+  --set-depth [--sd] ARG   : set new working copy depth to ARG ('exclude',
                              'empty', 'files', 'immediates', or 'infinity')
-                             [alias: --sd]
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
-  --ignore-externals       : ignore externals definitions
-                             [alias: --ie]
+  --ignore-externals [--ie] : ignore externals definitions
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
                              ('postpone', 'base', 'mine-conflict',
@@ -160,13 +153,11 @@ Valid options:
 Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
-  --no-auth-cache          : do not cache authentication tokens
-                             [alias: --nac]
+  --no-auth-cache [--nac]  : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
-  --config-dir ARG         : read user configuration files from directory ARG
-                             [alias: --cd]
+  --config-dir [--cd] ARG  : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
