@@ -276,6 +276,21 @@ elide_copyfrom(svn_wc__db_pdh_t *pdh,
                const char *local_relpath,
                apr_pool_t *scratch_pool);
 
+static svn_error_t *
+scan_addition(svn_wc__db_status_t *status,
+              const char **op_root_abspath,
+              const char **repos_relpath,
+              const char **repos_root_url,
+              const char **repos_uuid,
+              const char **original_repos_relpath,
+              const char **original_root_url,
+              const char **original_uuid,
+              svn_revnum_t *original_revision,
+              svn_wc__db_pdh_t *pdh,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
+
 
 /* Return the absolute path, in local path style, of LOCAL_RELPATH in WCROOT. */
 static const char *
@@ -2822,15 +2837,15 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       const char *original_repos_relpath, *original_root_url, *original_uuid;
       svn_revnum_t original_revision;
 
-      SVN_ERR(svn_wc__db_scan_addition(status, &op_root_abspath,
-                                       NULL /* repos_relpath */,
-                                       NULL /* repos_root_url */,
-                                       NULL /* repos_uuid */,
-                                       &original_repos_relpath,
-                                       &original_root_url, &original_uuid,
-                                       &original_revision,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
+      SVN_ERR(scan_addition(status, &op_root_abspath,
+                            NULL /* repos_relpath */,
+                            NULL /* repos_root_url */,
+                            NULL /* repos_uuid */,
+                            &original_repos_relpath,
+                            &original_root_url, &original_uuid,
+                            &original_revision,
+                            pdh, local_relpath,
+                            scratch_pool, scratch_pool));
 
       if (*status == svn_wc__db_status_copied
           || *status == svn_wc__db_status_moved_here)
@@ -6105,30 +6120,28 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 }
 
 
-svn_error_t *
-svn_wc__db_scan_addition(svn_wc__db_status_t *status,
-                         const char **op_root_abspath,
-                         const char **repos_relpath,
-                         const char **repos_root_url,
-                         const char **repos_uuid,
-                         const char **original_repos_relpath,
-                         const char **original_root_url,
-                         const char **original_uuid,
-                         svn_revnum_t *original_revision,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+/* Like svn_wc__db_scan_addition(), but with PDH+LOCAL_RELPATH instead of
+ * DB+LOCAL_ABSPATH. */
+static svn_error_t *
+scan_addition(svn_wc__db_status_t *status,
+              const char **op_root_abspath,
+              const char **repos_relpath,
+              const char **repos_root_url,
+              const char **repos_uuid,
+              const char **original_repos_relpath,
+              const char **original_root_url,
+              const char **original_uuid,
+              svn_revnum_t *original_revision,
+              svn_wc__db_pdh_t *pdh,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
-  const char *current_abspath = local_abspath;
-  const char *current_relpath;
-  const char *child_abspath = NULL;
+  const char *current_relpath = local_relpath;
+  const char *child_relpath = NULL;
   const char *build_relpath = "";
-  svn_wc__db_pdh_t *pdh;
-  svn_wc__db_wcroot_t *wcroot;
+  svn_wc__db_wcroot_t *wcroot = pdh->wcroot;
   svn_boolean_t found_info = FALSE;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Initialize all the OUT parameters. Generally, we'll only be filling
      in a subset of these, so it is easier to init all up front. Note that
@@ -6151,13 +6164,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
   if (original_revision)
     *original_revision = SVN_INVALID_REVNUM;
 
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &current_relpath, db,
-                              current_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  wcroot = pdh->wcroot;
-
   while (TRUE)
     {
       svn_sqlite__stmt_t *stmt;
@@ -6175,11 +6181,12 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
           /* Reset statement before (optionally) returning */
           SVN_ERR(svn_sqlite__reset(stmt));
 
-          if (current_abspath == local_abspath)
+          if (current_relpath == local_relpath)
             /* ### maybe we should return a usage error instead?  */
             return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                      _("The node '%s' was not found."),
-                                     svn_dirent_local_style(local_abspath,
+                                     path_for_error_message(wcroot,
+                                                            local_relpath,
                                                             scratch_pool));
 
           /* We just fell off the top of the WORKING tree. If we haven't
@@ -6187,8 +6194,9 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
              left was that root.  */
           if (op_root_abspath && *op_root_abspath == NULL)
             {
-              SVN_ERR_ASSERT(child_abspath != NULL);
-              *op_root_abspath = apr_pstrdup(result_pool, child_abspath);
+              SVN_ERR_ASSERT(child_relpath != NULL);
+              *op_root_abspath = svn_dirent_join(pdh->wcroot->abspath,
+                                                 child_relpath, result_pool);
             }
 
           /* This node was added/copied/moved and has an implicit location
@@ -6200,14 +6208,15 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
       /* Record information from the starting node.  */
-      if (current_abspath == local_abspath)
+      if (current_relpath == local_relpath)
         {
           /* The starting node should exist normally.  */
           if (presence != svn_wc__db_status_normal)
             return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
                                      svn_sqlite__reset(stmt),
                                      _("Expected node '%s' to be added."),
-                                     svn_dirent_local_style(local_abspath,
+                                     path_for_error_message(wcroot,
+                                                            local_relpath,
                                                             scratch_pool));
 
           /* Provide the default status; we'll override as appropriate. */
@@ -6229,7 +6238,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                 *status = svn_wc__db_status_copied;
             }
           if (op_root_abspath)
-            *op_root_abspath = apr_pstrdup(result_pool, current_abspath);
+            *op_root_abspath = svn_dirent_join(pdh->wcroot->abspath,
+                                               current_relpath, result_pool);
           if (original_repos_relpath)
             *original_repos_relpath = svn_sqlite__column_text(stmt, 11,
                                                               result_pool);
@@ -6260,7 +6270,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
          traverse up the tree.  */
       if (repos_relpath)
         {
-          build_relpath = svn_relpath_join(svn_dirent_basename(current_abspath,
+          build_relpath = svn_relpath_join(svn_dirent_basename(current_relpath,
                                                                NULL),
                                            build_relpath,
                                            scratch_pool);
@@ -6268,14 +6278,13 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 
       /* Move to the parent node. Remember the abspath to this node, since
          it could be the root of an add/delete.  */
-      child_abspath = current_abspath;
+      child_relpath = current_relpath;
 
       /* The wcroot can't have a restructuring operation; make sure we don't
          loop on invalid data */
       SVN_ERR_ASSERT(current_relpath[0] != '\0');
 
       current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
-      current_abspath = svn_dirent_dirname(current_abspath, scratch_pool);
     }
 
   /* If we're here, then we have an added/copied/moved (start) node, and
@@ -6299,6 +6308,40 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
         *repos_relpath = svn_relpath_join(base_relpath, build_relpath,
                                           result_pool);
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_scan_addition(svn_wc__db_status_t *status,
+                         const char **op_root_abspath,
+                         const char **repos_relpath,
+                         const char **repos_root_url,
+                         const char **repos_uuid,
+                         const char **original_repos_relpath,
+                         const char **original_root_url,
+                         const char **original_uuid,
+                         svn_revnum_t *original_revision,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(scan_addition(status, op_root_abspath, repos_relpath, repos_root_url,
+                        repos_uuid, original_repos_relpath, original_root_url,
+                        original_uuid, original_revision,
+                        pdh, local_relpath, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
