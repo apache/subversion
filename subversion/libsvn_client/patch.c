@@ -528,6 +528,36 @@ init_prop_target(prop_patch_target_t **prop_target,
   return SVN_NO_ERROR;
 }
 
+/* Return a suitable filename for the target of PATCH.
+ * Examine the ``old'' and ``new'' file names, and choose the file name
+ * with the fewest path components, the shortest basename, and the shortest
+ * total file name length (in that order). In case of a tie, return the new
+ * filename. This heuristic is also used by Larry Wall's UNIX patch (except
+ * that it prompts for a filename in case of a tie). */
+static const char *
+choose_target_filename(const svn_patch_t *patch)
+{
+  apr_size_t old;
+  apr_size_t new;
+
+  old = svn_path_component_count(patch->old_filename);
+  new = svn_path_component_count(patch->new_filename);
+
+  if (old == new)
+    {
+      old = strlen(svn_dirent_basename(patch->old_filename, NULL));
+      new = strlen(svn_dirent_basename(patch->new_filename, NULL));
+
+      if (old == new)
+        {
+          old = strlen(patch->old_filename);
+          new = strlen(patch->new_filename);
+        }
+    }
+
+  return (old < new) ? patch->old_filename : patch->new_filename;
+}
+
 /* Attempt to initialize a *PATCH_TARGET structure for a target file
  * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
@@ -589,7 +619,7 @@ init_patch_target(patch_target_t **patch_target,
   target->prop_targets = apr_hash_make(result_pool);
   target->pool = result_pool;
 
-  SVN_ERR(resolve_target_path(target, patch->new_filename,
+  SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
                               base_dir, strip_count, prop_changes_only,
                               wc_ctx, result_pool, scratch_pool));
   if (! target->skipped)
