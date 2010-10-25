@@ -226,7 +226,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t reverse_diff;     /* reverse a diff (e.g. when patching) */
   svn_boolean_t ignore_whitespace; /* don't account for whitespace when
                                       patching */
-  svn_boolean_t show_diff;        /* produce diff output */
+  svn_boolean_t show_diff;        /* produce diff output (maps to --diff) */
   svn_boolean_t internal_diff;    /* override diff_cmd in config file */
   svn_boolean_t use_git_diff_format; /* Use git's extended diff format */
 } svn_cl__opt_state_t;
