@@ -532,8 +532,6 @@ init_prop_target(prop_patch_target_t **prop_target,
  * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * OLD_PATCH_TARGET_NAMES indicates whether the old target's name parsed
- * from the patch file should be preferred over the new target's name.
  * The patch target structure is allocated in RESULT_POOL, but if the target
  * should be skipped, PATCH_TARGET->SKIPPED is set and the target should be
  * treated as not fully initialized, e.g. the caller should not not do any
@@ -545,9 +543,7 @@ static svn_error_t *
 init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
                   const char *base_dir,
-                  svn_wc_context_t *wc_ctx,
-                  int strip_count,
-                  svn_boolean_t old_patch_target_names,
+                  svn_wc_context_t *wc_ctx, int strip_count,
                   svn_boolean_t remove_tempfiles,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
@@ -593,8 +589,7 @@ init_patch_target(patch_target_t **patch_target,
   target->prop_targets = apr_hash_make(result_pool);
   target->pool = result_pool;
 
-  SVN_ERR(resolve_target_path(target, old_patch_target_names ?
-                                patch->old_filename : patch->new_filename,
+  SVN_ERR(resolve_target_path(target, patch->new_filename,
                               base_dir, strip_count, prop_changes_only,
                               wc_ctx, result_pool, scratch_pool));
   if (! target->skipped)
@@ -1630,8 +1625,6 @@ close_target_streams(const patch_target_t *target,
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * OLD_PATCH_TARGET_NAMES indicates whether the old filename parsed
- * from the patch file should be preferred over the new filename.
  * REMOVE_TEMPFILES, PATCH_FUNC, and PATCH_BATON as in svn_client_patch().
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * doing the matching.
@@ -1641,7 +1634,6 @@ static svn_error_t *
 apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const char *abs_wc_path, svn_wc_context_t *wc_ctx,
                 int strip_count,
-                svn_boolean_t old_patch_target_names,
                 svn_boolean_t ignore_whitespace,
                 svn_boolean_t remove_tempfiles,
                 svn_client_patch_func_t patch_func,
@@ -1656,8 +1648,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   static const int MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
 
-  SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx,
-                            strip_count, old_patch_target_names,
+  SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
   if (target->skipped)
     {
@@ -2535,9 +2526,6 @@ typedef struct {
   /* Number of leading components to strip from patch target paths. */
   int strip_count;
 
-  /* Whether to use the old path from the patch file instead of the new one. */
-  svn_boolean_t old_patch_target_names;
-
   /* Whether to apply the patch in reverse. */
   svn_boolean_t reverse;
 
@@ -2603,7 +2591,6 @@ apply_patches(void *baton,
 
           SVN_ERR(apply_one_patch(&target, patch, btn->abs_wc_path,
                                   btn->ctx->wc_ctx, btn->strip_count,
-                                  btn->old_patch_target_names,
                                   btn->ignore_whitespace,
                                   btn->remove_tempfiles,
                                   btn->patch_func, btn->patch_baton,
@@ -2661,7 +2648,6 @@ svn_client_patch(const char *patch_abspath,
                  const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
-                 svn_boolean_t old_patch_target_names,
                  svn_boolean_t reverse,
                  svn_boolean_t ignore_whitespace,
                  svn_boolean_t remove_tempfiles,
@@ -2682,7 +2668,6 @@ svn_client_patch(const char *patch_abspath,
   baton.dry_run = dry_run;
   baton.ctx = ctx;
   baton.strip_count = strip_count;
-  baton.old_patch_target_names = old_patch_target_names;
   baton.reverse = reverse;
   baton.ignore_whitespace = ignore_whitespace;
   baton.remove_tempfiles = remove_tempfiles;
