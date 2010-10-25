@@ -56,6 +56,8 @@ They will be merged into /trunk after passing the review.
  Justification:
    A very simple change that reduces the costs of our deep
    calling hierarchies.
+ Merge:
+   Merged to trunk in r1027213.
 
 * r985500
  Just another temp file name handling improvement: Use the already
