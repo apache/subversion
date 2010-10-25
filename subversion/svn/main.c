@@ -327,7 +327,7 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("apply the unidiff in reverse")},
   {"ignore-whitespace", opt_ignore_whitespace, 0,
                        N_("ignore whitespace during pattern matching")},
-  {"show-diff", opt_show_diff, 0,
+  {"diff", opt_show_diff, 0,
                        N_("produce diff output")},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
@@ -359,7 +359,6 @@ const apr_getopt_option_t svn_cl__options[] =
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
   {"iw",            opt_ignore_whitespace, 0, NULL},
-  {"diff",          opt_show_diff, 0, NULL},
   {"idiff",         opt_internal_diff, 0, NULL},
   {"keep-locks",    opt_no_unlock, 0, NULL},
 

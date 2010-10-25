@@ -57,7 +57,7 @@ Valid options:
   --with-all-revprops      : retrieve all revision properties
   --with-no-revprops       : retrieve no revision properties
   --with-revprop ARG       : retrieve revision property ARG
-  --show-diff [--diff]     : produce diff output
+  --diff                   : produce diff output
   --diff-cmd ARG           : use ARG as diff command
   --internal-diff [--idiff] : override diff-cmd specified in config file
   -x [--extensions] ARG    : Default: '-u'. When Subversion is invoking an
