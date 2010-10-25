@@ -660,7 +660,7 @@ svn_cl__log(apr_getopt_t *os,
   lb.omit_log_message = opt_state->quiet;
   SVN_ERR(svn_client_url_from_path2(&lb.target_url, true_path, ctx,
                                     pool, pool));
-  lb.show_diff = (! opt_state->quiet) && opt_state->show_diff;
+  lb.show_diff = opt_state->show_diff;
   lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.pool = pool;
