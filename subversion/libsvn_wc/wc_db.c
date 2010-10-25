@@ -2652,8 +2652,8 @@ cross_db_copy(svn_wc__db_t *db,
                                NULL /* lock */,
                                db, src_abspath, scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, src_abspath,
-                                         scratch_pool, scratch_pool));
+  SVN_ERR(db_read_pristine_props(&props, src_pdh, src_relpath,
+                                 scratch_pool, scratch_pool));
 
   blank_iwb(&iwb);
   iwb.presence = dst_status;
@@ -5029,12 +5029,22 @@ svn_wc__db_read_props(apr_hash_t **props,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   svn_error_t *err = NULL;
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_ACTUAL_PROPS, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (have_row && !svn_sqlite__column_is_null(stmt, 0))
@@ -5051,8 +5061,8 @@ svn_wc__db_read_props(apr_hash_t **props,
     return SVN_NO_ERROR;
 
   /* No local changes. Return the pristine props for this node.  */
-  SVN_ERR(svn_wc__db_read_pristine_props(props, db, local_abspath,
-                                         result_pool, scratch_pool));
+  SVN_ERR(db_read_pristine_props(props, pdh, local_relpath,
+                                 result_pool, scratch_pool));
   if (*props == NULL)
     {
       /* Pristine properties are not defined for this node.
