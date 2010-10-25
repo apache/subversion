@@ -585,25 +585,25 @@ svn_cl__log(apr_getopt_t *os,
     {
       if (opt_state->show_diff)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("'show-diff' option is not supported in "
+                                _("'diff' option is not supported in "
                                   "XML mode"));
     }
 
   if (opt_state->quiet && opt_state->show_diff)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'quiet' and 'show-diff' options are "
+                            _("'quiet' and 'diff' options are "
                               "mutually exclusive"));
   if (opt_state->diff_cmd && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'diff-cmd' option requires 'show-diff' "
+                            _("'diff-cmd' option requires 'diff' "
                               "option"));
   if (opt_state->internal_diff && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'internal-diff' option requires "
-                              "'show-diff' option"));
+                              "'diff' option"));
   if (opt_state->extensions && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'extensions' option requires 'show-diff' "
+                            _("'extensions' option requires 'diff' "
                               "option"));
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
