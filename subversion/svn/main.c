@@ -293,7 +293,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"limit",         'l', 1, N_("maximum number of log entries")},
   {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
-                       "[aliases: --nul, --keep-lock]")},
+                       "[alias: --keep-lock]")},
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
@@ -425,7 +425,6 @@ const apr_getopt_option_t svn_cl__options[] =
   {"iw",            opt_ignore_whitespace, 0, NULL},
   {"diff",          opt_show_diff, 0, NULL},
   {"idiff",         opt_internal_diff, 0, NULL},
-  {"nul",           opt_no_unlock, 0, NULL},
   {"keep-lock",     opt_no_unlock, 0, NULL},
   {"optn",          opt_old_patch_target_names, 0, NULL},
 
