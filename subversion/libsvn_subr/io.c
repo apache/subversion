@@ -1721,7 +1721,7 @@ svn_io_file_lock2(const char *lock_file,
 
 /* Data consistency/coherency operations. */
 
-static svn_error_t *
+static APR_INLINE svn_error_t *
 do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
                            const char *msg, const char *msg_no_name,
                            apr_pool_t *pool);
@@ -2782,7 +2782,7 @@ svn_io_file_open(apr_file_t **new_file, const char *fname,
 }
 
 
-static svn_error_t *
+static APR_INLINE svn_error_t *
 do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
                            const char *msg, const char *msg_no_name,
                            apr_pool_t *pool)
