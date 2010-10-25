@@ -304,18 +304,18 @@ const apr_getopt_option_t svn_cl__options[] =
                        "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
-  {"strip-count",   opt_strip_count, 1,
+  {"strip",         opt_strip_count, 1,
                     N_("number of leading path components to strip from\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
-                       "paths parsed from the patch file. --strip-count 0\n"
+                       "paths parsed from the patch file. --strip 0\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "is the default and leaves paths unmodified.\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
-                       "--strip-count 1 would change the path\n"
+                       "--strip 1 would change the path\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "'doc/fudge/crunchy.html' to 'fudge/crunchy.html'.\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
-                       "--strip-count 2 would leave just 'crunchy.html'\n"
+                       "--strip 2 would leave just 'crunchy.html'\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "The expected component separator is '/' on all\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
@@ -371,7 +371,6 @@ const apr_getopt_option_t svn_cl__options[] =
   {"kl",            opt_keep_local, 0, NULL},
   {"sr",            opt_show_revs, 1, NULL},
   {"ri",            opt_reintegrate, 0, NULL},
-  {"strip",         opt_strip_count, 1, NULL},
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
   {"iw",            opt_ignore_whitespace, 0, NULL},
