@@ -63,7 +63,7 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_SELECT_WORKING_NODE
-SELECT presence, kind, checksum, translated_size,
+SELECT op_depth, presence, kind, checksum, translated_size,
   changed_revision, changed_date, changed_author, depth, symlink_target,
   repos_id, repos_path, revision,
   moved_here, moved_to, last_mod_time, properties
@@ -77,6 +77,26 @@ SELECT prop_reject, changelist, conflict_old, conflict_new,
 conflict_working, tree_conflict_data, properties
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_SELECT_NODE_CHILDREN_INFO
+/* Getting rows in an advantageous order using
+     ORDER BY local_relpath, op_depth DESC
+   turns out to be slower than getting rows in a random order and making the
+   C code handle it. */
+SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
+  checksum, translated_size, changed_revision, changed_date, changed_author,
+  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
+  lock_comment, lock_date, local_relpath
+FROM nodes
+LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
+  AND nodes.repos_path = lock.repos_relpath
+WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_CHILDREN_INFO
+SELECT prop_reject, changelist, conflict_old, conflict_new,
+conflict_working, tree_conflict_data, properties, local_relpath
+FROM actual_node
+WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_SELECT_REPOSITORY_BY_ID
 SELECT root, uuid FROM repository WHERE id = ?1;
@@ -313,10 +333,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
--- STMT_UPDATE_BASE_NODE_PRESENCE_AND_REVNUM
-UPDATE nodes SET presence = ?3, revision = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
-
 -- STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH
 UPDATE nodes SET presence = ?3, revision = ?4, repos_path = ?5
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
@@ -464,11 +480,12 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
--- STMT_SELECT_CHILDREN_OP_DEPTH_RECURSIVE
-SELECT local_relpath, op_depth FROM nodes as node
+-- STMT_SELECT_WORKING_OP_DEPTH_RECURSIVE
+SELECT local_relpath, op_depth, presence FROM nodes as node
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#'
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = node.wc_id
+                  WHERE op_depth > 0
+                    AND wc_id = node.wc_id
                     AND local_relpath = node.local_relpath);
 
 -- STMT_UPDATE_OP_DEPTH

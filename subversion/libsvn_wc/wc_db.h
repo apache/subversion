@@ -46,6 +46,8 @@
 #include "private/svn_skel.h"
 #include "private/svn_sqlite.h"
 
+#include "svn_private_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -1004,28 +1006,6 @@ svn_wc__db_pristine_repair(svn_wc__db_t *db,
 /* @} */
 
 
-/* @defgroup svn_wc__db_repos  Repository information management
-   @{
-*/
-
-/* Ensure an entry for the repository at REPOS_ROOT_URL with UUID exists
-   in DB for LOCAL_ABSPATH, either by finding the correct row, or inserting
-   a new row.  In either case return the id in *REPOS_ID.
-
-   Use SCRATCH_POOL for temporary allocations.
-*/
-svn_error_t *
-svn_wc__db_repos_ensure(apr_int64_t *repos_id,
-                        svn_wc__db_t *db,
-                        const char *local_abspath,
-                        const char *repos_root_url,
-                        const char *repos_uuid,
-                        apr_pool_t *scratch_pool);
-
-
-/* @} */
-
-
 /* @defgroup svn_wc__db_op  Operations on WORKING tree
    @{
 */
@@ -1142,10 +1122,8 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
    To specify no properties, PROPS must be an empty hash, not NULL.
    If the node is not present, return an error.
 
-   ### All the callers are doing a comparison against the current 'pristine'
-       props before calling this, and are passing NULL if the actual props
-       are to be the same as the pristine props. This behaviour should be
-       encapsulated.
+   If PROPS is NULL, set the properties to be the same as the pristine
+   properties.
 
    CONFLICT is used to register a conflict on this node at the same time
    the properties are changed.
@@ -1509,6 +1487,41 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+/* Structure returned by svn_wc__db_read_children_info.  Only has the
+   fields needed by status. */
+struct svn_wc__db_info_t {
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_revnum_t revnum;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  svn_revnum_t changed_rev;
+  const char *changed_author;
+  apr_time_t changed_date;
+  apr_time_t last_mod_time;
+  svn_depth_t depth;
+  svn_filesize_t translated_size;
+  const char *changelist;
+  svn_boolean_t has_props;
+#ifdef HAVE_SYMLINK
+  svn_boolean_t special;
+#endif
+  svn_boolean_t props_mod;
+  svn_boolean_t have_base;
+  svn_boolean_t conflicted;
+  svn_wc__db_lock_t *lock;
+};
+
+/* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for
+   the children of DIR_ABSPATH, and in *CONFLICTS a hash of names in
+   conflict.  */
+svn_error_t *
+svn_wc__db_read_children_info(apr_hash_t **nodes,
+                              apr_hash_t **conflicts,
+                              svn_wc__db_t *db,
+                              const char *dir_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /* Set *PROPVAL to the value of the property named PROPNAME of the node
    LOCAL_ABSPATH in the ACTUAL tree (looking through to the WORKING or BASE

@@ -220,6 +220,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
 
   if (resolve_text)
     {
+      svn_stream_t *tmp_stream = NULL;
       const char *auto_resolve_src;
 
       /* Handle automatic conflict resolution before the temporary files are
@@ -244,7 +245,6 @@ resolve_conflict_on_node(svn_wc__db_t *db,
             if (conflict_old && conflict_working && conflict_new)
               {
                 const char *temp_dir;
-                svn_stream_t *tmp_stream;
                 svn_diff_t *diff;
                 svn_diff_conflict_display_style_t style =
                   conflict_choice == svn_wc_conflict_choose_theirs_conflict
@@ -256,7 +256,8 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                                                        pool, pool));
                 SVN_ERR(svn_stream_open_unique(&tmp_stream,
                                                &auto_resolve_src,
-                                               temp_dir, svn_io_file_del_none,
+                                               temp_dir,
+                                               svn_io_file_del_on_close,
                                                pool, pool));
 
                 /* ### If any of these paths isn't absolute, treat it
@@ -290,7 +291,6 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                                                     NULL, NULL, NULL, NULL,
                                                     style,
                                                     pool));
-                SVN_ERR(svn_stream_close(tmp_stream));
               }
             else
               auto_resolve_src = NULL;
@@ -305,6 +305,9 @@ resolve_conflict_on_node(svn_wc__db_t *db,
         SVN_ERR(svn_io_copy_file(
           svn_dirent_join(conflict_dir_abspath, auto_resolve_src, pool),
           local_abspath, TRUE, pool));
+
+      if (tmp_stream)
+        SVN_ERR(svn_stream_close(tmp_stream));
     }
 
   /* Records whether we found any of the conflict files.  */

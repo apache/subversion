@@ -38,6 +38,9 @@ XFail = svntest.testcase.XFail
 Wimp = svntest.testcase.Wimp
 Item = wc.StateItem
 
+# Generic UUID-matching regular expression
+uuid_regex = re.compile(r"[a-fA-F0-9]{8}(-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}")
+
 ######################################################################
 # Tests
 #
@@ -2551,7 +2554,99 @@ def delete_and_add_same_file(sbox):
                                         None,
                                         wc_dir)
 
+def delete_child_parent_update(sbox):
+  "rm child, commit, rm parent"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E/alpha'))
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/E/alpha')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', 'A/B/E/beta', status='D ')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+
+  # This produces a tree-conflict
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/B/E', treeconflict='C')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        [],
+                                        expected_disk,
+                                        expected_status)
+
+
+
 #----------------------------------------------------------------------
+
+def basic_relocate(sbox):
+  "basic relocate of a wc"
+  sbox.build(read_only = True)
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  shutil.copytree(repo_dir, other_repo_dir)
+
+  def _verify_url(wc_path, url):
+    name = os.path.basename(wc_path)
+    expected = {'Path' : re.escape(wc_path),
+                'URL' : url,
+                'Repository Root' : '.*',
+                'Revision' : '.*',
+                'Node Kind' : 'directory',
+                'Repository UUID' : uuid_regex,
+              }
+    svntest.actions.run_and_verify_info([expected], wc_path)
+
+  # No-op relocation of just the scheme.
+  scheme = repo_url[:repo_url.index('://')+3]
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     scheme, scheme, wc_dir)
+  _verify_url(wc_dir, repo_url)
+
+  # No-op relocation of a bit more of the URL.
+  substring = repo_url[:repo_url.index('://')+7]
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     substring, substring, wc_dir)
+  _verify_url(wc_dir, repo_url)
+  
+  # Real relocation to OTHER_REPO_URL.
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+  _verify_url(wc_dir, other_repo_url)
+
+  # ... and back again, using the newer 'svn relocate' subcommand.
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     other_repo_url, repo_url, wc_dir)
+  _verify_url(wc_dir, repo_url)
+
+  # To OTHER_REPO_URL again, this time with the single-URL form of
+  # 'svn relocate'.
+  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+                                     other_repo_url, wc_dir)
+  _verify_url(wc_dir, other_repo_url)
+
+  ### TODO: When testing ra_dav or ra_svn, do relocations between
+  ### those and ra_local URLs.
+
 
 ########################################################################
 # Run the tests
@@ -2611,6 +2706,8 @@ test_list = [ None,
               SkipUnless(meta_correct_library_being_used,
                          svntest.main.is_ra_type_dav),
               delete_and_add_same_file,
+              delete_child_parent_update,
+              basic_relocate,
              ]
 
 if __name__ == '__main__':

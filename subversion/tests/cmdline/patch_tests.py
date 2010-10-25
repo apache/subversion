@@ -671,7 +671,7 @@ def patch_chopped_leading_spaces(sbox):
 
 
 def patch_strip1(sbox):
-  "patch with --strip-count 1"
+  "patch with --strip 1"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -838,7 +838,7 @@ def patch_strip1(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--strip-count', '1')
+                                       '--strip', '1')
 
 def patch_no_index_line(sbox):
   "patch with no index lines"

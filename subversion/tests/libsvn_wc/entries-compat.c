@@ -531,7 +531,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
                       SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_wc_locked(&locked, D3, pool));
   SVN_TEST_ASSERT(locked);
-  SVN_ERR(svn_wc_revert3(D, adm_access, -1, FALSE,
+  SVN_ERR(svn_wc_revert3(D, adm_access, svn_depth_infinity, FALSE,
                          NULL, NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_wc_locked(&locked, D3, pool));
   SVN_TEST_ASSERT(!locked);

@@ -197,11 +197,6 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
    otherwise copy both the versioned metadata and the filesystem node (even
    if it is the wrong kind, and recursively if it is a dir).
 
-   A replacement for both copy_file_administratively and
-   copy_added_file_administratively.
-
-   ### Not yet fully working.  Relies on in-db-props.
-
    This also works for versioned symlinks that are stored in the db as
    svn_wc__db_kind_file with svn:special set. */
 static svn_error_t *
@@ -238,9 +233,21 @@ copy_versioned_file(svn_wc__db_t *db,
                              tmpdir_abspath,
                              TRUE, /* recursive */
                              cancel_func, cancel_baton, scratch_pool));
+
       if (tmp_dst_abspath)
         {
           svn_skel_t *work_item;
+
+          /* Remove 'read-only' from the destination file; it's a local add. */
+            {
+              const svn_string_t *needs_lock;
+              SVN_ERR(svn_wc__internal_propget(&needs_lock, db, src_abspath,
+                                               SVN_PROP_NEEDS_LOCK,
+                                               scratch_pool, scratch_pool));
+              if (needs_lock)
+                SVN_ERR(svn_io_set_file_read_write(tmp_dst_abspath,
+                                                   FALSE, scratch_pool));
+            }
 
           SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
                                              tmp_dst_abspath, dst_abspath,
@@ -425,6 +432,50 @@ copy_versioned_dir(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
+#ifdef SVN_WC__OP_DEPTH
+/*
+A plan for copying a versioned node, recursively, with proper op-depths.
+
+Each DB change mentioned in a separate step is intended to change the WC
+from one valid state to another and must be exectuted within a DB txn.
+Several such changes can be batched together in a bigger txn if we don't
+want clients to be able to see intermediate states.
+
+### TODO: This plan doesn't yet provide well for notification of all copied
+    paths.
+
+copy-versioned_node:
+  # Copy a versioned file/dir SRC_PATH to DST_PATH, recursively.
+
+  # This function takes care to copy both the metadata tree and the disk
+  # tree as they are, even if they are different node kinds and so different
+  # tree shapes.
+
+  src_op_depth = working_op_depth_of(src_path)
+  src_depth = relpath_depth(src_path)
+  dst_depth = relpath_depth(dst_path)
+
+  # The source tree has in the NODES table, by design:
+  #   - zero or more rows below SRC_OP_DEPTH (these are uninteresting);
+  #   - one or more rows at SRC_OP_DEPTH;
+  #   - no rows with SRC_OP_DEPTH < row.op_depth <= SRC_DEPTH;
+  #   - zero or more rows above SRC_DEPTH (modifications);
+  # and SRC_OP_DEPTH <= SRC_DEPTH.
+
+  Copy single NODES row from src_path@src_op_depth to dst_path@dst_depth.
+  Copy all rows of descendent paths in == src_op_depth to == dst_depth.
+  Copy all rows of descendent paths in > src_depth to > dst_depth,
+    adjusting op_depth by (dst_depth - src_depth).
+
+  Copy disk node recursively (if it exists, and whatever its kind).
+  Copy ACTUAL_NODE rows (props and any other actual metadata).
+
+  # ### Are there no scenarios in which we would want to decrease dst_depth
+  #     and so subsume the destination into an existing op?  I guess not.
+
+*/
+#endif
 
 
 /* Public Interface */

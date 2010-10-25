@@ -189,15 +189,15 @@ static const char * const TESTING_DATA = (
   "  0, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-b', 1, 'J', 2, 'some/dir', 2, 'normal',"
+  "  1, 'J/J-b', 2, 'J', 2, 'some/dir', 2, 'normal',"
   "  0, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-b/J-b-a', 1, 'J/J-b', 2, 'another/dir', 2, 'normal',"
+  "  1, 'J/J-b/J-b-a', 3, 'J/J-b', 2, 'another/dir', 2, 'normal',"
   "  0, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-b/J-b-b', 1, 'J/J-b', null, null, null, 'normal',"
+  "  1, 'J/J-b/J-b-b', 2, 'J/J-b', null, null, 2, 'normal',"
   "  0, null, 'file', '()', null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
@@ -209,7 +209,7 @@ static const char * const TESTING_DATA = (
   "  0, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-d', 1, 'J', 2, 'moved/file', 2, 'normal',"
+  "  1, 'J/J-d', 2, 'J', 2, 'moved/file', 2, 'normal',"
   "  1, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
@@ -580,38 +580,41 @@ validate_node(svn_wc__db_t *db,
     }
 
   value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  SVN_TEST_STRING_ASSERT(value->data, "v1");
   SVN_ERR(svn_wc__db_base_get_prop(&value, db, path, "p1",
                                    scratch_pool, scratch_pool));
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  SVN_TEST_STRING_ASSERT(value->data, "v1");
 
   value = apr_hash_get(props, "for-file", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
+  SVN_TEST_STRING_ASSERT(value->data, relpath);
   SVN_ERR(svn_wc__db_base_get_prop(&value, db, path, "for-file",
                                    scratch_pool, scratch_pool));
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
+  SVN_TEST_STRING_ASSERT(value->data, relpath);
 
   SVN_ERR(svn_wc__db_read_props(&props, db, path,
                                 scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(props != NULL);
   value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  SVN_TEST_STRING_ASSERT(value->data, "v1");
 
   SVN_ERR(svn_wc__db_read_pristine_props(&props, db, path,
                                          scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(props != NULL);
   value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  SVN_TEST_STRING_ASSERT(value->data, "v1");
 
   /* Now add a property value and read it back (all on actual) */
-  apr_hash_set(props, "p999", APR_HASH_KEY_STRING, value);
-
-  SVN_ERR(svn_wc__db_op_set_props(db, path, props, NULL, NULL, scratch_pool));
-  SVN_ERR(svn_wc__db_read_props(&props, db, path,
-                                scratch_pool, scratch_pool));
-  SVN_TEST_ASSERT(props != NULL);
-  value = apr_hash_get(props, "p999", APR_HASH_KEY_STRING);
-  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+  {
+    apr_hash_t *actual_props = apr_hash_copy(scratch_pool, props);
+    apr_hash_set(actual_props, "p999", APR_HASH_KEY_STRING, value);
+    SVN_ERR(svn_wc__db_op_set_props(db, path, actual_props,
+                                    NULL, NULL, scratch_pool));
+    SVN_ERR(svn_wc__db_read_props(&props, db, path,
+                                  scratch_pool, scratch_pool));
+    SVN_TEST_ASSERT(props != NULL);
+    value = apr_hash_get(props, "p999", APR_HASH_KEY_STRING);
+    SVN_TEST_STRING_ASSERT(value->data, "v1");
+  }
 
   return SVN_NO_ERROR;
 }

@@ -1068,18 +1068,17 @@ def relocate_beyond_repos_root(sbox):
   
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   
-
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given destination URL invalid.*",
+                                     ".*Invalid destination URL.*",
                                      'switch', '--relocate',
                                      A_url, other_B_url, A_wc_dir)
 
   # Another way of trying to change the fs path, leading to an invalid
   # repository root.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given source URL invalid.*",
+                                     ".*is not the root.*",
                                      'switch', '--relocate',
                                      repo_url, other_B_url, A_wc_dir)
 

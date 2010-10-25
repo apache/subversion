@@ -4679,146 +4679,6 @@ def copy_over_deleted_dir(sbox):
   main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A/D'),
                os.path.join(sbox.wc_dir, 'A/B'))
 
-#----------------------------------------------------------------------
-
-def check_op_depth(path, expected_result):
-  """Examine the WC DB for paths PATH and below, and check that their rows
-     in the 'NODES' table match EXPECTED_RESULT.  EXPECTED_RESULT is a
-     dictionary of {(op_depth, relpath) -> has_repo_noderev}, where 'relpath'
-     is relative to PATH, and 'has_repo_noderev' is true iff the repository
-     id, revision and relpath columns are expected to be non-null.
-
-     If the result does not match, raise a Failure.
-  """
-
-  errors = []
-
-  db, _, base_relpath = svntest.wc.open_wc_db(path)
-  c = db.cursor()
-
-  c.execute("""SELECT op_depth, presence, local_relpath, repos_id, revision,
-                 repos_path FROM nodes
-               WHERE local_relpath = '""" + base_relpath + """'
-                 OR  local_relpath LIKE '""" + base_relpath + """/%'""")
-  for row in c:
-    op_depth = row[0]
-    wc_relpath = row[2]
-    repo_id = row[3]
-    repo_rev = row[4]
-    repo_relpath = row[5]
-    relpath = wc_relpath[len(base_relpath):]
-
-    try:
-      has_repo = expected_result.pop((op_depth, relpath))
-    except KeyError:
-      errors.append("Row not expected: op_depth=%s, relpath=%s"
-                    % (op_depth, relpath))
-      continue
-
-    try:
-      if has_repo:
-        assert repo_id and repo_rev and repo_relpath
-      else:
-        assert not repo_id and not repo_rev and not repo_relpath
-    except AssertionError:
-      print "  EXPECTED:", op_depth, relpath, has_repo
-      print "  ACTUAL:  ", op_depth, relpath, repo_relpath
-      errors.append("Row op_depth=%s, relpath=%s has repo_relpath=%s"
-                    % (op_depth, relpath, repo_relpath))
-      continue
-
-  for (op_depth, relpath) in expected_result:
-    errors.append("Row not found: op_depth=%s, relpath=%s"
-                  % (op_depth, relpath))
-
-  db.close()
-
-  if errors:
-    raise svntest.Failure(errors)
-
-def nodes_table_wc_wc_copies(sbox):
-  """test wc-to-wc copies"""
-  sbox.build()
-
-  def wc_path(*components):
-    return os.path.join(sbox.wc_dir, *components)
-
-  # Prepare various things to copy
-
-  source_base_file = wc_path('A', 'B', 'lambda')
-  source_base_dir = wc_path('A', 'B', 'E')
-
-  source_added_file = wc_path('A', 'B', 'file-added')
-  source_added_dir = wc_path('A', 'B', 'D-added')
-  source_added_dir2 = wc_path('A', 'B', 'D-added', 'D2')
-
-  svntest.main.file_write(source_added_file, 'New file')
-  sbox.simple_add(source_added_file)
-  sbox.simple_mkdir(source_added_dir)
-  sbox.simple_mkdir(source_added_dir2)
-
-  source_copied_file = wc_path('A', 'B', 'lambda-copied')
-  source_copied_dir = wc_path('A', 'B', 'E-copied')
-
-  svntest.main.run_svn(None, 'copy', source_base_file, source_copied_file)
-  svntest.main.run_svn(None, 'copy', source_base_dir, source_copied_dir)
-
-  # Test copying various things
-
-  # base file
-  target = wc_path('A', 'C', 'copy1')
-  svntest.main.run_svn(None, 'copy', source_base_file, target)
-  check_op_depth(target, { (3, ''):       True })
-
-  # base dir
-  target = wc_path('A', 'C', 'copy2')
-  svntest.main.run_svn(None, 'copy', source_base_dir, target)
-  check_op_depth(target, { (3, ''):       True,
-                           (3, '/alpha'): False,
-                           (3, '/beta'):  False })
-
-  # added file
-  target = wc_path('A', 'C', 'copy3')
-  svntest.main.run_svn(None, 'copy', source_added_file, target)
-  check_op_depth(target, { (3, ''):       False })
-
-  # added dir
-  target = wc_path('A', 'C', 'copy4')
-  svntest.main.run_svn(None, 'copy', source_added_dir, target)
-  check_op_depth(target, { (3, ''):       False,
-                           (4, '/D2'):    False })
-
-  # copied file
-  target = wc_path('A', 'C', 'copy5')
-  svntest.main.run_svn(None, 'copy', source_copied_file, target)
-  check_op_depth(target, { (3, ''):       True })
-
-  # copied dir
-  target = wc_path('A', 'C', 'copy6')
-  svntest.main.run_svn(None, 'copy', source_copied_dir, target)
-  check_op_depth(target, { (3, ''):       True,
-                           (3, '/alpha'): False,
-                           (3, '/beta'):  False })
-
-  # copied tree with everything in it
-  target = wc_path('A', 'C', 'copy7')
-  svntest.main.run_svn(None, 'copy', wc_path('A', 'B'), target)
-  check_op_depth(target, { (3, ''):               True,
-                           (3, '/lambda'):        False,
-                           (3, '/E'):             False,
-                           (3, '/E/alpha'):       False,
-                           (3, '/E/beta'):        False,
-                           (3, '/F'):             False,
-                           # Each add is an op_root
-                           (4, '/file-added'):    False,
-                           (4, '/D-added'):       False,
-                           (5, '/D-added/D2'):    False,
-                           # Each copied-copy subtree is an op_root
-                           (4, '/lambda-copied'): True,
-                           (4, '/E-copied'):      True,
-                           (4, '/E-copied/alpha'):False,
-                           (4, '/E-copied/beta'): False, })
-
 def mixed_rev_copy_del(sbox):
   """copy mixed-rev and delete children"""
   
@@ -4890,6 +4750,61 @@ def mixed_rev_copy_del(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
+def copy_delete_undo(sbox, use_revert):
+  "copy, delete child, undo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Copy directory with children
+  svntest.main.run_svn(wc_dir, 'copy',
+                       sbox.ospath('A/B/E'), sbox.ospath('A/B/E-copied'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/E-copied'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E-copied/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E-copied/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Delete a child
+  svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E-copied/alpha'))
+  expected_status.tweak('A/B/E-copied/alpha', status='D ', copied=None,
+                        wc_rev='?', entry_rev='1')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Undo the whole copy
+  if (use_revert):
+    svntest.main.run_svn(wc_dir, 'revert', '--recursive',
+                         sbox.ospath('A/B/E-copied'))
+    svntest.main.safe_rmtree(os.path.join(wc_dir, 'A/B/E-copied'))
+  else:
+    svntest.main.run_svn(wc_dir, 'rm', '--force', sbox.ospath('A/B/E-copied'))
+  expected_status.remove('A/B/E-copied',
+                         'A/B/E-copied/alpha',
+                         'A/B/E-copied/beta')
+
+  # Undo via revert FAILs here because a wq item remains
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Copy a directory without children.
+  svntest.main.run_svn(wc_dir, 'copy',
+                       sbox.ospath('A/B/F'), sbox.ospath('A/B/E-copied'))
+  expected_status.add({
+    'A/B/E-copied'       : Item(status='A ', copied='+', wc_rev='-'),
+    })
+
+  # Undo via delete FAILs here because the deleted child got left behind
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+def copy_delete_delete(sbox):
+  "copy, delete child, delete copy"
+  copy_delete_undo(sbox, False)
+
+def copy_delete_revert(sbox):
+  "copy, delete child, revert copy"
+  copy_delete_undo(sbox, True)
 
 ########################################################################
 # Run the tests
@@ -4985,8 +4900,9 @@ test_list = [ None,
               XFail(changed_dir_data_should_match_checkout),
               move_added_nodes,
               copy_over_deleted_dir,
-              Wimp("Needs NODES table & op-depth", nodes_table_wc_wc_copies),
               XFail(mixed_rev_copy_del),
+              XFail(copy_delete_delete),
+              XFail(copy_delete_revert),
              ]
 
 if __name__ == '__main__':
