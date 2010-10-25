@@ -124,11 +124,47 @@ svn_opt_get_option_from_code(int code,
 }
 
 
-void
-svn_opt_format_option(const char **string,
-                      const apr_getopt_option_t *opt,
-                      svn_boolean_t doc,
-                      apr_pool_t *pool)
+/* Like svn_opt_get_option_from_code2(), but also, if CODE appears a second
+ * time in OPTION_TABLE with a different name, then set *LONG_ALIAS to that
+ * second name, else set it to NULL. */
+static const apr_getopt_option_t *
+get_option_from_code(const char **long_alias,
+                     int code,
+                     const apr_getopt_option_t *option_table,
+                     const svn_opt_subcommand_desc2_t *command,
+                     apr_pool_t *pool)
+{
+  const apr_getopt_option_t *i;
+  const apr_getopt_option_t *opt
+    = svn_opt_get_option_from_code2(code, option_table, command, pool);
+
+  /* Find a long alias in the table, if there is one. */
+  *long_alias = NULL;
+  for (i = option_table; i->optch; i++)
+    {
+      if (i->optch == code && i->name != opt->name)
+        {
+          *long_alias = i->name;
+          break;
+        }
+    }
+
+  return opt;
+}
+
+
+/* Print an option OPT nicely into a STRING allocated in POOL.
+ * If OPT has a single-character short form, then print OPT->name (if not
+ * NULL) as an alias, else print LONG_ALIAS (if not NULL) as an alias.
+ * If DOC is set, include the generic documentation string of OPT,
+ * localized to the current locale if a translation is available.
+ */
+static void
+format_option(const char **string,
+              const apr_getopt_option_t *opt,
+              const char *long_alias,
+              svn_boolean_t doc,
+              apr_pool_t *pool)
 {
   char *opts;
 
@@ -149,9 +185,24 @@ svn_opt_format_option(const char **string,
     opts = apr_pstrcat(pool, opts, _(" ARG"), (char *)NULL);
 
   if (doc)
-    opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
+    {
+      opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
+      if (long_alias)
+        opts = apr_pstrcat(pool, opts,
+                           "\n                             [alias: --",
+                           long_alias, "]", (char *)NULL);
+    }
 
   *string = opts;
+}
+
+void
+svn_opt_format_option(const char **string,
+                      const apr_getopt_option_t *opt,
+                      svn_boolean_t doc,
+                      apr_pool_t *pool)
+{
+  format_option(string, opt, NULL, doc, pool);
 }
 
 
@@ -238,6 +289,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
   if (help)
     {
       const apr_getopt_option_t *option;
+      const char *long_alias;
       svn_boolean_t have_options = FALSE;
 
       SVN_ERR(svn_cmdline_fprintf(stream, pool, ": %s", _(cmd->help)));
@@ -255,16 +307,14 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                 }
 
               /* convert each option code into an option */
-              option =
-                svn_opt_get_option_from_code2(cmd->valid_options[i],
-                                              options_table,
-                                              cmd, pool);
+              option = get_option_from_code(&long_alias, cmd->valid_options[i],
+                                            options_table, cmd, pool);
 
               /* print the option's docstring */
               if (option && option->description)
                 {
                   const char *optstr;
-                  svn_opt_format_option(&optstr, option, TRUE, pool);
+                  format_option(&optstr, option, long_alias, TRUE, pool);
                   SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
                                               optstr));
                 }
@@ -281,16 +331,14 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
             {
 
               /* convert each option code into an option */
-              option =
-                svn_opt_get_option_from_code2(global_options[i],
-                                              options_table,
-                                              cmd, pool);
+              option = get_option_from_code(&long_alias, global_options[i],
+                                            options_table, cmd, pool);
 
               /* print the option's docstring */
               if (option && option->description)
                 {
                   const char *optstr;
-                  svn_opt_format_option(&optstr, option, TRUE, pool);
+                  format_option(&optstr, option, long_alias, TRUE, pool);
                   SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
                                               optstr));
                 }
