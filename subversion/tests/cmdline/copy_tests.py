@@ -4750,6 +4750,61 @@ def mixed_rev_copy_del(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
+def copy_delete_undo(sbox, use_revert):
+  "copy, delete child, undo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Copy directory with children
+  svntest.main.run_svn(wc_dir, 'copy',
+                       sbox.ospath('A/B/E'), sbox.ospath('A/B/E-copied'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/E-copied'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E-copied/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E-copied/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Delete a child
+  svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E-copied/alpha'))
+  expected_status.tweak('A/B/E-copied/alpha', status='D ', copied=None,
+                        wc_rev='?', entry_rev='1')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Undo the whole copy
+  if (use_revert):
+    svntest.main.run_svn(wc_dir, 'revert', '--recursive',
+                         sbox.ospath('A/B/E-copied'))
+    svntest.main.safe_rmtree(os.path.join(wc_dir, 'A/B/E-copied'))
+  else:
+    svntest.main.run_svn(wc_dir, 'rm', '--force', sbox.ospath('A/B/E-copied'))
+  expected_status.remove('A/B/E-copied',
+                         'A/B/E-copied/alpha',
+                         'A/B/E-copied/beta')
+
+  # Undo via revert FAILs here because a wq item remains
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Copy a directory without children.
+  svntest.main.run_svn(wc_dir, 'copy',
+                       sbox.ospath('A/B/F'), sbox.ospath('A/B/E-copied'))
+  expected_status.add({
+    'A/B/E-copied'       : Item(status='A ', copied='+', wc_rev='-'),
+    })
+
+  # Undo via delete FAILs here because the deleted child got left behind
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+def copy_delete_delete(sbox):
+  "copy, delete child, delete copy"
+  copy_delete_undo(sbox, False)
+
+def copy_delete_revert(sbox):
+  "copy, delete child, revert copy"
+  copy_delete_undo(sbox, True)
 
 ########################################################################
 # Run the tests
@@ -4846,6 +4901,8 @@ test_list = [ None,
               move_added_nodes,
               copy_over_deleted_dir,
               XFail(mixed_rev_copy_del),
+              XFail(copy_delete_delete),
+              XFail(copy_delete_revert),
              ]
 
 if __name__ == '__main__':
