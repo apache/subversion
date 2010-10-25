@@ -2910,13 +2910,13 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
           *copyfrom_relpath = repos_relpath;
           *copyfrom_rev = revision;
           if (!repos_root_url || !repos_uuid)
-            SVN_ERR(svn_wc__db_scan_base_repos(NULL,
-                                               &repos_root_url, &repos_uuid,
-                                               db, local_abspath,
-                                               scratch_pool, scratch_pool));
-          SVN_ERR(fetch_repos_id(copyfrom_id,
-                                 repos_root_url, repos_uuid,
-                                 pdh->wcroot->sdb, scratch_pool));
+            SVN_ERR(scan_upwards_for_repos(copyfrom_id, NULL,
+                                           pdh->wcroot, local_relpath,
+                                           result_pool, scratch_pool));
+          else
+            SVN_ERR(fetch_repos_id(copyfrom_id,
+                                   repos_root_url, repos_uuid,
+                                   pdh->wcroot->sdb, scratch_pool));
         }
     }
   else
