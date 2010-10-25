@@ -1325,11 +1325,10 @@ main(int argc, const char *argv[])
       switch (opt_id) {
       case 'l':
         {
-          char *end;
-          opt_state.limit = (int) strtol(opt_arg, &end, 10);
-          if (end == opt_arg || *end != '\0')
+          err = svn_cstring_atoi(&opt_state.limit, opt_arg);
+          if (err)
             {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err,
                                      _("Non-numeric limit argument given"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
