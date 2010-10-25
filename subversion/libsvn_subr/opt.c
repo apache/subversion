@@ -124,6 +124,37 @@ svn_opt_get_option_from_code(int code,
 }
 
 
+void
+svn_opt_format_option(const char **string,
+                      const apr_getopt_option_t *opt,
+                      svn_boolean_t doc,
+                      apr_pool_t *pool)
+{
+  char *opts;
+
+  if (opt == NULL)
+    {
+      *string = "?";
+      return;
+    }
+
+  /* We have a valid option which may or may not have a "short
+     name" (a single-character alias for the long option). */
+  if (opt->optch <= 255)
+    opts = apr_psprintf(pool, "-%c [--%s]", opt->optch, opt->name);
+  else
+    opts = apr_psprintf(pool, "--%s", opt->name);
+
+  if (opt->has_arg)
+    opts = apr_pstrcat(pool, opts, _(" ARG"), (char *)NULL);
+
+  if (doc)
+    opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
+
+  *string = opts;
+}
+
+
 svn_boolean_t
 svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
                                  int option_code,
@@ -310,36 +341,6 @@ svn_opt_print_generic_help2(const char *header,
  print_error:
   svn_handle_error2(err, stderr, FALSE, "svn: ");
   svn_error_clear(err);
-}
-
-void
-svn_opt_format_option(const char **string,
-                      const apr_getopt_option_t *opt,
-                      svn_boolean_t doc,
-                      apr_pool_t *pool)
-{
-  char *opts;
-
-  if (opt == NULL)
-    {
-      *string = "?";
-      return;
-    }
-
-  /* We have a valid option which may or may not have a "short
-     name" (a single-character alias for the long option). */
-  if (opt->optch <= 255)
-    opts = apr_psprintf(pool, "-%c [--%s]", opt->optch, opt->name);
-  else
-    opts = apr_psprintf(pool, "--%s", opt->name);
-
-  if (opt->has_arg)
-    opts = apr_pstrcat(pool, opts, _(" ARG"), (char *)NULL);
-
-  if (doc)
-    opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
-
-  *string = opts;
 }
 
 
