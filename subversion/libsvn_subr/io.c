@@ -818,6 +818,29 @@ file_perms_set(const char *fname, apr_fileperms_t perms,
   else
     return SVN_NO_ERROR;
 }
+
+/* Set permissions PERMS on the FILE. This is a cheaper variant of the 
+ * file_perms_set wrapper() function because no locale-dependent string
+ * conversion is required. 
+ */
+static svn_error_t *
+file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
+{
+  const char *fname_apr;
+  apr_status_t status;
+
+  status = apr_file_name_get(&fname_apr, file);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't get file name"));
+
+  status = apr_file_perms_set(fname_apr, perms);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
+                              fname_apr);
+  else
+    return SVN_NO_ERROR;
+}
+
 #endif /* !WIN32 && !__OS2__ */
 
 svn_error_t *
@@ -3854,7 +3877,7 @@ svn_io_open_unique_file3(apr_file_t **file,
    * ### So we tweak perms of the tempfile here, but only if the umask
    * ### allows it. */
   SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-  SVN_ERR(file_perms_set(tempname, perms, scratch_pool));
+  SVN_ERR(file_perms_set2(tempfile, perms));
 #endif
 
   if (file)
