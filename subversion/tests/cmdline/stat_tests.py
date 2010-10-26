@@ -1780,6 +1780,20 @@ def status_with_tree_conflicts(sbox):
     raise svntest.Failure
 
 
+#----------------------------------------------------------------------
+# Regression for issue #3742
+def status_nested_wc_old_format(sbox):
+  "status on wc with nested old-format wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  os.mkdir(os.path.join(wc_dir, 'subdir'))
+  os.mkdir(os.path.join(wc_dir, 'subdir', '.svn'))
+  svntest.main.file_append(os.path.join(wc_dir, 'subdir', '.svn', 'format'),
+                           '10\n') # format 10 was the Subversion 1.6 format
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, [ "?       subdir\n" ], [], 'st')
+
 ########################################################################
 # Run the tests
 
@@ -1818,6 +1832,7 @@ test_list = [ None,
               status_depth_update,
               status_dash_u_type_change,
               status_with_tree_conflicts,
+              XFail(status_nested_wc_old_format),
              ]
 
 if __name__ == '__main__':
