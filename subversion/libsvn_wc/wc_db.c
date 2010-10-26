@@ -3787,7 +3787,7 @@ struct set_tc_baton
 {
   const char *local_abspath;
   apr_int64_t wc_id;
-  const char *local_relpath;
+  const char *parent_relpath;
   const char *parent_abspath;
   const svn_wc_conflict_description2_t *tree_conflict;
 };
@@ -3805,7 +3805,7 @@ set_tc_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   /* Get the conflict information for the parent of LOCAL_ABSPATH. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", stb->wc_id, stb->local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", stb->wc_id, stb->parent_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   /* No ACTUAL node, no conflict info, no problem. */
@@ -3847,12 +3847,12 @@ set_tc_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                         STMT_INSERT_ACTUAL_TREE_CONFLICTS));
     }
 
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", stb->wc_id, stb->local_relpath,
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", stb->wc_id, stb->parent_relpath,
                             tree_conflict_data));
 
-  if (!have_row && stb->local_relpath[0])
+  if (!have_row && stb->parent_relpath[0])
     SVN_ERR(svn_sqlite__bind_text(stmt, 4,
-                                  svn_dirent_dirname(stb->local_relpath,
+                                  svn_dirent_dirname(stb->parent_relpath,
                                                      scratch_pool)));
 
   return svn_error_return(svn_sqlite__step_done(stmt));
@@ -3871,7 +3871,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   stb.parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &stb.local_relpath, db,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &stb.parent_relpath, db,
                               stb.parent_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
