@@ -3803,6 +3803,7 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
 struct set_tc_baton
 {
   const char *local_abspath;
+  const char *local_relpath;
   apr_int64_t wc_id;
   const char *parent_relpath;
   const char *parent_abspath;
@@ -3875,6 +3876,62 @@ set_tc_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
 
+/* */
+static svn_error_t *
+set_tc_txn2(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  struct set_tc_baton *stb = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *tree_conflict_data;
+
+  /* Get existing conflict information for LOCAL_ABSPATH. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", stb->wc_id, stb->local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (stb->tree_conflict)
+    {
+      apr_hash_t *conflicts = apr_hash_make(scratch_pool);
+      apr_hash_set(conflicts, "", APR_HASH_KEY_STRING, stb->tree_conflict);
+      SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts,
+                                           scratch_pool));
+    }
+  else
+    tree_conflict_data = NULL;
+
+  if (have_row)
+    {
+      /* There is an existing ACTUAL row, so just update it. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_ACTUAL_CONFLICT_DATA));
+    }
+  else
+    {
+      /* We need to insert an ACTUAL row with the tree conflict data. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_INSERT_ACTUAL_CONFLICT_DATA));
+    }
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", stb->wc_id, stb->local_relpath,
+                            tree_conflict_data));
+  if (!have_row)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, stb->parent_relpath));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Now, remove the actual node if it doesn't have any more useful
+     information.  We only need to do this if we've remove data ourselves. */
+  if (!tree_conflict_data)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_EMPTY));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", stb->wc_id, stb->local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
@@ -3898,6 +3955,26 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
   stb.tree_conflict = tree_conflict;
 
   SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, set_tc_txn, &stb,
+                                       scratch_pool));
+
+
+  /* ### The above is for tree-conflicts storage in parents;
+     ### the following is for tree-conflicts in ACTUAL.conflict_data.
+     ###
+     ### They are obviously redundant, with the latter being the eventual
+     ### implementation. */
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &stb.local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* Should probably be in the same txn as above, but since we can't
+     guarantee that pdh->wcroot->sdb is the same for both, and since
+     the above implementation is going away, we'll fudge a bit here.
+
+     ### Or can we guarantee pdh->wcroot->sdb is the same, given single db? */
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, set_tc_txn2, &stb,
                                        scratch_pool));
 
   /* There may be some entries, and the lock info is now out of date.  */
@@ -5065,12 +5142,8 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
       child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
       if (!child)
         {
-          err = svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                  _("Corrupt data for '%s'"),
-                                  svn_dirent_local_style(child_relpath,
-                                                         scratch_pool));
-          SVN_ERR(svn_error_compose_create(err,
-                                           svn_sqlite__step(&have_row, stmt)));
+          child = apr_palloc(result_pool, sizeof(*child) + sizeof(int));
+          child->status = svn_wc__db_status_not_present;
         }
 
       child->changelist = svn_sqlite__column_text(stmt, 1, result_pool);

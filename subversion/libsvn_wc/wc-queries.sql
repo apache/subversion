@@ -220,6 +220,15 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
+-- STMT_UPDATE_ACTUAL_CONFLICT_DATA
+UPDATE actual_node SET conflict_data = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_ACTUAL_CONFLICT_DATA
+INSERT INTO actual_node (
+  wc_id, local_relpath, conflict_data, parent_relpath)
+VALUES (?1, ?2, ?3, ?4);
+
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 UPDATE actual_node SET tree_conflict_data = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
@@ -262,6 +271,20 @@ VALUES (?1, ?2, ?3, ?4);
 REPLACE INTO actual_node (
   wc_id, local_relpath, parent_relpath, changelist)
 VALUES (?1, ?2, ?3, ?4);
+
+-- STMT_DELETE_ACTUAL_EMPTY
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND properties IS NULL
+  AND conflict_old IS NULL
+  AND conflict_new IS NULL
+  AND prop_reject IS NULL
+  AND changelist IS NULL
+  AND text_mod IS NULL
+  AND tree_conflict_data IS NULL
+  AND older_checksum IS NULL
+  AND right_checksum IS NULL
+  AND left_checksum IS NULL;
 
 -- STMT_DELETE_BASE_NODE
 DELETE FROM nodes
