@@ -2934,15 +2934,17 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__db_op_copy(svn_wc__db_t *db,
-                   const char *src_abspath,
-                   const char *dst_abspath,
+/* Like svn_wc__db_op_copy(), but with PDH+LOCAL_RELPATH instead of
+ * DB+LOCAL_ABSPATH. */
+static svn_error_t *
+db_op_copy(svn_wc__db_pdh_t *src_pdh,
+           const char *src_relpath,
+           svn_wc__db_pdh_t *dst_pdh,
+           const char *dst_relpath,
            const svn_skel_t *work_items,
            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *src_pdh, *dst_pdh;
-  const char *src_relpath, *dst_relpath, *copyfrom_relpath;
+  const char *copyfrom_relpath;
   svn_revnum_t copyfrom_rev;
   svn_wc__db_status_t status, dst_status;
   svn_boolean_t have_work;
@@ -2950,24 +2952,6 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   svn_wc__db_kind_t kind;
   const apr_array_header_t *children;
   apr_int64_t op_depth;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
-
-  /* ### This should all happen in one transaction, but that can't
-     ### happen until we move to a centralised database. */
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&src_pdh, &src_relpath, db,
-                                             src_abspath,
-                                             svn_sqlite__mode_readwrite,
-                                             scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(src_pdh);
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&dst_pdh, &dst_relpath, db,
-                                             dst_abspath,
-                                             svn_sqlite__mode_readwrite,
-                                             scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(dst_pdh);
 
   SVN_ERR(get_info_for_copy(&copyfrom_id, &copyfrom_relpath, &copyfrom_rev,
                             &status, &kind, &have_work,
@@ -2994,12 +2978,14 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
     case svn_wc__db_status_absent:
       return svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
                                _("Cannot copy '%s' excluded by server"),
-                               svn_dirent_local_style(src_abspath,
+                               path_for_error_message(src_pdh->wcroot,
+                                                      src_relpath,
                                                       scratch_pool));
     default:
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("Cannot handle status of '%s'"),
-                               svn_dirent_local_style(src_abspath,
+                               path_for_error_message(src_pdh->wcroot,
+                                                      src_relpath,
                                                       scratch_pool));
     }
 
@@ -3069,6 +3055,38 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   SVN_ERR(elide_copyfrom(dst_pdh, dst_relpath, scratch_pool));
 
   SVN_ERR(add_work_items(dst_pdh->wcroot->sdb, work_items, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_op_copy(svn_wc__db_t *db,
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   const svn_skel_t *work_items,
+                   apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *src_pdh, *dst_pdh;
+  const char *src_relpath, *dst_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&src_pdh, &src_relpath, db,
+                                             src_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(src_pdh);
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&dst_pdh, &dst_relpath, db,
+                                             dst_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(dst_pdh);
+
+  /* ### This should all happen in one transaction. */
+  SVN_ERR(db_op_copy(src_pdh, src_relpath, dst_pdh, dst_relpath,
+                     work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
