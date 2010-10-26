@@ -315,6 +315,7 @@ def textual_merges_galore(sbox):
   #
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[-3]],
@@ -796,6 +797,7 @@ def merge_similar_unrelated_trees(sbox):
     })
 
   # run_and_verify_merge doesn't support 'svn merge URL URL path'
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'merge',
                                      '--ignore-ancestry',
@@ -4684,6 +4686,7 @@ def mergeinfo_inheritance(sbox):
 
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-c5',
                                      sbox.repo_url + '/A/B/E/beta',
                                      beta_COPY_path)
@@ -4768,6 +4771,7 @@ def mergeinfo_inheritance(sbox):
   expected_skip = wc.State(omega_COPY_path, { })
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[6]],
@@ -4891,6 +4895,7 @@ def mergeinfo_elision(sbox):
 
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[5]],
@@ -5068,6 +5073,7 @@ def mergeinfo_elision(sbox):
 
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[-5]],
@@ -8528,6 +8534,7 @@ def cherry_picking(sbox):
   expected_skip = wc.State(rho_COPY_path, { })
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[3,4],[6]],
@@ -9495,6 +9502,7 @@ def new_subtrees_should_not_break_merge(sbox):
                                        None, None, None, None, None, 1)
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[8]],
@@ -11189,6 +11197,7 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.  Check the resulting mergeinfo with
   # a propget.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[5]], ['U    ' + A_copy_mu_path + '\n',
@@ -11401,6 +11410,7 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
   expected_skip = wc.State(nu_copy_path, { })
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[7]],
@@ -12591,6 +12601,7 @@ def subtree_merges_dont_cause_spurious_conflicts(sbox):
                                        None, None, None, None, None, 1)
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[-3]],
                                        ['G    ' + psi_COPY_path + '\n',
