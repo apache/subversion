@@ -4396,37 +4396,13 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-  svn_boolean_t base_none, working_none, new_working_none;
   svn_wc__db_status_t base_status, working_status, new_working_status;
-  svn_boolean_t have_work;
+  svn_boolean_t have_base, have_work, new_have_work;
 
-  err = svn_wc__db_base_get_info(&base_status,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 db, local_abspath,
-                                 scratch_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      base_none = TRUE;
-      svn_error_clear(err);
-    }
-  else if (! err)
-    base_none = FALSE;
-  else
-    return svn_error_return(err);
-
-  /* ### should error on excluded, too. excluded nodes could be removed
-     ### from our metadata, but they cannot be scheduled for deletion.  */
-  if (!base_none && base_status == svn_wc__db_status_absent)
-    return SVN_NO_ERROR; /* ### should return an error.... WHICH ONE? */
-
-  /* No need to check for SVN_ERR_WC_PATH_NOT_FOUND. Something has to
-     be there for us to delete.  */
   SVN_ERR(svn_wc__db_read_info(&working_status, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &have_work, NULL, NULL,
+                               NULL, NULL, &have_base, &have_work, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
   if (working_status == svn_wc__db_status_deleted)
@@ -4436,9 +4412,18 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       return SVN_NO_ERROR;
     }
 
-  working_none = !have_work;
+  if (have_base)
+    SVN_ERR(svn_wc__db_base_get_info(&base_status,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool));
 
-  new_working_none = working_none;
+  if (have_base && (base_status == svn_wc__db_status_absent
+                    || base_status == svn_wc__db_status_excluded))
+    return SVN_NO_ERROR; /* ### should return an error.... WHICH ONE? */
+
+  new_have_work = have_work;
   new_working_status = working_status;
 
   if (working_status == svn_wc__db_status_normal
@@ -4447,9 +4432,9 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       /* No structural changes (ie. no WORKING node). Mark the BASE node
          as deleted.  */
 
-      SVN_ERR_ASSERT(working_none);
+      SVN_ERR_ASSERT(!have_work);
 
-      new_working_none = FALSE;
+      new_have_work = TRUE;
       new_working_status = svn_wc__db_status_base_deleted;
     }
   /* ### remaining states: added, absent, excluded, incomplete
@@ -4457,22 +4442,22 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
      ### and this code may need to change further, but I'm not
      ### going to worry about it now
   */
-  else if (working_none)
+  else if (!have_work)
     {
       /* No structural changes  */
       if (base_status == svn_wc__db_status_normal
           || base_status == svn_wc__db_status_incomplete
           || base_status == svn_wc__db_status_excluded)
         {
-          new_working_none = FALSE;
+          new_have_work = TRUE;
           new_working_status = svn_wc__db_status_base_deleted;
         }
     }
-    /* ### BH: base_none is not a safe check, because a node can
+    /* ### BH: have_base is not a safe check, because a node can
        ### still be a child of an added node even though it replaces
        ### a base node. */
   else if (working_status == svn_wc__db_status_added
-           && (base_none || base_status == svn_wc__db_status_not_present))
+           && (!have_base || base_status == svn_wc__db_status_not_present))
     {
       /* ADD/COPY-HERE/MOVE-HERE. There is "no BASE node".  */
 
@@ -4481,7 +4466,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
                                      db, local_abspath, scratch_pool));
       if (add_or_root_of_copy)
-        new_working_none = TRUE;
+        new_have_work = FALSE;
       else
         new_working_status = svn_wc__db_status_not_present;
     }
@@ -4502,10 +4487,10 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
                                      db, local_abspath, scratch_pool));
       if (add_or_root_of_copy)
-        new_working_none = TRUE;
+        new_have_work = FALSE;
     }
 
-  if (new_working_none && !working_none)
+  if (!new_have_work && have_work)
     {
       SVN_ERR(db_working_actual_remove(db, local_abspath, scratch_pool));
       /* ### Search the cached directories in db for directories below
@@ -4514,10 +4499,10 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath,
                                                scratch_pool));
     }
-  else if (!new_working_none && working_none)
+  else if (new_have_work && !have_work)
     SVN_ERR(db_working_insert(new_working_status,
                               db, local_abspath, scratch_pool));
-  else if (!new_working_none && !working_none
+  else if (new_have_work && have_work
            && new_working_status != working_status)
     SVN_ERR(db_working_update_presence(new_working_status,
                                        db, local_abspath, scratch_pool));
