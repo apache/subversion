@@ -396,16 +396,14 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
  * operator, in order to match any path that is a child of LOCAL_RELPATH
  * (at any depth below LOCAL_RELPATH), *excluding* LOCAL_RELPATH itself.
  * LOCAL_RELPATH may be the empty string, in which case the result will
- * match any path *including* the empty path.
- *
- * ### Inconsistent on whether the match includes LOCAL_RELPATH itself.
+ * match any path except the empty path.
  *
  * Allocate the result either statically or in RESULT_POOL.  */
 static const char *construct_like_arg(const char *local_relpath,
                                       apr_pool_t *result_pool)
 {
   if (local_relpath[0] == '\0')
-    return "%";
+    return "_%";
 
   return apr_pstrcat(result_pool,
                      escape_sqlite_like(local_relpath, result_pool),
@@ -7692,13 +7690,7 @@ wclock_obtain_cb(void *baton,
                                                         scratch_pool));
     }
 
-  if (*bt->local_relpath == '\0')
-    filter = "%";
-  else
-    filter = apr_pstrcat(scratch_pool,
-                         escape_sqlite_like(bt->local_relpath, scratch_pool),
-                         "/%",
-                         (char *)NULL);
+  filter = construct_like_arg(bt->local_relpath, scratch_pool);
 
   /* Check if there are nodes locked below the new lock root */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
