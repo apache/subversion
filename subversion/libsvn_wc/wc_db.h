@@ -1010,7 +1010,14 @@ svn_wc__db_pristine_repair(svn_wc__db_t *db,
    @{
 */
 
-/* ### svn cp WCPATH WCPATH ... can copy mixed base/working around */
+/* Copy the node at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
+ * DST_ABSPATH, both in DB but not necessarily in the same WC.  The parent
+ * of DST_ABSPATH must be a versioned directory.
+ *
+ * This copy is NOT recursive. It simply establishes this one node, plus
+ * incomplete nodes for the children.
+ *
+ * Add WORK_ITEMS to the work queue. */
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
