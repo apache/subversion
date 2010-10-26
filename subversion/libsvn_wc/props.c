@@ -1577,7 +1577,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         SVN_ERR(svn_wc__wq_tmp_build_set_property_conflict_marker(
                                           &work_item,
                                           db, local_abspath,
-                                          svn_dirent_basename(reject_path, NULL),
+                                          svn_dirent_basename(reject_path,
+                                                              NULL),
                                           scratch_pool, scratch_pool));
 
         SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
