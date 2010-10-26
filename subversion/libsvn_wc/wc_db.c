@@ -4932,8 +4932,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
         new_child = FALSE;
       else
         {
-          child = apr_palloc(result_pool,
-                             sizeof(struct svn_wc__db_info_t) + sizeof(int));
+          child = apr_palloc(result_pool, sizeof(*child) + sizeof(*op_depth));
           new_child = TRUE;
         }
 
