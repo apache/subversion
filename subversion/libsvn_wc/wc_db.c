@@ -2996,7 +2996,6 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                _("Cannot copy '%s' excluded by server"),
                                svn_dirent_local_style(src_abspath,
                                                       scratch_pool));
-      break;
     default:
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("Cannot handle status of '%s'"),
