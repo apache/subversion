@@ -498,7 +498,7 @@ init_prop_target(prop_patch_target_t **prop_target,
   new_prop_target->content_info = content_info;
 
   err = svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name, 
-                           result_pool, scratch_pool);
+                         result_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
