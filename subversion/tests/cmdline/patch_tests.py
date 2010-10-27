@@ -2575,7 +2575,8 @@ def patch_add_path_with_props(sbox):
   patch_file_path = make_patch_path(sbox)
   iota_path = os.path.join(wc_dir, 'iota')
 
-  # Apply patch that adds a file and a dir.
+  # Apply patch that adds two files, one of which is empty.
+  # Both files have properties.
 
   unidiff_patch = [
     "Index: new\n",
