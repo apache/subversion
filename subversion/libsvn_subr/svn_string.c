@@ -266,9 +266,21 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
-  /* Ensure string buffer of size + 1 */
-  svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(size, pool);
+  char *data;
 
+  /* apr_palloc will allocate multiples of 8.
+   * Thus, we would waste some of that memory if we stuck to the
+   * smaller size. Note that this is safe even if apr_palloc would
+   * use some other aligment or none at all. */
+  apr_size_t aligned_size = APR_ALIGN_DEFAULT(size + 1) - 1;
+
+  /* Ensure string buffer of aligned_size + 1.
+   * This should allocate the same amount of memory as "size" would. */
+  svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(aligned_size, pool);
+
+  /* Actually, aligned_size+1 would be faster but we cannot be entirely
+   * sure that the source string has been aligned properly such that
+   * all the extra bytes would actually come from addressible memory.*/
   memcpy(strbuf->data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
