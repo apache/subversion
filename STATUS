@@ -33,7 +33,7 @@ They will be merged into /trunk after passing the review.
      correct, I think some of the function names could be improved, but
      that's a bikeshed we can have on trunk."
 
-* r985606
+* r985606, r1028092
  A somewhat larger change: Reduce the ra_svn de-marshalling
  overhead mainly by pre-allocating sufficient container capacity
  in various places.
@@ -51,3 +51,12 @@ They will be merged into /trunk after passing the review.
    most CPU-demanding part of an svn export. This patch more than
    doubles its performance. It should also speed up svn checkout by
    the same amount (not factor) of time.
+
+* r1028094
+ Exploit knowledge of APR pool allocation interna to allocate sightly
+ larger capacity stringbuf containers without actually using more memory.
+ Justification:
+   Very low computational overhead that should prevent costly
+   re-allocations when working with small or empty strings.
+   Also, this does not make the functionality (correctness) 
+   of the code depend on APR internals.
