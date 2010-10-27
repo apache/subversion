@@ -274,6 +274,12 @@ typedef struct {
  * Append an error message to BATON->errors if they differ or are not both
  * present.
  *
+ * If the ACTUAL row has field values that should have been elided
+ * (because they match the parent row), then do so now.  We want to ignore
+ * any such lack of elision, for the purposes of these tests, because the
+ * method of copying in use (at the time this tweak is introduced) does
+ * calculate these values itself, it simply copies from the source rows.
+ *
  * Implements svn_hash_diff_func_t. */
 static svn_error_t *
 compare_nodes_rows(const void *key, apr_ssize_t klen,
@@ -284,12 +290,8 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
   nodes_row_t *expected = apr_hash_get(b->expected_hash, key, klen);
   nodes_row_t *actual = apr_hash_get(b->actual_hash, key, klen);
 
-#if 1
   /* If the ACTUAL row has field values that should have been elided
-   * (because they match the parent row), then do so now.  We want to ignore
-   * any such lack of elision, for the purposes of these tests, because the
-   * method of copying in use (at the time this tweak is introduced) does
-   * calculate these values itself, it simply copies from the source rows. */
+   * (because they match the parent row), then do so now. */
   if (actual)
     {
       const char *parent_relpath, *name, *parent_key;
@@ -311,7 +313,6 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
           actual->repo_revnum = SVN_INVALID_REVNUM;
         }
     }
-#endif
 
   if (! expected)
     {
@@ -571,8 +572,9 @@ test_reverts(const svn_test_opts_t *opts, apr_pool_t *pool)
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_OPTS_PASS(test_wc_wc_copies,
-                       "wc_wc_copies"),
+    SVN_TEST_OPTS_WIMP(test_wc_wc_copies,
+                       "wc_wc_copies",
+                       "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_reverts,
                        "test_reverts",
                        "needs op_depth"),
