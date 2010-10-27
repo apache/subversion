@@ -411,19 +411,19 @@ check_db_rows(wc_baton_t *b,
 static svn_error_t *
 wc_wc_copies(wc_baton_t *b)
 {
+  const char source_everything[]  = "A/B";
+
+  const char source_base_file[]   = "A/B/lambda";
+  const char source_base_dir[]    = "A/B/E";
+
+  const char source_added_file[]  = "A/B/file-added";
+  const char source_added_dir[]   = "A/B/D-added";
+  const char source_added_dir2[]  = "A/B/D-added/D2";
+
+  const char source_copied_file[] = "A/B/lambda-copied";
+  const char source_copied_dir[]  = "A/B/E-copied";
+
   SVN_ERR(add_and_commit_greek_tree(b));
-
-#define source_everything  "A/B"
-
-#define source_base_file   "A/B/lambda"
-#define source_base_dir    "A/B/E"
-
-#define source_added_file  "A/B/file-added"
-#define source_added_dir   "A/B/D-added"
-#define source_added_dir2  "A/B/D-added/D2"
-
-#define source_copied_file "A/B/lambda-copied"
-#define source_copied_dir  "A/B/E-copied"
 
   /* Create the various kinds of source node which will be copied */
 
