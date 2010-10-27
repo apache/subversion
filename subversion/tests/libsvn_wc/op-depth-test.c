@@ -520,7 +520,11 @@ wc_wc_copies(wc_baton_t *b)
     /* Perform each subtest in turn. */
     for (subtest = subtests; subtest->from_path; subtest++)
       {
-        SVN_ERR(wc_copy(b, subtest->from_path, subtest->to_path));
+        SVN_ERR(svn_wc_copy3(b->wc_ctx,
+                             wc_path(b, subtest->from_path),
+                             wc_path(b, subtest->to_path),
+                             FALSE /* metadata_only */,
+                             NULL, NULL, NULL, NULL, b->pool));
         SVN_ERR(check_db_rows(b, subtest->to_path, subtest->expected));
       }
   }
