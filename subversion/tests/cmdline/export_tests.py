@@ -621,6 +621,36 @@ def export_externals_with_native_eol(sbox):
                                         expected_disk,
                                         '--native-eol', 'CR')
 
+def export_to_current_dir(sbox):
+  "export to current dir"
+  # Issue 3727: Forced export in current dir creates unexpected subdir.
+  sbox.build(create_wc = False, read_only = True)
+
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  os.mkdir(sbox.wc_dir)
+
+  orig_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  export_url = sbox.repo_url + '/A/B/E'
+  export_target = '.'
+  expected_output = svntest.wc.State('', {
+    '.'         : Item(status='A '),
+    'alpha'     : Item(status='A '),
+    'beta'      : Item(status='A '),
+    })
+  expected_disk = svntest.wc.State('', {
+    'alpha'     : Item("This is the file 'alpha'.\n"),
+    'beta'      : Item("This is the file 'beta'.\n"),
+    })
+  svntest.actions.run_and_verify_export(export_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk,
+                                        '--force')
+
+  os.chdir(orig_dir)
+
 ########################################################################
 # Run the tests
 
@@ -650,6 +680,7 @@ test_list = [ None,
               export_with_url_unsafe_characters,
               XFail(export_working_copy_with_depths),
               export_externals_with_native_eol,
+              XFail(export_to_current_dir),
              ]
 
 if __name__ == '__main__':
