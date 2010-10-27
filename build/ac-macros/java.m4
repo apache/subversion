@@ -81,13 +81,14 @@ AC_DEFUN(SVN_FIND_JDK,
   dnl but Darwin doesn't have that utility.  /usr/bin/java is a symlink into
   dnl /System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK/Commands
   dnl See http://developer.apple.com/qa/qa2001/qa1170.html
+  OSX_JAVA_FRAMEWORK_HOME="/System/Library/Frameworks/JavaVM.framework"
   os_arch="`uname`"
   if test "$os_arch" = "Darwin" && test "$JDK" = "/usr" &&
      test -d "/Library/Java/Home"; then
       JDK="/Library/Java/Home"
   fi
   if test "$os_arch" = "Darwin" && test "$JDK" = "/Library/Java/Home"; then
-      JRE_LIB_DIR="/System/Library/Frameworks/JavaVM.framework/Classes"
+      JRE_LIB_DIR="$OSX_JAVA_FRAMEWORK_HOME/Classes"
   else
       JRE_LIB_DIR="$JDK/jre/lib"
   fi
@@ -95,6 +96,17 @@ AC_DEFUN(SVN_FIND_JDK,
   if test -f "$JDK/include/jni.h"; then
     dnl This *must* be fully expanded, or we'll have problems later in find.
     JNI_INCLUDEDIR="$JDK/include"
+    JDK_SUITABLE=yes
+  elif test "$os_arch" = "Darwin" && test -f "$JDK/Headers/jni.h" -o \
+                                          -h "$JDK/Headers/jni.h"; then
+    dnl This works around the JDK issue on Snow Leopard
+    JNI_INCLUDEDIR="$JDK/Headers"
+    JDK_SUITABLE=yes
+  elif test "$os_arch" = "Darwin" && \
+       test -f "$OSX_JAVA_FRAMEWORK_HOME/Versions/Current/Headers/jni.h" -o \
+            -h "$OSX_JAVA_FRAMEWORK_HOME/Versions/Current/Headers/jni.h"; then
+    dnl This works around the JDK issue on Snow Leopard
+    JNI_INCLUDEDIR="$OSX_JAVA_FRAMEWORK_HOME/Versions/Current/Headers"
     JDK_SUITABLE=yes
   else
     AC_MSG_WARN([no JNI header files found.])
