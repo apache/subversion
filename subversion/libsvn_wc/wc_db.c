@@ -3089,6 +3089,189 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Set *OP_DEPTH to the highest op depth of PDH:LOCAL_RELPATH. */
+static svn_error_t *
+op_depth_of(apr_int64_t *op_depth,
+            svn_wc__db_pdh_t *pdh,
+            const char *local_relpath)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR_ASSERT(have_row);
+  *op_depth = svn_sqlite__column_int64(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
+}
+
+/*
+ * Copy single NODES row from src_path@src_op_depth to dst_path@dst_depth.
+ * Copy all rows of descendent paths in == src_op_depth to == dst_depth.
+ * Copy all rows of descendent paths in > src_depth to > dst_depth,
+ * adjusting op_depth by (dst_depth - src_depth).
+ *
+ * ### TODO: Return a list of copied nodes. */
+static svn_error_t *
+copy_nodes_rows(svn_wc__db_pdh_t *src_pdh,
+                const char *src_relpath,
+                svn_wc__db_pdh_t *dst_pdh,
+                const char *dst_relpath,
+                apr_pool_t *scratch_pool)
+{
+  apr_int64_t src_op_depth;
+  apr_int64_t src_depth = relpath_depth(src_relpath);
+  apr_int64_t dst_depth = relpath_depth(dst_relpath);
+  svn_sqlite__stmt_t *stmt;
+  const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
+                                                       scratch_pool);
+
+  SVN_ERR(op_depth_of(&src_op_depth, src_pdh, src_relpath));
+
+  /* Root node */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                                    STMT_COPY_NODES_ROW));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isissi",
+                            src_pdh->wcroot->wc_id,
+                            src_relpath,
+                            src_op_depth,
+                            dst_relpath,
+                            dst_parent_relpath,
+                            dst_depth));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Descendants at same depth */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                                    STMT_COPY_NODES_AT_SAME_OP_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isisii",
+                            src_pdh->wcroot->wc_id,
+                            construct_like_arg(src_relpath, scratch_pool),
+                            src_op_depth,
+                            dst_relpath,
+                            dst_depth,
+                            (apr_int64_t)(strlen(src_relpath) + 1)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Descendants at greater depths */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                                    STMT_COPY_NODES_AT_GREATER_OP_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isisii",
+                            src_pdh->wcroot->wc_id,
+                            construct_like_arg(src_relpath, scratch_pool),
+                            src_depth,
+                            dst_relpath,
+                            dst_depth,
+                            (apr_int64_t)(strlen(src_relpath) + 1)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+copy_actual_rows(svn_wc__db_pdh_t *src_pdh,
+                 const char *src_relpath,
+                 svn_wc__db_pdh_t *dst_pdh,
+                 const char *dst_relpath,
+                 apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  const char *src_parent_relpath = svn_relpath_dirname(src_relpath,
+                                                       scratch_pool);
+  const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
+                                                       scratch_pool);
+
+  /* ### Copying changelist is OK for a move but what about a copy? */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, dst_pdh->wcroot->sdb,
+                                    STMT_COPY_ACTUAL_NODE_ROWS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issssii",
+                            src_pdh->wcroot->wc_id, src_relpath,
+                            construct_like_arg(src_relpath, scratch_pool),
+                            dst_relpath, dst_parent_relpath,
+                            strlen(src_relpath) + 1,
+                            strlen(src_parent_relpath) + 1));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+struct copy_tree_baton_t
+{
+  svn_wc__db_pdh_t *src_pdh, *dst_pdh;
+  const char *src_relpath, *dst_relpath;
+  const svn_skel_t *work_items;
+};
+
+/* */
+static svn_error_t *
+db_op_copy_tree(void *baton,
+                svn_sqlite__db_t *sdb,
+                apr_pool_t *scratch_pool)
+{
+  struct copy_tree_baton_t *b = baton;
+
+  SVN_ERR(copy_nodes_rows(b->src_pdh, b->src_relpath,
+                          b->dst_pdh, b->dst_relpath,
+                          scratch_pool));
+
+  SVN_ERR(copy_actual_rows(b->src_pdh, b->src_relpath,
+                           b->dst_pdh, b->dst_relpath,
+                           scratch_pool));
+
+  SVN_ERR(add_work_items(b->dst_pdh->wcroot->sdb, b->work_items, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_op_copy_tree(svn_wc__db_t *db,
+                        const char *src_abspath,
+                        const char *dst_abspath,
+                        const svn_skel_t *work_items,
+                        apr_pool_t *scratch_pool)
+{
+  struct copy_tree_baton_t b;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&b.src_pdh, &b.src_relpath, db,
+                                             src_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(b.src_pdh);
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&b.dst_pdh, &b.dst_relpath, db,
+                                             dst_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(b.dst_pdh);
+
+  b.work_items = work_items;
+
+  if (b.src_pdh->wcroot == b.dst_pdh->wcroot)
+    {
+      /* ASSERT(presence == normal) */
+
+      SVN_ERR(svn_sqlite__with_transaction(b.dst_pdh->wcroot->sdb,
+                                           db_op_copy_tree, &b, scratch_pool));
+
+      /* ### Do we need to flush entries?
+       * SVN_ERR(flush_entries(db, b.dst_pdh, dst_abspath, scratch_pool)); */
+    }
+  else
+    {
+      /* Cross-DB copy */
+      SVN_ERR(db_op_copy(b.src_pdh, b.src_relpath, b.dst_pdh, b.dst_relpath,
+                         b.work_items, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc__db_op_copy_dir(svn_wc__db_t *db,

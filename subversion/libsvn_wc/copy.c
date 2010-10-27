@@ -120,6 +120,7 @@ copy_to_tmpdir(const char **dst_abspath,
 }
 
 
+#ifndef SVN_WC__OP_DEPTH
 /* If SRC_ABSPATH and DST_ABSPATH use different pristine stores, copy the
    pristine text of SRC_ABSPATH (if there is one) into the pristine text
    store connected to DST_ABSPATH.  This will only happen when copying into
@@ -431,6 +432,7 @@ copy_versioned_dir(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 #ifdef SVN_WC__OP_DEPTH
@@ -442,10 +444,14 @@ from one valid state to another and must be exectuted within a DB txn.
 Several such changes can be batched together in a bigger txn if we don't
 want clients to be able to see intermediate states.
 
-### TODO: This plan doesn't yet provide well for notification of all copied
-    paths.
+TODO: We will probably want to notify all copied paths rather than just the
+  root path, some time in the future.  It may be difficult to get the list
+  of visited paths directly, because the metadata copying is performed
+  within a single SQL statement.  We could walk the destination tree after
+  copying, taking care to include any 'excluded' nodes but ignore any
+  'deleted' paths that may be left over from a replaced sub-tree.
 
-copy-versioned_node:
+copy_versioned_node:
   # Copy a versioned file/dir SRC_PATH to DST_PATH, recursively.
 
   # This function takes care to copy both the metadata tree and the disk
@@ -475,6 +481,68 @@ copy-versioned_node:
   #     and so subsume the destination into an existing op?  I guess not.
 
 */
+
+/* Copy a versioned file/dir SRC_PATH to DST_PATH, recursively. */
+static svn_error_t *
+copy_versioned_node(svn_wc__db_t *db,
+                    const char *src_abspath,
+                    const char *dst_abspath,
+                    svn_boolean_t metadata_only,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item = NULL;
+
+  /* Prepare a copy of the on-disk tree (if it exists, and whatever its kind),
+   * in a temporary location. */
+  if (! metadata_only)
+    {
+      const char *tmpdir_abspath;
+      const char *tmp_dst_abspath;
+      svn_node_kind_t kind;
+
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db, dst_abspath,
+                                             scratch_pool, scratch_pool));
+
+      SVN_ERR(copy_to_tmpdir(&tmp_dst_abspath, &kind, src_abspath,
+                             tmpdir_abspath,
+                             TRUE, /* recursive */
+                             cancel_func, cancel_baton,
+                             scratch_pool));
+      if (tmp_dst_abspath)
+        {
+          SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
+                                             tmp_dst_abspath, dst_abspath,
+                                             scratch_pool, scratch_pool));
+        }
+    }
+
+  /* Copy single NODES row from src_path@src_op_depth to dst_path@dst_depth. */
+  /* Copy all rows of descendent paths in == src_op_depth to == dst_depth. */
+  /* Copy all rows of descendent paths in > src_depth to > dst_depth,
+     adjusting op_depth by (dst_depth - src_depth). */
+  /* Copy ACTUAL_NODE rows (props and any other actual metadata). */
+  SVN_ERR(svn_wc__db_op_copy_tree(db, src_abspath, dst_abspath,
+                                  work_item, scratch_pool));
+
+  SVN_ERR(svn_wc__wq_run(db, dst_abspath, cancel_func, cancel_baton,
+                         scratch_pool));
+
+  /* Notify */
+  if (notify_func)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(dst_abspath, svn_wc_notify_add,
+                               scratch_pool);
+      notify->kind = svn_node_dir;
+      (*notify_func)(notify_baton, notify, scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
 #endif
 
 
@@ -645,6 +713,13 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                                         scratch_pool));
     }
 
+#ifdef SVN_WC__OP_DEPTH
+  SVN_ERR(copy_versioned_node(db, src_abspath, dst_abspath,
+                              metadata_only,
+                              cancel_func, cancel_baton,
+                              notify_func, notify_baton,
+                              scratch_pool));
+#else
   if (src_db_kind == svn_wc__db_kind_file
       || src_db_kind == svn_wc__db_kind_symlink)
     {
@@ -660,6 +735,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                  notify_func, notify_baton,
                                  scratch_pool));
     }
+#endif
 
   return SVN_NO_ERROR;
 }
