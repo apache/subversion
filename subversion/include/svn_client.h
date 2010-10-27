@@ -3068,8 +3068,38 @@ svn_client_diff_summarize_peg(const char *path,
  * If @a dry_run is TRUE, the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
  *
+ * If allow_mixed_rev is @c FALSE, and @a merge_target is a mixed-revision
+ * working copy, raise @c SVN_ERR_CLIENT_NOT_READY_TO_MERGE.
+ * Because users rarely intend to merge into mixed-revision working copies,
+ * it is recommended to set this parameter to FALSE by default unless the
+ * user has explicitly requested a merge into a mixed-revision working copy.
+ *
  * The authentication baton cached in @a ctx is used to communicate with the
  * repository.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_merge4(const char *source1,
+                  const svn_opt_revision_t *revision1,
+                  const char *source2,
+                  const svn_opt_revision_t *revision2,
+                  const char *target_wcpath,
+                  svn_depth_t depth,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t force,
+                  svn_boolean_t record_only,
+                  svn_boolean_t dry_run,
+                  svn_boolean_t allow_mixed_rev,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_merge4(), but with @a allow_mixed_rev set to
+ * @c TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -3172,7 +3202,30 @@ svn_client_merge_reintegrate(const char *source,
  * list of provided ranges has an `unspecified' or unrecognized
  * `kind', return #SVN_ERR_CLIENT_BAD_REVISION.
  *
- * All other options are handled identically to svn_client_merge3().
+ * All other options are handled identically to svn_client_merge4().
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_merge_peg4(const char *source,
+                      const apr_array_header_t *ranges_to_merge,
+                      const svn_opt_revision_t *peg_revision,
+                      const char *target_wcpath,
+                      svn_depth_t depth,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t force,
+                      svn_boolean_t record_only,
+                      svn_boolean_t dry_run,
+                      svn_boolean_t allow_mixed_rev,
+                      const apr_array_header_t *merge_options,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_merge_peg4(), but with @a allow_mixed_rev set to
+ * @c TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
