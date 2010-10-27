@@ -101,6 +101,7 @@
  * wc_id  a WCROOT id associated with a node
  */
 
+#define INVALID_REPOS_ID ((apr_int64_t) -1)
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
@@ -280,11 +281,9 @@ static svn_error_t *
 scan_addition(svn_wc__db_status_t *status,
               const char **op_root_relpath,
               const char **repos_relpath,
-              const char **repos_root_url,
-              const char **repos_uuid,
+              apr_int64_t *repos_id,
               const char **original_repos_relpath,
-              const char **original_root_url,
-              const char **original_uuid,
+              apr_int64_t *original_repos_id,
               svn_revnum_t *original_revision,
               svn_wc__db_pdh_t *pdh,
               const char *local_relpath,
@@ -2837,15 +2836,12 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
   else if (*status == svn_wc__db_status_added)
     {
       const char *op_root_relpath;
-      const char *original_repos_relpath, *original_root_url, *original_uuid;
+      const char *original_repos_relpath;
       svn_revnum_t original_revision;
 
       SVN_ERR(scan_addition(status, &op_root_relpath,
-                            NULL /* repos_relpath */,
-                            NULL /* repos_root_url */,
-                            NULL /* repos_uuid */,
-                            &original_repos_relpath,
-                            &original_root_url, &original_uuid,
+                            NULL, NULL, /* repos_* */
+                            &original_repos_relpath, copyfrom_id,
                             &original_revision,
                             pdh, local_relpath,
                             scratch_pool, scratch_pool));
@@ -2859,9 +2855,6 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                                         local_relpath),
                                scratch_pool);
           *copyfrom_rev = original_revision;
-          SVN_ERR(fetch_repos_id(copyfrom_id,
-                                 original_root_url, original_uuid,
-                                 pdh->wcroot->sdb, scratch_pool));
         }
       else
         {
@@ -2879,8 +2872,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       if (work_del_relpath)
         {
           const char *op_root_relpath;
-          const char *original_repos_relpath, *original_root_url;
-          const char *original_uuid;
+          const char *original_repos_relpath;
           svn_revnum_t original_revision;
           const char *parent_del_relpath = svn_dirent_dirname(work_del_relpath,
                                                               scratch_pool);
@@ -2888,11 +2880,8 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
           /* Similar to, but not the same as, the _scan_addition and
              _join above.  Can we use get_copyfrom here? */
           SVN_ERR(scan_addition(NULL, &op_root_relpath,
-                                NULL /* repos_relpath */,
-                                NULL /* repos_root_url */,
-                                NULL /* repos_uuid */,
-                                &original_repos_relpath,
-                                &original_root_url, &original_uuid,
+                                NULL, NULL, /* repos_* */
+                                &original_repos_relpath, copyfrom_id,
                                 &original_revision,
                                 pdh, parent_del_relpath,
                                 scratch_pool, scratch_pool));
@@ -2902,9 +2891,6 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                                         local_relpath),
                                scratch_pool);
           *copyfrom_rev = original_revision;
-          SVN_ERR(fetch_repos_id(copyfrom_id,
-                                 original_root_url, original_uuid,
-                                 pdh->wcroot->sdb, scratch_pool));
         }
       else
         {
@@ -6391,17 +6377,15 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 /* Like svn_wc__db_scan_addition(), but with PDH+LOCAL_RELPATH instead of
  * DB+LOCAL_ABSPATH.
  *
- * ### TODO: Return xxx_repos_id instead of xxx_root_url and xxx_uuid,
- *     because that would be better for most of the internal callers. */
+ * The output value of *ORIGINAL_REPOS_ID will be INVALID_REPOS_ID if there
+ * is no 'copy-from' repository. */
 static svn_error_t *
 scan_addition(svn_wc__db_status_t *status,
               const char **op_root_relpath,
               const char **repos_relpath,
-              const char **repos_root_url,
-              const char **repos_uuid,
+              apr_int64_t *repos_id,
               const char **original_repos_relpath,
-              const char **original_root_url,
-              const char **original_uuid,
+              apr_int64_t *original_repos_id,
               svn_revnum_t *original_revision,
               svn_wc__db_pdh_t *pdh,
               const char *local_relpath,
@@ -6414,24 +6398,16 @@ scan_addition(svn_wc__db_status_t *status,
   svn_wc__db_wcroot_t *wcroot = pdh->wcroot;
   svn_boolean_t found_info = FALSE;
 
-  /* Initialize all the OUT parameters. Generally, we'll only be filling
+  /* Initialize most of the OUT parameters. Generally, we'll only be filling
      in a subset of these, so it is easier to init all up front. Note that
      the STATUS parameter will be initialized once we read the status of
      the specified node.  */
   if (op_root_relpath)
     *op_root_relpath = NULL;
-  if (repos_relpath)
-    *repos_relpath = NULL;
-  if (repos_root_url)
-    *repos_root_url = NULL;
-  if (repos_uuid)
-    *repos_uuid = NULL;
   if (original_repos_relpath)
     *original_repos_relpath = NULL;
-  if (original_root_url)
-    *original_root_url = NULL;
-  if (original_uuid)
-    *original_uuid = NULL;
+  if (original_repos_id)
+    *original_repos_id = INVALID_REPOS_ID;
   if (original_revision)
     *original_revision = SVN_INVALID_REVNUM;
 
@@ -6512,19 +6488,15 @@ scan_addition(svn_wc__db_status_t *status,
           if (original_repos_relpath)
             *original_repos_relpath = svn_sqlite__column_text(stmt, 11,
                                                               result_pool);
-          if (original_root_url || original_uuid)
-            SVN_ERR(fetch_repos_info(original_root_url, original_uuid,
-                                     wcroot->sdb,
-                                     svn_sqlite__column_int64(stmt, 10),
-                                     result_pool));
+          if (original_repos_id)
+            *original_repos_id = svn_sqlite__column_int64(stmt, 10);
           if (original_revision)
             *original_revision = svn_sqlite__column_revnum(stmt, 12);
 
           /* We may have to keep tracking upwards for REPOS_* values.
              If they're not needed, then just return.  */
           if (repos_relpath == NULL
-              && repos_root_url == NULL
-              && repos_uuid == NULL)
+              && repos_id == NULL)
             return svn_error_return(svn_sqlite__reset(stmt));
 
           /* We've found the info we needed. Scan for the top of the
@@ -6560,18 +6532,13 @@ scan_addition(svn_wc__db_status_t *status,
      CURRENT_ABSPATH now points to a BASE node. Figure out the repository
      information for the current node, and use that to compute the start
      node's repository information.  */
-  if (repos_relpath || repos_root_url || repos_uuid)
+  if (repos_relpath || repos_id)
     {
-      apr_int64_t repos_id;
       const char *base_relpath;
 
-      SVN_ERR(scan_upwards_for_repos(&repos_id, &base_relpath,
+      SVN_ERR(scan_upwards_for_repos(repos_id, &base_relpath,
                                      pdh->wcroot, current_relpath,
                                      scratch_pool, scratch_pool));
-
-      if (repos_root_url || repos_uuid)
-        SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
-                                 repos_id, result_pool));
 
       if (repos_relpath)
         *repos_relpath = svn_relpath_join(base_relpath, build_relpath,
@@ -6600,6 +6567,11 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   const char *op_root_relpath;
+  apr_int64_t repos_id, original_repos_id;
+  apr_int64_t *repos_id_p
+    = (repos_root_url || repos_uuid) ? &repos_id : NULL;
+  apr_int64_t *original_repos_id_p
+    = (original_root_url || original_uuid) ? &original_repos_id : NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -6608,14 +6580,31 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(scan_addition(status, &op_root_relpath, repos_relpath, repos_root_url,
-                        repos_uuid, original_repos_relpath, original_root_url,
-                        original_uuid, original_revision,
+  SVN_ERR(scan_addition(status, &op_root_relpath, repos_relpath, repos_id_p,
+                        original_repos_relpath, original_repos_id_p,
+                        original_revision,
                         pdh, local_relpath, result_pool, scratch_pool));
 
   if (op_root_abspath)
     *op_root_abspath = svn_dirent_join(pdh->wcroot->abspath, op_root_relpath,
                                        result_pool);
+  if (repos_id_p)
+    SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
+                             repos_id, result_pool));
+  if (original_repos_id_p)
+    {
+      if (original_repos_id == INVALID_REPOS_ID)
+        {
+          if (original_root_url)
+            *original_root_url = NULL;
+          if (original_uuid)
+            *original_uuid = NULL;
+        }
+      else
+        SVN_ERR(fetch_repos_info(original_root_url, original_uuid,
+                                 pdh->wcroot->sdb, original_repos_id,
+                                 result_pool));
+    }
 
   return SVN_NO_ERROR;
 }
