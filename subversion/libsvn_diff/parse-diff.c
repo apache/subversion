@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "svn_props.h"
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_dirent_uri.h"
@@ -477,19 +478,24 @@ svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
   return SVN_NO_ERROR;
 }
 
-/* Parse PROP_NAME from HEADER as the part after the INDICATOR line. */
+/* Parse *PROP_NAME from HEADER as the part after the INDICATOR line.
+ * Allocate *PROP_NAME in RESULT_POOL.
+ * Set *PROP_NAME to NULL if no valid property name was found. */
 static svn_error_t *
 parse_prop_name(const char **prop_name, const char *header, 
                 const char *indicator, apr_pool_t *result_pool)
 {
-  /* ### This can fail if the filename cannot be represented in the current
-   * ### locale's encoding. */
   SVN_ERR(svn_utf_cstring_to_utf8(prop_name,
                                   header + strlen(indicator),
                                   result_pool));
-
-  /* ### Are we guarenteed that there are no trailing or leading
-   * ### whitespaces in the name? */
+  if (**prop_name == '\0')
+    *prop_name = NULL;
+  else if (! svn_prop_name_is_valid(*prop_name))
+    {
+      svn_stringbuf_t *buf = svn_stringbuf_create(*prop_name, result_pool);
+      svn_stringbuf_strip_whitespace(buf);
+      *prop_name = (svn_prop_name_is_valid(buf->data) ? buf->data : NULL);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -674,20 +680,23 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
           else if (starts_with(line->data, "Added: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Added: ",
-                                      result_pool));
-              *prop_operation = svn_diff_op_added;
+                                      result_pool));  
+              if (*prop_name)
+                *prop_operation = svn_diff_op_added;
             }
           else if (starts_with(line->data, "Deleted: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Deleted: ",
                                       result_pool));
-              *prop_operation = svn_diff_op_deleted;
+              if (*prop_name)
+                *prop_operation = svn_diff_op_deleted;
             }
           else if (starts_with(line->data, "Modified: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Modified: ",
                                       result_pool));
-              *prop_operation = svn_diff_op_modified;
+              if (*prop_name)
+                *prop_operation = svn_diff_op_modified;
             }
           else if (starts_with(line->data, minus)
                    || starts_with(line->data, "diff --git "))
@@ -1261,6 +1270,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
       const char *last_prop_name;
       const char *prop_name;
       svn_diff_operation_kind_t prop_operation;
+
+      last_prop_name = NULL;
 
       /* Parse hunks. */
       (*patch)->hunks = apr_array_make(result_pool, 10,
