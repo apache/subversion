@@ -290,26 +290,27 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
    * any such lack of elision, for the purposes of these tests, because the
    * method of copying in use (at the time this tweak is introduced) does
    * calculate these values itself, it simply copies from the source rows. */
-  {
-    const char *parent_relpath, *name, *parent_key;
-    nodes_row_t *parent_actual;
+  if (actual)
+    {
+      const char *parent_relpath, *name, *parent_key;
+      nodes_row_t *parent_actual;
 
-    svn_relpath_split(&parent_relpath, &name, actual->local_relpath,
-                      b->scratch_pool);
-    parent_key = apr_psprintf(b->scratch_pool, "%d %s",
-                              actual->op_depth, parent_relpath);
-    parent_actual = apr_hash_get(b->actual_hash, parent_key,
-                                 APR_HASH_KEY_STRING);
-    if (parent_actual
-        && strcmp(actual->repo_relpath,
-                  svn_relpath_join(parent_actual->repo_relpath, name,
-                                   b->scratch_pool)) == 0
-        && actual->repo_revnum == parent_actual->repo_revnum)
-      {
-        actual->repo_relpath = NULL;
-        actual->repo_revnum = SVN_INVALID_REVNUM;
-      }
-  }
+      svn_relpath_split(&parent_relpath, &name, actual->local_relpath,
+                        b->scratch_pool);
+      parent_key = apr_psprintf(b->scratch_pool, "%d %s",
+                                actual->op_depth, parent_relpath);
+      parent_actual = apr_hash_get(b->actual_hash, parent_key,
+                                   APR_HASH_KEY_STRING);
+      if (parent_actual
+          && strcmp(actual->repo_relpath,
+                    svn_relpath_join(parent_actual->repo_relpath, name,
+                                     b->scratch_pool)) == 0
+          && actual->repo_revnum == parent_actual->repo_revnum)
+        {
+          actual->repo_relpath = NULL;
+          actual->repo_revnum = SVN_INVALID_REVNUM;
+        }
+    }
 #endif
 
   if (! expected)
