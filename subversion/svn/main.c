@@ -122,6 +122,7 @@ typedef enum {
   opt_diff,
   opt_internal_diff,
   opt_use_git_diff_format,
+  opt_allow_mixed_revisions,
 } svn_cl__longopt_t;
 
 #define SVN_CL__OPTION_CONTINUATION_INDENT "                             "
@@ -332,6 +333,12 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("override diff-cmd specified in config file")},
   {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format")},
+  {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
+                       N_("Allow merge into mixed-revision working copy.\n"
+                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "Use of this option is not recommended!\n"
+                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "Please run 'svn update' instead")},
 
   /* Long-opt Aliases
    *
@@ -718,7 +725,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  The --ignore-ancestry option overrides this, forcing Subversion to\n"
      "  regard the sources as unrelated and not to track the merge.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
-     opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate} },
+     opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
+     opt_allow_mixed_revisions} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
@@ -1781,6 +1789,9 @@ main(int argc, const char *argv[])
         break;
       case opt_use_git_diff_format:
         opt_state.use_git_diff_format = TRUE;
+        break;
+      case opt_allow_mixed_revisions:
+        opt_state.allow_mixed_rev = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

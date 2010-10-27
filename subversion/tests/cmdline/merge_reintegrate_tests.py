@@ -669,7 +669,7 @@ def reintegrate_fail_on_modified_wc(sbox):
   svntest.actions.run_and_verify_merge(
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
-    ".*Cannot reintegrate into a working copy that has local modifications.*",
+    ".*Cannot merge into a working copy that has local modifications.*",
     None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
@@ -692,7 +692,7 @@ def reintegrate_fail_on_mixed_rev_wc(sbox):
   svntest.actions.run_and_verify_merge(
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
-    ".*Cannot reintegrate into mixed-revision working copy.*",
+    ".*Cannot merge into mixed-revision working copy.*",
     None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
@@ -737,7 +737,7 @@ def reintegrate_fail_on_switched_wc(sbox):
   svntest.actions.run_and_verify_merge(
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
-    ".*Cannot reintegrate into a working copy with a switched subtree.*",
+    ".*Cannot merge into a working copy with a switched subtree.*",
     None, None, None, None, True, False, '--reintegrate', A_path)
 
 #----------------------------------------------------------------------
@@ -1319,7 +1319,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                            ' U   ' + A_COPY_path + '\n',
                            ' U   ' + D_COPY_path + '\n',
                            ' U   ' + gamma_moved_COPY_path + '\n']),
-    [], 'merge', sbox.repo_url + '/A',  A_COPY_path)
+    [], 'merge', '--allow-mixed-revisions', sbox.repo_url + '/A',  A_COPY_path)
   expected_output = wc.State(
     wc_dir,
     {'A_COPY'               : Item(verb='Sending'), # Mergeinfo update
@@ -1611,7 +1611,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
     expected_merge_output([[2,3],[2,16]],
                           ['U    ' + psi_COPY_path + '\n',
                            ' U   ' + A_COPY_path   + '\n',]),
-    [], 'merge', sbox.repo_url + '/A', A_COPY_path)
+    [], 'merge', '--allow-mixed-revisions', sbox.repo_url + '/A', A_COPY_path)
 
 #----------------------------------------------------------------------
 # Test for a reintegrate bug which can occur when the merge source

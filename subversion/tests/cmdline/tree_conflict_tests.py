@@ -477,6 +477,7 @@ def ensure_tree_conflict(sbox, operation,
           verbose_print("--- Merging")
           run_and_verify_svn(None, expected_stdout, [],
                              'merge', '--ignore-ancestry',
+                             '--allow-mixed-revisions',
                              '-r', str(source_left_rev) + ':' + str(source_right_rev),
                              source_url, target_path)
         else:

@@ -298,7 +298,8 @@ def merge_history_repos(sbox):
   # Mergeinfo changes on /trunk:
   #    Merged /branches/a:r7
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', '--record-only', '-r6:7',
+  svntest.main.run_svn(None, 'merge', '--allow-mixed-revisions',
+                       '--record-only', '-r6:7',
                        os.path.join('..', branch_a))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Block r7 from merging to trunk.",
@@ -392,7 +393,8 @@ def merge_history_repos(sbox):
   #    Merged /trunk:r2
   #    Merged /branches/c:r3-16
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c) + '@HEAD')
+  svntest.main.run_svn(None, 'merge', '--allow-mixed-revisions',
+                       os.path.join('..', branch_c) + '@HEAD')
   svntest.main.file_write(os.path.join('A', 'mu'),
                           "This is the file 'mu'.\n" +
                           "Don't forget to look at 'upsilon', as well.\n" +
