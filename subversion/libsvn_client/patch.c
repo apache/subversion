@@ -346,9 +346,7 @@ resolve_target_path(patch_target_t *target,
   target->canon_path_from_patchfile = svn_dirent_internal_style(
                                         path_from_patchfile, result_pool);
 
-  /* We allow properties to be set on the wc root dir.
-   * ### Do we need to check for empty paths here, shouldn't the parser
-   * ### guarentee that the paths returned are non-empty? */
+  /* We allow properties to be set on the wc root dir. */
   if (! prop_changes_only && target->canon_path_from_patchfile[0] == '\0')
     {
       /* An empty patch target path? What gives? Skip this. */
