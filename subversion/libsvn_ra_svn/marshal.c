@@ -44,6 +44,12 @@
 
 #define svn_iswhitespace(c) ((c) == ' ' || (c) == '\n')
 
+/* If we receive data that *claims* to be followed by a very long string,
+ * we should not trust that claim right away. But everything up to 1 MB
+ * should be too small to be instrumental for a DOS attack. */
+
+#define SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD (0x100000)
+
 /* --- CONNECTION INITIALIZATION --- */
 
 svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
@@ -555,9 +561,8 @@ svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- READING DATA ITEMS --- */
 
-/* Read LEN bytes from CONN into already-allocated structure ITEM.
- * Afterwards, *ITEM is of type 'SVN_RA_SVN_STRING', and its string
- * data is allocated in POOL. */
+/* Read LEN bytes from CONN into a supposedly empty STRINGBUF.
+ * POOL will be used for temporary allocations. */
 static svn_error_t *
 read_long_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                  svn_stringbuf_t *stringbuf, apr_uint64_t len)
@@ -593,7 +598,14 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 svn_ra_svn_item_t *item, apr_uint64_t len)
 {
   svn_stringbuf_t *stringbuf;
-  if (len > 0x100000)
+
+  /* We should not use large strings in our protocol. However, we may
+   * receive a claim that a very long string is going to follow. In that
+   * case, we start small and wait for all that data to actually show up.
+   * This does not fully prevent DOS attacs but makes them harder (you
+   * have to actually send gigabytes of data).
+   */
+  if (len > SUSPICIOUSLY_HUGE_STRING_SIZE_THRESHOLD)
     {
       /* This string might take a large amount of memory. Don't allocate
        * the whole buffer at once, so to prevent OOM issues by corrupted
