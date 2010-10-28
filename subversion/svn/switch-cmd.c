@@ -41,6 +41,7 @@
 
 static svn_error_t *
 rewrite_urls(const apr_array_header_t *targets,
+             svn_boolean_t ignore_externals,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
@@ -65,7 +66,8 @@ rewrite_urls(const apr_array_header_t *targets,
 
   if (targets->nelts == 2)
     {
-      SVN_ERR(svn_client_relocate2("", from, to, ctx, pool));
+      SVN_ERR(svn_client_relocate2("", from, to, ignore_externals,
+                                   ctx, pool));
     }
   else
     {
@@ -75,7 +77,8 @@ rewrite_urls(const apr_array_header_t *targets,
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
           svn_pool_clear(subpool);
-          SVN_ERR(svn_client_relocate2(target, from, to, ctx, subpool));
+          SVN_ERR(svn_client_relocate2(target, from, to,
+                                       ignore_externals, ctx, subpool));
         }
     }
 
@@ -108,7 +111,8 @@ svn_cl__switch(apr_getopt_t *os,
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
-    return rewrite_urls(targets, ctx, scratch_pool);
+    return rewrite_urls(targets, opt_state->ignore_externals,
+                        ctx, scratch_pool);
 
   if (targets->nelts < 1)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);

@@ -960,7 +960,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn relocate http:// svn:// project1 project2\n"
      "    svn relocate http://www.example.com/repo/project \\\n"
      "                 svn://svn.example.com/repo/project\n"),
-    {0} },
+    {opt_ignore_externals} },
 
   { "resolve", svn_cl__resolve, {0}, N_
     ("Resolve conflicts on working copy files or directories.\n"

@@ -48,6 +48,7 @@ svn_cl__relocate(apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
+  svn_boolean_t ignore_externals = opt_state->ignore_externals;
   apr_array_header_t *targets;
   const char *from = NULL, *to = NULL, *path;
 
@@ -77,7 +78,8 @@ svn_cl__relocate(apr_getopt_t *os,
 
       SVN_ERR(svn_client_url_from_path2(&from, path, ctx,
                                         scratch_pool, scratch_pool));
-      SVN_ERR(svn_client_relocate2(path, from, to, ctx, scratch_pool));
+      SVN_ERR(svn_client_relocate2(path, from, to, ignore_externals,
+                                   ctx, scratch_pool));
     }
   /* ... Everything else is form #1. */
   else
@@ -87,7 +89,8 @@ svn_cl__relocate(apr_getopt_t *os,
 
       if (targets->nelts == 2)
         {
-          SVN_ERR(svn_client_relocate2("", from, to, ctx, scratch_pool));
+          SVN_ERR(svn_client_relocate2("", from, to, ignore_externals,
+                                       ctx, scratch_pool));
         }
       else
         {
@@ -98,7 +101,8 @@ svn_cl__relocate(apr_getopt_t *os,
             {
               svn_pool_clear(subpool);
               path = APR_ARRAY_IDX(targets, i, const char *);
-              SVN_ERR(svn_client_relocate2(path, from, to, ctx, subpool));
+              SVN_ERR(svn_client_relocate2(path, from, to, ignore_externals,
+                                           ctx, subpool));
             }
           svn_pool_destroy(subpool);
         }

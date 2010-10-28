@@ -3104,7 +3104,8 @@ def relocate_with_relative_externals(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a relative external.
-  change_external(os.path.join(wc_dir, 'A', 'B'), "^/A/D/G G-ext", commit=True)
+  change_external(os.path.join(wc_dir, 'A', 'B'),
+                  "^/A/D/G G-ext\n../D/H H-ext", commit=True)
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
   
   # Move our repository to another location.
@@ -3118,10 +3119,12 @@ def relocate_with_relative_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
 
-  # Check the URL of the external -- was it updated to point to the
+  # Check the URLs of the externals -- were they updated to point to the
   # .other repository URL?
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/G$' }],
                                       os.path.join(wc_dir, 'A', 'B', 'G-ext'))
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/H$' }],
+                                      os.path.join(wc_dir, 'A', 'B', 'H-ext'))
 
 
 ########################################################################
@@ -3168,7 +3171,7 @@ test_list = [ None,
               single_file_relocate,
               relocate_with_switched_children,
               XFail(copy_with_switched_subdir),
-              XFail(relocate_with_relative_externals),
+              relocate_with_relative_externals,
               ]
 
 if __name__ == '__main__':

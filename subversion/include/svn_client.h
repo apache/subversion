@@ -3476,6 +3476,8 @@ svn_client_upgrade(const char *dir,
  * @param wcroot_dir Working copy root directory
  * @param from Original URL
  * @param to New URL
+ * @param ignore_externals If not set, recurse into external working
+ *        copies after relocating the primary working copy
  * @param ctx svn_client_ctx_t
  * @param pool The pool from which to perform memory allocations
  *
@@ -3485,11 +3487,13 @@ svn_error_t *
 svn_client_relocate2(const char *wcroot_dir,
                      const char *from,
                      const char *to,
+                     svn_boolean_t ignore_externals,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 /**
- * Similar to svn_client_relocate2().
+ * Similar to svn_client_relocate2(), but with @a ignore_externals
+ * always TRUE.
  *
  * @note As of the 1.7 API, @a dir is required to be a working copy
  * root directory, and @a recurse is required to be TRUE.

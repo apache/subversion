@@ -230,7 +230,7 @@ switch_dir_external(const char *path,
                                                  subpool));
 
                   err = svn_client_relocate2(path, repos_root_url, repos_root,
-                                             ctx, subpool);
+                                             FALSE, ctx, subpool);
                   /* If the relocation failed because the new URL points
                      to another repository, then we need to relegate and
                      check out a new WC. */
