@@ -4469,7 +4469,7 @@ delete_not_present_children(svn_wc__db_pdh_t *pdh,
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id,
                             construct_like_arg(local_relpath,
                                                scratch_pool),
-                            op_depth));
+                            (apr_int64_t)op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
