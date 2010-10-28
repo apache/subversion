@@ -4471,6 +4471,16 @@ db_working_update_presence(svn_wc__db_status_t status,
                             presence_map, status));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+  if (status == svn_wc__db_status_base_deleted)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                      STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+                                construct_like_arg(local_relpath,
+                                                   scratch_pool)));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
   return SVN_NO_ERROR;
 }
 
