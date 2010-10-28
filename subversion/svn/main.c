@@ -338,7 +338,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "Use of this option is not recommended!\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
-                       "Please run 'svn update' instead")},
+                       "Please run 'svn update' instead.")},
 
   /* Long-opt Aliases
    *
