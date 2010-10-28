@@ -4554,31 +4554,29 @@ db_working_insert(svn_wc__db_status_t status,
    a copy, to FALSE otherwise. */
 static svn_error_t*
 is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
+                       svn_wc__db_pdh_t *pdh,
+                       const char *local_relpath,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  const char *op_root_abspath;
-  const char *original_repos_relpath, *original_repos_root;
-  const char *original_repos_uuid;
+  const char *op_root_relpath;
+  const char *original_repos_relpath;
+  apr_int64_t original_repos_id;
   svn_revnum_t original_revision;
 
-  SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
-                                   NULL, NULL, NULL,
-                                   &original_repos_relpath,
-                                   &original_repos_root,
-                                   &original_repos_uuid,
-                                   &original_revision,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
+  SVN_ERR(scan_addition(&status, &op_root_relpath, NULL, NULL,
+                        &original_repos_relpath,
+                        &original_repos_id,
+                        &original_revision,
+                        pdh, local_relpath,
+                        scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(status == svn_wc__db_status_added
                  || status == svn_wc__db_status_copied);
-  SVN_ERR_ASSERT(op_root_abspath != NULL);
+  SVN_ERR_ASSERT(op_root_relpath != NULL);
 
   *add_or_root_of_copy = (status == svn_wc__db_status_added
-                          || !strcmp(local_abspath, op_root_abspath));
+                          || !strcmp(local_relpath, op_root_relpath));
 
   if (*add_or_root_of_copy && status == svn_wc__db_status_copied)
     {
@@ -4587,24 +4585,22 @@ is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
              here because I just need to detect whether this is an
              instance of the merge bug, and that's easier than fixing
              scan_addition or merge. */
-      const char *parent_abspath;
+      const char *parent_relpath;
       const char *name;
       svn_wc__db_status_t parent_status;
-      const char *parent_original_repos_relpath, *parent_original_repos_root;
-      const char *parent_original_repos_uuid;
+      const char *parent_original_repos_relpath;
+      apr_int64_t parent_original_repos_id;
       svn_revnum_t parent_original_revision;
       svn_error_t *err;
 
-      svn_dirent_split(&parent_abspath, &name, local_abspath, scratch_pool);
+      svn_relpath_split(&parent_relpath, &name, local_relpath, scratch_pool);
 
-      err = svn_wc__db_scan_addition(&parent_status,
-                                     NULL, NULL, NULL, NULL,
-                                     &parent_original_repos_relpath,
-                                     &parent_original_repos_root,
-                                     &parent_original_repos_uuid,
-                                     &parent_original_revision,
-                                     db, parent_abspath,
-                                     scratch_pool, scratch_pool);
+      err = scan_addition(&parent_status, NULL, NULL, NULL,
+                          &parent_original_repos_relpath,
+                          &parent_original_repos_id,
+                          &parent_original_revision,
+                          pdh, parent_relpath,
+                          scratch_pool, scratch_pool);
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -4614,8 +4610,7 @@ is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
         }
       else if (parent_status == svn_wc__db_status_copied
                && original_revision == parent_original_revision
-               && !strcmp(original_repos_uuid, parent_original_repos_uuid)
-               && !strcmp(original_repos_root, parent_original_repos_root)
+               && original_repos_id == parent_original_repos_id
                && !strcmp(original_repos_relpath,
                           svn_dirent_join(parent_original_repos_relpath,
                                           name,
@@ -4635,15 +4630,24 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
   svn_wc__db_status_t base_status, working_status, new_working_status;
   svn_boolean_t have_base, have_work, new_have_work;
 
-  SVN_ERR(svn_wc__db_read_info(&working_status, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, &have_base, &have_work, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(read_info(&working_status, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, &have_base, &have_work, NULL, NULL,
+                    pdh, local_relpath,
+                    scratch_pool, scratch_pool));
   if (working_status == svn_wc__db_status_deleted)
     {
       /* The node is already deleted.  */
@@ -4703,7 +4707,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       svn_boolean_t add_or_root_of_copy;
 
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
-                                     db, local_abspath, scratch_pool));
+                                     pdh, local_relpath, scratch_pool));
       if (add_or_root_of_copy)
         new_have_work = FALSE;
       else
@@ -4714,7 +4718,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       /* DELETE + ADD  */
       svn_boolean_t add_or_root_of_copy;
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
-                                     db, local_abspath, scratch_pool));
+                                     pdh, local_relpath, scratch_pool));
       if (add_or_root_of_copy)
         new_working_status = svn_wc__db_status_base_deleted;
       else
@@ -4724,7 +4728,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
     {
       svn_boolean_t add_or_root_of_copy;
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
-                                     db, local_abspath, scratch_pool));
+                                     pdh, local_relpath, scratch_pool));
       if (add_or_root_of_copy)
         new_have_work = FALSE;
     }
