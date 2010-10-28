@@ -6682,7 +6682,7 @@ scan_addition(svn_wc__db_status_t *status,
         op_depth = svn_sqlite__column_int64(stmt, 0);
 
         /* Skip to op_depth */
-        for (i = relpath_depth(local_relpath); i > op_depth; i--)
+        for (i = relpath_depth(current_relpath); i > op_depth; i--)
           {
             /* Calculate the path of the operation root */
             repos_prefix_path =
