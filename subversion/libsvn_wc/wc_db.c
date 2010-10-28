@@ -4473,11 +4473,21 @@ db_working_update_presence(svn_wc__db_status_t status,
 
   if (status == svn_wc__db_status_base_deleted)
     {
+      /* Switching to base-deleted is undoing an add/copy.  If this
+         was a copy then any children of the copy will now be
+         not-present and should be removed. */
+#ifdef SVN_WC__OP_DEPTH
+      int op_depth = relpath_depth(local_relpath);
+#else
+      int op_depth = 2;  /* ### temporary op_depth */
+#endif
+
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                       STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id,
                                 construct_like_arg(local_relpath,
-                                                   scratch_pool)));
+                                                   scratch_pool),
+                                op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
