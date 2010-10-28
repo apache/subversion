@@ -4794,8 +4794,6 @@ def copy_delete_undo(sbox, use_revert):
     'A/B/E-copied'       : Item(status='A ', copied='+', wc_rev='-'),
     })
 
-  # Undo via delete FAILs here because the deleted children show up.
-  # Is this a fail?  Perhaps they should be visible?
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def copy_delete_delete(sbox):
@@ -4933,7 +4931,7 @@ test_list = [ None,
               move_added_nodes,
               copy_over_deleted_dir,
               XFail(mixed_rev_copy_del),
-              XFail(copy_delete_delete),
+              copy_delete_delete,
               XFail(copy_delete_revert),
               delete_replace_delete,
              ]

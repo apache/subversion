@@ -4448,6 +4448,33 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
 }
 
 
+/* Delete child sub-trees of LOCAL_RELPATH that are presence=not-present
+   and at the same op_depth.
+
+   ### Do we need to handle incomplete here? */
+static svn_error_t *
+delete_not_present_children(svn_wc__db_pdh_t *pdh,
+                            const char *local_relpath,
+                            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+#ifdef SVN_WC__OP_DEPTH
+  int op_depth = relpath_depth(local_relpath);
+#else
+  int op_depth = 2;  /* ### temporary op_depth */
+#endif
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id,
+                            construct_like_arg(local_relpath,
+                                               scratch_pool),
+                            op_depth));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 /* Update the working node for LOCAL_ABSPATH setting presence=STATUS */
 static svn_error_t *
 db_working_update_presence(svn_wc__db_status_t status,
@@ -4471,31 +4498,19 @@ db_working_update_presence(svn_wc__db_status_t status,
                             presence_map, status));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+  /* Switching to base-deleted is undoing an add/copy.  If this was a
+     copy then any children of the copy will now be not-present and
+     should be removed.  By this stage an add will have no children. */
   if (status == svn_wc__db_status_base_deleted)
-    {
-      /* Switching to base-deleted is undoing an add/copy.  If this
-         was a copy then any children of the copy will now be
-         not-present and should be removed. */
-#ifdef SVN_WC__OP_DEPTH
-      int op_depth = relpath_depth(local_relpath);
-#else
-      int op_depth = 2;  /* ### temporary op_depth */
-#endif
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                      STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id,
-                                construct_like_arg(local_relpath,
-                                                   scratch_pool),
-                                op_depth));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
+    SVN_ERR(delete_not_present_children(pdh, local_relpath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 
-/* Delete working and actual nodes for LOCAL_ABSPATH */
+/* Delete working and actual nodes for LOCAL_ABSPATH.  When called any
+   remain working child sub-trees should be presence=not-present and will
+   be deleted. */
 static svn_error_t *
 db_working_actual_remove(svn_wc__db_t *db,
                          const char *local_abspath,
@@ -4521,6 +4536,8 @@ db_working_actual_remove(svn_wc__db_t *db,
                                     STMT_DELETE_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(delete_not_present_children(pdh, local_relpath, scratch_pool));
 
   SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));
 
