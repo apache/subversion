@@ -1293,12 +1293,13 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
   return SVN_NO_ERROR;
 }
 
-/* Write the diff text of the hunk described by HI to the
- * reject stream of CONTENT_INFO, and mark TARGET as having had rejects.
+/* Write the diff text of HUNK to the reject stream of CONTENT_INFO,
+ * and mark TARGET as having had rejects.
  * Do temporary allocations in POOL. */
 static svn_error_t *
 reject_hunk(patch_target_t *target, target_content_info_t *content_info, 
-            hunk_info_t *hi, const char *prop_name, apr_pool_t *pool)
+            const svn_diff_hunk_t *hunk, const char *prop_name,
+            apr_pool_t *pool)
 {
   const char *hunk_header;
   apr_size_t len;
@@ -1319,18 +1320,18 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
       /* ### What about just setting a variable to either "@@" or "##",
        * ### and merging with the else clause below? */
       hunk_header = apr_psprintf(pool, "## -%lu,%lu +%lu,%lu ##%s",
-                                 svn_diff_hunk_get_original_start(hi->hunk),
-                                 svn_diff_hunk_get_original_length(hi->hunk),
-                                 svn_diff_hunk_get_modified_start(hi->hunk),
-                                 svn_diff_hunk_get_modified_length(hi->hunk),
+                                 svn_diff_hunk_get_original_start(hunk),
+                                 svn_diff_hunk_get_original_length(hunk),
+                                 svn_diff_hunk_get_modified_start(hunk),
+                                 svn_diff_hunk_get_modified_length(hunk),
                                  APR_EOL_STR);
     }
   else
     hunk_header = apr_psprintf(pool, "@@ -%lu,%lu +%lu,%lu @@%s",
-                               svn_diff_hunk_get_original_start(hi->hunk),
-                               svn_diff_hunk_get_original_length(hi->hunk),
-                               svn_diff_hunk_get_modified_start(hi->hunk),
-                               svn_diff_hunk_get_modified_length(hi->hunk),
+                               svn_diff_hunk_get_original_start(hunk),
+                               svn_diff_hunk_get_original_length(hunk),
+                               svn_diff_hunk_get_modified_start(hunk),
+                               svn_diff_hunk_get_modified_length(hunk),
                                APR_EOL_STR);
   len = strlen(hunk_header);
   SVN_ERR(svn_stream_write(content_info->reject, hunk_header, &len));
@@ -1343,7 +1344,7 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_diff_hunk_readline_diff_text(hi->hunk, &hunk_line, &eol_str,
+      SVN_ERR(svn_diff_hunk_readline_diff_text(hunk, &hunk_line, &eol_str,
                                                &eof, iterpool, iterpool));
       if (! eof)
         {
@@ -1407,7 +1408,7 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
         {
           /* Seek failed, reject this hunk. */
           hi->rejected = TRUE;
-          SVN_ERR(reject_hunk(target, content_info, hi, prop_name, pool));
+          SVN_ERR(reject_hunk(target, content_info, hi->hunk, prop_name, pool));
           return SVN_NO_ERROR;
         }
     }
@@ -1738,7 +1739,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       if (hi->already_applied)
         continue;
       else if (hi->rejected)
-        SVN_ERR(reject_hunk(target, target->content_info, hi,
+        SVN_ERR(reject_hunk(target, target->content_info, hi->hunk,
                             NULL /* prop_name */, 
                             iterpool));
       else
@@ -1827,7 +1828,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           if (hi->already_applied)
             continue;
           else if (hi->rejected)
-            SVN_ERR(reject_hunk(target, prop_target->content_info, hi,
+            SVN_ERR(reject_hunk(target, prop_target->content_info, hi->hunk,
                                 prop_target->name,
                                 iterpool));
           else
@@ -2300,7 +2301,7 @@ install_patched_prop_targets(patch_target_t *target,
                                             i, hunk_info_t *);
                   hunk_info->rejected = TRUE;
                   SVN_ERR(reject_hunk(target, prop_target->content_info,
-                                      hunk_info, prop_target->name,
+                                      hunk_info->hunk, prop_target->name,
                                       iterpool));
                 }
             }
