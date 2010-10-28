@@ -2534,26 +2534,25 @@ def patch_dir_properties(sbox):
   modified_prop_contents = "The property 'modified' has changed.\n"
   ignore_prop_contents = "*.o\n.libs\n*.lo\n"
 
-  ### The output for properties set on illegal targets (i.e. svn:excutable
-  ### on a dir) is still subject to change. We might just want to bail out 
-  ### directly instead of catching the error and use the notify mechanism.
   expected_output = [
     ' U        %s\n' % wc_dir,
-    ' U        %s\n' % os.path.join(wc_dir, 'A', 'B'),
-    'Skipped missing target \'svn:executable\' on (\'%s\')' % B_path,
+    ' C        %s\n' % os.path.join(wc_dir, 'A', 'B'),
     'Summary of conflicts:\n',
-    '  Skipped paths: 1\n',
+    '  Property conflicts: 1\n',
   ]
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     '' : Item(props={'modified' : modified_prop_contents,
-                     'svn:ignore' : ignore_prop_contents})
+                     'svn:ignore' : ignore_prop_contents}),
+    'A/B.svnpatch.rej'  : Item(contents="--- A/B\n+++ A/B\n" +
+                               "Property: svn:executable\n" +
+                               "## -0,0 +1,1 ##\n+*\n"),
     })
   expected_disk.tweak('A/B', props={})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('', status=' M')
-  expected_status.tweak('A/B', status=' M')
+  expected_status.tweak('', status=' M', wc_rev=2)
+  expected_status.tweak('A/B', status=' M', wc_rev=2)
 
   expected_skip = wc.State('', { })
 
@@ -3382,7 +3381,7 @@ test_list = [ None,
               patch_no_eol_at_eof,
               patch_with_properties,
               patch_same_twice,
-              XFail(patch_dir_properties),
+              patch_dir_properties,
               patch_add_path_with_props,
               patch_prop_offset,
               patch_prop_with_fuzz,
