@@ -233,11 +233,10 @@ test10(apr_pool_t *pool)
   /* Test that:
    *   - The initial block was just the right fit.
    *   - The block more than doubled (because second string so long).
-   *   - The block grew by a power of 2.
    */
   if ((len_1 == (block_len_1 - 1))
       && ((block_len_2 / block_len_1) > 2)
-        && (((block_len_2 / block_len_1) % 2) == 0))
+      )
     return SVN_NO_ERROR;
   else
     return fail(pool, "test failed");
