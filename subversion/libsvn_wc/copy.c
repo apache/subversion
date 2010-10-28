@@ -120,7 +120,6 @@ copy_to_tmpdir(const char **dst_abspath,
 }
 
 
-#ifndef SVN_WC__OP_DEPTH
 /* If SRC_ABSPATH and DST_ABSPATH use different pristine stores, copy the
    pristine text of SRC_ABSPATH (if there is one) into the pristine text
    store connected to DST_ABSPATH.  This will only happen when copying into
@@ -432,7 +431,6 @@ copy_versioned_dir(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 
 #ifdef SVN_WC__OP_DEPTH
@@ -562,7 +560,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   svn_wc__db_kind_t src_db_kind;
   const char *dstdir_abspath;
-  
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
   
@@ -714,12 +712,16 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
     }
 
 #ifdef SVN_WC__OP_DEPTH
-  SVN_ERR(copy_versioned_node(db, src_abspath, dst_abspath,
-                              metadata_only,
-                              cancel_func, cancel_baton,
-                              notify_func, notify_baton,
-                              scratch_pool));
-#else
+  if (svn_wc__db_same_db(db, src_abspath, dst_abspath, scratch_pool))
+    {
+      SVN_ERR(copy_versioned_node(db, src_abspath, dst_abspath,
+                                  metadata_only,
+                                  cancel_func, cancel_baton,
+                                  notify_func, notify_baton,
+                                  scratch_pool));
+    }
+  else
+#endif
   if (src_db_kind == svn_wc__db_kind_file
       || src_db_kind == svn_wc__db_kind_symlink)
     {
@@ -735,7 +737,6 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                  notify_func, notify_baton,
                                  scratch_pool));
     }
-#endif
 
   return SVN_NO_ERROR;
 }

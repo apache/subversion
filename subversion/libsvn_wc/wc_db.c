@@ -3043,6 +3043,38 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_wc__db_same_db(svn_wc__db_t *db,
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_wc__db_pdh_t *src_pdh, *dst_pdh;
+  const char *src_relpath, *dst_relpath;
+
+  err = svn_wc__db_pdh_parse_local_abspath(&src_pdh, &src_relpath, db,
+                                           src_abspath,
+                                           svn_sqlite__mode_readonly,
+                                           scratch_pool, scratch_pool);
+  if (err)
+    {
+      src_pdh = NULL;
+      svn_error_clear(err);
+    }
+  err = svn_wc__db_pdh_parse_local_abspath(&dst_pdh, &dst_relpath, db,
+                                           dst_abspath,
+                                           svn_sqlite__mode_readonly,
+                                           scratch_pool, scratch_pool);
+  if (err)
+    {
+      dst_pdh = NULL;
+      svn_error_clear(err);
+    }
+
+  return (src_pdh && dst_pdh && src_pdh->wcroot == dst_pdh->wcroot);
+}
+
 /* Set *OP_DEPTH to the highest op depth of PDH:LOCAL_RELPATH. */
 static svn_error_t *
 op_depth_of(apr_int64_t *op_depth,
@@ -3206,22 +3238,17 @@ svn_wc__db_op_copy_tree(svn_wc__db_t *db,
 
   b.work_items = work_items;
 
-  if (b.src_pdh->wcroot == b.dst_pdh->wcroot)
-    {
-      /* ASSERT(presence == normal) */
+  SVN_ERR_ASSERT(b.src_pdh->wcroot == b.dst_pdh->wcroot);
+  /* ASSERT(presence == normal) */
 
-      SVN_ERR(svn_sqlite__with_transaction(b.dst_pdh->wcroot->sdb,
-                                           db_op_copy_tree, &b, scratch_pool));
+  SVN_ERR(svn_sqlite__with_transaction(b.dst_pdh->wcroot->sdb,
+                                       db_op_copy_tree, &b, scratch_pool));
 
-      /* ### Do we need to flush entries?
-       * SVN_ERR(flush_entries(db, b.dst_pdh, dst_abspath, scratch_pool)); */
-    }
-  else
-    {
-      /* Cross-DB copy */
-      SVN_ERR(db_op_copy(b.src_pdh, b.src_relpath, b.dst_pdh, b.dst_relpath,
-                         b.work_items, scratch_pool));
-    }
+  /* ### Do we sometimes need to elide copy-from info and/or other fields on
+   * the destination root node? See elide_copyfrom(). */
+
+  /* ### Do we need to flush entries?
+   * SVN_ERR(flush_entries(db, b.dst_pdh, dst_abspath, scratch_pool)); */
 
   return SVN_NO_ERROR;
 }

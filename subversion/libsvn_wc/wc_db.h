@@ -1010,9 +1010,26 @@ svn_wc__db_pristine_repair(svn_wc__db_t *db,
    @{
 */
 
+/* Return TRUE if SRC_ABSPATH and DST_ABSPATH are versioned paths in the
+ * same DB; FALSE otherwise. */
+svn_boolean_t
+svn_wc__db_same_db(svn_wc__db_t *db,
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   apr_pool_t *scratch_pool);
+
 /* Copy the tree at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
- * DST_ABSPATH, both in DB.  The parent of DST_ABSPATH must be a versioned
- * directory.
+ * DST_ABSPATH.
+ *
+ * SRC_ABSPATH and DST_ABSPATH must be in the same WC.  SRC_ABSPATH must
+ * exist, and must not be excluded/absent/not-present.  The parent of
+ * DST_ABSPATH must be a versioned directory.  DST_ABSPATH must be in a
+ * state suitable for creating a new node: nonexistent or deleted.
+ *
+ * Preserve changelist associations in the copy.  Preserve all node states
+ * including excluded/absent/not-present.
+ *
+ * Copy the metadata only: do not look at or copy the nodes on disk.
  *
  * Add WORK_ITEMS to the work queue. */
 svn_error_t *
