@@ -503,13 +503,9 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
--- STMT_SELECT_WORKING_OP_DEPTH_RECURSIVE
-SELECT local_relpath, op_depth, presence FROM nodes as node
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#'
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE op_depth > 0
-                    AND wc_id = node.wc_id
-                    AND local_relpath = node.local_relpath);
+-- STMT_UPDATE_OP_DEPTH_RECURSIVE
+UPDATE nodes SET op_depth = ?3
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3 + 1;
 
 -- STMT_UPDATE_OP_DEPTH
 UPDATE nodes SET op_depth = ?4
