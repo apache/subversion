@@ -840,11 +840,6 @@ blank_iwb(insert_working_baton_t *piwb)
 }
 
 
-struct relpath_op_depth_t {
-  const char *local_relpath;
-  apr_int64_t op_depth;
-};
-
 /* Copy the row specified by BATON->(wc_id,local_relpath) from BASE to
  * WORKING, changing its 'presence' and 'op_depth' to the values in BATON. */
 static svn_error_t *
@@ -854,11 +849,9 @@ copy_working_from_base(void *baton,
 {
   const insert_working_baton_t *piwb = baton;
   svn_sqlite__stmt_t *stmt;
-
+#ifdef SVN_WC__OP_DEPTH
   const char *like_arg;
-  svn_boolean_t have_row;
-  apr_array_header_t *nodes;
-  int i;
+#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                          STMT_INSERT_WORKING_NODE_FROM_BASE));
@@ -868,9 +861,10 @@ copy_working_from_base(void *baton,
                             presence_map, piwb->presence));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
-  /* Need to update the op_depth of all deleted children. A single
-     query can locate all the rows, but not update them, so we fall
-     back on one update per row.
+#ifdef SVN_WC__OP_DEPTH
+  /* Need to update the op_depth of all deleted child trees -- this
+     relies on the recursion having already deleted the trees so
+     that they are all at op_depth+1.
 
      ### Rewriting the op_depth means that the number of queries is
      ### O(depth^2).  Fix it by implementing svn_wc__db_op_delete so
@@ -879,37 +873,11 @@ copy_working_from_base(void *baton,
      ### only gets written once. */
   like_arg = construct_like_arg(piwb->local_relpath, scratch_pool);
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_SELECT_WORKING_OP_DEPTH_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", piwb->wc_id, like_arg));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  nodes = apr_array_make(scratch_pool, 10, sizeof(struct relpath_op_depth_t *));
-  while (have_row)
-    {
-      apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 1);
-      svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 2,
-                                                            presence_map);
-      if (status != svn_wc__db_status_excluded)
-        {
-          struct relpath_op_depth_t *rod = apr_palloc(scratch_pool,
-                                                      sizeof(*rod));
-          rod->local_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
-          rod->op_depth = op_depth;
-          APR_ARRAY_PUSH(nodes, struct relpath_op_depth_t *) = rod;
-        }
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
-  for (i = 0; i < nodes->nelts; ++i)
-    {
-      struct relpath_op_depth_t *rod
-        = APR_ARRAY_IDX(nodes, i, struct relpath_op_depth_t *);
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_OP_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isii",
-                                piwb->wc_id, rod->local_relpath, rod->op_depth,
-                                piwb->op_depth));
-      SVN_ERR(svn_sqlite__update(NULL, stmt));
-    }
+                                    STMT_UPDATE_OP_DEPTH_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                            piwb->wc_id, like_arg, piwb->op_depth));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+#endif
 
   return SVN_NO_ERROR;
 }
