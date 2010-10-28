@@ -303,7 +303,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
-                    N_("lump-merge all of source URL's unmerged changes")},
+                    N_("merge a branch back into its parent branch")},
   {"strip",         opt_strip, 1,
                     N_("number of leading path components to strip from\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
