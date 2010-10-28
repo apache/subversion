@@ -128,7 +128,17 @@ class Permission:
 
     def parse_groups(self, groupsiter):
         for option, value in groupsiter:
-            self._group[option] = value.split()
+            groupusers = []
+            for token in value.split():
+                # expand nested groups in place; no forward decls
+                if token[0] == "@":
+                    try:
+                        groupusers.extend(self._group[token[1:]])
+                    except KeyError:
+                        raise Error, "group '%s' not found" % token[1:]
+                else:
+                    groupusers.append(token)
+            self._group[option] = groupusers
 
     def parse_perms(self, permsiter):
         for option, value in permsiter:
