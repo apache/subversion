@@ -177,6 +177,15 @@ wc_revert(wc_baton_t *b, const char *path, svn_depth_t depth)
                         b->pool);
 }
 
+static svn_error_t *
+wc_delete(wc_baton_t *b, const char *path)
+{
+  const char *abspath = wc_path(b, path);
+
+  return svn_wc_delete4(b->wc_ctx, abspath, FALSE, TRUE, NULL, NULL, NULL, NULL,
+                        b->pool);
+}
+
 /* Create the Greek tree on disk in the WC, and commit it. */
 static svn_error_t *
 add_and_commit_greek_tree(wc_baton_t *b)
@@ -612,7 +621,6 @@ test_deletes(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "A/B/F", rows));
   }
 
-
   SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B"),
                          FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
   {
@@ -638,6 +646,41 @@ test_deletes(const svn_test_opts_t *opts, apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "deletes", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(add_and_commit_greek_tree(&b));
+
+  SVN_ERR(wc_copy(&b, "A/B", "A/B-copied"));
+  SVN_ERR(wc_delete(&b, "A/B-copied/E"));
+  SVN_ERR(wc_copy(&b, "A/B", "A/B-copied/E"));
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E/F"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = {
+      { 3, "A/B-copied/E/F", "not-present",       1, "A/B/F" },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B-copied/E/F", rows));
+  }
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = { { 0 } };
+    SVN_ERR(check_db_rows(&b, "A/B-copied", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -652,6 +695,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_deletes,
                        "test_deletes",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_delete_of_copies,
+                       "test_delete_of_copies",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
