@@ -307,6 +307,11 @@ DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
       AND changelist IS NULL;
 
+-- STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#'
+  AND presence = 'not-present';
+
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST
 UPDATE actual_node
 SET properties = NULL,

@@ -4935,7 +4935,7 @@ test_list = [ None,
               XFail(mixed_rev_copy_del),
               XFail(copy_delete_delete),
               XFail(copy_delete_revert),
-              XFail(delete_replace_delete),
+              delete_replace_delete,
              ]
 
 if __name__ == '__main__':
