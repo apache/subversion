@@ -1618,31 +1618,30 @@ close_target_streams(const patch_target_t *target,
   apr_hash_index_t *hi;
   target_content_info_t *prop_content_info;
 
-   /* First the streams belonging to properties .. */
-      for (hi = apr_hash_first(pool, target->prop_targets);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          prop_patch_target_t *prop_target;
-          prop_target = svn__apr_hash_index_val(hi);
-          prop_content_info = prop_target->content_info;
+  /* First the streams belonging to properties .. */
+  for (hi = apr_hash_first(pool, target->prop_targets);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      prop_patch_target_t *prop_target;
+      prop_target = svn__apr_hash_index_val(hi);
+      prop_content_info = prop_target->content_info;
 
-          /* ### If the prop did not exist pre-patching we'll not have a
-           * ### stream to read from. Find a better way to store info on
-           * ### the existence of the target prop. */
-          if (prop_content_info->stream)
-            SVN_ERR(svn_stream_close(prop_content_info->stream));
+      /* ### If the prop did not exist pre-patching we'll not have a
+       * ### stream to read from. Find a better way to store info on
+       * ### the existence of the target prop. */
+      if (prop_content_info->stream)
+        SVN_ERR(svn_stream_close(prop_content_info->stream));
 
-          SVN_ERR(svn_stream_close(prop_content_info->patched));
-        }
+      SVN_ERR(svn_stream_close(prop_content_info->patched));
+    }
 
-
-   /* .. And then streams associted with the file. The reject stream is
-    * shared between all target_content_info structures. */
+  /* .. and then streams associated with the file.
+   * ### We're not closing the reject stream -- it still needed and
+   * ### will be closed later in write_out_rejected_hunks(). */
   if (target->kind_on_disk == svn_node_file)
     SVN_ERR(svn_stream_close(target->content_info->stream));
   SVN_ERR(svn_stream_close(target->content_info->patched));
-  SVN_ERR(svn_stream_close(target->content_info->reject));
 
   return SVN_NO_ERROR;
 }
@@ -2148,6 +2147,8 @@ write_out_rejected_hunks(patch_target_t *target,
                          svn_boolean_t dry_run,
                          apr_pool_t *pool)
 {
+  SVN_ERR(svn_stream_close(target->content_info->reject));
+
   if (! dry_run && (target->had_rejects || target->had_prop_rejects))
     {
       /* Write out rejected hunks, if any. */
@@ -2171,14 +2172,6 @@ install_patched_prop_targets(patch_target_t *target,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
-  if (dry_run)
-    {
-      if (! target->has_text_changes && target->kind_on_disk == svn_node_none)
-        target->added = TRUE;
-
-      return SVN_NO_ERROR;
-    }
-
   iterpool = svn_pool_create(scratch_pool);
 
   for (hi = apr_hash_first(scratch_pool, target->prop_targets);
@@ -2190,19 +2183,22 @@ install_patched_prop_targets(patch_target_t *target,
       svn_stream_t *patched_stream;
       svn_stringbuf_t *line;
       svn_stringbuf_t *prop_content;
+      const svn_string_t *prop_val;
       const char *eol_str;
       svn_boolean_t eof;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
       /* For a deleted prop we only set the value to NULL. */
       if (prop_target->operation == svn_diff_op_deleted)
         {
-          SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
-                                   prop_target->name, NULL, 
-                                   TRUE /* skip_checks */,
-                                   NULL, NULL, /* suppress notification */
-                                   iterpool));
+          if (! dry_run)
+            SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
+                                     prop_target->name, NULL, 
+                                     TRUE /* skip_checks */,
+                                     NULL, NULL, /* suppress notification */
+                                     iterpool));
           continue;
         }
 
@@ -2246,28 +2242,72 @@ install_patched_prop_targets(patch_target_t *target,
           && target->kind_on_disk == svn_node_none
           && ! target->added)
         {
-          SVN_ERR(svn_io_file_create(target->local_abspath, "", scratch_pool));
-          SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
-                                       ctx->cancel_func, ctx->cancel_baton,
-                                       NULL, NULL, /* suppress notification */
-                                       iterpool));
+          if (! dry_run)
+            {
+              SVN_ERR(svn_io_file_create(target->local_abspath, "",
+                                         scratch_pool));
+              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           /* suppress notification */
+                                           NULL, NULL,
+                                           iterpool));
+            }
           target->added = TRUE;
         }
 
-      /* ### How should we handle SVN_ERR_ILLEGAL_TARGET and
-       * ### SVN_ERR_BAD_MIME_TYPE?
-       *
-       * ### stsp: I'd say reject the property hunk.
-       * ###       We should verify all modified prop hunk texts using
-       * ###       svn_wc_canonicalize_svn_prop() before starting the
-       * ###       patching process, to reject them as early as possible. */
-      SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
-                               prop_target->name,
-                               svn_string_create_from_buf(prop_content, 
-                                                          iterpool),
-                               TRUE /* skip_checks */,
-                               NULL, NULL,
-                               iterpool));
+      /* Attempt to set the property, and reject all hunks if this fails. */
+      prop_val = svn_string_create_from_buf(prop_content, iterpool);
+      if (dry_run)
+        {
+          const svn_string_t *canon_propval;
+
+          err = svn_wc_canonicalize_svn_prop(&canon_propval,
+                                             prop_target->name,
+                                             prop_val, target->local_abspath,
+                                             target->db_kind,
+                                             TRUE, /* ### Skipping checks */
+                                             NULL, NULL,
+                                             iterpool);
+        }
+      else
+        {
+          err = (svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
+                                  prop_target->name, prop_val,
+                                  TRUE, /* ### Skipping checks */
+                                  NULL, NULL,
+                                  iterpool));
+        }
+
+      if (err)
+        {
+          /* ### The errors which svn_wc_canonicalize_svn_prop() will
+           * ### return aren't documented. */
+          if (err->apr_err == SVN_ERR_ILLEGAL_TARGET ||
+              err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND ||
+              err->apr_err == SVN_ERR_IO_UNKNOWN_EOL ||
+              err->apr_err == SVN_ERR_BAD_MIME_TYPE ||
+              err->apr_err == SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION)
+            {
+              int i;
+
+              svn_error_clear(err);
+
+              for (i = 0; i < prop_target->content_info->hunks->nelts; i++)
+                {
+                  hunk_info_t *hunk_info;
+
+                  hunk_info = APR_ARRAY_IDX(prop_target->content_info->hunks,
+                                            i, hunk_info_t *);
+                  hunk_info->rejected = TRUE;
+                  SVN_ERR(reject_hunk(target, prop_target->content_info,
+                                      hunk_info, prop_target->name,
+                                      iterpool));
+                }
+            }
+          else
+            return svn_error_return(err);
+        }
+
     }
 
   svn_pool_destroy(iterpool);
