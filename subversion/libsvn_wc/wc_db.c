@@ -6406,6 +6406,8 @@ scan_addition(svn_wc__db_status_t *status,
   if (original_revision)
     *original_revision = SVN_INVALID_REVNUM;
 
+
+#ifndef SVN_WC__OP_DEPTH
   while (TRUE)
     {
       svn_sqlite__stmt_t *stmt;
@@ -6522,7 +6524,167 @@ scan_addition(svn_wc__db_status_t *status,
 
       current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
     }
+#else  /* ifdef SVN_WC__OP_DEPTH */
+  {
+    svn_sqlite__stmt_t *stmt;
+    svn_boolean_t have_row;
+    svn_wc__db_status_t presence;
+    int op_depth;
+    const char *repos_prefix_path = "";
+    int i;
 
+    /* ### is it faster to fetch fewer columns? */
+    SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                      STMT_SELECT_WORKING_NODE));
+    SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+    SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+    if (!have_row)
+      {
+        /* Reset statement before returning */
+        SVN_ERR(svn_sqlite__reset(stmt));
+
+        /* ### maybe we should return a usage error instead?  */
+        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                 _("The node '%s' was not found."),
+                                 path_for_error_message(wcroot,
+                                                        local_relpath,
+                                                        scratch_pool));
+      }
+
+    presence = svn_sqlite__column_token(stmt, 1, presence_map);
+
+    /* The starting node should exist normally.  */
+    if (presence != svn_wc__db_status_normal)
+      /* reset the statement as part of the error generation process */
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                               svn_sqlite__reset(stmt),
+                               _("Expected node '%s' to be added."),
+                               path_for_error_message(wcroot,
+                                                      local_relpath,
+                                                      scratch_pool));
+
+    if (original_revision)
+      *original_revision = svn_sqlite__column_revnum(stmt, 12);
+
+    /* Provide the default status; we'll override as appropriate. */
+    if (status)
+      *status = svn_wc__db_status_added;
+
+
+    /* Calculate the op root local path components */
+    op_depth = svn_sqlite__column_int64(stmt, 0);
+    current_relpath = local_relpath;
+
+    for (i = relpath_depth(local_relpath); i > op_depth; --i)
+      {
+        /* Calculate the path of the operation root */
+        repos_prefix_path =
+          svn_relpath_join(svn_dirent_basename(current_relpath, NULL),
+                           repos_prefix_path,
+                           scratch_pool);
+        current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
+      }
+
+    if (op_root_relpath)
+      *op_root_relpath = apr_pstrdup(result_pool, current_relpath);
+
+    if (original_repos_relpath
+        || original_repos_id
+        || status)
+      {
+        if (local_relpath != current_relpath)
+          /* requery to get the add/copy root */
+          {
+            SVN_ERR(svn_sqlite__reset(stmt));
+
+            SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                      wcroot->wc_id, current_relpath));
+            SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+            if (!have_row)
+              {
+                /* Reset statement before returning */
+                SVN_ERR(svn_sqlite__reset(stmt));
+
+                /* ### maybe we should return a usage error instead?  */
+                return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                         _("The node '%s' was not found."),
+                                         path_for_error_message(wcroot,
+                                                                current_relpath,
+                                                                scratch_pool));
+              }
+          }
+
+        /* current_relpath / current_abspath
+           as well as the record in stmt contain the data of the op_root */
+        if (original_repos_relpath)
+          *original_repos_relpath = svn_sqlite__column_text(stmt, 11,
+                                                            result_pool);
+
+        if (!svn_sqlite__column_is_null(stmt, 10)
+            && (status
+                || original_repos_id))
+          /* If column 10 (original_repos_id) is NULL,
+             this is a plain add, not a copy or a move */
+          {
+            if (original_repos_id)
+              *original_repos_id = svn_sqlite__column_int64(stmt, 10);
+
+            if (status)
+              {
+                if (svn_sqlite__column_boolean(stmt, 13 /* moved_here */))
+                  *status = svn_wc__db_status_moved_here;
+                else
+                  *status = svn_wc__db_status_copied;
+              }
+          }
+      }
+
+
+    /* ### This loop here is to skip up to the first node which is a BASE node,
+       because scan_upwards_for_repos() doesn't accomodate the scenario that
+       we're looking at here; we found the true op_root, which may be inside
+       further changed trees. */
+    while (TRUE)
+      {
+
+        SVN_ERR(svn_sqlite__reset(stmt));
+
+        /* Pointing at op_depth, look at the parent */
+        repos_prefix_path =
+          svn_relpath_join(svn_dirent_basename(current_relpath, NULL),
+                           repos_prefix_path,
+                           scratch_pool);
+        current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
+
+
+        SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+        SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+        if (! have_row)
+          break;
+
+        op_depth = svn_sqlite__column_int64(stmt, 0);
+
+        /* Skip to op_depth */
+        for (i = relpath_depth(local_relpath); i > op_depth; i--)
+          {
+            /* Calculate the path of the operation root */
+            repos_prefix_path =
+              svn_relpath_join(svn_dirent_basename(current_relpath, NULL),
+                               repos_prefix_path,
+                               scratch_pool);
+            current_relpath =
+              svn_relpath_dirname(current_relpath, scratch_pool);
+          }
+      }
+
+    SVN_ERR(svn_sqlite__reset(stmt));
+
+    build_relpath = repos_prefix_path;
+  }
+#endif
   /* If we're here, then we have an added/copied/moved (start) node, and
      CURRENT_ABSPATH now points to a BASE node. Figure out the repository
      information for the current node, and use that to compute the start
