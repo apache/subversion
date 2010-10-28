@@ -4759,7 +4759,6 @@ def copy_delete_undo(sbox, use_revert):
   # Copy directory with children
   svntest.main.run_svn(wc_dir, 'copy',
                        sbox.ospath('A/B/E'), sbox.ospath('A/B/E-copied'))
-
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/E-copied'       : Item(status='A ', copied='+', wc_rev='-'),
@@ -4795,7 +4794,8 @@ def copy_delete_undo(sbox, use_revert):
     'A/B/E-copied'       : Item(status='A ', copied='+', wc_rev='-'),
     })
 
-  # Undo via delete FAILs here because the deleted child got left behind
+  # Undo via delete FAILs here because the deleted children show up.
+  # Is this a fail?  Perhaps they should be visible?
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def copy_delete_delete(sbox):
@@ -4805,6 +4805,38 @@ def copy_delete_delete(sbox):
 def copy_delete_revert(sbox):
   "copy, delete child, revert copy"
   copy_delete_undo(sbox, True)
+
+def delete_replace_delete(sbox):
+  "delete, replace, delete"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete directory with children
+  svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Replace with directory with different children
+  svntest.main.run_svn(wc_dir, 'copy',
+                       sbox.ospath('A/D/G'), sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', status='R ', copied='+', wc_rev='-')
+  expected_status.add({
+    'A/B/E/pi' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E/rho' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E/tau' : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  # A/B/E/alpha and A/B/E/beta show up as deleted, is that right?
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Delete replacement
+  svntest.main.run_svn(wc_dir, 'rm', '--force', sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', status='D ', copied=None, wc_rev='1')
+  expected_status.remove('A/B/E/pi', 'A/B/E/rho', 'A/B/E/tau')
+  # Currently fails because pi, rho, tau get left behind
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -4903,6 +4935,7 @@ test_list = [ None,
               XFail(mixed_rev_copy_del),
               XFail(copy_delete_delete),
               XFail(copy_delete_revert),
+              XFail(delete_replace_delete),
              ]
 
 if __name__ == '__main__':
