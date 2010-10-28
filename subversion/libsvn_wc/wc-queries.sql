@@ -309,7 +309,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE
 DELETE FROM nodes
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#'
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
   AND presence = 'not-present';
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST
