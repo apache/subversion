@@ -3796,9 +3796,11 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while walking
  * to determine if the client has cancelled the operation.
  *
- * If @a external_func is non-NULL, call it with @a external_baton if an
- * external definition is found while walking @a local_abspath.
- * ### call it with what other parameters?
+ * If @a external_func is non-NULL and an external definition is found
+ * while walking @a local_abspath, call @a external_func with @a
+ * external_baton, with the local abspath on which the definition was
+ * found, and with the current external definition provided as both
+ * the @a old_val and @a new_val parameters of the callback function.
  *
  * This function uses @a scratch_pool for temporary allocations.
  *
