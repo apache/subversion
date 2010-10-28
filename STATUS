@@ -40,6 +40,8 @@ They will be merged into /trunk after passing the review.
  Justification:
    In LAN environments, the data processing on the client becomes
    a bottleneck for faster servers.
+ Merge:
+   Merged to trunk in r1028352.
 
 * r986453
  An even larger change: Speed up file translation by further optimizing
