@@ -7692,7 +7692,6 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
-  const char *tree_conflict_data;
   svn_boolean_t have_row;
   apr_hash_t *found;
   apr_array_header_t *found_keys;
