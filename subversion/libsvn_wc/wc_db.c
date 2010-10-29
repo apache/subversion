@@ -932,13 +932,11 @@ insert_working_node(void *baton,
   const char *parent_relpath;
   svn_sqlite__stmt_t *stmt;
 
+  SVN_ERR_ASSERT(piwb->op_depth > 0);
+
   /* We cannot insert a WORKING_NODE row at the wcroot.  */
-  /* ### actually, with per-dir DB, we can... */
   SVN_ERR_ASSERT(*piwb->local_relpath != '\0');
-  if (*piwb->local_relpath == '\0')
-    parent_relpath = NULL;
-  else
-    parent_relpath = svn_relpath_dirname(piwb->local_relpath, scratch_pool);
+  parent_relpath = svn_relpath_dirname(piwb->local_relpath, scratch_pool);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisnnntstrisn"
