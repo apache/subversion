@@ -1151,7 +1151,8 @@ jbyteArray SVNClient::revProperty(const char *path,
     return JNIUtil::makeJByteArray((const signed char *)propval->data,
                                    propval->len);
 }
-void SVNClient::relocate(const char *from, const char *to, const char *path)
+void SVNClient::relocate(const char *from, const char *to, const char *path,
+                         bool ignoreExternals)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1171,7 +1172,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path)
         return;
 
     SVN_JNI_ERR(svn_client_relocate2(intPath.c_str(), intFrom.c_str(),
-                                     intTo.c_str(), ctx,
+                                     intTo.c_str(), ignoreExternals, ctx,
                                      requestPool.pool()), );
 }
 
