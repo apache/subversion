@@ -798,10 +798,11 @@ public interface ISVNClient
      * @param from      old url
      * @param to        new url
      * @param path      working copy path
+     * @param ignoreExternals if externals are ignored during relocate
      * @throws ClientException
      * @since 1.0
      */
-    void relocate(String from, String to, String path)
+    void relocate(String from, String to, String path, boolean ignoreExternals)
             throws ClientException;
 
     /**
