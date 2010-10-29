@@ -3117,6 +3117,31 @@ copy_nodes_rows(svn_wc__db_pdh_t *src_pdh,
 
   SVN_ERR(op_depth_of(&src_op_depth, src_pdh, src_relpath));
 
+  /* If there are any absent (excluded by authz) base nodes then the
+     copy must fail.  It's not possible to commit such a copy. */
+  if (src_op_depth == 0)
+    {
+      svn_boolean_t have_row;
+      const char *local_relpath;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                                        STMT_SELECT_ABSENT_NODES));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                                src_pdh->wcroot->wc_id,
+                                src_relpath,
+                                construct_like_arg(src_relpath, scratch_pool)));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        local_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+      SVN_ERR(svn_sqlite__reset(stmt));
+      if (have_row)
+        return svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
+                                 _("Cannot copy '%s' excluded by server"),
+                                 path_for_error_message(src_pdh->wcroot,
+                                                        local_relpath,
+                                                        scratch_pool));
+    }
+
   /* Root node */
   SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
                                     STMT_COPY_NODES_ROW));
