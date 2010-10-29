@@ -1858,7 +1858,7 @@ svn_error_t *
 svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
-                              const svn_skel_t *conflict_skel,
+                              svn_skel_t *conflict_skel,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
@@ -1868,8 +1868,7 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
   SVN_ERR_ASSERT(conflict_skel != NULL);
 
   if (conflict_skel != NULL)
-    /* ### woah! this needs to dup the skel into RESULT_POOL  */
-    svn_skel__prepend((svn_skel_t *)conflict_skel, *work_item);
+    svn_skel__prepend(conflict_skel, *work_item);
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
                         *work_item, result_pool);
   svn_skel__prepend_str(OP_PREJ_INSTALL, *work_item, result_pool);
