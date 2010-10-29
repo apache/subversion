@@ -8521,6 +8521,7 @@ struct make_copy_baton
   const char *local_relpath;
   svn_boolean_t remove_base;
   svn_boolean_t is_root;
+  apr_int64_t op_depth;
 };
 
 /* Transaction callback for svn_wc__db_temp_op_make_copy */
@@ -8653,7 +8654,7 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath,
-                                (apr_int64_t)2)); /* ### temporary op_depth */
+                                mcb->op_depth));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
@@ -8667,7 +8668,7 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath,
-                                (apr_int64_t)2)); /* ### temporary op_depth */
+                                mcb->op_depth));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
@@ -8736,6 +8737,11 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
   mcb.local_abspath = local_abspath;
   mcb.remove_base = remove_base;
   mcb.is_root = TRUE;
+#ifdef SVN_WC__OP_DEPTH
+  mcb.op_depth = relpath_depth(mcb.local_relpath);
+#else
+  mcb.op_depth = 2;  /* ### temporary op_depth */
+#endif
 
   SVN_ERR(svn_sqlite__with_transaction(mcb.pdh->wcroot->sdb,
                                        make_copy_txn, &mcb,
