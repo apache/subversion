@@ -8630,6 +8630,7 @@ make_copy_txn(void *baton,
       cbt.db = mcb->db;
       cbt.remove_base = mcb->remove_base;
       cbt.is_root = FALSE;
+      cbt.op_depth = mcb->op_depth;
 
       SVN_ERR(make_copy_txn(&cbt, cbt.pdh->wcroot->sdb, iterpool));
     }
