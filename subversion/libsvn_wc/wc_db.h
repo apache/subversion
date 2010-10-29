@@ -1888,12 +1888,7 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
    @{
 */
 
-/* Scan for a BASE node's repository information.
-
-   In the typical case, a BASE node has unspecified repository information,
-   meaning that it is implied by its parent's information. When the info is
-   needed, this function can be used to scan up the BASE tree to find
-   the data.
+/* Read a BASE node's repository information.
 
    For the BASE node implied by LOCAL_ABSPATH, its location in the repository
    returned in *REPOS_ROOT_URL and *REPOS_UUID will be returned in

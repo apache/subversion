@@ -620,12 +620,6 @@ run_base_remove(svn_wc__db_t *db,
                                        NULL, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
-
-      if (!repos_relpath)
-        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                           &repos_uuid,
-                                           db, local_abspath, scratch_pool,
-                                           scratch_pool));
     }
 
   SVN_ERR(remove_base_node(db, local_abspath,

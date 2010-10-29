@@ -230,6 +230,8 @@ static svn_error_t *
 insert_incomplete_children(svn_sqlite__db_t *sdb,
                            apr_int64_t wc_id,
                            const char *local_relpath,
+                           apr_int64_t repos_id,
+                           const char *repos_relpath,
                            svn_revnum_t revision,
                            const apr_array_header_t *children,
                            apr_int64_t op_depth,
@@ -562,9 +564,8 @@ repos_location_from_columns(const char **repos_root_url,
 }
 
 
-/* Scan from LOCAL_RELPATH upwards through parent nodes until we find a parent
-   that has values in the 'repos_id' and 'repos_relpath' columns.  Return
-   that information in REPOS_ID and REPOS_RELPATH (either may be NULL). */
+/* Set *REPOS_ID and *REPOS_RELPATH to the BASE node of LOCAL_RELPATH.
+ * Either of REPOS_ID and REPOS_RELPATH may be NULL if not wanted. */
 static svn_error_t *
 scan_upwards_for_repos(apr_int64_t *repos_id,
                        const char **repos_relpath,
@@ -573,92 +574,34 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  const char *relpath_suffix = "";
-  const char *current_basename = svn_dirent_basename(local_relpath, NULL);
-  const char *current_relpath = local_relpath;
   svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(wcroot->sdb != NULL && wcroot->wc_id != UNKNOWN_WC_ID);
   SVN_ERR_ASSERT(repos_id != NULL || repos_relpath != NULL);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_BASE_NODE));
-  while (TRUE)
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
     {
-      svn_boolean_t have_row;
-
-      /* Get the current node's repository information.  */
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      if (!have_row)
-        {
-          svn_error_t *err;
-
-          /* If we moved upwards at least once, or we're looking at the
-             root directory of this WCROOT, then something is wrong.  */
-          if (*relpath_suffix != '\0' || *local_relpath == '\0')
-            {
-              err = svn_error_createf(
-                SVN_ERR_WC_CORRUPT, NULL,
-                _("Parent(s) of '%s' should have been present."),
-                path_for_error_message(wcroot, local_relpath, scratch_pool));
-            }
-          else
-            {
-              err = svn_error_createf(
-                SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                _("The node '%s' was not found."),
-                path_for_error_message(wcroot, local_relpath, scratch_pool));
-            }
-
-          return svn_error_compose_create(err, svn_sqlite__reset(stmt));
-        }
-
-      /* Did we find some non-NULL repository columns? */
-      if (!svn_sqlite__column_is_null(stmt, 0))
-        {
-          /* If one is non-NULL, then so should the other. */
-          SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 1));
-
-          if (repos_id)
-            *repos_id = svn_sqlite__column_int64(stmt, 0);
-
-          /* Given the node's relpath, append all the segments that
-             we stripped as we scanned upwards. */
-          if (repos_relpath)
-            *repos_relpath = svn_relpath_join(svn_sqlite__column_text(stmt, 1,
-                                                                      NULL),
-                                              relpath_suffix,
-                                              result_pool);
-          return svn_sqlite__reset(stmt);
-        }
-
-      SVN_ERR(svn_sqlite__reset(stmt));
-
-      if (*current_relpath == '\0')
-        {
-          /* We scanned all the way up, and did not find the information.
-             Something is corrupt in the database. */
-          return svn_error_createf(
-            SVN_ERR_WC_CORRUPT, NULL,
-            _("Parent(s) of '%s' should have repository information."),
+      svn_error_t *err = svn_error_createf(
+            SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+            _("The node '%s' was not found."),
             path_for_error_message(wcroot, local_relpath, scratch_pool));
-        }
 
-      /* Strip a path segment off the end, and append it to the suffix
-         that we'll use when we finally find a base relpath.  */
-      svn_relpath_split(&current_relpath, &current_basename, current_relpath,
-                        scratch_pool);
-      relpath_suffix = svn_relpath_join(relpath_suffix, current_basename,
-                                        scratch_pool);
-
-      /* Loop to try the parent.  */
-
-      /* ### strictly speaking, moving to the parent could send us to a
-         ### different SDB, and (thus) we would need to fetch STMT again.
-         ### but we happen to know the parent is *always* in the same db,
-         ### and will have the repos info.  */
+      return svn_error_compose_create(err, svn_sqlite__reset(stmt));
     }
+
+  SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
+  SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 1));
+
+  if (repos_id)
+    *repos_id = svn_sqlite__column_int64(stmt, 0);
+  if (repos_relpath)
+    *repos_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
+  return svn_sqlite__reset(stmt);
 }
 
 
@@ -776,6 +719,9 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     (*pibb->local_relpath == '\0') ? NULL
     : svn_relpath_dirname(pibb->local_relpath, scratch_pool);
 
+  SVN_ERR_ASSERT(pibb->repos_id != INVALID_REPOS_ID);
+  SVN_ERR_ASSERT(pibb->repos_relpath != NULL);
+
   /* ### we can't handle this right now  */
   SVN_ERR_ASSERT(pibb->conflict == NULL);
 
@@ -817,6 +763,8 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   if (pibb->kind == svn_wc__db_kind_dir && pibb->children)
     SVN_ERR(insert_incomplete_children(sdb, pibb->wc_id,
                                        pibb->local_relpath,
+                                       pibb->repos_id,
+                                       pibb->repos_relpath,
                                        pibb->revision,
                                        pibb->children,
                                        0 /* BASE */,
@@ -885,13 +833,17 @@ copy_working_from_base(void *baton,
 
 /* Insert a row in NODES for each (const char *) child name in CHILDREN,
    whose parent directory is LOCAL_RELPATH, at op_depth=OP_DEPTH.  Set each
-   child's presence to 'incomplete', kind to 'unknown', and revision to
-   REVISION (which should match the parent's revision).  The child's
-   repos_id and repos_relpath will be inherited from the parent. */
+   child's presence to 'incomplete', kind to 'unknown', repos_id to REPOS_ID,
+   repos_path by appending the child name to REPOS_PATH, and revision to
+   REVISION (which should match the parent's revision).
+
+   If REPOS_ID is INVALID_REPOS_ID, set each child's repos_id to null. */
 static svn_error_t *
 insert_incomplete_children(svn_sqlite__db_t *sdb,
                            apr_int64_t wc_id,
                            const char *local_relpath,
+                           apr_int64_t repos_id,
+                           const char *repos_path,
                            svn_revnum_t revision,
                            const apr_array_header_t *children,
                            apr_int64_t op_depth,
@@ -899,6 +851,10 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
 {
   svn_sqlite__stmt_t *stmt;
   int i;
+
+  SVN_ERR_ASSERT(repos_path != NULL || op_depth > 0);
+  SVN_ERR_ASSERT((repos_id != INVALID_REPOS_ID)
+                 == (repos_path != NULL));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
 
@@ -915,6 +871,14 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
                                 revision,
                                 "incomplete", /* 8, presence */
                                 "unknown"));  /* 10, kind */
+
+      if (repos_id != INVALID_REPOS_ID)
+        {
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 5, repos_id));
+          SVN_ERR(svn_sqlite__bind_text(stmt, 6,
+                                        svn_relpath_join(repos_path, name,
+                                                         scratch_pool)));
+        }
 
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
     }
@@ -987,6 +951,8 @@ insert_working_node(void *baton,
   if (piwb->kind == svn_wc__db_kind_dir && piwb->children)
     SVN_ERR(insert_incomplete_children(sdb, piwb->wc_id,
                                        piwb->local_relpath,
+                                       INVALID_REPOS_ID /* inherit repos_id */,
+                                       NULL /* inherit repos_path */,
                                        piwb->original_revnum,
                                        piwb->children,
                                        piwb->op_depth,
@@ -1901,6 +1867,9 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
       err = repos_location_from_columns(repos_root_url, repos_uuid, revision,
                                         repos_relpath,
                                         pdh, stmt, 0, 4, 1, result_pool);
+      SVN_ERR_ASSERT(!repos_root_url || *repos_root_url);
+      SVN_ERR_ASSERT(!repos_uuid || *repos_uuid);
+      SVN_ERR_ASSERT(!repos_relpath || *repos_relpath);
       if (lock)
         {
           *lock = lock_from_columns(stmt, 14, 15, 16, 17, result_pool);
@@ -2987,6 +2956,8 @@ db_op_copy(svn_wc__db_pdh_t *src_pdh,
         SVN_ERR(insert_incomplete_children(dst_pdh->wcroot->sdb,
                                            dst_pdh->wcroot->wc_id,
                                            dst_relpath,
+                                           INVALID_REPOS_ID /* inherit repos_id */,
+                                           NULL /* inherit repos_path */,
                                            copyfrom_rev,
                                            children,
                                            op_depth,
@@ -5879,13 +5850,10 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
         new_depth_str = svn_sqlite__column_text(stmt_base, 10, scratch_pool);
     }
 
-  /* Get the repository information. REPOS_RELPATH will indicate whether
-     we bind REPOS_ID/REPOS_RELPATH as null values in the database (in order
-     to inherit values from the parent node), or that we have actual data.
-     Note: only inherit if we're not at the root.  */
-  if (have_base && !svn_sqlite__column_is_null(stmt_base, 0))
+  /* Check that the repository information is not being changed.  */
+  if (have_base)
     {
-      /* If 'repos_id' is valid, then 'repos_relpath' should be, too.  */
+      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt_base, 0));
       SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt_base, 1));
 
       /* A commit cannot change these values.  */
@@ -6021,11 +5989,9 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 
 /* Set *REPOS_ID and *REPOS_RELPATH to the BASE repository location of
- * (PDH, LOCAL_RELPATH), scanning upwards through parents if no BASE row
- * exists for this node or if it inherits the info.
- *
- * Similar to scan_upwards_for_repos() except that the node need not exist
- * in BASE. */
+ * (PDH, LOCAL_RELPATH), directly if its BASE row exists or implied from
+ * its parent's BASE row if not. In the latter case, error if the parent
+ * BASE row does not exist. */
 static svn_error_t *
 determine_repos_info(apr_int64_t *repos_id,
                      const char **repos_relpath,
@@ -6047,9 +6013,9 @@ determine_repos_info(apr_int64_t *repos_id,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  if (have_row && !svn_sqlite__column_is_null(stmt, 0))
+  if (have_row)
     {
-      /* If one is non-NULL, then so should the other. */
+      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
       SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 1));
 
       *repos_id = svn_sqlite__column_int64(stmt, 0);
@@ -6118,19 +6084,12 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.no_unlock = no_unlock;
   cb.work_items = work_items;
 
-  /* If we are adding a directory (no BASE_NODE), then we need to get
-     repository information from an ancestor node (start scanning from the
-     parent node since "this node" does not have a BASE). We cannot simply
-     inherit that information (across SDB boundaries).
-
-     If we're adding a file, then leaving the fields as null (in order to
-     inherit) would be possible.
+  /* If we are adding a file or directory, then we need to get
+     repository information from the parent node since "this node" does
+     not have a BASE).
 
      For existing nodes, we should retain the (potentially-switched)
-     repository information.
-
-     ### this always returns values. we should switch to null if/when
-     ### possible.  */
+     repository information.  */
   SVN_ERR(determine_repos_info(&cb.repos_id, &cb.repos_relpath,
                                pdh, local_relpath,
                                scratch_pool, scratch_pool));
