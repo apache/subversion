@@ -74,7 +74,7 @@ LIMIT 1;
 
 -- STMT_SELECT_ACTUAL_NODE
 SELECT prop_reject, changelist, conflict_old, conflict_new,
-conflict_working, tree_conflict_data, properties
+conflict_working, tree_conflict_data, properties, conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
@@ -94,7 +94,8 @@ WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_SELECT_ACTUAL_CHILDREN_INFO
 SELECT prop_reject, changelist, conflict_old, conflict_new,
-conflict_working, tree_conflict_data, properties, local_relpath
+conflict_working, tree_conflict_data, properties, local_relpath,
+conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2;
 
@@ -416,8 +417,13 @@ WHERE wc_id = ?1 AND parent_relpath = ?2 AND
   NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
        AND (conflict_new IS NULL) AND (conflict_working IS NULL))
 
+-- STMT_SELECT_ACTUAL_CHILDREN_TREE_CONFLICT
+SELECT local_relpath, conflict_data
+FROM actual_node
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND conflict_data IS NOT NULL;
+
 -- STMT_SELECT_CONFLICT_DETAILS
-SELECT prop_reject, conflict_old, conflict_new, conflict_working
+SELECT prop_reject, conflict_old, conflict_new, conflict_working, conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
