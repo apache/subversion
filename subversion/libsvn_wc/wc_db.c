@@ -5392,10 +5392,10 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
         }
 
 
-      child->conflicted = (svn_sqlite__column_text(stmt, 2, NULL)     /* old */
-                           || svn_sqlite__column_text(stmt, 3, NULL)  /* new */
-                           || svn_sqlite__column_text(stmt, 4, NULL)  /* work */
-                           || svn_sqlite__column_text(stmt, 0, NULL));/* prop */
+      child->conflicted = !svn_sqlite__column_is_null(stmt, 2) ||  /* old */
+                          !svn_sqlite__column_is_null(stmt, 3) ||  /* new */
+                          !svn_sqlite__column_is_null(stmt, 4) ||  /* work */
+                          !svn_sqlite__column_is_null(stmt, 0);    /* prop */
 
       err = svn_sqlite__step(&have_row, stmt);
       if (err)
