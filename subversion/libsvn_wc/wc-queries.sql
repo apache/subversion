@@ -597,6 +597,11 @@ SELECT wc_id,
 FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
 
+-- STMT_SELECT_ABSENT_NODES
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND op_depth = 0 AND presence = 'absent' LIMIT 1;
+
 /* ### Why can't this query not just use the BASE repository
    location values, instead of taking 3 additional parameters?! */
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE
