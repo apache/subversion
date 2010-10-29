@@ -5039,10 +5039,10 @@ read_info(svn_wc__db_status_t *status,
           if (have_act)
             {
               *conflicted =
-                 svn_sqlite__column_text(stmt_act, 2, NULL) || /* old */
-                 svn_sqlite__column_text(stmt_act, 3, NULL) || /* new */
-                 svn_sqlite__column_text(stmt_act, 4, NULL) || /* working */
-                 svn_sqlite__column_text(stmt_act, 0, NULL); /* prop_reject */
+                 !svn_sqlite__column_is_null(stmt_act, 2) || /* old */
+                 !svn_sqlite__column_is_null(stmt_act, 3) || /* new */
+                 !svn_sqlite__column_is_null(stmt_act, 4) || /* working */
+                 !svn_sqlite__column_is_null(stmt_act, 0); /* prop_reject */
 
               /* At the end of this function we check for tree conflicts */
             }
