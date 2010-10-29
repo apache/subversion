@@ -7696,6 +7696,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   svn_boolean_t have_row;
   apr_hash_t *found;
   apr_array_header_t *found_keys;
+  apr_hash_t *conflict_items;
 
   *victims = NULL;
 
@@ -7729,24 +7730,12 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   SVN_ERR(svn_sqlite__reset(stmt));
 
   /* And add tree conflicts */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_TREE_CONFLICT));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(read_all_tree_conflicts(&conflict_items, pdh, local_relpath,
+                                  scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    tree_conflict_data = svn_sqlite__column_text(stmt, 0, scratch_pool);
-  else
-    tree_conflict_data = NULL;
-
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  if (tree_conflict_data)
+  if (conflict_items)
     {
-      apr_hash_t *conflict_items;
       apr_hash_index_t *hi;
-      SVN_ERR(svn_wc__read_tree_conflicts(&conflict_items, tree_conflict_data,
-                                          local_abspath, scratch_pool));
 
       for(hi = apr_hash_first(scratch_pool, conflict_items);
           hi;
