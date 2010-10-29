@@ -4482,9 +4482,9 @@ delete_not_present_children(svn_wc__db_pdh_t *pdh,
 {
   svn_sqlite__stmt_t *stmt;
 #ifdef SVN_WC__OP_DEPTH
-  int op_depth = relpath_depth(local_relpath);
+  apr_int64_t op_depth = relpath_depth(local_relpath);
 #else
-  int op_depth = 2;  /* ### temporary op_depth */
+  apr_int64_t op_depth = 2;  /* ### temporary op_depth */
 #endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -4492,7 +4492,7 @@ delete_not_present_children(svn_wc__db_pdh_t *pdh,
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id,
                             construct_like_arg(local_relpath,
                                                scratch_pool),
-                            (apr_int64_t)op_depth));
+                            op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -4878,10 +4878,10 @@ read_info(svn_wc__db_status_t *status,
 
   if (have_info)
     {
-      int op_depth;
+      apr_int64_t op_depth;
       svn_wc__db_kind_t node_kind;
 
-      op_depth = svn_sqlite__column_int(stmt_info, 0);
+      op_depth = svn_sqlite__column_int64(stmt_info, 0);
       node_kind = svn_sqlite__column_token(stmt_info, 4, kind_map);
 
       if (status)
@@ -5093,7 +5093,7 @@ read_info(svn_wc__db_status_t *status,
               if (err || !have_info)
                 break;
 
-              op_depth = svn_sqlite__column_int(stmt_info, 0);
+              op_depth = svn_sqlite__column_int64(stmt_info, 0);
             }
 
           if (have_base)
@@ -5227,7 +5227,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
       const char *child_relpath = svn_sqlite__column_text(stmt, 19, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
       svn_error_t *err;
-      int *op_depth, row_op_depth;
+      apr_int64_t *op_depth, row_op_depth;
       svn_boolean_t new_child;
 
       child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
@@ -5239,7 +5239,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
           new_child = TRUE;
         }
 
-      op_depth = (int *)(char*)(child + 1);
+      op_depth = (apr_int64_t *)(child + 1);
       row_op_depth = svn_sqlite__column_int(stmt, 0);
 
       if (new_child || *op_depth < row_op_depth)
@@ -6593,7 +6593,7 @@ scan_addition(svn_wc__db_status_t *status,
     svn_sqlite__stmt_t *stmt;
     svn_boolean_t have_row;
     svn_wc__db_status_t presence;
-    int op_depth;
+    apr_int64_t op_depth;
     const char *repos_prefix_path = "";
     int i;
 
