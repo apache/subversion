@@ -4279,7 +4279,7 @@ read_all_tree_conflicts(apr_hash_t **tree_conflicts,
 
       conflict_data = svn_sqlite__column_text(stmt, 1, NULL);
       SVN_ERR(svn_wc__read_tree_conflicts(&conflict_hash, conflict_data,
-                                          pdh->wcroot->abspath, iterpool));
+                                          pdh->wcroot->abspath, result_pool));
 
       *tree_conflicts = apr_hash_overlay(result_pool, conflict_hash,
                                          *tree_conflicts);
