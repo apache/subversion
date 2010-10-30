@@ -34,17 +34,6 @@ They will be merged into /trunk after passing the review.
    doubles its performance. It should also speed up svn checkout by
    the same amount (not factor) of time.
 
-* r1028094, r1028104, r1029038
- Exploit knowledge of APR pool allocation interna to allocate sightly
- larger capacity stringbuf containers without actually using more memory.
- The second revision is test adaptation only. A third revision pushed
- the aligment logic deeper the call stack to make it used more widely.
- Justification:
-   Very low computational overhead that should prevent costly
-   re-allocations when working with small or empty strings.
-   Also, this does not make the functionality (correctness) 
-   of the code depend on APR internals.
-
 * r1029042
  Where possible, don't use svn_stringbuf_appendbyte to copy strings; 
  use svn_stringbuf_appendbytes instead.
