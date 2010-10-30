@@ -799,8 +799,8 @@ struct translation_baton
      or zero if none encountered yet */
   apr_size_t src_format_len;
 
-  /* if this is svn_tristate_false, translate_newline() will be called
-     for every newline in the file */
+  /* If this is svn_tristate_false, translate_newline() will be called
+     for every newline in the file. */
   svn_tristate_t nl_translation_skippable;
 };
 
@@ -1013,7 +1013,7 @@ translate_chunk(svn_stream_t *dst,
               /* skip current EOL */
               len += b->eol_str_len;
 
-              /* check 4 bytes at once to allow for efficient pipilening
+              /* Check 4 bytes at once to allow for efficient pipilening
                  and to reduce loop condition overhead. */
               while ((p + len + 4) <= end)
                 {
