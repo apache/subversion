@@ -33,6 +33,9 @@ They will be merged into /trunk after passing the review.
    most CPU-demanding part of an svn export. This patch more than
    doubles its performance. It should also speed up svn checkout by
    the same amount (not factor) of time.
+ Concerns:
+   'nl_translation_skippable' is never compared to svn_tristate_false or to
+   svn_tristate_true, only to svn_tristate_unknown.
 
 * r1029042
  Where possible, don't use svn_stringbuf_appendbyte to copy strings; 
