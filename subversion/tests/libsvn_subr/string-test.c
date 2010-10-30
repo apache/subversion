@@ -231,12 +231,13 @@ test10(apr_pool_t *pool)
   block_len_2 = (s->blocksize);
 
   /* Test that:
-   *   - The initial block was just the right fit.
+   *   - The initial block was at least the right fit.
+   *   - The initial block was not excessively large.
    *   - The block more than doubled (because second string so long).
    */
-  if ((len_1 == (block_len_1 - 1))
-      && ((block_len_2 / block_len_1) > 2)
-      )
+  if ((len_1 <= (block_len_1 - 1))
+      && ((block_len_1 - len_1) <= APR_ALIGN_DEFAULT(1))
+        && ((block_len_2 / block_len_1) > 2))
     return SVN_NO_ERROR;
   else
     return fail(pool, "test failed");
