@@ -250,7 +250,15 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
 svn_stringbuf_t *
 svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 {
-  char *data = apr_palloc(pool, ++blocksize); /* + space for '\0' */
+  char *data;
+
+  /* apr_palloc will allocate multiples of 8.
+   * Thus, we would waste some of that memory if we stuck to the
+   * smaller size. Note that this is safe even if apr_palloc would
+   * use some other aligment or none at all. */
+
+  ++blocksize; /* + space for '\0' */
+  data = apr_palloc(pool, APR_ALIGN_DEFAULT(blocksize));
 
   data[0] = '\0';
 
@@ -261,9 +269,7 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
-  /* Ensure string buffer of size + 1 */
   svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(size, pool);
-
   memcpy(strbuf->data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
@@ -368,12 +374,18 @@ svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
   if (str->blocksize < minimum_size)
     {
       if (str->blocksize == 0)
-        str->blocksize = minimum_size;
+        /* APR will increase odd allocation sizes to the next
+         * multiple for 8, for instance. Take advantage of that
+         * knowledge and allow for the extra size to be used. */
+        str->blocksize = APR_ALIGN_DEFAULT(minimum_size);
       else
         while (str->blocksize < minimum_size)
           {
+            /* str->blocksize is aligned;
+             * doubling it should keep it aligned */
             apr_size_t prev_size = str->blocksize;
             str->blocksize *= 2;
+
             /* check for apr_size_t overflow */
             if (prev_size > str->blocksize)
               {
