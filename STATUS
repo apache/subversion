@@ -21,11 +21,13 @@ They will be merged into /trunk after passing the review.
         Perhaps we should look at callers and switch them to use this new
         API?
 
-* r986453
+* r986453, r1029092
  An even larger change: Speed up file translation by further optimizing
  the search for "interesting chars" and replacing EOLs only if they
  have actually changed (allowing for larger chunks of data per write
  output operation).
+ Note:
+   r1029092 is a docstring change.
  Justification:
    Apart from the physical I/O and the MD5 translation, this is the
    most CPU-demanding part of an svn export. This patch more than
