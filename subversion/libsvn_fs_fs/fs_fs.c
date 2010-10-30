@@ -277,7 +277,6 @@ svn_fs_fs__path_rev_absolute(const char **path,
 
   if (! is_packed_rev(fs, rev))
     {
-      fs_fs_data_t *ffd = fs->fsap_data;
       svn_node_kind_t kind;
 
       /* Initialize the return variable. */

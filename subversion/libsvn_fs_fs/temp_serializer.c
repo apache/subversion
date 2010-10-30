@@ -252,11 +252,11 @@ typedef struct hash_data_t
   svn_fs_dirent_t **entries;
 } hash_data_t;
 
-int
+static int
 compare_dirent_id_names(const void *lhs, const void *rhs)
 {
-  return strcmp((*(svn_fs_dirent_t **)lhs)->name, 
-                (*(svn_fs_dirent_t **)rhs)->name);
+  return strcmp((*(const svn_fs_dirent_t *const *)lhs)->name, 
+                (*(const svn_fs_dirent_t *const *)rhs)->name);
 }
 
 /* Utility function to serialize the ENTRIES into a new serialization
