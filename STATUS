@@ -33,16 +33,6 @@ They will be merged into /trunk after passing the review.
      correct, I think some of the function names could be improved, but
      that's a bikeshed we can have on trunk."
 
-* r985606, r1028092
- A somewhat larger change: Reduce the ra_svn de-marshalling
- overhead mainly by pre-allocating sufficient container capacity
- in various places.
- Justification:
-   In LAN environments, the data processing on the client becomes
-   a bottleneck for faster servers.
- Merge:
-   Merged to trunk in r1028352.
-
 * r986453
  An even larger change: Speed up file translation by further optimizing
  the search for "interesting chars" and replacing EOLs only if they
@@ -54,12 +44,20 @@ They will be merged into /trunk after passing the review.
    doubles its performance. It should also speed up svn checkout by
    the same amount (not factor) of time.
 
-* r1028094, r1028104
+* r1028094, r1028104, r1029038
  Exploit knowledge of APR pool allocation interna to allocate sightly
  larger capacity stringbuf containers without actually using more memory.
- The second revision is test adaptation only.
+ The second revision is test adaptation only. A third revision pushed
+ the aligment logic deeper the call stack to make it used more widely.
  Justification:
    Very low computational overhead that should prevent costly
    re-allocations when working with small or empty strings.
    Also, this does not make the functionality (correctness) 
    of the code depend on APR internals.
+
+* r1029042
+ Where possible, don't use svn_stringbuf_appendbyte to copy strings; 
+ use svn_stringbuf_appendbytes instead.
+ Justification:
+   Low risk change to speed up parsing diffs.
+
