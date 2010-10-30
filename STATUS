@@ -21,18 +21,6 @@ They will be merged into /trunk after passing the review.
         Perhaps we should look at callers and switch them to use this new
         API?
 
-* r985500
- Just another temp file name handling improvement: Use the already
- properly encoded file name information from the APR file instead
- of constructing it.
- Justification:
-   Further reduction of the client-side overhead in svn export
-   (and possibly others).
- Merge:
-   Merged to trunk in r1027192.  From the log message: "While functionally
-     correct, I think some of the function names could be improved, but
-     that's a bikeshed we can have on trunk."
-
 * r986453
  An even larger change: Speed up file translation by further optimizing
  the search for "interesting chars" and replacing EOLs only if they
