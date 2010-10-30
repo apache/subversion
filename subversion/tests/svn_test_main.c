@@ -464,6 +464,5 @@ main(int argc, const char *argv[])
   svn_pool_destroy(pool);      /* takes test_pool with it */
   apr_terminate();
 
-  exit(got_error);
   return got_error;
 }
