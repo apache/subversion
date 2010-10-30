@@ -255,13 +255,15 @@ svn_stringbuf_create_empty(apr_pool_t *pool)
 svn_stringbuf_t *
 svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 {
+  char *data;
+
   /* apr_palloc will allocate multiples of 8.
    * Thus, we would waste some of that memory if we stuck to the
    * smaller size. Note that this is safe even if apr_palloc would
    * use some other aligment or none at all. */
 
-  blocksize = APR_ALIGN_DEFAULT(++blocksize); /* + space for '\0' */
-  char *data = apr_palloc(pool, blocksize);
+  ++blocksize; /* + space for '\0' */
+  data = apr_palloc(pool, APR_ALIGN_DEFAULT(blocksize));
 
   data[0] = '\0';
 
