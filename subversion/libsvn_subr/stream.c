@@ -274,6 +274,11 @@ scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Size that 90% of the lines we encounter will be not longer than.
+   used by stream_readline_bytewise() and stream_readline_chunky().
+ */
+#define LINE_CHUNK_SIZE 80
+
 /* Guts of svn_stream_readline() and svn_stream_readline_detect_eol().
  * Returns the line read from STREAM in *STRINGBUF, and indicates
  * end-of-file in *EOF.  If DETECT_EOL is TRUE, the end-of-line indicator
@@ -298,8 +303,6 @@ stream_readline_bytewise(svn_stringbuf_t **stringbuf,
      optimize for the 90% case.  90% of the time, we can avoid the
      stringbuf ever having to realloc() itself if we start it out at
      80 chars.  */
-#define LINE_CHUNK_SIZE 80
-
   str = svn_stringbuf_create_ensure(LINE_CHUNK_SIZE, pool);
 
   if (detect_eol)
@@ -369,7 +372,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
   apr_size_t total_parsed = 0;
 
   /* invariant for this call */
-  size_t eol_len = strlen(eol);
+  const size_t eol_len = strlen(eol);
 
   /* Remember the line start so this plus the line length will be
    * the position to move to at the end of this function.
