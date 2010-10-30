@@ -850,9 +850,9 @@ create_translation_baton(const char *eol_str,
 
 /* Return TRUE if the EOL starting at BUF matches the eol_str member of B.
  * Be aware of special cases like "\n\r\n" and "\n\n\r". For sequences like
- * "\n$", the result will be FALSE since it is more efficient to handle
- * that special case implicitly in the calling code by exiting the quick
- * scan loop.
+ * "\n$" (an EOL followed by a keyword), the result will be FALSE since it is
+ * more efficient to handle that special case implicitly in the calling code
+ * by exiting the quick scan loop.
  */
 static APR_INLINE svn_boolean_t
 eol_unchanged(struct translation_baton *b,
