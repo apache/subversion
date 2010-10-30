@@ -166,6 +166,8 @@ attempt_deletion(const char *parent_dir,
    ### leave, for example, one of the conflict artifact files deleted but
    ### the entry still referring to it and trying to use it for the next
    ### attempt at resolving.
+
+   ### Does this still apply in the world of WC-NG?  -hkw
 */
 static svn_error_t *
 resolve_conflict_on_node(svn_wc__db_t *db,
@@ -188,11 +190,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
 
   *did_resolve = FALSE;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath, pool, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, pool));
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
                                     pool, pool));
 

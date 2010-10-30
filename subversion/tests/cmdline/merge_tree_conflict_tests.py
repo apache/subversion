@@ -416,7 +416,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1)
+                                       1, 0, '--allow-mixed-revisions', A_path)
 
 #----------------------------------------------------------------------
 # Issue #2515

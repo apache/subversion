@@ -3068,8 +3068,38 @@ svn_client_diff_summarize_peg(const char *path,
  * If @a dry_run is TRUE, the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
  *
+ * If allow_mixed_rev is @c FALSE, and @a merge_target is a mixed-revision
+ * working copy, raise @c SVN_ERR_CLIENT_NOT_READY_TO_MERGE.
+ * Because users rarely intend to merge into mixed-revision working copies,
+ * it is recommended to set this parameter to FALSE by default unless the
+ * user has explicitly requested a merge into a mixed-revision working copy.
+ *
  * The authentication baton cached in @a ctx is used to communicate with the
  * repository.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_merge4(const char *source1,
+                  const svn_opt_revision_t *revision1,
+                  const char *source2,
+                  const svn_opt_revision_t *revision2,
+                  const char *target_wcpath,
+                  svn_depth_t depth,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t force,
+                  svn_boolean_t record_only,
+                  svn_boolean_t dry_run,
+                  svn_boolean_t allow_mixed_rev,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_merge4(), but with @a allow_mixed_rev set to
+ * @c TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -3172,7 +3202,30 @@ svn_client_merge_reintegrate(const char *source,
  * list of provided ranges has an `unspecified' or unrecognized
  * `kind', return #SVN_ERR_CLIENT_BAD_REVISION.
  *
- * All other options are handled identically to svn_client_merge3().
+ * All other options are handled identically to svn_client_merge4().
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_merge_peg4(const char *source,
+                      const apr_array_header_t *ranges_to_merge,
+                      const svn_opt_revision_t *peg_revision,
+                      const char *target_wcpath,
+                      svn_depth_t depth,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t force,
+                      svn_boolean_t record_only,
+                      svn_boolean_t dry_run,
+                      svn_boolean_t allow_mixed_rev,
+                      const apr_array_header_t *merge_options,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_merge_peg4(), but with @a allow_mixed_rev set to
+ * @c TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  *
  * @since New in 1.5.
  */
@@ -3423,6 +3476,8 @@ svn_client_upgrade(const char *dir,
  * @param wcroot_dir Working copy root directory
  * @param from Original URL
  * @param to New URL
+ * @param ignore_externals If not set, recurse into external working
+ *        copies after relocating the primary working copy
  * @param ctx svn_client_ctx_t
  * @param pool The pool from which to perform memory allocations
  *
@@ -3432,11 +3487,13 @@ svn_error_t *
 svn_client_relocate2(const char *wcroot_dir,
                      const char *from,
                      const char *to,
+                     svn_boolean_t ignore_externals,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 /**
- * Similar to svn_client_relocate2().
+ * Similar to svn_client_relocate2(), but with @a ignore_externals
+ * always TRUE.
  *
  * @note As of the 1.7 API, @a dir is required to be a working copy
  * root directory, and @a recurse is required to be TRUE.
@@ -5258,15 +5315,6 @@ typedef svn_error_t *(*svn_client_patch_func_t)(
  * stripped from paths obtained from the patch. It is an error if a
  * negative strip count is passed.
  *
- * If @a old_patch_target_names is @c TRUE, use target names from the old
- * side of the patch, rather than using target names from the new side of
- * the patch. For instance, if a unidiff header contains
- *   --- foo.c
- *   +++ foo.c.new
- * and @a old_patch_target_names is @c TRUE, the name "foo.c" will be used
- * for the target, and if @a old_patch_target_names is @c FALSE, the target
- * name "foo.c.new" will be used.
- *
  * If @a reverse is @c TRUE, apply patches in reverse, deleting lines
  * the patch would add and adding lines the patch would delete.
  * This is useful when applying a unidiff which was created with the
@@ -5298,7 +5346,6 @@ svn_client_patch(const char *patch_abspath,
                  const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
-                 svn_boolean_t old_patch_target_names,
                  svn_boolean_t reverse,
                  svn_boolean_t ignore_whitespace,
                  svn_boolean_t remove_tempfiles,

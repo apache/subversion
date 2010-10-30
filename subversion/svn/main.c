@@ -114,15 +114,15 @@ typedef enum {
   opt_show_revs,
   opt_reintegrate,
   opt_trust_server_cert,
-  opt_strip_count,
+  opt_strip,
   opt_show_copies_as_adds,
   opt_ignore_keywords,
   opt_reverse_diff,
   opt_ignore_whitespace,
-  opt_show_diff,
+  opt_diff,
   opt_internal_diff,
   opt_use_git_diff_format,
-  opt_old_patch_target_names,
+  opt_allow_mixed_revisions,
 } svn_cl__longopt_t;
 
 #define SVN_CL__OPTION_CONTINUATION_INDENT "                             "
@@ -303,8 +303,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
-                    N_("lump-merge all of source URL's unmerged changes")},
-  {"strip",         opt_strip_count, 1,
+                    N_("merge a branch back into its parent branch")},
+  {"strip",         opt_strip, 1,
                     N_("number of leading path components to strip from\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "paths parsed from the patch file. --strip 0\n"
@@ -325,29 +325,20 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ignore-keywords", opt_ignore_keywords, 0,
                     N_("don't expand keywords")},
   {"reverse-diff", opt_reverse_diff, 0,
-                    N_("apply the unidiff in reverse\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
-                       "This option also reverses patch target names; the\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
-                       "--old-patch-target-names option will prevent this.")},
+                    N_("apply the unidiff in reverse")},
   {"ignore-whitespace", opt_ignore_whitespace, 0,
                        N_("ignore whitespace during pattern matching")},
-  {"show-diff", opt_show_diff, 0,
-                       N_("produce diff output")},
+  {"diff", opt_diff, 0, N_("produce diff output")}, /* maps to show_diff */
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
   {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format")},
-  {"old-patch-target-names", opt_old_patch_target_names, 0,
-                       N_("use target names from the old side of a patch.\n"
+  {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
+                       N_("Allow merge into mixed-revision working copy.\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
-                       "If a diff header contains\n"
+                       "Use of this option is not recommended!\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
-                       "  --- foo.c\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
-                       "  +++ foo.c.new\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
-                       "this option will cause the name \"foo.c\" to be used")},
+                       "Please run 'svn update' instead.")},
 
   /* Long-opt Aliases
    *
@@ -374,10 +365,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
   {"iw",            opt_ignore_whitespace, 0, NULL},
-  {"diff",          opt_show_diff, 0, NULL},
   {"idiff",         opt_internal_diff, 0, NULL},
-  {"keep-lock",     opt_no_unlock, 0, NULL},
-  {"optn",          opt_old_patch_target_names, 0, NULL},
+  {"keep-locks",    opt_no_unlock, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -679,7 +668,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     opt_show_diff, opt_diff_cmd, opt_internal_diff, 'x'},
+     opt_diff, opt_diff_cmd, opt_internal_diff, 'x'},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -736,7 +725,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  The --ignore-ancestry option overrides this, forcing Subversion to\n"
      "  regard the sources as unrelated and not to track the merge.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
-     opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate} },
+     opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
+     opt_allow_mixed_revisions} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
@@ -826,8 +816,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run, opt_strip_count, opt_reverse_diff,
-     opt_ignore_whitespace, opt_old_patch_target_names} },
+    {'q', opt_dry_run, opt_strip, opt_reverse_diff,
+     opt_ignore_whitespace} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -970,7 +960,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn relocate http:// svn:// project1 project2\n"
      "    svn relocate http://www.example.com/repo/project \\\n"
      "                 svn://svn.example.com/repo/project\n"),
-    {0} },
+    {opt_ignore_externals} },
 
   { "resolve", svn_cl__resolve, {0}, N_
     ("Resolve conflicts on working copy files or directories.\n"
@@ -1343,11 +1333,10 @@ main(int argc, const char *argv[])
       switch (opt_id) {
       case 'l':
         {
-          char *end;
-          opt_state.limit = (int) strtol(opt_arg, &end, 10);
-          if (end == opt_arg || *end != '\0')
+          err = svn_cstring_atoi(&opt_state.limit, opt_arg);
+          if (err)
             {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err,
                                      _("Non-numeric limit argument given"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
@@ -1766,22 +1755,19 @@ main(int argc, const char *argv[])
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
         break;
-      case opt_strip_count:
+      case opt_strip:
         {
-          char *end;
-          opt_state.strip_count = (int) strtol(opt_arg, &end, 10);
-          if (end == opt_arg || *end != '\0')
+          err = svn_cstring_atoi(&opt_state.strip, opt_arg);
+          if (err)
             {
-              err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+              err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
                                       _("Invalid strip count '%s'"), opt_arg);
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          if (opt_state.strip_count < 0)
+          if (opt_state.strip < 0)
             {
-              err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                      _("Negative strip count '%i' "
-                                        "(strip count must be positive)"),
-                                      opt_state.strip_count);
+              err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                     _("Argument to --strip must be positive"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
         }
@@ -1795,7 +1781,7 @@ main(int argc, const char *argv[])
       case opt_ignore_whitespace:
           opt_state.ignore_whitespace = TRUE;
           break;
-      case opt_show_diff:
+      case opt_diff:
           opt_state.show_diff = TRUE;
           break;
       case opt_internal_diff:
@@ -1804,8 +1790,8 @@ main(int argc, const char *argv[])
       case opt_use_git_diff_format:
         opt_state.use_git_diff_format = TRUE;
         break;
-      case opt_old_patch_target_names:
-        opt_state.old_patch_target_names = TRUE;
+      case opt_allow_mixed_revisions:
+        opt_state.allow_mixed_rev = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

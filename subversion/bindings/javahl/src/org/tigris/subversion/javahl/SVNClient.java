@@ -2125,7 +2125,7 @@ public class SVNClient implements SVNClientInterface
 
         try
         {
-            aSVNClient.relocate(from, to, path);
+            aSVNClient.relocate(from, to, path, true);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {

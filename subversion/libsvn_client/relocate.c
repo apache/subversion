@@ -125,15 +125,122 @@ validator_func(void *baton,
   return SVN_NO_ERROR;
 }
 
+
+/* Callback of type svn_wc_external_update_t.  Just squirrels away an
+   svn:externals property value into BATON (which is an apr_hash_t *
+   keyed on local absolute path).  */
+static svn_error_t *
+externals_update_func(void *baton,
+                      const char *local_abspath,
+                      const svn_string_t *old_val,
+                      const svn_string_t *new_val,
+                      svn_depth_t depth,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_t *externals_hash = baton;
+  apr_pool_t *hash_pool = apr_hash_pool_get(externals_hash);
+
+  apr_hash_set(externals_hash, apr_pstrdup(hash_pool, local_abspath),
+               APR_HASH_KEY_STRING, svn_string_dup(new_val, hash_pool));
+  return SVN_NO_ERROR;
+}
+
+
+/* Callback of type svn_wc_status_func4_t.  Does nothing. */
+static svn_error_t *
+status_noop_func(void *baton,
+                 const char *local_abspath,
+                 const svn_wc_status3_t *status,
+                 apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
+/* Examing the array of svn_wc_external_item2_t's EXT_DESC (parsed
+   from the svn:externals property set on LOCAL_ABSPATH) and determine
+   if the external working copies described by such should be
+   relocated as a side-effect of the relocation of their parent
+   working copy (from OLD_PARENT_REPOS_ROOT_URL to
+   NEW_PARENT_REPOS_ROOT_URL).  If so, attempt said relocation.  */
+static svn_error_t *
+relocate_externals(const char *local_abspath,
+                   apr_array_header_t *ext_desc,
+                   const char *old_parent_repos_root_url,
+                   const char *new_parent_repos_root_url,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
+{
+  const char *url;
+  apr_pool_t *iterpool;
+  int i;
+
+  SVN_ERR(svn_client_url_from_path2(&url, local_abspath, ctx,
+                                    scratch_pool, scratch_pool));
+
+  /* Parse an externals definition into an array of external items. */
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  for (i = 0; i < ext_desc->nelts; i++)
+    {
+      svn_wc_external_item2_t *ext_item =
+        APR_ARRAY_IDX(ext_desc, i, svn_wc_external_item2_t *);
+      const char *target_repos_root_url;
+      const char *target_abspath;
+      
+      svn_pool_clear(iterpool);
+
+      /* If this external isn't pulled in via a relative URL, ignore
+         it.  There's no sense in relocating a working copy only to
+         have the next 'svn update' try to point it back to another
+         location. */
+      if (! ((strncmp("../", ext_item->url, 3) == 0) ||
+             (strncmp("^/", ext_item->url, 2) == 0)))
+        continue;
+
+      /* If the external working copy's not-yet-relocated repos root
+         URL matches the primary working copy's pre-relocated
+         repository root URL, try to relocate that external, too.
+         You might wonder why this check is needed, given that we're
+         already limiting ourselves to externals pulled via URLs
+         relative to their primary working copy.  Well, it's because
+         you can use "../" to "crawl up" above one repository's URL
+         space and down into another one.  */
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath,
+                                      svn_dirent_join(local_abspath,
+                                                      ext_item->target_dir,
+                                                      iterpool),
+                                      iterpool));
+      SVN_ERR(svn_client_root_url_from_path(&target_repos_root_url,
+                                            target_abspath, ctx, iterpool));
+
+      if (strcmp(target_repos_root_url, old_parent_repos_root_url) == 0)
+        SVN_ERR(svn_client_relocate2(target_abspath,
+                                     old_parent_repos_root_url,
+                                     new_parent_repos_root_url,
+                                     TRUE, ctx, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_relocate2(const char *wcroot_dir,
                      const char *from,
                      const char *to,
+                     svn_boolean_t ignore_externals,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
   struct validator_baton_t vb;
   const char *local_abspath;
+  apr_hash_t *externals_hash = NULL;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = NULL;
+  const char *old_repos_root_url, *new_repos_root_url;
 
   /* Populate our validator callback baton, and call the relocate code. */
   vb.ctx = ctx;
@@ -142,8 +249,61 @@ svn_client_relocate2(const char *wcroot_dir,
   vb.pool = pool;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcroot_dir, pool));
+
+  /* If we're ignoring externals, just relocate and get outta here. */
+  if (ignore_externals)
+    {
+      return svn_error_return(svn_wc_relocate4(ctx->wc_ctx, local_abspath,
+                                               from, to, validator_func, &vb,
+                                               pool));
+    }
+
+  /* Fetch our current root URL. */
+  SVN_ERR(svn_client_root_url_from_path(&old_repos_root_url, local_abspath,
+                                        ctx, pool));
+
+  /* Perform the relocation. */
   SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from, to,
                            validator_func, &vb, pool));
+
+  /* Now fetch new current root URL. */
+  SVN_ERR(svn_client_root_url_from_path(&new_repos_root_url, local_abspath,
+                                        ctx, pool));
+
+  externals_hash = apr_hash_make(pool);
+
+  /* Do a status run just to harvest externals definitions. */
+  SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath,
+                             svn_depth_infinity, FALSE, FALSE, NULL,
+                             status_noop_func, NULL,
+                             externals_update_func, externals_hash,
+                             ctx->cancel_func, ctx->cancel_baton, pool));
+
+  /* No externals?  No problem.  We're done here. */
+  if (! apr_hash_count(externals_hash))
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(pool);
+
+  for (hi = apr_hash_first(pool, externals_hash);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const char *this_abspath = svn__apr_hash_index_key(hi);
+      const svn_string_t *pval = svn__apr_hash_index_val(hi);
+      apr_array_header_t *ext_desc;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc_parse_externals_description3(&ext_desc, this_abspath,
+                                                  pval->data, FALSE,
+                                                  iterpool));
+      if (ext_desc->nelts)
+        SVN_ERR(relocate_externals(this_abspath, ext_desc, old_repos_root_url,
+                                   new_repos_root_url, ctx, iterpool));
+    }
+    
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

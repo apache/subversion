@@ -930,15 +930,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       if (err)
         goto abort_report;
 
-      if (!parent_repos_relpath)
-        err = svn_wc__db_scan_base_repos(&parent_repos_relpath, NULL,
-                                         NULL,
-                                         db, parent_abspath,
-                                         scratch_pool, scratch_pool);
-
-      if (err)
-        goto abort_report;
-
       if (strcmp(repos_relpath,
                  svn_relpath_join(parent_repos_relpath, base,
                                   scratch_pool)) != 0)

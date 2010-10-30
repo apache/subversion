@@ -305,7 +305,10 @@ def textual_merges_galore(sbox):
                                        expected_skip,
                                        None,
                                        svntest.tree.detect_conflict_files,
-                                       list(tau_conflict_support_files))
+                                       (list(tau_conflict_support_files)),
+                                       None, None, False, True,
+                                       '--allow-mixed-revisions',
+                                       other_wc)
 
   # Now reverse merge r3 into A/D/G/rho, give it non-conflicting local
   # mods, then merge in the 2:3 change.  ### Not bothering to do the
@@ -315,6 +318,7 @@ def textual_merges_galore(sbox):
   #
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[-3]],
@@ -796,6 +800,7 @@ def merge_similar_unrelated_trees(sbox):
     })
 
   # run_and_verify_merge doesn't support 'svn merge URL URL path'
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'merge',
                                      '--ignore-ancestry',
@@ -1256,7 +1261,8 @@ def merge_binary_file(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1)
+                                       True, True, '--allow-mixed-revisions',
+                                       other_wc)
 
 #----------------------------------------------------------------------
 # Regression test for Issue #1297:
@@ -1529,7 +1535,8 @@ def merge_skips_obstructions(sbox):
                                        expected_status.copy(wc_dir),
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 0)
+                                       True, False, '--allow-mixed-revisions',
+                                       wc_dir)
 
   # Revert the local mods, and commit a change to A/B/lambda (r4), and then
   # commit the deletion of the same file. (r5)
@@ -1593,7 +1600,8 @@ def merge_skips_obstructions(sbox):
                                        expected_status_short,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 0)
+                                       True, False, '--allow-mixed-revisions',
+                                       wc_dir)
 
   # OK, so let's commit the new lambda (r6), and then delete the
   # working file.  Then re-run the -r3:4 merge, and see how svn deals
@@ -1639,7 +1647,8 @@ def merge_skips_obstructions(sbox):
                                        expected_status.copy(wc_dir),
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 0, '--ignore-ancestry', wc_dir)
+                                       1, 0, '--ignore-ancestry', 
+                                       '--allow-mixed-revisions', wc_dir)
 
 #----------------------------------------------------------------------
 # At one time, a merge that added items with the same name as missing
@@ -1748,7 +1757,9 @@ def merge_into_missing(sbox):
                                        expected_skip,
                                        None, None, None, None, None,
                                        0, 0, '--dry-run',
-                                       '--ignore-ancestry', F_path)
+                                       '--ignore-ancestry',
+                                       '--allow-mixed-revisions',
+                                       F_path)
 
   expected_status = wc.State(F_path, {
     ''      : Item(status='  ', wc_rev=1),
@@ -1776,7 +1787,9 @@ def merge_into_missing(sbox):
                                        expected_skip,
                                        None, None, None, None, None,
                                        0, 0,
-                                       '--ignore-ancestry', F_path)
+                                       '--ignore-ancestry',
+                                       '--allow-mixed-revisions',
+                                       F_path)
 
   # This merge fails when it attempts to descend into the missing
   # directory.  That's OK, there is no real need to support merge into
@@ -2689,7 +2702,8 @@ def merge_dir_branches(sbox):
   ### TODO: We can use run_and_verify_merge() here now.
   expected_output = expected_merge_output(None, "A    " + foo_path + "\n")
   svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'merge', C_url, F_url, wc_dir)
+                                     'merge', '--allow-mixed-revisions',
+                                     C_url, F_url, wc_dir)
 
   # Run info to check the copied rev to make sure it's right
   expected_info = {"Path" : re.escape(foo_path), # escape backslashes
@@ -3345,7 +3359,10 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status,
-                                       expected_skip)
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       True, False, '--allow-mixed-revisions',
+                                       wc_dir)
 
   # When issue #2522 was filed, svn used to break the WC if we didn't
   # update here. But nowadays, this no longer happens, so the separate
@@ -3431,7 +3448,7 @@ def merge_ignore_whitespace(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       0, 0,
+                                       0, 0, '--allow-mixed-revisions',
                                        '-x', '-w', wc_dir)
 
 #----------------------------------------------------------------------
@@ -3513,7 +3530,7 @@ def merge_ignore_eolstyle(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       0, 0,
+                                       0, 0, '--allow-mixed-revisions',
                                        '-x', '--ignore-eol-style', wc_dir)
 
 #----------------------------------------------------------------------
@@ -4684,6 +4701,7 @@ def mergeinfo_inheritance(sbox):
 
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-c5',
                                      sbox.repo_url + '/A/B/E/beta',
                                      beta_COPY_path)
@@ -4768,6 +4786,7 @@ def mergeinfo_inheritance(sbox):
   expected_skip = wc.State(omega_COPY_path, { })
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[6]],
@@ -4891,6 +4910,7 @@ def mergeinfo_elision(sbox):
 
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[5]],
@@ -5068,6 +5088,7 @@ def mergeinfo_elision(sbox):
 
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[-5]],
@@ -5841,7 +5862,9 @@ def merge_to_path_with_switched_children(sbox):
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status, expected_skip,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None,
+                                       True, False, '--allow-mixed-revisions',
+                                       A_COPY_H_path)
 
   # Non-inheritable mergeinfo ranges on a target do prevent repeat
   # merges on the target itself.
@@ -5894,7 +5917,9 @@ def merge_to_path_with_switched_children(sbox):
                                        expected_elision_output,
                                        expected_disk_D,
                                        expected_status_D, expected_skip_D,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None,
+                                       True, False, '--allow-mixed-revisions',
+                                       A_COPY_D_path)
   # Repeated merge is a no-op, though we still see the notification reporting
   # the mergeinfo describing the merge has been recorded, though this time it
   # is a ' G' notification because there is a local mergeinfo change.
@@ -5909,7 +5934,9 @@ def merge_to_path_with_switched_children(sbox):
                                        expected_elision_output,
                                        expected_disk_D,
                                        expected_status_D, expected_skip_D,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None,
+                                       True, False, '--allow-mixed-revisions',
+                                       A_COPY_D_path)
 
   # Test issue #3187 'Reverse merges don't work properly with
   # non-inheritable ranges'.
@@ -8528,6 +8555,7 @@ def cherry_picking(sbox):
   expected_skip = wc.State(rho_COPY_path, { })
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[3,4],[6]],
@@ -9495,12 +9523,14 @@ def new_subtrees_should_not_break_merge(sbox):
                                        None, None, None, None, None, 1)
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[8]],
                           ['U    ' + nu_COPY_path + '\n',
                            ' G   ' + nu_COPY_path + '\n']),
-    [], 'merge', '-c8', sbox.repo_url + '/A/D/H/nu', nu_COPY_path)
+    [], 'merge', '-c8', '--allow-mixed-revisions',
+    sbox.repo_url + '/A/D/H/nu', nu_COPY_path)
 
   # Merge -r4:6 to A_COPY, then reverse merge r6 from A_COPY/D.
   expected_output = wc.State(A_COPY_path, {
@@ -10020,7 +10050,8 @@ def dont_add_mergeinfo_from_own_history(sbox):
                                        expected_A_status,
                                        expected_A_skip,
                                        None, None, None, None,
-                                       None, 1)
+                                       None, True, False,
+                                       '--allow-mixed-revisions', A_path)
 
   # Revert all local mods
   svntest.actions.run_and_verify_svn(None,
@@ -10871,7 +10902,9 @@ def reverse_merge_away_all_mergeinfo(sbox):
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status, expected_skip,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None,
+                                       True, False, '--allow-mixed-revisions',
+                                       A_COPY_H_path)
 
 #----------------------------------------------------------------------
 # Issue #3138
@@ -11189,6 +11222,7 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.  Check the resulting mergeinfo with
   # a propget.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[5]], ['U    ' + A_copy_mu_path + '\n',
@@ -11401,6 +11435,7 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
   expected_skip = wc.State(nu_copy_path, { })
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[7]],
@@ -12388,10 +12423,11 @@ def svn_commit(path):
   svn_commit.repo_rev += 1
   return svn_commit.repo_rev
 
-def svn_merge(rev_spec, source, target, exp_out=None):
+def svn_merge(rev_spec, source, target, exp_out=None, *args):
   """Merge a single change from path 'source' to path 'target'.
   SRC_CHANGE_NUM is either a number (to cherry-pick that specific change)
-  or a command-line option revision range string such as '-r10:20'."""
+  or a command-line option revision range string such as '-r10:20'.
+  *ARGS are additional arguments passed to svn merge."""
   source = local_path(source)
   target = local_path(target)
   if isinstance(rev_spec, int):
@@ -12404,7 +12440,7 @@ def svn_merge(rev_spec, source, target, exp_out=None):
             target_re + ".*':"
     exp_out = svntest.verify.RegexOutput(exp_1 + "|" + exp_2 + "|" + exp_3)
   svntest.actions.run_and_verify_svn(None, exp_out, [],
-                                     'merge', rev_spec, source, target)
+                                     'merge', rev_spec, source, target, *args)
 
 def svn_propset(pname, pvalue, *paths):
   "Set property 'pname' to value 'pvalue' on each path in 'paths'"
@@ -12591,6 +12627,7 @@ def subtree_merges_dont_cause_spurious_conflicts(sbox):
                                        None, None, None, None, None, 1)
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  ### TODO: We can use run_and_verify_merge() here now.
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[-3]],
                                        ['G    ' + psi_COPY_path + '\n',
@@ -12928,7 +12965,8 @@ def merge_two_edits_to_same_prop(sbox):
       % A_path,
       " U   A\n",
       "Summary of conflicts:\n",
-      "  Property conflicts: 1\n"])
+      "  Property conflicts: 1\n"],
+      '--allow-mixed-revisions')
 
   # Revert changes to source wc, to test next scenario of #3250
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -12941,14 +12979,16 @@ def merge_two_edits_to_same_prop(sbox):
       "--- Recording mergeinfo for merge of r9 into '%s':\n" % A_path,
       " U   A\n",
       "Summary of conflicts:\n",
-      "  Property conflicts: 1\n"])
+      "  Property conflicts: 1\n"],
+      '--allow-mixed-revisions')
   svn_merge(rev4, A_COPY_path, A_path, [
       "--- Merging r10 into '%s':\n" % A_path,
       " C   %s\n" % mu_path,
       "--- Recording mergeinfo for merge of r10 into '%s':\n" % A_path,
       " G   A\n",
       "Summary of conflicts:\n",
-      "  Property conflicts: 1\n"])
+      "  Property conflicts: 1\n"],
+      '--allow-mixed-revisions')
 
   os.chdir(was_cwd)
 
@@ -12993,7 +13033,8 @@ def merge_an_eol_unification_and_set_svn_eol_style(sbox):
   svn_commit('A_COPY')
 
   # Merge the two changes together to the target branch.
-  svn_merge('-r'+str(rev1)+':'+str(rev3), 'A', 'A_COPY')
+  svn_merge('-r'+str(rev1)+':'+str(rev3), 'A', 'A_COPY', None,
+            '--allow-mixed-revisions')
 
   # That merge should succeed.
   # Surprise: setting svn:eol-style='LF' instead of 'native' doesn't fail.
@@ -15020,6 +15061,7 @@ def merge_automatic_conflict_resolution(sbox):
                                        list(psi_conflict_support_files),
                                        None, None, 1, 1,
                                        '--accept', 'postpone',
+                                       '--allow-mixed-revisions',
                                        A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
@@ -15039,6 +15081,7 @@ def merge_automatic_conflict_resolution(sbox):
                                        None, None, None,
                                        None, None, 1, 0,
                                        '--accept', 'mine-conflict',
+                                       '--allow-mixed-revisions',
                                        A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
@@ -15053,6 +15096,7 @@ def merge_automatic_conflict_resolution(sbox):
                                        None, None, None,
                                        None, None, 1, 0,
                                        '--accept', 'mine-full',
+                                       '--allow-mixed-revisions',
                                        A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
@@ -15072,6 +15116,7 @@ def merge_automatic_conflict_resolution(sbox):
                                        None, None, None,
                                        None, None, 1, 0,
                                        '--accept', 'theirs-conflict',
+                                       '--allow-mixed-revisions',
                                        A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
@@ -15086,6 +15131,7 @@ def merge_automatic_conflict_resolution(sbox):
                                        None, None, None,
                                        None, None, 1, 0,
                                        '--accept', 'theirs-full',
+                                       '--allow-mixed-revisions',
                                        A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', wc_dir)
@@ -15106,6 +15152,7 @@ def merge_automatic_conflict_resolution(sbox):
                                        None, None, None,
                                        None, None, 1, 0,
                                        '--accept', 'base',
+                                       '--allow-mixed-revisions',
                                        A_COPY_path)
 
 #----------------------------------------------------------------------
@@ -15377,7 +15424,8 @@ def committed_case_only_move_and_revert(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0)
+                                       None, 1, 0,
+                                       '--allow-mixed-revisions', A_COPY_path)
 
 #----------------------------------------------------------------------
 # This is a test for issue #3221 'Unable to merge into working copy of
@@ -15543,7 +15591,7 @@ def foreign_repos_del_and_props(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'merge',
                                       sbox.repo_url, wc2_dir,
-                                      '-r', '1:2')
+                                      '-r', '1:2', '--allow-mixed-revisions')
 
   expected_status.tweak('A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/tau', 'A/D/G/pi',
                          'A/D/gamma', 'A/D/H', 'A/D/H/psi', 'A/D/H/omega',

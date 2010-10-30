@@ -8862,6 +8862,73 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
   return SVN_NO_ERROR;
 }
 
+/* Perform checks to determine whether of the working copy at TARGET_ABSPATH
+ * can safely be used as a merge target. Checks are performed according to
+ * the ALLOW_MIXED_REV, ALLOW_LOCAL_MODS, and ALLOW_SWITCHED_SUBTREES
+ * parameters. If any checks fail, raise SVN_ERR_CLIENT_NOT_READY_TO_MERGE.
+ *
+ * E.g. if all the ALLOW_* parameters are FALSE, TARGET_ABSPATH must
+ * be a single-revision, pristine, unswitched working copy.
+ * In other words, it must reflect a subtree of the repostiory as found
+ * at single revision -- although sparse checkouts are permitted. */
+static svn_error_t *
+ensure_wc_is_suitable_merge_target(const char *target_abspath,
+                                   svn_client_ctx_t *ctx,
+                                   svn_boolean_t allow_mixed_rev,
+                                   svn_boolean_t allow_local_mods,
+                                   svn_boolean_t allow_switched_subtrees,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_wc_revision_status_t *wc_stat;
+
+  /* Avoid the following status crawl if we don't need it. */
+  if (allow_mixed_rev && allow_local_mods && allow_switched_subtrees)
+    return SVN_NO_ERROR;
+
+  /* Get a WC summary with min/max revisions set to the BASE revision. */
+  SVN_ERR(svn_wc_revision_status2(&wc_stat, ctx->wc_ctx, target_abspath, NULL,
+                                  FALSE, ctx->cancel_func, ctx->cancel_baton,
+                                  scratch_pool, scratch_pool));
+
+  if (! allow_switched_subtrees && wc_stat->switched)
+    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                            _("Cannot merge into a working copy "
+                              "with a switched subtree"));
+
+  if (! allow_local_mods && wc_stat->modified)
+    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                            _("Cannot merge into a working copy "
+                              "that has local modifications"));
+
+  if (! allow_mixed_rev)
+    {
+      if (! (SVN_IS_VALID_REVNUM(wc_stat->min_rev)
+             && SVN_IS_VALID_REVNUM(wc_stat->max_rev)))
+        {
+          svn_boolean_t is_added;
+
+          /* Allow merge into added nodes. */
+          SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, target_abspath,
+                                        scratch_pool));
+          if (is_added)
+            return SVN_NO_ERROR;
+          else
+            return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                    _("Cannot determine revision of working "
+                                      "copy"));
+        }
+
+      if (wc_stat->min_rev != wc_stat->max_rev)
+        return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                 _("Cannot merge into mixed-revision working "
+                                   "copy [%lu:%lu]; try updating first"),
+                                   wc_stat->min_rev, wc_stat->max_rev);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /*-----------------------------------------------------------------------*/
 
 /*** Public APIs ***/
@@ -8877,6 +8944,7 @@ merge_locked(const char *source1,
              svn_boolean_t force,
              svn_boolean_t record_only,
              svn_boolean_t dry_run,
+             svn_boolean_t allow_mixed_rev,
              const apr_array_header_t *merge_options,
              svn_client_ctx_t *ctx,
              apr_pool_t *scratch_pool)
@@ -8951,6 +9019,12 @@ merge_locked(const char *source1,
                               SVN_ERR_ILLEGAL_TARGET, NULL,
                               _("Merge target '%s' does not exist in the "
                                 "working copy"), target_abspath));
+
+
+  /* Do not allow merges into mixed-revision working copies. */
+  SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
+                                             allow_mixed_rev, TRUE, TRUE,
+                                             scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
   working_rev.kind = svn_opt_revision_working;
@@ -9150,6 +9224,7 @@ struct merge_baton {
   svn_boolean_t force;
   svn_boolean_t record_only;
   svn_boolean_t dry_run;
+  svn_boolean_t allow_mixed_rev;
   const apr_array_header_t *merge_options;
   svn_client_ctx_t *ctx;
 };
@@ -9163,7 +9238,8 @@ merge_cb(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   SVN_ERR(merge_locked(b->source1, b->revision1, b->source2, b->revision2,
                        b->target_abspath, b->depth, b->ignore_ancestry,
                        b->force, b->record_only, b->dry_run,
-                       b->merge_options, b->ctx, scratch_pool));
+                       b->allow_mixed_rev, b->merge_options, b->ctx,
+                       scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -9191,7 +9267,7 @@ get_target_and_lock_abspath(const char **target_abspath,
 }
 
 svn_error_t *
-svn_client_merge3(const char *source1,
+svn_client_merge4(const char *source1,
                   const svn_opt_revision_t *revision1,
                   const char *source2,
                   const svn_opt_revision_t *revision2,
@@ -9201,6 +9277,7 @@ svn_client_merge3(const char *source1,
                   svn_boolean_t force,
                   svn_boolean_t record_only,
                   svn_boolean_t dry_run,
+                  svn_boolean_t allow_mixed_rev,
                   const apr_array_header_t *merge_options,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
@@ -9221,6 +9298,7 @@ svn_client_merge3(const char *source1,
   baton.force = force;
   baton.record_only = record_only;
   baton.dry_run = dry_run;
+  baton.allow_mixed_rev = allow_mixed_rev;
   baton.merge_options = merge_options;
   baton.ctx = ctx;
 
@@ -9234,45 +9312,6 @@ svn_client_merge3(const char *source1,
   return SVN_NO_ERROR;
 }
 
-
-/* If TARGET_WCPATH does not reflect a single-revision, pristine,
-   unswitched working copy -- in other words, a subtree found in a
-   single revision (although sparse checkouts are permitted) -- raise
-   SVN_ERR_CLIENT_NOT_READY_TO_MERGE. */
-static svn_error_t *
-ensure_wc_reflects_repository_subtree(const char *target_abspath,
-                                      svn_client_ctx_t *ctx,
-                                      apr_pool_t *scratch_pool)
-{
-  svn_wc_revision_status_t *wc_stat;
-
-  /* Get a WC summary with min/max revisions set to the BASE revision. */
-  SVN_ERR(svn_wc_revision_status2(&wc_stat, ctx->wc_ctx, target_abspath, NULL,
-                                  FALSE, ctx->cancel_func, ctx->cancel_baton,
-                                  scratch_pool, scratch_pool));
-
-  if (wc_stat->switched)
-    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot reintegrate into a working copy "
-                              "with a switched subtree"));
-
-  if (wc_stat->modified)
-    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot reintegrate into a working copy "
-                              "that has local modifications"));
-
-  if (! (SVN_IS_VALID_REVNUM(wc_stat->min_rev)
-         && SVN_IS_VALID_REVNUM(wc_stat->max_rev)))
-    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot determine revision of working copy"));
-
-  if (wc_stat->min_rev != wc_stat->max_rev)
-    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot reintegrate into mixed-revision "
-                              "working copy; try updating first"));
-
-  return SVN_NO_ERROR;
-}
 
 /* Check if mergeinfo for a given path is described explicitly or via
    inheritance in a mergeinfo catalog.
@@ -10221,8 +10260,11 @@ merge_reintegrate_locked(const char *source,
                              svn_dirent_local_style(target_abspath,
                                                     scratch_pool));
 
-  SVN_ERR(ensure_wc_reflects_repository_subtree(target_abspath, ctx,
-                                                scratch_pool));
+  /* A reintegrate merge requires the merge target to reflect a subtree
+   * of the repository as found at a single revision. */
+  SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
+                                             FALSE, FALSE, FALSE,
+                                             scratch_pool));
   SVN_ERR(svn_wc__node_get_base_rev(&target_base_rev, ctx->wc_ctx,
                                     target_abspath, scratch_pool));
 
@@ -10438,6 +10480,7 @@ merge_peg_locked(const char *source,
                  svn_boolean_t force,
                  svn_boolean_t record_only,
                  svn_boolean_t dry_run,
+                 svn_boolean_t allow_mixed_rev,
                  const apr_array_header_t *merge_options,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool)
@@ -10478,6 +10521,10 @@ merge_peg_locked(const char *source,
                               SVN_ERR_ILLEGAL_TARGET, NULL,
                               _("Merge target '%s' does not exist in the "
                                 "working copy"), target_abspath));
+
+  SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
+                                             allow_mixed_rev, TRUE, TRUE,
+                                             scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
   working_rev.kind = svn_opt_revision_working;
@@ -10541,6 +10588,7 @@ struct merge_peg_baton {
   svn_boolean_t force;
   svn_boolean_t record_only;
   svn_boolean_t dry_run;
+  svn_boolean_t allow_mixed_rev;
   const apr_array_header_t *merge_options;
   svn_client_ctx_t *ctx;
 };
@@ -10554,13 +10602,14 @@ merge_peg_cb(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   SVN_ERR(merge_peg_locked(b->source, b->ranges_to_merge, b->peg_revision,
                            b->target_abspath, b->depth, b->ignore_ancestry,
                            b->force, b->record_only, b->dry_run,
-                           b->merge_options, b->ctx, scratch_pool));
+                           b->allow_mixed_rev, b->merge_options, b->ctx,
+                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_merge_peg3(const char *source,
+svn_client_merge_peg4(const char *source,
                       const apr_array_header_t *ranges_to_merge,
                       const svn_opt_revision_t *peg_revision,
                       const char *target_wcpath,
@@ -10569,6 +10618,7 @@ svn_client_merge_peg3(const char *source,
                       svn_boolean_t force,
                       svn_boolean_t record_only,
                       svn_boolean_t dry_run,
+                      svn_boolean_t allow_mixed_rev,
                       const apr_array_header_t *merge_options,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
@@ -10592,6 +10642,7 @@ svn_client_merge_peg3(const char *source,
   baton.force = force;
   baton.record_only = record_only;
   baton.dry_run = dry_run;
+  baton.allow_mixed_rev = allow_mixed_rev;
   baton.merge_options = merge_options;
   baton.ctx = ctx;
 

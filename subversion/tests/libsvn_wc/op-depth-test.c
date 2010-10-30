@@ -177,6 +177,15 @@ wc_revert(wc_baton_t *b, const char *path, svn_depth_t depth)
                         b->pool);
 }
 
+static svn_error_t *
+wc_delete(wc_baton_t *b, const char *path)
+{
+  const char *abspath = wc_path(b, path);
+
+  return svn_wc_delete4(b->wc_ctx, abspath, FALSE, TRUE, NULL, NULL, NULL, NULL,
+                        b->pool);
+}
+
 /* Create the Greek tree on disk in the WC, and commit it. */
 static svn_error_t *
 add_and_commit_greek_tree(wc_baton_t *b)
@@ -274,6 +283,12 @@ typedef struct {
  * Append an error message to BATON->errors if they differ or are not both
  * present.
  *
+ * If the ACTUAL row has field values that should have been elided
+ * (because they match the parent row), then do so now.  We want to ignore
+ * any such lack of elision, for the purposes of these tests, because the
+ * method of copying in use (at the time this tweak is introduced) does
+ * calculate these values itself, it simply copies from the source rows.
+ *
  * Implements svn_hash_diff_func_t. */
 static svn_error_t *
 compare_nodes_rows(const void *key, apr_ssize_t klen,
@@ -283,6 +298,30 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
   comparison_baton_t *b = baton;
   nodes_row_t *expected = apr_hash_get(b->expected_hash, key, klen);
   nodes_row_t *actual = apr_hash_get(b->actual_hash, key, klen);
+
+  /* If the ACTUAL row has field values that should have been elided
+   * (because they match the parent row), then do so now. */
+  if (actual && actual->op_depth > 0 && actual->repo_relpath)
+    {
+      const char *parent_relpath, *name, *parent_key;
+      nodes_row_t *parent_actual;
+
+      svn_relpath_split(&parent_relpath, &name, actual->local_relpath,
+                        b->scratch_pool);
+      parent_key = apr_psprintf(b->scratch_pool, "%d %s",
+                                actual->op_depth, parent_relpath);
+      parent_actual = apr_hash_get(b->actual_hash, parent_key,
+                                   APR_HASH_KEY_STRING);
+      if (parent_actual && parent_actual > 0 && parent_actual->repo_relpath
+          && strcmp(actual->repo_relpath,
+                    svn_relpath_join(parent_actual->repo_relpath, name,
+                                     b->scratch_pool)) == 0
+          && actual->repo_revnum == parent_actual->repo_revnum)
+        {
+          actual->repo_relpath = NULL;
+          actual->repo_revnum = SVN_INVALID_REVNUM;
+        }
+    }
 
   if (! expected)
     {
@@ -378,26 +417,24 @@ check_db_rows(wc_baton_t *b,
 /* ---------------------------------------------------------------------- */
 /* The test functions */
 
-/* Check that all kinds of WC-to-WC copies give correct op_depth results. */
+/* Check that all kinds of WC-to-WC copies give correct op_depth results:
+ * create a Greek tree, make copies in it, and check the resulting DB rows. */
 static svn_error_t *
 wc_wc_copies(wc_baton_t *b)
 {
+  const char source_everything[]  = "A/B";
 
-  SVN_ERR(svn_wc_context_create(&(*b).wc_ctx, NULL, b->pool, b->pool));
+  const char source_base_file[]   = "A/B/lambda";
+  const char source_base_dir[]    = "A/B/E";
+
+  const char source_added_file[]  = "A/B/file-added";
+  const char source_added_dir[]   = "A/B/D-added";
+  const char source_added_dir2[]  = "A/B/D-added/D2";
+
+  const char source_copied_file[] = "A/B/lambda-copied";
+  const char source_copied_dir[]  = "A/B/E-copied";
 
   SVN_ERR(add_and_commit_greek_tree(b));
-
-#define source_everything  "A/B"
-
-#define source_base_file   "A/B/lambda"
-#define source_base_dir    "A/B/E"
-
-#define source_added_file  "A/B/file-added"
-#define source_added_dir   "A/B/D-added"
-#define source_added_dir2  "A/B/D-added/D2"
-
-#define source_copied_file "A/B/lambda-copied"
-#define source_copied_dir  "A/B/E-copied"
 
   /* Create the various kinds of source node which will be copied */
 
@@ -492,7 +529,11 @@ wc_wc_copies(wc_baton_t *b)
     /* Perform each subtest in turn. */
     for (subtest = subtests; subtest->from_path; subtest++)
       {
-        SVN_ERR(wc_copy(b, subtest->from_path, subtest->to_path));
+        SVN_ERR(svn_wc_copy3(b->wc_ctx,
+                             wc_path(b, subtest->from_path),
+                             wc_path(b, subtest->to_path),
+                             FALSE /* metadata_only */,
+                             NULL, NULL, NULL, NULL, b->pool));
         SVN_ERR(check_db_rows(b, subtest->to_path, subtest->expected));
       }
   }
@@ -509,6 +550,7 @@ test_wc_wc_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
   b.pool = pool;
   SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
                                         "wc_wc_copies", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
 
   return wc_wc_copies(&b);
 }
@@ -522,6 +564,7 @@ test_reverts(const svn_test_opts_t *opts, apr_pool_t *pool)
   b.pool = pool;
   SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
                                         "reverts", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
 
   SVN_ERR(wc_wc_copies(&b));
 
@@ -535,6 +578,108 @@ test_reverts(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_deletes(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "deletes", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(add_and_commit_greek_tree(&b));
+
+  file_write(&b,     "A/B/E/new-file", "New file");
+  SVN_ERR(wc_add(&b, "A/B/E/new-file"));
+  {
+    nodes_row_t rows[] = {
+      { 4, "A/B/E/new-file", "normal", NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B/E/new-file", rows));
+  }
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B/E/alpha"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A/B/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 4, "A/B/E/alpha", "base-deleted", NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B/E/alpha", rows));
+  }
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B/F"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A/B/F", "normal",       1, "A/B/F" },
+      { 3, "A/B/F", "base-deleted", NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B/F", rows));
+  }
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A/B",         "normal",       1, "A/B",        },
+      { 2, "A/B/lambda",  "base-deleted", NO_COPY_FROM },
+      { 0, "A/B/lambda",  "normal",       1, "A/B/lambda", },
+      { 2, "A/B",         "base-deleted", NO_COPY_FROM },
+      { 0, "A/B/E",       "normal",       1, "A/B/E",      },
+      { 2, "A/B/E",       "base-deleted", NO_COPY_FROM },
+      { 0, "A/B/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 2, "A/B/E/alpha", "base-deleted", NO_COPY_FROM },
+      { 0, "A/B/E/beta",  "normal",       1, "A/B/E/beta" },
+      { 2, "A/B/E/beta",  "base-deleted", NO_COPY_FROM },
+      { 0, "A/B/F",       "normal",       1, "A/B/F",      },
+      { 2, "A/B/F",       "base-deleted", NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "deletes", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(add_and_commit_greek_tree(&b));
+
+  SVN_ERR(wc_copy(&b, "A/B", "A/B-copied"));
+  SVN_ERR(wc_delete(&b, "A/B-copied/E"));
+  SVN_ERR(wc_copy(&b, "A/B", "A/B-copied/E"));
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E/F"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = {
+      { 3, "A/B-copied/E/F", "not-present",       1, "A/B/F" },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B-copied/E/F", rows));
+  }
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = { { 0 } };
+    SVN_ERR(check_db_rows(&b, "A/B-copied", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -547,6 +692,12 @@ struct svn_test_descriptor_t test_funcs[] =
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_reverts,
                        "test_reverts",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_deletes,
+                       "test_deletes",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_delete_of_copies,
+                       "test_delete_of_copies",
                        "needs op_depth"),
     SVN_TEST_NULL
   };

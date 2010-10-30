@@ -57,7 +57,7 @@ struct log_receiver_baton
   /* Don't print log message body nor its line count. */
   svn_boolean_t omit_log_message;
 
-  /* Whether to show diffs in the log. */
+  /* Whether to show diffs in the log. (maps to --diff) */
   svn_boolean_t show_diff;
 
   /* Diff arguments received from command line. */
@@ -585,25 +585,25 @@ svn_cl__log(apr_getopt_t *os,
     {
       if (opt_state->show_diff)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("'show-diff' option is not supported in "
+                                _("'diff' option is not supported in "
                                   "XML mode"));
     }
 
   if (opt_state->quiet && opt_state->show_diff)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'quiet' and 'show-diff' options are "
+                            _("'quiet' and 'diff' options are "
                               "mutually exclusive"));
   if (opt_state->diff_cmd && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'diff-cmd' option requires 'show-diff' "
+                            _("'diff-cmd' option requires 'diff' "
                               "option"));
   if (opt_state->internal_diff && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'internal-diff' option requires "
-                              "'show-diff' option"));
+                              "'diff' option"));
   if (opt_state->extensions && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'extensions' option requires 'show-diff' "
+                            _("'extensions' option requires 'diff' "
                               "option"));
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -660,7 +660,7 @@ svn_cl__log(apr_getopt_t *os,
   lb.omit_log_message = opt_state->quiet;
   SVN_ERR(svn_client_url_from_path2(&lb.target_url, true_path, ctx,
                                     pool, pool));
-  lb.show_diff = (! opt_state->quiet) && opt_state->show_diff;
+  lb.show_diff = opt_state->show_diff;
   lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.pool = pool;

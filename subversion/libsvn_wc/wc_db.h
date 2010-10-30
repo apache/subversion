@@ -1010,7 +1010,43 @@ svn_wc__db_pristine_repair(svn_wc__db_t *db,
    @{
 */
 
-/* ### svn cp WCPATH WCPATH ... can copy mixed base/working around */
+/* Return TRUE if SRC_ABSPATH and DST_ABSPATH are versioned paths in the
+ * same DB; FALSE otherwise. */
+svn_boolean_t
+svn_wc__db_same_db(svn_wc__db_t *db,
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   apr_pool_t *scratch_pool);
+
+/* Copy the tree at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
+ * DST_ABSPATH.
+ *
+ * SRC_ABSPATH and DST_ABSPATH must be in the same WC.  SRC_ABSPATH must
+ * exist, and must not be excluded/absent/not-present.  The parent of
+ * DST_ABSPATH must be a versioned directory.  DST_ABSPATH must be in a
+ * state suitable for creating a new node: nonexistent or deleted.
+ *
+ * Preserve changelist associations in the copy.  Preserve all node states
+ * including excluded/absent/not-present.
+ *
+ * Copy the metadata only: do not look at or copy the nodes on disk.
+ *
+ * Add WORK_ITEMS to the work queue. */
+svn_error_t *
+svn_wc__db_op_copy_tree(svn_wc__db_t *db,
+                        const char *src_abspath,
+                        const char *dst_abspath,
+                        const svn_skel_t *work_items,
+                        apr_pool_t *scratch_pool);
+
+/* Copy the node at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
+ * DST_ABSPATH, both in DB but not necessarily in the same WC.  The parent
+ * of DST_ABSPATH must be a versioned directory.
+ *
+ * This copy is NOT recursive. It simply establishes this one node, plus
+ * incomplete nodes for the children.
+ *
+ * Add WORK_ITEMS to the work queue. */
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
@@ -1852,12 +1888,7 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
    @{
 */
 
-/* Scan for a BASE node's repository information.
-
-   In the typical case, a BASE node has unspecified repository information,
-   meaning that it is implied by its parent's information. When the info is
-   needed, this function can be used to scan up the BASE tree to find
-   the data.
+/* Read a BASE node's repository information.
 
    For the BASE node implied by LOCAL_ABSPATH, its location in the repository
    returned in *REPOS_ROOT_URL and *REPOS_UUID will be returned in

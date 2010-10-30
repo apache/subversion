@@ -72,7 +72,7 @@ def automatic_conflict_resolution(sbox):
       "( U   .*A_COPY\n)|"
       "(Summary of conflicts:\n)|"
       "(  Text conflicts: 1\n)",
-      [], 'merge', '-c3',
+      [], 'merge', '-c3', '--allow-mixed-revisions',
       sbox.repo_url + '/A',
       A_COPY_path)
 

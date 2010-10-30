@@ -97,27 +97,27 @@ static const char * const TESTING_DATA = (
   "  null, null, 'dir', '()', 'infinity', null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'A', 0, '', null, null, 1, 'normal',"
+  "  1, 'A', 0, '', 1, 'A', 1, 'normal',"
   "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
-  "  1, 'B', 0, '', null, null, null, 'excluded',"
+  "  1, 'B', 0, '', 1, 'B', null, 'excluded',"
   "  null, null, 'symlink', null, null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'C', 0, '', null, null, null, 'absent',"
+  "  1, 'C', 0, '', 1, 'C', null, 'absent',"
   "  null, null, 'unknown', null, null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'D', 0, '', null, null, null, 'not-present',"
+  "  1, 'D', 0, '', 1, 'D', null, 'not-present',"
   "  null, null, 'unknown', null, null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'E', 0, '', null, null, null, 'incomplete',"
+  "  1, 'E', 0, '', 1, 'E', null, 'incomplete',"
   "  null, null, 'unknown', null, null, null, null, null, null, null,"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'F', 0, '', null, null, 1, 'normal',"
+  "  1, 'F', 0, '', 1, 'F', 1, 'normal',"
   "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
@@ -125,51 +125,51 @@ static const char * const TESTING_DATA = (
   "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
-  "  1, 'H', 0, '', null, null, 1, 'normal',"
+  "  1, 'H', 0, '', 1, 'H', 1, 'normal',"
   "  null, null, 'symlink', '()', null, null, 'H-target', 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'I', 0, '', null, null, 1, 'normal',"
+  "  1, 'I', 0, '', 1, 'I', 1, 'normal',"
   "  null, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J', 0, '', null, null, 1, 'normal',"
+  "  1, 'J', 0, '', 1, 'J', 1, 'normal',"
   "  null, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-e', 0, 'J', null, null, 1, 'normal',"
+  "  1, 'J/J-e', 0, 'J', 1, 'J/J-e', 1, 'normal',"
   "  null, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-e/J-e-a', 0, 'J/J-e', null, null, 1, 'normal',"
+  "  1, 'J/J-e/J-e-a', 0, 'J/J-e', 1, 'J/J-e/J-e-a', 1, 'normal',"
   "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-e/J-e-b', 0, 'J/J-e', null, null, 1, 'normal',"
+  "  1, 'J/J-e/J-e-b', 0, 'J/J-e', 1, 'J/J-e/J-e-b', 1, 'normal',"
   "  null, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-e/J-e-b/Jeba', 0, 'J/J-e/J-e-b', null, null, 1, 'normal',"
+  "  1, 'J/J-e/J-e-b/Jeba', 0, 'J/J-e/J-e-b', 1, 'J/J-e/J-e-b/Jeba', 1, 'normal',"
   "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-f', 0, 'J', null, null, 1, 'normal',"
+  "  1, 'J/J-f', 0, 'J', 1, 'J/J-f', 1, 'normal',"
   "  null, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-f/J-f-a', 0, 'J/J-f', null, null, 1, 'normal',"
+  "  1, 'J/J-f/J-f-a', 0, 'J/J-f', 1, 'J/J-f/J-f-a', 1, 'normal',"
   "  null, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'K', 0, '', null, null, 1, 'normal',"
+  "  1, 'K', 0, '', 1, 'K', 1, 'normal',"
   "  null, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'K/K-a', 0, 'K', null, null, 1, 'normal',"
+  "  1, 'K/K-a', 0, 'K', 1, 'K/K-a', 1, 'normal',"
   "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
-  "  1, 'K/K-b', 0, 'K', null, null, 1, 'normal',"
+  "  1, 'K/K-b', 0, 'K', 1, 'K/K-b', 1, 'normal',"
   "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   ""
@@ -265,7 +265,7 @@ static const char * const TESTING_DATA = (
    "'" I_TC_DATA "', null, null, null, null);"
    "  "
    "insert into nodes values ("
-   "  1, 'M', 0, '', null, null, null, 'normal', "
+   "  1, 'M', 0, '', 1, 'M', null, 'normal', "
    "  1, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
    "  null, null, null, null);"
    "insert into nodes values ("
@@ -402,7 +402,7 @@ test_getting_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(target == NULL);
   SVN_TEST_ASSERT(lock == NULL);
 
-  /* Test: NULL params, file-specific values, inherit repos info. */
+  /* Test: file-specific values. */
   SVN_ERR(svn_wc__db_base_get_info(
             NULL, &kind, NULL,
             &repos_relpath, &repos_root_url, &repos_uuid,
@@ -411,17 +411,8 @@ test_getting_info(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "A", pool),
             pool, pool));
   SVN_TEST_ASSERT(kind == svn_wc__db_kind_file);
-  SVN_TEST_ASSERT(repos_relpath == NULL);
-  SVN_TEST_ASSERT(repos_root_url == NULL);
-  SVN_TEST_ASSERT(repos_uuid == NULL);
   SVN_TEST_STRING_ASSERT(MD5_1, svn_checksum_to_cstring(checksum, pool));
   SVN_TEST_ASSERT(translated_size == 10);
-
-  /* Grab the inherited info. */
-  SVN_ERR(svn_wc__db_scan_base_repos(
-            &repos_relpath, &repos_root_url, &repos_uuid,
-            db, svn_dirent_join(local_abspath, "A", pool),
-            pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "A");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
@@ -437,9 +428,9 @@ test_getting_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(kind == svn_wc__db_kind_symlink);
   SVN_TEST_ASSERT(status == svn_wc__db_status_excluded);
   SVN_TEST_ASSERT(!SVN_IS_VALID_REVNUM(revision));
-  SVN_TEST_ASSERT(repos_relpath == NULL);
-  SVN_TEST_ASSERT(repos_root_url == NULL);
-  SVN_TEST_ASSERT(repos_uuid == NULL);
+  SVN_TEST_STRING_ASSERT(repos_relpath, "B");
+  SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
+  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
   SVN_TEST_ASSERT(!SVN_IS_VALID_REVNUM(changed_rev));
   SVN_TEST_ASSERT(changed_date == 0);
   SVN_TEST_ASSERT(changed_author == NULL);
@@ -1268,12 +1259,7 @@ test_global_relocate(apr_pool_t *pool)
   /* The UUID should still be the same. */
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
-  /* While we're at it, let's see if the children have been relocated, too.
-
-     ### Relocate doesn't change anything in the child since the
-         repos_id is inherited (null).  Should we have some children
-         where the repos_id is not null but equal to the parent or
-         root? */
+  /* While we're at it, let's see if the children have been relocated, too. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                &repos_relpath, &repos_root_url, &repos_uuid,
                                NULL, NULL, NULL, NULL,
@@ -1283,9 +1269,9 @@ test_global_relocate(apr_pool_t *pool)
                                db, svn_dirent_join(local_abspath, "F",
                                                    pool),
                                pool, pool));
-  SVN_TEST_STRING_ASSERT(repos_relpath, NULL);
-  SVN_TEST_STRING_ASSERT(repos_root_url, NULL);
-  SVN_TEST_STRING_ASSERT(repos_uuid, NULL);
+  SVN_TEST_STRING_ASSERT(repos_relpath, "F");
+  SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_THREE);
+  SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
   /* Alternate repository is not relocated. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
