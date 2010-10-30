@@ -1879,6 +1879,12 @@ seek_handler_string(void *baton, svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
+static svn_boolean_t
+buffered_handler_string(void *baton)
+{
+  return TRUE;
+}
+
 svn_stream_t *
 svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool)
@@ -1897,6 +1903,7 @@ svn_stream_from_string(const svn_string_t *str,
   svn_stream_set_skip(stream, skip_handler_string);
   svn_stream_set_mark(stream, mark_handler_string);
   svn_stream_set_seek(stream, seek_handler_string);
+  svn_stream_set_buffered(stream, buffered_handler_string);
   return stream;
 }
 
