@@ -1013,7 +1013,7 @@ translate_chunk(svn_stream_t *dst,
               /* skip current EOL */
               len += b->eol_str_len;
 
-              /* Check 4 bytes at once to allow for efficient pipilening
+              /* Check 4 bytes at once to allow for efficient pipelining
                  and to reduce loop condition overhead. */
               while ((p + len + 4) <= end)
                 {
@@ -1033,7 +1033,7 @@ translate_chunk(svn_stream_t *dst,
                while ((p + len) < end && !interesting[(unsigned char)p[len]])
                  ++len;
             }
-          while (b->nl_translation_skippable &&   /* can skip EOLs at all */
+          while (b->nl_translation_skippable == svn_tristate_true &&   /* can skip EOLs at all */
                  p + len + 2 < end &&             /* not too close to EOF */
                  eol_unchanged (b, p + len));     /* EOL format already ok */
 
