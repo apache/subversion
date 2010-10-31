@@ -491,7 +491,9 @@ svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
   * compression level (@ref SVNDIFF1_COMPRESS_LEVEL).
   *
   * @since New in 1.4.
+  * @deprecated Provided for backward compatibility with the 1.6 API.
   */
+SVN_DEPRECATED
 void
 svn_txdelta_to_svndiff2(svn_txdelta_window_handler_t *handler,
                         void **handler_baton,
