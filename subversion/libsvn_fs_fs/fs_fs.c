@@ -2953,7 +2953,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
                          ffd->rev_root_id_cache, &rev, pool));
-  if (is_cached)
+  if (is_cached &&
+      is_packed_rev(fs, rev) == svn_fs_fs__is_packed(*root_id_p))
     return SVN_NO_ERROR;
 
   /* we don't care about the file pointer position */
@@ -2967,6 +2968,9 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(get_fs_id_at_offset(&root_id, apr_rev_file, fs, rev, root_offset, 
                               pool));
+  svn_fs_fs__set_packed(root_id, is_packed_rev(fs, rev)
+                                    ? svn_tristate_true
+                                    : svn_tristate_false);
 
   SVN_ERR(svn_file_handle_cache__close(revision_file));
 

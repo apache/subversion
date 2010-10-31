@@ -49,6 +49,12 @@ svn_revnum_t svn_fs_fs__id_rev(const svn_fs_id_t *id);
    ID. */
 apr_off_t svn_fs_fs__id_offset(const svn_fs_id_t *id);
 
+/* Access the "is_packed" flag of the ID. */
+svn_tristate_t svn_fs_fs__is_packed(const svn_fs_id_t *id);
+
+/* Set the "is_packed" flag of the ID. */
+void svn_fs_fs__set_packed(const svn_fs_id_t *id, svn_tristate_t is_packed);
+
 /* Convert ID into string form, allocated in POOL. */
 svn_string_t *svn_fs_fs__id_unparse(const svn_fs_id_t *id,
                                     apr_pool_t *pool);
