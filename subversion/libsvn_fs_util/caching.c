@@ -78,7 +78,7 @@ svn_fs__get_global_membuffer_cache(void)
       svn_cache__membuffer_cache_create
           (&cache,
            (apr_size_t)cache_size,
-           (apr_size_t)cache_size / 16,
+           (apr_size_t)(cache_size / 16),
            ! svn_fs_get_cache_config()->single_threaded,
            pool);
     }
