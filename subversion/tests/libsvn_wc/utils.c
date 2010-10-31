@@ -1,4 +1,4 @@
-/* svn_test_utils.c --- test utilities
+/* utils.c --- wc/client test utilities
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -20,10 +20,12 @@
  * ====================================================================
  */
 
-#include "svn_test_utils.h"
-#include "svn_test_fs.h"
 #include "svn_error.h"
 #include "svn_client.h"
+
+#include "utils.h"
+
+#include "../svn_test_fs.h"
 
 svn_error_t *
 svn_test__create_repos_and_wc(const char **repos_url,

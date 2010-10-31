@@ -40,6 +40,8 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 
+#include "utils.h"
+
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
 #include "../../libsvn_wc/wc-queries.h"
@@ -48,7 +50,6 @@
 #include "private/svn_wc_private.h"
 
 #include "../svn_test.h"
-#include "../svn_test_utils.h"
 
 
 /* Create repos and WC, and also set *DB to a new DB context. */

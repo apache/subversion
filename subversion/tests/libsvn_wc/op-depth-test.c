@@ -33,11 +33,12 @@
 #include "svn_client.h"
 #include "svn_hash.h"
 
+#include "utils.h"
+
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
 
 #include "../svn_test.h"
-#include "../svn_test_utils.h"
 
 
 /* Compare strings, like strcmp but either or both may be NULL which
