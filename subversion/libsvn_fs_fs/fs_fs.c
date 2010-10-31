@@ -1939,34 +1939,54 @@ open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
 {
   svn_error_t *err;
   const char *path;
+  svn_boolean_t retry = FALSE;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
-  /* make sure file has a defined state */
-  *file = NULL;
-  err = svn_fs_fs__path_rev_absolute(&path, fs, rev, pool);
-
-  if (! err)
+  do
     {
-      /* open the revision file in buffered r/o mode */
-      fs_fs_data_t *ffd = fs->fsap_data;
-      err = svn_file_handle_cache__open(file,
-                                        ffd->file_handle_cache,
-                                        path,
-                                        APR_READ | APR_BUFFERED,
-                                        APR_OS_DEFAULT,
-                                        offset,
-                                        cookie,
-                                        pool);
+      /* make sure file has a defined state */
+      *file = NULL;
+      err = svn_fs_fs__path_rev_absolute(&path, fs, rev, pool);
 
-      /* if that succeeded, there must be an underlying APR file */
-      assert(err || svn_file_handle_cache__get_apr_handle(*file));
-    }
+      if (! err)
+        {
+          /* open the revision file in buffered r/o mode */
+          err = svn_file_handle_cache__open(file,
+                                            ffd->file_handle_cache,
+                                            path,
+                                            APR_READ | APR_BUFFERED,
+                                            APR_OS_DEFAULT,
+                                            offset,
+                                            cookie,
+                                            pool);
 
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                               _("No such revision %ld"), rev);
+          /* if that succeeded, there must be an underlying APR file */
+          assert(err || svn_file_handle_cache__get_apr_handle(*file));
+        }
+
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* Could not open the file. This may happen if the
+           * file once existed but got packed later. Note that
+           * the file handle cache may have had an open handle
+           * to the old file but had to close it in the function
+           * call above due to different open flags.
+           */
+          svn_error_clear(err);
+
+          /* if that was our 2nd attempt, leave it at that. */
+          if (retry)
+            return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                    _("No such revision %ld"), rev);
+
+          /* we failed for the first time. Refresh caches & retry. */
+          SVN_ERR(svn_file_handle_cache__flush(ffd->file_handle_cache));
+          SVN_ERR(update_min_unpacked_rev(fs, pool));
+
+          retry = TRUE;
+        }
     }
+  while (err && retry);
 
   return svn_error_return(err);
 }
@@ -2953,9 +2973,9 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
                          ffd->rev_root_id_cache, &rev, pool));
-  if (is_cached &&
-      is_packed_rev(fs, rev) == svn_fs_fs__is_packed(*root_id_p))
-    return SVN_NO_ERROR;
+//  if (is_cached &&
+//      is_packed_rev(fs, rev) == svn_fs_fs__is_packed(*root_id_p))
+//    return SVN_NO_ERROR;
 
   /* we don't care about the file pointer position */
   SVN_ERR(open_pack_or_rev_file(&revision_file, fs, rev, -1,
