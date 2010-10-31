@@ -594,7 +594,7 @@ svn_fs_fs__deserialize_id(void **out,
 
 /** Caching node_revision_t objects. **/
 
-/* Implements vn_cache__serialize_fn_t for node_revision_t.
+/* Implements svn_cache__serialize_fn_t for node_revision_t.
  */
 svn_error_t *
 svn_fs_fs__serialize_node_revision(char **buffer,
