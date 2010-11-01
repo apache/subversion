@@ -993,6 +993,12 @@ svn_client_export5(svn_revnum_t *result_rev,
           apr_hash_index_t *hi;
           struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
 
+          if (svn_path_is_empty(to))
+            {
+              to = svn_path_uri_decode(svn_uri_basename(from, NULL), pool);
+              eb->root_path = to;
+            }
+          
           /* Since you cannot actually root an editor at a file, we
            * manually drive a few functions of our editor. */
 
