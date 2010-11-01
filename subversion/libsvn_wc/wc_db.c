@@ -1814,39 +1814,30 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__db_base_get_info(svn_wc__db_status_t *status,
-                         svn_wc__db_kind_t *kind,
-                         svn_revnum_t *revision,
-                         const char **repos_relpath,
-                         const char **repos_root_url,
-                         const char **repos_uuid,
-                         svn_revnum_t *changed_rev,
-                         apr_time_t *changed_date,
-                         const char **changed_author,
-                         apr_time_t *last_mod_time,
-                         svn_depth_t *depth,
-                         const svn_checksum_t **checksum,
-                         svn_filesize_t *translated_size,
-                         const char **target,
-                         svn_wc__db_lock_t **lock,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+static svn_error_t *
+base_get_info(svn_wc__db_status_t *status,
+              svn_wc__db_kind_t *kind,
+              svn_revnum_t *revision,
+              const char **repos_relpath,
+              const char **repos_root_url,
+              const char **repos_uuid,
+              svn_revnum_t *changed_rev,
+              apr_time_t *changed_date,
+              const char **changed_author,
+              apr_time_t *last_mod_time,
+              svn_depth_t *depth,
+              const svn_checksum_t **checksum,
+              svn_filesize_t *translated_size,
+              const char **target,
+              svn_wc__db_lock_t **lock,
+              svn_wc__db_pdh_t *pdh,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   svn_error_t *err = SVN_NO_ERROR;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     lock ? STMT_SELECT_BASE_NODE_WITH_LOCK
@@ -1924,7 +1915,8 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                 err = svn_error_createf(
                         err->apr_err, err,
                         _("The node '%s' has a corrupt checksum value."),
-                        svn_dirent_local_style(local_abspath, scratch_pool));
+                        path_for_error_message(pdh->wcroot, local_relpath,
+                                               scratch_pool));
             }
         }
       if (translated_size)
@@ -1943,7 +1935,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
     {
       err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                               _("The node '%s' was not found."),
-                              svn_dirent_local_style(local_abspath,
+                              path_for_error_message(pdh->wcroot, local_relpath,
                                                      scratch_pool));
     }
 
@@ -1951,6 +1943,45 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
   return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 }
 
+
+svn_error_t *
+svn_wc__db_base_get_info(svn_wc__db_status_t *status,
+                         svn_wc__db_kind_t *kind,
+                         svn_revnum_t *revision,
+                         const char **repos_relpath,
+                         const char **repos_root_url,
+                         const char **repos_uuid,
+                         svn_revnum_t *changed_rev,
+                         apr_time_t *changed_date,
+                         const char **changed_author,
+                         apr_time_t *last_mod_time,
+                         svn_depth_t *depth,
+                         const svn_checksum_t **checksum,
+                         svn_filesize_t *translated_size,
+                         const char **target,
+                         svn_wc__db_lock_t **lock,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(base_get_info(status, kind, revision, repos_relpath, repos_root_url,
+                        repos_uuid, changed_rev, changed_date, changed_author,
+                        last_mod_time, depth, checksum, translated_size,
+                        target, lock,
+                        pdh, local_relpath, result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_base_get_prop(const svn_string_t **propval,
@@ -4741,11 +4772,10 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
     }
 
   if (have_base)
-    SVN_ERR(svn_wc__db_base_get_info(&base_status,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     db, local_abspath,
-                                     scratch_pool, scratch_pool));
+    SVN_ERR(base_get_info(&base_status,
+                          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                          pdh, local_relpath, scratch_pool, scratch_pool));
 
   if (have_base && (base_status == svn_wc__db_status_absent
                     || base_status == svn_wc__db_status_excluded))
@@ -7998,10 +8028,10 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
   SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Now check the BASE node's status.  */
-  SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, db, local_abspath,
-                                   scratch_pool, scratch_pool));
+  SVN_ERR(base_get_info(&base_status,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        pdh, local_relpath, scratch_pool, scratch_pool));
 
   *hidden = (base_status == svn_wc__db_status_absent
              || base_status == svn_wc__db_status_not_present
