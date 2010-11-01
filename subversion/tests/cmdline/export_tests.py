@@ -680,7 +680,7 @@ test_list = [ None,
               export_with_url_unsafe_characters,
               XFail(export_working_copy_with_depths),
               export_externals_with_native_eol,
-              XFail(export_to_current_dir),
+              export_to_current_dir,
              ]
 
 if __name__ == '__main__':
