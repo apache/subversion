@@ -300,7 +300,6 @@ add_file(const char *local_abspath,
 
   /* Add the file */
   SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
-                               ctx->cancel_func, ctx->cancel_baton,
                                NULL, NULL, pool));
 
   if (is_special)
@@ -387,7 +386,6 @@ add_dir_recursive(const char *dir_abspath,
 
   /* Add this directory to revision control. */
   err = svn_wc_add_from_disk(ctx->wc_ctx, dir_abspath,
-                             ctx->cancel_func, ctx->cancel_baton,
                              ctx->notify_func2, ctx->notify_baton2,
                              iterpool);
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
@@ -548,8 +546,10 @@ add_parent_dirs(svn_client_ctx_t *ctx,
     SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, parent_abspath, FALSE,
                                        scratch_pool, scratch_pool));
 
+  if (ctx->cancel_func)
+    SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
   SVN_ERR(svn_wc_add_from_disk(wc_ctx, local_abspath,
-                               ctx->cancel_func, ctx->cancel_baton,
                                ctx->notify_func2, ctx->notify_baton2,
                                scratch_pool));
   /* ### New dir gets added with its own per-directory lock which we

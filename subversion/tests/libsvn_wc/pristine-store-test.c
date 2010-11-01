@@ -216,8 +216,7 @@ pristine_get_translated(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, dirname, 0, FALSE, pool));
 
-    SVN_ERR(svn_wc_add_from_disk(wc_ctx, versioned_abspath,
-                                 NULL, NULL, NULL, NULL, pool));
+    SVN_ERR(svn_wc_add_from_disk(wc_ctx, versioned_abspath, NULL, NULL, pool));
     SVN_ERR(svn_wc_prop_set4(wc_ctx, versioned_abspath,
                              "svn:keywords", svn_string_create("Rev", pool),
                              FALSE, NULL, NULL, pool));
