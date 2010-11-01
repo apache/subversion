@@ -4212,9 +4212,8 @@ svn_wc_delete(const char *path,
               apr_pool_t *pool);
 
 /**
- * Schedule the node or tree that exists on disk at @a local_abspath for
- * addition to the working copy, recursively.  The added nodes will have
- * no properties.
+ * Schedule the single node that exists on disk at @a local_abspath for
+ * addition to the working copy.  The added node will have no properties.
  *
  * The versioned state of the parent path must be a modifiable directory,
  * and the versioned state of @a local_abspath must be either nonexistent or
@@ -4227,10 +4226,9 @@ svn_wc_delete(const char *path,
  *
  * ### TODO: Cancellation isn't implemented yet.
  *
- * ### TODO: Recurse as far as a specified depth?
+ * ### TODO: Allow the caller to provide the node's properties?
  *
- * ### A better API might allow the caller to walk a tree and add a single
- *     node at a time, specifying each node's properties.
+ * ### TODO: Split into add_dir, add_file, add_symlink?
  */
 svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
