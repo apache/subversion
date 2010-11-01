@@ -4575,23 +4575,31 @@ db_working_update_presence(svn_wc__db_status_t status,
   if (status == svn_wc__db_status_base_deleted)
     SVN_ERR(delete_not_present_children(pdh, local_relpath, scratch_pool));
 
+  /* ### Should the switch to not-present remove an ACTUAL row? */
+
   return SVN_NO_ERROR;
 }
 
 
 /* Delete working and actual nodes for LOCAL_ABSPATH.  When called any
-   remain working child sub-trees should be presence=not-present and will
-   be deleted. */
+   remaining working child sub-trees should be presence=not-present
+   and will be deleted. */
 static svn_error_t *
 db_working_actual_remove(svn_wc__db_pdh_t *pdh,
                          const char *local_relpath,
                          apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+#ifdef SVN_WC__OP_DEPTH
+  apr_int64_t op_depth = relpath_depth(local_relpath);
+#else
+  apr_int64_t op_depth = 2;  /* ### temporary op_depth */
+#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_DELETE_WORKING_NODES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+                                    STMT_DELETE_OP_DEPTH_NODES));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id,
+                            local_relpath, op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
