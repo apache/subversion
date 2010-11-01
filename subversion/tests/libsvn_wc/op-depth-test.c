@@ -656,9 +656,63 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
                                         "deletes", opts, pool));
   SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
   SVN_ERR(add_and_commit_greek_tree(&b));
-
   SVN_ERR(wc_copy(&b, "A/B", "A/B-copied"));
-  SVN_ERR(wc_delete(&b, "A/B-copied/E"));
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = {
+      { 2, "A/B-copied/E",       "not-present",       1, "A/B/E" },
+      { 2, "A/B-copied/E/alpha", "not-present",       NO_COPY_FROM},
+      { 2, "A/B-copied/E/beta",  "not-present",       NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
+  }
+
+  SVN_ERR(wc_copy(&b, "A/D/G", "A/B-copied/E"));
+  {
+    nodes_row_t rows[] = {
+      { 2, "A/B-copied/E",       "not-present",       1, "A/B/E" },
+      { 2, "A/B-copied/E/alpha", "not-present",       NO_COPY_FROM},
+      { 2, "A/B-copied/E/beta",  "not-present",       NO_COPY_FROM},
+      { 3, "A/B-copied/E",       "normal",            1, "A/D/G" },
+      { 3, "A/B-copied/E/pi",    "normal",            NO_COPY_FROM},
+      { 3, "A/B-copied/E/rho",   "normal",            NO_COPY_FROM},
+      { 3, "A/B-copied/E/tau",   "normal",            NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
+  }
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E/rho"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = {
+      { 2, "A/B-copied/E",       "not-present",       1, "A/B/E" },
+      { 2, "A/B-copied/E/alpha", "not-present",       NO_COPY_FROM},
+      { 2, "A/B-copied/E/beta",  "not-present",       NO_COPY_FROM},
+      { 3, "A/B-copied/E",       "normal",            1, "A/D/G" },
+      { 3, "A/B-copied/E/pi",    "normal",            NO_COPY_FROM},
+      { 3, "A/B-copied/E/rho",   "not-present",       NO_COPY_FROM},
+      { 3, "A/B-copied/E/tau",   "normal",            NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
+  }
+
+  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E"),
+                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  {
+    nodes_row_t rows[] = {
+      { 2, "A/B-copied/E",       "not-present",       1, "A/B/E" },
+      { 2, "A/B-copied/E/alpha", "not-present",       NO_COPY_FROM},
+      { 2, "A/B-copied/E/beta",  "not-present",       NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
+  }
+
   SVN_ERR(wc_copy(&b, "A/B", "A/B-copied/E"));
 
   SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E/F"),
