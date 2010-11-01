@@ -232,7 +232,7 @@ add_and_commit_greek_tree(wc_baton_t *b)
     apr_array_header_t *targets = apr_array_make(b->pool, 1,
                                                  sizeof(const char *));
 
-    APR_ARRAY_PUSH(targets, const char *) = wc_path(b, "A");
+    APR_ARRAY_PUSH(targets, const char *) = wc_path(b, "");
     SVN_ERR(svn_client_create_context(&ctx, b->pool));
     SVN_ERR(svn_client_commit5(targets, svn_depth_infinity,
                                FALSE, FALSE, /* keep locks/cl's */
