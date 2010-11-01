@@ -4557,19 +4557,11 @@ delete_not_present_children(svn_wc__db_pdh_t *pdh,
 /* Update the working node for LOCAL_ABSPATH setting presence=STATUS */
 static svn_error_t *
 db_working_update_presence(svn_wc__db_status_t status,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
+                           svn_wc__db_pdh_t *pdh,
+                           const char *local_relpath,
                            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_UPDATE_NODE_WORKING_PRESENCE));
@@ -4591,20 +4583,11 @@ db_working_update_presence(svn_wc__db_status_t status,
    remain working child sub-trees should be presence=not-present and will
    be deleted. */
 static svn_error_t *
-db_working_actual_remove(svn_wc__db_t *db,
-                         const char *local_abspath,
+db_working_actual_remove(svn_wc__db_pdh_t *pdh,
+                         const char *local_relpath,
                          apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-
-  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_DELETE_WORKING_NODES));
@@ -4618,8 +4601,6 @@ db_working_actual_remove(svn_wc__db_t *db,
 
   SVN_ERR(delete_not_present_children(pdh, local_relpath, scratch_pool));
 
-  SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -4629,21 +4610,12 @@ db_working_actual_remove(svn_wc__db_t *db,
 /* Insert a working node for LOCAL_ABSPATH with presence=STATUS. */
 static svn_error_t *
 db_working_insert(svn_wc__db_status_t status,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
+                  svn_wc__db_pdh_t *pdh,
+                  const char *local_relpath,
                   apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   insert_working_baton_t iwb;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  /* Update WORKING_NODE and NODE_DATA transactionally */
   blank_iwb(&iwb);
 
   iwb.wc_id = pdh->wcroot->wc_id;
@@ -4655,12 +4627,7 @@ db_working_insert(svn_wc__db_status_t status,
   iwb.op_depth = 2; /* ### temporary op_depth */
 #endif
 
-  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
-                                       copy_working_from_base, &iwb,
-                                       scratch_pool));
-
-
-  SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));
+  SVN_ERR(copy_working_from_base(&iwb, pdh->wcroot->sdb, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -4738,31 +4705,29 @@ is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
   return SVN_NO_ERROR;
 }
 
+struct temp_op_delete_baton {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  /* The following two are only needed for svn_wc__db_temp_forget_directory */
+  svn_wc__db_t *db;
+  const char *local_abspath;
+};
 
 /* Delete LOCAL_ABSPATH.  Implements the delete transition from
    notes/wc-ng/transitions. */
-svn_error_t *
-svn_wc__db_temp_op_delete(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool)
+static svn_error_t *
+temp_op_delete_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
+  struct temp_op_delete_baton *b = baton;
   svn_wc__db_status_t base_status, working_status, new_working_status;
   svn_boolean_t have_base, have_work, new_have_work;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(read_info(&working_status, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, &have_base, &have_work, NULL, NULL,
-                    pdh, local_relpath,
+                    b->pdh, b->local_relpath,
                     scratch_pool, scratch_pool));
   if (working_status == svn_wc__db_status_deleted)
     {
@@ -4775,7 +4740,8 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
     SVN_ERR(base_get_info(&base_status,
                           NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                           NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                          pdh, local_relpath, scratch_pool, scratch_pool));
+                          b->pdh, b->local_relpath,
+                          scratch_pool, scratch_pool));
 
   if (have_base && (base_status == svn_wc__db_status_absent
                     || base_status == svn_wc__db_status_excluded))
@@ -4822,7 +4788,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       svn_boolean_t add_or_root_of_copy;
 
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
-                                     pdh, local_relpath, scratch_pool));
+                                     b->pdh, b->local_relpath, scratch_pool));
       if (add_or_root_of_copy)
         new_have_work = FALSE;
       else
@@ -4833,7 +4799,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       /* DELETE + ADD  */
       svn_boolean_t add_or_root_of_copy;
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
-                                     pdh, local_relpath, scratch_pool));
+                                     b->pdh, b->local_relpath, scratch_pool));
       if (add_or_root_of_copy)
         new_working_status = svn_wc__db_status_base_deleted;
       else
@@ -4843,28 +4809,55 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
     {
       svn_boolean_t add_or_root_of_copy;
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
-                                     pdh, local_relpath, scratch_pool));
+                                     b->pdh, b->local_relpath, scratch_pool));
       if (add_or_root_of_copy)
         new_have_work = FALSE;
     }
 
   if (!new_have_work && have_work)
     {
-      SVN_ERR(db_working_actual_remove(db, local_abspath, scratch_pool));
+      SVN_ERR(db_working_actual_remove(b->pdh, b->local_relpath, scratch_pool));
+
       /* ### Search the cached directories in db for directories below
              local_abspath and close their handles to allow deleting
              them from the working copy */
-      SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath,
+      SVN_ERR(svn_wc__db_temp_forget_directory(b->db, b->local_abspath,
                                                scratch_pool));
     }
   else if (new_have_work && !have_work)
     SVN_ERR(db_working_insert(new_working_status,
-                              db, local_abspath, scratch_pool));
+                              b->pdh, b->local_relpath, scratch_pool));
   else if (new_have_work && have_work
            && new_working_status != working_status)
     SVN_ERR(db_working_update_presence(new_working_status,
-                                       db, local_abspath, scratch_pool));
+                                       b->pdh, b->local_relpath, scratch_pool));
   /* ### else nothing to do, return an error? */
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_temp_op_delete(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
+{
+  struct temp_op_delete_baton b;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&b.pdh, &b.local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(b.pdh);
+
+  /* These two for svn_wc__db_temp_forget_directory */
+  b.db = db; 
+  b.local_abspath = local_abspath;
+
+  SVN_ERR(svn_sqlite__with_transaction(b.pdh->wcroot->sdb, temp_op_delete_txn,
+                                       &b, scratch_pool));
+
+  SVN_ERR(flush_entries(db, b.pdh, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
