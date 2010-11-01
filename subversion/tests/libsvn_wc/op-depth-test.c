@@ -244,7 +244,7 @@ add_and_commit_greek_tree(wc_baton_t *b)
 
 
 /* ---------------------------------------------------------------------- */
-/* Functions for comparing expected and actual WC DB data. */
+/* Functions for comparing expected and found WC DB data. */
 
 /* Some of the fields from a NODES table row. */
 typedef struct nodes_row_t {
@@ -274,7 +274,7 @@ print_row(const nodes_row_t *row,
 /* A baton to pass through svn_hash_diff() to compare_nodes_rows(). */
 typedef struct {
     apr_hash_t *expected_hash;  /* Maps "OP_DEPTH PATH" to nodes_row_t. */
-    apr_hash_t *actual_hash;    /* Maps "OP_DEPTH PATH" to nodes_row_t. */
+    apr_hash_t *found_hash;     /* Maps "OP_DEPTH PATH" to nodes_row_t. */
     apr_pool_t *scratch_pool;
     svn_error_t *errors;        /* Chain of errors found in comparison. */
 } comparison_baton_t;
@@ -297,29 +297,30 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
 {
   comparison_baton_t *b = baton;
   nodes_row_t *expected = apr_hash_get(b->expected_hash, key, klen);
-  nodes_row_t *actual = apr_hash_get(b->actual_hash, key, klen);
+  nodes_row_t *found = apr_hash_get(b->found_hash, key, klen);
 
   /* If the ACTUAL row has field values that should have been elided
    * (because they match the parent row), then do so now. */
-  if (actual && actual->op_depth > 0 && actual->repo_relpath)
+  if (found && found->op_depth > 0 && found->repo_relpath)
     {
       const char *parent_relpath, *name, *parent_key;
-      nodes_row_t *parent_actual;
+      nodes_row_t *parent_found;
 
-      svn_relpath_split(&parent_relpath, &name, actual->local_relpath,
+      svn_relpath_split(&parent_relpath, &name, found->local_relpath,
                         b->scratch_pool);
       parent_key = apr_psprintf(b->scratch_pool, "%d %s",
-                                actual->op_depth, parent_relpath);
-      parent_actual = apr_hash_get(b->actual_hash, parent_key,
-                                   APR_HASH_KEY_STRING);
-      if (parent_actual && parent_actual > 0 && parent_actual->repo_relpath
-          && strcmp(actual->repo_relpath,
-                    svn_relpath_join(parent_actual->repo_relpath, name,
+                                found->op_depth, parent_relpath);
+      parent_found = apr_hash_get(b->found_hash, parent_key,
+                                  APR_HASH_KEY_STRING);
+      if (parent_found && parent_found->op_depth > 0
+          && parent_found->repo_relpath
+          && strcmp(found->repo_relpath,
+                    svn_relpath_join(parent_found->repo_relpath, name,
                                      b->scratch_pool)) == 0
-          && actual->repo_revnum == parent_actual->repo_revnum)
+          && found->repo_revnum == parent_found->repo_revnum)
         {
-          actual->repo_relpath = NULL;
-          actual->repo_revnum = SVN_INVALID_REVNUM;
+          found->repo_relpath = NULL;
+          found->repo_revnum = SVN_INVALID_REVNUM;
         }
     }
 
@@ -327,25 +328,25 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
     {
       b->errors = svn_error_createf(
                     SVN_ERR_TEST_FAILED, b->errors,
-                    "actual   {%s}",
-                    print_row(actual, b->scratch_pool));
+                    "found   {%s}",
+                    print_row(found, b->scratch_pool));
     }
-  else if (! actual)
+  else if (! found)
     {
       b->errors = svn_error_createf(
                     SVN_ERR_TEST_FAILED, b->errors,
                     "expected {%s}",
                     print_row(expected, b->scratch_pool));
     }
-  else if (expected->repo_revnum != actual->repo_revnum
-           || (strcmp_null(expected->repo_relpath, actual->repo_relpath) != 0)
-           || (strcmp_null(expected->presence, actual->presence) != 0))
+  else if (expected->repo_revnum != found->repo_revnum
+           || (strcmp_null(expected->repo_relpath, found->repo_relpath) != 0)
+           || (strcmp_null(expected->presence, found->presence) != 0))
     {
       b->errors = svn_error_createf(
                     SVN_ERR_TEST_FAILED, b->errors,
-                    "expected {%s}; actual {%s}",
+                    "expected {%s}; found {%s}",
                     print_row(expected, b->scratch_pool),
-                    print_row(actual, b->scratch_pool));
+                    print_row(found, b->scratch_pool));
     }
 
   /* Don't terminate the comparison: accumulate all differences. */
@@ -368,10 +369,10 @@ check_db_rows(wc_baton_t *b,
   int i;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_hash_t *actual_hash = apr_hash_make(b->pool);
+  apr_hash_t *found_hash = apr_hash_make(b->pool);
   apr_hash_t *expected_hash = apr_hash_make(b->pool);
   comparison_baton_t comparison_baton
-    = { expected_hash, actual_hash, b->pool, NULL };
+    = { expected_hash, found_hash, b->pool, NULL };
 
   /* Fill ACTUAL_HASH with data from the WC DB. */
   SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
@@ -391,7 +392,7 @@ check_db_rows(wc_baton_t *b,
       row->repo_relpath = svn_sqlite__column_text(stmt, 4, b->pool);
 
       key = apr_psprintf(b->pool, "%d %s", row->op_depth, row->local_relpath);
-      apr_hash_set(actual_hash, key, APR_HASH_KEY_STRING, row);
+      apr_hash_set(found_hash, key, APR_HASH_KEY_STRING, row);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
@@ -408,7 +409,7 @@ check_db_rows(wc_baton_t *b,
     }
 
   /* Compare EXPECTED_HASH with ACTUAL_HASH and return any errors. */
-  SVN_ERR(svn_hash_diff(expected_hash, actual_hash,
+  SVN_ERR(svn_hash_diff(expected_hash, found_hash,
                         compare_nodes_rows, &comparison_baton, b->pool));
   return comparison_baton.errors;
 }
