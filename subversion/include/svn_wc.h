@@ -4224,8 +4224,6 @@ svn_wc_delete(const char *path,
  *
  * This is equivalent to svn_wc_add4() case 2a.
  *
- * ### TODO: Cancellation isn't implemented yet.
- *
  * ### TODO: Allow the caller to provide the node's properties?
  *
  * ### TODO: Split into add_dir, add_file, add_symlink?
@@ -4233,8 +4231,6 @@ svn_wc_delete(const char *path,
 svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      apr_pool_t *scratch_pool);
