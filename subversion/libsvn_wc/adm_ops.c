@@ -1083,25 +1083,28 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     }
   else  /* Case 1: Integrating a separate WC into this one, in place */
     {
-      svn_boolean_t owns_lock;
-      const char *tmpdir_abspath, *moved_abspath, *moved_adm_abspath;
-      const char *adm_abspath = svn_wc__adm_child(local_abspath, "",
-                                                  scratch_pool);
+      const char *moved_abspath;
 
       /* Drop any references to the wc that is to be rewritten */
       SVN_ERR(svn_wc__db_drop_root(db, local_abspath, scratch_pool));
 
-      /* Move the admin dir from the wc to a temporary location */
-      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
-                                             svn_dirent_dirname(local_abspath,
-                                                                scratch_pool),
-                                             scratch_pool, scratch_pool));
-      SVN_ERR(svn_io_open_unique_file3(NULL, &moved_abspath, tmpdir_abspath,
-                                       svn_io_file_del_on_close,
-                                       scratch_pool, scratch_pool));
-      SVN_ERR(svn_io_dir_make(moved_abspath, APR_OS_DEFAULT, scratch_pool));
-      moved_adm_abspath = svn_wc__adm_child(moved_abspath, "", scratch_pool);
-      SVN_ERR(svn_io_file_move(adm_abspath, moved_adm_abspath, scratch_pool));
+      /* Move the admin dir from the wc to a temporary location: MOVED_ABSPATH */
+      {
+        const char *tmpdir_abspath, *moved_adm_abspath, *adm_abspath;
+
+        SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
+                                               svn_dirent_dirname(local_abspath,
+                                                                  scratch_pool),
+                                               scratch_pool, scratch_pool));
+        SVN_ERR(svn_io_open_unique_file3(NULL, &moved_abspath, tmpdir_abspath,
+                                         svn_io_file_del_on_close,
+                                         scratch_pool, scratch_pool));
+        SVN_ERR(svn_io_dir_make(moved_abspath, APR_OS_DEFAULT, scratch_pool));
+
+        adm_abspath = svn_wc__adm_child(local_abspath, "", scratch_pool);
+        moved_adm_abspath = svn_wc__adm_child(moved_abspath, "", scratch_pool);
+        SVN_ERR(svn_io_file_move(adm_abspath, moved_adm_abspath, scratch_pool));
+      }
 
       /* Copy entries from temporary location into the main db */
       SVN_ERR(svn_wc_copy3(wc_ctx, moved_abspath, local_abspath,
@@ -1116,11 +1119,14 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       /* The subdir is now part of our parent working copy. Our caller assumes
          that we return the new node locked, so obtain a lock if we didn't
          receive the lock via our depth infinity lock */
-      SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath, FALSE,
-                                          scratch_pool));
-      if (!owns_lock)
-        SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
-                                         scratch_pool));
+      {
+        svn_boolean_t owns_lock;
+        SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
+                                            FALSE, scratch_pool));
+        if (!owns_lock)
+          SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                           scratch_pool));
+      }
     }
 
   /* Report the addition to the caller. */
