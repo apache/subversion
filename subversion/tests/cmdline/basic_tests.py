@@ -2731,7 +2731,7 @@ test_list = [ None,
               delete_and_add_same_file,
               delete_child_parent_update,
               basic_relocate,
-              XFail(delete_urls_with_spaces),
+              delete_urls_with_spaces,
              ]
 
 if __name__ == '__main__':
