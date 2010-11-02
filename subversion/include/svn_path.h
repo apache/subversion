@@ -243,6 +243,7 @@ svn_path_split(const char *path,
  * directory -- that is, if prepending it as a component to an existing
  * path would result in no meaningful change.
  */
+/* J: For RELPATHs only. Doc should just not say "or ... that is ...". */
 int
 svn_path_is_empty(const char *path);
 
@@ -286,6 +287,7 @@ svn_path_is_canonical(const char *path, apr_pool_t *pool);
 /** Return an integer greater than, equal to, or less than 0, according
  * as @a path1 is greater than, equal to, or less than @a path2.
  */
+/* J: Should be per path kind. */
 int
 svn_path_compare_paths(const char *path1, const char *path2);
 
@@ -416,6 +418,7 @@ svn_path_condense_targets(const char **pcommon,
  *     between saying "i'm in foo, update bar" and "i'm in foo/bar,
  *     update '.'"
  */
+/* J: Ought to be specific to OSPATHs or URLPATHs. */
 svn_error_t *
 svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
                              const apr_array_header_t *targets,
@@ -427,6 +430,7 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
  * absolute, the first component will be a lone dir separator (the
  * root directory).
  */
+/* J: Separate per path kind, or only for RELPATH. */
 apr_array_header_t *
 svn_path_decompose(const char *path, apr_pool_t *pool);
 
@@ -439,6 +443,7 @@ svn_path_decompose(const char *path, apr_pool_t *pool);
  *
  * @since New in 1.5.
  */
+/* J: Per path kind, or only for RELPATH. */
 const char *
 svn_path_compose(const apr_array_header_t *components, apr_pool_t *pool);
 
@@ -458,6 +463,7 @@ svn_path_is_single_path_component(const char *name);
  *
  * @since New in 1.1.
  */
+/* J: Per path kind. */
 svn_boolean_t
 svn_path_is_backpath_present(const char *path);
 
@@ -524,6 +530,7 @@ svn_path_is_ancestor(const char *path1, const char *path2);
  *
  * @since New in 1.2.
  */
+/* J: Should it check a single component? Start with "/"? */
 svn_error_t *
 svn_path_check_valid(const char *path, apr_pool_t *pool);
 
@@ -535,6 +542,7 @@ svn_path_check_valid(const char *path, apr_pool_t *pool);
  */
 
 /** Return TRUE iff @a path looks like a valid absolute URL. */
+/* J: OK as is. */
 svn_boolean_t
 svn_path_is_url(const char *path);
 
@@ -545,10 +553,12 @@ svn_path_is_uri_safe(const char *path);
 /** Return a URI-encoded copy of @a path, allocated in @a pool.  (@a
     path can be an arbitrary UTF-8 string and does not have to be a
     canonical path.) */
+/* J: Input must be valid URL/URI syntax, as it is parsed. */
 const char *
 svn_path_uri_encode(const char *path, apr_pool_t *pool);
 
 /** Return a URI-decoded copy of @a path, allocated in @a pool. */
+/* J: OK as is. */
 const char *
 svn_path_uri_decode(const char *path, apr_pool_t *pool);
 
@@ -579,6 +589,7 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool);
  *
  * @since New in 1.6.
  */
+/* J: Replace "component" by "RELPATH". Another API can join 2 URLs. */
 const char *
 svn_path_url_add_component2(const char *url,
                             const char *component,
@@ -627,12 +638,14 @@ svn_path_uri_autoescape(const char *uri, apr_pool_t *pool);
  */
 
 /** Convert @a path_utf8 from UTF-8 to the internal encoding used by APR. */
+/* J: OSPATH only. */
 svn_error_t *
 svn_path_cstring_from_utf8(const char **path_apr,
                            const char *path_utf8,
                            apr_pool_t *pool);
 
 /** Convert @a path_apr from the internal encoding used by APR to UTF-8. */
+/* J: OSPATH only. */
 svn_error_t *
 svn_path_cstring_to_utf8(const char **path_utf8,
                          const char *path_apr,

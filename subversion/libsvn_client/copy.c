@@ -1449,10 +1449,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           /* Schedule dst_path for addition in parent, with copy history.
              (This function also recursively puts a 'copied' flag on every
              entry). */
-          SVN_ERR(svn_wc_add4(ctx->wc_ctx, dst_abspath, svn_depth_infinity,
-                              pair->src_abspath_or_url, pair->src_revnum,
-                              ctx->cancel_func, ctx->cancel_baton,
-                              ctx->notify_func2, ctx->notify_baton2, pool));
+          SVN_ERR(svn_wc__integrate_nested_wc_as_copy(ctx->wc_ctx, dst_abspath,
+                                                      ctx->notify_func2,
+                                                      ctx->notify_baton2,
+                                                      pool));
 
           /* ### Recording of implied mergeinfo should really occur
              ### *before* the notification callback is invoked by

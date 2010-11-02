@@ -953,6 +953,68 @@ check_can_add_node(svn_node_kind_t *kind_p,
   return SVN_NO_ERROR;
 }
 
+/* Convert the nested pristine working copy rooted at LOCAL_ABSPATH into
+ * a copied subtree in the outer working copy.
+ *
+ * LOCAL_ABSPATH must be the root of a nested working copy that has no
+ * local modifications.  The parent directory of LOCAL_ABSPATH must be a
+ * versioned directory in the outer WC, and must belong to the same
+ * repository as the nested WC.  The nested WC will be integrated into the
+ * parent's WC, and will no longer be a separate WC. */
+static svn_error_t *
+integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db = wc_ctx->db;
+  const char *moved_abspath;
+
+  /* Drop any references to the wc that is to be rewritten */
+  SVN_ERR(svn_wc__db_drop_root(db, local_abspath, scratch_pool));
+
+  /* Move the admin dir from the wc to a temporary location: MOVED_ABSPATH */
+  {
+    const char *tmpdir_abspath, *moved_adm_abspath, *adm_abspath;
+
+    SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
+                                           svn_dirent_dirname(local_abspath,
+                                                              scratch_pool),
+                                           scratch_pool, scratch_pool));
+    SVN_ERR(svn_io_open_unique_file3(NULL, &moved_abspath, tmpdir_abspath,
+                                     svn_io_file_del_on_close,
+                                     scratch_pool, scratch_pool));
+    SVN_ERR(svn_io_dir_make(moved_abspath, APR_OS_DEFAULT, scratch_pool));
+
+    adm_abspath = svn_wc__adm_child(local_abspath, "", scratch_pool);
+    moved_adm_abspath = svn_wc__adm_child(moved_abspath, "", scratch_pool);
+    SVN_ERR(svn_io_file_move(adm_abspath, moved_adm_abspath, scratch_pool));
+  }
+
+  /* Copy entries from temporary location into the main db */
+  SVN_ERR(svn_wc_copy3(wc_ctx, moved_abspath, local_abspath,
+                       TRUE /* metadata_only */,
+                       NULL, NULL, NULL, NULL, scratch_pool));
+
+  /* Cleanup the temporary admin dir */
+  SVN_ERR(svn_wc__db_drop_root(db, moved_abspath, scratch_pool));
+  SVN_ERR(svn_io_remove_dir2(moved_abspath, FALSE, NULL, NULL,
+                             scratch_pool));
+
+  /* The subdir is now part of our parent working copy. Our caller assumes
+     that we return the new node locked, so obtain a lock if we didn't
+     receive the lock via our depth infinity lock */
+  {
+    svn_boolean_t owns_lock;
+    SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
+                                        FALSE, scratch_pool));
+    if (!owns_lock)
+      SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                       scratch_pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_add4(svn_wc_context_t *wc_ctx,
             const char *local_abspath,
@@ -1083,50 +1145,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     }
   else  /* Case 1: Integrating a separate WC into this one, in place */
     {
-      const char *moved_abspath;
-
-      /* Drop any references to the wc that is to be rewritten */
-      SVN_ERR(svn_wc__db_drop_root(db, local_abspath, scratch_pool));
-
-      /* Move the admin dir from the wc to a temporary location: MOVED_ABSPATH */
-      {
-        const char *tmpdir_abspath, *moved_adm_abspath, *adm_abspath;
-
-        SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
-                                               svn_dirent_dirname(local_abspath,
-                                                                  scratch_pool),
-                                               scratch_pool, scratch_pool));
-        SVN_ERR(svn_io_open_unique_file3(NULL, &moved_abspath, tmpdir_abspath,
-                                         svn_io_file_del_on_close,
-                                         scratch_pool, scratch_pool));
-        SVN_ERR(svn_io_dir_make(moved_abspath, APR_OS_DEFAULT, scratch_pool));
-
-        adm_abspath = svn_wc__adm_child(local_abspath, "", scratch_pool);
-        moved_adm_abspath = svn_wc__adm_child(moved_abspath, "", scratch_pool);
-        SVN_ERR(svn_io_file_move(adm_abspath, moved_adm_abspath, scratch_pool));
-      }
-
-      /* Copy entries from temporary location into the main db */
-      SVN_ERR(svn_wc_copy3(wc_ctx, moved_abspath, local_abspath,
-                           TRUE /* metadata_only */,
-                           NULL, NULL, NULL, NULL, scratch_pool));
-
-      /* Cleanup the temporary admin dir */
-      SVN_ERR(svn_wc__db_drop_root(db, moved_abspath, scratch_pool));
-      SVN_ERR(svn_io_remove_dir2(moved_abspath, FALSE, NULL, NULL,
-                                 scratch_pool));
-
-      /* The subdir is now part of our parent working copy. Our caller assumes
-         that we return the new node locked, so obtain a lock if we didn't
-         receive the lock via our depth infinity lock */
-      {
-        svn_boolean_t owns_lock;
-        SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
-                                            FALSE, scratch_pool));
-        if (!owns_lock)
-          SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
-                                           scratch_pool));
-      }
+      SVN_ERR(integrate_nested_wc_as_copy(wc_ctx, local_abspath,
+                                          scratch_pool));
     }
 
   /* Report the addition to the caller. */
@@ -1136,6 +1156,45 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                      svn_wc_notify_add,
                                                      scratch_pool);
       notify->kind = kind;
+      (*notify_func)(notify_baton, notify, scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db = wc_ctx->db;
+  svn_boolean_t is_wc_root;
+
+  /* Precondition: LOCAL_ABSPATH is the root of a separate WC. */
+  SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
+                                db, local_abspath, scratch_pool));
+  if (! is_wc_root)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' is not a WC root"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  /* Precondition: parent(LOCAL_ABSPATH) is a versioned directory in an
+   * acceptable state. */
+  SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx, local_abspath,
+                                  scratch_pool, scratch_pool));
+
+  SVN_ERR(integrate_nested_wc_as_copy(wc_ctx, local_abspath, scratch_pool));
+
+  /* Report the addition to the caller. */
+  if (notify_func != NULL)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_add, scratch_pool);
+
+      notify->kind = svn_node_dir;
       (*notify_func)(notify_baton, notify, scratch_pool);
     }
 

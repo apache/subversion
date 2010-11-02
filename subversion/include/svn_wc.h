@@ -4222,7 +4222,7 @@ svn_wc_delete(const char *path,
  * If @a local_abspath does not exist as file, directory or symlink, return
  * #SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * This is equivalent to svn_wc_add4() case 2a.
+ * This is a replacement for svn_wc_add4() case 2a.
  *
  * ### TODO: Allow the caller to provide the node's properties?
  *
@@ -4234,6 +4234,28 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      apr_pool_t *scratch_pool);
+
+/**
+ * Convert the nested pristine working copy rooted at @a local_abspath into
+ * a copied subtree in the outer working copy.
+ *
+ * @a local_abspath must be the root of a nested working copy that has no
+ * local modifications.  The parent directory of @a local_abspath must be a
+ * versioned directory in the outer WC, and must belong to the same
+ * repository as the nested WC.  The nested WC will be integrated into the
+ * parent's WC, and will no longer be a separate WC.
+ *
+ * Call @a notify_func (if it is not @c NULL) with the @a notify_baton and
+ * the path.
+ *
+ * This is a replacement for svn_wc_add4() case 1.
+ */
+svn_error_t *
+svn_wc__integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
+                                    apr_pool_t *scratch_pool);
 
 /**
  * Put @a local_abspath under version control by registering it as addition
@@ -4271,6 +4293,9 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
  *
  * When the @a local_abspath has been added, then @a notify_func will be
  * called (if it is not @c NULL) with the @a notify_baton and the path.
+ *
+ * @note For case 1, prefer svn_wc__integrate_nested_wc_as_copy().
+ * @note For case 2a, prefer svn_wc_add_from_disk().
  *
  * @since New in 1.7.
  */
