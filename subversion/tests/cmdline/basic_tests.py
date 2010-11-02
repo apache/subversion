@@ -2647,6 +2647,29 @@ def basic_relocate(sbox):
   ### TODO: When testing ra_dav or ra_svn, do relocations between
   ### those and ra_local URLs.
 
+#----------------------------------------------------------------------
+
+def delete_urls_with_spaces(sbox):
+  "delete multiple targets with spaces"
+  sbox.build(create_wc = False)
+  
+  # Create three directories with a space in their name  
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+                                     sbox.repo_url + '/A spaced',
+                                     sbox.repo_url + '/B spaced',
+                                     sbox.repo_url + '/C spaced',
+                                     '-m', 'Created dirs')
+
+  # Try to delete the first                                     
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     sbox.repo_url + '/A spaced',
+                                     '-m', 'Deleted A') 
+
+  # And then two at once
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     sbox.repo_url + '/B spaced',
+                                     sbox.repo_url + '/C spaced',
+                                     '-m', 'Deleted B and C') 
 
 ########################################################################
 # Run the tests
@@ -2708,6 +2731,7 @@ test_list = [ None,
               delete_and_add_same_file,
               delete_child_parent_update,
               basic_relocate,
+              XFail(delete_urls_with_spaces),
              ]
 
 if __name__ == '__main__':
