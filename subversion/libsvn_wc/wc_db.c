@@ -3205,8 +3205,8 @@ copy_actual_rows(svn_wc__db_pdh_t *src_pdh,
                             src_pdh->wcroot->wc_id, src_relpath,
                             construct_like_arg(src_relpath, scratch_pool),
                             dst_relpath, dst_parent_relpath,
-                            strlen(src_relpath) + 1,
-                            strlen(src_parent_relpath) + 1));
+                            (apr_int64_t)(strlen(src_relpath) + 1),
+                            (apr_int64_t)(strlen(src_parent_relpath) + 1)));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -8591,11 +8591,11 @@ start_directory_update_txn(void *baton,
                &stmt, db,
                STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH));
 
-  SVN_ERR(svn_sqlite__bindf(stmt, "istis",
+  SVN_ERR(svn_sqlite__bindf(stmt, "istrs",
                             du->wc_id,
                             du->local_relpath,
                             presence_map, svn_wc__db_status_incomplete,
-                            (apr_int64_t)du->new_rev,
+                            du->new_rev,
                             du->new_repos_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -9300,9 +9300,9 @@ set_rev_relpath_txn(void *baton,
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                         STMT_UPDATE_BASE_REVISION));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi", rrb->pdh->wcroot->wc_id,
+      SVN_ERR(svn_sqlite__bindf(stmt, "isr", rrb->pdh->wcroot->wc_id,
                                              rrb->local_relpath,
-                                             (apr_int64_t)rrb->rev));
+                                             rrb->rev));
 
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
