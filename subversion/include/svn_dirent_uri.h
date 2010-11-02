@@ -300,7 +300,7 @@ svn_relpath_split(const char **dirpath,
  * @since New in 1.7.
  */
 const char *
-svn_relpath_basename(const char *uri,
+svn_relpath_basename(const char *relpath,
                      apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a relpath, defined as
@@ -372,7 +372,7 @@ svn_uri_basename(const char *uri,
  * @since New in 1.7.
  */
 char *
-svn_uri_dirname(const char *dirent,
+svn_uri_dirname(const char *uri,
                 apr_pool_t *pool);
 
 
@@ -453,7 +453,7 @@ svn_dirent_canonicalize(const char *dirent,
  * @since New in 1.7.
  */
 const char *
-svn_relpath_canonicalize(const char *uri,
+svn_relpath_canonicalize(const char *relpath,
                          apr_pool_t *pool);
 
 
