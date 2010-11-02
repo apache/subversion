@@ -783,7 +783,7 @@ check_can_add_to_parent(const char **repos_root_url,
                              repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL,
-                             db, parent_abspath, scratch_pool, scratch_pool);
+                             db, parent_abspath, result_pool, scratch_pool);
 
   if (err
       || parent_status == svn_wc__db_status_not_present
@@ -813,7 +813,7 @@ check_can_add_to_parent(const char **repos_root_url,
                              _("Can't schedule an addition of '%s'"
                                " below a not-directory node"),
                              svn_dirent_local_style(local_abspath,
-                                                 scratch_pool));
+                                                    scratch_pool));
 
   /* If we haven't found the repository info yet, find it now. */
   if ((repos_root_url && ! *repos_root_url)
@@ -824,12 +824,12 @@ check_can_add_to_parent(const char **repos_root_url,
                                          repos_root_url, repos_uuid, NULL,
                                          NULL, NULL, NULL,
                                          db, parent_abspath,
-                                         scratch_pool, scratch_pool));
+                                         result_pool, scratch_pool));
       else
         SVN_ERR(svn_wc__db_scan_base_repos(NULL,
                                            repos_root_url, repos_uuid,
                                            db, parent_abspath,
-                                           scratch_pool, scratch_pool));
+                                           result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
