@@ -663,6 +663,17 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
+-- STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE
+SELECT 1
+FROM nodes
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND op_depth >= ?4;
+
+-- STMT_SELECT_ACTUAL_NODE_RECURSIVE
+SELECT 1
+FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

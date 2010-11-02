@@ -4590,6 +4590,21 @@ db_working_actual_remove(svn_wc__db_pdh_t *pdh,
                          apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  apr_int64_t op_depth;
+
+  /* Precondition: There is a working row in NODES.
+   * Record its op_depth, which is needed for postcondition checking. */
+  {
+    svn_boolean_t have_row;
+
+    SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                      STMT_SELECT_WORKING_NODE));
+    SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+    SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    SVN_ERR_ASSERT(have_row);
+    op_depth = svn_sqlite__column_int64(stmt, 0);
+    SVN_ERR(svn_sqlite__reset(stmt));
+  }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_DELETE_WORKING_NODE));
@@ -4602,6 +4617,33 @@ db_working_actual_remove(svn_wc__db_pdh_t *pdh,
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   SVN_ERR(delete_not_present_children(pdh, local_relpath, scratch_pool));
+
+  /* Postcondition: There are no NODES rows in this subtree, at same or
+   * greater op_depth. */
+  {
+    svn_boolean_t have_row;
+
+    SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                      STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE));
+    SVN_ERR(svn_sqlite__bindf(stmt, "issi", pdh->wcroot->wc_id, local_relpath,
+                              construct_like_arg(local_relpath, scratch_pool),
+                              op_depth));
+    SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    SVN_ERR_ASSERT(! have_row);
+    SVN_ERR(svn_sqlite__reset(stmt));
+  }
+  /* Postcondition: There are no ACTUAL_NODE rows in this subtree. */
+  {
+    svn_boolean_t have_row;
+
+    SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                      STMT_SELECT_ACTUAL_NODE_RECURSIVE));
+    SVN_ERR(svn_sqlite__bindf(stmt, "iss", pdh->wcroot->wc_id, local_relpath,
+                              construct_like_arg(local_relpath, scratch_pool)));
+    SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    SVN_ERR_ASSERT(! have_row);
+    SVN_ERR(svn_sqlite__reset(stmt));
+  }
 
   return SVN_NO_ERROR;
 }
