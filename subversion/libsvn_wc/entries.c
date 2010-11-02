@@ -487,7 +487,7 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
 static svn_error_t *
 read_one_entry(const svn_wc_entry_t **new_entry,
                svn_wc__db_t *db,
-               apr_uint64_t wc_id,
+               apr_int64_t wc_id,
                const char *dir_abspath,
                const char *name,
                const svn_wc_entry_t *parent_entry,
@@ -1068,7 +1068,7 @@ read_entries_new(apr_hash_t **result_entries,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   const svn_wc_entry_t *parent_entry;
-  apr_uint64_t wc_id = 1;  /* ### hacky. should remove.  */
+  apr_int64_t wc_id = 1;  /* ### hacky. should remove.  */
 
   entries = apr_hash_make(result_pool);
 
@@ -1123,7 +1123,7 @@ read_entry_pair(const svn_wc_entry_t **parent_entry,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  apr_uint64_t wc_id = 1;  /* ### hacky. should remove.  */
+  apr_int64_t wc_id = 1;  /* ### hacky. should remove.  */
 
   SVN_ERR(read_one_entry(parent_entry, db, wc_id, dir_abspath,
                          "" /* name */,
@@ -1998,7 +1998,7 @@ write_entry(svn_wc__db_t *db,
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                             STMT_UPDATE_FILE_EXTERNAL));
           SVN_ERR(svn_sqlite__bindf(stmt, "iss",
-                                    (apr_uint64_t)1 /* wc_id */,
+                                    (apr_int64_t)1 /* wc_id */,
                                     entry->name,
                                     str));
           SVN_ERR(svn_sqlite__step_done(stmt));

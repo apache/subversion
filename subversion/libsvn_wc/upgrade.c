@@ -720,7 +720,7 @@ db_kind_from_node_kind(svn_node_kind_t node_kind)
 static svn_error_t *
 migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
                                   const char *tree_conflict_data,
-                                  apr_uint64_t wc_id,
+                                  apr_int64_t wc_id,
                                   const char *local_relpath,
                                   apr_pool_t *scratch_pool)
 {
@@ -847,7 +847,7 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_sqlite__step(&have_row, select_stmt));
   while (have_row)
     {
-      apr_uint64_t wc_id;
+      apr_int64_t wc_id;
       const char *local_relpath;
       const char *tree_conflict_data;
 
