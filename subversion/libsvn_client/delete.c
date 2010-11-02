@@ -162,7 +162,7 @@ delete_urls(const apr_array_header_t *paths,
     {
       const char *bname;
       svn_uri_split(&common, &bname, common, pool);
-      APR_ARRAY_PUSH(targets, const char *) = svn_path_uri_decode(bname, pool);
+      APR_ARRAY_PUSH(targets, const char *) = bname;
     }
 
   /* Create new commit items and add them to the array. */
@@ -206,7 +206,7 @@ delete_urls(const apr_array_header_t *paths,
       const char *item_url;
 
       svn_pool_clear(subpool);
-      item_url = svn_path_url_add_component2(common, path, subpool);
+      item_url = svn_uri_join(common, path, subpool);
       path = svn_path_uri_decode(path, pool);
       APR_ARRAY_IDX(targets, i, const char *) = path;
 
