@@ -4813,6 +4813,7 @@ info_below_working(svn_boolean_t *have_base,
               }
         }
     }
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }
