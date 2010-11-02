@@ -4456,7 +4456,7 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
   SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_DELETE_WORKING_NODES));
+                                    STMT_DELETE_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -4590,16 +4590,10 @@ db_working_actual_remove(svn_wc__db_pdh_t *pdh,
                          apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-#ifdef SVN_WC__OP_DEPTH
-  apr_int64_t op_depth = relpath_depth(local_relpath);
-#else
-  apr_int64_t op_depth = 2;  /* ### temporary op_depth */
-#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_DELETE_OP_DEPTH_NODES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id,
-                            local_relpath, op_depth));
+                                    STMT_DELETE_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -6023,8 +6017,10 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   if (have_work)
     {
+      /* This removes all op_depth > 0 and so does both layers of a
+         two-layer replace. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, cb->pdh->wcroot->sdb,
-                                        STMT_DELETE_WORKING_NODES));
+                                        STMT_DELETE_ALL_WORKING_NODES));
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                 cb->pdh->wcroot->wc_id, cb->local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
@@ -8767,7 +8763,7 @@ make_copy_txn(void *baton,
   if (remove_working)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_DELETE_WORKING_NODES));
+                                        STMT_DELETE_WORKING_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath));
