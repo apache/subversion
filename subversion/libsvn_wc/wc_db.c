@@ -4569,11 +4569,21 @@ db_working_update_presence(svn_wc__db_status_t status,
                             presence_map, status));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  /* Switching to base-deleted is undoing an add/copy.  If this was a
-     copy then any children of the copy will now be not-present and
-     should be removed.  By this stage an add will have no children. */
   if (status == svn_wc__db_status_base_deleted)
-    SVN_ERR(delete_not_present_children(pdh, local_relpath, scratch_pool));
+    {
+      /* Switching to base-deleted is undoing an add/copy.  If this
+         was a copy then any children of the copy will now be
+         not-present and should be removed.  By this stage an add will
+         have no children. */
+      SVN_ERR(delete_not_present_children(pdh, local_relpath, scratch_pool));
+
+      /* Reset the copyfrom in case this was a copy.
+         ### What else should be reset? Properties? Or copy the node again? */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_UPDATE_COPYFROM_TO_INHERIT));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   /* ### Should the switch to not-present remove an ACTUAL row? */
 
@@ -4749,6 +4759,64 @@ is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
   return SVN_NO_ERROR;
 }
 
+/* Return the status of the node, if any, below the "working" node.
+   Set *HAVE_BASE or *HAVE_WORK to indicate if a base node or lower
+   working node is present, and *STATUS to the status of the node.
+
+   This is an experimental interface. */
+static svn_error_t *
+info_below_working(svn_boolean_t *have_base,
+                   svn_boolean_t *have_work,
+                   svn_wc__db_status_t *status,
+                   svn_wc__db_pdh_t *pdh,
+                   const char *local_relpath,
+                   apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *have_base = *have_work =  FALSE;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                            pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        {
+          apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
+
+          if (op_depth > 0)
+            *have_work = TRUE;
+          else
+            *have_base = TRUE;
+              
+          *status = svn_sqlite__column_token(stmt, 3, presence_map);
+          if (op_depth > 0)
+            switch (*status)
+              {
+              case svn_wc__db_status_incomplete:
+              case svn_wc__db_status_excluded:
+                break;
+              case svn_wc__db_status_base_deleted:
+              case svn_wc__db_status_not_present:
+                *status = svn_wc__db_status_deleted;
+                break;
+              case svn_wc__db_status_normal:
+                *status = svn_wc__db_status_added;
+                break;
+              default:
+                SVN_ERR_ASSERT(FALSE);
+              }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 struct temp_op_delete_baton {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
@@ -4758,98 +4826,59 @@ struct temp_op_delete_baton {
   const char *local_abspath;
 };
 
-/* Delete LOCAL_ABSPATH.  Implements the delete transition from
-   notes/wc-ng/transitions. */
+/* Deletes BATON->LOCAL_RELPATH using BATON->PDH. */
 static svn_error_t *
 temp_op_delete_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct temp_op_delete_baton *b = baton;
-  svn_wc__db_status_t base_status, working_status, new_working_status;
-  svn_boolean_t have_base, have_work, new_have_work;
+  svn_wc__db_status_t status, new_working_status;
+  svn_boolean_t have_work, new_have_work;
 
-  SVN_ERR(read_info(&working_status, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, &have_base, &have_work, NULL, NULL,
+  SVN_ERR(read_info(&status,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    &have_work,
+                    NULL, NULL,
                     b->pdh, b->local_relpath,
                     scratch_pool, scratch_pool));
-  if (working_status == svn_wc__db_status_deleted)
-    {
-      /* The node is already deleted.  */
-      /* ### return an error? callers should know better.  */
-      return SVN_NO_ERROR;
-    }
-
-  if (have_base)
-    SVN_ERR(base_get_info(&base_status,
-                          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                          b->pdh, b->local_relpath,
-                          scratch_pool, scratch_pool));
-
-  if (have_base && (base_status == svn_wc__db_status_absent
-                    || base_status == svn_wc__db_status_excluded))
-    return SVN_NO_ERROR; /* ### should return an error.... WHICH ONE? */
 
   new_have_work = have_work;
-  new_working_status = working_status;
+  new_working_status = status;
 
-  if (working_status == svn_wc__db_status_normal
-      || working_status == svn_wc__db_status_not_present)
-    {
-      /* No structural changes (ie. no WORKING node). Mark the BASE node
-         as deleted.  */
-
-      SVN_ERR_ASSERT(!have_work);
-
-      new_have_work = TRUE;
-      new_working_status = svn_wc__db_status_base_deleted;
-    }
-  /* ### remaining states: added, absent, excluded, incomplete
-     ### the last three have debatable schedule-delete semantics,
-     ### and this code may need to change further, but I'm not
-     ### going to worry about it now
-  */
-  else if (!have_work)
+  if (!have_work)
     {
       /* No structural changes  */
-      if (base_status == svn_wc__db_status_normal
-          || base_status == svn_wc__db_status_incomplete
-          || base_status == svn_wc__db_status_excluded)
+      if (status == svn_wc__db_status_normal
+          || status == svn_wc__db_status_incomplete)
         {
           new_have_work = TRUE;
           new_working_status = svn_wc__db_status_base_deleted;
         }
     }
-    /* ### BH: have_base is not a safe check, because a node can
-       ### still be a child of an added node even though it replaces
-       ### a base node. */
-  else if (working_status == svn_wc__db_status_added
-           && (!have_base || base_status == svn_wc__db_status_not_present))
+  else if (status == svn_wc__db_status_added)
     {
-      /* ADD/COPY-HERE/MOVE-HERE. There is "no BASE node".  */
-
+      /* ADD/COPY-HERE/MOVE-HERE */
       svn_boolean_t add_or_root_of_copy;
 
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
                                      b->pdh, b->local_relpath, scratch_pool));
       if (add_or_root_of_copy)
-        new_have_work = FALSE;
-      else
-        new_working_status = svn_wc__db_status_not_present;
-    }
-  else if (working_status == svn_wc__db_status_added)
-    {
-      /* DELETE + ADD  */
-      svn_boolean_t add_or_root_of_copy;
-      SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
+        {
+          svn_boolean_t below_base, below_work;
+          svn_wc__db_status_t below_status;
+
+          SVN_ERR(info_below_working(&below_base, &below_work, &below_status,
                                      b->pdh, b->local_relpath, scratch_pool));
-      if (add_or_root_of_copy)
-        new_working_status = svn_wc__db_status_base_deleted;
+
+          if (below_base && below_status != svn_wc__db_status_not_present)
+            new_working_status = svn_wc__db_status_base_deleted;
+          else
+            new_have_work = FALSE;
+        }
       else
         new_working_status = svn_wc__db_status_not_present;
     }
-  else if (working_status == svn_wc__db_status_incomplete)
+  else if (status == svn_wc__db_status_incomplete)
     {
       svn_boolean_t add_or_root_of_copy;
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
@@ -4862,20 +4891,26 @@ temp_op_delete_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     {
       SVN_ERR(db_working_actual_remove(b->pdh, b->local_relpath, scratch_pool));
 
-      /* ### Search the cached directories in db for directories below
-             local_abspath and close their handles to allow deleting
-             them from the working copy */
+      /* This is needed for access batons? */
       SVN_ERR(svn_wc__db_temp_forget_directory(b->db, b->local_abspath,
                                                scratch_pool));
     }
   else if (new_have_work && !have_work)
-    SVN_ERR(db_working_insert(new_working_status,
-                              b->pdh, b->local_relpath, scratch_pool));
+    {
+      SVN_ERR(db_working_insert(new_working_status, b->pdh, b->local_relpath,
+                                scratch_pool));
+    }
   else if (new_have_work && have_work
-           && new_working_status != working_status)
-    SVN_ERR(db_working_update_presence(new_working_status,
-                                       b->pdh, b->local_relpath, scratch_pool));
-  /* ### else nothing to do, return an error? */
+           && new_working_status != status)
+    {
+      SVN_ERR(db_working_update_presence(new_working_status, b->pdh,
+                                         b->local_relpath, scratch_pool));
+    }
+  else
+    {
+      /* Already deleted, or absent or excluded. */
+      /* ### Nothing to do, return an error?  Which one? */
+    }
 
   return SVN_NO_ERROR;
 }
