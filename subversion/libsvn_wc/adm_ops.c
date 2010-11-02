@@ -1075,7 +1075,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                  repos_root_url, repos_uuid);
 
       inner_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                             scratch_pool);
+                                              scratch_pool);
 
       if (strcmp(copyfrom_url, inner_url))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -1116,31 +1116,24 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
           svn_stream_t *content = svn_stream_empty(scratch_pool);
 
           SVN_ERR(svn_wc_add_repos_file4(wc_ctx, local_abspath,
-                                         content, NULL,
-                                         NULL, NULL,
+                                         content, NULL, NULL, NULL,
                                          copyfrom_url, copyfrom_rev,
                                          cancel_func, cancel_baton,
-                                         NULL, NULL,
-                                         scratch_pool));
+                                         NULL, NULL, scratch_pool));
         }
       else
-        SVN_ERR(svn_wc__db_op_copy_dir(db,
-                                       local_abspath,
+        SVN_ERR(svn_wc__db_op_copy_dir(db, local_abspath,
                                        apr_hash_make(scratch_pool),
-                                       copyfrom_rev,
-                                       0,
-                                       NULL,
+                                       copyfrom_rev, 0, NULL,
                                        svn_path_uri_decode(
-                                            svn_uri_skip_ancestor(repos_root_url,
-                                                                  copyfrom_url),
-                                            scratch_pool),
-                                       repos_root_url,
-                                       repos_uuid,
+                                         svn_uri_skip_ancestor(repos_root_url,
+                                                               copyfrom_url),
+                                         scratch_pool),
+                                       repos_root_url, repos_uuid,
                                        copyfrom_rev,
-                                       NULL,
-                                       depth,
-                                       NULL,
-                                       NULL,
+                                       NULL /* children */, depth,
+                                       NULL /* conflicts */,
+                                       NULL /* work items */,
                                        scratch_pool));
     }
   else  /* Case 1: Integrating a separate WC into this one, in place */
