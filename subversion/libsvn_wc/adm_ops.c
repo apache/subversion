@@ -1010,11 +1010,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                  inner_repos_root_url, inner_repos_uuid,
                                  repos_root_url, repos_uuid);
 
-      if (!svn_uri_is_ancestor(repos_root_url, copyfrom_url))
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("The URL '%s' is not in repository '%s'"),
-                                 copyfrom_url, repos_root_url);
-
       inner_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
                                              scratch_pool);
 
