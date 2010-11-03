@@ -451,6 +451,11 @@ wc_wc_copies(wc_baton_t *b)
   SVN_ERR(wc_copy(b, source_base_file, source_copied_file));
   SVN_ERR(wc_copy(b, source_base_dir, source_copied_dir));
 
+  /* Delete some nodes so that we can test copying onto these paths */
+
+  SVN_ERR(wc_delete(b, "A/D/gamma"));
+  SVN_ERR(wc_delete(b, "A/D/G"));
+
   /* Test copying various things */
 
   {
@@ -515,6 +520,26 @@ wc_wc_copies(wc_baton_t *b)
             { 4, "E-copied",        "normal",   1, source_base_dir },
             { 4, "E-copied/alpha",  "normal",   NO_COPY_FROM },
             { 4, "E-copied/beta",   "normal",   NO_COPY_FROM }
+          } },
+
+        /* dir onto a schedule-delete file */
+        { source_base_dir, "A/D/gamma", {
+            { 0, "",                "normal",   1, "A/D/gamma" },
+            { 3, "",                "normal",   1, source_base_dir },
+            { 3, "alpha",           "normal",   NO_COPY_FROM },
+            { 3, "beta",            "normal",   NO_COPY_FROM }
+          } },
+
+        /* file onto a schedule-delete dir */
+        { source_base_file, "A/D/G", {
+            { 0, "",                "normal",   1, "A/D/G" },
+            { 0, "pi",              "normal",   1, "A/D/G/pi" },
+            { 0, "rho",             "normal",   1, "A/D/G/rho" },
+            { 0, "tau",             "normal",   1, "A/D/G/tau" },
+            { 3, "",                "normal",   1, source_base_file },
+            { 3, "pi",              "base-deleted",   NO_COPY_FROM },
+            { 3, "rho",             "base-deleted",   NO_COPY_FROM },
+            { 3, "tau",             "base-deleted",   NO_COPY_FROM }
           } },
 
         { 0 }
@@ -646,6 +671,20 @@ test_deletes(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     SVN_ERR(check_db_rows(&b, "A/B", rows));
   }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_adds(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "adds", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+
 
   return SVN_NO_ERROR;
 }
@@ -823,6 +862,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_delete_with_base,
                        "test_delete_with_base",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_adds,
+                       "adds",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
