@@ -16093,6 +16093,138 @@ def merge_with_os_deleted_subtrees(sbox):
     svntest.verify.AnyOutput, [], 'merge', sbox.repo_url + '/A',
     A_COPY_path, '--depth=empty')
 
+#----------------------------------------------------------------------
+# Test for issue #3668 'inheritance can result in self-referential
+# mergeinfo' and issue #3669 'inheritance can result in mergeinfo
+# describing nonexistent sources'
+def no_self_referential_or_nonexistent_inherited_mergeinfo(sbox):
+  "don't inherit bogus mergeinfo"
+
+  # r1: Create a greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2 - r6: Copy A to A_COPY and then make some text changes under A.
+  set_up_branch(sbox, nbr_of_branches=1)
+
+  # Some paths we'll care about
+  nu_path      = os.path.join(wc_dir, "A", "C", "nu")
+  nu_COPY_path = os.path.join(wc_dir, "A_COPY", "C", "nu")
+  J_path       = os.path.join(wc_dir, "A", "D", "J")
+  J_COPY_path  = os.path.join(wc_dir, "A_COPY", "D", "J")
+  zeta_path    = os.path.join(wc_dir, "A", "D", "J", "zeta")
+  A_COPY_path  = os.path.join(wc_dir, "A_COPY")
+
+  # r7 - Add the file A/C/nu
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Add file', wc_dir)
+
+  # r8 - Sync merge A to A_COPY
+  svntest.actions.run_and_verify_svn(
+    "Synch merge failed unexpectedly",
+    svntest.verify.AnyOutput, [], 'merge', sbox.repo_url + '/A',
+    A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Sync A_COPY with A', wc_dir)
+  
+  # r9 - Add the subtree A/D/J
+  #                      A/D/J/zeta
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', J_path)
+  svntest.main.file_write(zeta_path, "This is the file 'zeta'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', zeta_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Add subtree', wc_dir)
+
+  # Update the WC in preparation for merges.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # r10 - Sync merge A to A_COPY
+  svntest.actions.run_and_verify_svn(
+    "Synch merge failed unexpectedly",
+    svntest.verify.AnyOutput, [], 'merge', sbox.repo_url + '/A',
+    A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Sync A_COPY with A', wc_dir)
+
+  # r11 - Text changes to A/C/nu and A/D/J/zeta.
+  svntest.main.file_write(nu_path, "This is the EDITED file 'nu'.\n")
+  svntest.main.file_write(zeta_path, "This is the EDITED file 'zeta'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Edit added files', wc_dir)
+
+  # Update the WC in preparation for merges.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # This test is marked as XFail because the following two merges
+  # create mergeinfo with both non-existent path-revs and self-referential
+  # mergeinfo.c
+  #
+  # Merge all available revisions from A/C/nu to A_COPY/C/nu.
+  # The target has no explicit mergeinfo of its own but inherits mergeinfo
+  # from A_COPY.  A_COPY has the mergeinfo '/A:2-9' so the naive mergeinfo
+  # A_COPY/C/nu inherits is '/A/C/nu:2-9'.  However, '/A/C/nu:2-6' don't
+  # actually exist (issue #3669) and '/A/C/nu:7-8' is self-referential
+  # (issue #3668).  Neither of these should be present in the resulting
+  # mergeinfo for A_COPY/C/nu, only '/A/C/nu:8-11'
+  expected_output = wc.State(nu_COPY_path, {
+    '' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(nu_COPY_path, {
+    '' : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(nu_COPY_path, {
+    })
+  expected_status = wc.State(nu_COPY_path, {
+    '' : Item(status='MM', wc_rev=11),
+    })
+  expected_disk = wc.State('', {
+    '' : Item(props={SVN_PROP_MERGEINFO : '/A/C/nu:8-11'}),
+    })
+  expected_skip = wc.State(nu_COPY_path, { })
+  svntest.actions.run_and_verify_merge(nu_COPY_path, None, None,
+                                       sbox.repo_url + '/A/C/nu', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
+  # Merge all available revisions from A/D/J to A_COPY/D/J.  Like the
+  # previous merge, the target should not have any non-existent ('/A/D/J:2-8')
+  # or self-referential mergeinfo ('/A/D/J:9') recorded on it post-merge.
+  expected_output = wc.State(J_COPY_path, {
+    'zeta' : Item(status='U '),    
+    })
+  expected_mergeinfo_output = wc.State(J_COPY_path, {
+    '' : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(J_COPY_path, {
+    })
+  expected_status = wc.State(J_COPY_path, {
+    ''     : Item(status=' M', wc_rev=11),
+    'zeta' : Item(status='M ', wc_rev=11),
+    })
+  expected_disk = wc.State('', {
+    ''     : Item(props={SVN_PROP_MERGEINFO : '/A/D/J:10-11'}),
+    'zeta' : Item("This is the EDITED file 'zeta'.\n")
+    })
+  expected_skip = wc.State(J_COPY_path, { })
+  svntest.actions.run_and_verify_merge(J_COPY_path, None, None,
+                                       sbox.repo_url + '/A/D/J', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -16282,6 +16414,7 @@ test_list = [ None,
               merge_into_locally_added_file,
               merge_into_locally_added_directory,
               merge_with_os_deleted_subtrees,
+              XFail(no_self_referential_or_nonexistent_inherited_mergeinfo),
              ]
 
 if __name__ == '__main__':
