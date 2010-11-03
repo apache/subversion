@@ -1091,29 +1091,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 }
 
 
-/* Prepare directory for dir_baton DB for updating or checking out.
- * Give it depth DEPTH.
- *
- * If the path already exists, but is not a working copy for
- * ANCESTOR_URL and ANCESTOR_REVISION, then an error will be returned.
- */
-static svn_error_t *
-prep_directory(struct dir_baton *db,
-               const char *ancestor_url,
-               svn_revnum_t ancestor_revision,
-               apr_pool_t *pool)
-{
-  const char *dir_abspath;
-
-  dir_abspath = db->local_abspath;
-
-  /* Make sure the directory exists. */
-  SVN_ERR(svn_wc__ensure_directory(dir_abspath, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Find the last-change info within ENTRY_PROPS, and return then in the
    CHANGED_* parameters. Each parameter will be initialized to its "none"
    value, and will contain the relavent info if found.
@@ -2473,17 +2450,12 @@ add_directory(const char *path,
                                                        db->ambient_depth,
                                                        pool));
 
-  SVN_ERR(prep_directory(db,
-                         svn_path_url_add_component2(eb->repos_root,
-                                                     db->new_relpath, pool),
-                         *(eb->target_revision),
-                         db->pool));
+  SVN_ERR(svn_wc__ensure_directory(db->local_abspath, pool));
 
   /* If PATH is within a locally deleted tree then make it also
-     scheduled for deletion.  We must do this after the call to
-     prep_directory() otherwise the administrative area for DB->PATH
-     is not present, nor is there an entry for DB->PATH in DB->PATH's
-     entries. */
+     scheduled for deletion.  We should do this at the same time as
+     setting the dir incomplete otherwise the db is temporarily
+     invalid. */
   if (pb->in_deleted_and_tree_conflicted_subtree)
     {
       SVN_ERR(svn_wc__db_temp_op_delete(eb->db, db->local_abspath, pool));
@@ -4556,7 +4528,8 @@ close_file(void *file_baton,
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */
 
   /* An ancestor was locally-deleted. This file is being added within
-     that tree. We need to schedule this file for deletion.  */
+     that tree. We need to schedule this file for deletion.  This
+     should happen at the same time as svn_wc__db_base_add_file.  */
   if (fb->dir_baton->in_deleted_and_tree_conflicted_subtree && fb->adding_file)
     {
       SVN_ERR(svn_wc__db_temp_op_delete(eb->db, fb->local_abspath, pool));
