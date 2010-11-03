@@ -1158,8 +1158,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc__integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
                                     const char *local_abspath,
-                                    svn_wc_notify_func2_t notify_func,
-                                    void *notify_baton,
                                     apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
@@ -1180,16 +1178,6 @@ svn_wc__integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
                                   scratch_pool, scratch_pool));
 
   SVN_ERR(integrate_nested_wc_as_copy(wc_ctx, local_abspath, scratch_pool));
-
-  /* Report the addition to the caller. */
-  if (notify_func != NULL)
-    {
-      svn_wc_notify_t *notify
-        = svn_wc_create_notify(local_abspath, svn_wc_notify_add, scratch_pool);
-
-      notify->kind = svn_node_dir;
-      (*notify_func)(notify_baton, notify, scratch_pool);
-    }
 
   return SVN_NO_ERROR;
 }

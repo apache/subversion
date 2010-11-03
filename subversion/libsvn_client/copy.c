@@ -1433,7 +1433,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       /* Make a new checkout of the requested source. While doing so,
        * resolve pair->src_revnum to an actual revision number in case it
        * was until now 'invalid' meaning 'head'.  Ask this function not to
-       * sleep for timestamps, by passing a sleep_needed output param. */
+       * sleep for timestamps, by passing a sleep_needed output param.
+       * This sends notifications for all nodes except the root node. */
       SVN_ERR(svn_client__checkout_internal(&pair->src_revnum,
                                             pair->src_original,
                                             dst_abspath,
@@ -1443,38 +1444,11 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                             ignore_externals, FALSE, TRUE,
                                             &sleep_needed, ctx, pool));
 
-      /* Rewrite URLs recursively, remove wcprops, and mark everything
-         as 'copied' -- assuming that the src and dst are from the
-         same repository.  (It's kind of weird that svn_wc_add3() is the
-         way to do this; see its doc for more about the controversy.) */
-      if (same_repositories)
+      if (! same_repositories)
         {
-          /* Schedule dst_path for addition in parent, with copy history.
-             (This function also recursively puts a 'copied' flag on every
-             entry). */
-          SVN_ERR(svn_wc__integrate_nested_wc_as_copy(ctx->wc_ctx, dst_abspath,
-                                                      ctx->notify_func2,
-                                                      ctx->notify_baton2,
-                                                      pool));
-
-          /* ### Recording of implied mergeinfo should really occur
-             ### *before* the notification callback is invoked by
-             ### svn_wc_add4(), but can't occur before we add the new
-             ### source path. */
-          SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
-                                             pair->src_abspath_or_url,
-                                             pair->src_revnum, ctx, pool));
-          SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
-        }
-      else  /* different repositories */
-        {
-          /* ### Someday, we would just call svn_wc_add4(), as above,
-             but with no copyfrom args.  I.e. in the
-             directory-foreign-UUID case, we still want everything
-             scheduled for addition, URLs rewritten, and wcprop cache
-             deleted, but WITHOUT any copied flags or copyfrom urls.
-             Unfortunately, svn_wc_add4() is such a mess that it chokes
-             at the moment when we pass a NULL copyfromurl. */
+          /* ### We want to schedule this as a simple add, or even better
+             a copy from a foreign repos, but we don't yet have the
+             WC APIs to do that. */
 
           svn_io_sleep_for_timestamps(dst_abspath, pool);
 
@@ -1483,6 +1457,14 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
              _("Source URL '%s' is from foreign repository; "
                "leaving it as a disjoint WC"), pair->src_abspath_or_url);
         }
+
+      /* Schedule dst_path for addition in parent, with copy history.
+         Don't send any notification here.
+
+         ### This is a wierd way to do it. See the doc string of
+             svn_wc_add_repos_file4() for more about the controversy. */
+      SVN_ERR(svn_wc__integrate_nested_wc_as_copy(ctx->wc_ctx, dst_abspath,
+                                                  pool));
     } /* end directory case */
 
   else if (pair->src_kind == svn_node_file)
@@ -1516,23 +1498,25 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          ctx->cancel_func, ctx->cancel_baton,
          ctx->notify_func2, ctx->notify_baton2,
          pool));
+    }
 
-      SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo,
-                                         NULL, pair->src_abspath_or_url,
-                                         pair->src_revnum, ctx, pool));
-      SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
+  /* Record the implied mergeinfo (before the notification callback
+     is invoked for the root node). */
+  SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
+                                     pair->src_abspath_or_url,
+                                     pair->src_revnum, ctx, pool));
+  SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
 
-      /* Ideally, svn_wc_add_repos_file3() would take a notify function
-         and baton, and we wouldn't have to make this call here.
-         However, the situation is... complicated.  See issue #1552
-         for the full story. */
-      if (ctx->notify_func2)
-        {
-          svn_wc_notify_t *notify = svn_wc_create_notify(
-                                      dst_abspath, svn_wc_notify_add, pool);
-          notify->kind = pair->src_kind;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
-        }
+  /* Do our own notification for the root node, even if we could possibly
+     have delegated it.  See also issue #1552.
+
+     ### Maybe this notification should mention the mergeinfo change. */
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(
+                                  dst_abspath, svn_wc_notify_add, pool);
+      notify->kind = pair->src_kind;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
     }
 
   svn_io_sleep_for_timestamps(dst_abspath, pool);

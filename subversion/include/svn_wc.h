@@ -4245,16 +4245,11 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
  * repository as the nested WC.  The nested WC will be integrated into the
  * parent's WC, and will no longer be a separate WC.
  *
- * Call @a notify_func (if it is not @c NULL) with the @a notify_baton and
- * the path.
- *
  * This is a replacement for svn_wc_add4() case 1.
  */
 svn_error_t *
 svn_wc__integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
                                     const char *local_abspath,
-                                    svn_wc_notify_func2_t notify_func,
-                                    void *notify_baton,
                                     apr_pool_t *scratch_pool);
 
 /**
