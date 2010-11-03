@@ -1476,6 +1476,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
              Unfortunately, svn_wc_add4() is such a mess that it chokes
              at the moment when we pass a NULL copyfromurl. */
 
+          svn_io_sleep_for_timestamps(pair->dst_abspath_or_url, pool);
+
           return svn_error_createf
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("Source URL '%s' is from foreign repository; "
