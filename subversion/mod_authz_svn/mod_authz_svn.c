@@ -174,7 +174,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf)
         return NULL;
       }
       access_file = svn_dirent_join_many(r->pool, repos_path, "conf",
-                                         conf->repo_relative_access_file,a
+                                         conf->repo_relative_access_file,
                                          NULL);
     } 
   else
