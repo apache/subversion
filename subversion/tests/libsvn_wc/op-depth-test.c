@@ -186,6 +186,20 @@ wc_delete(wc_baton_t *b, const char *path)
                         b->pool);
 }
 
+static svn_error_t *
+wc_commit(wc_baton_t *b, const char *path)
+{
+  svn_client_ctx_t *ctx;
+  apr_array_header_t *targets = apr_array_make(b->pool, 1,
+                                               sizeof(const char *));
+
+  APR_ARRAY_PUSH(targets, const char *) = wc_path(b, path);
+  SVN_ERR(svn_client_create_context(&ctx, b->pool));
+  return svn_client_commit5(targets, svn_depth_infinity,
+                            FALSE, FALSE, /* keep locks/cl's */
+                            NULL, NULL, NULL, NULL, ctx, b->pool);
+}
+
 /* Create the Greek tree on disk in the WC, and commit it. */
 static svn_error_t *
 add_and_commit_greek_tree(wc_baton_t *b)
@@ -227,17 +241,7 @@ add_and_commit_greek_tree(wc_baton_t *b)
       SVN_ERR(wc_add(b, greek_tree_files[i][0]));
     }
 
-  {
-    svn_client_ctx_t *ctx;
-    apr_array_header_t *targets = apr_array_make(b->pool, 1,
-                                                 sizeof(const char *));
-
-    APR_ARRAY_PUSH(targets, const char *) = wc_path(b, "");
-    SVN_ERR(svn_client_create_context(&ctx, b->pool));
-    SVN_ERR(svn_client_commit5(targets, svn_depth_infinity,
-                               FALSE, FALSE, /* keep locks/cl's */
-                               NULL, NULL, NULL, NULL, ctx, b->pool));
-  }
+  SVN_ERR(wc_commit(b, ""));
 
   return SVN_NO_ERROR;
 }
@@ -747,6 +751,8 @@ test_delete_with_base(const svn_test_opts_t *opts, apr_pool_t *pool)
                                         "deletes_with_base", opts, pool));
   SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
   SVN_ERR(add_and_commit_greek_tree(&b));
+  SVN_ERR(wc_delete(&b, "A/B/E/beta"));
+  SVN_ERR(wc_commit(&b, ""));
 
   SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B/E"),
                          FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
@@ -754,10 +760,9 @@ test_delete_with_base(const svn_test_opts_t *opts, apr_pool_t *pool)
     nodes_row_t rows[] = {
       { 0, "A/B/E",       "normal",        1, "A/B/E"},
       { 0, "A/B/E/alpha", "normal",        1, "A/B/E/alpha"},
-      { 0, "A/B/E/beta",  "normal",        1, "A/B/E/beta"},
+      { 0, "A/B/E/beta",  "not-present",   2, "A/B/E/beta"},
       { 3, "A/B/E",       "base-deleted",  NO_COPY_FROM},
       { 3, "A/B/E/alpha", "base-deleted",  NO_COPY_FROM},
-      { 3, "A/B/E/beta",  "base-deleted",  NO_COPY_FROM},
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "A/B/E", rows));
@@ -765,16 +770,17 @@ test_delete_with_base(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(wc_copy(&b, "A/B/F", "A/B/E"));
   SVN_ERR(wc_copy(&b, "A/mu",  "A/B/E/alpha"));
+  SVN_ERR(wc_copy(&b, "A/mu",  "A/B/E/beta"));
   {
     nodes_row_t rows[] = {
       { 0, "A/B/E",       "normal",        1, "A/B/E"},
       { 0, "A/B/E/alpha", "normal",        1, "A/B/E/alpha"},
-      { 0, "A/B/E/beta",  "normal",        1, "A/B/E/beta"},
+      { 0, "A/B/E/beta",  "not-present",   2, "A/B/E/beta"},
       { 3, "A/B/E",       "base-deleted",  NO_COPY_FROM},
       { 3, "A/B/E/alpha", "base-deleted",  NO_COPY_FROM},
-      { 3, "A/B/E/beta",  "base-deleted",  NO_COPY_FROM},
       { 3, "A/B/E",       "normal",        1, "A/B/F"},
       { 4, "A/B/E/alpha", "normal",        1, "A/mu"},
+      { 4, "A/B/E/beta",  "normal",        1, "A/mu"},
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "A/B/E", rows));
@@ -786,10 +792,9 @@ test_delete_with_base(const svn_test_opts_t *opts, apr_pool_t *pool)
     nodes_row_t rows[] = {
       { 0, "A/B/E",       "normal",        1, "A/B/E"},
       { 0, "A/B/E/alpha", "normal",        1, "A/B/E/alpha"},
-      { 0, "A/B/E/beta",  "normal",        1, "A/B/E/beta"},
+      { 0, "A/B/E/beta",  "not-present",   2, "A/B/E/beta"},
       { 3, "A/B/E",       "base-deleted",  NO_COPY_FROM},
       { 3, "A/B/E/alpha", "base-deleted",  NO_COPY_FROM},
-      { 3, "A/B/E/beta",  "base-deleted",  NO_COPY_FROM},
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "A/B/E", rows));
