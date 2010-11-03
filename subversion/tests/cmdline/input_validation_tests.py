@@ -194,6 +194,13 @@ def invalid_revert_targets(sbox):
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'revert',
                              target)
 
+def invalid_lock_targets(sbox):
+  "wc paths and repo URL target mixture for 'lock'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                             "copy targets", 'lock', target1, target2)
+
 ########################################################################
 # Run the tests
 
@@ -215,6 +222,7 @@ test_list = [ None,
               invalid_resolve_targets,
               invalid_resolved_targets,
               invalid_revert_targets,
+              invalid_lock_targets,
              ]
 
 if __name__ == '__main__':
