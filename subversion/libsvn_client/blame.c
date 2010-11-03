@@ -551,35 +551,28 @@ normalize_blames(struct blame_chain *chain,
         }
     }
 
-  /* If both next pointers are null, we have an equally long list. */
-  if (walk->next == NULL && walk_merged->next == NULL)
-    return;
-
-  if (walk_merged->next == NULL)
+  /* If both NEXT pointers are null, the lists are equally long, otherwise
+     we need to extend one of them.  If CHAIN is longer, append new chunks
+     to CHAIN_MERGED until its length matches that of CHAIN. */
+  while (walk->next != NULL)
     {
-      /* Make new walk_merged chunks as needed at the end of the list so that
-         the length matches that of walk. */
-      while (walk->next != NULL)
-        {
-          struct blame *tmp = blame_create(chain_merged, walk_merged->rev,
-                                           walk->next->start);
-          walk_merged->next = tmp;
-          walk_merged = walk_merged->next;
-          walk = walk->next;
-        }
+      struct blame *tmp = blame_create(chain_merged, walk_merged->rev,
+                                       walk->next->start);
+      walk_merged->next = tmp;
+
+      walk_merged = walk_merged->next;
+      walk = walk->next;
     }
 
-  if (walk->next == NULL)
+  /* Same as above, only extend CHAIN to match CHAIN_MERGED. */
+  while (walk_merged->next != NULL)
     {
-      /* Same as above, only create walk chunks as needed. */
-      while (walk_merged->next != NULL)
-        {
-          struct blame *tmp = blame_create(chain, walk->rev,
-                                           walk_merged->next->start);
-          walk->next = tmp;
-          walk = walk->next;
-          walk_merged = walk_merged->next;
-        }
+      struct blame *tmp = blame_create(chain, walk->rev,
+                                       walk_merged->next->start);
+      walk->next = tmp;
+
+      walk = walk->next;
+      walk_merged = walk_merged->next;
     }
 }
 
