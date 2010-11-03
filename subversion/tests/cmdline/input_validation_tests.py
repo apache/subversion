@@ -180,6 +180,13 @@ def invalid_resolve_targets(sbox):
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'resolve',
                              '--accept', 'base', target)
 
+def invalid_resolved_targets(sbox):
+  "non-working copy paths for 'resolved'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'resolved',
+                             target)
+
 ########################################################################
 # Run the tests
 
@@ -199,6 +206,7 @@ test_list = [ None,
               invalid_merge_args,
               invalid_wcpath_upgrade,
               invalid_resolve_targets,
+              invalid_resolved_targets,
              ]
 
 if __name__ == '__main__':
