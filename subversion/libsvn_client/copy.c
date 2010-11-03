@@ -1428,9 +1428,12 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   if (pair->src_kind == svn_node_dir)
     {
+      svn_boolean_t sleep_needed = FALSE;
+
       /* Make a new checkout of the requested source. While doing so,
        * resolve pair->src_revnum to an actual revision number in case it
-       * was until now 'invalid' meaning 'head'. */
+       * was until now 'invalid' meaning 'head'.  Ask this function not to
+       * sleep for timestamps, by passing a sleep_needed output param. */
       SVN_ERR(svn_client__checkout_internal(&pair->src_revnum,
                                             pair->src_original,
                                             pair->dst_abspath_or_url,
@@ -1438,7 +1441,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                             &pair->src_op_revision, NULL,
                                             svn_depth_infinity,
                                             ignore_externals, FALSE, TRUE,
-                                            NULL, ctx, pool));
+                                            &sleep_needed, ctx, pool));
 
       /* Rewrite URLs recursively, remove wcprops, and mark everything
          as 'copied' -- assuming that the src and dst are from the
@@ -1529,9 +1532,9 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           notify->kind = pair->src_kind;
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
-
-      svn_io_sleep_for_timestamps(pair->dst_abspath_or_url, pool);
     }
+
+  svn_io_sleep_for_timestamps(pair->dst_abspath_or_url, pool);
 
   return SVN_NO_ERROR;
 }
