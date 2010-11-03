@@ -187,6 +187,13 @@ def invalid_resolved_targets(sbox):
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'resolved',
                              target)
 
+def invalid_revert_targets(sbox):
+  "non-working copy paths for 'revert'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'revert',
+                             target)
+
 ########################################################################
 # Run the tests
 
@@ -207,6 +214,7 @@ test_list = [ None,
               invalid_wcpath_upgrade,
               invalid_resolve_targets,
               invalid_resolved_targets,
+              invalid_revert_targets,
              ]
 
 if __name__ == '__main__':
