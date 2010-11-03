@@ -571,6 +571,107 @@ wc_wc_copies(wc_baton_t *b)
   return SVN_NO_ERROR;
 }
 
+/* Check that all kinds of repo-to-WC copies give correct op_depth results:
+ * create a Greek tree, make copies in it, and check the resulting DB rows. */
+static svn_error_t *
+repo_wc_copies(wc_baton_t *b)
+{
+  const char source_base_file[]   = "A/B/lambda";
+  const char source_base_dir[]    = "A/B/E";
+
+  SVN_ERR(add_and_commit_greek_tree(b));
+
+  /* Delete some nodes so that we can test copying onto these paths */
+
+  SVN_ERR(wc_delete(b, "A/D/gamma"));
+  SVN_ERR(wc_delete(b, "A/D/G"));
+
+  /* Test copying various things */
+
+  {
+#define NO_COPY_FROM SVN_INVALID_REVNUM, NULL
+    struct subtest_t
+      {
+        const char *from_path;
+        const char *to_path;
+        nodes_row_t expected[20];
+      }
+    subtests[] =
+      {
+        /* file */
+        { source_base_file, "A/C/copy1", {
+            { 3, "",                "normal",   1, source_base_file }
+          } },
+
+        /* dir */
+        { source_base_dir, "A/C/copy2", {
+            { 3, "",                "normal",   1, source_base_dir },
+            { 3, "alpha",           "normal",   NO_COPY_FROM },
+            { 3, "beta",            "normal",   NO_COPY_FROM }
+          } },
+
+        /* dir onto a schedule-delete file */
+        { source_base_dir, "A/D/gamma", {
+            { 0, "",                "normal",   1, "A/D/gamma" },
+            { 3, "",                "normal",   1, source_base_dir },
+            { 3, "alpha",           "normal",   NO_COPY_FROM },
+            { 3, "beta",            "normal",   NO_COPY_FROM }
+          } },
+
+        /* file onto a schedule-delete dir */
+        { source_base_file, "A/D/G", {
+            { 0, "",                "normal",   1, "A/D/G" },
+            { 0, "pi",              "normal",   1, "A/D/G/pi" },
+            { 0, "rho",             "normal",   1, "A/D/G/rho" },
+            { 0, "tau",             "normal",   1, "A/D/G/tau" },
+            { 3, "",                "normal",   1, source_base_file },
+            { 3, "pi",              "base-deleted",   NO_COPY_FROM },
+            { 3, "rho",             "base-deleted",   NO_COPY_FROM },
+            { 3, "tau",             "base-deleted",   NO_COPY_FROM }
+          } },
+
+        { 0 }
+      };
+    struct subtest_t *subtest;
+    svn_client_ctx_t *ctx;
+
+    /* Fix up the expected->local_relpath fields in the subtest data to be
+     * relative to the WC root rather than to the copy destination dir. */
+    for (subtest = subtests; subtest->from_path; subtest++)
+      {
+        nodes_row_t *row;
+        for (row = &subtest->expected[0]; row->local_relpath; row++)
+          row->local_relpath = svn_dirent_join(subtest->to_path,
+                                               row->local_relpath, b->pool);
+      }
+
+    /* Perform each copy. */
+    SVN_ERR(svn_client_create_context(&ctx, b->pool));
+    for (subtest = subtests; subtest->from_path; subtest++)
+      {
+        svn_opt_revision_t rev = { svn_opt_revision_number, { 1 } };
+        svn_client_copy_source_t source = { NULL, &rev, &rev };
+        apr_array_header_t *sources
+          = apr_array_make(b->pool, 0, sizeof(svn_client_copy_source_t *));
+
+        source.path = svn_uri_join(b->repos_url, subtest->from_path, b->pool);
+        APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
+        SVN_ERR(svn_client_copy6(sources,
+                                 wc_path(b, subtest->to_path),
+                                 FALSE, FALSE, FALSE,
+                                 NULL, NULL, NULL, ctx, b->pool));
+      }
+
+    /* Check each result. */
+    for (subtest = subtests; subtest->from_path; subtest++)
+      {
+        SVN_ERR(check_db_rows(b, subtest->to_path, subtest->expected));
+      }
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 test_wc_wc_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
@@ -842,6 +943,19 @@ test_delete_with_base(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_repo_wc_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "wc_wc_copies", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+
+  return repo_wc_copies(&b);
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -865,6 +979,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_adds,
                        "adds",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_repo_wc_copies,
+                       "test_repo_wc_copies",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
