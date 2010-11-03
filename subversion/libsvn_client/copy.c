@@ -1436,7 +1436,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
        * sleep for timestamps, by passing a sleep_needed output param. */
       SVN_ERR(svn_client__checkout_internal(&pair->src_revnum,
                                             pair->src_original,
-                                            pair->dst_abspath_or_url,
+                                            dst_abspath,
                                             &pair->src_peg_revision,
                                             &pair->src_op_revision, NULL,
                                             svn_depth_infinity,
@@ -1476,7 +1476,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
              Unfortunately, svn_wc_add4() is such a mess that it chokes
              at the moment when we pass a NULL copyfromurl. */
 
-          svn_io_sleep_for_timestamps(pair->dst_abspath_or_url, pool);
+          svn_io_sleep_for_timestamps(dst_abspath, pool);
 
           return svn_error_createf
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -1529,14 +1529,13 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify = svn_wc_create_notify(
-                                      pair->dst_abspath_or_url,
-                                      svn_wc_notify_add, pool);
+                                      dst_abspath, svn_wc_notify_add, pool);
           notify->kind = pair->src_kind;
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
     }
 
-  svn_io_sleep_for_timestamps(pair->dst_abspath_or_url, pool);
+  svn_io_sleep_for_timestamps(dst_abspath, pool);
 
   return SVN_NO_ERROR;
 }
