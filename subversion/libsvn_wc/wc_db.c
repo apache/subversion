@@ -4732,6 +4732,51 @@ is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
   return SVN_NO_ERROR;
 }
 
+/* Convert STATUS, the raw status obtained from the presence map, to
+   the status appropriate for a working (op_depth > 0) node and return
+   it in *WORKING_STATUS. */
+static svn_error_t *
+convert_to_working_status(svn_wc__db_status_t *working_status,
+                          svn_wc__db_status_t status)
+{
+  svn_wc__db_status_t work_status = status;
+
+  SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
+                 || work_status == svn_wc__db_status_not_present
+                 || work_status == svn_wc__db_status_base_deleted
+                 || work_status == svn_wc__db_status_incomplete
+                 || work_status == svn_wc__db_status_excluded);
+
+  if (work_status == svn_wc__db_status_incomplete)
+    {
+      *working_status = svn_wc__db_status_incomplete;
+    }
+  else if (work_status == svn_wc__db_status_excluded)
+    {
+      *working_status = svn_wc__db_status_excluded;
+    }
+  else if (work_status == svn_wc__db_status_not_present
+           || work_status == svn_wc__db_status_base_deleted)
+    {
+      /* The caller should scan upwards to detect whether this
+         deletion has occurred because this node has been moved
+         away, or it is a regular deletion. Also note that the
+         deletion could be of the BASE tree, or a child of
+         something that has been copied/moved here. */
+
+      *working_status = svn_wc__db_status_deleted;
+    }
+  else /* normal */
+    {
+      /* The caller should scan upwards to detect whether this
+         addition has occurred because of a simple addition,
+         a copy, or is the destination of a move. */
+      *working_status = svn_wc__db_status_added;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Return the status of the node, if any, below the "working" node.
    Set *HAVE_BASE or *HAVE_WORK to indicate if a base node or lower
    working node is present, and *STATUS to the status of the node.
@@ -4769,21 +4814,7 @@ info_below_working(svn_boolean_t *have_base,
               
           *status = svn_sqlite__column_token(stmt, 3, presence_map);
           if (op_depth > 0)
-            switch (*status)
-              {
-              case svn_wc__db_status_incomplete:
-              case svn_wc__db_status_excluded:
-                break;
-              case svn_wc__db_status_base_deleted:
-              case svn_wc__db_status_not_present:
-                *status = svn_wc__db_status_deleted;
-                break;
-              case svn_wc__db_status_normal:
-                *status = svn_wc__db_status_added;
-                break;
-              default:
-                SVN_ERR_ASSERT(FALSE);
-              }
+            SVN_ERR(convert_to_working_status(status, *status));
         }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -4915,7 +4946,6 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-
 /* Like svn_wc__db_read_info(), but with PDH+LOCAL_RELPATH instead of
  * DB+LOCAL_ABSPATH.*/
 static svn_error_t *
@@ -4990,43 +5020,7 @@ read_info(svn_wc__db_status_t *status,
           *status = svn_sqlite__column_token(stmt_info, 3, presence_map);
 
           if (op_depth != 0) /* WORKING */
-            {
-              svn_wc__db_status_t work_status;
-
-              work_status = *status;
-              SVN_ERR_ASSERT(work_status == svn_wc__db_status_normal
-                             || work_status == svn_wc__db_status_not_present
-                             || work_status == svn_wc__db_status_base_deleted
-                             || work_status == svn_wc__db_status_incomplete
-                             || work_status == svn_wc__db_status_excluded);
-
-              if (work_status == svn_wc__db_status_incomplete)
-                {
-                  *status = svn_wc__db_status_incomplete;
-                }
-              else if (work_status == svn_wc__db_status_excluded)
-                {
-                  *status = svn_wc__db_status_excluded;
-                }
-              else if (work_status == svn_wc__db_status_not_present
-                       || work_status == svn_wc__db_status_base_deleted)
-                {
-                  /* The caller should scan upwards to detect whether this
-                     deletion has occurred because this node has been moved
-                     away, or it is a regular deletion. Also note that the
-                     deletion could be of the BASE tree, or a child of
-                     something that has been copied/moved here. */
-
-                  *status = svn_wc__db_status_deleted;
-                }
-              else /* normal */
-                {
-                  /* The caller should scan upwards to detect whether this
-                     addition has occurred because of a simple addition,
-                     a copy, or is the destination of a move. */
-                  *status = svn_wc__db_status_added;
-                }
-            }
+            SVN_ERR(convert_to_working_status(status, *status));
         }
       if (kind)
         {
@@ -5362,13 +5356,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
 
           child->status = svn_sqlite__column_token(stmt, 3, presence_map);
           if (*op_depth != 0)
-            {
-              if (child->status == svn_wc__db_status_not_present
-                  || child->status == svn_wc__db_status_base_deleted)
-                child->status = svn_wc__db_status_deleted;
-              else if (child->status == svn_wc__db_status_normal)
-                child->status = svn_wc__db_status_added;
-            }
+            SVN_ERR(convert_to_working_status(&child->status, child->status));
 
           if (*op_depth != 0)
             child->revnum = SVN_INVALID_REVNUM;
