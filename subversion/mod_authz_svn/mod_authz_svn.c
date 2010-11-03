@@ -52,6 +52,7 @@ typedef struct {
   int no_auth_when_anon_ok;
   const char *base_path;
   const char *access_file;
+  const char *repo_relative_access_file;
   const char *force_username_case;
 } authz_svn_config_rec;
 
@@ -76,6 +77,37 @@ create_authz_svn_dir_config(apr_pool_t *p, char *d)
   return conf;
 }
 
+static const char *
+AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  authz_svn_config_rec *conf = config;
+
+  if (conf->repo_relative_access_file != NULL)
+    return "AuthzSVNAccessFile cannot be defined at "
+           "same time as AuthzSVNReposRelativeAccessFile.";
+
+  conf->access_file = ap_server_root_relative(cmd->pool, arg1);
+
+  return NULL;
+}
+
+
+static const char *
+AuthzSVNReposRelativeAccessFile_cmd(cmd_parms *cmd,
+                                    void *config,
+                                    const char *arg1)
+{
+  authz_svn_config_rec *conf = config;
+
+  if (conf->access_file != NULL)
+    return "AuthzSVNReposRelativeAccessFile cannot be defined at "
+           "same time as AuthzSVNAccessFile.";
+
+  conf->repo_relative_access_file = arg1;
+
+  return NULL;
+}
+
 /* Implements the #cmds member of Apache's #module vtable. */
 static const command_rec authz_svn_cmds[] =
 {
@@ -84,10 +116,17 @@ static const command_rec authz_svn_cmds[] =
                OR_AUTHCFG,
                "Set to 'Off' to allow access control to be passed along to "
                "lower modules. (default is On.)"),
-  AP_INIT_TAKE1("AuthzSVNAccessFile", ap_set_file_slot,
-                (void *)APR_OFFSETOF(authz_svn_config_rec, access_file),
+  AP_INIT_TAKE1("AuthzSVNAccessFile", AuthzSVNAccessFile_cmd,
+                NULL,
                 OR_AUTHCFG,
-                "Text file containing permissions of repository paths."),
+                "Path to text file containing permissions of repository "
+                "paths."),
+  AP_INIT_TAKE1("AuthzSVNReposRelativeAccessFile",
+                AuthzSVNReposRelativeAccessFile_cmd,
+                NULL,
+                OR_AUTHCFG,
+                "Path (relative to repository 'conf' directory) to text "
+                "file containing permissions of repository paths. "),
   AP_INIT_FLAG("AuthzSVNAnonymous", ap_set_flag_slot,
                (void *)APR_OFFSETOF(authz_svn_config_rec, anonymous),
                OR_AUTHCFG,
@@ -119,18 +158,40 @@ static svn_authz_t *
 get_access_conf(request_rec *r, authz_svn_config_rec *conf)
 {
   const char *cache_key = NULL;
+  const char *access_file;
+  const char *repos_path;
   void *user_data = NULL;
   svn_authz_t *access_conf = NULL;
   svn_error_t *svn_err;
+  dav_error *dav_err;
   char errbuf[256];
 
+  if (conf->repo_relative_access_file) 
+    {
+      dav_err = dav_svn_get_repos_path(r, conf->base_path, &repos_path);
+      if (dav_err) {
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, dav_err->desc);
+        return NULL;
+      }
+      access_file = svn_dirent_join_many(r->pool, repos_path, "conf",
+                                         conf->repo_relative_access_file,a
+                                         NULL);
+    } 
+  else
+    {
+      access_file = conf->access_file;
+    }
+  
+  ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r,
+                "Path to authz file is %s", access_file);
+
   cache_key = apr_pstrcat(r->pool, "mod_authz_svn:",
-                          conf->access_file, (char *)NULL);
+                          access_file, (char *)NULL);
   apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
   access_conf = user_data;
   if (access_conf == NULL)
     {
-      svn_err = svn_repos_authz_read(&access_conf, conf->access_file,
+      svn_err = svn_repos_authz_read(&access_conf, access_file,
                                      TRUE, r->connection->pool);
       if (svn_err)
         {
@@ -516,7 +577,8 @@ subreq_bypass(request_rec *r,
   username_to_authorize = get_username_to_authorize(r, conf);
 
   /* If configured properly, this should never be true, but just in case. */
-  if (!conf->anonymous || !conf->access_file)
+  if (!conf->anonymous || !conf->access_file
+      || !conf->repo_relative_access_file)
     {
       log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
       return HTTP_FORBIDDEN;
@@ -580,7 +642,8 @@ access_checker(request_rec *r)
   int status;
 
   /* We are not configured to run */
-  if (!conf->anonymous || !conf->access_file)
+  if (!conf->anonymous
+      || (!conf->access_file && !conf->repo_relative_access_file))
     return DECLINED;
 
   if (ap_some_auth_required(r))
@@ -638,7 +701,8 @@ check_user_id(request_rec *r)
 
   /* We are not configured to run, or, an earlier module has already
    * authenticated this request. */
-  if (!conf->access_file || !conf->no_auth_when_anon_ok || r->user)
+  if ((!conf->access_file && !conf->repo_relative_access_file)
+      || !conf->no_auth_when_anon_ok || r->user)
     return DECLINED;
 
   /* If anon access is allowed, return OK, preventing later modules
@@ -665,7 +729,7 @@ auth_checker(request_rec *r)
   int status;
 
   /* We are not configured to run */
-  if (!conf->access_file)
+  if (!conf->access_file && !conf->repo_relative_access_file)
     return DECLINED;
 
   /* Previous hook (check_user_id) already did all the work,
