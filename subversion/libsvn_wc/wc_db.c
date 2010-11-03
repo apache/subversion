@@ -791,49 +791,6 @@ blank_iwb(insert_working_baton_t *piwb)
 }
 
 
-/* Copy the row specified by BATON->(wc_id,local_relpath) from BASE to
- * WORKING, changing its 'presence' and 'op_depth' to the values in BATON. */
-static svn_error_t *
-copy_working_from_base(void *baton,
-                       svn_sqlite__db_t *sdb,
-                       apr_pool_t *scratch_pool)
-{
-  const insert_working_baton_t *piwb = baton;
-  svn_sqlite__stmt_t *stmt;
-#ifdef SVN_WC__OP_DEPTH
-  const char *like_arg;
-#endif
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                         STMT_INSERT_WORKING_NODE_FROM_BASE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isit", piwb->wc_id,
-                            piwb->local_relpath,
-                            piwb->op_depth,
-                            presence_map, piwb->presence));
-  SVN_ERR(svn_sqlite__insert(NULL, stmt));
-
-#ifdef SVN_WC__OP_DEPTH
-  /* Need to update the op_depth of all deleted child trees -- this
-     relies on the recursion having already deleted the trees so
-     that they are all at op_depth+1.
-
-     ### Rewriting the op_depth means that the number of queries is
-     ### O(depth^2).  Fix it by implementing svn_wc__db_op_delete so
-     ### that the recursion gets moved from adm_ops.c to wc_db.c and
-     ### one transaction does the whole tree and thus each op_depth
-     ### only gets written once. */
-  like_arg = construct_like_arg(piwb->local_relpath, scratch_pool);
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_UPDATE_OP_DEPTH_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                            piwb->wc_id, like_arg, piwb->op_depth));
-  SVN_ERR(svn_sqlite__update(NULL, stmt));
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Insert a row in NODES for each (const char *) child name in CHILDREN,
    whose parent directory is LOCAL_RELPATH, at op_depth=OP_DEPTH.  Set each
    child's presence to 'incomplete', kind to 'unknown', repos_id to REPOS_ID,
@@ -4668,20 +4625,36 @@ db_working_insert(svn_wc__db_status_t status,
                   const char *local_relpath,
                   apr_pool_t *scratch_pool)
 {
-  insert_working_baton_t iwb;
-
-  blank_iwb(&iwb);
-
-  iwb.wc_id = pdh->wcroot->wc_id;
-  iwb.local_relpath = local_relpath;
-  iwb.presence = status;
+  svn_sqlite__stmt_t *stmt;
 #ifdef SVN_WC__OP_DEPTH
-  iwb.op_depth = relpath_depth(local_relpath);
+  const char *like_arg = construct_like_arg(local_relpath, scratch_pool);
+  apr_int64_t op_depth = relpath_depth(local_relpath);
 #else
-  iwb.op_depth = 2; /* ### temporary op_depth */
+  apr_int64_t op_depth = 2; /* ### temporary op_depth */
 #endif
 
-  SVN_ERR(copy_working_from_base(&iwb, pdh->wcroot->sdb, scratch_pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_INSERT_WORKING_NODE_FROM_BASE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isit", pdh->wcroot->wc_id,
+                            local_relpath, op_depth, presence_map, status));
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+#ifdef SVN_WC__OP_DEPTH
+  /* Need to update the op_depth of all deleted child trees -- this
+     relies on the recursion having already deleted the trees so
+     that they are all at op_depth+1.
+
+     ### Rewriting the op_depth means that the number of queries is
+     ### O(depth^2).  Fix it by implementing svn_wc__db_op_delete so
+     ### that the recursion gets moved from adm_ops.c to wc_db.c and
+     ### one transaction does the whole tree and thus each op_depth
+     ### only gets written once. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_OP_DEPTH_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                            pdh->wcroot->wc_id, like_arg, op_depth));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+#endif
 
   return SVN_NO_ERROR;
 }
