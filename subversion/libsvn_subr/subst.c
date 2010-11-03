@@ -853,12 +853,17 @@ create_translation_baton(const char *eol_str,
  * "\n$" (an EOL followed by a keyword), the result will be FALSE since it is
  * more efficient to handle that special case implicitly in the calling code
  * by exiting the quick scan loop.
+ * The caller must ensure that buf[0] and buf[1] refer to valid memory
+ * locations.
  */
 static APR_INLINE svn_boolean_t
 eol_unchanged(struct translation_baton *b,
               const char *buf)
 {
-  /* if the first byte doesn't match, the whole EOL won't */
+  /* If the first byte doesn't match, the whole EOL won't.
+   * This does also handle the (certainly invalid) case that 
+   * eol_str would be an empty string.
+   */
   if (buf[0] != b->eol_str[0])
     return FALSE;
 
