@@ -8005,24 +8005,46 @@ svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
                      svn_boolean_t allow_missing,
                      apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt_info;
+  svn_boolean_t have_info;
 
-  err = svn_wc__db_read_info(NULL, kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
-                             db, local_abspath, scratch_pool, scratch_pool);
-  if (!err)
-    return SVN_NO_ERROR;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  if (allow_missing && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt_info, pdh->wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt_info, "is",
+                            pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_info, stmt_info));
+
+  if (!have_info)
     {
-      svn_error_clear(err);
-      *kind = svn_wc__db_kind_unknown;
-      return SVN_NO_ERROR;
+      if (allow_missing)
+        {
+          *kind = svn_wc__db_kind_unknown;
+          SVN_ERR(svn_sqlite__reset(stmt_info));
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          SVN_ERR(svn_sqlite__reset(stmt_info));
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("The node '%s' was not found."),
+                                   path_for_error_message(pdh->wcroot,
+                                                          local_relpath,
+                                                          scratch_pool));
+        }
     }
 
-  return svn_error_return(err);
+  *kind = svn_sqlite__column_token(stmt_info, 4, kind_map);
+
+  return svn_error_return(svn_sqlite__reset(stmt_info));
 }
 
 
