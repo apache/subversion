@@ -194,7 +194,8 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   if (mid == 0)
     {
       mid = env->GetMethodID(clazz, "<init>",
-                             "(Ljava/lang/String;Ljava/lang/String;J"
+                             "(Ljava/lang/String;Ljava/lang/String;"
+                             "Ljava/lang/String;J"
                              "L"JAVA_PACKAGE"/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
@@ -211,6 +212,10 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
     }
 
   jstring jpath = JNIUtil::makeJString(path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jwcroot = JNIUtil::makeJString(info->wcroot_abspath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -280,7 +285,8 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   jlong jreposSize = info->size == SVN_INFO_SIZE_UNKNOWN
     ? -1 : (jlong) info->size;
 
-  jobject jinfo2 = env->NewObject(clazz, mid, jpath, jurl, (jlong) info->rev,
+  jobject jinfo2 = env->NewObject(clazz, mid, jpath, jwcroot, jurl,
+                                  (jlong) info->rev,
                                   jnodeKind, jreposRootUrl, jreportUUID,
                                   (jlong) info->last_changed_rev,
                                   (jlong) info->last_changed_date,
