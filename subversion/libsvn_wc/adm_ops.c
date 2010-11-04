@@ -1119,7 +1119,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                          content, NULL, NULL, NULL,
                                          copyfrom_url, copyfrom_rev,
                                          cancel_func, cancel_baton,
-                                         NULL, NULL, scratch_pool));
+                                         scratch_pool));
         }
       else
         SVN_ERR(svn_wc__db_op_copy_dir(db, local_abspath,
