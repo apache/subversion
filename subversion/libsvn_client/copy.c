@@ -45,7 +45,6 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
-#include "../libsvn_wc/adm_files.h"
 
 
 /*
@@ -1508,9 +1507,14 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                TRUE /* metadata_only */,
                                ctx->cancel_func, ctx->cancel_baton,
                                NULL, NULL, pool));
-          SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(tmp_abspath, NULL, pool),
-                                     FALSE /* ignore_enoent */,
-                                     ctx->cancel_func, ctx->cancel_baton, pool));
+          SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, tmp_abspath,
+                                             FALSE, pool, pool));
+          SVN_ERR(svn_wc_remove_from_revision_control2(ctx->wc_ctx,
+                                                       tmp_abspath,
+                                                       FALSE, FALSE,
+                                                       ctx->cancel_func,
+                                                       ctx->cancel_baton,
+                                                       pool));
         }
       else
         {
