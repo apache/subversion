@@ -682,6 +682,8 @@ svn_ra_reparent(svn_ra_session_t *ra_session,
 
 /** Set @a *url to the repository URL to which @a ra_session was
  * opened or most recently reparented.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_ra_get_session_url(svn_ra_session_t *ra_session,
@@ -746,12 +748,40 @@ svn_ra_get_dated_revision(svn_ra_session_t *session,
  *
  * If @a value is @c NULL, delete the named revision property.
  *
+ * If the server advertises the #SVN_RA_CAPABILITY_ATOMIC_REVPROPS capability
+ * and @a old_value_p is not @c NULL, then changing the property will fail with
+ * an error chain that contains #SVN_ERR_FS_PROP_BASEVALUE_MISMATCH if the
+ * present value of the property is not @a *old_value_p.  (This is an atomic
+ * test-and-set).
+ * @a *old_value_p may be @c NULL, representing that the property must be not
+ * already set.
+ *
+ * If the capability is not advertised, then @a old_value_p MUST be @c NULL.
+ *
  * Please note that properties attached to revisions are @em unversioned.
  *
  * Use @a pool for memory allocation.
  *
- * @since New in 1.2.
+ * @see svn_fs_change_rev_prop2(), svn_error_has_cause().
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_ra_change_rev_prop2(svn_ra_session_t *session,
+                        svn_revnum_t rev,
+                        const char *name,
+                        const svn_string_t *const *old_value_p,
+                        const svn_string_t *value,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_change_rev_prop2(), but with @a old_value_p set
+ * to @c NULL.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_change_rev_prop(svn_ra_session_t *session,
                        svn_revnum_t rev,
@@ -1912,6 +1942,14 @@ svn_ra_has_capability(svn_ra_session_t *session,
  * @since New in 1.5.
  */
 #define SVN_RA_CAPABILITY_COMMIT_REVPROPS "commit-revprops"
+
+/**
+ * The capability of specifying (and atomically verifying) expected
+ * preexisting values when modifying revprops.
+ *
+ * @since New in 1.7.
+ */
+#define SVN_RA_CAPABILITY_ATOMIC_REVPROPS "atomic-revprops"
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *

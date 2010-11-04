@@ -223,6 +223,7 @@ static svn_error_t *log_command(server_baton_t *b,
 svn_error_t *load_configs(svn_config_t **cfg,
                           svn_config_t **pwdb,
                           svn_authz_t **authzdb,
+                          enum username_case_type *username_case,
                           const char *filename,
                           svn_boolean_t must_exist,
                           const char *base,
@@ -286,6 +287,8 @@ svn_error_t *load_configs(svn_config_t **cfg,
                  SVN_CONFIG_OPTION_AUTHZ_DB, NULL);
   if (authzdb_path)
     {
+      const char *case_force_val;
+
       authzdb_path = svn_dirent_join(base, authzdb_path, pool);
       err = svn_repos_authz_read(authzdb, authzdb_path, TRUE, pool);
       if (err)
@@ -304,10 +307,25 @@ svn_error_t *load_configs(svn_config_t **cfg,
              * will go to standard error for the admin to see. */
             return err;
         }
+      
+      /* Are we going to be case-normalizing usernames when we consult
+       * this authz file? */
+      svn_config_get(*cfg, &case_force_val, SVN_CONFIG_SECTION_GENERAL,
+                     SVN_CONFIG_OPTION_FORCE_USERNAME_CASE, NULL);
+      if (case_force_val)
+        {
+          if (strcmp(case_force_val, "upper") == 0)
+            *username_case = CASE_FORCE_UPPER;
+          else if (strcmp(case_force_val, "lower") == 0)
+            *username_case = CASE_FORCE_LOWER;
+          else
+            *username_case = CASE_ASIS;
+        }
     }
   else
     {
       *authzdb = NULL;
+      *username_case = CASE_ASIS;
     }
 
   return SVN_NO_ERROR;
@@ -340,6 +358,18 @@ static svn_error_t *get_fs_path(const char *repos_url, const char *url,
 
 /* --- AUTHENTICATION AND AUTHORIZATION FUNCTIONS --- */
 
+/* Convert TEXT to upper case if TO_UPPERCASE is TRUE, else
+   converts it to lower case. */
+static void convert_case(char *text, svn_boolean_t to_uppercase)
+{
+  char *c = text;
+  while (*c)
+    {
+      *c = (to_uppercase ? apr_toupper(*c) : apr_tolower(*c));
+      ++c;
+    }
+}
+
 /* Set *ALLOWED to TRUE if PATH is accessible in the REQUIRED mode to
    the user described in BATON according to the authz rules in BATON.
    Use POOL for temporary allocations only.  If no authz rules are
@@ -369,8 +399,20 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
   if (path && *path != '/')
     path = svn_uri_join("/", path, pool);
 
+  /* If we have a username, and we've not yet used it + any username
+     case normalization that might be requested to determine "the
+     username we used for authz purposes", do so now. */
+  if (b->user && (! b->authz_user))
+    {
+      b->authz_user = apr_pstrdup(b->pool, b->user);
+      if (b->username_case == CASE_FORCE_UPPER)
+        convert_case((char *)b->authz_user, TRUE);
+      else if (b->username_case == CASE_FORCE_LOWER)
+        convert_case((char *)b->authz_user, FALSE);
+    }
+
   return svn_repos_authz_check_access(b->authzdb, b->authz_repos_name,
-                                      path, b->user, required,
+                                      path, b->authz_user, required,
                                       allowed, pool);
 }
 
@@ -994,6 +1036,65 @@ static svn_error_t *get_dated_rev(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+/* Common logic for change_rev_prop() and change_rev_prop2(). */
+static svn_error_t *do_change_rev_prop(svn_ra_svn_conn_t *conn,
+                                       server_baton_t *b,
+                                       svn_revnum_t rev,
+                                       const char *name,
+                                       const svn_string_t *const *old_value_p,
+                                       const svn_string_t *value,
+                                       apr_pool_t *pool)
+{
+  SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, FALSE));
+  SVN_ERR(log_command(b, conn, pool, "%s",
+                      svn_log__change_rev_prop(rev, name, pool)));
+  SVN_CMD_ERR(svn_repos_fs_change_rev_prop4(b->repos, rev, b->user,
+                                            name, old_value_p, value,
+                                            TRUE, TRUE,
+                                            authz_check_access_cb_func(b), b,
+                                            pool));
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *change_rev_prop2(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                     apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  svn_revnum_t rev;
+  const char *name;
+  svn_string_t *value;
+  const svn_string_t *const *old_value_p;
+  svn_string_t *old_value;
+  svn_boolean_t dont_care;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc(?s)(b?s)",
+                                 &rev, &name, &value,
+                                 &dont_care, &old_value));
+
+  /* Argument parsing. */
+  if (dont_care)
+    old_value_p = NULL;
+  else
+    old_value_p = (const svn_string_t *const *)&old_value;
+
+  /* Input validation. */
+  if (dont_care && old_value)
+    {
+      svn_error_t *err;
+      err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "'previous-value' and 'dont-care' cannot both be "
+                             "set in 'change-rev-prop2' request");
+      return log_fail_and_flush(err, b, conn, pool);
+    }
+
+  /* Do it. */
+  SVN_ERR(do_change_rev_prop(conn, b, rev, name, old_value_p, value, pool));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     apr_array_header_t *params, void *baton)
 {
@@ -1006,14 +1107,8 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      optional element pattern "(?s)" isn't used. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc?s", &rev, &name, &value));
 
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, FALSE));
-  SVN_ERR(log_command(b, conn, pool, "%s",
-                      svn_log__change_rev_prop(rev, name, pool)));
-  SVN_CMD_ERR(svn_repos_fs_change_rev_prop3(b->repos, rev, b->user,
-                                            name, value, TRUE, TRUE,
-                                            authz_check_access_cb_func(b), b,
-                                            pool));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+  SVN_ERR(do_change_rev_prop(conn, b, rev, name, NULL, value, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1376,7 +1471,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_uint64_t dirent_fields;
   apr_array_header_t *dirent_fields_list = NULL;
   svn_ra_svn_item_t *elt;
-  int i;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb?l", &path, &rev,
                                  &want_props, &want_contents,
@@ -1388,6 +1482,8 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else
     {
+      int i;
+
       dirent_fields = 0;
 
       for (i = 0; i < dirent_fields_list->nelts; ++i)
@@ -1452,6 +1548,14 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           svn_pool_clear(subpool);
 
           file_path = svn_uri_join(full_path, name, subpool);
+
+          if (! lookup_access(subpool, b, conn, svn_authz_read,
+                              file_path, FALSE))
+            {
+              apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+              continue;
+            }
+
           entry = apr_pcalloc(pool, sizeof(*entry));
 
           if (dirent_fields & SVN_DIRENT_KIND)
@@ -2755,6 +2859,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-latest-rev",  get_latest_rev },
   { "get-dated-rev",   get_dated_rev },
   { "change-rev-prop", change_rev_prop },
+  { "change-rev-prop2",change_rev_prop2 },
   { "rev-proplist",    rev_proplist },
   { "rev-prop",        rev_prop },
   { "commit",          commit },
@@ -2899,7 +3004,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   /* If the svnserve configuration files have not been loaded then
      load them from the repository. */
   if (NULL == b->cfg)
-    SVN_ERR(load_configs(&b->cfg, &b->pwdb, &b->authzdb,
+    SVN_ERR(load_configs(&b->cfg, &b->pwdb, &b->authzdb, &b->username_case,
                          svn_repos_svnserve_conf(b->repos, pool), FALSE,
                          svn_repos_conf_dir(b->repos, pool),
                          b, conn,
@@ -2968,6 +3073,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.tunnel_user = get_tunnel_user(params, pool);
   b.read_only = params->read_only;
   b.user = NULL;
+  b.username_case = params->username_case;
+  b.authz_user = NULL;
   b.cfg = params->cfg;
   b.pwdb = params->pwdb;
   b.authzdb = params->authzdb;
@@ -2978,7 +3085,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwww)",
+  /* Server-side capabilities list: */
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
                                         SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
@@ -2986,6 +3094,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
                                         SVN_RA_SVN_CAP_DEPTH,
                                         SVN_RA_SVN_CAP_LOG_REVPROPS,
+                                        SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
                                         SVN_RA_SVN_CAP_PARTIAL_REPLAY));
 
   /* Read client response, which we assume to be in version 2 format:

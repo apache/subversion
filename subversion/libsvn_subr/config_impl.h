@@ -114,7 +114,10 @@ svn_error_t *svn_config__parse_registry(svn_config_t *cfg,
    or svn_config_get_user_config_path() instead. */
 #ifdef WIN32
 #  define SVN_CONFIG__SUBDIRECTORY    "Subversion"
-#else  /* ! WIN32 */
+#elif defined __HAIKU__ /* HAIKU */
+#  define SVN_CONFIG__SYS_DIRECTORY   "subversion"
+#  define SVN_CONFIG__USR_DIRECTORY   "subversion"
+#else  /* ! WIN32 && ! __HAIKU__ */
 #  define SVN_CONFIG__SYS_DIRECTORY   "/etc/subversion"
 #  define SVN_CONFIG__USR_DIRECTORY   ".subversion"
 #endif /* WIN32 */

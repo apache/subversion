@@ -166,6 +166,47 @@ def invalid_merge_args(sbox):
   run_and_verify_svn_in_wc(sbox, "svn: Path '.*' does not exist",
                            'merge', '-c42', '^/mu', 'nonexistent')
 
+def invalid_wcpath_upgrade(sbox):
+  "non-working copy paths for 'upgrade'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'upgrade',
+                             target, target)
+
+def invalid_resolve_targets(sbox):
+  "non-working copy paths for 'resolve'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'resolve',
+                             '--accept', 'base', target)
+
+def invalid_resolved_targets(sbox):
+  "non-working copy paths for 'resolved'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'resolved',
+                             target)
+
+def invalid_revert_targets(sbox):
+  "non-working copy paths for 'revert'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'revert',
+                             target)
+
+def invalid_lock_targets(sbox):
+  "wc paths and repo URL target mixture for 'lock'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                             "copy targets", 'lock', target1, target2)
+
+def invalid_status_targets(sbox):
+  "non-working copy paths for 'status'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'status',
+                             target)
 
 ########################################################################
 # Run the tests
@@ -184,6 +225,12 @@ test_list = [ None,
               invalid_import_args,
               invalid_log_targets,
               invalid_merge_args,
+              invalid_wcpath_upgrade,
+              invalid_resolve_targets,
+              invalid_resolved_targets,
+              invalid_revert_targets,
+              invalid_lock_targets,
+              invalid_status_targets,
              ]
 
 if __name__ == '__main__':

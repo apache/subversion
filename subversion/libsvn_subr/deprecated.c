@@ -549,17 +549,20 @@ svn_opt_print_help(apr_getopt_t *os,
                    apr_pool_t *pool)
 {
   apr_array_header_t *targets = NULL;
-  int i;
 
   if (os)
     SVN_ERR(svn_opt_parse_all_args(&targets, os, pool));
 
   if (os && targets->nelts)  /* help on subcommand(s) requested */
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_opt_subcommand_help(APR_ARRAY_IDX(targets, i, const char *),
-                                cmd_table, option_table, pool);
-      }
+    {
+      int i;
+
+      for (i = 0; i < targets->nelts; i++)
+        {
+          svn_opt_subcommand_help(APR_ARRAY_IDX(targets, i, const char *),
+                                  cmd_table, option_table, pool);
+        }
+    }
   else if (print_version)   /* just --version */
     SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer, quiet,
                                         pool));

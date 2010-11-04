@@ -177,7 +177,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
 }
 
 jobject
-CreateJ::Info2(const char *path, const svn_info_t *info)
+CreateJ::Info(const char *path, const svn_info_t *info)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -186,7 +186,7 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/Info2");
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/Info");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -194,12 +194,13 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   if (mid == 0)
     {
       mid = env->GetMethodID(clazz, "<init>",
-                             "(Ljava/lang/String;Ljava/lang/String;J"
+                             "(Ljava/lang/String;Ljava/lang/String;"
+                             "Ljava/lang/String;J"
                              "L"JAVA_PACKAGE"/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/Lock;Z"
-                             "L"JAVA_PACKAGE"/Info2$ScheduleKind;"
+                             "L"JAVA_PACKAGE"/Info$ScheduleKind;"
                              "Ljava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
@@ -211,6 +212,10 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
     }
 
   jstring jpath = JNIUtil::makeJString(path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jwcroot = JNIUtil::makeJString(info->wcroot_abspath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -280,7 +285,8 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   jlong jreposSize = info->size == SVN_INFO_SIZE_UNKNOWN
     ? -1 : (jlong) info->size;
 
-  jobject jinfo2 = env->NewObject(clazz, mid, jpath, jurl, (jlong) info->rev,
+  jobject jinfo2 = env->NewObject(clazz, mid, jpath, jwcroot, jurl,
+                                  (jlong) info->rev,
                                   jnodeKind, jreposRootUrl, jreportUUID,
                                   (jlong) info->last_changed_rev,
                                   (jlong) info->last_changed_date,
@@ -671,8 +677,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
 }
 
 jobject
-CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify,
-                                 apr_pool_t *pool)
+CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -762,7 +767,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify,
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jobject jrevProps = CreateJ::PropertyMap(wcNotify->rev_props, pool);
+  jobject jrevProps = CreateJ::PropertyMap(wcNotify->rev_props);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -791,8 +796,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify,
 }
 
 jobject
-CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify,
-                                apr_pool_t *pool)
+CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -1016,7 +1020,6 @@ CreateJ::RevisionRangeList(apr_array_header_t *ranges)
 jobject
 CreateJ::StringSet(apr_array_header_t *strings)
 {
-  JNIEnv *env = JNIUtil::getEnv();
   std::vector<jobject> jstrs;
 
   for (int i = 0; i < strings->nelts; ++i)
@@ -1032,7 +1035,7 @@ CreateJ::StringSet(apr_array_header_t *strings)
   return CreateJ::Set(jstrs);
 }
 
-jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
+jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -1072,7 +1075,8 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
 
   apr_hash_index_t *hi;
   int i = 0;
-  for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi), ++i)
+  for (hi = apr_hash_first(apr_hash_pool_get(prop_hash), prop_hash);
+       hi; hi = apr_hash_next(hi), ++i)
     {
       const char *key;
       svn_string_t *val;

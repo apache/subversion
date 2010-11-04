@@ -270,7 +270,7 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
               && !svn_string_compare(wanted_value, present_value)))
         {
           /* What we expected isn't what we found. */
-          return svn_error_createf(SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+          return svn_error_createf(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH, NULL,
                                    _("revprop '%s' has unexpected value in "
                                      "filesystem"),
                                    name);
@@ -1159,7 +1159,6 @@ svn_fs_base__purge_txn(svn_fs_t *fs,
 {
   struct cleanup_txn_args args;
   transaction_t *txn;
-  int i;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
@@ -1182,6 +1181,8 @@ svn_fs_base__purge_txn(svn_fs_t *fs,
   /* Kill the transaction's copies (which should gracefully...). */
   if (txn->copies)
     {
+      int i;
+
       for (i = 0; i < txn->copies->nelts; i++)
         {
           SVN_ERR(svn_fs_base__retry_txn

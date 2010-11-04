@@ -46,7 +46,7 @@ class CreateJ
   ConflictDescriptor(const svn_wc_conflict_description_t *desc);
 
   static jobject
-  Info2(const char *path, const svn_info_t *info);
+  Info(const char *path, const svn_info_t *info);
 
   static jobject
   Lock(const svn_lock_t *lock);
@@ -59,10 +59,10 @@ class CreateJ
          const svn_client_status_t *status, apr_pool_t *pool);
 
   static jobject
-  ClientNotifyInformation(const svn_wc_notify_t *notify, apr_pool_t *pool);
+  ClientNotifyInformation(const svn_wc_notify_t *notify);
 
   static jobject
-  ReposNotifyInformation(const svn_repos_notify_t *notify, apr_pool_t *pool);
+  ReposNotifyInformation(const svn_repos_notify_t *notify);
 
   static jobject
   CommitItem(svn_client_commit_item3_t *item);
@@ -77,7 +77,7 @@ class CreateJ
   StringSet(apr_array_header_t *strings);
 
   static jobject
-  PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool);
+  PropertyMap(apr_hash_t *prop_hash);
 
   /* This creates a set of Objects.  It derefs the members of the vector
    * after putting them in the set, so they caller doesn't need to. */

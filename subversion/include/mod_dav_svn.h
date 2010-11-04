@@ -48,8 +48,10 @@ extern "C" {
 
    Three special substrings of the uri are returned for convenience:
 
-   * REPOS_NAME:      The single path component that is the directory
-                      which contains the repository.
+   * REPOS_BASENAME:  The single path component that is the directory
+                      which contains the repository.  (Don't confuse
+                      this with the "repository name" as optionally
+                      defined via the SVNReposName directive!)
 
    * RELATIVE_PATH:   The remaining imaginary path components.
 
@@ -68,7 +70,7 @@ extern "C" {
    ROOT_PATH of '/svn/repos'.  But either way, we would get back:
 
      * CLEANED_URI:    /svn/repos/proj1/!svn/blah/13/A/B/alpha
-     * REPOS_NAME:     proj1
+     * REPOS_BASENAME: proj1
      * RELATIVE_PATH:  /!svn/blah/13/A/B/alpha
      * REPOS_PATH:     A/B/alpha
      * TRAILING_SLASH: FALSE
@@ -78,7 +80,7 @@ AP_MODULE_DECLARE(dav_error *) dav_svn_split_uri(request_rec *r,
                                                  const char *root_path,
                                                  const char **cleaned_uri,
                                                  int *trailing_slash,
-                                                 const char **repos_name,
+                                                 const char **repos_basename,
                                                  const char **relative_path,
                                                  const char **repos_path);
 

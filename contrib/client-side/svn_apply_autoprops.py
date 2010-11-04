@@ -124,6 +124,8 @@ def filter_walk(autoprop_lines, dirname, filenames):
     prop_list = autoprops_line[1]
 
     matching_filenames = fnmatch.filter(filenames, fnmatch_str)
+    matching_filenames = [f for f in matching_filenames \
+      if not os.path.islink(os.path.join(dirname, f))]
     if not matching_filenames:
       continue
 

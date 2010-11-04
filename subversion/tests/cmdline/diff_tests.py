@@ -2409,8 +2409,12 @@ def diff_repos_wc_add_with_props(sbox):
   diff_X_bar_base_r3 = make_diff_header("X/bar", "revision 0",
                                                  "revision 3") + diff_X_bar
 
-  expected_output_r1_base = diff_X_r1_base + diff_X_bar_r1_base + diff_foo_r1_base
-  expected_output_base_r3 = diff_foo_base_r3 + diff_X_bar_base_r3 + diff_X_base_r3
+  expected_output_r1_base = svntest.verify.UnorderedOutput(diff_X_r1_base +
+                                                           diff_X_bar_r1_base +
+                                                           diff_foo_r1_base)
+  expected_output_base_r3 = svntest.verify.UnorderedOutput(diff_foo_base_r3 +
+                                                           diff_X_bar_base_r3 +
+                                                           diff_X_base_r3)
 
   os.chdir(sbox.wc_dir)
 

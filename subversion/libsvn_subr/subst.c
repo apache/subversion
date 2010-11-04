@@ -371,16 +371,14 @@ svn_subst_build_keywords2(apr_hash_t **kw,
 
 
 /* Write out LEN bytes of BUF into STREAM. */
+/* ### TODO: 'stream_write()' would be a better name for this. */
 static svn_error_t *
 translate_write(svn_stream_t *stream,
                 const void *buf,
                 apr_size_t len)
 {
-  apr_size_t wrote = len;
-  svn_error_t *write_err = svn_stream_write(stream, buf, &wrote);
-  if ((write_err) || (len != wrote))
-    return write_err;
-
+  SVN_ERR(svn_stream_write(stream, buf, &len));
+  /* (No need to check LEN, as a short write always produces an error.) */
   return SVN_NO_ERROR;
 }
 
@@ -609,30 +607,36 @@ translate_keyword(char *buf,
 }
 
 
-/* Translate NEWLINE_BUF (length of NEWLINE_LEN) to the newline format
-   specified in EOL_STR (length of EOL_STR_LEN), and write the
-   translated thing to FILE (whose path is DST_PATH).
+/* Translate the newline string NEWLINE_BUF (of length NEWLINE_LEN) to
+   the newline string EOL_STR (of length EOL_STR_LEN), writing the
+   result (which is always EOL_STR) to the stream DST.
 
-   SRC_FORMAT (length *SRC_FORMAT_LEN) is a cache of the first newline
-   found while processing SRC_PATH.  If the current newline is not the
-   same style as that of SRC_FORMAT, look to the REPAIR parameter.  If
-   REPAIR is TRUE, ignore the inconsistency, else return an
-   SVN_ERR_IO_INCONSISTENT_EOL error.  If we are examining the first
-   newline in the file, copy it to {SRC_FORMAT, *SRC_FORMAT_LEN} to
-   use for later consistency checks. */
+   Also check for consistency of the source newline strings across
+   multiple calls, using SRC_FORMAT (length *SRC_FORMAT_LEN) as a cache
+   of the first newline found.  If the current newline is not the same
+   as SRC_FORMAT, look to the REPAIR parameter.  If REPAIR is TRUE,
+   ignore the inconsistency, else return an SVN_ERR_IO_INCONSISTENT_EOL
+   error.  If *SRC_FORMAT_LEN is 0, assume we are examining the first
+   newline in the file, and copy it to {SRC_FORMAT, *SRC_FORMAT_LEN} to
+   use for later consistency checks.
+
+   Note: all parameters are required even if REPAIR is TRUE.
+   ### We could require that REPAIR must not change across a sequence of
+       calls, and could then optimize by not using SRC_FORMAT at all if
+       REPAIR is TRUE.
+*/
 static svn_error_t *
 translate_newline(const char *eol_str,
                   apr_size_t eol_str_len,
                   char *src_format,
                   apr_size_t *src_format_len,
-                  char *newline_buf,
+                  const char *newline_buf,
                   apr_size_t newline_len,
                   svn_stream_t *dst,
                   svn_boolean_t repair)
 {
-  /* If this is the first newline we've seen, cache it
-     future comparisons, else compare it with our cache to
-     check for consistency. */
+  /* If we've seen a newline before, compare it with our cache to
+     check for consistency, else cache it for future comparisons. */
   if (*src_format_len)
     {
       /* Comparing with cache.  If we are inconsistent and
@@ -649,7 +653,7 @@ translate_newline(const char *eol_str,
       strncpy(src_format, newline_buf, newline_len);
       *src_format_len = newline_len;
     }
-  /* Translate the newline */
+  /* Write the desired newline */
   return translate_write(dst, eol_str, eol_str_len);
 }
 

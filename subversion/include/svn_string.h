@@ -199,7 +199,7 @@ svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
 /** Create a new empty bytestring with at least @a minimum_size bytes of
  * space available in the memory block.
  *
- * The allocated string buffer will be one byte larger then @a minimum_size
+ * The allocated string buffer will be one byte larger than @a minimum_size
  * to account for a final '\\0'.
  *
  * @since New in 1.6.
@@ -254,6 +254,10 @@ void
 svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
 
 /** Append a single character @a byte onto @a targetstr.
+ * This is an optimized version of @ref svn_stringbuf_appendbytes
+ * that is much faster to call and execute. Gains vary with the ABI.
+ * The advantages extend beyond the actual call because the reduced
+ * register pressure allows for more optimization within the caller.
  *
  * reallocs if necessary. @a targetstr is affected, nothing else is.
  * @since New in 1.7.

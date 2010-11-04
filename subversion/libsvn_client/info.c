@@ -167,6 +167,9 @@ build_info_for_entry(svn_info_t **info,
   SVN_ERR(svn_wc__node_get_schedule(&tmpinfo->schedule, NULL,
                                     wc_ctx, local_abspath, pool));
 
+  SVN_ERR(svn_wc_get_wc_root(&tmpinfo->wcroot_abspath, wc_ctx,
+                             local_abspath, pool, pool));
+
   /* Some random stuffs we don't have wc-ng apis for yet */
   SVN_ERR(svn_wc__node_get_info_bits(&tmpinfo->text_time,
                                      &tmpinfo->conflict_old,
@@ -289,7 +292,7 @@ push_dir_info(svn_ra_session_t *ra_session,
       URL  = svn_path_url_add_component2(session_URL, name, subpool);
 
       fs_path = svn_uri_is_child(repos_root, URL, subpool);
-      fs_path = apr_pstrcat(subpool, "/", fs_path, NULL);
+      fs_path = apr_pstrcat(subpool, "/", fs_path, (char *)NULL);
       fs_path = svn_path_uri_decode(fs_path, subpool);
 
       lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
@@ -692,6 +695,8 @@ svn_info_dup(const svn_info_t *info, apr_pool_t *pool)
     dupinfo->conflict_wrk = apr_pstrdup(pool, info->conflict_wrk);
   if (info->prejfile)
     dupinfo->prejfile = apr_pstrdup(pool, info->prejfile);
+  if (info->wcroot_abspath)
+    dupinfo->wcroot_abspath = apr_pstrdup(pool, info->wcroot_abspath);
 
   return dupinfo;
 }

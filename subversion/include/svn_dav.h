@@ -243,6 +243,12 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_LOG_REVPROPS SVN_DAV_PROP_NS_DAV "svn/log-revprops"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to enforce
+ * old-value atomicity in PROPPATCH (for editing revprops). */
+#define SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS\
+            SVN_DAV_PROP_NS_DAV "svn/atomic-revprops"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
  * that the transmitter (in this case, the server) knows how to handle
  * a replay of a directory in the repository (not root). */
 #define SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY\

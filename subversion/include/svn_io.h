@@ -248,7 +248,10 @@ svn_io_open_uniquely_named(apr_file_t **file,
  * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
- * The file will be deleted according to @a delete_when.
+ * The file will be deleted according to @a delete_when.  If @a delete_when
+ * is @c svn_io_file_del_on_close and @a file is @c NULL, the file will be
+ * deleted before this function returns.
+ *
  * When passing @c svn_io_file_del_none please don't forget to eventually
  * remove the temporary file to avoid filling up the system temp directory.
  * It is often appropriate to bind the lifetime of the temporary file to
@@ -286,7 +289,7 @@ svn_io_open_unique_file2(apr_file_t **f,
 
 /** Like svn_io_open_unique_file2, but can't delete on pool cleanup.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API
+ * @deprecated Provided for backward compatibility with the 1.3 API
  *
  * @note In 1.4 the API was extended to require either @a f or
  *       @a unique_name_p (the other can be NULL).  Before that, both were
@@ -1308,13 +1311,15 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
  * converting any error to a Subversion error. If @a ignore_enoent is TRUE, and
  * the file is not present (APR_STATUS_IS_ENOENT returns TRUE), then no
  * error will be returned.
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_io_remove_file2(const char *path,
-                   svn_boolean_t ignore_enoent,
-                   apr_pool_t *scratch_pool);
+                    svn_boolean_t ignore_enoent,
+                    apr_pool_t *scratch_pool);
 
-/** Similar to svn_io_remove_file2(), except with @a missing_ok set to FALSE.
+/** Similar to svn_io_remove_file2(), except with @a ignore_enoent set to FALSE.
  *
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
@@ -1392,6 +1397,7 @@ svn_io_get_dirents3(apr_hash_t **dirents,
  * structures instead of svn_io_dirent2_t and with only a single pool.
  *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -1839,7 +1845,11 @@ svn_io_stat(apr_finfo_t *finfo,
             apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_rename().  @a from_path and @a to_path are
+/** Rename and/or move the node (not necessarily a regular file) at
+ * @a from_path to a new path @a to_path within the same filesystem.
+ * In some cases, an existing node at @a to_path will be overwritten.
+ *
+ * A wrapper for apr_file_rename().  @a from_path and @a to_path are
  * utf8-encoded.
  */
 svn_error_t *

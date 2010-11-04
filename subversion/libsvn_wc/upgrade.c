@@ -720,7 +720,7 @@ db_kind_from_node_kind(svn_node_kind_t node_kind)
 static svn_error_t *
 migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
                                   const char *tree_conflict_data,
-                                  apr_uint64_t wc_id,
+                                  apr_int64_t wc_id,
                                   const char *local_relpath,
                                   apr_pool_t *scratch_pool)
 {
@@ -847,7 +847,7 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_sqlite__step(&have_row, select_stmt));
   while (have_row)
     {
-      apr_uint64_t wc_id;
+      apr_int64_t wc_id;
       const char *local_relpath;
       const char *tree_conflict_data;
 
@@ -987,21 +987,21 @@ migrate_node_props(const char *dir_abspath,
                                      apr_pstrcat(scratch_pool,
                                                  name,
                                                  SVN_WC__BASE_EXT,
-                                                 NULL),
+                                                 (char *)NULL),
                                      scratch_pool);
 
       revert_abspath = svn_dirent_join(basedir_abspath,
                                        apr_pstrcat(scratch_pool,
                                                    name,
                                                    SVN_WC__REVERT_EXT,
-                                                   NULL),
+                                                   (char *)NULL),
                                        scratch_pool);
 
       working_abspath = svn_dirent_join(propsdir_abspath,
                                         apr_pstrcat(scratch_pool,
                                                     name,
                                                     SVN_WC__WORK_EXT,
-                                                    NULL),
+                                                    (char *)NULL),
                                         scratch_pool);
     }
 
@@ -1194,6 +1194,16 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   return SVN_NO_ERROR;
 }
+
+#if (SVN_WC__VERSION > 19)
+static svn_error_t *
+bump_to_20(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_NODES));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_20));
+  return SVN_NO_ERROR;
+}
+#endif
 
 
 #if 0 /* ### no tree conflict migration yet */
@@ -1482,22 +1492,28 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 18;
         /* FALLTHROUGH  */
 
-#if (SVN_WC__VERSION > 18)
       case 18:
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("The working copy '%s' is at format 18; "
                                    "use 'tools/dev/wc-ng/bump-to-19.py' to "
                                    "upgrade it"), wcroot_abspath);
+
+#if (SVN_WC__VERSION > 19)
+      case 19:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_20, &bb,
+                                             scratch_pool));
+        *result_format = 20;
+        /* FALLTHROUGH  */
 #endif
 
       /* ### future bumps go here.  */
 #if 0
-      case 98:
+      case XXX-1:
         /* Revamp the recording of tree conflicts.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_XXX,
-                                             (void *)wcroot_abspath,
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_XXX, &bb,
                                              scratch_pool));
-        *result_format = 99;
+        *result_format = XXX;
+        /* FALLTHROUGH  */
 #endif
     }
 
@@ -1691,6 +1707,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                                     scratch_pool);
   pristine_to = svn_wc__adm_child(local_abspath, PRISTINE_STORAGE_RELPATH,
                                   scratch_pool);
+  SVN_ERR(svn_wc__ensure_directory(pristine_from, scratch_pool));
   SVN_ERR(svn_wc__wq_build_file_move(&work_item, db,
                                      pristine_from, pristine_to,
                                      scratch_pool, scratch_pool));

@@ -184,7 +184,6 @@ create_mergeinfo_body(serf_bucket_t **bkt,
 {
   mergeinfo_context_t *mergeinfo_ctx = baton;
   serf_bucket_t *body_bkt;
-  int i;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
@@ -209,6 +208,8 @@ create_mergeinfo_body(serf_bucket_t **bkt,
 
   if (mergeinfo_ctx->paths)
     {
+      int i;
+
       for (i = 0; i < mergeinfo_ctx->paths->nelts; i++)
         {
           const char *this_path = APR_ARRAY_IDX(mergeinfo_ctx->paths,

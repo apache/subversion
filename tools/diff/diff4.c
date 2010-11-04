@@ -1,4 +1,4 @@
-/* diff4-test.c -- test driver for 3-way text merges
+/* diff4.c -- test driver for 4-way text merges
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
   svn_err = svn_stream_for_stdout(&ostream, pool);
   if (svn_err)
     {
-      svn_handle_error2(svn_err, stdout, FALSE, "diff4-test: ");
+      svn_handle_error2(svn_err, stdout, FALSE, "diff4: ");
       rc = 2;
     }
   else if (argc == 5)
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
                          pool);
       if (svn_err != NULL)
         {
-          svn_handle_error2(svn_err, stdout, FALSE, "diff4-test: ");
+          svn_handle_error2(svn_err, stdout, FALSE, "diff4: ");
           rc = 2;
         }
     }

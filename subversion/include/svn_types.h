@@ -132,12 +132,15 @@ void *
 svn__apr_hash_index_val(const apr_hash_index_t *hi);
 
 /** On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
- * invalid-pathname error but not this one, so we include it. */
-/* ### This fix should go into APR. */
+ * invalid-pathname error but not ERROR_INVALID_NAME, so we include it.
+ * We also include ERROR_DIRECTORY as that was not included in apr versions
+ * before 1.4.0 and this fix is not backported */
+/* ### These fixes should go into APR. */
 #ifndef WIN32
 #define SVN__APR_STATUS_IS_ENOTDIR(s)  APR_STATUS_IS_ENOTDIR(s)
 #else
 #define SVN__APR_STATUS_IS_ENOTDIR(s)  (APR_STATUS_IS_ENOTDIR(s) \
+                      || ((s) == APR_OS_START_SYSERR + ERROR_DIRECTORY) \
                       || ((s) == APR_OS_START_SYSERR + ERROR_INVALID_NAME))
 #endif
 
@@ -178,13 +181,16 @@ svn_node_kind_to_word(svn_node_kind_t kind);
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
 
-/** Generic three-state property to represent an unknown value for values that
- * are just like booleans. @since New in 1.7. */
+/** Generic three-state property to represent an unknown value for values
+ * that are just like booleans.  The values have been set deliberately to
+ * make tristates mainly compatible with #svn_boolean_t.
+ *
+ * @since New in 1.7. */
 typedef enum
 {
-  svn_tristate_unknown = 0,
-  svn_tristate_false,
-  svn_tristate_true
+  svn_tristate_false = FALSE,
+  svn_tristate_true = TRUE,
+  svn_tristate_unknown
 } svn_tristate_t;
 
 /** Return a constant string "true", "false" or NULL representing the value of

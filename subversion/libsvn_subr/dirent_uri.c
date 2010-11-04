@@ -1936,10 +1936,9 @@ svn_dirent_condense_targets(const char **pcommon,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  int i, j, num_condensed = targets->nelts;
+  int i, num_condensed = targets->nelts;
   svn_boolean_t *removed;
   apr_array_header_t *abs_targets;
-  size_t basedir_len;
 
   /* Early exit when there's no data to work on. */
   if (targets->nelts <= 0)
@@ -1995,6 +1994,8 @@ svn_dirent_condense_targets(const char **pcommon,
 
   if (pcondensed_targets != NULL)
     {
+      size_t basedir_len;
+
       if (remove_redundancies)
         {
           /* Find the common part of each pair of targets.  If
@@ -2006,6 +2007,8 @@ svn_dirent_condense_targets(const char **pcommon,
              another non-removed target, remove the child. */
           for (i = 0; i < abs_targets->nelts; ++i)
             {
+              int j;
+
               if (removed[i])
                 continue;
 
@@ -2101,10 +2104,9 @@ svn_uri_condense_targets(const char **pcommon,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  int i, j, num_condensed = targets->nelts;
+  int i, num_condensed = targets->nelts;
   apr_array_header_t *uri_targets;
   svn_boolean_t *removed;
-  size_t basedir_len;
 
   /* Early exit when there's no data to work on. */
   if (targets->nelts <= 0)
@@ -2156,6 +2158,8 @@ svn_uri_condense_targets(const char **pcommon,
 
   if (pcondensed_targets != NULL)
     {
+      size_t basedir_len;
+
       if (remove_redundancies)
         {
           /* Find the common part of each pair of targets.  If
@@ -2167,6 +2171,8 @@ svn_uri_condense_targets(const char **pcommon,
              another non-removed target, remove the child. */
           for (i = 0; i < uri_targets->nelts; ++i)
             {
+              int j;
+
               if (removed[i])
                 continue;
 
@@ -2423,7 +2429,7 @@ svn_uri_get_file_url_from_dirent(const char **url,
   dirent = svn_path_uri_encode(dirent, pool);
 
 #ifndef SVN_USE_DOS_PATHS
-  *url = apr_pstrcat(pool, "file://", dirent, NULL);
+  *url = apr_pstrcat(pool, "file://", dirent, (char *)NULL);
 #else
   if (dirent[0] == '/')
     {

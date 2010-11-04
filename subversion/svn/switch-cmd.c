@@ -41,14 +41,13 @@
 
 static svn_error_t *
 rewrite_urls(const apr_array_header_t *targets,
-             svn_boolean_t recurse,
+             svn_boolean_t ignore_externals,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
   apr_pool_t *subpool;
   const char *from;
   const char *to;
-  int i;
 
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -67,16 +66,19 @@ rewrite_urls(const apr_array_header_t *targets,
 
   if (targets->nelts == 2)
     {
-      SVN_ERR(svn_client_relocate("", from, to, recurse, ctx, pool));
+      SVN_ERR(svn_client_relocate2("", from, to, ignore_externals,
+                                   ctx, pool));
     }
   else
     {
+      int i;
+
       for (i = 2; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
           svn_pool_clear(subpool);
-          SVN_ERR(svn_client_relocate(target, from, to, recurse,
-                                      ctx, subpool));
+          SVN_ERR(svn_client_relocate2(target, from, to,
+                                       ignore_externals, ctx, subpool));
         }
     }
 
@@ -109,8 +111,7 @@ svn_cl__switch(apr_getopt_t *os,
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
-    return rewrite_urls(targets,
-                        SVN_DEPTH_IS_RECURSIVE(opt_state->depth),
+    return rewrite_urls(targets, opt_state->ignore_externals,
                         ctx, scratch_pool);
 
   if (targets->nelts < 1)

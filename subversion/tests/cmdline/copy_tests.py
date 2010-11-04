@@ -3799,106 +3799,6 @@ def allow_unversioned_parent_for_copy_src(sbox):
                                      wc2_dir,
                                      copy_to_path)
 
-
-#----------------------------------------------------------------------
-# Issue #2986
-def replaced_local_source_for_incoming_copy(sbox):
-  "update receives copy, but local source is replaced"
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  other_wc_dir = wc_dir + '-other'
-
-  # These paths are for regular content testing.
-  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
-  rho_url = sbox.repo_url + '/A/D/G/rho'
-  pi_url = sbox.repo_url + '/A/D/G/pi'
-  other_G_path = os.path.join(other_wc_dir, 'A', 'D', 'G')
-  other_rho_path = os.path.join(other_G_path, 'rho')
-
-  # These paths are for properties testing.
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  chi_path = os.path.join(H_path, 'chi')
-  psi_path = os.path.join(H_path, 'psi')
-  omega_path = os.path.join(H_path, 'omega')
-  psi_url = sbox.repo_url + '/A/D/H/psi'
-  chi_url = sbox.repo_url + '/A/D/H/chi'
-  other_H_path = os.path.join(other_wc_dir, 'A', 'D', 'H')
-  other_psi_path = os.path.join(other_H_path, 'psi')
-  other_omega_path = os.path.join(other_H_path, 'omega')
-
-  # Prepare for properties testing.  If the regular content bug
-  # reappears, we still want to be able to test for the property bug
-  # independently.  That means making two files have the same content,
-  # to avoid encountering the checksum error that might reappear in a
-  # regression.  So here we do that, as well as set the marker
-  # property that we'll check for later.  The reason to set the marker
-  # property in this commit, rather than later, is so that we pass the
-  # conditional in update_editor.c:locate_copyfrom() that compares the
-  # revisions.
-  svntest.main.file_write(chi_path, "Same contents for two files.\n")
-  svntest.main.file_write(psi_path, "Same contents for two files.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
-                                     'chi-prop', 'chi-val', chi_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
-                                     '-m', 'identicalize contents', wc_dir);
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-
-  # Make the duplicate working copy.
-  svntest.main.safe_rmtree(other_wc_dir)
-  shutil.copytree(wc_dir, other_wc_dir)
-
-  try:
-    ## Test properties. ##
-
-    # Commit a replacement from the first working copy.
-    svntest.actions.run_and_verify_svn(None, None, [], 'rm',
-                                       omega_path);
-    svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                       psi_url, omega_path);
-    svntest.actions.run_and_verify_svn(None, None, [], 'ci',
-                                       '-m', 'a propset and a copy', wc_dir);
-
-    # Now schedule a replacement in the second working copy, then update
-    # to receive the replacement from the first working copy, with the
-    # source being the now-scheduled-replace file.
-    svntest.actions.run_and_verify_svn(None, None, [], 'rm',
-                                       other_psi_path);
-    svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                       chi_url, other_psi_path);
-    svntest.actions.run_and_verify_svn(None, None, [], 'up',
-                                       other_wc_dir)
-    exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
-                                                     '-v', other_omega_path)
-    if len(errput):
-      raise svntest.Failure("unexpected error output: %s" % errput)
-    if len(output):
-      raise svntest.Failure("unexpected properties found on '%s': %s"
-                            % (other_omega_path, output))
-
-    ## Test regular content. ##
-
-    # Commit a replacement from the first working copy.
-    svntest.actions.run_and_verify_svn(None, None, [], 'rm',
-                                       tau_path);
-    svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                       rho_url, tau_path);
-    svntest.actions.run_and_verify_svn(None, None, [], 'ci',
-                                       '-m', 'copy rho to tau', wc_dir);
-
-    # Now schedule a replacement in the second working copy, then update
-    # to receive the replacement from the first working copy, with the
-    # source being the now-scheduled-replace file.
-    svntest.actions.run_and_verify_svn(None, None, [], 'rm',
-                                       other_rho_path);
-    svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                       pi_url, other_rho_path);
-    svntest.actions.run_and_verify_svn(None, None, [], 'up',
-                                       other_wc_dir)
-
-  finally:
-    svntest.main.safe_rmtree(other_wc_dir)
-
-
 def unneeded_parents(sbox):
   "svn cp --parents FILE_URL DIR_URL"
 
@@ -4771,61 +4671,6 @@ def move_added_nodes(sbox):
   expected_status.add({'X/Z' : Item(status='A ', wc_rev='0')})
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
-def locate_wrong_origin(sbox):
-  "update editor locates invalid file source"
-
-  sbox.build()
-
-  iota = os.path.join(sbox.wc_dir, 'iota')
-  gamma = os.path.join(sbox.wc_dir, 'A/D/gamma')
-
-  D1 = os.path.join(sbox.wc_dir, 'D1')
-  D2 = os.path.join(sbox.wc_dir, 'D2')
-
-  main.run_svn(None, 'mkdir', D1, D2)
-  main.run_svn(None, 'cp', iota, os.path.join(D1, 'iota'))
-  main.run_svn(None, 'cp', gamma, os.path.join(D2, 'iota'))
-
-  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Add 2*iotas in r2')
-  main.run_svn(None, 'rm', D1)
-
-  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Why?')
-
-  main.run_svn(None, 'cp', D2, D1)
-  main.run_svn(None, 'ci', sbox.wc_dir, '-m', 'Replace one iota')
-
-  # <= 1.6 needs a new checkout here to reproduce, but not since r961831.
-  # so we just perform an update
-  main.run_svn(None, 'up', sbox.wc_dir)
-
-  main.run_svn(None, 'cp', sbox.repo_url + '/D1/iota@2',
-               sbox.repo_url + '/iobeta', '-m', 'Copy iota')
-
-
-  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 4)
-  expected_status.add({
-    'D1'                : Item(status='  ', wc_rev='4'),
-    'D1/iota'           : Item(status='  ', wc_rev='4'),
-    'D2'                : Item(status='  ', wc_rev='4'),
-    'D2/iota'           : Item(status='  ', wc_rev='4'),
-  })
-  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
-
-  # The next update receives an add_file('/D1/iota', 2), which it then tries
-  # to locate in the local working copy. It finds a '/D1/iota' in the expected
-  # place, with a last-changed revision of 2 and a local revision of HEAD-1
-  #
-  # locate_copyfrom identifies this file as correct because 
-  #     * last-mod <= 2 and
-  #     * 2 <= REV
-  #
-  # Luckily close_file() receives an expected_checksum which makes us fail, or
-  # we would have a completely broken working copy
-
-  # So this gives a Checksum mismatch error.
-  main.run_svn(None, 'up', sbox.wc_dir)
-
-# This test currently fails, but should work ok once we move to single DB
 def copy_over_deleted_dir(sbox):
   "copy a directory over a deleted directory"
   sbox.build(read_only = True)
@@ -4833,6 +4678,162 @@ def copy_over_deleted_dir(sbox):
   main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'A/B'))
   main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A/D'),
                os.path.join(sbox.wc_dir, 'A/B'))
+
+def mixed_rev_copy_del(sbox):
+  """copy mixed-rev and delete children"""
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete and commit A/B/E/alpha
+  svntest.main.run_svn(None, 'rm', sbox.ospath('A/B/E/alpha'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha': Item(verb='Deleting'),
+    })
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Update to r2, then update A/B/E/alpha and A/B/E/beta to r1
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.main.run_svn(None, 'up', '-r1',
+                       sbox.ospath('A/B/E/alpha'),
+                       sbox.ospath('A/B/E/beta'))
+  expected_status.add({
+    'A/B/E/alpha' : Item(status='  ', wc_rev=1),
+    })
+  expected_status.tweak('A/B/E/beta', wc_rev=1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Copy A/B/E to A/B/E_copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E_copy'))
+  expected_status.add({
+    'A/B/E_copy'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E_copy/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E_copy/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Delete A/B/E_copy/alpha and A/B/E_copy/beta
+  svntest.main.run_svn(None, 'rm',
+                       sbox.ospath('A/B/E_copy/alpha'),
+                       sbox.ospath('A/B/E_copy/beta'))
+  expected_status.tweak('A/B/E_copy/alpha', 'A/B/E_copy/beta', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # This test currently fails above, as both alpha and beta disappear
+  # from status, what should happen is unclear.  In 1.6 both names
+  # remained in status 'D'.
+
+  # The commit doesn't work either, it should not delete alpha but
+  # must delete beta.  In 1.6 both alpha and beta were deleted and the
+  # commit failed.  It's not clear how the client can determine that
+  # alpha and beta should be treated differently.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E_copy'      : Item(verb='Adding'),
+    'A/B/E_copy/beta' : Item(verb='Deleting'),
+    })
+  expected_status.tweak('A/B/E_copy', wc_rev=3, copied=None)
+  expected_status.remove('A/B/E_copy/alpha', 'A/B/E_copy/beta')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+def copy_delete_undo(sbox, use_revert):
+  "copy, delete child, undo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Copy directory with children
+  svntest.main.run_svn(wc_dir, 'copy',
+                       sbox.ospath('A/B/E'), sbox.ospath('A/B/E-copied'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/E-copied'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E-copied/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E-copied/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Delete a child
+  svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E-copied/alpha'))
+  expected_status.tweak('A/B/E-copied/alpha', status='D ', copied=None,
+                        wc_rev='?', entry_rev='1')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Undo the whole copy
+  if (use_revert):
+    svntest.main.run_svn(wc_dir, 'revert', '--recursive',
+                         sbox.ospath('A/B/E-copied'))
+    svntest.main.safe_rmtree(os.path.join(wc_dir, 'A/B/E-copied'))
+  else:
+    svntest.main.run_svn(wc_dir, 'rm', '--force', sbox.ospath('A/B/E-copied'))
+  expected_status.remove('A/B/E-copied',
+                         'A/B/E-copied/alpha',
+                         'A/B/E-copied/beta')
+
+  # Undo via revert FAILs here because a wq item remains
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Copy a directory without children.
+  svntest.main.run_svn(wc_dir, 'copy',
+                       sbox.ospath('A/B/F'), sbox.ospath('A/B/E-copied'))
+  expected_status.add({
+    'A/B/E-copied'       : Item(status='A ', copied='+', wc_rev='-'),
+    })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+def copy_delete_delete(sbox):
+  "copy, delete child, delete copy"
+  copy_delete_undo(sbox, False)
+
+def copy_delete_revert(sbox):
+  "copy, delete child, revert copy"
+  copy_delete_undo(sbox, True)
+
+def delete_replace_delete(sbox):
+  "delete, replace, delete"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete directory with children
+  svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Replace with directory with different children
+  svntest.main.run_svn(wc_dir, 'copy',
+                       sbox.ospath('A/D/G'), sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', status='R ', copied='+', wc_rev='-')
+  expected_status.add({
+    'A/B/E/pi' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E/rho' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E/tau' : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  # A/B/E/alpha and A/B/E/beta show up as deleted, is that right?
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Delete replacement
+  svntest.main.run_svn(wc_dir, 'rm', '--force', sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', status='D ', copied=None, wc_rev='1')
+  expected_status.remove('A/B/E/pi', 'A/B/E/rho', 'A/B/E/tau')
+  # Currently fails because pi, rho, tau get left behind
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 ########################################################################
@@ -4910,7 +4911,6 @@ test_list = [ None,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
               allow_unversioned_parent_for_copy_src,
-              replaced_local_source_for_incoming_copy,
               unneeded_parents,
               double_parents_with_url,
               copy_into_absent_dir,
@@ -4929,10 +4929,11 @@ test_list = [ None,
               changed_data_should_match_checkout,
               XFail(changed_dir_data_should_match_checkout),
               move_added_nodes,
-              # Serf needs a different testcase for this issue
-              XFail(Skip(locate_wrong_origin,
-                         svntest.main.is_ra_type_dav_serf)),
               copy_over_deleted_dir,
+              XFail(mixed_rev_copy_del),
+              copy_delete_delete,
+              XFail(copy_delete_revert),
+              delete_replace_delete,
              ]
 
 if __name__ == '__main__':

@@ -188,8 +188,8 @@ read_rep(const svn_test_opts_t *opts,
     (pool, "((fulltext 0  (md5 16 XXXXXXXXXXXXXXXX)) kfogel31337");
   char *new_rep_after = apr_pstrdup
     (pool, "((fulltext 0  (md5 16 XXXXXXXXXXXXXXXX)) a83t2Z0");
-  int rep_after_len = strlen(rep_after);
-  int new_rep_after_len = strlen(new_rep_after);
+  size_t rep_after_len = strlen(rep_after);
+  size_t new_rep_after_len = strlen(new_rep_after);
 
   /* Replace the fake fake checksums with the real fake checksums.
      And someday, when checksums are actually calculated, we can

@@ -847,15 +847,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                        dry_run = 0)
 
   # now test if the revert works ok
-  revert_paths = [G_path,
-                  os.path.join(G_path, 'alpha'),
-                  os.path.join(G_path, 'beta')]
-
-  if svntest.main.wc_is_singledb(wc_dir):
-    # These nodes are not lost in single-db
-    revert_paths += [ os.path.join(G_path, 'pi'),
-                      os.path.join(G_path, 'rho'),
-                      os.path.join(G_path, 'tau')]
+  revert_paths = [G_path]
 
   expected_output = svntest.verify.UnorderedOutput([
     "Reverted '%s'\n" % path for path in revert_paths])

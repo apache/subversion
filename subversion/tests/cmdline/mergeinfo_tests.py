@@ -412,7 +412,8 @@ def mergeinfo_on_pegged_wc_path(sbox):
     expected_merge_output([[5]],
                           ['U    ' + beta_COPY_path + '\n',
                            ' U   ' + A_COPY_path + '\n']),
-    [], 'merge', '-c5', sbox.repo_url + '/A', A_COPY_path)
+    [], 'merge', '-c5', '--allow-mixed-revisions',
+    sbox.repo_url + '/A', A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', wc_dir,
                                      '-m', 'Merge r5')

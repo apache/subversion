@@ -119,7 +119,7 @@ simple_extend(const char *adm_path,  /* ### adm_abspath?  */
   if (subdir)
     child = svn_dirent_join(subdir, child, result_pool);
   if (extension)
-    child = apr_pstrcat(result_pool, child, extension, NULL);
+    child = apr_pstrcat(result_pool, child, extension, (char *)NULL);
 
   if (use_tmp)
     return svn_dirent_join_many(result_pool,
@@ -774,7 +774,6 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
   svn_wc__db_t *db;
   const char *local_abspath;
   const char *temp_dir;
-  apr_file_t *file;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(fp || new_name);
@@ -792,13 +791,8 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
   if (err)
     return svn_error_return(err);
 
-  SVN_ERR(svn_io_open_unique_file3(&file, new_name, temp_dir,
+  SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
                                    delete_when, pool, pool));
-
-  if (fp)
-    *fp = file;
-  else
-    SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }

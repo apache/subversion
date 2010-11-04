@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_path.h"
 #include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
@@ -47,6 +48,7 @@ svn_cl__revert(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets = NULL;
   svn_error_t *err;
+  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -63,9 +65,21 @@ svn_cl__revert(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
+  /* Don't even attempt to modify the working copy if any of the
+   * targets look like URLs. URLs are invalid input. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      if (svn_path_is_url(target))
+        return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                                  NULL,
+                                                  _("'%s' is not a local path"),
+                                                  target));
+    }
+
   err = svn_client_revert2(targets, opt_state->depth,
                            opt_state->changelists, ctx, scratch_pool);
-
   if (err
       && (err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH)
       && (! SVN_DEPTH_IS_RECURSIVE(opt_state->depth)))

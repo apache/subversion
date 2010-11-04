@@ -248,7 +248,8 @@ add_subdir(svn_fs_root_t *source_root,
           if (copyfrom_path)
             {
               svn_fs_t *fs = svn_fs_root_fs(source_root);
-              SVN_ERR(svn_fs_revision_root(&new_source_root, fs, copyfrom_rev, pool));
+              SVN_ERR(svn_fs_revision_root(&new_source_root, fs, copyfrom_rev,
+                                           pool));
               new_source_path = copyfrom_path;
             }
           else

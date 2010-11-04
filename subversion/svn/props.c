@@ -82,7 +82,8 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
 
 
 svn_error_t *
-svn_cl__print_prop_hash(apr_hash_t *prop_hash,
+svn_cl__print_prop_hash(svn_stream_t *out,
+                        apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool)
 {
@@ -93,6 +94,7 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
       const char *pname = svn__apr_hash_index_key(hi);
       svn_string_t *propval = svn__apr_hash_index_val(hi);
       const char *pname_stdout;
+      apr_size_t len;
 
       if (svn_prop_needs_translation(pname))
         SVN_ERR(svn_subst_detranslate_string(&propval, propval,
@@ -100,18 +102,45 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
 
       SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname, pool));
 
-      /* ### We leave these printfs for now, since if propval wasn't translated
-       * above, we don't know anything about its encoding.  In fact, it
-       * might be binary data... */
-      printf("  %s\n", pname_stdout);
+      if (out)
+        {
+          pname_stdout = apr_psprintf(pool, "  %s\n", pname_stdout); 
+          SVN_ERR(svn_subst_translate_cstring2(pname_stdout, &pname_stdout,
+                                              APR_EOL_STR,  /* 'native' eol */
+                                              FALSE, /* no repair */
+                                              NULL,  /* no keywords */
+                                              FALSE, /* no expansion */
+                                              pool));
+
+          len = strlen(pname_stdout);
+          SVN_ERR(svn_stream_write(out, pname_stdout, &len));
+        }
+      else
+        {
+          /* ### We leave these printfs for now, since if propval wasn't
+             translated above, we don't know anything about its encoding.
+             In fact, it might be binary data... */
+          printf("  %s\n", pname_stdout);
+        }
+
       if (!names_only)
         {
           /* Add an extra newline to the value before indenting, so that
            * every line of output has the indentation whether the value
            * already ended in a newline or not. */
           const char *newval = apr_psprintf(pool, "%s\n", propval->data);
-
-          printf("%s", svn_cl__indent_string(newval, "    ", pool));
+          const char *indented_newval = svn_cl__indent_string(newval,
+                                                              "    ",
+                                                              pool);
+          if (out)
+            {
+              len = strlen(indented_newval);
+              SVN_ERR(svn_stream_write(out, indented_newval, &len));
+            }
+          else
+            {
+              printf("%s", indented_newval);
+            }
         }
     }
 

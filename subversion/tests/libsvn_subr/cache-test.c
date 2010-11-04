@@ -71,11 +71,12 @@ deserialize_revnum(void **out,
                    apr_size_t data_len,
                    apr_pool_t *pool)
 {
-  svn_revnum_t *in_rev, *out_rev;
+  const svn_revnum_t *in_rev = (const svn_revnum_t *) data;
+  svn_revnum_t *out_rev;
+
   if (data_len != sizeof(*in_rev))
     return svn_error_create(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
                             _("Bad size for revision number in cache"));
-  in_rev = (svn_revnum_t *) data;
   out_rev = apr_palloc(pool, sizeof(*out_rev));
   *out_rev = *in_rev;
   *out = out_rev;

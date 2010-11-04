@@ -826,14 +826,14 @@ svn_cl__get_log_message(const char **log_msg,
              white space as we will consider white space only as empty */
           apr_size_t len;
 
-          for (len = message->len - 1; len >= 0; len--)
+          for (len = 0; len < message->len; len++)
             {
               /* FIXME: should really use an UTF-8 whitespace test
                  rather than svn_ctype_isspace, which is ASCII only */
               if (! svn_ctype_isspace(message->data[len]))
                 break;
             }
-          if (len < 0)
+          if (len == message->len)
             message = NULL;
         }
 
@@ -906,9 +906,6 @@ svn_cl__may_need_force(svn_error_t *err)
 svn_error_t *
 svn_cl__error_checked_fputs(const char *string, FILE* stream)
 {
-  /* This function is equal to svn_cmdline_fputs() minus
-     the utf8->local encoding translation */
-
   /* On POSIX systems, errno will be set on an error in fputs, but this might
      not be the case on other platforms.  We reset errno and only
      use it if it was set by the below fputs call.  Else, we just return
