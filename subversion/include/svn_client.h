@@ -5125,6 +5125,12 @@ typedef struct svn_info_t
    */
   svn_wc_conflict_description_t *tree_conflict;
 
+  /**
+   * The local absolute path of the working copy root.
+   * @since New in 1.7.
+   */
+  const char *wcroot_abspath;
+
   /** @} */
 
 } svn_info_t;
