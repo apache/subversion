@@ -4755,7 +4755,7 @@ tweak_entries(svn_wc__db_t *db,
       svn_wc__db_status_t status;
 
       const char *child_repos_relpath = NULL;
-      svn_boolean_t excluded;
+      svn_boolean_t excluded, is_file_external;
 
       svn_pool_clear(iterpool);
 
@@ -4765,10 +4765,19 @@ tweak_entries(svn_wc__db_t *db,
                                                child_basename, iterpool);
 
       child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
+
+      /* Skip stuff we've already decided to exclude. */
       excluded = (apr_hash_get(exclude_paths, child_abspath,
                                APR_HASH_KEY_STRING) != NULL);
-
       if (excluded)
+        continue;
+
+      /* Skip stuff we've identified as file externals.  (If we're
+         here, we were doing an update of a directory, not the actual
+         switch handling of a file external itself.) */
+      SVN_ERR(svn_wc__internal_is_file_external(&is_file_external, db,
+                                                child_abspath, iterpool));
+      if (is_file_external)
         continue;
 
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,

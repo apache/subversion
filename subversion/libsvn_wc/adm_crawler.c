@@ -347,7 +347,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
       svn_revnum_t this_rev;
       svn_depth_t this_depth;
       svn_wc__db_lock_t *this_lock;
-      svn_boolean_t this_switched;
+      svn_boolean_t this_switched = FALSE;
+      svn_boolean_t this_file_external = FALSE;
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
@@ -461,7 +462,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
       /* And finally prepare for reporting */
       if (!this_repos_relpath)
         {
-          this_switched = FALSE;
           this_repos_relpath = svn_relpath_join(dir_repos_relpath, child,
                                                 iterpool);
         }
@@ -472,9 +472,20 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                                        NULL);
 
           if (childname == NULL || strcmp(childname, child) != 0)
-            this_switched = TRUE;
-          else
-            this_switched = FALSE;
+            {
+              const char *file_ext_str;
+
+              this_switched = TRUE;
+             
+              /* This could be a file external!  We need to know
+                 that. */
+              SVN_ERR(svn_wc__db_temp_get_file_external(&file_ext_str, db,
+                                                        this_abspath,
+                                                        scratch_pool,
+                                                        scratch_pool));
+              if (file_ext_str)
+                this_file_external = TRUE;
+            }
         }
 
       /* Tweak THIS_DEPTH to a useful value.  */
@@ -489,9 +500,15 @@ report_revisions_and_depths(svn_wc__db_t *db,
       if (!SVN_IS_VALID_REVNUM(this_rev))
         this_rev = dir_rev;
 
+      /*** File Externals **/
+      if (this_file_external)
+        {
+          /* File externals are ... special.  We ignore them. */;
+        }
+
       /*** Files ***/
-      if (this_kind == svn_wc__db_kind_file ||
-          this_kind == svn_wc__db_kind_symlink)
+      else if (this_kind == svn_wc__db_kind_file ||
+               this_kind == svn_wc__db_kind_symlink)
         {
           if (report_everything)
             {
