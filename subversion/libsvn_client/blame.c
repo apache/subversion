@@ -93,8 +93,6 @@ struct file_rev_baton {
   /* These are used for tracking merged revisions. */
   svn_boolean_t include_merged_revisions;
   svn_boolean_t merged_revision;
-  svn_boolean_t seen_merged_revision;
-
   struct blame_chain *merged_chain;  /* the merged blame chain. */
   /* name of file containing the previous merged revision of the file */
   const char *last_original_filename;
