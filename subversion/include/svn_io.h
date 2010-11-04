@@ -1845,7 +1845,11 @@ svn_io_stat(apr_finfo_t *finfo,
             apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_rename().  @a from_path and @a to_path are
+/** Rename and/or move the node (not necessarily a regular file) at
+ * @a from_path to a new path @a to_path within the same filesystem.
+ * In some cases, an existing node at @a to_path will be overwritten.
+ *
+ * A wrapper for apr_file_rename().  @a from_path and @a to_path are
  * utf8-encoded.
  */
 svn_error_t *
